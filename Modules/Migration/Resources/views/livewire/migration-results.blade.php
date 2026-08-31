@@ -62,12 +62,12 @@
         </section>
     @endif
 
-    <div class="flex flex-wrap gap-4 text-sm">
+    <div class="flex flex-wrap gap-x-4 gap-y-6 text-sm">
         @if ($run->transactions_inserted_count > 0)
-            <a href="{{ Destination::Transactions->url() }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
+            <a href="{{ Destination::Transactions->url() }}" class="tap-link font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
         @endif
         @if ($budgetMonthsCount > 0)
-            <a href="{{ Destination::Budgets->url() }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
+            <a href="{{ Destination::Budgets->url() }}" class="tap-link font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
         @endif
     </div>
 

@@ -6,6 +6,7 @@ namespace Modules\DriftAlerts\Database\Factories;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Public\Enums\Currency;
@@ -36,7 +37,7 @@ final class DriftAlertFactory extends Factory
             'delta_minor' => -150,
             'annualized_impact_minor' => -1800,
             'threshold_percent_used' => 5,
-            'threshold_source' => 'global',
+            'threshold_source' => ThresholdSource::Global->value,
             'latest_occurrence_id' => null,
             'snoozed_until' => null,
             'detected_at' => $this->faker->dateTimeBetween('-30 days', 'now'),

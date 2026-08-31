@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Ton appareil a refusé de stocker la clé. Le déverrouillage biométrique est indisponible.',
     'heading' => 'Verrouillage de l\'app',
 
-    'moved_help' => 'Ton PIN, le délai de verrouillage automatique et le déverrouillage biométrique se trouvent dans les paramètres de synchronisation de cet appareil.',
-    'moved_cta' => 'Ouvrir Synchronisation et appareil',
-
     'toggle_label' => 'Verrouiller l\'app avec un PIN',
     'toggle_description' => 'Remplace la connexion quotidienne par un PIN. Les sessions restent actives 30 jours.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Conserver le PIN',
 
     'error_pin_too_short' => 'Le PIN doit comporter au moins 6 chiffres.',
-    'error_pin_digits' => 'Le PIN doit comporter 6 à 10 chiffres — uniquement des chiffres.',
+    'error_pin_digits' => 'Le PIN doit comporter :min à :max chiffres — uniquement des chiffres.',
     'error_pin_mismatch' => 'Les PIN ne correspondent pas. Réessaie.',
     'error_pin_required' => 'Saisis ton PIN.',
     'error_pin_incorrect' => 'PIN incorrect.',

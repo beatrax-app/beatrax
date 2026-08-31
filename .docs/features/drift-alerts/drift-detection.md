@@ -53,15 +53,15 @@ the threshold opens an alert just as a rise does.
 
 ## The threshold ladder
 
-`effectiveThresholdPercent()` is a **precedence chain, not a maximum**.
-It returns the first of these that is set, along with a `source` label
-that is written onto the alert row:
+`effectiveThreshold()` is a **precedence chain, not a maximum**. It
+returns the first of these that is set, along with a `ThresholdSource`
+that rides onto the alert row inside a `DriftMetrics`:
 
 | Order | Source | Where it comes from | `threshold_source` |
 |---|---|---|---|
 | 1 | Per-series override | `recurring_series.drift_threshold_percent`, read through `RecurringSeriesQuery::driftThresholdForSeries()`. Any non-null value wins, including one *lower* than the user's global. | `series_override` |
 | 2 | User global | `users.drift_alert_threshold_percent`, but only when it is `> 0`. | `global` |
-| 3 | Hard default | `DriftEvaluator::DEFAULT_THRESHOLD_PERCENT`, which is `5`. | `default` |
+| 3 | Hard default | `DriftThresholdOptions::DEFAULT_PERCENT`, which is `5`. | `default` |
 
 The per-series step exists because volatility is a property of the
 series, not of the user. A monthly electricity pre-payment in the
@@ -84,10 +84,17 @@ force when it fired.
 
 ## Annualising the impact
 
-`annualized_impact_minor` is `delta * cadenceMultiplierForYear(cadence)`,
-a plain integer multiplication on minor units:
+`annualized_impact_minor` is **each side at the rate it was billed at**, not
+the delta at one rate:
 
-| Cadence | Multiplier |
+```
+annual = latest × latestPerYear − prior × priorPerYear
+```
+
+`AmountMovement::annualImpactMinor()` does that arithmetic and
+`CadenceYearRate` maps a cadence onto its per-year rate:
+
+| Cadence | Rate |
 |---|---|
 | `weekly` | 52 |
 | `monthly` | 12 |
@@ -98,6 +105,25 @@ a plain integer multiplication on minor units:
 52 is a calendar-year approximation chosen for integer consistency with
 the monthly-equivalent multiplier used elsewhere in `Recurring`, not for
 calendar accuracy.
+
+`latestPerYear` is the series' current cadence. `priorPerYear` is read off the
+gap *before* the prior occurrence — `DriftEvaluator::priorOccurrencesPerYear()`
+divides 365 by that gap in days and snaps the result onto the nearest rate by
+ratio, falling back to the current cadence when there is no third occurrence to
+measure against. Nearest by ratio and not by difference: 4/yr and 1/yr are 3
+apart while 52/yr and 12/yr are 40, so a linear nearest-match would pull every
+long gap onto the yearly band.
+
+The two rates differ exactly when a subscription is restructured, and that is
+the whole reason for the shape. EUR 10.00 a month becoming EUR 100.00 a year is
+`delta = −9000` — a much bigger single charge — while the year went from EUR
+120.00 to EUR 100.00. Annualising the raw delta at the new multiplier reported
+EUR 90.00/yr *extra* for a EUR 20.00/yr saving; the two-rate form reports
+`annual = +2000`. The `cadence-restructure.php` fixture pins that pair.
+
+A positive `annualized_impact_minor` on an expense is therefore a saving, and
+the dashboard tile counts only the negative ones. The `/drift` row's arrow and
+tint read the same figure, so the two surfaces cannot disagree about one alert.
 
 `irregular` maps to `0`, which is also the gate that stops the alert in
 step 3 above. A series with no discernible interval has no meaningful
@@ -147,7 +173,7 @@ cents.
 "how much has this subscription risen since I first paid it" — and so
 reads the **entire** occurrence history rather than the 24-point window
 the series-detail chart uses. `FULL_HISTORY_POINTS = 600` is the ceiling
-it passes to `RecurringSeriesQuery::amountTrendForSeries()`: 600 monthly
+it passes to `RecurringOccurrenceQuery::amountTrendForSeries()`: 600 monthly
 occurrences is 50 years and 600 weekly ones is 11, which covers any
 subscription lifetime that can exist in real data while still bounding
 the query. Truncating to 24 would silently redefine "baseline" as
@@ -157,6 +183,25 @@ That query is also expense-only, and compares **absolute** amounts:
 expense occurrences are stored negative, so taking the magnitude makes a
 more-expensive charge read as a positive, upward drift in the row and in
 the sparkline, which is the direction a reader expects.
+
+It runs the first and last occurrence through the same `AmountMovement`
+refusal the evaluator applies, *before* taking those magnitudes, and drops the
+series when it returns null. Taking the magnitude first hid both cases the
+evaluator will not speak to: a zero first charge printed `+0.0%` beside a real
+euro figure, and a refund against a charge — `−1000, −1000, +2000` — rendered
+as a `+100.0%` price rise. This module would rather show no row than the wrong
+direction.
+
+Each endpoint is priced in **its own** `observed_currency`, and the row is
+dropped when the two disagree. `recurring_series.latest_currency` is rewritten
+on every refresh, so a merchant that changed denomination leaves older
+occurrences in the old code under a header that has moved on; stamping every
+trend point with the header's code measured JPY1,200 against EUR12.00 and
+called the difference a creep. Converting the older endpoint at today's rate
+would file the rate's own movement as the merchant's, so this refuses the pair
+exactly as `DriftEvaluator` does. `RecurringOccurrenceQuery::amountTrendForSeries()`
+carries `currency` on every point for the same reason the series-detail chart
+needs it: the minor-unit divisor is not a hundred everywhere.
 
 ## See also
 

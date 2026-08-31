@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Rodoma :shown naujausių iš :count.',
+
     'drawer_nav' => 'Naršymas',
 
     'search_placeholder' => 'Ieškoti…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Nori savo duomenis matyti ir telefone?',
         'body' => 'Įdiek Beatrax telefone, kad greitai pasiektum savo finansus.',
         'dismiss_aria' => 'Slėpti diegimo patarimą',
+        'dismiss_caption' => 'Slėpti',
         'install_app' => 'Įdiegti programėlę',
 
         'desktop_html' => 'Atverk Beatrax telefono naršyklėje ir paliesk „Pridėti į pradžios ekraną“ — arba Safari bendrinimo lange paliesk <strong style="color: var(--color-text);">⚡</strong> piktogramą.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Pasirinkta failų: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Pasirink datą',
         'prev_month' => 'Ankstesnis mėnuo',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minutė',
         'empty' => 'laikas nepasirinktas',
     ],
+
+    'toast_undo' => 'Anuliuoti',
 
     'veil_locked' => 'Programa užrakinta',
 

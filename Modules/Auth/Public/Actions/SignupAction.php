@@ -12,8 +12,9 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
-use Modules\Auth\Internal\Support\Username;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
+use Modules\Auth\Public\Recovery\PendingRecoveryCodes;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Events\UserInstalled;
@@ -24,18 +25,18 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class SignupAction
+final readonly class SignupAction
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
-        private readonly AuthManager $auth,
-        private readonly RecoveryCodeMinter $recoveryCodes,
-        private readonly SessionFactory $session,
-        private readonly Dispatcher $events,
-        private readonly Translator $translator,
-        private readonly UserCountry $countries,
-        private readonly LoggerInterface $log,
+        private DatabaseManager $db,
+        private Hasher $hasher,
+        private AuthManager $auth,
+        private RecoveryCodeMinter $recoveryCodes,
+        private SessionFactory $session,
+        private Dispatcher $events,
+        private Translator $translator,
+        private UserCountry $countries,
+        private LoggerInterface $log,
     ) {}
 
     /**
@@ -101,7 +102,7 @@ final class SignupAction
         // reference data a fresh install needs is seeded here too. An empty
         // code is the reader skipping the picker, and store() leaves it unset.
 
-        // The country is written either way — `users` does not sync, so a joiner
+        // The country is asked of every joiner rather than synced, so a joiner
         // that did not record it here never learns it. Only the reference data
         // behind it rides on $seedsStarterData: those tables DO sync, and a row
         // this device seeds is one the peer's own can no longer land beside.
@@ -121,7 +122,7 @@ final class SignupAction
         $guard = $this->auth->guard();
         $guard->login($result['user']);
 
-        ($this->session)()->put('auth.signup.recovery_codes_plain', $result['codesPlain']);
+        PendingRecoveryCodes::store(($this->session)(), $result['codesPlain']);
 
         return $result;
     }

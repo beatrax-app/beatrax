@@ -7,9 +7,11 @@ namespace Modules\Import\Internal\Services;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\DateFactory;
-use InvalidArgumentException;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Models\User;
+use Modules\Import\Internal\Enums\AliasFileRejection;
+use Modules\Import\Internal\Exceptions\AliasFileRejectedException;
+use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Modules\Sync\Public\Events\EntityMutated;
 use Psr\Log\LoggerInterface;
@@ -17,18 +19,21 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-final class AliasYamlImporter
+final readonly class AliasYamlImporter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PatternGeneralizer $generalizer,
-        private readonly LoggerInterface $logger,
-        private readonly DateFactory $dates,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private PatternGeneralizer $generalizer,
+        private LoggerInterface $logger,
+        private DateFactory $dates,
+        private Dispatcher $events,
+        private MerchantNameResolver $resolver,
     ) {}
 
     /**
      * @return list<CorpusEntryDto>
+     *
+     * @throws AliasFileRejectedException when the file is not an alias list this build can read
      */
     public function parse(string $yamlContent): array
     {
@@ -46,20 +51,19 @@ final class AliasYamlImporter
     private function decodeEntries(string $yamlContent): array
     {
         try {
-            /** @var mixed $document */
             $document = Yaml::parse($yamlContent, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
         } catch (ParseException $e) {
             $this->logger->info('AliasYamlImporter: YAML parse failed.', [
                 'exception_message' => $e->getMessage(),
             ]);
 
-            throw new InvalidArgumentException('The file is not a valid YAML document.', previous: $e);
+            throw AliasFileRejectedException::file(AliasFileRejection::NotYaml, $e);
         } catch (Throwable $e) {
-            throw new InvalidArgumentException('The file could not be parsed.', previous: $e);
+            throw AliasFileRejectedException::file(AliasFileRejection::UnreadableAsYaml, $e);
         }
 
         if (! is_array($document) || ! isset($document['entries']) || ! is_array($document['entries'])) {
-            throw new InvalidArgumentException("The file is missing the top-level 'entries' list.");
+            throw AliasFileRejectedException::file(AliasFileRejection::NoEntriesList);
         }
 
         return $document['entries'];
@@ -69,16 +73,13 @@ final class AliasYamlImporter
     {
         $position = is_int($index) ? $index + 1 : 0;
         if (! is_array($raw)) {
-            throw new InvalidArgumentException(sprintf('Entry #%d is not a mapping.', $position));
+            throw AliasFileRejectedException::entry(AliasFileRejection::EntryIsNotAMapping, $position);
         }
 
         $pattern = trim(self::stringField($raw, 'pattern') ?? '');
         $name = trim(self::stringField($raw, 'name') ?? '');
         if ($pattern === '' || $name === '') {
-            throw new InvalidArgumentException(sprintf(
-                "Entry #%d is missing a required 'pattern' or 'name' field.",
-                $position,
-            ));
+            throw AliasFileRejectedException::entry(AliasFileRejection::EntryIsMissingAField, $position);
         }
 
         return new CorpusEntryDto(
@@ -152,63 +153,7 @@ final class AliasYamlImporter
         $captured = [];
 
         $this->db->connection()->transaction(function () use ($user, $entries, $conflictResolutions, $existing, &$changed, &$captured): void {
-            $now = $this->dates->now()->toDateTimeString();
-            $connection = $this->db->connection();
-
-            foreach ($entries as $entry) {
-                $existingRow = $existing[$entry->pattern] ?? null;
-
-                if ($existingRow === null) {
-                    $aliasId = $connection->table('merchant_aliases')->insertGetId([
-                        'user_id' => $user->id,
-                        'pattern' => $entry->pattern,
-                        'generalized_pattern' => $entry->generalizedPattern,
-                        'friendly_name' => $entry->name,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                    $changed++;
-
-                    // The user's own work, uploaded on the settings page, so
-                    // it travels with them.
-                    $captured[] = new EntityMutated(
-                        table: 'merchant_aliases',
-                        pk: $aliasId,
-                        userId: $user->id,
-                        mutationType: 'create',
-                        dirtyFields: [
-                            'user_id' => $user->id,
-                            'pattern' => $entry->pattern,
-                            'generalized_pattern' => $entry->generalizedPattern,
-                            'friendly_name' => $entry->name,
-                        ],
-                    );
-
-                    continue;
-                }
-
-                if (
-                    $existingRow['friendly_name'] === $entry->name
-                    && $existingRow['generalized_pattern'] === $entry->generalizedPattern
-                ) {
-                    continue;
-                }
-
-                $action = $conflictResolutions[$entry->pattern] ?? 'keep';
-                if ($action !== 'replace') {
-                    continue;
-                }
-
-                $connection->table('merchant_aliases')
-                    ->where('user_id', $user->id)
-                    ->where('pattern', $entry->pattern)
-                    ->update([
-                        'generalized_pattern' => $entry->generalizedPattern,
-                        'friendly_name' => $entry->name,
-                        'updated_at' => $now,
-                    ]);
-                $changed++;
-            }
+            [$changed, $captured] = $this->writeEntries($user, $entries, $conflictResolutions, $existing);
         });
 
         // Only once the rows are committed. Dispatched inside, a rollback left
@@ -218,7 +163,106 @@ final class AliasYamlImporter
             $this->events->dispatch($event);
         }
 
+        // A bulk import replaces whole patterns at once, so a memo not told
+        // about it answers the rest of this request out of the list the file
+        // just superseded.
+        $this->resolver->forget($user->id);
+
         return $changed;
+    }
+
+    /**
+     * @param  list<CorpusEntryDto>  $entries
+     * @param  array<string, string>  $conflictResolutions
+     * @param  array<string, array{friendly_name: string, generalized_pattern: string}>  $existing
+     * @return array{0: int, 1: list<EntityMutated>} rows written, and the ops for the ones that
+     *                                               survive the commit
+     */
+    private function writeEntries(User $user, array $entries, array $conflictResolutions, array $existing): array
+    {
+        $changed = 0;
+        $captured = [];
+        $now = $this->dates->now()->toDateTimeString();
+        $connection = $this->db->connection();
+
+        foreach ($entries as $entry) {
+            $existingRow = $existing[$entry->pattern] ?? null;
+
+            if ($existingRow === null) {
+                $aliasId = $connection->table('merchant_aliases')->insertGetId([
+                    'user_id' => $user->id,
+                    'pattern' => $entry->pattern,
+                    'generalized_pattern' => $entry->generalizedPattern,
+                    'friendly_name' => $entry->name,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $changed++;
+
+                // The user's own work, uploaded on the settings page, so
+                // it travels with them.
+                $captured[] = new EntityMutated(
+                    table: 'merchant_aliases',
+                    pk: $aliasId,
+                    userId: $user->id,
+                    mutationType: 'create',
+                    dirtyFields: [
+                        'user_id' => $user->id,
+                        'pattern' => $entry->pattern,
+                        'generalized_pattern' => $entry->generalizedPattern,
+                        'friendly_name' => $entry->name,
+                    ],
+                );
+
+                continue;
+            }
+
+            if (
+                $existingRow['friendly_name'] === $entry->name
+                && $existingRow['generalized_pattern'] === $entry->generalizedPattern
+            ) {
+                continue;
+            }
+
+            $action = $conflictResolutions[$entry->pattern] ?? 'keep';
+            if ($action !== 'replace') {
+                continue;
+            }
+
+            $connection->table('merchant_aliases')
+                ->where('user_id', $user->id)
+                ->where('pattern', $entry->pattern)
+                ->update([
+                    'generalized_pattern' => $entry->generalizedPattern,
+                    'friendly_name' => $entry->name,
+                    'updated_at' => $now,
+                ]);
+            $changed++;
+
+            // The replace branch captured nothing, so an import that only
+            // resolved conflicts changed this device and no other. Keyed
+            // by pattern, so the pk has to be read back rather than
+            // assumed from the insert above.
+            $replacedId = $connection->table('merchant_aliases')
+                ->where('user_id', $user->id)
+                ->where('pattern', $entry->pattern)
+                ->value('id');
+
+            if (is_numeric($replacedId)) {
+                $captured[] = new EntityMutated(
+                    table: 'merchant_aliases',
+                    pk: (int) $replacedId,
+                    userId: $user->id,
+                    mutationType: 'edit',
+                    dirtyFields: [
+                        'generalized_pattern' => $entry->generalizedPattern,
+                        'friendly_name' => $entry->name,
+                    ],
+                );
+            }
+        }
+
+        return [$changed, $captured];
     }
 
     /**

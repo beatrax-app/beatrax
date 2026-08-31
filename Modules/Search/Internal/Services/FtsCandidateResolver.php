@@ -19,7 +19,7 @@ use stdClass;
 // id list via FTS5 MATCH, or — for queries too short for FTS5 — the
 // decrypt-then-substring LIKE fallback, plus the highlight/snippet load
 // that reuses the same MATCH expression.
-final class FtsCandidateResolver
+final readonly class FtsCandidateResolver
 {
     use CoercesScalars;
 
@@ -32,13 +32,13 @@ final class FtsCandidateResolver
     // Bounds the candidate window the <3-char LIKE fallback decrypts,
     // most-recent-first, so a short query never decrypts an entire
     // multi-year history on every keystroke.
-    public const LIKE_FALLBACK_CANDIDATE_CAP = 500;
+    public const int LIKE_FALLBACK_CANDIDATE_CAP = 500;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
     ) {}
 
     // Returns null for the empty-text (filters-only) branch to signal
@@ -57,15 +57,17 @@ final class FtsCandidateResolver
 
         $searchable = self::separateControlBytes($textQuery);
 
-        // Short words (1-2 chars) still exist in the FTS body and pass
-        // through naturally, but can't be explicit MATCH predicates; a
-        // query with no >=3-char word falls back to the LIKE scan.
+        // Short words cannot be MATCH predicates -- the trigram tokenizer needs
+        // three characters -- but they still have to narrow. Dropping them made
+        // a query WIDER than what the reader typed: "de la place" returned
+        // exactly what "la place" did, the failure typed tokens were fixed for.
         $ftsWords = $this->significantFtsWords($searchable);
-        if (strlen($searchable) < 3 || $ftsWords === []) {
+        $shortWords = $this->shortFtsWords($searchable);
+        if (mb_strlen($searchable) < SearchDocumentBody::TRIGRAM_WIDTH || $ftsWords === []) {
             return $this->likeFallbackIds($user, $searchable, $applyFilters);
         }
 
-        $rowids = $this->db->connection()
+        $query = $this->db->connection()
             ->table('transaction_search_fts')
             ->whereRaw('transaction_search_fts MATCH ?', [$this->ftsMatchExpression($ftsWords)])
             ->join(
@@ -74,9 +76,13 @@ final class FtsCandidateResolver
                 '=',
                 'transaction_search_fts.rowid',
             )
-            ->where('transaction_search_docs.user_id', $user->id)
-            ->pluck('transaction_search_fts.rowid')
-            ->all();
+            ->where('transaction_search_docs.user_id', $user->id);
+
+        foreach ($shortWords as $word) {
+            LikeNeedle::contains($query, 'transaction_search_docs.search_body', $word);
+        }
+
+        $rowids = $query->pluck('transaction_search_fts.rowid')->all();
 
         return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rowids));
     }
@@ -199,13 +205,28 @@ final class FtsCandidateResolver
     }
 
     /**
-     * @return list<string> the query's words of at least 3 chars
+     * @return list<string> the query's words of at least 3 CHARACTERS
      */
     private function significantFtsWords(string $textQuery): array
     {
+        // Characters, not bytes. A two-letter accented word is three bytes, so
+        // a byte count sent it to FTS5, whose tokenizer needs three characters
+        // and matched nothing -- and because words are AND-joined, it took
+        // every other term down with it.
         return array_values(array_filter(
             explode(' ', trim($textQuery)),
-            static fn (string $w): bool => strlen($w) >= 3,
+            static fn (string $w): bool => mb_strlen($w) >= SearchDocumentBody::TRIGRAM_WIDTH,
+        ));
+    }
+
+    /**
+     * @return list<string> the query's non-empty words of fewer than 3 characters
+     */
+    private function shortFtsWords(string $textQuery): array
+    {
+        return array_values(array_filter(
+            explode(' ', trim($textQuery)),
+            static fn (string $w): bool => $w !== '' && mb_strlen($w) < SearchDocumentBody::TRIGRAM_WIDTH,
         ));
     }
 

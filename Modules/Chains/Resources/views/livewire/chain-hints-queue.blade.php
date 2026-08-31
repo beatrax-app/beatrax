@@ -15,7 +15,7 @@
     $fmt = static fn ($money) => $money->format();
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
             <x-core::page-heading>{{ Lang::get('chains::hints.heading') }}</x-core::page-heading>

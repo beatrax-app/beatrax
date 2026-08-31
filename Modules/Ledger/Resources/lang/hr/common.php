@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorije',
+    'unavailable_category' => 'Kategorije nema na ovom uređaju',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Proknjiženo',
         'uncleared' => 'Neproknjiženo',

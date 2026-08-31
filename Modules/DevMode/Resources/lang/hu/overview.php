@@ -7,6 +7,10 @@ return [
     'subtitle' => 'Az alkalmazásba épített Developer Console működési felülete.',
     'worker_heartbeat' => 'Worker életjel',
     'not_running' => 'NEM FUT',
+    // i18n-review: hu · heartbeat_age — same instrumental suffix as the sidebar
+    // pulse it sits beside, and both want the same answer. `ttl` is left as the
+    // technical abbreviation, beside a count it does not govern.
+    'heartbeat_age' => ':count s-mal ezelőtt · ttl :ttl s|:count s-mal ezelőtt · ttl :ttl s',
     'queue' => 'Várólista',
     'pending' => 'függőben',
     'failed' => 'sikertelen',

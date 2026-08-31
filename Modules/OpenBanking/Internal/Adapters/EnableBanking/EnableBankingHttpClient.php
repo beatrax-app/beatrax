@@ -10,16 +10,15 @@ use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 class EnableBankingHttpClient
 {
-    private const ACCOUNTS_PATH = 'accounts/';
+    private const string ACCOUNTS_PATH = 'accounts/';
 
-    private const EB_API_HOST = 'api.enablebanking.com';
+    private const string EB_API_HOST = 'api.enablebanking.com';
 
     public function __construct(
         private readonly OpenBankingSecretsRepository $secrets,
@@ -161,7 +160,7 @@ class EnableBankingHttpClient
     {
         $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
-        $this->assertAllowedUrl($url, $credentials);
+        $this->assertAllowedUrl($url);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
 
         try {
@@ -190,7 +189,7 @@ class EnableBankingHttpClient
     {
         $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
-        $this->assertAllowedUrl($url, $credentials);
+        $this->assertAllowedUrl($url);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
 
         try {
@@ -211,23 +210,21 @@ class EnableBankingHttpClient
         return $this->decodeJsonBody((string) $response->getBody(), $url);
     }
 
+    // Every URL this client builds comes from baseUri(). The bank's SCA origin
+    // is reached by the reader's browser, through an outward redirect this
+    // class never issues, so widening the list to it would authorise a request
+    // no path here makes -- with a bearer token attached.
     /**
      * @return list<string>
      */
-    private function allowedHosts(OpenBankingCredentials $credentials): array
+    private function allowedHosts(): array
     {
-        $hosts = [self::EB_API_HOST];
-
-        if ($credentials->bankScaHost !== null && $credentials->bankScaHost !== '') {
-            $hosts[] = strtolower($credentials->bankScaHost);
-        }
-
-        return $hosts;
+        return [self::EB_API_HOST];
     }
 
     // SSRF gate. Both postJson() and getJson() call this before signing, so
     // no bearer token is ever built for a non-https or non-allow-listed URL.
-    private function assertAllowedUrl(string $url, OpenBankingCredentials $credentials): void
+    private function assertAllowedUrl(string $url): void
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
         if (! is_string($scheme) || strtolower($scheme) !== 'https') {
@@ -235,7 +232,7 @@ class EnableBankingHttpClient
         }
 
         $host = parse_url($url, PHP_URL_HOST);
-        if (! is_string($host) || ! in_array(strtolower($host), $this->allowedHosts($credentials), strict: true)) {
+        if (! is_string($host) || ! in_array(strtolower($host), $this->allowedHosts(), strict: true)) {
             throw UnsafeOpenBankingRequestException::disallowedHost(is_string($host) ? $host : null);
         }
     }

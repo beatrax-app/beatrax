@@ -14,6 +14,8 @@ use Livewire\Component;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
+use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
@@ -67,12 +69,20 @@ final class RenameCounterpartyPopover extends Component
         $generalizedTrimmed = trim($this->generalized);
 
         if ($this->remember) {
-            ($createAlias)(
-                $user,
-                $this->raw,
-                $generalizedTrimmed === '' ? null : $generalizedTrimmed,
-                $friendlyTrimmed,
-            );
+            try {
+                ($createAlias)(
+                    $user,
+                    $this->raw,
+                    $generalizedTrimmed === '' ? null : $generalizedTrimmed,
+                    $friendlyTrimmed,
+                );
+            } catch (MerchantAliasPatternTooShortException) {
+                // The reader can edit the generalized field, so they stay on
+                // the form with it named rather than losing the rename.
+                $this->addError('generalized', Lang::get('import::aliases.errors.too_short'));
+
+                return;
+            }
         }
 
         if ($this->categoryHint !== null && $this->categoryHint > 0 && $generalizedTrimmed !== '') {
@@ -99,8 +109,8 @@ final class RenameCounterpartyPopover extends Component
                 // error bag would strand the user on a form already saved.
             } catch (InvalidArgumentException) {
                 // A duplicate rule, or a stale/tampered categoryHint failing
-                // assertCategoryVisible(). Either way the alias itself already
-                // persisted, so the popover closes calmly.
+                // NormalisesRuleInput::assertReferentVisible(). Either way the
+                // alias itself already persisted, so the popover closes calmly.
             }
         }
 

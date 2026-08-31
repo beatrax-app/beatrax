@@ -818,9 +818,10 @@ it('never renders a stored sensitive value on /uncategorized', function (): void
     $response = $this->get('/uncategorized');
     $response->assertOk();
 
+    // The merchant sentinel carries a split leg that sums to it, so its legs
+    // categorize it in full and it is correctly no longer outstanding work.
+    // The mystery row has no legs and is what this page still has to decrypt.
     rcgExpectReadable('/uncategorized', $response->getContent(), $this->rcgCensus, [
-        RCG_MERCHANT,
-        RCG_DESCRIPTION,
         RCG_MYSTERY_DESCRIPTION,
     ]);
 });
@@ -1026,11 +1027,10 @@ it('never prints the crypto layer\'s vocabulary on the import preview', function
             rowIndex: 1,
             status: PreviewRowStatus::Error,
             accountId: null,
-            bookedAt: '14-08-2026',
+            postedAt: '14-08-2026',
             counterpartyName: RCG_MERCHANT,
             counterpartyIban: RCG_CP_IBAN,
             description: RCG_DESCRIPTION,
-            categoryName: null,
             amountMinor: -1850,
             currency: 'EUR',
             error: $message,

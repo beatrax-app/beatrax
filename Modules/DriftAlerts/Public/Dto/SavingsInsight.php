@@ -19,6 +19,7 @@ final class SavingsInsight extends Data
         public readonly int $monthlyMinor,
         public readonly string $currency,
         public readonly string $message,
+        public readonly string $messageKey,
         public readonly string $actionLabel,
         public readonly string $actionUrl,
         public readonly ?string $counterpartySlug = null,

@@ -12,18 +12,21 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Auth\Public\Actions\LogoutAction;
+use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final class EncryptedBackupRestore extends Component
 {
     use WithFileUploads;
 
-    public const CONFIRM_PHRASE = 'RESTORE';
+    public const string CONFIRM_PHRASE = 'RESTORE';
 
-    public const SNAPSHOT_FLASH_KEY = 'backup.snapshot_path';
+    public const string SNAPSHOT_FLASH_KEY = 'backup.snapshot_path';
 
     public ?TemporaryUploadedFile $backup = null;
 
@@ -44,7 +47,7 @@ final class EncryptedBackupRestore extends Component
         $this->error = Lang::get('core::backup.errors.upload_failed');
     }
 
-    public function restore(RestoreEncryptedBackup $restore, LogoutAction $logout, Session $session): void
+    public function restore(RestoreEncryptedBackup $restore, LogoutAction $logout, Session $session, LoggerInterface $logger): void
     {
         $this->error = '';
         $this->snapshotPath = '';
@@ -57,7 +60,8 @@ final class EncryptedBackupRestore extends Component
         try {
             $this->snapshotPath = $restore($path, $this->passphrase);
         } catch (RuntimeException $e) {
-            $this->error = $e->getMessage();
+            $logger->warning('EncryptedBackupRestore: restore refused.', SafeExceptionContext::describe($e));
+            $this->error = RestoreRefusal::forThrowable($e)->sentence();
 
             return;
         }

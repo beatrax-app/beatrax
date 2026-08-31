@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Salvadanai · Beatrax',
     'heading' => 'Salvadanai',
-    'subtitle' => 'Sotto-saldi virtuali che sommati danno sempre il saldo reale del tuo conto.',
+    'subtitle' => 'Sotto-saldi virtuali ricavati dal saldo reale del conto.',
     'add_pot' => 'Aggiungi salvadanaio',
 
     'pot_fallback' => 'salvadanaio',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Mostra cronologia ↓',
         'hide' => 'Nascondi cronologia ↑',
+        'truncated' => 'Movimenti recenti: :shown su :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Prelievo',
         'moved_from' => 'Spostato da :name',
         'moved_to' => 'Spostato in :name',
+        'unreadable' => 'Registrato da una versione più recente di Beatrax',
+        'released_on_archive' => 'Liberato con l\'archiviazione',
     ],
 
     'archived' => [
-        'toggle' => 'Salvadanai archiviati (:count)',
+        'toggle' => 'Salvadanaio archiviato (:count)|Salvadanai archiviati (:count)',
         'badge' => 'Archiviato',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Inserisci un nome per questo salvadanaio.',
         'select_account' => 'Seleziona un conto per questo salvadanaio.',
-        'amount_exceeds_unallocated' => "L'importo supera il saldo non assegnato.",
         'amount_exceeds_unallocated_available' => "L'importo supera il saldo non assegnato (:amount disponibile).",
         'amount_exceeds_pot_balance' => "L'importo supera il saldo di :name (:amount disponibile).",
+        'generic' => 'Impossibile salvare il salvadanaio. Controlla i campi e riprova.',
+        'amount_invalid' => 'Inserisci un importo maggiore di zero.',
+        'goal_already_linked' => 'Questo obiettivo ha già un salvadanaio collegato attivo. Archivialo prima.',
+        'account_cannot_hold_pots' => 'Un salvadanaio richiede un conto che contiene denaro. Scegli un altro conto.',
+        'select_target_pot' => 'Seleziona un salvadanaio in cui spostare.',
+        'move_target_missing' => 'Quel salvadanaio non è più disponibile. Scegline un altro.',
+        'move_same_pot' => 'Un salvadanaio non può spostare denaro su se stesso. Scegli un altro salvadanaio.',
+        'move_cross_account' => 'I salvadanai si scambiano denaro solo all\'interno di uno stesso conto, e :name è in :account.',
+        'pot_missing' => 'Quel salvadanaio non è più disponibile.',
+        'operation_failed' => 'Non è andata a buon fine. Nessun denaro è stato spostato: riprova.',
     ],
 
     'toast' => [

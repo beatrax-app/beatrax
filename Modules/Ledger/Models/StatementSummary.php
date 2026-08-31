@@ -26,6 +26,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property int|null $closing_balance_minor
  * @property string|null $closing_balance_currency
  * @property CarbonImmutable|null $closing_balance_date
+ * @property CarbonImmutable|null $payment_due_date
  * @property int $entry_count
  * @property array<string, mixed>|null $extras
  */
@@ -48,6 +49,7 @@ final class StatementSummary extends Model
         'closing_balance_minor',
         'closing_balance_currency',
         'closing_balance_date',
+        'payment_due_date',
         'entry_count',
         'extras',
     ];
@@ -60,6 +62,7 @@ final class StatementSummary extends Model
             'period_end' => 'immutable_datetime',
             'opening_balance_date' => 'immutable_datetime',
             'closing_balance_date' => 'immutable_datetime',
+            'payment_due_date' => 'immutable_datetime',
             'opening_balance_minor' => 'integer',
             'closing_balance_minor' => 'integer',
             'entry_count' => 'integer',

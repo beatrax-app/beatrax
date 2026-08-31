@@ -359,3 +359,70 @@ it('PendingFileIntent discards a stored intent whose extension is not allow-list
     expect($intent->pending())->toBeNull();
     expect(session()->has(PendingFileIntent::SESSION_KEY))->toBeFalse();
 })->group('phase-15');
+
+// The chain ended one step short: the path was validated and remembered, and
+// then the reader was shown whatever they had asked for. Nothing in the product
+// ever navigated to desktop.file-staging — only the tests did.
+
+it('takes the reader to the staged file instead of the page they asked for', function (): void {
+    $user = User::query()->create([
+        'username' => 'staging-navigation-fixture',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    $this->actingAs($user);
+
+    $path = $this->fixturesDir.'/double-clicked.csv';
+    file_put_contents($path, "date,amount\n2026-01-01,12.34");
+
+    /** @var FileOpenIntake $intake */
+    $intake = app(FileOpenIntake::class);
+    $intake->receive($path);
+
+    $this->get(route('dashboard'))->assertRedirect(route('desktop.file-staging'));
+});
+
+it('lets the reader carry on once the staged file has been shown', function (): void {
+    $user = User::query()->create([
+        'username' => 'staging-once-fixture',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    $this->actingAs($user);
+
+    $path = $this->fixturesDir.'/shown-once.csv';
+    file_put_contents($path, "date,amount\n2026-01-01,12.34");
+
+    /** @var FileOpenIntake $intake */
+    $intake = app(FileOpenIntake::class);
+    $intake->receive($path);
+
+    $this->get(route('desktop.file-staging'))->assertOk();
+
+    // Viewing the staging page consumes the intent, so the reader is not sent
+    // back to it on every navigation for the rest of the session.
+    expect($this->get(route('dashboard'))->headers->get('Location'))
+        ->not->toBe(route('desktop.file-staging'));
+});
+
+it('never sends a signed-out reader to a staging screen the auth gate bounces straight back', function (): void {
+    // An install with an owner, so the first-launch gate is not what answers.
+    User::query()->create([
+        'username' => 'signed-out-fixture',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $path = $this->fixturesDir.'/signed-out.csv';
+    file_put_contents($path, "date,amount\n2026-01-01,12.34");
+
+    app(PendingFileIntent::class)->remember((string) realpath($path), 'csv');
+
+    // The staging route is behind `auth`, so a redirect here would bounce back
+    // to login and be redirected again, forever.
+    expect($this->get(route('login'))->headers->get('Location'))
+        ->not->toBe(route('desktop.file-staging'));
+});

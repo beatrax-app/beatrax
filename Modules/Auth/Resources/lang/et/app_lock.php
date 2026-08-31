@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Seade keeldus võtit salvestamast. Biomeetriline avamine pole saadaval.',
     'heading' => 'Rakenduse lukk',
 
-    'moved_help' => 'Sinu PIN-kood, automaatse lukustuse aeg ja biomeetriline avamine asuvad selle seadme sünkroonimisseadetes.',
-    'moved_cta' => 'Ava sünkroonimine ja seade',
-
     'toggle_label' => 'Lukusta rakendus PIN-koodiga',
     'toggle_description' => 'Asendab igapäevase sisselogimise PIN-koodiga. Sessioonid püsivad aktiivsena 30 päeva.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Jäta PIN-kood alles',
 
     'error_pin_too_short' => 'PIN-kood peab olema vähemalt 6 numbrit.',
-    'error_pin_digits' => 'PIN-kood peab olema 6–10 numbrit — ainult numbrid.',
+    'error_pin_digits' => 'PIN-kood peab olema :min–:max numbrit — ainult numbrid.',
     'error_pin_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
     'error_pin_required' => 'Sisesta oma PIN-kood.',
     'error_pin_incorrect' => 'Vale PIN-kood.',

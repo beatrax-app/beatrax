@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
+use Modules\DevMode\Internal\Process\CommandArgValidator;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
@@ -26,6 +27,7 @@ final readonly class ArtisanSpawnController
         private DevCommandRegistry $registry,
         private RunRegistry $runs,
         private ValidatorFactory $validator,
+        private CommandArgValidator $argValidator,
     ) {}
 
     public function __invoke(Request $request, CurrentUser $user): JsonResponse
@@ -61,19 +63,13 @@ final readonly class ArtisanSpawnController
 
         $spec = $this->registry->find($command);
 
-        // Third guard on the args, alongside the command whitelist and
-        // CommandSpawner's escapeshellarg — and the only one before the shell.
-        if ($spec->argsSchema !== []) {
-            $argRules = [];
-            foreach ($spec->argsSchema as $argSpec) {
-                $argRules['args.'.$argSpec->name] = $argSpec->rules;
-            }
-            $this->validator->make($payload, $argRules)->validate();
-        }
-
         $argsRaw = $validated['args'] ?? null;
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
+
+        // Third guard on the args, alongside the command whitelist and
+        // CommandSpawner's escapeshellarg — and the only one before the shell.
+        $this->argValidator->assertValid($spec, $args);
 
         try {
             $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Safe);

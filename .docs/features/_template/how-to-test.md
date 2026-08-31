@@ -87,18 +87,10 @@ and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
 <!--
-  Fill in per-module. Each contract names the test that proves it, so a
-  reader can go from "the module guarantees X" to the assertion without
-  searching. The requirement behind the contract is the spec's; this
-  section maps it onto the code.
+  Fill in per-module. A reader who is about to change something here
+  should be able to confirm, by reading this file plus the linked tests,
+  what the module is supposed to do and what it must not do.
 -->
-
-The behavioural contract for the module. A reader who is about to
-change something here should be able to confirm, by reading this file
-plus the linked tests, what the module is supposed to do and what it
-must not do.
-
-## Behavioral contracts
 
 Bulleted list of the guarantees the module makes. Each entry is one
 sentence, present-tense, and cross-references the Pest test that
@@ -126,7 +118,7 @@ entry names the case and the observable behaviour:
 - **Partial failure** — what survives, what rolls back.
 
 The edge-case catalogue is the second-most-valuable section of this
-file (after Behavioral contracts). A new contributor reading this
+file (after the behavioural contracts). A new contributor reading this
 section should be able to anticipate every failure mode the module
 handles cleanly and recognise any case the module does not yet handle.
 

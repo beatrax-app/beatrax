@@ -26,13 +26,22 @@ and `$_ENV` as well, and `isMobileRuntime()` keeps the structural fallback (the
 sibling `persisted_data` directory, which only NativePHP mobile provisions) for
 the config-load window where even those are not yet populated.
 
-Gates that branch on *which* shell — currently only
-`Internal\Http\Middleware\ClientSideRedirect` — ask
-`UserDataPathService::platform()` instead, which returns a
-`Modules\Core\Public\Enums\MobilePlatform` case and answers the decision
-through `needsClientSideRedirect()` rather than comparing to `'android'`. A
-platform NativePHP names but that enum does not model reads as `null` there,
-so a rename of the value cannot silently flip a shell gate the other way.
+Gates that branch on *which* shell — `Internal\Http\Middleware\ClientSideRedirect`
+and `Sync`'s `MulticastMdnsQuery` — ask `UserDataPathService::platform()`
+instead, which returns a `Modules\Core\Public\Enums\MobilePlatform` case and
+answers the decision through `needsClientSideRedirect()` rather than comparing
+to `'android'`. A platform NativePHP names but that enum does not model reads as
+`null` there, so a rename of the value cannot silently flip a shell gate the
+other way.
+
+The one gate with more than one caller asks through an object rather than the
+enum: every screen that produces a file — `Core`'s `EncryptedBackupDownload`,
+`Auth`'s `RecoveryCodesDisplay` and `ManageUserPage`, `Tax`'s `TaxPage`,
+`Reports`' `ReportBuilder`, `Import`'s `AliasesSettingsPage` and this module's
+`MobileImportBootstrap` — calls
+`Public\Services\ShareSheetExport::replacesWebViewDownload()`, which is the
+only place `savesWebViewDownloads()` is read. See
+[a download the shell drops](a-download-the-shell-drops.md).
 
 **The scan preview is in-page, not a separate activity.** The scanner
 plugin's own surface is a full-screen `ScannerActivity`, which over the
@@ -59,9 +68,13 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs five patches, applied from the mobile root's
-`post-update-cmd`.** `native:install` regenerates the native trees, so none is
-hand-edited; all are idempotent and fail loudly if their anchor moves.
+**The generated shell needs twenty-one patches, applied from the mobile root's
+`post-update-cmd`.** The authoritative list is
+`Modules\Mobile\Internal\Boot\NativeBuildPatches::SCRIPTS`, which
+`scripts/nativephp_patch_all.php` mirrors; `native:install` regenerates the
+native trees, so none is hand-edited; all are idempotent and fail loudly if
+their anchor moves. Seven of them carry reasoning a reader cannot reconstruct
+from the script:
 
 - `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
   override so the in-page scanner can obtain a camera. Video capture only.
@@ -79,6 +92,16 @@ hand-edited; all are idempotent and fail loudly if their anchor moves.
   a valid session row on-device. The app-lock, not cookie lifetime, is the
   security boundary here. `clearAllCookies()` itself is left in place for
   callers that genuinely want a clean jar.
+- `nativephp_android_single_content_type.php` makes the generated WebView
+  client read `Content-Type` case-insensitively and supply it through the
+  `WebResourceResponse` constructor alone. Its header map was case-sensitive
+  while the bridge writes lowercase names, so the `mimeType` argument fell back
+  to a literal `text/html` on every route; and Chromium appends the header map
+  on top of the constructor's own `Content-Type`, so naming the field in both
+  places emitted it twice. Every response in the Android shell carried two
+  values against the iPhone's one, with `nosniff` telling the reader to believe
+  the wrong first one:
+  [android-content-type-is-emitted-once.md](android-content-type-is-emitted-once.md).
 - `nativephp_ios_request_body_stream.php` drains `request.httpBodyStream` when
   `request.httpBody` is nil. WebKit populates the latter only for simple string
   bodies; a FormData or Blob body — every file upload — arrives as a stream, and
@@ -92,29 +115,52 @@ hand-edited; all are idempotent and fail loudly if their anchor moves.
   and the WebView *navigated onto the blob*: the app replaced by its own raw
   bytes, no chrome, no back gesture, nothing saved, and only a force-quit out.
   On the recovery-codes screen that destroyed one-time data.
+- `nativephp_ios_theme_native_shell.php` hands the iOS shell the app's own
+  theme, which it had no way to learn: there was no `UIStatusBarStyle` in
+  `Info.plist` and no `preferredColorScheme` anywhere in the shell, so the
+  status-bar clock and the home indicator took their polarity from the PHONE's
+  theme and sat on the app's own background at roughly 1.05:1 whenever the two
+  disagreed. The same file owns the other half — a WKWebView paints its own
+  opaque white from the moment a document is torn down until the next one
+  paints, so every navigation on a dark shell flashed white. The page reports
+  its resolved theme on a `WKScriptMessageHandler` and the shell uses that one
+  answer for both. Android splits the same work between
+  `nativephp_theme_native_shell.php` and
+  `nativephp_android_system_bar_appearance.php`; on iOS they are one file and
+  one signal, and splitting them would let a tree exist where one patch applied
+  and the other did not — a build failure rather than a cosmetic bug.
+
+  The reported payload carries the reader's CHOICE as well as the resolved
+  theme, and that is the load-bearing part. `preferredColorScheme` reaches the
+  status bar by overriding the WINDOW's interface style, and a WKWebView inside
+  an overridden window reports the override to `prefers-color-scheme` — where a
+  reader on `system` resolves their theme. So the shell overrides nothing while
+  they follow the phone, and the flag is what tells it.
 
 **When each patch is present, and when it is not.** Worth stating plainly,
 because the failure is silent — an unpatched shell builds, installs and runs,
 and only the patched behaviour is missing:
 
 - `composer update` regenerates the trees via `native:install` and then
-  re-applies all five, because they follow it in `post-update-cmd`. Net
-  effect: patched.
+  re-applies every one of them, because they follow it in `post-update-cmd`.
+  Net effect: patched.
 - `php artisan native:run android|ios` (and `native:build`) does **not**
   regenerate the tree, so patches already in it survive the build. A patch
   script added after the last `composer update` is therefore **not** in the
-  build — writing the script is not applying it. That cost a device pass: the
-  file-chooser fix was written, committed, built and installed, and the picker
-  was still inert because nothing had run the script.
-- `php artisan native:install` on its own regenerates the trees and drops all
-  five.
+  build — writing the script is not applying it: the file-chooser fix was
+  written, committed, built and installed, and the picker was still inert
+  because nothing had run the script.
+- `php artisan native:install` on its own regenerates the trees and drops every
+  one of them.
 
-`composer native:patch` runs all five on demand, and is the recovery for the
+`composer native:patch` runs them all on demand, and is the recovery for the
 last case — and the step to run the first time a new patch script lands.
 
-The two iOS patches are also listed in `NativeBuildPatches`, which re-applies
-them immediately before `native:run` / `native:build`, so a regenerated tree
-cannot ship without them.
+`NativeBuildPatches` re-applies the whole set immediately before `native:run` /
+`native:build`, so a regenerated tree cannot ship without them. Two are listed
+in its `REQUIRED_SCRIPTS` as well — the privacy manifest and the export
+compliance key — because a cosmetic patch that fails is visible on the device
+while those two are invisible until App Store review rejects the build.
 
 ### Signed URLs cannot be absolute on iOS
 
@@ -173,6 +219,40 @@ truncated statement would import as a wrong number rather than fail. Base64
 being ASCII is also what makes the format restriction go away rather than move:
 a PDF crosses as safely as a CSV, which the string-typed bridge body could
 never have done.
+
+### The decode is streamed, and the advertised maximum is enforced
+
+Encoding costs memory on both ends, and the server end had none of it bounded.
+`base64_decode()` on the whole payload put a third full copy of the file beside
+the raw request body and Laravel's parsed copy of the base64 string — about
+four times the attached file live at once. Against the phone's 128 MB (the
+interpreter's compiled default: NativePHP's Android shell writes a `php.ini`
+with no `memory_limit` in it, and Beatrax patches in only the two upload
+directives plus `zend.exception_ignore_args`), and with a routed `web` request
+costing ~10 MB over a bare
+harness, **20 MB — the size the product advertises in three places — was a
+fatal**, not a 422. Memory exhaustion is `E_ERROR`: no response, no log entry,
+no retry, nothing the reader could act on.
+
+The decode now runs a slice at a time straight onto the staging file, so the
+peak no longer tracks the payload: 20 MB went from 118.9 MB peak (and a fatal
+once the routed baseline is counted) to 98.3 MB. The alphabet and quantum
+alignment are validated in one allocation-free pass first, which is what lets
+each slice decode without re-validating and keeps "refuses rather than repairs"
+intact — the SHA-256 is still computed over what was actually written.
+
+Two bounds sit in front of it. The **declared** size is checked against
+`EncodedUploadTransport::MAX_BYTES` before a byte is decoded, because a limit
+enforced by running out of memory is not a limit. And the *number* of files is
+capped: `post_max_size` bounded the bytes and nothing bounded the count, so a
+body of ten thousand one-byte entries was ten thousand staged temp files.
+
+`MAX_BYTES` is the fourth place the same number is written — the other three
+are `resources/js/mobile-upload.js`, which refuses the pick, and the two
+shells' `php.ini` patches, which decide whether the request arrives at all.
+None of the four can see the others, so `EncodedUploadTransportTest` reads all
+four and fails on a drift: a body the client sends and the transport refuses is
+a wasted upload, and one the shell drops never arrives to be refused.
 
 Both halves are inert off that shell: the shim checks `location.protocol` and
 does nothing on http/https, and the middleware acts only on its own marker
@@ -244,6 +324,17 @@ recognisable as stale; and a session filled *before* a request — which is how
 `withSession()` signs a caller in — is started, so emptying unconditionally
 would blank every seeded session in this root's own suite.
 
+That protection covers the *first* request only. `save()` clears the started
+flag at the end of it, so the **second** request of a mobile-root feature test
+meets an emptied store, and everything the harness seeded is gone unless the
+test carries the session forward the way a WebView does: read
+`session()->getId()` after the first request, pass it as
+`config('session.cookie')` through `withCookie()`, and add `withCredentials()`
+for `getJson()` — Laravel omits cookies from JSON requests without it. The same
+test at the repo root passes without any of this, which is what makes a
+mobile-root-only failure here look like a defect in the code under test.
+`TheRecoveryCodesDoNotOutliveTheScreenThatShowsThemTest` is the worked example.
+
 Nothing here rebuilds the session driver. `forgetGuards()` does, and rebuilding
 registers a rebound callback the container never prunes, which on a process that
 never restarts grows without bound.
@@ -264,11 +355,10 @@ absence shows up only on-device.
 
 ### `--with-icu` ships ICU code, not ICU locale data
 
-`--with-icu` is not the whole story, and the gap cost a device debugging session
-(2026-08-17). The flag selects the `-icu` variant of the prebuilt PHP binaries and
-`nativephp.lock` records `"icu": true`, so `ext-intl` loads and `INTL_ICU_VERSION`
-answers — but the data package inside those binaries is filtered to **English
-only**. Read the shipped archive to see it:
+`--with-icu` is not the whole story. The flag selects the `-icu` variant of the
+prebuilt PHP binaries and `nativephp.lock` records `"icu": true`, so `ext-intl`
+loads and `INTL_ICU_VERSION` answers — but the data package inside those binaries
+is filtered to **English only**. Read the shipped archive to see it:
 
 ```
 strings mobile-app/nativephp/android/app/src/main/staticLibs/arm64-v8a/libicudata.a \
@@ -393,6 +483,17 @@ serialized wire-snapshot payload to the browser on every later render.
 While the form is still being filled those properties necessarily hold
 what the reader typed, exactly as every other password screen in the app
 does — a rejected submit deliberately leaves them alone (below).
+The screen's own PIN gate is the provisioner's floor — six to ten digits,
+nothing else — because it runs *before* `SignupAction` commits and the floor
+runs after. A gate that admitted what the floor refuses made the account and
+then could not finish the device: eleven digits (the input has no `maxlength`)
+landed on `provisioning_failed` with the lock disabled, no self device row,
+and a stash the retry replayed to the same refusal forever. Provisioning tells
+a refused credential apart from a failed step — `DeviceProvisioningOutcome` —
+so the screen names the rule instead of offering a retry that is arithmetic on
+a fixed answer, and a fresh mount with the stash still present returns to the
+failure rather than walking past it into the codes.
+
 The retry path never re-runs `SignupAction` (the account already exists)
 and reads only the session stash, never the emptied public properties —
 reading those was a real bug that either permanently stranded the device
@@ -419,6 +520,14 @@ Laravel envelope, so the fault was a false promise, never plaintext at
 rest. `RecoveryCodesExportController` reads the same session key, which
 is why the display marks rather than consumes: a share-sheet export
 fired from the screen must still find the codes.
+
+That marker answers "were they shown"; it never answered "are they
+still owed". Nothing on the way out cleared the plaintext, so a reader
+who followed the link — or simply went elsewhere — left it in the
+session for the rest of that session's life. The codes now end at the
+first page load that is not the ceremony saying so, which is a rule
+neither the link nor the reader can step around:
+[the pending recovery codes live one request at a time](../auth/pending-recovery-codes-lifetime.md).
 
 **Form validation.** Every broken rule is reported at once and scoped to
 its own field, so the message renders under the box it describes and that
@@ -674,9 +783,12 @@ have been re-projected — finishing the sync leg alone is necessary but
 not sufficient, since a relay-only or not-yet-delivered import would
 otherwise report complete while landing on a dashboard of
 decrypt-failed rows. The first `pull()` step to observe a non-empty
-keyring re-projects the entire persisted op-log exactly once (guarded by
-a `reprojected_at` stamp) so any entry that arrived and was quarantined
-before the keyring was populated now decrypts and projects.
+keyring re-projects exactly once (guarded by a `reprojected_at` stamp) so
+any entry that arrived and was quarantined before the keyring was
+populated now decrypts and projects. It replays what the quarantine
+names, not the whole persisted op-log: the latter was measured fatal at
+this ceiling, and the attempt is counted on disk before it runs so a pass
+killed by memory exhaustion is visible on the next tick.
 
 ## Sync transport: LAN-first, relay fallback
 
@@ -711,28 +823,35 @@ a maximum frame count, and routes each through the `GdkEpochDeliveryGateway`
 Public seam — this is the only new wire-adjacent behavior the mobile
 peer adds; the catch-up/op-exchange protocol itself is unchanged.
 
-`MobilePullCommand` (`sync:mobile-pull`) is the OS-scheduled background
+`MobilePullCommand` (`sync:mobile-pull`) was the OS-scheduled background
 cadence leg, invoked by Android WorkManager or iOS BGTaskScheduler (a
 best-effort hint, not a guaranteed cadence) via the premium
-`nativephp/mobile-background-tasks` plugin. Each firing is an untrusted,
-key-less cold start until an unlocked session has handed the trigger
-service a usable device identity — an OS-scheduled tick has no
-cookie/session to attach to an in-app unlock, so `AppLockKeyService::
-release()` returns null on essentially every real firing. That is not a
-defect: the command skips cleanly, touches nothing, and never caches a
-key anywhere for background convenience. It fans out over every `users`
-row (rather than a single hard-coded user) since the schema stays
-multi-user-ready even in a single-user v1, and each user's burst is
-isolated so one user's failure never stops the rest.
+`nativephp/mobile-background-tasks` plugin. **It is no longer scheduled, and
+never was able to do its work.** Each firing is a key-less cold start: an
+OS-scheduled tick has no session to attach to an in-app unlock, so
+`AppLockKeyService::release()` returns null on every real firing, the sealed
+device identity never opens, and the burst skips. Enabling sync requires an app
+lock that can never be turned off again, so this holds on every device that can
+sync at all — six firings and no syncs, measured on a paired, fully synced
+SM-S928B. `Modules\Core\Public\Scheduling\MobileBackgroundSchedule::impossibleOnDevice()`
+carries the declaration and the reason; the whole chain is in
+[background-sync-cannot-hold-the-key.md](background-sync-cannot-hold-the-key.md).
+The command itself still fans out over every `users` row (rather than a single
+hard-coded user) since the schema stays multi-user-ready even in a single-user
+v1, and each user's burst is isolated so one user's failure never stops the
+rest — one `try` around the fan-out body, because an OS-scheduled process has
+nobody to report a fatal to and `DeviceIdentityLoader::load()` throws on an
+unreadable key-file.
 
-That schedule is declared in `Modules/Mobile/Routes/console.php`, and *when*
-the file is loaded decides whether iOS ever runs it. The plugin hands
+The mobile-only schedule that remains — a bounded `queue:work` drain — is
+declared in `Modules/Mobile/Routes/console.php`, and *when* the file is loaded
+decides whether iOS ever runs it. The plugin hands
 BGTaskScheduler the whole task list once, from
 `BackgroundTasksServiceProvider::boot()`, which boots roughly thirty-seven
 providers ahead of `MobileServiceProvider`. Loaded from `MobileServiceProvider::
 boot()` the entry arrived after the manifest had already been registered, and
 the phone logged twenty schedule events — the app-root `routes/console.php`
-exactly — with `sync:mobile-pull` absent and background sync running never.
+exactly — with every mobile-root entry absent and neither of them running ever.
 The build-time half of the same plugin was never fooled:
 `native:background-tasks:pre-compile` runs in an ordinary console process,
 long after every provider has booted, so `BGTaskSchedulerPermittedIdentifiers`
@@ -748,16 +867,268 @@ part of the route cache.
 
 Two filters in `SchedulerManifestGenerator` drop schedules without failing
 anything, and `Modules/Mobile/tests/Unit/IosBackgroundTaskManifestTest.php`
-pins what they drop. A `Schedule::call()` closure has no name for
-BGTaskScheduler to dispatch, so skipping those is the only option there is. A
-cron the generator has no interval for is a different matter: `db:backup
---force` at `dailyAt('03:00')` is a schedule somebody wrote which iOS then
-never runs, and BGTaskScheduler could not honour a wall-clock hour anyway. The
-pinned list is what makes the next one visible before a device does.
+pins what they drop. That pin is empty now, and the section below is why.
 
 LAN peer discovery is a separate story on iOS and currently does not work at
 all: see
 [ios-lan-discovery-entitlement.md](ios-lan-discovery-entitlement.md).
+
+## The phone runs an artisan name on an interval, and nothing else
+
+`BackgroundTasksServiceProvider::boot()` hands the platform a manifest built by
+`SchedulerManifestGenerator`, and two filters decide what gets into it. An event
+with no `$event->command` — every `Schedule::call()` closure — is dropped,
+because Android WorkManager re-launches the app and runs an artisan name while
+iOS BGTaskScheduler dispatches a registered identifier: neither can reach a
+closure defined in a routes file. An event whose cron the generator has no
+repeat period for is dropped too. Its map holds twelve expressions, every one of
+them an interval, and no `dailyAt()` produces one.
+
+Measured on a Samsung SM-S928B on 2026-08-29, from the app's own log under
+`app_storage/laravel/storage/logs/laravel.log`:
+
+```
+BackgroundTasks: found 21 schedule event(s)
+  skipped — could not extract command name    : 19
+  skipped db:backup --force
+        — unsupported cron expression 0 3 * * *:  1
+  carried                                     :  1   (sync:mobile-pull)
+```
+
+Automatic backups did not exist on the phone. FX rates never refreshed, so every
+converted figure went stale with nothing to say so. No reminder and no digest
+ever arrived. Nothing failed and nothing surfaced it — the lines above are
+`INFO`, in a log no user reads.
+
+So a task the phone must run is a `Schedule::command()` in `routes/console.php`
+whose body lives in a command class inside the module that owns the work: one
+implementation, scheduled once, running the same way on both platforms. Its
+expression has to be one of
+`Modules\Core\Public\Scheduling\MobileBackgroundSchedule::RUNNER_INTERVALS`.
+
+That class is also the declaration of intent. `requiredOnDevice()` names every
+task the phone must run, `desktopOnly()` names the ones it deliberately does not
+and why, and `mobileRootOnly()` names the two that exist only where
+`nativephp/mobile-background-tasks` is installed. The `Background schedule`
+probe in `beatrax:doctor` fails on anything required that stops reaching the
+manifest, and
+`Modules/Mobile/tests/Unit/TheBackgroundManifestCarriesEveryTaskThePhoneMustRunTest.php`
+fails in CI for the same reason — including for a task that is scheduled but
+declared in neither list, which is the shape the original twenty had.
+
+The inbox-fetch pipeline is the one thing still written as closures, and that is
+a decision rather than an omission: it fetches whole `.eml` bodies over IMAP
+against credentials and an OAuth client provisioned through a desktop browser
+flow, and its results reach the phone over sync. A phone-only household with a
+connected inbox therefore gets no email scanning at all; that gap is stated in
+`desktopOnly()` rather than left to be rediscovered on a device.
+
+### A stated decision and a live control disagreed
+
+`receipts.scan-drop-folder` was in that list too, on the reasoning that
+`storage/app/inbox-drop/{userId}/` is a desktop filesystem affordance. The
+switch that turns it on shipped to the phone anyway — enabled, not disabled —
+under copy promising a scan every five minutes, and the entry was a
+`Schedule::call()` closure that no device manifest could carry. It is a
+`Schedule::command('receipts:scan-drop-folder')` in `requiredOnDevice()` now,
+implemented by `Modules\Receipts\Internal\Console\ScanInboxDropFolderCommand`
+and registered through `RegistersScheduledCommands` like every other one.
+
+`desktopOnly()` answers "does the phone run this?". It cannot answer "does the
+phone still offer this?", and nothing else asked. A task belongs in that list
+only while no screen on a device offers it; the moment one does, the honest
+choices are to run it or to withdraw the control, and leaving both in place is
+the shape that shipped. The copy branch is the other half, written up as
+[a cadence promised on a screen](../../conventions/invariants-from-shipped-failures.md#a-cadence-promised-on-a-screen-whose-device-never-registered-the-task)
+whose device never registered the task.
+
+The five-minute expression stays because that is the desktop's real cadence.
+`SchedulerManifestGenerator` clamps it to its fifteen-minute floor on a device,
+and past that BGTaskScheduler decides for itself when a registered identifier
+gets a turn, so `AutoImportSettingsSection` reads
+`Modules\Core\Public\Services\UserDataPathService::platform()` and the blade
+picks a phone-shaped sentence that promises no interval at all.
+
+The reciprocal question, asked of the rest of the list, found the same shape in
+the inbox pipeline. All five of its entries — `desktop.email-scan.timer`,
+`email-scan.incremental`, `email-scan.discovery`,
+`email-scan.detect-ics-statement-ready` and
+`receipts.process-fetched-inbox-messages` — are `Schedule::call()` closures with
+sound reasons in `desktopOnly()`, and `/inboxes` ships to the phone sidebar
+ungated, under copy reading "Connect Gmail and Microsoft 365 inboxes so Beatrax
+can scan them for receipts". The wizard's connect-email step and the welcome
+step's third row promised the same automatic capture.
+
+Withdrawing the control is not the answer here the way running the task was for
+the drop folder: no inbox table is in the sync merge registry, so a mailbox
+connected on the desktop never reaches the phone's list, and the reader's real
+option is the desktop app — which the phone can now name. `InboxesPage`,
+`WelcomeStep` and `ConnectEmailStep` each read
+`UserDataPathService::platform()` once in `mount()`, and `/inboxes` carries the
+notice above its OAuth banners rather than inside a card's help text, because a
+reader who learns it after tapping Connect has already been sent somewhere
+pointless.
+
+### Four more sentences branch, and one screen stopped denying the next
+
+The same sweep, run over every `Modules/*/Resources/lang/en/*.php` string that
+promises automatic or scheduled behaviour, found four more claims that hold on a
+desktop and not on a device. Each reads `UserDataPathService::platform()` once in
+`mount()`, the way `AutoImportSettingsSection` does, and the blade picks between
+a desktop line and a `_phone` twin:
+
+| Surface | The desktop keeps | The phone is told |
+|---|---|---|
+| `SettingsPage` · `core::settings.about_updates.body` | it updates itself, and a banner announces the next version | the App Store or Google Play installs new versions — all three `AutoUpdater` listeners open with `if (UserDataPathService::isMobileRuntime()) { return; }`, and `nativephp/desktop` is not a dependency of the mobile composer root |
+| `SharedListSettingsPanel` · `community::settings.update_on_updates.help` | "every time Beatrax updates itself" | "every time a new version is installed from the App Store or Google Play" |
+| `DevicesAndSyncSettingsSection` · `sync::devices.relay_endpoint_help` | offline devices sync via the relay | the relay holds changes until the reader syncs from that screen, because `impossibleOnDevice()` names `mobile.sync-pull` |
+| `NotificationsSettingsSection` · `notifications::settings.background_note` | a deferred pass is picked up as the reader carries on using the open app | it arrives the next time the app is opened |
+
+That last one was over-cautious rather than false: it was gated on encryption
+alone, and `RunDeferredNotificationPasses` is `web` middleware on **both** roots,
+so a desktop reader is already inside the app that replays the pass and telling
+them to open it names a step they are past.
+
+The worst of the set needed no branch at all, because the screen it sits on
+exists only on a phone. `mobile::sync_complete.automatic_body` — the last screen
+of setup — read "There is no sync button to press", and the first screen after
+it, Data & devices, is built around one. `SyncScreen::syncNow()` is the only
+caller of the burst outside the initial pull, so that button is not a shortcut
+past an automatic mechanism; it **is** the mechanism. The three lines about
+syncing on that screen now carry a `:action` placeholder, filled in
+`SyncCompleteScreen::mount()` from `mobile::sync.sync_now` — the same key that
+labels the button on the next screen. The two screens read one string, so they
+can no longer name different things.
+
+`core::alerts.messages.backup_overdue` came out of the same sweep and needed no
+branch either: it told the reader to run `php artisan db:backup`, and neither
+shipped bundle has a terminal to run it in. The daily run it also named is real,
+and stays.
+
+### A wall-clock hour the runner cannot express moves into the command
+
+Five entries named an hour. Four did not need one. `db:backup` ran at 03:00 so
+that an interactive session had stopped writing, but `VACUUM INTO` only reads
+and a WAL reader never blocks a writer; `counterparties.gc` ran an hour after it
+so a pruned set landed in the next snapshot, which still holds when both are
+`->daily()` and the backup is defined first; `open-banking.daily-sync` ran ahead
+of the FX refresh and the notification pass, which it still is. Those four
+became `->daily()`, and the ordering they depended on is now carried by the
+order they are defined in.
+
+The daily notification pass is the exception. Payment reminders, the position
+digest and savings prompts are pushes, and 09:15 is part of what they are: at
+midnight `SuppressionEvaluator`'s quiet hours suppress delivery while the row is
+still written, so the notification would exist and never be sent. The three
+entries became one command, `notifications:daily-triggers`, on a fifteen-minute
+interval, with the clock inside it — `Modules\Core\Public\Scheduling\DailyLocalWindow`
+lets exactly one tick per local day through, at or after 09:15. The desktop
+still fires at 09:15 to the minute, because that time sits on the fifteen-minute
+grid, and a read-only `->when()` filter asking the same window is what keeps it
+from spawning the other ninety-five artisan processes a day. The phone never
+evaluates a schedule filter, so the command re-asks and claims for itself.
+
+That last point generalises. `->timezone()`, `->skip()`, `->when()` and
+`withoutOverlapping()` are all read by `schedule:run`, and the phone never runs
+`schedule:run` — WorkManager invokes the artisan name directly. A condition that
+has to hold on a phone belongs inside the command.
+
+### Scheduled commands register outside `runningInConsole()`
+
+`Modules\Core\Public\Support\RegistersScheduledCommands` exists to make that
+non-optional, and its name is the reason. The Android bridge sets
+`APP_RUNNING_IN_CONSOLE=true` before the cold-path `php_embed_init()`, so a
+WorkManager firing that starts a fresh process boots providers in console mode.
+On the hot path — app already alive, ephemeral runtime borrowing the existing
+TSRM — it sets nothing, and the last value written was `false`. A command
+registered behind `$this->app->runningInConsole()` is then missing from the
+Artisan application the runner calls into, and the task ends in a
+command-not-found the worker retries and nobody reads. Registering costs
+nothing outside the console: `commands()` only adds an `ArtisanStarting`
+listener.
+
+### Queued work needs a worker the phone only runs in the foreground
+
+These commands dispatch jobs rather than doing the work inline, which is what
+keeps the desktop and the phone on one code path. NativePHP's queue worker is a
+thread `MainActivity` starts, so with the app closed those jobs sit in `jobs`
+until it is next opened, and a task that only enqueues is a task that has not
+run. `Modules/Mobile/Routes/console.php` therefore schedules a bounded
+`queue:work --stop-when-empty --max-time=55 --quiet`, behind an `onAnyNetwork`
+macro guard that makes it mobile-only — the macro is registered by a package
+only the mobile composer root requires, so the guard needs to ask the runtime
+nothing. It is safe next to the in-app worker because a reserved job cannot be
+reserved twice. It is the only entry left in that file: the sync burst that
+used to sit beside it is declared impossible on a phone, above.
+
+### Two loaders reach the console routes and only one is idempotent
+
+`routes/console.php` is reached twice on the mobile Composer root, by two
+mechanisms that do not share include state.
+
+`Illuminate\Foundation\Console\Kernel::discoverCommands()` plain-`require`s
+every path `withRouting(commands: …)` registers. `nativephp/mobile-background-tasks`
+adds a second loader in `BackgroundTasksServiceProvider::register()`: a
+`resolving(Schedule::class)` hook that `require_once`s `basePath('routes/console.php')`.
+That hook is not redundant — the phone is served over HTTP through
+`PHPSchemeHandler`, command discovery never runs there, and without it the
+device would build its manifest from an empty schedule. But `require_once`
+fires first, during provider boot, when `Modules/Mobile/Routes/console.php`
+resolves `Schedule` for its own entry; command discovery then runs later in
+`Kernel::bootstrap()` and `require`s the same file again. Its body executed
+twice, and every `Schedule::command()` in it registered twice.
+
+`mobile-app/routes` is a symlink to `../routes`, so this is one file loaded
+twice, not two copies drifting apart. `__FILE__` resolves symlinks, which is why
+it is a usable key.
+
+**This is the divergence to remember: a duplicate background task is free on one
+platform and fatal on the other.** Android WorkManager enqueues by unique name
+and replaces, so twelve doubled tasks registered and ran there with nothing in
+any log. iOS `BGTaskScheduler.register` throws `NSInternalInconsistencyException`
+on the second handler for one identifier; `PHPScheduler.registerHandlers()` does
+not catch it, and it is raised from `initBackgroundTasks()` before the first
+frame. Build 1.3.0 (10300) on an iPhone 12 mini terminated on signal 6 on every
+launch, naming `com.nativephp.task.recurring-detect` — merely the first of the
+twelve it reached. The app was unusable, and the same manifest was healthy on
+Android. A schedule written only against Android gets no feedback at all until
+an iPhone refuses to open.
+
+Three things hold it shut, at three levels:
+
+- `Modules\Core\Public\Scheduling\ScheduleRegistrationGuard::firstLoad(__FILE__)`
+  at the top of `routes/console.php` returns early on a second pass. It is keyed
+  on the container instance rather than on a process-wide static, because a test
+  process builds a fresh application per test whose `Schedule` starts empty — a
+  process-wide latch would leave every application after the first with no
+  schedule at all. It marks before registering anything, so a re-entrant load
+  from the `resolving` hook cannot slip through.
+- `scripts/nativephp_dedupe_background_task_identifiers.php` patches
+  `SchedulerManifestGenerator::generate()` to key its task list by identifier.
+  A patch script rather than a container binding because both call sites
+  construct the generator with `new`, so nothing can be bound over it. It runs
+  from the mobile root's `post-update-cmd` through `nativephp_patch_all.php`,
+  and from `NativeBuildPatches` on every `native:run` / `native:build` /
+  `native:package`.
+- `Modules/Mobile/tests/Unit/IosBackgroundTaskManifestTest.php` boots a fresh
+  **console** kernel in a subprocess and fails when `generateIdentifiers()`
+  names anything twice, and
+  `Modules/Mobile/tests/Unit/TheBackgroundManifestCarriesEveryTaskThePhoneMustRunTest.php`
+  loads `routes/console.php` a second time and fails if the schedule grows.
+
+Neither pre-existing test caught the original because both deduplicated before
+asserting — `array_unique`, and `array_diff` comparing sets — and because the
+boot-boundary probe boots the **HTTP** kernel, where `discoverCommands()` never
+runs and the second load does not happen.
+
+`background_task_identifiers.json` and the `BGTaskSchedulerPermittedIdentifiers`
+array in `NativePHP/Info.plist` and `NativePHP-simulator-Info.plist` are
+generated, not committed: `mobile-app/nativephp/` is gitignored, and
+`native:background-tasks:pre-compile` writes all four from
+`SchedulerManifestGenerator` during the build. `PluginHookRunner` invokes it with
+`Artisan::call()`, in the same process as `native:build` — so the identifiers
+shipped in a bundle are exactly what that build process's own schedule held,
+which is where the duplicates came from.
 
 ## Wiring
 
@@ -928,8 +1299,7 @@ attribute. `layouts.app` is a traditional `@extends`/`@yield('content')`
 Blade layout, not a Blade component; the `#[Layout(...)]` attribute
 drives Livewire's component-slot layout mode (`@component`/`@slot('slot')`)
 instead, which silently renders an empty page body against a
-`@yield`-style layout. This was found and fixed as a real bug during
-Phase 15 via a live authenticated HTTP GET, not a guess.
+`@yield`-style layout.
 
 ## Throwaway spikes
 
@@ -966,7 +1336,7 @@ optional here.
 beside the content, and no `top_bar` or `bottom_nav` node at all. A test
 asserting on those types fails against a screen that is entirely correct.
 
-Three things fail silently here, all found by rendering rather than reading:
+Three things fail silently here, and none of them is visible in the source:
 
 - **A bare `<top-bar />` is dropped.** An empty chrome element contributes
   nothing to hoist, so the bar never reaches the shell and `nav_title` is
@@ -1073,6 +1443,25 @@ reported success having done half its job.
 Restoring a device therefore starts a fresh install with no data, which is what
 [F4](../core/architecture.md) covers: the encrypted backup
 the user takes deliberately is the recovery path, not the platform's.
+
+## The phone's PHP has no `ext-zip`
+
+The mobile runtime is a prebuilt static PHP shipped by `nativephp/mobile`, and
+its `php_config.h` carries `#undef HAVE_ZIP` on both iOS and Android — with
+`HAVE_ZLIB 1` beside it. Nothing in this repo compiles that binary, so this is a
+constraint to design around rather than a build flag to flip.
+
+`ext-zip` is the only extension the repo root requires that the phone cannot
+supply, which is why `mobile-app/composer.json` does not list it: Composer has
+no way to say "required on one target". Every other name in the root's require
+block is either present in the mobile build or already guarded at its call site
+the way the three `pcntl_signal` users are.
+
+The whole of `Migration` stood on it — all three source products upload a ZIP —
+so the wizard was dead on a phone, and said so by blaming the reader's file.
+[Reading a ZIP without ext-zip](../migration/reading-a-zip-without-ext-zip.md)
+covers the built-in reader that replaced it, what it still refuses, and how the
+three endings are told apart.
 
 ## The pairing screen is the whole of sync setup on a phone
 

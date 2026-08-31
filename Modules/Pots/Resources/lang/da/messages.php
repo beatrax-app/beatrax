@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Opsparingspuljer · Beatrax',
     'heading' => 'Opsparingspuljer',
-    'subtitle' => 'Virtuelle delsaldi, der altid summer op til din reelle kontosaldo.',
+    'subtitle' => 'Virtuelle delsaldi, der er skåret ud af den reelle kontosaldo.',
     'add_pot' => 'Tilføj pulje',
 
     'pot_fallback' => 'pulje',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Vis historik ↓',
         'hide' => 'Skjul historik ↑',
+        'truncated' => 'Seneste bevægelser: :shown af :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Hævning',
         'moved_from' => 'Flyttet fra :name',
         'moved_to' => 'Flyttet til :name',
+        'unreadable' => 'Registreret af en nyere version af Beatrax',
+        'released_on_archive' => 'Frigivet ved arkivering',
     ],
 
     'archived' => [
-        'toggle' => 'Arkiverede puljer (:count)',
+        'toggle' => 'Arkiveret pulje (:count)|Arkiverede puljer (:count)',
         'badge' => 'Arkiveret',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Indtast et navn til denne pulje.',
         'select_account' => 'Vælg en konto til denne pulje.',
-        'amount_exceeds_unallocated' => 'Beløbet overstiger den ufordelte saldo.',
         'amount_exceeds_unallocated_available' => 'Beløbet overstiger den ufordelte saldo (:amount til rådighed).',
         'amount_exceeds_pot_balance' => 'Beløbet overstiger saldoen i :name (:amount til rådighed).',
+        'generic' => 'Puljen kunne ikke gemmes. Tjek felterne, og prøv igen.',
+        'amount_invalid' => 'Angiv et beløb større end nul.',
+        'goal_already_linked' => 'Dette mål har allerede en aktiv tilknyttet pulje. Arkivér den først.',
+        'account_cannot_hold_pots' => 'En pulje kræver en konto, der rummer penge. Vælg en anden konto.',
+        'select_target_pot' => 'Vælg en pulje at flytte til.',
+        'move_target_missing' => 'Den pulje er ikke længere tilgængelig. Vælg en anden.',
+        'move_same_pot' => 'En pulje kan ikke flytte penge til sig selv. Vælg en anden pulje.',
+        'move_cross_account' => 'Puljer bytter kun penge inden for én konto, og :name ligger på :account.',
+        'pot_missing' => 'Den pulje er ikke længere tilgængelig.',
+        'operation_failed' => 'Det gik ikke igennem. Der blev ikke flyttet penge — prøv igen.',
     ],
 
     'toast' => [

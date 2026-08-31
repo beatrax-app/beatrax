@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Afvigelsesadvarsler',
-    'aria' => 'Afvigelsesadvarsler — :count åbne, :amount i årlig effekt',
+    'aria' => 'Afvigelsesadvarsler — :count åbne, :impact',
     'open' => 'åbne',
-    'annualized_impact' => 'årlig effekt',
+    'impact_rising' => ':amount i årlig effekt',
+    'impact_flat' => 'ingen ekstra årlige omkostninger',
 ];

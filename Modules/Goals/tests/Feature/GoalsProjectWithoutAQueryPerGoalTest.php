@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
-use Modules\Goals\Internal\Enums\GoalProgressState;
+use Modules\Goals\Public\Enums\GoalProgressState;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
 // The goals list already reads every goal's attributions in one statement to

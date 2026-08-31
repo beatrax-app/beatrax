@@ -12,7 +12,7 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 final class EnrichedDisposition extends FingerprintDisposition
 {
     /**
-     * @param  array<string, array{stored: mixed, incoming: mixed}>  $conflictingFields  Per-field disagreements detected during classify() (counterparty_name/description/currency/amount_minor vs. the stored row); ApplyEnrichments resolves each per the user's receipt_conflict_resolution policy. Empty by default (pure source_ref-only enrichment).
+     * @param  array<array-key, array{stored: mixed, incoming: mixed}>  $conflictingFields  Per-field disagreements detected during classify() (counterparty_name/description/currency/amount_minor vs. the stored row); ApplyEnrichments resolves each per the user's receipt_conflict_resolution policy. Empty by default (pure source_ref-only enrichment).
      */
     public function __construct(
         public readonly int $existingTransactionId,

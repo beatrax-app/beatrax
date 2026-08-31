@@ -6,9 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Actions\CheckForUpdates;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyConfirmedException;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Models\MigrationRun;
@@ -162,4 +164,31 @@ it('DiscardMigrationRun: sweepAbandonedForUser reclaims only THIS user\'s stale 
     expect(MigrationRun::query()->where('id', $staleRun->id)->exists())->toBeFalse();
     expect(MigrationRun::query()->where('id', $freshRun->id)->exists())->toBeTrue();
     expect(MigrationRun::query()->where('id', $otherStaleRun->id)->exists())->toBeTrue();
+});
+
+it('DiscardMigrationRun: sweepAbandonedForUser also reclaims a reconciliation abandoned at its preview', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+    expect($reconciliationRun->status)->toBe(MigrationRunStatus::NeedsAttention->value);
+
+    MigrationRun::query()->where('id', $reconciliationRun->id)->update(['created_at' => now()->subDays(2)]);
+
+    expect(app(DiscardMigrationRun::class)->sweepAbandonedForUser($this->user))->toBe(1);
+
+    expect(MigrationRun::query()->where('id', $reconciliationRun->id)->exists())->toBeFalse()
+        ->and(MigrationRun::query()->where('id', $firstRun->id)->exists())->toBeTrue()
+        ->and($this->db->connection()->table('migration_staging_transactions')
+            ->where('migration_run_id', $reconciliationRun->id)->count())->toBe(0);
 });

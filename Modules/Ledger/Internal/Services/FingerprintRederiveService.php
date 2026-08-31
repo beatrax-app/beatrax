@@ -12,13 +12,13 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use stdClass;
 
-final class FingerprintRederiveService
+final readonly class FingerprintRederiveService
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly FingerprintComposer $fingerprints,
-        private readonly DatabaseManager $db,
+        private FingerprintComposer $fingerprints,
+        private DatabaseManager $db,
     ) {}
 
     /**
@@ -146,7 +146,6 @@ final class FingerprintRederiveService
             currency: self::toString($row->currency),
             settledAmountMinor: self::toInt($row->settled_amount_minor),
             settledCurrency: self::toString($row->settled_currency),
-            fxRateUsed: self::toStringOrNull($row->fx_rate_used),
             counterpartyName: self::toStringOrNull($row->counterparty_name),
             counterpartyIban: self::toStringOrNull($row->counterparty_iban),
             counterpartyNormalized: self::toString($row->counterparty_normalized),

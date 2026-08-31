@@ -11,6 +11,15 @@ isolation.
   date parsers, column maps, header profiles, the MT940 lexer
   - Tag 61 + Tag 86 parsers, the PayPal CSV language profile +
   rollup, the PDF text extractor (smoke).
+- **The two PDF readers:** `PdfTextExtractorTest` covers the
+  reader choice and the three refusals; the drawing-only and
+  encrypted cases are asserted against *both* readers, because
+  the reason shown has to be the same one on a phone and on a
+  desktop. `TheInAppReaderRebuildsAColumnLayoutTest` renders the
+  committed real-statement text into a per-cell, Flate-compressed
+  PDF and reads it back — the shape a bank's report generator
+  emits, which the committed one-string-per-row fixture does not
+  exercise.
 - **Common stubs:** unit tests are pure-function; no stubs
   needed. The exception types are asserted by class, not by
   message.
@@ -35,7 +44,11 @@ isolation.
 - **Location:** `Modules/Ingestion/tests/Integration/`
 - **What they test:** the PDF text extractor end-to-end
   (`PdfTextExtractorSmokeTest`) against a real consumer-portal
-  PDF fixture.
+  PDF fixture, plus the equivalence of the two readers — the
+  same statement, parsed by `pdftotext` and by the in-app
+  reader, has to yield the same rows field for field. This suite
+  is the one that needs poppler on the host; a machine without
+  it runs `pest --exclude-group=integration`.
 
 ## Contract / arch invariants
 
@@ -105,10 +118,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Ingestion` module.
-
-## Behavioral contracts
-
 - **No content-sniffing format detection.** The user declares the
   source format up front; `SourceAdapterRegistry::for($formatId)`
   is the only entry point. An unknown id raises
@@ -168,7 +177,7 @@ The behavioural contract for the `Ingestion` module.
 - **An empty file** — adapter yields zero DTOs; pipeline
   produces an empty preview; confirm is a no-op.
 - **A CSV with trailing repeated header rows** (user pasted
-  exports together) — `AsnCsvAdapter` skips header-shaped rows
+  exports together) — `PositionalCsvAdapter` skips header-shaped rows
   mid-stream.
 - **A CAMT.053 with multiple statements in one file** — the
   adapter yields per-entry DTOs across all statements.
@@ -203,7 +212,7 @@ The behavioural contract for the `Ingestion` module.
 
 ## Configuration + feature flags
 
-- The five stable format identifiers (`asn-csv`,
+- The stable format identifiers (`asn-csv`,
   `asn-camt053`, `asn-mt940`, `ics-pdf`, `paypal-csv`) are
   fixed in the provider's `SourceAdapterRegistry` factory
   closure. Adding a new format is a constant edit + an

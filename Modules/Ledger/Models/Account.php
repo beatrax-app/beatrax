@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Core\Public\Casts\DateOnlyCast;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
@@ -20,6 +21,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string $default_currency
  * @property int|null $starting_balance_minor
  * @property CarbonImmutable|null $starting_balance_date
+ * @property CarbonImmutable|null $opening_balance_as_of_date
  */
 final class Account extends Model
 {
@@ -42,7 +44,8 @@ final class Account extends Model
     {
         return [
             'starting_balance_minor' => 'integer',
-            'starting_balance_date' => 'immutable_date',
+            'starting_balance_date' => DateOnlyCast::class,
+            'opening_balance_as_of_date' => DateOnlyCast::class,
         ];
     }
 

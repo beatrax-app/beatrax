@@ -12,6 +12,7 @@ return [
         'locked' => 'Atbloķējiet lietotni, lai turpinātu iestatīšanu.',
         'revoked' => 'Šī ierīce tika noņemta jūsu otrā ierīcē. Savienojiet pārī vēlreiz, lai turpinātu sinhronizāciju.',
     ],
+    'unlock_cta' => 'Atbloķē lietotni',
     'step' => [
         'connect' => 'Savienojas ar otru ierīci',
         'keys' => 'Saņem šifrēšanas atslēgas',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Atjauno jūsu vēsturi',
     ],
     'step_current' => 'pašreizējais solis',
-    'working' => [
-        'connect' => 'Sazinās ar otru ierīci…',
-        'keys' => 'Atslēdz jūsu datus…',
-        'transfer' => 'Pieprasa jūsu vēsturi…',
-        'rebuild' => 'Atjauno jūsu vēsturi — tas var aizņemt minūti.',
-    ],
     'page_title' => 'Iestata…',
     'resuming' => 'Atsāk iestatīšanu…',
     'setting_up' => 'Iestata šo ierīci…',
     'progress_aria' => 'Iestatīšanas gaita',
     'records' => ':count ierakstu|:count ieraksts|:count ieraksti',
-    'records_preparing' => 'Gaida otru ierīci…',
 ];

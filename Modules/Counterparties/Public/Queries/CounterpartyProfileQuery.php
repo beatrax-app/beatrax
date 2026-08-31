@@ -10,11 +10,16 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Counterparties\Internal\Enums\CounterpartyMetadataKey;
+use Modules\Counterparties\Internal\Enums\CounterpartySubcategory;
+use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
 use Modules\Sync\Public\Dto\DecryptedRow;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -44,7 +49,7 @@ final readonly class CounterpartyProfileQuery
         }
 
         $cpId = $cp->id;
-        $cutoffDate = $this->clock->now()->subYear()->toDateString();
+        $cutoffDate = RollingTwelveMonths::startDate($this->clock->now());
         $connection = $this->db->connection();
 
         // settled_amount_minor grouped by settled_currency: a roll-up is what
@@ -78,7 +83,7 @@ final readonly class CounterpartyProfileQuery
         return new CounterpartyProfileDto(
             id: $cpId,
             slug: $cp->slug,
-            displayName: self::readable($decrypted, 'display_name') ?? '',
+            displayName: CounterpartyDefaultName::resolve(self::readable($decrypted, 'display_name') ?? '', $cp->metadata),
             type: $cp->type,
             iban: self::readable($decrypted, 'iban'),
             merchantName: self::readable($decrypted, 'merchant_name'),
@@ -88,7 +93,19 @@ final readonly class CounterpartyProfileQuery
             lastSeenDate: is_string($lastSeen) ? substr($lastSeen, 0, 10) : null,
             currency: $total12m->currency,
             unconvertedCurrencies: $total12m->unconverted,
+            isBankFee: self::isBankFee($cp),
         );
+    }
+
+    // The DTO carries the answer rather than the stored token: the token is this
+    // module's own vocabulary, and a Public DTO that declared it would be putting
+    // an Internal type on the cross-module surface.
+    private static function isBankFee(Counterparty $cp): bool
+    {
+        $metadata = is_array($cp->metadata) ? $cp->metadata : [];
+        $stored = $metadata[CounterpartyMetadataKey::Subcategory->value] ?? null;
+
+        return is_string($stored) && CounterpartySubcategory::tryFrom($stored) === CounterpartySubcategory::Fee;
     }
 
     /**
@@ -118,7 +135,7 @@ final readonly class CounterpartyProfileQuery
         $cp = Counterparty::query()
             ->where('user_id', $user->id)
             ->where('id', $id)
-            ->first(['slug', 'display_name', 'type']);
+            ->first(['slug', 'display_name', 'type', 'metadata']);
 
         if ($cp === null) {
             return null;
@@ -128,7 +145,7 @@ final readonly class CounterpartyProfileQuery
 
         return [
             'slug' => $cp->slug,
-            'displayName' => $displayName,
+            'displayName' => CounterpartyDefaultName::resolve($displayName, $cp->metadata),
             'type' => $cp->type,
         ];
     }
@@ -152,7 +169,7 @@ final readonly class CounterpartyProfileQuery
         $rows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->whereIn('id', $clean)
-            ->get(['id', 'slug', 'display_name', 'type']);
+            ->get(['id', 'slug', 'display_name', 'type', 'metadata']);
 
         $map = [];
         foreach ($rows as $row) {
@@ -166,7 +183,7 @@ final readonly class CounterpartyProfileQuery
                 : '';
             $map[$id] = [
                 'slug' => is_string($row->slug) ? $row->slug : '',
-                'displayName' => $displayName,
+                'displayName' => CounterpartyDefaultName::resolve($displayName, $row->metadata ?? null),
                 'type' => is_string($row->type) ? $row->type : '',
             ];
         }
@@ -239,64 +256,72 @@ final readonly class CounterpartyProfileQuery
     /**
      * @return Collection<int, stdClass>
      */
-    public function categoryBreakdown(Counterparty $cp): Collection
+    public function categoryBreakdown(Counterparty $cp, User $user): Collection
     {
-        $cutoffDate = $this->clock->now()->subYear()->toDateString();
+        $cutoffDate = RollingTwelveMonths::startDate($this->clock->now());
 
-        $rows = $this->db->connection()->table('transactions as t')
-            ->leftJoin('categories as c', 'c.id', '=', 't.category_id')
+        $joined = $this->db->connection()->table('transactions as t')
+            ->leftJoin('categories as c', 'c.id', '=', 't.category_id');
+
+        $rows = CategoryPathName::joinParent($joined, self::toInt($cp->user_id), 'c', 'cp')
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
             ->where('t.posted_at', '>=', $cutoffDate)
-            ->select(['t.category_id as category_id', 't.settled_currency as settled_currency', ...CategoryDisplayName::columns('c')])
+            ->select(['t.category_id as category_id', 't.settled_currency as settled_currency', ...CategoryPathName::columns('c', 'cp')])
             ->selectRaw('COALESCE(SUM(t.settled_amount_minor), 0) as total_minor')
-            ->groupBy('t.category_id', 't.settled_currency', ...CategoryDisplayName::bareColumns('c'))
+            ->groupBy('t.category_id', 't.settled_currency', ...CategoryDisplayName::bareColumns('c'), ...CategoryDisplayName::bareColumns('cp'))
             ->get();
 
         // The breakdown goes straight to Blade, so the row carries the display
         // name rather than the stored one under the key the view already reads.
         $resolved = $rows->map(static function (stdClass $row): stdClass {
-            $row->category_name = CategoryDisplayName::fromRow($row, 'category');
+            $row->category_name = CategoryPathName::fromRow($row);
 
             return $row;
         });
 
-        return $this->convertedBuckets($resolved, fn (stdClass $row): string => self::toString($row->category_id ?? null));
+        return $this->convertedBuckets($resolved, fn (stdClass $row): string => self::toString($row->category_id ?? null), $user);
     }
 
-    // The SQL groups by currency too, so a category charged in two arrives as
-    // two rows, folded back into one only after each has been through its own
-    // rate. Ordering happens here for the same reason: ABS() over raw minor
+    // Converted a currency's whole bucket at a time, never a row at a time:
+    // per row the rounding drifted the rows away from the hero figure they sit
+    // under. Ordering happens here for a related reason: ABS() over raw minor
     // units ranked a dollar category above a larger euro one.
     /**
      * @param  Collection<int, stdClass>  $rows
      * @param  callable(stdClass): string  $keyOf
      * @return Collection<int, stdClass>
      */
-    private function convertedBuckets(Collection $rows, callable $keyOf): Collection
+    private function convertedBuckets(Collection $rows, callable $keyOf, User $user): Collection
     {
-        $baseCurrency = $this->baseCurrency->code();
+        $baseCurrency = $this->baseCurrency->forUser($user);
         $currencies = [];
         foreach ($rows as $row) {
-            $currencies[] = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            $currencies[] = self::settledCurrency($row);
         }
         $rates = $this->fx->ratesTo($currencies, $baseCurrency);
 
-        /** @var array<string, stdClass> $merged */
+        /** @var array<array-key, stdClass> $merged */
         $merged = [];
-        /** @var array<string, array<string, int>> $byCurrency */
-        $byCurrency = [];
+        /** @var array<string, array<array-key, int>> $partsByCurrency */
+        $partsByCurrency = [];
         foreach ($rows as $row) {
             $key = $keyOf($row);
-            $currency = is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+            $currency = self::settledCurrency($row);
             $merged[$key] ??= $row;
-            $byCurrency[$key][$currency] = is_numeric($row->total_minor ?? null) ? (int) $row->total_minor : 0;
+            $partsByCurrency[$currency][$key] = ($partsByCurrency[$currency][$key] ?? 0)
+                + self::toInt($row->total_minor ?? null);
         }
+
+        [$totals, $unconverted] = $this->distributedTotals($partsByCurrency, array_keys($merged), $baseCurrency, $rates);
 
         $result = [];
         foreach ($merged as $key => $row) {
-            $row->total_minor = $this->fx->withRates($byCurrency[$key], $baseCurrency, $rates)->minor;
+            $row->total_minor = $totals[$key];
             $row->currency = $baseCurrency;
+            $codes = $unconverted[$key];
+            sort($codes);
+            $row->unconverted = $codes;
             unset($row->settled_currency);
             $result[] = $row;
         }
@@ -304,6 +329,48 @@ final readonly class CounterpartyProfileQuery
         usort($result, fn (stdClass $a, stdClass $b): int => abs(self::toInt($b->total_minor)) <=> abs(self::toInt($a->total_minor)));
 
         return new Collection($result);
+    }
+
+    // A row with no settled currency keeps the empty code rather than a
+    // coerced one: '' is the bucket the rate table is asked nothing about,
+    // and a number cast to "0" would be asked for a rate that cannot exist.
+    private static function settledCurrency(stdClass $row): string
+    {
+        return is_string($row->settled_currency ?? null) ? $row->settled_currency : '';
+    }
+
+    /**
+     * @param  array<string, array<array-key, int>>  $partsByCurrency
+     * @param  list<array-key>  $keys
+     * @param  array<string, string>  $rates
+     * @return array{array<array-key, int>, array<array-key, list<string>>}
+     */
+    private function distributedTotals(array $partsByCurrency, array $keys, string $baseCurrency, array $rates): array
+    {
+        $totals = array_fill_keys($keys, 0);
+        /** @var array<array-key, list<string>> $unconverted */
+        $unconverted = array_fill_keys($keys, []);
+
+        foreach ($partsByCurrency as $currency => $parts) {
+            $converted = $this->fx->distribute($parts, $currency, $baseCurrency, $rates);
+
+            // Named per row rather than dropped: only the rows that actually
+            // held the unpriced currency are short, and a row that is short
+            // must say so beside the figure.
+            if ($converted === null) {
+                foreach (array_keys($parts) as $key) {
+                    $unconverted[$key][] = $currency;
+                }
+
+                continue;
+            }
+
+            foreach ($converted as $key => $minor) {
+                $totals[$key] += $minor;
+            }
+        }
+
+        return [$totals, $unconverted];
     }
 
     // Nothing writes metadata.funding_chain yet, so this returns null in
@@ -336,7 +403,7 @@ final readonly class CounterpartyProfileQuery
     /**
      * @return Collection<int, stdClass>
      */
-    public function taxYearBreakdown(Counterparty $cp): Collection
+    public function taxYearBreakdown(Counterparty $cp, User $user): Collection
     {
         if ($cp->type !== CounterpartyType::Government->value) {
             return new Collection;
@@ -349,7 +416,7 @@ final readonly class CounterpartyProfileQuery
             ->groupBy('year', 'settled_currency')
             ->get();
 
-        $converted = $this->convertedBuckets($rows, fn (stdClass $row): string => self::toString($row->year ?? null));
+        $converted = $this->convertedBuckets($rows, fn (stdClass $row): string => self::toString($row->year ?? null), $user);
         $years = $converted->all();
         usort($years, fn (stdClass $a, stdClass $b): int => self::toInt($b->year) <=> self::toInt($a->year));
 

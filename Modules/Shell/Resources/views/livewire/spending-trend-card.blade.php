@@ -13,21 +13,34 @@
     $totalDir = $trend->totalDeltaMinor > 0 ? 'up' : ($trend->totalDeltaMinor < 0 ? 'down' : 'flat');
 @endphp
 
+{{-- Every comparison figure is held behind hasComparison(): with a previous
+     period the ledger never reached, "vs <month>" names a month that is not
+     there and the delta is the whole current total dressed as a rise. The card
+     itself still draws where a currency was left out of the total, because
+     that notice is the reader's only warning that the figure is partial. --}}
 <div>
-    @if ($trend->hasComparison())
+    @if ($trend->hasComparison() || $trend->unconvertedCurrencies !== [])
         <x-core::card tag="section" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
             <div class="flex flex-wrap items-baseline justify-between gap-4">
                 <x-core::section-heading :title="Lang::get('core::spending_trend.heading')" />
-                <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
+                @if ($trend->hasComparison())
+                    <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
+                @endif
             </div>
 
             <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span class="text-2xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($trend->currentTotalMinor) }}</span>
-                <span class="text-sm font-medium {{ $deltaClass($totalDir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($trend->totalDeltaMinor) }}</span>
+                @if ($trend->hasComparison())
+                    <span class="text-sm font-medium {{ $deltaClass($totalDir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($trend->totalDeltaMinor) }}</span>
+                @endif
                 <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.spent_this_period') }}</span>
             </div>
 
-            @if (count($trend->movers) > 0)
+            @if ($trend->unconvertedCurrencies !== [])
+                <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $trend->unconvertedCurrencies)]) }}</p>
+            @endif
+
+            @if ($trend->hasComparison() && count($trend->movers) > 0)
                 <ul class="mt-4 space-y-1.5">
                     @foreach ($trend->movers as $mover)
                         @php $dir = $mover->direction(); @endphp

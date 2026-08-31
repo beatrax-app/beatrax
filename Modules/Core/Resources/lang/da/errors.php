@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Tilbage til Beatrax',
 
+    'not_saved' => 'Intet blev gemt. Dine data er uændrede — prøv igen.',
+
+    'no_longer_here' => 'Det findes ikke længere.',
+
     '404' => [
         'title' => 'Denne side findes ikke',
         'body' => 'Linket er måske gammelt, eller siden har fået et nyt navn. Der er ikke noget galt med dine data.',

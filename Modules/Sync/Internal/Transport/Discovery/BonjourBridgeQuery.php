@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Discovery;
 
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 
 // The second road to the same answer: let the platform's own Bonjour browser
 // do the multicast, instead of sending the datagram ourselves. iOS refuses the
@@ -17,14 +18,7 @@ final class BonjourBridgeQuery implements PeerDiscovery
 {
     public const string BROWSE_FUNCTION = 'Discovery.Browse';
 
-    // Same ceilings the offer fetcher applies to a peer's own answer. What
-    // comes back here crossed no network, but it describes devices that did,
-    // and an unbounded name reaches a log line and a screen either way.
-    private const int MAX_DEVICE_ID_BYTES = 128;
-
     private const int MAX_HOST_BYTES = 255;
-
-    private const int MAX_PORT = 65535;
 
     private ?LanDiscoveryReach $lastBrowseReach = null;
 
@@ -40,7 +34,7 @@ final class BonjourBridgeQuery implements PeerDiscovery
      * @param  float  $timeoutSeconds  How long to keep collecting answers for.
      * @return list<DiscoveredPeer>
      */
-    public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+    public function browse(string $serviceType, float $timeoutSeconds = ProtocolTimings::BROWSE_SECONDS): array
     {
         $this->lastBrowseReach = $this->registeredReach();
 
@@ -96,11 +90,11 @@ final class BonjourBridgeQuery implements PeerDiscovery
      */
     private function peerFrom(array $row): ?DiscoveredPeer
     {
-        $deviceId = self::boundedString($row['deviceId'] ?? null, self::MAX_DEVICE_ID_BYTES);
+        $deviceId = self::boundedString($row['deviceId'] ?? null, PeerAdvertisementLimits::MAX_DEVICE_ID_BYTES);
         $host = self::boundedString($row['host'] ?? null, self::MAX_HOST_BYTES);
         $port = $row['port'] ?? null;
 
-        if ($deviceId === '' || ! is_int($port) || $port < 1 || $port > self::MAX_PORT) {
+        if ($deviceId === '' || ! is_int($port) || $port < 1 || $port > PeerAdvertisementLimits::MAX_PORT) {
             return null;
         }
 

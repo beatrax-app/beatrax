@@ -21,6 +21,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Services\AccountDenomination;
 use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
@@ -28,7 +29,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -37,20 +37,15 @@ final class ConnectBankStep extends Component
 {
     use WithFileUploads;
 
-    // Every value here is an adapter key the ingestion registry binds, so the
-    // format the user picks is the format that reaches the pipeline. Only the
-    // CSV variants need a follow-on bank pick; CAMT.053 and MT940 are
-    // self-describing.
+    // The two formats that describe themselves. Every other format this step
+    // accepts is a CSV layout read from the preset registry, not written out
+    // here: the written-out list went stale the moment a preset was added, and
+    // offered two Dutch banks while the app could already read four layouts.
     /** @var list<string> */
-    private const array SUPPORTED_FORMATS = [
+    private const array STATEMENT_FORMATS = [
         SourceFormat::Camt053->value,
         SourceFormat::Mt940->value,
-        SourceFormat::AsnCsv->value,
-        CsvPresetRegistry::ING_NL,
     ];
-
-    /** @var list<string> */
-    private const array CSV_BANK_FORMATS = [SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL];
 
     public ?TemporaryUploadedFile $file = null;
 
@@ -58,10 +53,17 @@ final class ConnectBankStep extends Component
 
     public string $selectedFormat = SourceFormat::Camt053->value;
 
-    // The CSV chip has to land on some CSV format, so $selectedFormat alone
-    // cannot say whether the user has named their bank or is looking at that
-    // landing default. This carries only that, and never the bank's identity.
-    public bool $csvBankPicked = false;
+    // The CSV chip has to land on some CSV layout, so $selectedFormat alone
+    // cannot say whether the reader has named a layout or is looking at that
+    // landing default. This carries only that, and never the layout itself.
+    public bool $csvLayoutPicked = false;
+
+    private CsvPresetRegistry $csvPresets;
+
+    public function boot(CsvPresetRegistry $csvPresets): void
+    {
+        $this->csvPresets = $csvPresets;
+    }
 
     /**
      * @return array<string, list<string>>
@@ -70,7 +72,7 @@ final class ConnectBankStep extends Component
     {
         return [
             'file' => ['required', 'file', 'max:'.UploadLimits::MAX_KB, 'extensions:csv,txt,xml,sta,mt940,940'],
-            'selectedFormat' => ['required', 'in:'.implode(',', self::SUPPORTED_FORMATS)],
+            'selectedFormat' => ['required', 'in:'.implode(',', $this->supportedFormats())],
         ];
     }
 
@@ -88,22 +90,22 @@ final class ConnectBankStep extends Component
 
     public function setFormat(string $format): void
     {
-        if (! in_array($format, self::SUPPORTED_FORMATS, strict: true)) {
+        if (! in_array($format, $this->supportedFormats(), strict: true)) {
             return;
         }
 
         $this->selectedFormat = $format;
-        $this->csvBankPicked = false;
+        $this->csvLayoutPicked = false;
     }
 
-    public function setCsvBank(string $format): void
+    public function setCsvLayout(string $format): void
     {
-        if (! in_array($format, self::CSV_BANK_FORMATS, strict: true)) {
+        if (! $this->isCsvFormat($format)) {
             return;
         }
 
         $this->selectedFormat = $format;
-        $this->csvBankPicked = true;
+        $this->csvLayoutPicked = true;
     }
 
     public function submit(
@@ -113,7 +115,7 @@ final class ConnectBankStep extends Component
         Application $app,
         DatabaseManager $db,
         AccountSlugResolver $slugs,
-        BaseCurrency $baseCurrency,
+        AccountDenomination $denomination,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -122,11 +124,11 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        // The chip row lands on a CSV format before the user has named a bank,
+        // The chip row lands on a CSV layout before the reader has named one,
         // so submitting from that state would import the landing default under
-        // the user's file.
-        if ($this->isCsvFormat($this->selectedFormat) && ! $this->csvBankPicked) {
-            $this->addError('csvBankPicked', Lang::get('onboarding::connect_bank.errors.pick_bank'));
+        // the reader's file.
+        if ($this->isCsvFormat($this->selectedFormat) && ! $this->csvLayoutPicked) {
+            $this->addError('csvLayoutPicked', Lang::get('onboarding::connect_bank.errors.pick_bank'));
 
             return;
         }
@@ -141,7 +143,7 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        if ($this->createMissingBankAccounts($result, $user, $db, $slugs, $baseCurrency) > 0) {
+        if ($this->createMissingBankAccounts($result, $user, $db, $slugs, $denomination) > 0) {
             $this->repreview($result->importRunId, $user, $importer, $formatHint, $logger, $app);
         }
 
@@ -172,7 +174,7 @@ final class ConnectBankStep extends Component
     private function formatHint(): ?BankCsvFormatHint
     {
         return match ($this->selectedFormat) {
-            SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
+            CsvPresetRegistry::ASN => BankCsvFormatHint::Asn,
             default => null,
         };
     }
@@ -180,13 +182,13 @@ final class ConnectBankStep extends Component
     /**
      * @return int how many accounts the preview needed that did not exist yet
      */
-    private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): int
+    private function createMissingBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, AccountDenomination $denomination): int
     {
-        $bankLabel = $this->bankLabel();
+        $accountName = $this->accountName();
 
         $created = 0;
         foreach ($result->accountsToName as $unknown) {
-            if ($this->createBankAccount($unknown, $bankLabel, $user, $db, $slugs, $baseCurrency)) {
+            if ($this->createBankAccount($unknown, $accountName, $user, $db, $slugs, $denomination)) {
                 $created++;
             }
         }
@@ -194,7 +196,7 @@ final class ConnectBankStep extends Component
         return $created;
     }
 
-    private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db, AccountSlugResolver $slugs, BaseCurrency $baseCurrency): bool
+    private function createBankAccount(UnknownIban $unknown, string $accountName, User $user, DatabaseManager $db, AccountSlugResolver $slugs, AccountDenomination $denomination): bool
     {
         $exists = $db->connection()
             ->table('accounts')
@@ -207,11 +209,11 @@ final class ConnectBankStep extends Component
 
         Account::query()->create([
             'user_id' => $user->id,
-            'name' => $bankLabel,
-            'slug' => $slugs->resolveUnique($user->id, $bankLabel),
+            'name' => $accountName,
+            'slug' => $slugs->resolveUnique($user->id, $accountName),
             'kind' => AccountKind::Bank->value,
             'iban' => $unknown->iban,
-            'default_currency' => $baseCurrency->code(),
+            'default_currency' => $denomination->forStatement($unknown->statementCurrency),
         ]);
 
         return true;
@@ -262,15 +264,19 @@ final class ConnectBankStep extends Component
         $progress->update(['data' => $data]);
     }
 
-    private function bankLabel(): string
+    // Becomes accounts.name, which the starting-balance card reads back as
+    // "We detected your {name} started at". CAMT.053 and MT940 carry no issuer,
+    // so a reader who picked one of them named a file type and not a bank, and
+    // the account may not claim otherwise.
+    private function accountName(): string
     {
-        // Concatenated into "We detected your {label} account started at",
-        // so the label must never itself contain the word "account".
-        return match ($this->selectedFormat) {
-            SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value => 'ASN bank',
-            CsvPresetRegistry::ING_NL => 'ING bank',
-            default => AccountKind::Bank->value,
-        };
+        foreach ($this->csvLayouts() as $layout) {
+            if ($layout['format'] === $this->selectedFormat) {
+                return Lang::get('onboarding::connect_bank.account_name_layout', ['layout' => $layout['label']]);
+            }
+        }
+
+        return Lang::get('onboarding::connect_bank.account_name_default');
     }
 
     public function skip(): void
@@ -280,11 +286,39 @@ final class ConnectBankStep extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('onboarding::livewire.steps.connect-bank-step');
+        return $views->make('onboarding::livewire.steps.connect-bank-step', [
+            'csvLayouts' => $this->csvLayouts(),
+        ]);
     }
 
     private function isCsvFormat(string $format): bool
     {
-        return in_array($format, self::CSV_BANK_FORMATS, strict: true);
+        return in_array($format, array_column($this->csvLayouts(), 'format'), strict: true);
+    }
+
+    // Every layout the registry holds, which is every bank CSV an adapter is
+    // bound for: the registry carries only bank presets, so nothing here has to
+    // exclude PayPal's own CSV. Adding a preset offers it in the wizard.
+    /**
+     * @return list<array{format: string, label: string}>
+     */
+    private function csvLayouts(): array
+    {
+        $layouts = [];
+        foreach ($this->csvPresets->allLayouts() as $preset) {
+            $layouts[] = ['format' => $preset->format, 'label' => $preset->label];
+        }
+
+        usort($layouts, static fn (array $a, array $b): int => strcmp($a['label'], $b['label']));
+
+        return $layouts;
+    }
+
+    /**
+     * @return list<string> every format id this step may submit
+     */
+    private function supportedFormats(): array
+    {
+        return [...self::STATEMENT_FORMATS, ...array_column($this->csvLayouts(), 'format')];
     }
 }

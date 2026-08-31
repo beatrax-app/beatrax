@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Verworfen — Rückgängig',
+        'dismissed' => 'Verworfen',
         'restored' => 'Wiederhergestellt',
     ],
 ];

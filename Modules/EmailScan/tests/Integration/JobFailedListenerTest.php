@@ -92,7 +92,12 @@ it('IncrementalScanJob::failed() flips inbox_scan_state.status to error with tru
     expect((string) $row->error_message)->toContain('Synthetic incremental failure');
 });
 
-it('IncrementalScanJob::failed() swallows invalid transitions (needs_reauth → error is rejected)', function (): void {
+// What the swallow must NOT be is the only thing standing between a revoked
+// grant and a stuck inbox. It is not: OAuthCallbackReconnectTest proves a
+// Reconnect lifts needs_reauth back to idle, and BackfillChunkedJobTest proves
+// the backfill skips a needs_reauth inbox instead of throwing a transition
+// error nothing downstream could record.
+it('IncrementalScanJob::failed() keeps the more actionable needs_reauth rather than degrading it to error', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $db->connection()
@@ -108,8 +113,10 @@ it('IncrementalScanJob::failed() swallows invalid transitions (needs_reauth → 
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
 
-    // The machine rejects needs_reauth → error, and the hook has to swallow
-    // that rather than escalate a recovery scenario into a hard error.
+    // needs_reauth is the MORE actionable of the two: it is what raises the
+    // Reconnect banner, where `error` only says "try again later". Keeping it
+    // is the point, so the machine rejects needs_reauth → error and the hook
+    // swallows that rather than escalating it into a queue-worker error.
     $job->failed(new RuntimeException('subsequent failure during reauth grace.'), $sm);
 
     $row = $db->connection()

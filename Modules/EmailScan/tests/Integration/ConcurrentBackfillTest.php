@@ -16,6 +16,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Internal\Jobs\GraphDeltaWalk;
 use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
@@ -23,10 +24,13 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 
 uses(RefreshDatabase::class);
 
-// `PRAGMA busy_timeout = 5000` inside each per-page transaction is what makes
-// two backfills for one user wait rather than raise SQLITE_BUSY. A
-// single-threaded PHP test cannot stage two real writers, so a recording
-// decorator proves the pragma is issued before every insert instead.
+// Two backfills for one user have to wait rather than raise SQLITE_BUSY, and
+// what makes them wait is the connection's busy_timeout. That used to be set
+// per transaction here, at 5000 -- which SILENTLY CUT the 30s config/database.php
+// asks for, because the pragma is connection-scoped and outlives the
+// transaction that issued it. The connection now carries the configured value
+// and no write path re-sets it, so this asserts the value in force during the
+// job rather than the statement that used to impose it.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -43,7 +47,7 @@ afterEach(function (): void {
     }
 });
 
-it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', function (): void {
+it('keeps the configured busy_timeout in force through every per-page transaction', function (): void {
     $user = User::query()->create([
         'username' => 'concurrent',
         'password' => 'fixture',
@@ -95,23 +99,20 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
         new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
         $this->app->make(KnownSenderQuery::class),
         $this->app->make(JobUserContext::class),
+        $this->app->make(GraphDeltaWalk::class),
     );
 
-    $captured = $recordingDb->capturedStatements;
-
-    // The pragma has to be the first statement in each transaction body, and
-    // the job walks one page of three messages, so at least three of them.
-    $pragmaCount = 0;
-    foreach ($captured as $tx) {
-        if (count($tx) === 0) {
-            continue;
-        }
-        $firstStatement = (string) $tx[0];
-        if (str_contains($firstStatement, 'PRAGMA busy_timeout = 5000')) {
-            $pragmaCount++;
+    // No write path may re-issue the pragma: one that does lowers the timeout
+    // for every later statement on the same connection, which is the regression
+    // this file exists to catch.
+    foreach ($recordingDb->capturedStatements as $tx) {
+        foreach ($tx as $statement) {
+            expect((string) $statement)->not->toContain('PRAGMA busy_timeout');
         }
     }
-    expect($pragmaCount)->toBeGreaterThanOrEqual(3);
+
+    $timeout = (int) ($realDb->connection()->select('PRAGMA busy_timeout')[0]->timeout ?? 0);
+    expect($timeout)->toBeGreaterThanOrEqual(30_000);
 
     // The recording wrapper is a passthrough, so the writes still landed.
     $msgCount = $realDb->connection()
@@ -121,14 +122,16 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
     expect($msgCount)->toBe(3);
 });
 
-it('accepts PRAGMA busy_timeout = 5000 on the live test connection without error', function (): void {
+// SqliteOptimizationsProvider applies it once, at ConnectionEstablished, from
+// config. Proved here because a test connection that did not get it would make
+// the assertion above pass for the wrong reason.
+it('carries the configured busy_timeout on a connection nothing has touched', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
-    $connection = $db->connection();
 
-    $connection->statement('PRAGMA busy_timeout = 5000');
+    $timeout = (int) ($db->connection()->select('PRAGMA busy_timeout')[0]->timeout ?? 0);
 
-    expect(true)->toBeTrue();
+    expect($timeout)->toBeGreaterThanOrEqual(30_000);
 });
 
 // capturedStatements collects one array per transaction() invocation, holding

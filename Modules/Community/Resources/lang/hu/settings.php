@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'A megosztott listáról',
     'about_body' => 'Egy a Beatraxszal együtt szállított YAML-fájl, amely a rejtélyes banki kivonatkódokat beszédes kereskedőnevekhez rendeli. Bekapcsolva a Beatrax importáláskor olvassa a listát; a javaslat beküldése megnyitja a GitHubot a böngésződben.',
 
-    'mappings' => 'Megfeleltetések',
-    'contributors' => 'Közreműködők',
+    'mappings' => ':count megfeleltetés|:count megfeleltetés',
+    'contributors' => ':count közreműködő|:count közreműködő',
 
     'use_shared_list' => [
         'title' => 'A megosztott kereskedőlista használata',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'A megosztott lista frissítése az alkalmazás frissítésekor',
         'help' => 'Frissítse a beépített listát minden alkalommal, amikor a Beatrax frissíti magát.',
+        'help_phone' => 'Frissítse a beépített listát minden alkalommal, amikor a Beatrax új verziója az App Store-ból vagy a Google Play-ből települ.',
         'note' => 'Egy későbbi alkalmazásfrissítéssel lép életbe — az aktuális verziót lásd: Beállítások → Névjegy.',
     ],
 ];

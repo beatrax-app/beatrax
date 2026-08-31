@@ -17,12 +17,12 @@ use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class RenameScenario
+final readonly class RenameScenario
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $scenarioId, User $user, string $newName): void

@@ -10,10 +10,10 @@ use Throwable;
 // Lives in Public so Core's DoctorCommand can depend on it without
 // crossing into Search Internal. Returns plain PHP values (no Core
 // Internal types) so DoctorCommand builds its own ProbeResult.
-final class FtsHealthCheck
+final readonly class FtsHealthCheck
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function label(): string
@@ -58,9 +58,16 @@ final class FtsHealthCheck
             ];
         }
 
+        // An index AHEAD of the table is the normal shape of the damage --
+        // orphaned documents a delete never reaped -- and printing it as
+        // "-364 behind table" told the reader the opposite of what happened.
+        $drift = $delta < 0
+            ? (-$delta).' ahead of table (orphaned documents)'
+            : $delta.' behind table';
+
         return [
             'severity' => 'warning',
-            'message' => "FTS index: {$indexCount} rows — {$delta} behind table",
+            'message' => "FTS index: {$indexCount} rows — {$drift}",
         ];
     }
 }

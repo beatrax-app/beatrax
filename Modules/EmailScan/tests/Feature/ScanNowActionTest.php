@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
@@ -88,7 +89,22 @@ it('scanNow on a scanning inbox emits the in-progress toast and does NOT dispatc
     Bus::assertNotDispatched(IncrementalScanJob::class);
 });
 
-it('scanNow cross-user 404: another user\'s inbox raises NotFoundHttpException', function (): void {
+// A needs_reauth inbox exits IncrementalScanJob on its first status read, so
+// dispatching there is a no-op the user was told had started a scan.
+it('scanNow on a needs_reauth inbox tells the user to reconnect and does NOT dispatch', function (): void {
+    Bus::fake();
+    $user = snatUser('reauth@example.com');
+    $inboxId = snatSeedInbox($user, status: 'needs_reauth');
+    $this->actingAs($user);
+
+    Livewire::test(InboxesPage::class)
+        ->call('scanNow', $inboxId)
+        ->assertDispatched('toast', message: Lang::get('email-scan::inboxes.toast.reconnect_first'));
+
+    Bus::assertNotDispatched(IncrementalScanJob::class);
+});
+
+it('scanNow cross-user refusal: another user\'s inbox queues nothing and answers with a toast', function (): void {
     Bus::fake();
     $userA = snatUser('a@example.com');
     $userB = snatUser('b@example.com');
@@ -98,7 +114,8 @@ it('scanNow cross-user 404: another user\'s inbox raises NotFoundHttpException',
 
     Livewire::test(InboxesPage::class)
         ->call('scanNow', $inboxA)
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertDispatched('toast', message: Lang::get('core::errors.no_longer_here'));
 
     Bus::assertNotDispatched(IncrementalScanJob::class);
 });
@@ -113,7 +130,7 @@ it('reconnect redirects to /oauth/connect/{provider}?inbox_id={id}', function ()
         ->assertRedirect("/oauth/connect/microsoft?inbox_id={$inboxId}");
 });
 
-it('reconnect cross-user 404: another user\'s inbox raises NotFoundHttpException', function (): void {
+it('reconnect cross-user refusal: another user\'s inbox does not redirect and answers with a toast', function (): void {
     $userA = snatUser('cross-a@example.com');
     $userB = snatUser('cross-b@example.com');
     $inboxA = snatSeedInbox($userA, status: 'needs_reauth');
@@ -122,5 +139,7 @@ it('reconnect cross-user 404: another user\'s inbox raises NotFoundHttpException
 
     Livewire::test(InboxesPage::class)
         ->call('reconnect', $inboxA)
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertNoRedirect()
+        ->assertDispatched('toast', message: Lang::get('core::errors.no_longer_here'));
 });

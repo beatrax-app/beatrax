@@ -10,8 +10,6 @@ return [
 
     'step_progress' => ':current. solis no :total',
 
-    'step_dot_aria' => ':number. solis no :total',
-
     'back' => 'Atpakaļ',
     'back_aria' => 'Atpakaļ — atgriežas pie iepriekšējā iestatīšanas soļa',
 

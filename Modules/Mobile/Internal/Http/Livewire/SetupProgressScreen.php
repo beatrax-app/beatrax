@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
@@ -31,12 +32,18 @@ final class SetupProgressScreen extends Component
 
     public int $percent = 0;
 
+    // All three are derived from the puller on every mount and every tick, so
+    // nothing on the wire may name them: a client-set `complete` walked past
+    // the gate this screen exists to hold.
+    #[Locked]
     public SyncPhase $phase = SyncPhase::Pending;
 
     // Null while the pull is simply working. Rendered as copy, so a stall
     // reads as a state rather than a frozen screen.
+    #[Locked]
     public ?SyncBlockedReason $blocked = null;
 
+    #[Locked]
     public SetupStep $step = SetupStep::Connect;
 
     // Picks the "Resuming setup" headline over the fresh-start one, and never
@@ -67,13 +74,17 @@ final class SetupProgressScreen extends Component
         }
 
         // Without the desktop's address only the relay leg runs, and that
-        // drains a mailbox without applying rows: 0 of 0 forever.
+        // drains a mailbox without applying rows: 0 of 0 forever. Recalled
+        // rather than located, because a browse costs its whole timeout and
+        // the pull below already runs one when nothing is remembered.
         try {
+            $address = $peerAddress->recall($currentUser->id());
+
             $progress = $puller->pull(
                 $currentUser->id(),
                 $session,
-                $peerAddress->host(),
-                $peerAddress->port(),
+                $address['host'] ?? null,
+                $address['port'] ?? null,
             );
 
             $this->applyProgress($progress);
@@ -97,9 +108,15 @@ final class SetupProgressScreen extends Component
         }
     }
 
-    public function render(ViewFactory $views): View
+    // The app-lock allow-list exempts this route so a wire:poll tick is never
+    // interrupted by the PIN screen. Nothing then redirects a reader whose lock
+    // engaged anyway, and the blocked copy named a door with no handle: the
+    // screen sat on "unlock to continue" through a relaunch, with no control.
+    public function render(ViewFactory $views, UrlGenerator $urls): View
     {
-        $view = $views->make('mobile::livewire.setup-progress-screen');
+        $view = $views->make('mobile::livewire.setup-progress-screen', [
+            'lockUrl' => $urls->route('mobile.lock'),
+        ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · Beatrax']);

@@ -7,10 +7,10 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 
-final class FieldProvenanceWriter
+final readonly class FieldProvenanceWriter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     // A null (never-stamped) map is initialised via COALESCE(..., '{}')

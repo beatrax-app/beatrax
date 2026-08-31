@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Še ni ničesar skrivnostnega. Uvozi nekaj izpiskov in Beatrax bo tukaj prikazal vrstice, ki jih ni mogel prepoznati.',
 
+    'showing_capped' => 'Prikazanih je prvih :shown od :total.',
+
     'footer' => 'Skupni seznam je datoteka YAML, ki je priložena Beatraxu. Pošiljanje predloga odpre GitHub v tvojem brskalniku; nič drugega ne zapusti te naprave.',
 
     'card' => [

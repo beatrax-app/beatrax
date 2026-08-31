@@ -12,7 +12,8 @@
     two read as one activity — and leaves room for what comes next.
 --}}
 @section('content')
-        <div class="mx-auto max-w-3xl space-y-10 px-4 py-12 sm:px-8">
+    <x-core::page-shell width="3xl">
+        <div class="space-y-10">
             <header class="space-y-2">
                 <x-core::page-heading level="section">
                     {{ Lang::get('community::index.heading') }}
@@ -82,4 +83,5 @@
                 </x-core::card>
             </section>
         </div>
+    </x-core::page-shell>
 @endsection

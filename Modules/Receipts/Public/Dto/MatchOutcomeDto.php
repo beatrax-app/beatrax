@@ -18,7 +18,22 @@ final class MatchOutcomeDto extends Data
         public readonly ?ParsedReceiptDto $parsed,
         public readonly ?string $skipReason,
         public readonly ?string $unmatchedReason = null,
+        public readonly ?string $matcherKey = null,
     ) {}
+
+    // Stamped by the registry from the matcher that answered, which is the only
+    // place that fact is known first-hand; a matcher writing its own key into
+    // the untyped raw payload made every reader guess it back out of a mixed.
+    public function fromMatcher(string $matcherKey): self
+    {
+        return new self(
+            kind: $this->kind,
+            parsed: $this->parsed,
+            skipReason: $this->skipReason,
+            unmatchedReason: $this->unmatchedReason,
+            matcherKey: $matcherKey,
+        );
+    }
 
     public static function parsed(ParsedReceiptDto $receipt): self
     {

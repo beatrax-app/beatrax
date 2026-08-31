@@ -23,10 +23,13 @@ enum SnoozeWindow: string
     // CarbonImmutable::setTestNow() still fixes what the targets come out as.
     public function targetFrom(CarbonInterface $now): string
     {
+        // NoOverflow because a plain addMonth() off a day the target month does
+        // not have rolls FORWARD past it: snoozed on 31 January, "one month"
+        // came back on 3 March. It clamps onto that month's last day instead.
         $target = match ($this) {
             self::OneWeek => $now->addWeek(),
-            self::OneMonth => $now->addMonth(),
-            self::ThreeMonths => $now->addMonths(3),
+            self::OneMonth => $now->addMonthNoOverflow(),
+            self::ThreeMonths => $now->addMonthsNoOverflow(3),
         };
 
         return $target->toIso8601String();

@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Erősítsd meg vagy utasítsd el azokat a jelölt kapcsolatokat, amelyeket a láncfeloldó nem tudott automatikusan megerősíteni.',
 
     'empty_heading' => 'Nincs áttekintendő tétel',
-    'empty_body' => 'Minden lánckapcsolat vagy megerősített, vagy elutasított. Az új jelöltek az importok beérkezésekor jelennek meg itt.',
+    'empty_body' => 'Minden kapcsolat, amelyet a feloldó párosítani tudott, megerősített vagy elutasított. Az új jelöltek az importok beérkezésekor jelennek meg itt.',
 
     'auto_confirm_nudge' => 'Még egy megerősítés, és a hasonló kapcsolatok automatikusan megerősítésre kerülnek.',
 

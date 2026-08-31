@@ -9,8 +9,8 @@
         ['key' => 'budget', 'label' => Lang::get('migration::preview.stats.budget'), 'value' => $summary->budgetMonthsCount],
     ];
 
-    $everythingClean = $summary->unmapped['extra']['count'] === 0
-        && $summary->unmapped['conflict']['count'] === 0;
+    $stagedNothing = $summary->stagedNothing();
+    $everythingClean = ! $stagedNothing && $summary->unmappedCount() === 0;
 @endphp
 
 <div class="space-y-8 pb-24">
@@ -29,8 +29,11 @@
         @endforeach
     </section>
 
-    {{-- Grouped-section unmapped/conflict list, or the all-clean empty state. --}}
-    @if ($everythingClean)
+    {{-- Grouped-section unmapped/conflict list, or one of the two empty states:
+         nothing staged at all, or everything staged and all of it mapped. --}}
+    @if ($stagedNothing)
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.nothing_staged') }}</p>
+    @elseif ($everythingClean)
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.all_clean') }}</p>
     @else
         <section class="space-y-3">
@@ -88,7 +91,10 @@
         <div class="mx-auto max-w-5xl space-y-2">
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.footer_note') }}</p>
             <div class="flex items-center justify-between gap-3">
-                <x-core::secondary-button wire:click="discard">
+                <x-core::secondary-button
+                    wire:click="discard"
+                    wire:confirm="{{ Lang::get('migration::preview.discard_confirm') }}"
+                >
                     {{ Lang::get('migration::preview.discard_button') }}
                 </x-core::secondary-button>
                 <button

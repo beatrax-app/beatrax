@@ -20,7 +20,7 @@ return [
     'ok_aria' => 'OK — PIN-kód megerősítése',
     'ok' => 'OK',
 
-    'error_too_short' => 'A PIN-kódnak legalább 6 számjegyűnek kell lennie.',
+    'error_pin_shape' => 'A PIN-kódnak :min–:max számjegyből kell állnia — csak számok.',
 
     'error_backoff' => 'Túl sok próbálkozás — próbáld újra ennyi múlva: :wait.',
 

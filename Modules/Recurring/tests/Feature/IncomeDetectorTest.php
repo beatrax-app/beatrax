@@ -182,7 +182,7 @@ it('drops income below the recurring_income_min_amount_minor threshold so small 
     // The default threshold is €2000; every row seeded below is €500.
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -223,7 +223,7 @@ it('produces two distinct income series for multi-IBAN payroll', function (): vo
 it('falls back to counterparty_normalized when IBAN is null', function (): void {
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -251,7 +251,7 @@ it('clusters mixed-currency income (EUR vs USD same employer) into two separate 
     // Both runs below share one IBAN; only the currency differs.
     $start = CarbonImmutable::parse('2025-10-25');
     for ($i = 0; $i < 6; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -325,7 +325,7 @@ it('does not touch expense-type transactions', function (): void {
 it('leaves a snoozed series untouched — refreshing metrics during snooze would wake the row up', function (): void {
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -379,7 +379,7 @@ it('leaves a snoozed series untouched — refreshing metrics during snooze would
 it('suppresses every cadence variant when the counterparty has a rejected series — partial cadence-only un-rejection is not supported', function (): void {
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -408,7 +408,7 @@ it('suppresses every cadence variant when the counterparty has a rejected series
         ->delete();
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
-        $date = $quarterlyStart->addMonths($i * 3)->toDateString();
+        $date = $quarterlyStart->addMonthsNoOverflow($i * 3)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -440,7 +440,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
     // than latch onto A on the strength of the shared name.
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 13; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,
@@ -489,7 +489,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
         ->delete();
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
-        $date = $quarterlyStart->addMonths($i * 3)->toDateString();
+        $date = $quarterlyStart->addMonthsNoOverflow($i * 3)->toDateString();
         idtSeedTx(
             $this->db, $this->user, $this->account, $this->run,
             $date,

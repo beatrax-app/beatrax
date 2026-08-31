@@ -7,7 +7,9 @@ namespace Modules\Auth\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 
 // No --password option, and a hard refusal when not interactive: a scripted
@@ -23,6 +25,7 @@ class ResetPasswordCommand extends Command
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
+        private readonly SessionRevoker $sessions,
     ) {
         parent::__construct();
     }
@@ -42,7 +45,7 @@ class ResetPasswordCommand extends Command
     {
         // Larastan narrows the required `username` argument to string from the
         // typed signature, so no is_string() guard is needed.
-        $username = strtolower(trim($this->argument('username')));
+        $username = Username::normalize($this->argument('username'));
 
         $user = User::query()->where('username', $username)->first();
 
@@ -63,6 +66,10 @@ class ResetPasswordCommand extends Command
                 'password' => $this->hasher->make($password),
                 'force_password_change_at_next_login' => true,
             ]);
+
+        // The escape hatch is reached when the account is already out of
+        // reach, so whatever still holds it goes with the old password.
+        $this->sessions->revokeAllFor($user->id);
 
         $this->info("Password updated for {$user->username}.");
 

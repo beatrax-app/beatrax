@@ -1,14 +1,11 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Open Banking connect wizard modal (19-06, UI-SPEC Surface B3).
-
-     Numbered-step chrome cloned from EmailScan's
-     oauth-client-wizard-modal.blade.php: circled step badges, mono
-     copy-to-clipboard chips for secrets-adjacent values, footer
-     [Cancel] [primary action] layout. Unlike that component (a static
-     instructional list), this wizard genuinely advances through
-     $step server-side — each step's action performs real work
-     (keypair generation, a disk write, the consent hand-off) so only
-     the current step's content and controls render. --}}
+@use('Modules\OpenBanking\Internal\Enums\BankChoice')
+@use('Modules\OpenBanking\Internal\Enums\CuratedInstitution')
+@use('Modules\OpenBanking\Internal\Enums\WizardStep')
+{{-- The step chrome is EmailScan's oauth-client-wizard-modal, but unlike that
+     static instructional list every step here performs real work server-side
+     — keypair generation, a disk write, the consent hand-off — so only the
+     current step's content and controls render. --}}
 
 <div>
     <flux:modal wire:key="open-banking-wizard" name="open-banking-wizard" class="md:max-w-2xl" :dismissible="false">
@@ -20,20 +17,18 @@
                 </p>
             </header>
 
-            {{-- Step progress: 5 circled badges, current + completed steps
-                 dark, upcoming steps muted. --}}
             <ol class="flex items-center gap-2">
-                @for ($n = 1; $n <= 5; $n++)
+                @foreach (WizardStep::cases() as $badge)
                     <li
                         class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold
-                            {{ $step >= $n
+                            {{ $step >= $badge->value
                                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                                 : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' }}"
-                    >{{ $n }}</li>
-                @endfor
+                    >{{ $badge->value }}</li>
+                @endforeach
             </ol>
 
-            @if ($step === 1)
+            @if ($step === WizardStep::Keypair->value)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step1_title') }}</p>
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.step1_body') }}</p>
@@ -82,7 +77,7 @@
                         </div>
                     @endif
                 </div>
-            @elseif ($step === 2)
+            @elseif ($step === WizardStep::Register->value)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step2_title') }}</p>
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.step2_body') }}</p>
@@ -94,7 +89,7 @@
                         rel="noopener"
                     >{{ Lang::get('openbanking::messages.wizard.open_portal') }}</x-core::secondary-button>
                 </div>
-            @elseif ($step === 3)
+            @elseif ($step === WizardStep::ApplicationId->value)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step3_title') }}</p>
                     {{-- The aria-label that used to sit on this input repeated
@@ -110,7 +105,7 @@
                         class="font-mono"
                     />
                 </div>
-            @elseif ($step === 4)
+            @elseif ($step === WizardStep::Bank->value)
                 {{-- Without a shared name= the browser never treated these three
                      as one group: arrow keys did not move between them, and two
                      could sit checked until the Livewire round trip corrected it.
@@ -119,26 +114,21 @@
                 <fieldset class="space-y-3">
                     <legend class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step4_title') }}</legend>
                     <div class="grid grid-cols-2 gap-3">
-                        <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
-                            <span class="flex items-center gap-2">
-                                <input type="radio" name="bankChoice" wire:click="chooseBank('asn')" @checked($bankChoice === 'asn') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
-                                <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">ASN Bank</span>
-                            </span>
-                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
-                        </label>
-                        <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
-                            <span class="flex items-center gap-2">
-                                <input type="radio" name="bankChoice" wire:click="chooseBank('sns')" @checked($bankChoice === 'sns') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
-                                <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">SNS (de Volksbank)</span>
-                            </span>
-                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
-                        </label>
+                        @foreach (CuratedInstitution::cases() as $institution)
+                            <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
+                                <span class="flex items-center gap-2">
+                                    <input type="radio" name="bankChoice" wire:click="chooseBank('{{ $institution->choice()->value }}')" @checked($bankChoice === $institution->choice()->value) class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
+                                    <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $institution->displayName() }}</span>
+                                </span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
+                            </label>
+                        @endforeach
                     </div>
                     <label class="flex items-center gap-2 pt-1">
-                        <input type="radio" name="bankChoice" wire:click="chooseBank('other')" @checked($bankChoice === 'other') class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
+                        <input type="radio" name="bankChoice" wire:click="chooseBank('{{ BankChoice::Other->value }}')" @checked($bankChoice === BankChoice::Other->value) class="h-4 w-4 border-slate-300 text-emerald-700 focus:ring-emerald-600 dark:border-slate-700">
                         <span class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.other_institution') }}</span>
                     </label>
-                    @if ($bankChoice === 'other')
+                    @if ($bankChoice === BankChoice::Other->value)
                         <input
                             type="text"
                             wire:model.live="otherInstitutionId"
@@ -148,7 +138,7 @@
                         >
                     @endif
                 </fieldset>
-            @elseif ($step === 5)
+            @elseif ($step === WizardStep::Consent->value)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step5_title') }}</p>
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.step5_body') }}</p>
@@ -165,25 +155,25 @@
                     wire:click="cancel"
                 >{{ Lang::get('openbanking::messages.wizard.cancel') }}</x-core::secondary-button>
 
-                @if ($step === 2)
+                @if ($step === WizardStep::Register->value)
                     <x-core::neutral-button
                         class="min-h-[44px]"
                         wire:click="continueToApplicationId"
                     >{{ Lang::get('openbanking::messages.wizard.continue') }}</x-core::neutral-button>
-                @elseif ($step === 3)
+                @elseif ($step === WizardStep::ApplicationId->value)
                     <x-core::neutral-button
                         class="min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
                         :disabled="trim($applicationId) === ''"
                         wire:click="saveApplicationId"
                         wire:loading.attr="disabled"
                     >{{ Lang::get('openbanking::messages.wizard.continue') }}</x-core::neutral-button>
-                @elseif ($step === 4)
+                @elseif ($step === WizardStep::Bank->value)
                     <x-core::neutral-button
                         class="min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="$bankChoice === '' || ($bankChoice === 'other' && trim($otherInstitutionId) === '')"
+                        :disabled="$bankChoice === '' || ($bankChoice === BankChoice::Other->value && trim($otherInstitutionId) === '')"
                         wire:click="continueToConsent"
                     >{{ Lang::get('openbanking::messages.wizard.continue') }}</x-core::neutral-button>
-                @elseif ($step === 5)
+                @elseif ($step === WizardStep::Consent->value)
                     {{-- Same-tab redirect (no target="_blank") so the
                          callback re-mounts THIS page and the return-flash
                          enable fires. The href fallback (middle/cmd-click or

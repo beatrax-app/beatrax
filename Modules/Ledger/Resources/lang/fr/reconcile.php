@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'choisis un compte',
+        'choose_date' => 'choisis une date de relevé',
         'enter_balance' => 'saisis un solde de relevé',
         'matched' => 'concordant — :amount',
         'discrepancy' => 'écart — :amount',
+        'reconciled_through' => 'rapproché jusqu’au :date',
     ],
 
     'mismatch_html' => 'Le solde du relevé ne correspond pas encore à ton solde compensé. Bascule des lignes en compensé dans la <a href=":url" class="underline">liste des transactions</a> ou ajuste le solde saisi jusqu\'à ce que l\'écart tombe à zéro — ce flux ne crée jamais d\'écriture d\'équilibrage.',
+    'unreachable_no_baseline_html' => 'Aucun basculement de lignes ne peut ramener cet écart à zéro. Aucun solde d\'ouverture n\'est enregistré pour ce compte, son solde est donc mesuré à partir de zéro. Importe le relevé sur lequel le compte s\'ouvre, ou renseigne le solde d\'ouverture dans les <a href=":url" class="underline">Paramètres</a>.',
+    'unreachable' => 'Aucun basculement de lignes ne peut ramener cet écart à zéro : il se situe hors de la plage de toutes les lignes de ce compte jusqu\'à la date indiquée. Vérifie la date du relevé et le solde saisi.',
 
     'check' => 'Vérifier',
     'complete' => 'Terminer le rapprochement',
+    'complete_unavailable' => 'Il n’y a plus rien à verrouiller jusqu’à cette date — marque d’autres lignes comme compensées ou choisis une date de relevé ultérieure.',
 
     'errors' => [
         'choose_account' => 'Choisis d\'abord un compte.',

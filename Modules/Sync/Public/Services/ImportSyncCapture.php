@@ -22,7 +22,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     // Parents before children, so a peer replaying these accepts them: a
     // transaction carries a NOT NULL import_run_id and an account_id, and an
     // insert naming a row the peer has never seen fails the foreign key.
-    private const ORDER = ['import_runs', 'accounts', 'transactions'];
+    private const array ORDER = ['import_runs', 'accounts', 'transactions'];
 
     public function __construct(
         private DatabaseManager $db,

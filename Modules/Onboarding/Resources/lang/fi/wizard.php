@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Vaihe :current / :total',
 
-    'step_dot_aria' => 'Vaihe :number / :total',
-
     'back' => 'Takaisin',
     'back_aria' => 'Takaisin — palaa edelliseen määritysvaiheeseen',
 

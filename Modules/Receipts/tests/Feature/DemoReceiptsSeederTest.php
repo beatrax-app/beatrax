@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\ImportRun;
@@ -32,11 +31,9 @@ function seedDemoPrimary(): User
 it('inserts the two demo file_imports rows with source_kind derived from the filename', function (): void {
     $user = seedDemoPrimary();
 
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $seeder = new DemoReceiptsSeeder($db);
+    $seeder = $this->app->make(DemoReceiptsSeeder::class);
 
-    $count = $seeder->run(['demo-1@beatrax.local' => $user]);
+    $count = $seeder->run(['demo-1' => $user]);
 
     expect($count)->toBe(2);
 
@@ -51,19 +48,14 @@ it('inserts the two demo file_imports rows with source_kind derived from the fil
 it('is idempotent — a second run inserts no duplicate file_imports', function (): void {
     $user = seedDemoPrimary();
 
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $seeder = new DemoReceiptsSeeder($db);
+    $seeder = $this->app->make(DemoReceiptsSeeder::class);
 
-    $seeder->run(['demo-1@beatrax.local' => $user]);
-    $seeder->run(['demo-1@beatrax.local' => $user]);
+    $seeder->run(['demo-1' => $user]);
+    $seeder->run(['demo-1' => $user]);
 
     expect(DB::table('file_imports')->where('user_id', $user->id)->count())->toBe(2);
 });
 
 it('no-ops when the primary demo user is absent', function (): void {
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-
-    expect((new DemoReceiptsSeeder($db))->run([]))->toBe(0);
+    expect($this->app->make(DemoReceiptsSeeder::class)->run([]))->toBe(0);
 });

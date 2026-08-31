@@ -17,7 +17,7 @@ class SecureStorageKeyCustodian implements KeyCustodian
 {
     // Keychain/Keystore entry-name prefix; the current user id is
     // appended.
-    private const SLOT_PREFIX = 'beatrax.session.data_key.';
+    private const string SLOT_PREFIX = 'beatrax.session.data_key.';
 
     // Slot name => the key last read out of it. SensitiveColumnCodec resolves
     // the KEK once per decrypted VALUE, reaching release() before

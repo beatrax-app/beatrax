@@ -4,58 +4,62 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Services;
 
-use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
+use InvalidArgumentException;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
-use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\EmailScan\Public\Dto\InboxHealthLine;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Services\InboxScanSchedule;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Dto\TopCategories;
+use Modules\Ledger\Public\Enums\MoneyFlow;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md#thisperiodataglancequery--the-dashboard-composer
- */
-final class ThisPeriodAtAGlanceQuery
+final readonly class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
 
-    private const NON_EMPTY_CURRENCY_SQL = '(COALESCE(SUM(CASE WHEN type = ? THEN settled_amount_minor ELSE 0 END), 0) <> 0)
-         OR (COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) <> 0)';
+    // The head of the three conditional sums below. They differ only in which
+    // types they count and which sign they count them with.
+    private const string SUM_OVER_TYPES_PREFIX = 'COALESCE(SUM(CASE WHEN type IN (';
 
-    private const PER_CURRENCY_SQL = 'settled_currency,
-         COALESCE(SUM(CASE WHEN type = ? THEN settled_amount_minor ELSE 0 END), 0) AS inflow_minor,
-         COALESCE(SUM(CASE WHEN type = ? THEN -settled_amount_minor ELSE 0 END), 0) AS outflow_minor,
-         COALESCE(SUM(CASE WHEN type IN (?, ?) THEN settled_amount_minor ELSE 0 END), 0) AS net_minor';
+    // 86400 = 24h: where a scan is scheduled, an inbox untouched longer than
+    // that shows an amber dot. Inboxes past TILE_LINE_LIMIT collapse into a
+    // "+N more" line.
 
-    // 86400 = 24h: a scanned inbox untouched longer than that shows an amber
-    // dot. Inboxes past TILE_LINE_LIMIT collapse into a "+N more" line.
-    private const STALE_THRESHOLD_SECONDS = 86400;
+    private const int TILE_LINE_LIMIT = 3;
 
-    private const TILE_LINE_LIMIT = 3;
+    private const int EMAIL_LOCAL_PART_MAX = 12;
 
-    private const EMAIL_LOCAL_PART_MAX = 12;
+    // Where a scan is scheduled, an inbox untouched for longer than this is
+    // behind rather than merely quiet.
+    private static function staleThresholdSeconds(): int
+    {
+        return Duration::Day->seconds();
+    }
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly TopCategoriesByPeriodQuery $topCategoriesQuery,
-        private readonly TransactionListQuery $listQuery,
-        private readonly Clock $clock,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CrossCurrencyTotal $fx,
+        private DatabaseManager $db,
+        private TopCategoriesByPeriodQuery $topCategoriesQuery,
+        private TransactionListQuery $listQuery,
+        private Clock $clock,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
+        private CardStatementQuery $cardStatements,
     ) {}
 
     public function for(User $user, Period $period, ?string $displayCurrency = null): DashboardSummary
@@ -75,17 +79,17 @@ final class ThisPeriodAtAGlanceQuery
                 inflow: Money::ofMinor(0, $displayCurrency),
                 outflow: Money::ofMinor(0, $displayCurrency),
                 net: Money::ofMinor(0, $displayCurrency),
-                topCategories: [],
+                topCategories: TopCategories::none($displayCurrency),
                 recentTransactions: [],
                 uncategorizedCount: 0,
                 isFirstRun: true,
             );
         }
 
-        // Rollups filter by transactions.type, never by amount sign — the
-        // subtractive income rule, see the linked architecture page. Bucketed by
-        // the currency each row settled in: an account denominated in anything
-        // else was filtered away, reading as a period with no money in it.
+        // Rollups filter by transactions.type, never by amount sign, and which
+        // types each one counts is MoneyFlow's to say. Bucketed by the currency
+        // each row settled in: an account denominated in anything else was
+        // filtered away, reading as a period with no money in it.
         $buckets = $this->bucketsByCurrency($user, $period);
 
         $inflowByCurrency = [];
@@ -100,11 +104,11 @@ final class ThisPeriodAtAGlanceQuery
         $inflow = $this->fx->withRates($inflowByCurrency, $displayCurrency, $rates);
         $outflow = $this->fx->withRates($outflowByCurrency, $displayCurrency, $rates);
 
-        $uncategorized = $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNull('category_id')
-            ->count();
+        $uncategorized = SplitLegs::excludeParents(
+            $connection->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereNull('category_id')
+        )->count();
 
         $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10, currency: $displayCurrency);
 
@@ -149,27 +153,61 @@ final class ThisPeriodAtAGlanceQuery
         return $this->fx->of($byCurrency, $currency)->minor;
     }
 
+    // Income over a whole span, grouped by day and left unconverted, so a
+    // caller folding period by period pays one query and one rate lookup for
+    // the walk rather than one of each per period.
+    /**
+     * @return array<string, array<string, int>> posted_at => currency => minor
+     */
+    public function incomeForSpanByCurrencyPerDay(User $user, Period $span): array
+    {
+        $rows = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('type', TransactionType::Income->value)
+            ->where('posted_at', '>=', $span->start->toDateString())
+            ->where('posted_at', '<', $span->endExclusive->toDateString())
+            ->groupBy('posted_at', 'settled_currency')
+            ->selectRaw('posted_at, settled_currency, COALESCE(SUM(settled_amount_minor), 0) AS income_minor')
+            ->get();
+
+        $byDay = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $day = self::toString($row->posted_at);
+            $byDay[$day][self::toString($row->settled_currency)] = self::toInt($row->income_minor);
+        }
+
+        return $byDay;
+    }
+
     /**
      * @return list<stdClass>
      */
     private function bucketsByCurrency(User $user, Period $period): array
     {
+        $inflowTypes = MoneyFlow::Income->types();
+        $outflowTypes = MoneyFlow::Spend->types();
+        $netTypes = MoneyFlow::Net->types();
+
+        $inflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($inflowTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
+        $outflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($outflowTypes).') THEN -settled_amount_minor ELSE 0 END), 0)';
+        $netSum = self::SUM_OVER_TYPES_PREFIX.self::binds($netTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
+
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->groupBy('settled_currency')
-            ->havingRaw(self::NON_EMPTY_CURRENCY_SQL, [
-                TransactionType::Income->value,
-                TransactionType::Expense->value,
-            ])
-            ->selectRaw(self::PER_CURRENCY_SQL, [
-                TransactionType::Income->value,
-                TransactionType::Expense->value,
-                TransactionType::Income->value,
-                TransactionType::Expense->value,
-            ])
+            ->havingRaw(
+                '('.$inflowSum.' <> 0) OR ('.$outflowSum.' <> 0)',
+                [...$inflowTypes, ...$outflowTypes],
+            )
+            ->selectRaw(
+                'settled_currency, '.$inflowSum.' AS inflow_minor, '.$outflowSum.' AS outflow_minor, '.$netSum.' AS net_minor',
+                [...$inflowTypes, ...$outflowTypes, ...$netTypes],
+            )
             ->orderBy('settled_currency')
             ->get();
 
@@ -177,6 +215,30 @@ final class ThisPeriodAtAGlanceQuery
         $all = $rows->all();
 
         return $all;
+    }
+
+    /**
+     * @param  list<string>  $types
+     */
+    // havingRaw()/selectRaw() need a literal-string, so the placeholder run is
+    // matched against a fixed set rather than built with implode(). The counts
+    // are bounded by TransactionType's cases; anything else is a caller bug.
+    /**
+     * @param  list<string>  $types
+     * @return literal-string
+     */
+    private static function binds(array $types): string
+    {
+        return match (count($types)) {
+            1 => '?',
+            2 => '?, ?',
+            3 => '?, ?, ?',
+            4 => '?, ?, ?, ?',
+            5 => '?, ?, ?, ?, ?',
+            6 => '?, ?, ?, ?, ?, ?',
+            7 => '?, ?, ?, ?, ?, ?, ?',
+            default => throw new InvalidArgumentException('Unsupported bind count: '.count($types)),
+        };
     }
 
     /**
@@ -198,44 +260,12 @@ final class ThisPeriodAtAGlanceQuery
         }, $this->bucketsByCurrency($user, $period));
     }
 
-    // Null when no open/partially_settled statement exists, which the Blade
-    // reads as "hide the tile". The WHERE filters card_statements.user_id
-    // before any account join, so a forged user_id leaks nothing.
+    // Chains owns card_statements and the reason the raw open balance is not
+    // what will be paid, so the read is handed there rather than repeated. Read
+    // here it deducted no credits, and one statement was two amounts.
     public function nextIcsSettlement(User $user): ?CardStatementForecastTile
     {
-        $row = $this->db->connection()
-            ->table('card_statements')
-            ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
-            ->where('card_statements.user_id', $user->id)
-            ->where('accounts.kind', AccountKind::IcsCard->value)
-            ->whereIn('card_statements.state', [
-                CardStatementState::Open->value,
-                CardStatementState::PartiallySettled->value,
-            ])
-            ->orderByDesc('card_statements.period_end')
-            ->orderByDesc('card_statements.id')
-            ->select(
-                'card_statements.id as id',
-                'card_statements.open_balance_minor as open_balance_minor',
-                'card_statements.currency as currency',
-                'card_statements.period_end as period_end',
-                'card_statements.state as state',
-            )
-            ->first();
-
-        if ($row === null) {
-            return null;
-        }
-
-        $periodEnd = CarbonImmutable::parse(self::toString($row->period_end));
-        $openBalanceMinor = self::toInt($row->open_balance_minor);
-
-        return new CardStatementForecastTile(
-            amount: Money::ofMinor($openBalanceMinor, self::toString($row->currency)),
-            dueDate: $periodEnd->addDays(CardStatementQuery::STATEMENT_DUE_GRACE_DAYS)->startOfDay(),
-            statementId: self::toInt($row->id),
-            state: self::toString($row->state),
-        );
+        return $this->cardStatements->forecastTileForUser($user);
     }
 
     // Returns null when zero inboxes are connected — see the linked
@@ -267,6 +297,7 @@ final class ThisPeriodAtAGlanceQuery
         }
 
         $nowEpoch = $this->clock->now()->getTimestamp();
+        $scanIsScheduledHere = InboxScanSchedule::runsOnThisDevice();
         $overall = 'healthy';
         $lines = [];
         $emitted = 0;
@@ -279,7 +310,7 @@ final class ThisPeriodAtAGlanceQuery
             $status = $rawStatus === '' ? 'idle' : $rawStatus;
 
             $lastScanAt = self::parseLastScanAt(self::toString($row->last_scan_at ?? null));
-            $lineStatus = self::lineStatusFor($status, $lastScanAt, $nowEpoch);
+            $lineStatus = self::lineStatusFor($status, $lastScanAt, $nowEpoch, $scanIsScheduledHere);
             $overall = self::escalateOverall($overall, $lineStatus);
 
             if ($emitted < self::TILE_LINE_LIMIT) {
@@ -312,28 +343,32 @@ final class ThisPeriodAtAGlanceQuery
         }
     }
 
-    // A never-scanned inbox counts as stale alongside a too-long-ago one:
-    // the figure cannot be trusted either way.
-    private static function lineStatusFor(string $status, ?DateTimeImmutable $lastScanAt, int $nowEpoch): string
+    // Stale means a schedule fell behind, so only a device that runs one can
+    // reach it: where no scan is scheduled, never-scanned and long-ago are
+    // both the arrangement working as designed, and say so instead.
+    private static function lineStatusFor(string $status, ?DateTimeImmutable $lastScanAt, int $nowEpoch, bool $scanIsScheduledHere): string
     {
         if ($status === InboxScanStatus::NeedsReauth->value) {
             return 'reauth';
         }
 
-        if ($lastScanAt === null || $lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
-            return 'stale';
+        if ($lastScanAt !== null && $lastScanAt->getTimestamp() >= ($nowEpoch - self::staleThresholdSeconds())) {
+            return 'healthy';
         }
 
-        return 'healthy';
+        return $scanIsScheduledHere ? 'stale' : 'unscheduled';
     }
 
-    // reauth outranks stale outranks healthy, and a later healthy row never
-    // downgrades a severity already reached.
+    // reauth outranks stale outranks unscheduled outranks healthy, and a later
+    // row never downgrades a rank already reached. unscheduled sits above
+    // healthy because an unscanned inbox is not one the tile can vouch for,
+    // and below stale because nothing here was late.
     private static function escalateOverall(string $current, string $lineStatus): string
     {
         return match (true) {
             $current === 'reauth' || $lineStatus === 'reauth' => 'reauth',
             $current === 'stale' || $lineStatus === 'stale' => 'stale',
+            $current === 'unscheduled' || $lineStatus === 'unscheduled' => 'unscheduled',
             default => $current,
         };
     }

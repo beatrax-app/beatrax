@@ -24,6 +24,8 @@ Modules/DriftAlerts/
 │       └── CancellationImpactQuery.php
 ├── Internal/
 │   ├── DriftEvaluator.php
+│   ├── AmountMovement.php
+│   ├── CadenceYearRate.php
 │   ├── StateMachines/
 │   │   ├── DriftAlertStateMachine.php
 │   │   └── InvalidStateTransitionException.php
@@ -70,8 +72,8 @@ Modules/DriftAlerts/
 - **DTOs/**
   - `DriftAlertDto` — flattened row carrying series metadata for
     rendering.
-  - `CancellationImpactDto` — `(annualSavingsMinor, currency,
-    perOccurrence, occurrencesPerYear)`.
+  - `CancellationImpactDto` — `(recurringSeriesId, monthlySavings,
+    annualSavings, currency)`.
 - **Events/**
   - `DriftAlertOpened` (`alertId, userId, seriesId, deltaMinor`).
   - `DriftAlertAcknowledged`, `DriftAlertSnoozed`,
@@ -82,14 +84,19 @@ Modules/DriftAlerts/
     (single COUNT against the `(user_id, state)` index). The sidebar
     badge applies the same predicate from `NavCountsService`.
   - `DriftAlertQuery::openForUser($user, $cursorId, $limit)` — the
-    drift page's open tab, keyset-paged on id DESC rather than
-    offset-paged. `historyForUser(...)` and `dismissedForUser(...)`
-    are the same shape over the acknowledged and dismissed states.
-  - `DriftAlertQuery::groupedBySeriesForUser($user)` — the per-series
-    drill-in.
+    flat open list, keyset-paged on `(detected_at, id)` rather than
+    offset-paged.
+    `historyForUser(...)` and `dismissedForUser(...)` are the same
+    shape over the acknowledged and dismissed states, and are what the
+    History and Dismissed tabs render.
+  - `DriftAlertQuery::groupedBySeriesForUser($user, $seriesLimit)` —
+    the per-series grouping the Open tab actually renders, bounded to
+    `$seriesLimit` series. The Open tab does NOT call `openForUser`:
+    it once called it on every render and discarded the result.
   - `CancellationImpactQuery::forSeries($seriesId, $user)` —
-    projected annual savings (the series' monthly equivalent × 12).
-    Keyed on the recurring series, not on an alert id;
+    projected savings: the monthly equivalent, and the year at the
+    series' own price times its cadence rate. Keyed on the recurring
+    series, not on an alert id;
     `forSeriesIds($seriesIds, $user)` is the batched form the open tab
     calls once instead of looping.
 
@@ -97,10 +104,21 @@ Modules/DriftAlerts/
 
 - `Internal/DriftEvaluator` — the math. Reads through
   `RecurringSeriesQuery`, computes delta, applies effective
-  threshold, INSERTs. Idempotent on the unique constraint.
+  threshold, INSERTs under the id derived from
+  `(recurring_series_id, latest_occurrence_id)`, and emits the
+  `EntityMutated` create. Idempotent on the unique constraint.
+- `Internal/AmountMovement` — whether two amounts describe a movement at
+  all; refuses a zero prior, a currency change and a sign flip. The
+  evaluator and `SubscriptionDriftWatchQuery` share it, so the alert and
+  the watchlist cannot disagree about what counts as drift.
+- `Internal/CadenceYearRate` — the one spelling of how many times a year
+  each cadence bills, read by the evaluator's annualisation and by
+  `CancellationImpactQuery`.
 - `Internal/StateMachines/DriftAlertStateMachine` — SOLE sanctioned
-  mutator of `drift_alerts.state`. Validates the transition and
-  records a `drift_alert_transitions` audit row.
+  mutator of `drift_alerts.state`. Validates the transition, records a
+  `drift_alert_transitions` audit row, and emits the `EntityMutated`
+  edit afterwards, so every acknowledge, snooze, dismissal and revival
+  reaches the peer through one dispatch.
 - `Internal/StateMachines/InvalidStateTransitionException` — typed
   exception thrown for any disallowed transition.
 - `Internal/Jobs/DetectDriftAlertsJob` — queued evaluation per

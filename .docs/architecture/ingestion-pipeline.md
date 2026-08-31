@@ -3,9 +3,10 @@
 Every transaction Beatrax ever shows the user enters the system through the
 same pipeline. The pipeline is orchestrated by
 `Modules\Import\Internal\Pipeline\ImportPipeline` and the per-stage classes
-that hang off it. Source formats — ASN CSV, ASN CAMT.053, ASN MT940, ICS PDF,
-PayPal CSV, Gmail receipts, Microsoft Graph receipts, `.eml`/`.mbox`
-drop-in — feed in at the parse stage; everything past parse is uniform.
+that hang off it. Import types — CSV (in whichever dialect the reader's bank
+exports, resolved from a preset), CAMT.053, MT940, card-statement PDF, PayPal
+CSV, Gmail receipts, Microsoft Graph receipts, `.eml`/`.mbox` drop-in — feed in
+at the parse stage; everything past parse is uniform.
 
 This document describes the pipeline stages, the idempotency contract that
 governs duplicate handling, and the post-commit boundary that separates
@@ -25,22 +26,22 @@ aborts the whole preview.
 
 `Modules\Import\Internal\Pipeline\Stages\ParseStage` dispatches to the
 format-specific adapter registered with `SourceAdapterRegistry`. Adapters
-live under `Modules/Import/Internal/Parsers/` (one subdirectory per source:
-`Asn/`, `Ics/`, `Paypal/`, plus `.eml` and `.mbox` paths in
-`Modules/Receipts/`).
+live under `Modules/Ingestion/Internal/Adapters/` (one subdirectory per
+source family: `Banking/`, `Csv/`, `Ics/`, `Paypal/`, plus `.eml` and
+`.mbox` paths in `Modules/Receipts/`). `Modules/Import/Internal/Parsers/`
+holds the payment-type hinters, not the readers.
 
 Each adapter yields a sequence of `SourceRow` value objects — the
 unnormalised, parser-specific shape of one input line. Adapters know about
-their format's quirks (PayPal's UTF-8 BOM, ICS's Windows-1252 encoding, ASN
-CSV's per-bank dialect-hint requirement). They know nothing about the
-canonical schema.
+their format's quirks (PayPal's UTF-8 BOM, ICS's Windows-1252 encoding, a
+positional CSV's fixed column order). They know nothing about the canonical
+schema.
 
-The pipeline refuses an `asn-csv` import without an explicit
-`BankCsvFormatHint` — the CSV file's own headers are not enough to
-disambiguate the dialect reliably, and that guard lives at the public-contract
-boundary so even programmatic callers can't skip it. A CSV preset needs no
-hint because its format id already names the dialect: `ing-nl-csv` is the ING
-dialect, and there is no second identifier for the same bank.
+Every CSV dialect is now a preset whose format id already names it —
+`ing-nl-csv` is the ING dialect, `asn-csv` the ASN one — so no import needs a
+separate dialect hint. `BankCsvFormatHint` survives only as a required-argument
+guard on the public contract for `asn-csv`; it carries no information the format
+id does not, and removing it is blocked on test call sites outside this module.
 
 For the `eml`/`mbox` formats, `ParseStage` instead drives the receipt path:
 it reads the file bytes and hands them to `RecordReceipt`, which persists a
@@ -52,6 +53,16 @@ resulting `ParsedReceiptDto` to a `SourceTransactionDto` via
 per-message flow for each contained message. The `User` is required only
 for these receipt arms (to scope the `file_imports` row per-user); the
 CSV/CAMT/MT940/PDF arms ignore it.
+
+Before either arm reads a byte, `ReceiptFileShape::of()` (Receipts) answers
+which of the two transports the file actually is, off its own head: mboxrd puts
+a literal "From " at the start of the file and a single message never opens with
+one. A file that disagrees with the declared format raises
+`ReceiptFormatMismatchException`, which implements `NamesAFormatMismatch` and
+`MessageNamesNoUserData`, so the preview renders it as a refusal naming what the
+file is and which format to pick. This is the only arm that needs its own check:
+every other format reaches `HeaderSniffer` through its adapter, and the receipt
+arms bypass the registry entirely.
 
 ### 2. Account resolution
 
@@ -90,17 +101,22 @@ FK, via four steps:
 3. Maps the amount sign to `Transaction.type` (positive → income,
    negative → expense, zero → adjustment); future transfer-pair
    detection overrides this for matched cross-account flows.
-4. Substitutes the native amount + currency into the settled pair when
-   the source DTO omits `settledAmountMinor`/`settledCurrency` (every
-   EUR-native row). When the source supplies a different settled
-   currency, the canonical row carries both legs verbatim AND derives
-   `fxRateUsed = settled / native` via `Brick\Math\BigDecimal` at scale 8
-   with HALF_UP rounding — float arithmetic is forbidden on the money
-   path since the `decimal(18,8)` column requires exact precision. The
-   two legs can also differ at the SAME currency, which carries no rate:
-   a bank fee charged on top of the merchant's amount leaves the native
-   figure as what was charged and the settled figure as what the account
-   paid. See
+4. Hands the pair to `Ledger\Public\ValueObjects\TransactionAmount::relate()`,
+   which is the only place the settled columns and the rate between them
+   are derived. It substitutes the native amount + currency into the
+   settled pair when the source DTO omits `settledAmountMinor`/
+   `settledCurrency` (every EUR-native row). When the source supplies a
+   different settled currency, the settled leg takes its **magnitude**
+   from the source and its **sign** from the native leg — one movement
+   written twice has one direction, and a source that books each leg by
+   the balance IT moved supplies a settled credit for a native debit. It
+   then derives `fxRateUsed = settled / native` via `Brick\Math\BigDecimal`
+   at scale 8 with HALF_UP rounding — float arithmetic is forbidden on the
+   money path since the `decimal(18,8)` column requires exact precision —
+   which is therefore never negative. The two legs can also differ at the
+   SAME currency, which carries no rate and no sign rule: a bank fee
+   charged on top of the merchant's amount leaves the native figure as
+   what was charged and the settled figure as what the account paid. See
    [Generic CSV (bank presets)](../features/ingestion/architecture.md#generic-csv-bank-presets).
 
 ### 4. Transaction-type classification (`ClassifyTransactionType`)
@@ -153,10 +169,12 @@ lines and keeps `/dev/logs` tailable.
 The pipeline calls into `Modules\Categorization\Public\Contracts\AppliesAutoCategory`
 — a public-contract injection point. The implementation lives in
 `Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage`. The
-stage walks the per-user categorization rules in specificity order and
-applies the highest-scoring rule above the ≥40% confidence gate (see
-[Categorization](categorization.md)). If nothing clears the gate the
-transaction is left uncategorized; the user triages it later.
+stage evaluates the per-user categorization rules in `priority` order and
+folds the actions of every rule that fired, so the last matching rule's
+category is the one that lands; when no fired rule carries a category
+action the per-user merchant memory answers instead (see
+[Categorization](categorization.md)). With neither, the transaction is
+left uncategorized and the user triages it later.
 
 ### 7. Counterparty resolution (`ResolvesCounterparties`)
 
@@ -170,9 +188,14 @@ rides along into the persisted transaction.
 ### 8. Fingerprint (`FingerprintStage`)
 
 The post-commit boundary. The stage computes the v3 fingerprint over
-(`account_id`, `booked_at`, `amount_minor`, `currency`, normalised
-counterparty + description) and classifies the canonical transaction
-against the existing `transactions` table:
+(`user_id`, `account_id`, `posted_at` as a date, `booked_at` as a datetime,
+`amount_minor`, `currency`, `counterparty_normalized`) — the tuple
+`FingerprintComposer::composeTuple()` hashes, in that order. `description` is
+**not** among them, which is why `EnrichmentConflictField::Description` is the
+one conflict field answering false to `isFingerprintInput()`: enriching it
+needs no fingerprint recompose, while the other three do.
+The stage then classifies the canonical transaction against the existing
+`transactions` table:
 
 - **NEW** — no existing row matches the fingerprint. The row is queued for
   insert.
@@ -207,7 +230,11 @@ existing row's `counterparty_name`/`description`/`currency`/`amount_minor`
 and compares them to the incoming row (case-insensitive for strings,
 uppercase for currency, exact-int for amount), recording any disagreement
 on `EnrichedDisposition::$conflictingFields` for `ApplyEnrichments` to
-resolve per the user's `receipt_conflict_resolution` policy. Because
+resolve per the user's `receipt_conflict_resolution` policy. Those four
+names are `Modules\Import\Public\Enums\EnrichmentConflictField`, and
+the stage keys its conflicts from the enum rather than from literals, so
+the set it emits and the allow-lists that later accept a stored
+`field_name` as an UPDATE column cannot drift apart. Because
 `counterparty_name`/`description` are ciphertext at rest for an encrypted
 user, the stored value is decrypted before this compare — otherwise
 ciphertext could never equal the incoming plaintext and every
@@ -260,6 +287,26 @@ phase: it returns a zero-action result derived from the persisted counts
 duplicates), so a wizard refresh/back-button can never double-import or
 double-enrich.
 
+### What may not be confirmed
+
+Ahead of both phases, `ConfirmImport` reads the preview head's
+`confirmRefusal()` and throws `ImportNotConfirmableException` when the run
+still has accounts to name, or has rows of which none can be imported.
+`PreviewWizard` calls the same predicate to disable its button, but the
+rule is the action's: the wizard is not the only caller. A scheduled
+Enable Banking sync confirms without a reader present, and a window whose
+rows all failed as `UnknownAccount` used to flip to `confirmed` having
+written nothing — after which `RunImport`'s idempotency key refused to
+re-fetch that window and every transaction in it was gone.
+
+`OpenBankingSyncRunner` records the refusal as a failed attempt and does
+**not** advance `last_successful_sync_at`, so the window stays open and
+the rows land on the next run once the reader names the account. The
+failure is not handed back to the queue's retry envelope: the same fetch
+would be refused again. A window the bank returned nothing for never
+reaches the confirm at all — `OpenBankingFetchService` treats an empty
+fetch as the successful sync it is.
+
 ### Post-commit dispatch ordering
 
 After the transaction above commits, `ConfirmImport` runs a two-stage
@@ -273,8 +320,9 @@ post-commit block — skipped entirely on the re-confirm short-circuit:
   recovers a manually-deleted `card_statements` row on a re-import where
   every transaction is a fingerprint-duplicate.
 - **Stage B** (gated on `$result->inserted > 0 || $result->enriched > 0`):
-  inserts a `pending` `chain_resolution_runs` row (so the wizard's
-  `wire:poll` has something to display on its first tick), then dispatches
+  inserts a `pending` `chain_resolution_runs` row (so the results
+  page the confirm redirects to has a status to display on its very
+  first render, before its poll has ticked once), then dispatches
   the chain resolver and the recurring-detection sweep.
 
 Both dispatches run strictly AFTER the transaction commits, never inside

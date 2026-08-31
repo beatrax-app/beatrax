@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport;
 
+use Amp\CancelledException;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
 use Amp\TimeoutCancellation;
@@ -20,6 +21,7 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\InboundGdkWrapDrain;
 use Modules\Sync\Internal\Exceptions\PeerDisconnectedException;
+use Modules\Sync\Internal\Exceptions\PeerRevokedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
@@ -28,6 +30,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -36,16 +39,6 @@ use Throwable;
  */
 final class SyncWebSocketHandler implements WebsocketClientHandler
 {
-    // Caps attacker-paced unbounded receive/op_log growth from a peer's
-    // declared frame_count.
-    // Bounds the pre-auth slow-loris window: a peer that connects but never
-    // sends msg1 is dropped instead of parking a fiber forever.
-    private const HANDSHAKE_TIMEOUT_SECONDS = 10.0;
-
-    // A peer that stalls mid-stream is dropped rather than pinning the
-    // fiber. Generous enough for legitimate slow links + large replay batches.
-    private const READ_TIMEOUT_SECONDS = 60.0;
-
     // Announces the epoch-push phase and how many wrap frames follow. The
     // phase runs BEFORE catch-up, so it cannot end on a read timeout the way
     // a trailing phase could — that would swallow the catch-up request queued
@@ -190,7 +183,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             // authenticates then stalls is dropped rather than pinning this fiber.
             while ($message = $this->receiveWithTimeout(
                 $client,
-                self::READ_TIMEOUT_SECONDS,
+                ProtocolTimings::responderReadSeconds(),
                 'live stream',
             )) {
                 // Trust is re-checked on the LIVE connection, not just at
@@ -270,7 +263,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
 
         $msg1WsMessage = $this->receiveWithTimeout(
             $client,
-            self::HANDSHAKE_TIMEOUT_SECONDS,
+            ProtocolTimings::HANDSHAKE_SECONDS,
             'Noise handshake msg1',
         );
         if ($msg1WsMessage === null) {
@@ -295,7 +288,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
      */
     private function runCatchUp(WebsocketClient $client, SyncSession $session, array $deviceKeys): void
     {
-        $reqMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up request');
+        $reqMsg = $this->receiveWithTimeout($client, ProtocolTimings::responderReadSeconds(), 'catch-up request');
         if ($reqMsg === null) {
             return;
         }
@@ -303,28 +296,24 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $decryptedReq = $session->decrypt($reqMsg->buffer());
         $req = $this->catchUp->parseControlMessage($decryptedReq);
 
-        // Clamp watermark fields to non-negative — a negative hlc_l/hlc_c
-        // would make opsAfterWatermark()'s `> $peerHlcL` predicate match the
-        // entire op_log, a full-history dump on every reconnect.
-        $peerHlcL = isset($req['hlc_l']) && is_int($req['hlc_l']) ? max(0, $req['hlc_l']) : 0;
-        $peerHlcC = isset($req['hlc_c']) && is_int($req['hlc_c']) ? max(0, $req['hlc_c']) : 0;
-
-        $frames = $this->catchUp->opsAfterWatermark($this->userId, $peerHlcL, $peerHlcC);
-        $respControl = $this->catchUp->buildResponse($frames);
+        $delta = $this->catchUp->opsAfterWatermark($this->userId, $this->catchUp->cursorsFrom($req));
+        $respControl = $this->catchUp->buildResponse($delta);
         $client->sendBinary($session->encrypt(
             json_encode($respControl, JSON_THROW_ON_ERROR)
         ));
 
-        foreach ($frames as $frame) {
+        // Iterated, not collected: each frame is built as it is sent, so the
+        // owed history crosses the wire without ever being resident at once.
+        foreach ($delta as $frame) {
             $client->sendBinary($session->encrypt($frame));
         }
 
-        $myReq = $this->catchUp->buildRequest($this->userId, $this->localDeviceId);
+        $myReq = $this->catchUp->buildRequest($this->userId, $this->localDeviceId, $session->peerDeviceId() ?? '');
         $client->sendBinary($session->encrypt(
             json_encode($myReq, JSON_THROW_ON_ERROR)
         ));
 
-        $peerRespMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up response');
+        $peerRespMsg = $this->receiveWithTimeout($client, ProtocolTimings::responderReadSeconds(), 'catch-up response');
         if ($peerRespMsg === null) {
             return;
         }
@@ -344,7 +333,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         for ($i = 0; $i < $frameCount; $i++) {
             $frameMsg = $this->receiveWithTimeout(
                 $client,
-                self::READ_TIMEOUT_SECONDS,
+                ProtocolTimings::responderReadSeconds(),
                 'catch-up frame',
             );
             if ($frameMsg === null) {
@@ -359,7 +348,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             json_encode($complete, JSON_THROW_ON_ERROR)
         ));
 
-        $completeMsg = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'catch-up complete');
+        $completeMsg = $this->receiveWithTimeout($client, ProtocolTimings::responderReadSeconds(), 'catch-up complete');
         if ($completeMsg !== null) {
             $session->decrypt($completeMsg->buffer());
         }
@@ -480,7 +469,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $accounted = 0;
 
         for ($i = 0; $i < $announced; $i++) {
-            $message = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, 'peer epoch wrap');
+            $message = $this->receiveWithTimeout($client, ProtocolTimings::responderReadSeconds(), 'peer epoch wrap');
             if ($message === null) {
                 break;
             }
@@ -535,26 +524,49 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
      */
     private function readEpochControlMessage(WebsocketClient $client, SyncSession $session, string $phase): array
     {
-        $message = $this->receiveWithTimeout($client, self::READ_TIMEOUT_SECONDS, $phase);
+        $message = $this->receiveWithTimeout($client, ProtocolTimings::responderReadSeconds(), $phase);
         if ($message === null) {
             return [];
         }
 
         try {
-            return $this->catchUp->parseControlMessage($session->decrypt($message->buffer()));
+            $parsed = $this->catchUp->parseControlMessage($session->decrypt($message->buffer()));
         } catch (\UnexpectedValueException) {
             return [];
         }
+
+        if (($parsed['type'] ?? null) === self::MSG_PEER_REVOKED) {
+            $this->forgetRevokedPeer($session);
+
+            throw PeerRevokedException::toldByPeer($session->peerDeviceId() ?? '');
+        }
+
+        return $parsed;
+    }
+
+    // The mirror of tellPeerItIsRevoked(): this device is the one being
+    // refused. A peer still recorded as confirmed here would keep the settings
+    // screen and the scheduler offering a device that hangs up on every dial.
+    private function forgetRevokedPeer(SyncSession $session): void
+    {
+        $peerDeviceId = $session->peerDeviceId() ?? '';
+
+        $this->registryService->forgetPeerConfirmation($this->userId, $peerDeviceId);
+
+        $this->logger->warning('SyncWebSocketHandler: peer reports this device was removed — local confirmation cleared.', [
+            'peer_device_id' => $peerDeviceId,
+            'user_id' => $this->userId,
+        ]);
     }
 
     // A peer that stalls (pre-auth slow-loris or mid-stream) cannot pin this
-    // fiber indefinitely; on timeout the connection is closed and a
-    // TimeoutException is thrown so the caller's try/catch tears down the session.
+    // fiber indefinitely; on timeout the connection is closed and the throw is
+    // rethrown so the caller's try/catch tears down the session.
     /**
      * @param  float  $timeoutSeconds  Idle timeout for this single receive.
      * @param  string  $phase  Human-readable phase label for the timeout error.
      *
-     * @throws TimeoutException When the peer sends nothing within $timeoutSeconds.
+     * @throws CancelledException When the peer sends nothing within $timeoutSeconds.
      */
     private function receiveWithTimeout(
         WebsocketClient $client,
@@ -563,7 +575,11 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
     ): ?WebsocketMessage {
         try {
             return $client->receive(new TimeoutCancellation($timeoutSeconds));
-        } catch (TimeoutException $e) {
+        } catch (CancelledException|TimeoutException $e) {
+            // An expired TimeoutCancellation surfaces as CancelledException
+            // carrying TimeoutException as its PREVIOUS, so naming only the
+            // latter here never matched: no stalled peer was ever logged and
+            // none of them were ever closed.
             $this->logger->warning('SyncWebSocketHandler: receive timed out — closing connection.', [
                 'phase' => $phase,
                 'timeout_seconds' => $timeoutSeconds,

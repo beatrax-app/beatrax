@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Natrag u Beatrax',
 
+    'not_saved' => 'Ništa nije spremljeno. Tvoji podaci su nepromijenjeni — pokušaj ponovno.',
+
+    'no_longer_here' => 'To više ne postoji.',
+
     '404' => [
         'title' => 'Ova stranica ne postoji',
         'body' => 'Poveznica je možda stara ili je stranica preimenovana. S tvojim podacima je sve u redu.',

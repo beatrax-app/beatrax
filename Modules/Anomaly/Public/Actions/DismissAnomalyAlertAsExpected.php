@@ -6,28 +6,25 @@ namespace Modules\Anomaly\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
+use Modules\Anomaly\Internal\Support\SuppressionRuleKeyResolver;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertDismissed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DismissAnomalyAlertAsExpected
+final readonly class DismissAnomalyAlertAsExpected
 {
-    private const BAND_LOW_MULTIPLIER = 0.85;
-
-    private const BAND_HIGH_MULTIPLIER = 1.15;
-
     public function __construct(
-        private readonly AnomalyAlertStateMachine $stateMachine,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
-        private readonly DatabaseManager $db,
-        private readonly BaseCurrency $baseCurrency,
+        private AnomalyAlertStateMachine $stateMachine,
+        private Dispatcher $events,
+        private Clock $clock,
+        private DatabaseManager $db,
+        private SuppressionRuleKeyResolver $ruleKeys,
     ) {}
 
     // Returns TRUE only when a suppression rule was actually written, so the
@@ -44,7 +41,9 @@ final class DismissAnomalyAlertAsExpected
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        if ($alert->state === AnomalyAlertState::Dismissed->value) {
+        // A second tab, or the paired device, acting on a row this one still
+        // shows as open is a no-op, not a 500: acknowledged is terminal.
+        if (! AnomalyAlertState::from($alert->state)->allows(AnomalyAlertState::Dismissed)) {
             return false;
         }
 
@@ -56,7 +55,7 @@ final class DismissAnomalyAlertAsExpected
             'user_dismissed_expected',
             'user',
             null,
-            ['dismissed_as' => 'expected', 'actioned_at' => $now->toDateTimeString()],
+            ['dismissed_as' => DismissedAs::Expected->value, 'actioned_at' => $now->toDateTimeString()],
         );
 
         $rulesWritten = $this->insertSuppressionRules($alert, $user, $now->toDateTimeString());
@@ -64,7 +63,7 @@ final class DismissAnomalyAlertAsExpected
         $this->events->dispatch(new AnomalyAlertDismissed(
             userId: $user->id,
             anomalyAlertId: $alertId,
-            dismissedAs: 'expected',
+            dismissedAs: DismissedAs::Expected,
         ));
 
         return $rulesWritten;
@@ -72,36 +71,10 @@ final class DismissAnomalyAlertAsExpected
 
     private function insertSuppressionRules(AnomalyAlert $alert, User $user, string $nowString): bool
     {
-        $reasons = $alert->reasons;
-        if ($reasons === []) {
+        $key = $this->ruleKeys->forAlert($alert, $user);
+        if ($key === null) {
             return false;
         }
-
-        $currency = is_string($alert->currency) && $alert->currency !== '' ? $alert->currency : null;
-
-        $latestMinor = $alert->latest_amount_minor;
-        if ($latestMinor === null) {
-            // A duplicate-only / first-time-only alert carries no per-merchant
-            // baseline, so the band falls back to the charge's own settled
-            // amount — otherwise those detectors could never be suppressed.
-            $settled = $this->settledChargeForTransaction($user, $alert->transaction_id);
-            if ($settled === null) {
-                return false;
-            }
-            $latestMinor = $settled['amount_minor'];
-            $currency ??= $settled['currency'];
-        }
-
-        $currency ??= $this->baseCurrency->code();
-
-        $boundA = (int) round(self::BAND_LOW_MULTIPLIER * $latestMinor);
-        $boundB = (int) round(self::BAND_HIGH_MULTIPLIER * $latestMinor);
-        // For an expense (negative) the 1.15x bound is the more-negative one,
-        // so min/max — not the multipliers — decide which end is which.
-        $bandLow = min($boundA, $boundB);
-        $bandHigh = max($boundA, $boundB);
-
-        $counterpartyId = $this->counterpartyIdForTransaction($user, $alert->transaction_id);
 
         // Existence-checked rather than a UNIQUE index: SQLite treats NULL
         // counterparty_id values as distinct, so the index would not dedupe
@@ -109,85 +82,38 @@ final class DismissAnomalyAlertAsExpected
         $connection = $this->db->connection();
         $wrote = false;
 
-        foreach ($reasons as $reason) {
-            $exists = $connection->table('anomaly_suppression_rules')
-                ->where('user_id', $user->id)
-                ->where('detector', $reason)
-                ->where('direction', $alert->direction)
-                ->where('amount_band_low_minor', $bandLow)
-                ->where('amount_band_high_minor', $bandHigh)
-                ->where('currency', $currency)
-                ->when(
-                    $counterpartyId === null,
-                    static fn (Builder $q) => $q->whereNull('counterparty_id'),
-                    static fn (Builder $q) => $q->where('counterparty_id', $counterpartyId),
-                )
-                ->exists();
-
-            if ($exists) {
+        foreach ($key->detectors as $detector) {
+            if ($key->scope($connection->table('anomaly_suppression_rules'), $user->id, $detector)->exists()) {
                 continue;
             }
 
-            $connection->table('anomaly_suppression_rules')->insert([
-                'user_id' => $user->id,
-                'counterparty_id' => $counterpartyId,
-                'detector' => $reason,
-                'direction' => $alert->direction,
-                'amount_band_low_minor' => $bandLow,
-                'amount_band_high_minor' => $bandHigh,
-                'currency' => $currency,
+            $row = [
+                'counterparty_id' => $key->counterpartyId,
+                'detector' => $detector->value,
+                'direction' => $key->direction,
+                'amount_band_low_minor' => $key->bandLowMinor,
+                'amount_band_high_minor' => $key->bandHighMinor,
+                'currency' => $key->currency,
                 'source_anomaly_alert_id' => $alert->id,
                 'created_at' => $nowString,
                 'updated_at' => $nowString,
-            ]);
+            ];
+            $ruleId = $connection->table('anomaly_suppression_rules')
+                ->insertGetId([...$row, 'user_id' => $user->id]);
             $wrote = true;
+
+            // Without this the alert and its dismissal converged and the mute
+            // did not, so the next charge re-raised the anomaly on the peer and
+            // synced it back to the device that had already muted it.
+            $this->events->dispatch(new EntityMutated(
+                table: 'anomaly_suppression_rules',
+                pk: $ruleId,
+                userId: $user->id,
+                mutationType: 'create',
+                dirtyFields: $row,
+            ));
         }
 
         return $wrote;
-    }
-
-    /**
-     * @return array{amount_minor: int, currency: string}|null
-     */
-    private function settledChargeForTransaction(User $user, int $transactionId): ?array
-    {
-        $row = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('id', $transactionId)
-            ->first(['settled_amount_minor', 'settled_currency']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        $amount = $row->settled_amount_minor ?? null;
-        if (! is_numeric($amount)) {
-            return null;
-        }
-
-        $currency = is_string($row->settled_currency ?? null) && $row->settled_currency !== ''
-            ? $row->settled_currency
-            : $this->baseCurrency->code();
-
-        return ['amount_minor' => (int) $amount, 'currency' => $currency];
-    }
-
-    // A permitted ledger read (crossModuleRawTableWrites pins only writes).
-    // Null means an unresolved merchant and a counterparty_id IS NULL
-    // fallback rule, which the evaluator still matches.
-    private function counterpartyIdForTransaction(User $user, int $transactionId): ?int
-    {
-        $row = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('id', $transactionId)
-            ->first(['counterparty_id']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        $cpId = $row->counterparty_id ?? null;
-
-        return is_numeric($cpId) && (int) $cpId > 0 ? (int) $cpId : null;
     }
 }

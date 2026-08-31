@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Șterge :count sarcină|Șterge :count sarcini|Șterge :count de sarcini',
     'empty_pending' => 'Coada este goală.',
     'empty_failed' => 'Nicio sarcină eșuată.',
-    'empty_batches' => 'Niciun lot activ.',
+    'empty_batches' => 'Niciun lot.',
     'select_aria' => 'Selectează',
     'select_row_aria' => 'Selectează rândul :key',
     'col_id' => 'Id',
     'col_queue' => 'Coadă',
     'col_attempts' => 'Încercări',
+    'col_state' => 'Stare',
     'col_created' => 'Creat',
     'col_uuid' => 'UUID',
     'col_failed' => 'Eșuat',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'În așteptare',
     'col_actions' => 'Acțiuni',
     'delete_job' => 'Șterge sarcina',
+    'worker_running' => 'Un worker o execută',
     'delete_pending_confirm' => 'Ștergi sarcina în așteptare #:key?',
     'retry_job' => 'Reîncearcă sarcina',
     'forget_confirm' => 'Elimini sarcina eșuată :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Sarcinile eșuate selectate vor fi puse din nou în coadă, ca workerul să le reîncerce.',
     'cancel' => 'Anulează',
 
+    'state' => [
+        'available' => 'Disponibil',
+        'reserved' => 'Rezervat',
+        'scheduled' => 'Programat',
+    ],
+
     'tab' => [
         'pending' => 'În așteptare',
         'failed' => 'Eșuate',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Sarcină în așteptare ștearsă',
+        'pending_already_gone' => 'Sarcina nu mai exista',
         'failed_requeued' => 'Sarcină eșuată pusă din nou în coadă',
         'failed_removed' => 'Sarcină eșuată eliminată',
         'batch_cancelled' => 'Lot anulat',
         'batch_deleted' => 'Lot șters',
         'batch_failures_requeued' => 'Eșecurile lotului au fost puse din nou în coadă',
+        'batch_failures_none' => 'Nu mai există eșecuri în lot de re-adăugat în coadă',
         'failed_jobs_requeued' => 'Sarcinile eșuate au fost puse din nou în coadă',
+        'failed_jobs_none' => 'Nu mai există sarcini eșuate de re-adăugat în coadă',
         'bulk_refused' => 'Ștergere în masă refuzată — :reason',
         'rows_deleted' => 'Rândurile selectate au fost șterse',
     ],

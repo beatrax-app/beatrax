@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategorinamnet får inte vara tomt.',
         'name_duplicate' => 'Det finns redan en kategori med det här namnet.',
+        'category_not_saved' => 'Den här kategorin kunde inte sparas. Försök igen.',
+        'tag_refused' => 'Den här taggen kunde inte sparas. Stäng väljaren och försök igen.',
     ],
 ];

@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Patvirtink arba atmesk kandidatines sąsajas, kurių grandinių sprendiklis negalėjo patvirtinti automatiškai.',
 
     'empty_heading' => 'Nėra ką peržiūrėti',
-    'empty_body' => 'Kiekviena grandinės sąsaja yra patvirtinta arba atmesta. Nauji kandidatai atsiras čia, kai bus importuota naujų duomenų.',
+    'empty_body' => 'Kiekviena sąsaja, kurią sprendiklis sugebėjo suporuoti, yra patvirtinta arba atmesta. Nauji kandidatai atsiras čia, kai bus importuota naujų duomenų.',
 
     'auto_confirm_nudge' => 'Dar vienas patvirtinimas ir panašios sąsajos bus patvirtinamos automatiškai.',
 

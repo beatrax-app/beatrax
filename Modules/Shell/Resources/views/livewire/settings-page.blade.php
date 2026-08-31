@@ -1,7 +1,11 @@
+@use('Modules\Core\Models\User')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Core\Public\Support\LegalLinks')
 @use('Modules\Core\Public\Enums\Theme')
+@use('Illuminate\Support\Facades\URL')
+@use('Modules\Ledger\Public\Enums\CurrencyView')
+@use('Modules\Recurring\Public\Support\RecurringDetectionWindow')
 @php
     // Shared card chrome for the grouped settings sections. The redesign only
     // changes the visual container — every control, id, wire: binding, @error
@@ -149,8 +153,8 @@
                 wire:model="defaultCurrencyView"
                 class="max-w-xs"
             >
-                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only', ['code' => $baseCurrency]) }}</option>
-                <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
+                <option value="{{ CurrencyView::BaseOnly->value }}">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                <option value="{{ CurrencyView::Original->value }}">{{ Lang::get('core::settings.currency_display.original') }}</option>
             </x-core::form-field>
         </section>
 
@@ -246,8 +250,8 @@
             <x-core::form-field
                 name="recurringDetectionWindowMonths"
                 type="number"
-                min="2"
-                max="60"
+                :min="RecurringDetectionWindow::MINIMUM_MONTHS"
+                :max="RecurringDetectionWindow::MAXIMUM_MONTHS"
                 :label="Lang::get('core::settings.recurring.window_label')"
                 :hint="Lang::get('core::settings.recurring.window_help')"
                 wire:model="recurringDetectionWindowMonths"
@@ -259,7 +263,7 @@
                 min="0"
                 max="100000000"
                 :label="Lang::get('core::settings.recurring.income_label')"
-                :hint="Lang::get('core::settings.recurring.income_help', ['example' => Money::ofMinor(200000, $exampleCurrency)->format()])"
+                :hint="Lang::get('core::settings.recurring.income_help', ['minor' => User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR, 'example' => Money::ofMinor(User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR, $exampleCurrency)->format()])"
                 wire:model="recurringIncomeMinAmountMinor"
                 class="max-w-xs"
             />
@@ -289,6 +293,19 @@
         </section>
 
         <div class="space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
+            {{-- Above the button rather than beside the field: the reader is
+                 looking down here, having just pressed Save, and the strip is
+                 the answer to that press. --}}
+            @if ($confirmingPeriodMove)
+                <x-core::confirm-strip
+                    class="mb-3 max-w-xl"
+                    :question="Lang::get('core::settings.period.move_confirm', ['day' => $periodStartDay])"
+                    :cancel-label="Lang::get('core::settings.period.move_cancel')"
+                    :confirm-label="Lang::get('core::settings.period.move_apply')"
+                    cancel="cancelPeriodMove"
+                    confirm="save"
+                />
+            @endif
             <button
                 type="submit"
                 class="block w-full max-w-xs bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:focus-visible:ring-emerald-500"
@@ -401,8 +418,10 @@
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2" id="about-updates">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.about_updates.heading') }}</h2>
+            {{-- The desktop updates itself; a phone is updated by its store.
+                 Both keep their own sentence rather than sharing a vaguer one. --}}
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('core::settings.about_updates.body') }}
+                {{ Lang::get($onPhone ? 'core::settings.about_updates.body_phone' : 'core::settings.about_updates.body') }}
             </p>
             <x-core::secondary-button
                 size="sm"
@@ -447,7 +466,7 @@
                 {{ Lang::get('core::settings.first_run_tour.body') }}
             </p>
             <x-core::secondary-button
-                :href="route('setup', ['force' => 1])"
+                :href="URL::signedRoute('setup', ['force' => 1], absolute: false)"
                 size="sm"
             >{{ Lang::get('core::settings.first_run_tour.run_again') }}</x-core::secondary-button>
         </section>

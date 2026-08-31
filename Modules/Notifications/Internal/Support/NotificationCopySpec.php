@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
+use Modules\Core\Public\Support\AllOrNothing;
+use Modules\Core\Public\Support\CopyLine;
+
 /**
  * @link ../../../../.docs/features/notifications/reader-language-copy.md
  */
 final readonly class NotificationCopySpec
 {
-    public const PARAMS_KEY = 'copy';
+    public const string PARAMS_KEY = 'copy';
 
     /**
      * @param  list<CopyLine>  $body

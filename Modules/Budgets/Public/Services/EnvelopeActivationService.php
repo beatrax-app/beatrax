@@ -10,12 +10,12 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Services\PotWriter;
 
-final class EnvelopeActivationService
+final readonly class EnvelopeActivationService
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PotWriter $potWriter,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private PotWriter $potWriter,
+        private Clock $clock,
     ) {}
 
     public function activate(): void
@@ -35,8 +35,10 @@ final class EnvelopeActivationService
     }
 
     // A no-op if another caller already claimed (and thus already fully
-    // processed) this user.
-    private function activateForUser(int $userId): void
+    // processed) this user. Public because the cutover sweep above is a walk
+    // over the readers who existed when it ran, and a reader who signs up
+    // afterwards needs the same stamp from the same code.
+    public function activateForUser(int $userId): void
     {
         // Atomic claim BEFORE the walk: exactly one caller can flip this
         // row from NULL, so a concurrent or repeated activate() call

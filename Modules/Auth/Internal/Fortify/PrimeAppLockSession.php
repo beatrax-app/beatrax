@@ -15,12 +15,12 @@ use Modules\Core\Public\Services\SessionFactory;
 // Fortify's pipeline instead and never reaches it. Without this step a form
 // submitted before Livewire has booted authenticates into the one state the
 // lock forbids: unlocked, holding no data key.
-final class PrimeAppLockSession
+final readonly class PrimeAppLockSession
 {
     public function __construct(
-        private readonly AppLockProvisioner $provisioner,
-        private readonly SessionFactory $session,
-        private readonly AuthManager $auth,
+        private AppLockProvisioner $provisioner,
+        private SessionFactory $session,
+        private AuthManager $auth,
     ) {}
 
     public function handle(Request $request, Closure $next): mixed

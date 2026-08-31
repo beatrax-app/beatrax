@@ -6,12 +6,13 @@ namespace Modules\Mobile\Internal\Sync;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 
-final class MobileImportIntentGate
+final readonly class MobileImportIntentGate
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     // Idempotent - a second call for the same user is a no-op, never a
@@ -29,7 +30,7 @@ final class MobileImportIntentGate
 
         $this->db->connection()->table('mobile_import_intent')->insert([
             'user_id' => $userId,
-            'created_at' => $this->clock->now()->toIso8601String(),
+            'created_at' => Instant::zulu($this->clock->now()),
         ]);
     }
 

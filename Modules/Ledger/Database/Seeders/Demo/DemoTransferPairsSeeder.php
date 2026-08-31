@@ -6,6 +6,8 @@ namespace Modules\Ledger\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -21,13 +23,19 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 // monthly chain-flow transfers; idempotent via its own demo ImportRun.
 final class DemoTransferPairsSeeder
 {
-    private const PAIR_DAY_OFFSET = 50;
+    // The day inside the seeded window this pair posts on. It is placed by
+    // naming a period the budgets grid draws, not by counting days back from
+    // today: this is a source_format='demo' row like every other, and only the
+    // window says which periods the grid can navigate to.
+    private const PAIR_DAY_OF_MONTH = 11;
 
     private const PAIR_AMOUNT_MINOR = 4500;
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly DemoPeriodWindow $window,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -36,8 +44,8 @@ final class DemoTransferPairsSeeder
      */
     public function run(array $users, array $accounts): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
-        $userAccounts = $accounts['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
+        $userAccounts = $accounts['demo-1'] ?? null;
 
         if ($primary === null || $userAccounts === null) {
             return 0;
@@ -49,24 +57,26 @@ final class DemoTransferPairsSeeder
         $asn = $userAccounts['asn-demo-1'];
         $paypal = $userAccounts['paypal-demo-1'];
 
-        $today = CarbonImmutable::today();
-        $pairDate = $today->subDays(self::PAIR_DAY_OFFSET);
+        $now = $this->clock->now();
+        $periods = $this->window->forUser($primary, $now);
+        $middlePeriod = $periods[intdiv(count($periods), 2)];
+        $pairDate = DemoPeriodWindow::dayIn($middlePeriod, self::PAIR_DAY_OF_MONTH);
 
-        $asnRun = $this->ensureImportRun($primary, $asn);
-        $paypalRun = $this->ensureImportRun($primary, $paypal);
+        $asnRun = $this->ensureImportRun($primary, $asn, $now);
+        $paypalRun = $this->ensureImportRun($primary, $paypal, $now);
 
         $this->insertLeg($primary, $asn, $asnRun, new DemoTransferLeg(
             type: TransactionType::TransferOut,
             amountMinor: -self::PAIR_AMOUNT_MINOR,
             description: 'Tikkie reimbursement to PayPal',
             sourceRef: 'DEMO-PAIR-OUT-1',
-        ), $pairDate);
+        ), $pairDate, $now);
         $this->insertLeg($primary, $paypal, $paypalRun, new DemoTransferLeg(
             type: TransactionType::TransferIn,
             amountMinor: self::PAIR_AMOUNT_MINOR,
             description: 'Tikkie reimbursement from ASN',
             sourceRef: 'DEMO-PAIR-IN-1',
-        ), $pairDate);
+        ), $pairDate, $now);
 
         $this->linkPair($primary, $pairDate);
 
@@ -77,20 +87,29 @@ final class DemoTransferPairsSeeder
             ->count();
     }
 
-    private function ensureImportRun(User $user, Account $account): ImportRun
+    private function ensureImportRun(User $user, Account $account, CarbonImmutable $now): ImportRun
     {
         $sha = hash('sha256', 'demo-pair|'.$user->username.'|'.$account->slug);
 
-        return ImportRun::query()->updateOrCreate(
+        ImportRun::query()->updateOrCreate(
             ['user_id' => $user->id, 'sha256' => $sha],
             [
                 'source_format' => 'demo',
                 'raw_file_path' => 'demo://transfer-pair/'.$account->slug,
-                'uploaded_at' => CarbonImmutable::today(),
-                'confirmed_at' => CarbonImmutable::today(),
+                'uploaded_at' => $now->startOfDay(),
+                'confirmed_at' => $now->startOfDay(),
                 'status' => ImportRunStatus::Confirmed->value,
             ],
         );
+
+        // Re-read by the same UNIQUE rather than kept from updateOrCreate(): it
+        // ends in insertGetId(), lastInsertId() is per connection, and the badge
+        // listener writes a `cache` row from inside this INSERT's own event, so
+        // both legs would name a run that does not exist.
+        return ImportRun::query()
+            ->where('user_id', $user->id)
+            ->where('sha256', $sha)
+            ->first() ?? throw new IdReadBackFailedException('import_runs');
     }
 
     private function insertLeg(
@@ -99,6 +118,7 @@ final class DemoTransferPairsSeeder
         ImportRun $run,
         DemoTransferLeg $leg,
         CarbonImmutable $date,
+        CarbonImmutable $now,
     ): void {
         $normalized = $this->counterpartyKey->forName($leg->description, $user->id);
         $bookedAt = $date->setTime(12, 0, 0);
@@ -115,7 +135,6 @@ final class DemoTransferPairsSeeder
             currency: Currency::Eur->value,
             settledAmountMinor: $leg->amountMinor,
             settledCurrency: Currency::Eur->value,
-            fxRateUsed: null,
             counterpartyName: $isOut ? 'PayPal' : 'ASN Bank',
             counterpartyIban: $isOut ? 'PAYPAL-DEMO-1' : 'NL57ASNB0123456789',
             counterpartyNormalized: $normalized,
@@ -132,13 +151,13 @@ final class DemoTransferPairsSeeder
         );
 
         $fingerprint = $this->fingerprints->compose($canonical);
-        $now = CarbonImmutable::now()->toDateTimeString();
+        $stamp = $now->toDateTimeString();
 
         $attrs = array_merge($canonical->toAttributes(), [
             'fingerprint' => $fingerprint,
             'fingerprint_version' => $this->fingerprints->version(),
-            'created_at' => $now,
-            'updated_at' => $now,
+            'created_at' => $stamp,
+            'updated_at' => $stamp,
         ]);
 
         Transaction::query()->insertOrIgnore($attrs);

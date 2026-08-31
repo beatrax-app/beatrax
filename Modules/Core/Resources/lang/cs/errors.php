@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Zpět do Beatraxu',
 
+    'not_saved' => 'Nic nebylo uloženo. Tvá data jsou beze změny — zkus to znovu.',
+
+    'no_longer_here' => 'To už neexistuje.',
+
     '404' => [
         'title' => 'Tahle stránka neexistuje',
         'body' => 'Odkaz může být starý, nebo se stránka přejmenovala. S tvými daty je všechno v pořádku.',

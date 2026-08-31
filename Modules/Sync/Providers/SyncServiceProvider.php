@@ -52,13 +52,16 @@ use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\HeldPeerConfirm;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
 use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
+use Modules\Sync\Internal\Pairing\LocalConfirmRecorder;
 use Modules\Sync\Internal\Pairing\PairedDeviceAdmitter;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
+use Modules\Sync\Internal\Pairing\PairingPeerErrands;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
+use Modules\Sync\Internal\Pairing\PairingRefusalCopy;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
@@ -176,7 +179,7 @@ final class SyncServiceProvider extends ServiceProvider
         // directly.
         $this->app->bind(
             OpLogReplayer::class,
-            function () {
+            function (): OpLogReplayer {
                 $deviceKeys = $this->app->make(DeviceRegistryService::class)
                     ->deviceKeys($this->currentUserId());
 
@@ -207,7 +210,7 @@ final class SyncServiceProvider extends ServiceProvider
         // the list.
         $this->app->singleton(
             SafetyNumberDeriver::class,
-            fn () => new SafetyNumberDeriver(Bip39WordList::WORDS),
+            fn (): SafetyNumberDeriver => new SafetyNumberDeriver(Bip39WordList::WORDS),
         );
     }
 
@@ -219,9 +222,11 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->singleton(QrPayloadBuilder::class);
 
         // Collaborators PairingTokenService delegates to: device-registry
-        // admission and the relayed PAIR_CONFIRM anti-forgery gate. Each owns
-        // the crypto deps it uses so the host stays a thin orchestrator.
+        // admission, the local human's tap, and the relayed PAIR_CONFIRM
+        // anti-forgery gate. Each owns the crypto deps it uses so the host
+        // stays a thin orchestrator.
         $this->app->singleton(PairedDeviceAdmitter::class);
+        $this->app->singleton(LocalConfirmRecorder::class);
         $this->app->singleton(PeerConfirmVerifier::class);
         $this->app->singleton(HeldPeerConfirm::class);
 
@@ -237,6 +242,11 @@ final class SyncServiceProvider extends ServiceProvider
         // PairingFrame itself is static-only and needs no binding.
         $this->app->singleton(PairingFrameCourier::class);
 
+        // What a pairing screen hands off rather than doing itself: the frames
+        // and epochs the peer is owed, and the line each refusal renders as.
+        $this->app->singleton(PairingPeerErrands::class);
+        $this->app->singleton(PairingRefusalCopy::class);
+
         // Redelivery with no pairing screen open anywhere. Bound, not a
         // singleton: it is resolved from a request tail and from a daemon
         // timer, and each of those wants the collaborators of its own process.
@@ -250,7 +260,7 @@ final class SyncServiceProvider extends ServiceProvider
             OpLogWriter::class,
             function (Container $app, array $parameters): OpLogWriter {
                 /** @var array<string, mixed> $parameters */
-                return (new OpLogWriterFactory($app))->make($parameters);
+                return new OpLogWriterFactory($app)->make($parameters);
             },
         );
     }
@@ -320,7 +330,7 @@ final class SyncServiceProvider extends ServiceProvider
         // command resolves it, and building it reaches the encrypted search
         // writer — which made every artisan call need an application key,
         // including the `key:generate` that mints one.
-        $this->app->singleton(SyncServeCommand::class, fn () => new SyncServeCommand(
+        $this->app->singleton(SyncServeCommand::class, fn (): SyncServeCommand => new SyncServeCommand(
             logger: $this->app->make(LoggerInterface::class),
             handler: fn () => $this->app->make(SyncWebSocketHandler::class),
             advertiser: $this->app->make(MdnsAdvertiser::class),
@@ -342,7 +352,7 @@ final class SyncServiceProvider extends ServiceProvider
         // full browse timeout for the same answer.
         $this->app->singleton(
             PeerDiscovery::class,
-            fn () => new CachedPeerDiscovery(self::discovery(
+            fn (): CachedPeerDiscovery => new CachedPeerDiscovery(self::discovery(
                 $this->app->make(NativeBridge::class),
                 $this->app->make(Repository::class),
             )),

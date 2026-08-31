@@ -14,14 +14,14 @@ use Psr\Log\LoggerInterface;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#getting-back-inside-the-guarantee
  */
-final class SealedLedgerRecovery
+final readonly class SealedLedgerRecovery
 {
     public function __construct(
-        private readonly SensitiveColumnCodec $codec,
-        private readonly HistoryReprojector $reprojector,
-        private readonly EncryptionRecoveryMarkers $markers,
-        private readonly PlaintextResidueSweep $sweep,
-        private readonly LoggerInterface $log,
+        private SensitiveColumnCodec $codec,
+        private HistoryReprojector $reprojector,
+        private EncryptionRecoveryMarkers $markers,
+        private PlaintextResidueSweep $sweep,
+        private LoggerInterface $log,
     ) {}
 
     // Rows a background writer left in the clear, and peer entries a locked

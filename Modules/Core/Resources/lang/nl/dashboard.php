@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Grootste uitgaven',
     'no_expenses' => 'Nog geen gecategoriseerde uitgaven.',
+    'top_spending_refunded' => 'Niet in de ranglijst — :amount kwam terug',
 
     'recent_transactions' => 'Recente transacties',
     'view_all' => 'Alles bekijken',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Categorie',
     'th_amount' => 'Bedrag',
     'uncategorized' => 'Niet gecategoriseerd',
+
+    'jump_to_records' => [
+        'body' => 'Niets in deze periode. Je recentste transacties staan er nog.',
+        'action' => 'Periode :period tonen',
+    ],
 
     'reauth' => [
         'title' => 'Een postvak moet opnieuw worden gekoppeld.',

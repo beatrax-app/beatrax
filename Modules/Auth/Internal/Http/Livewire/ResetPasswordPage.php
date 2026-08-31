@@ -19,7 +19,7 @@ final class ResetPasswordPage extends Component
 {
     use HoldsFlashMessage;
 
-    private const FLASH_KEY = 'flash.reset_password';
+    private const string FLASH_KEY = 'flash.reset_password';
 
     public string $username = '';
 

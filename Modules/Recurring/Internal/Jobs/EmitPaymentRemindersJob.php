@@ -18,8 +18,8 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
-use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Events\PaymentReminderDue;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
@@ -50,7 +50,7 @@ final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, Sh
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(RecurringSeriesQuery $query, Dispatcher $events, Clock $clock): void
+    public function handle(RecurringSeriesQuery $query, RecurringOccurrenceQuery $occurrences, Dispatcher $events, Clock $clock): void
     {
         /** @var User|null $user */
         $user = User::query()->where('id', $this->userId)->first();
@@ -61,24 +61,28 @@ final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, Sh
         $today = $clock->now()->startOfDay();
         $windowEnd = $today->addDays(max(0, $this->leadDays));
 
+        $due = [];
         foreach ($query->allApprovedForUser($user) as $series) {
-            $due = $series->nextExpectedAt;
-            if ($due === null) {
+            $at = $series->nextExpectedAt;
+            if ($at === null || $at->lt($today) || $at->gt($windowEnd)) {
                 continue;
             }
+            $due[$series->seriesId] = [$series, $at];
+        }
 
-            if ($due->lt($today) || $due->gt($windowEnd)) {
-                continue;
-            }
+        // One SELECT for the whole sweep, not one per approved series: the
+        // only thing this needs from the observations is the newest date.
+        $latestObserved = $occurrences->latestObservedAtForSeriesIds(array_keys($due), $user);
 
-            if ($this->alreadySettled($query, $series, $user, $due)) {
+        foreach ($due as $seriesId => [$series, $at]) {
+            if (self::alreadySettled($latestObserved[$seriesId] ?? null, $at)) {
                 continue;
             }
 
             $events->dispatch(new PaymentReminderDue(
                 userId: $this->userId,
                 seriesId: $series->seriesId,
-                dueDate: $due,
+                dueDate: $at,
                 confidenceLow: $series->nextExpectedConfidenceLow,
                 expectedAmount: $series->latestAmount,
                 displayName: $series->displayName(),
@@ -86,24 +90,11 @@ final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, Sh
         }
     }
 
-    /**
-     * @return bool true when the candidate's expected charge already landed —
-     *              occurrencesForSeries() returns rows ordered observed_at DESC, so the first entry is
-     *              the most recent real transaction against this series; if it fell on or after the due
-     *              date, that charge has already been matched and the detector simply hasn't re-swept
-     *              next_expected_at forward yet
-     */
-    private function alreadySettled(
-        RecurringSeriesQuery $query,
-        RecurringSeriesDto $series,
-        User $user,
-        CarbonImmutable $due,
-    ): bool {
-        $occurrences = $query->occurrencesForSeries($series->seriesId, $user);
-        if ($occurrences === []) {
-            return false;
-        }
-
-        return $occurrences[0]->observedAt->toDateString() >= $due->toDateString();
+    // True when the expected charge already landed: the newest real
+    // transaction against this series fell on or after the due date, and the
+    // detector simply has not re-swept next_expected_at forward yet.
+    private static function alreadySettled(?string $latestObserved, CarbonImmutable $due): bool
+    {
+        return $latestObserved !== null && $latestObserved >= $due->toDateString();
     }
 }

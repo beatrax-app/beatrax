@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct% klart',
+        'aria' => ':name: :pct % klart',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Lägg till insättningar för att se en prognos',
         'not_enough_history' => 'Ännu inte tillräckligt med historik för att uppskatta ett datum',
         'no_recent_contributions' => 'Inga nyliga insättningar att uppskatta utifrån',
+        'too_far_to_date' => 'För långt bort för ett datum i den här takten',
         'est' => 'Ca :date ·',
         'projection_note' => '(prognos)',
         'projected' => 'Prognos: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Fler åtgärder för :name',
         'mark_complete' => 'Markera som slutfört',
+        'mark_complete_caption' => 'Markera',
         'archive' => 'Arkivera',
         'restore' => 'Återställ',
     ],
 
-    'archived_disclosure' => 'Arkiverade mål (:count)',
+    'archived_disclosure' => 'Arkiverat mål (:count)|Arkiverade mål (:count)',
 
     'form' => [
         'title_edit' => 'Redigera mål',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Ange ett namn för ditt mål.',
         'date' => 'Välj ett måldatum.',
+        'date_invalid' => 'Välj ett riktigt datum.',
+        'date_before_start' => 'Välj ett datum på eller efter målets startdatum.',
+        'generic' => 'Målet kunde inte sparas. Kontrollera fälten och försök igen.',
         'amount' => 'Ange ett giltigt belopp större än noll.',
         'pot_linked_category' => 'Den här sparpotten är kopplad till en kategori. Ta bort den kopplingen på sidan Sparpotter först.',
+        'pot_already_linked' => 'Den här sparpotten sparar redan till ett annat mål. Ta bort kopplingen där först.',
+        'pot_missing' => 'Den sparpotten är inte längre tillgänglig. Välj en annan, eller lämna det här målet utan koppling.',
     ],
 ];

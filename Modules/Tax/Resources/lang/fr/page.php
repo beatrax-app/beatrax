@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Exporter en PDF',
     'export_pdf_aria' => 'Exporter en PDF',
     'export_pdf_title' => 'Télécharger beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Ignorer',
 
     'country_prompt_heading' => 'Dans quel pays déclares-tu tes impôts ?',
     'country_prompt_body' => 'Tu peux changer ça à tout moment dans Paramètres → :section.',

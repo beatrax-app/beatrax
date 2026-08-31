@@ -7,6 +7,7 @@ use Illuminate\Console\Scheduling\Event as ScheduledEvent;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Modules\Core\Models\User;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
@@ -70,14 +71,19 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('registers the open-banking.daily-sync entry daily at 06:00', function (): void {
+// 06:00 sat ahead of the FX refresh and the notification pass, which it still
+// does now that all three are daily and this one is defined after FX. The hour
+// itself had to go: the phone's background runner takes only intervals.
+
+it('registers the open-banking.daily-sync entry daily, running open-banking:sync-due', function (): void {
     /** @var Schedule $schedule */
     $schedule = $this->app->make(Schedule::class);
 
     $event = ossFindEvent($schedule, 'open-banking.daily-sync');
 
     expect($event)->not->toBeNull('Expected a registered schedule entry with description "open-banking.daily-sync".');
-    expect($event->expression)->toBe('0 6 * * *');
+    expect($event->expression)->toBe('0 0 * * *');
+    expect((string) $event->command)->toContain('open-banking:sync-due');
     expect($event->mutexName())->not->toBe('');
 });
 
@@ -87,11 +93,7 @@ it('dispatches SyncOpenBankingAccountJob for an enabled connection with a non-ex
     $user = ossUser('oss-eligible');
     $connectionId = ossSeedConnection($user);
 
-    /** @var Schedule $schedule */
-    $schedule = $this->app->make(Schedule::class);
-    $event = ossFindEvent($schedule, 'open-banking.daily-sync');
-    expect($event)->not->toBeNull();
-    $event->run($this->app);
+    Artisan::call('open-banking:sync-due');
 
     Bus::assertDispatched(
         SyncOpenBankingAccountJob::class,
@@ -105,11 +107,7 @@ it('does NOT dispatch for a connection that is disabled', function (): void {
     $user = ossUser('oss-disabled');
     ossSeedConnection($user, ['enabled' => false]);
 
-    /** @var Schedule $schedule */
-    $schedule = $this->app->make(Schedule::class);
-    $event = ossFindEvent($schedule, 'open-banking.daily-sync');
-    expect($event)->not->toBeNull();
-    $event->run($this->app);
+    Artisan::call('open-banking:sync-due');
 
     Bus::assertNotDispatched(SyncOpenBankingAccountJob::class);
 });
@@ -122,11 +120,7 @@ it('does NOT dispatch for a connection whose consent has expired', function (): 
         'consent_expires_at' => CarbonImmutable::parse('2026-01-01 00:00:00')->toDateTimeString(),
     ]);
 
-    /** @var Schedule $schedule */
-    $schedule = $this->app->make(Schedule::class);
-    $event = ossFindEvent($schedule, 'open-banking.daily-sync');
-    expect($event)->not->toBeNull();
-    $event->run($this->app);
+    Artisan::call('open-banking:sync-due');
 
     Bus::assertNotDispatched(SyncOpenBankingAccountJob::class);
 });
@@ -137,11 +131,7 @@ it('does NOT dispatch for a connection with a null consent_expires_at', function
     $user = ossUser('oss-null-consent');
     ossSeedConnection($user, ['consent_expires_at' => null]);
 
-    /** @var Schedule $schedule */
-    $schedule = $this->app->make(Schedule::class);
-    $event = ossFindEvent($schedule, 'open-banking.daily-sync');
-    expect($event)->not->toBeNull();
-    $event->run($this->app);
+    Artisan::call('open-banking:sync-due');
 
     Bus::assertNotDispatched(SyncOpenBankingAccountJob::class);
 });

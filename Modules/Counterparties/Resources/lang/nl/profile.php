@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— geen financieringsketens voor persoonlijke contacten',
     'tab_note_bank' => '— tegenpartij voor bankkosten genereert geen financieringsketens',
+    'tab_note_bank_institution' => '— geen financieringsketens voor institutionele tegenpartijen',
     'tab_note_government' => '— geen financieringsketens voor overheidstegenpartijen',
 
     'recent_activity' => 'Recente activiteit',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankkosten per categorie',
+        'activity_heading' => 'Activiteit per categorie',
         'no_fees' => 'Nog geen kosten geregistreerd op deze tegenpartij.',
     ],
 

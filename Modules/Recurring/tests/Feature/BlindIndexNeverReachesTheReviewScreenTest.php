@@ -15,6 +15,8 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 
 uses(EnablesEncryptionForUser::class);
 
@@ -221,4 +223,37 @@ it('still falls back to the readable key for a user without at-rest encryption',
 
     expect(app(MerchantDisplayName::class)->forStoredKey((int) $user->id, 'kpn bv'))
         ->toBe('kpn bv');
+});
+
+// The deferral is correct, its silence was not: no row, no event and no line
+// anywhere reads exactly like a user with no recurring expenses at all.
+it('names the clusters it held back rather than deferring them silently', function (): void {
+    $user = binrUser();
+    $session = $this->enablesEncryptionForUser($user);
+    binrSeed($user, $session, 'Nordwind Media BV', dropStoredName: true);
+
+    $warnings = [];
+    $logger = new class($warnings) implements LoggerInterface
+    {
+        use LoggerTrait;
+
+        /** @param list<array{string, array<string, mixed>}> $warnings */
+        public function __construct(public array &$warnings) {}
+
+        /** @param array<string, mixed> $context */
+        public function log(mixed $level, string|Stringable $message, array $context = []): void
+        {
+            if ($level === 'warning') {
+                $this->warnings[] = [(string) $message, $context];
+            }
+        }
+    };
+    app()->instance(LoggerInterface::class, $logger);
+    app()->forgetInstance(ExpenseSeriesDetector::class);
+
+    binrDetect($user);
+
+    expect(RecurringSeries::query()->where('user_id', $user->id)->count())->toBe(0);
+    expect($warnings)->toHaveCount(1);
+    expect($warnings[0][1]['deferred_clusters'])->toBe(1);
 });

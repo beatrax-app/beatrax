@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Geboekte betaling',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list telt niet mee — betalingen daar veranderen het saldo niet',
+    ],
+
     'panel' => [
         'aria' => 'Detailpaneel dag',
         'close' => 'Dagpaneel sluiten',
+        'close_caption' => 'Sluiten',
         'start_of_day' => 'Begin van de dag',
         'no_payments' => 'Geen betalingen op deze dag.',
         'date_approximate' => '~ datum bij benadering',

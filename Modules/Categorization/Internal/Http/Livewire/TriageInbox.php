@@ -7,12 +7,15 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
+use Modules\Community\Public\Services\CommunitySettings;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Support\SplitLegs;
 
 // The cursor is a (posted_at, id) pair so rows sharing a posted_at value
 // never silently drop between pages.
@@ -20,7 +23,11 @@ final class TriageInbox extends Component
 {
     private const int QUICK_ASSIGN_CHIPS_PER_ROW = 9;
 
+    // Written only by selectForRow(), which types both halves, and read back
+    // as the two arguments AssignsCategory declares. Nothing binds it, so the
+    // pair is refused at the boundary rather than narrowed on the way out.
     /** @var array<int, ?int> map of transactionId => pending categoryId */
+    #[Locked]
     public array $pending = [];
 
     public ?int $cursorId = null;
@@ -63,6 +70,7 @@ final class TriageInbox extends Component
         CategoryOptionsQuery $options,
         DatabaseManager $db,
         ViewFactory $views,
+        CommunitySettings $community,
     ): View {
         $user = $currentUser->user();
         $batch = $triage->for(
@@ -71,28 +79,21 @@ final class TriageInbox extends Component
             cursorPostedAt: $this->cursorPostedAt,
         );
 
-        $totalPending = $db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNull('category_id')
-            ->count();
+        $totalPending = SplitLegs::excludeParents(
+            $db->connection()->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereNull('category_id')
+        )->count();
 
         $categories = $options->for($user);
         $topCategories = array_slice($categories, 0, self::QUICK_ASSIGN_CHIPS_PER_ROW);
-
-        // Default is true so a user who never opens the Settings panel
-        // still sees the per-row CTA.
-        $settings = is_array($user->community_settings) ? $user->community_settings : [];
-        $offerToContribute = array_key_exists('offerToContribute', $settings)
-            ? (bool) $settings['offerToContribute']
-            : true;
 
         return $views->make('categorization::livewire.triage-inbox', [
             'batch' => $batch,
             'categories' => $categories,
             'topCategories' => $topCategories,
             'totalPending' => $totalPending,
-            'offerToContribute' => $offerToContribute,
+            'offerToContribute' => $community->offersToContribute($user->id),
         ]);
     }
 }

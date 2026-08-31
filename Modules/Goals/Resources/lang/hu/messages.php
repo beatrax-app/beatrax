@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Adj hozzá befizetéseket az előrejelzéshez',
         'not_enough_history' => 'Még nincs elég előzmény a dátum előrejelzéséhez',
         'no_recent_contributions' => 'Nincs friss befizetés, amiből előre lehetne jelezni',
+        'too_far_to_date' => 'Ilyen ütemben túl messze van a dátumhoz',
         'est' => 'Becsült: :date ·',
         'projection_note' => '(előrejelzés)',
         'projected' => 'Előrejelzés: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'További műveletek: :name',
         'mark_complete' => 'Megjelölés teljesítettként',
+        'mark_complete_caption' => 'Megjelölés',
         'archive' => 'Archiválás',
         'restore' => 'Visszaállítás',
     ],
 
-    'archived_disclosure' => 'Archivált célok (:count)',
+    'archived_disclosure' => 'Archivált cél (:count)|Archivált célok (:count)',
 
     'form' => [
         'title_edit' => 'Cél szerkesztése',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Adj nevet a célnak.',
         'date' => 'Válassz céldátumot.',
+        'date_invalid' => 'Válasszon valós dátumot.',
+        'date_before_start' => 'Válassz a cél kezdőnapjával azonos vagy későbbi dátumot.',
+        'generic' => 'A célt nem sikerült menteni. Ellenőrizze a mezőket, és próbálja újra.',
         'amount' => 'Adj meg érvényes, nullánál nagyobb összeget.',
         'pot_linked_category' => 'Ez a persely egy kategóriához van kapcsolva. Előbb szüntesd meg a kapcsolatot a Perselyek oldalon.',
+        'pot_already_linked' => 'Ez a persely már egy másik célt gyűjt. Előbb ott szüntesd meg a kapcsolatot.',
+        'pot_missing' => 'Ez a persely már nem érhető el. Válassz másikat, vagy hagyd ezt a célt kapcsolat nélkül.',
     ],
 ];

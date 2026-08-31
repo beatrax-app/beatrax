@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Brez kategorije',
+    'no_counterparty' => 'Brez nasprotne stranke',
+    'unavailable_counterparty' => 'Nasprotne stranke v tej napravi ni',
     'title' => 'Poročila',
     'page_title' => 'Poročila · Beatrax',
     'subtitle' => 'Sestavi poročilo iz svoje glavne knjige.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Poljuben razpon',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Izberi tako začetni kot končni datum.',
+            'malformed' => 'Vnesi veljaven datum v obliki LLLL-MM-DD.',
+            'inverted' => 'Končni datum je pred začetnim.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtri',
+        'net_worth_note' => 'Neto vrednost je stanje: velja samo filter računa.',
     ],
 
     'compare' => 'Primerjaj s prejšnjim obdobjem',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Graf v valuti :currency — :list ni prikazano',
+        'undrawn' => 'Ni v obroču — :amount gre v nasprotno smer',
         'bar_title' => 'Klikni stolpec za prikaz njegovih transakcij',
         'line_title' => 'Klikni točko za prikaz njenih transakcij',
         'donut_title' => 'Klikni segment za prikaz njegovih transakcij',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Provizije in prilagoditve (niso vštete)',
+    'other_movement_with_refunds' => 'Provizije, vračila in prilagoditve (niso vštete)',
 ];

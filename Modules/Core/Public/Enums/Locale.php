@@ -152,6 +152,22 @@ enum Locale: string
         return $this !== self::Nl;
     }
 
+    // Seven locales write U+2212 MINUS SIGN where the rest write the ASCII
+    // hyphen-minus, transcribed from ICU for the same reason the marks above
+    // are: on device ICU can only answer for English, and a phone spelling a
+    // negative differently from the desktop beside it is the defect.
+    public function minusSign(): string
+    {
+        return match ($this) {
+            self::Et, self::Fi, self::Hr, self::Lt,
+            self::Nb, self::Sl, self::Sv => "\u{2212}",
+            self::Bg, self::Cs, self::Da, self::De, self::El, self::En,
+            self::Es, self::Fr, self::Hu, self::It, self::Lv, self::Nl,
+            self::Pl, self::Pt, self::Ro, self::Sk, self::Sr, self::Tr,
+            self::Uk => '-',
+        };
+    }
+
     // The language codes, DEFAULT first, so Symfony's getPreferredLanguage()
     // falls back to English rather than to whichever case is declared first.
     /**

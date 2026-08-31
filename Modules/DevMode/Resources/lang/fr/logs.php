@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Masquer de la vue (ne modifie pas le fichier de log)',
     'dismiss_aria' => 'Masquer l\'entrée de log de la vue',
     'totals' => [
-        'showing' => 'Affichées',
-        'of' => 'sur',
-        'received' => 'reçues (tampon max 10k)',
-        'lines_today' => 'lignes aujourd\'hui',
+        'showing' => 'Affichage de :shown sur :count ligne reçue (tampon max :cap)|Affichage de :shown sur :count lignes reçues (tampon max :cap)',
+        'lines_today' => ':count ligne aujourd\'hui|:count lignes aujourd\'hui',
+        'lines_today_capped' => 'plus de :count ligne aujourd\'hui|plus de :count lignes aujourd\'hui',
         'today' => 'aujourd\'hui',
-        'across' => 'réparties sur',
-        'daily_files' => 'fichiers quotidiens',
+        'all_files' => ':size répartis sur :count fichier quotidien|:size répartis sur :count fichiers quotidiens',
     ],
 
     'status' => [

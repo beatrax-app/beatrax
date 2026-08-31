@@ -11,6 +11,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
+use Modules\Chains\Internal\Presentation\CounterpartyDisplay;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Dto\ChainTree;
@@ -22,10 +24,12 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class ChainDrawer extends Component
 {
@@ -35,18 +39,16 @@ final class ChainDrawer extends Component
 
     public int $fanoutPage = 0;
 
-    public ?int $expandedFanoutId = null;
-
-    /** @var array<int, bool> Per-leg click-to-collapse state. */
-    public array $collapsedLegs = [];
+    // Set when a chip acts on a link the other tab already decided; cleared
+    // before every subsequent chip and on re-open.
+    public ?string $actionError = null;
 
     #[On('chain-drawer:open')]
     public function open(int $transactionId): void
     {
         $this->transactionId = $transactionId;
         $this->fanoutPage = 0;
-        $this->expandedFanoutId = null;
-        $this->collapsedLegs = [];
+        $this->actionError = null;
         // Dispatch modal-show from here (not the trigger button) so it
         // fires after transactionId is set and always targets the stable
         // chain-drawer flyout name, avoiding the first-click no-op a
@@ -54,12 +56,23 @@ final class ChainDrawer extends Component
         $this->dispatch('modal-show', name: 'chain-drawer');
     }
 
+    // Both chips carry the two-tab case /chains/review already answers: the
+    // link was decided on another screen between this render and this click,
+    // and the shared Public action answers a gone row by throwing. The drawer
+    // says so and repaints rather than handing the browser a 404.
     public function confirm(
         int $chainLinkId,
         CurrentUser $currentUser,
         ConfirmChainLink $confirm,
     ): void {
-        $confirm($chainLinkId, $currentUser->user());
+        $this->actionError = null;
+        try {
+            $confirm($chainLinkId, $currentUser->user());
+        } catch (ChainLinkRequiresConcretePartnerException) {
+            $this->actionError = Lang::get('chains::review.errors.confirm_hint');
+        } catch (NotFoundHttpException) {
+            $this->actionError = Lang::get('core::errors.no_longer_here');
+        }
     }
 
     public function reject(
@@ -67,17 +80,19 @@ final class ChainDrawer extends Component
         CurrentUser $currentUser,
         RejectChainLink $reject,
     ): void {
-        $reject($chainLinkId, $currentUser->user());
+        $this->actionError = null;
+        try {
+            $reject($chainLinkId, $currentUser->user());
+        } catch (ChainLinkRequiresConcretePartnerException) {
+            $this->actionError = Lang::get('chains::review.errors.reject_hint');
+        } catch (NotFoundHttpException) {
+            $this->actionError = Lang::get('core::errors.no_longer_here');
+        }
     }
 
     public function showMoreFanout(): void
     {
         $this->fanoutPage++;
-    }
-
-    public function toggleLeg(int $chainLinkId): void
-    {
-        $this->collapsedLegs[$chainLinkId] = ! ($this->collapsedLegs[$chainLinkId] ?? false);
     }
 
     public function render(
@@ -93,6 +108,7 @@ final class ChainDrawer extends Component
             return $views->make('chains::livewire.chain-drawer', [
                 'tree' => null,
                 'fanoutPage' => $this->fanoutPage,
+                'actionError' => $this->actionError,
             ]);
         }
 
@@ -102,6 +118,7 @@ final class ChainDrawer extends Component
         return $views->make('chains::livewire.chain-drawer', [
             'tree' => $tree,
             'fanoutPage' => $this->fanoutPage,
+            'actionError' => $this->actionError,
         ]);
     }
 
@@ -123,7 +140,7 @@ final class ChainDrawer extends Component
         return $this->nestChildren(
             $tree,
             $childTxIdsByParent,
-            $this->loadChildNodes($childTxIdsByParent, $db, $user, $codec, $session, $baseCurrency),
+            $this->loadChildNodes($childTxIdsByParent, $db, $user, $codec, $session, $baseCurrency, $this->accountNames($db, $user)),
         );
     }
 
@@ -139,7 +156,10 @@ final class ChainDrawer extends Component
             ->where('kind', ChainLinkKind::IcsBulkSettle->value)
             ->whereIn('from_transaction_id', $nodeIds)
             ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
-            ->orderBy('id')
+            // The link id is derived from the pair it joins, so it sorts in
+            // hash order; the settled leg's own id is what puts the fan-out
+            // children in the order the statement listed them.
+            ->orderBy('to_transaction_id')
             ->get();
 
         /** @var array<int, list<int>> $rawByParent */
@@ -158,9 +178,10 @@ final class ChainDrawer extends Component
 
     /**
      * @param  array<int, list<int>>  $childTxIdsByParent
+     * @param  array<int, string>  $accountNames
      * @return array<int, ChainTreeNode>
      */
-    private function loadChildNodes(array $childTxIdsByParent, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency): array
+    private function loadChildNodes(array $childTxIdsByParent, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency, array $accountNames): array
     {
         $allChildIds = [];
         foreach ($childTxIdsByParent as $ids) {
@@ -170,18 +191,21 @@ final class ChainDrawer extends Component
         }
 
         $childRows = $db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('id', array_keys($allChildIds))
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.id', array_keys($allChildIds))
             ->get([
-                'id', 'counterparty_name', 'amount_minor', 'currency',
-                'settled_amount_minor', 'settled_currency', 'booked_at',
-                'account_id',
+                'transactions.id', 'transactions.counterparty_name',
+                'transactions.amount_minor', 'transactions.currency',
+                'transactions.settled_amount_minor', 'transactions.settled_currency',
+                'transactions.posted_at', 'transactions.account_id',
+                CounterpartyDisplay::SLUG_SELECT,
             ]);
 
         $childNodes = [];
         foreach ($childRows as $row) {
             /** @var stdClass $row */
-            $childNodes[self::toInt($row->id)] = $this->makeChildNode($row, $db, $user, $codec, $session, $baseCurrency);
+            $childNodes[self::toInt($row->id)] = $this->makeChildNode($row, $user, $codec, $session, $baseCurrency, $accountNames);
         }
 
         return $childNodes;
@@ -220,11 +244,12 @@ final class ChainDrawer extends Component
                 chainLinkId: $node->chainLinkId,
                 counterpartyName: $node->counterpartyName,
                 amount: $node->amount,
-                bookedAt: $node->bookedAt,
+                postedAt: $node->postedAt,
                 accountName: $node->accountName,
                 kind: $node->kind,
                 confidenceTier: $node->confidenceTier,
                 children: $children,
+                counterpartySlug: $node->counterpartySlug,
             );
         }
 
@@ -234,19 +259,31 @@ final class ChainDrawer extends Component
         );
     }
 
-    private function makeChildNode(stdClass $row, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency): ChainTreeNode
+    /**
+     * @return array<int, string> keyed by account id; an id absent here is one the
+     *                            reader does not own, and its child shows no account name
+     */
+    private function accountNames(DatabaseManager $db, User $user): array
     {
-        $accountId = self::toInt($row->account_id ?? null);
-        $accountName = '';
-        if ($accountId !== 0) {
-            $acc = $db->connection()->table('accounts')
-                ->where('id', $accountId)
-                ->where('user_id', $user->id)
-                ->first(['name']);
-            if ($acc !== null) {
-                $accountName = self::toString($acc->name ?? null);
-            }
+        $names = [];
+        foreach ($db->connection()->table('accounts')->where('user_id', $user->id)->get(['id', 'name']) as $row) {
+            /** @var stdClass $row */
+            $names[self::toInt($row->id)] = self::toString($row->name);
         }
+
+        return $names;
+    }
+
+    // The names arrive as a map for the same reason ChainTreeWalker reads one:
+    // MAX_DEPTH caps how deep the walk goes and nothing caps how wide, and a
+    // settled ICS statement covers 50 to 300 charges. Asked per child, this
+    // spent a query on each of them.
+    /**
+     * @param  array<int, string>  $accountNames
+     */
+    private function makeChildNode(stdClass $row, User $user, SensitiveColumnCodec $codec, Session $session, string $baseCurrency, array $accountNames): ChainTreeNode
+    {
+        $accountName = $accountNames[self::toInt($row->account_id ?? null)] ?? '';
 
         $settledCurrency = self::toString($row->settled_currency ?? null);
         $nativeCurrency = self::toString($row->currency ?? null);
@@ -257,9 +294,9 @@ final class ChainDrawer extends Component
 
         $amountMinor = self::toInt($row->settled_amount_minor ?? $row->amount_minor ?? null);
 
-        $bookedAtRaw = self::toString($row->booked_at ?? null);
-        $bookedAt = $bookedAtRaw !== ''
-            ? CarbonImmutable::parse($bookedAtRaw)
+        $postedAtRaw = self::toString($row->posted_at ?? null);
+        $postedAt = $postedAtRaw !== ''
+            ? CarbonImmutable::parse($postedAtRaw)
             : CarbonImmutable::parse('1970-01-01 00:00:00');
 
         $storedCounterpartyName = self::toString($row->counterparty_name ?? null);
@@ -267,16 +304,19 @@ final class ChainDrawer extends Component
             ? ''
             : $codec->decryptValue('transactions', 'counterparty_name', $storedCounterpartyName, $user->id, $session)['value'];
 
+        $slug = self::toString($row->counterparty_slug ?? null);
+
         return new ChainTreeNode(
             transactionId: self::toInt($row->id),
             chainLinkId: null,
             counterpartyName: $counterpartyName,
             amount: Money::ofMinor($amountMinor, $currency),
-            bookedAt: $bookedAt,
+            postedAt: $postedAt,
             accountName: $accountName,
             kind: 'ics_bulk_settle_child',
             confidenceTier: ConfidenceTier::Confirmed,
             children: [],
+            counterpartySlug: $slug === '' ? null : $slug,
         );
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Skarbonki · Beatrax',
     'heading' => 'Skarbonki',
-    'subtitle' => 'Wirtualne salda cząstkowe, które zawsze sumują się do rzeczywistego salda konta.',
+    'subtitle' => 'Wirtualne salda cząstkowe wydzielone z rzeczywistego salda konta.',
     'add_pot' => 'Dodaj skarbonkę',
 
     'pot_fallback' => 'skarbonka',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Pokaż historię ↓',
         'hide' => 'Ukryj historię ↑',
+        'truncated' => 'Ostatnie ruchy: :shown z :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Wypłata',
         'moved_from' => 'Przeniesiono ze skarbonki: :name',
         'moved_to' => 'Przeniesiono do skarbonki: :name',
+        'unreadable' => 'Zapisano przez nowszą wersję Beatrax',
+        'released_on_archive' => 'Zwolniono przy archiwizacji',
     ],
 
     'archived' => [
-        'toggle' => 'Zarchiwizowane skarbonki (:count)',
+        'toggle' => 'Zarchiwizowana skarbonka (:count)|Zarchiwizowane skarbonki (:count)|Zarchiwizowanych skarbonek (:count)',
         'badge' => 'Zarchiwizowana',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Podaj nazwę tej skarbonki.',
         'select_account' => 'Wybierz konto dla tej skarbonki.',
-        'amount_exceeds_unallocated' => 'Kwota przekracza nieprzydzielone saldo.',
         'amount_exceeds_unallocated_available' => 'Kwota przekracza nieprzydzielone saldo (dostępne: :amount).',
         'amount_exceeds_pot_balance' => 'Kwota przekracza saldo skarbonki :name (dostępne: :amount).',
+        'generic' => 'Nie udało się zapisać koperty. Sprawdź pola i spróbuj ponownie.',
+        'amount_invalid' => 'Podaj kwotę większą od zera.',
+        'goal_already_linked' => 'Ten cel ma już aktywną powiązaną kopertę. Najpierw ją zarchiwizuj.',
+        'account_cannot_hold_pots' => 'Skarbonka wymaga konta, na którym leżą pieniądze. Wybierz inne konto.',
+        'select_target_pot' => 'Wybierz skarbonkę, do której przenieść.',
+        'move_target_missing' => 'Ta skarbonka nie jest już dostępna. Wybierz inną.',
+        'move_same_pot' => 'Skarbonka nie może przenieść pieniędzy do siebie samej. Wybierz inną skarbonkę.',
+        'move_cross_account' => 'Skarbonki wymieniają pieniądze tylko w obrębie jednego konta, a :name jest na koncie :account.',
+        'pot_missing' => 'Ta skarbonka nie jest już dostępna.',
+        'operation_failed' => 'Nie udało się. Nie przeniesiono żadnych pieniędzy — spróbuj ponownie.',
     ],
 
     'toast' => [

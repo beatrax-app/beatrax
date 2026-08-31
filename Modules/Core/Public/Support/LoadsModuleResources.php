@@ -18,7 +18,7 @@ trait LoadsModuleResources
 {
     protected function loadModuleResources(string $namespace): void
     {
-        $providerFile = (new ReflectionClass(static::class))->getFileName();
+        $providerFile = new ReflectionClass(static::class)->getFileName();
         if ($providerFile === false) {
             return;
         }

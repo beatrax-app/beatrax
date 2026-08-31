@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Vue opérationnelle de la Dev Console intégrée.',
     'worker_heartbeat' => 'Heartbeat du worker',
     'not_running' => 'ARRÊTÉ',
+    'heartbeat_age' => 'il y a :count s · ttl :ttl s|il y a :count s · ttl :ttl s',
     'queue' => 'File',
     'pending' => 'en attente',
     'failed' => 'échoués',

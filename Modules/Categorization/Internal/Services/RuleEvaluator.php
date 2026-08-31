@@ -10,9 +10,9 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use stdClass;
 
-final class RuleEvaluator
+final readonly class RuleEvaluator
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     // The JOIN matches on the derived `normalized_name` key, which is not a
     // sensitive column, so no decrypt is needed even for an encrypted user.
@@ -32,7 +32,13 @@ final class RuleEvaluator
                     ->where('m.normalized_name', '=', $normalized);
             })
             ->where('mm.user_id', $userId)
+            // Recency first: on the count alone a fresh correction at 1 could
+            // never beat an old memory at 18, so the reader got the wrong
+            // category back -- and no divergence toast, because AssignCategory
+            // documents that memory relearns on its own. The id breaks ties.
+            ->orderByDesc('mm.last_seen_at')
             ->orderByDesc('mm.occurrence_count')
+            ->orderByDesc('mm.id')
             ->first(['mm.id', 'mm.category_id', 'mm.occurrence_count']);
 
         return $row;

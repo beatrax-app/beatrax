@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Vahvista tai hylkää ehdokaslinkit, joita ketjunratkaisija ei voinut vahvistaa automaattisesti.',
 
     'empty_heading' => 'Ei tarkistettavaa',
-    'empty_body' => 'Jokainen ketjulinkki on joko vahvistettu tai hylätty. Uudet ehdokkaat ilmestyvät tänne tuontien myötä.',
+    'empty_body' => 'Jokainen linkki, jonka ratkaisija pystyi parittamaan, on vahvistettu tai hylätty. Uudet ehdokkaat ilmestyvät tänne tuontien myötä.',
 
     'auto_confirm_nudge' => 'Vielä yksi vahvistus, niin vastaavat linkit vahvistetaan automaattisesti.',
 

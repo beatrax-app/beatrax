@@ -30,6 +30,7 @@ use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Http\Livewire\MobileWelcomeScreen;
+use Modules\Mobile\Internal\Http\Livewire\SchemaIncompleteScreen;
 use Modules\Mobile\Internal\Http\Livewire\SetupProgressScreen;
 use Modules\Mobile\Internal\Http\Livewire\SyncCompleteScreen;
 use Modules\Mobile\Internal\Http\Livewire\SyncScreen;
@@ -180,6 +181,7 @@ final class MobileServiceProvider extends ServiceProvider
         $livewire->component('mobile.setup-progress-screen', SetupProgressScreen::class);
         $livewire->component('mobile.sync-complete-screen', SyncCompleteScreen::class);
         $livewire->component('mobile.sync-screen', SyncScreen::class);
+        $livewire->component('mobile.schema-incomplete-screen', SchemaIncompleteScreen::class);
         $livewire->component('mobile.welcome-screen', MobileWelcomeScreen::class);
         $livewire->component('mobile.cold-start-biometric-settings-section', ColdStartBiometricSettingsSection::class);
 

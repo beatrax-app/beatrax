@@ -125,7 +125,7 @@ it('decrypts counterparty_iban before clustering so same-IBAN income rows cluste
 
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         // Re-encrypting the SAME plaintext IBAN yields a different ciphertext per
         // row (random nonce) — the failure mode this suite exists to close.
         $encryptedIban = $codec->encryptValue('transactions', 'counterparty_iban', 'NL91RDE0123456789', $user->id, $session);
@@ -160,7 +160,7 @@ it('logs a warning and skips the iban-dependent income detection when the KEK is
 
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         $encryptedIban = $codec->encryptValue('transactions', 'counterparty_iban', 'NL91RDE0987654321', $user->id, $session);
         rdeSeedIncomeTx($db, $user, $account, $run, $date, $encryptedIban, $i + 1, 'rde-ka-'.$i);
     }
@@ -216,7 +216,7 @@ it('runs a non-encrypted user\'s scheduled sweep normally regardless of KEK stat
 
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
-        $date = $start->addMonths($i)->toDateString();
+        $date = $start->addMonthsNoOverflow($i)->toDateString();
         rdeSeedIncomeTx($db, $user, $account, $run, $date, 'NL91RDE0111222333', $i + 1, 'rde-ne-'.$i);
     }
 

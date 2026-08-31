@@ -12,12 +12,12 @@ use Modules\Core\Public\Services\LocaleNegotiator;
 
 // Renders copy in the RECIPIENT's language, not the request's: digests and
 // reminders fire from jobs that have no request locale at all.
-final class NotificationCopyRenderer
+final readonly class NotificationCopyRenderer
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Translator $translator,
-        private readonly LocaleNegotiator $negotiator,
+        private DatabaseManager $db,
+        private Translator $translator,
+        private LocaleNegotiator $negotiator,
     ) {}
 
     /**

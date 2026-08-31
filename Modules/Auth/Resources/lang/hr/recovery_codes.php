@@ -23,5 +23,6 @@ return [
         'body' => 'Kodovi za oporavak jedini su način da se vratiš na svoj račun ako zaboraviš lozinku.',
         'warning' => 'Spremaju se kao sažetak pa se ne mogu ponovno prikazati. Novi set odmah poništava stari.',
         'regenerate' => 'Izradi nove kodove',
+        'regenerate_confirm' => 'Izraditi novi set kodova za oporavak? Set koji sada imaš prestaje vrijediti u trenutku kad nastane novi i više se ne može prikazati — ispisana ili prepisana kopija postaje beskorisna. Spremi nove kodove prije nego što napustiš ovu stranicu.',
     ],
 ];

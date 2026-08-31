@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Esporta PDF',
     'export_pdf_aria' => 'Esporta PDF',
     'export_pdf_title' => 'Scarica beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Ignora',
 
     'country_prompt_heading' => 'In quale paese presenti la dichiarazione dei redditi?',
     'country_prompt_body' => 'Puoi cambiarlo in qualsiasi momento in Impostazioni → :section.',

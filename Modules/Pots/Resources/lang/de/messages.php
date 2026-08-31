@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Rücklagen · Beatrax',
     'heading' => 'Rücklagen',
-    'subtitle' => 'Virtuelle Teilsalden, die zusammen immer deinem tatsächlichen Saldo entsprechen.',
+    'subtitle' => 'Virtuelle Teilsalden, herausgelöst aus dem tatsächlichen Kontosaldo.',
     'add_pot' => 'Rücklage hinzufügen',
 
     'pot_fallback' => 'Rücklage',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Verlauf anzeigen ↓',
         'hide' => 'Verlauf ausblenden ↑',
+        'truncated' => 'Letzte Bewegungen: :shown von :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Entnahme',
         'moved_from' => 'Verschoben aus :name',
         'moved_to' => 'Verschoben nach :name',
+        'unreadable' => 'Von einer neueren Version von Beatrax erfasst',
+        'released_on_archive' => 'Bei Archivierung freigegeben',
     ],
 
     'archived' => [
-        'toggle' => 'Archivierte Rücklagen (:count)',
+        'toggle' => 'Archivierte Rücklage (:count)|Archivierte Rücklagen (:count)',
         'badge' => 'Archiviert',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Gib dieser Rücklage einen Namen.',
         'select_account' => 'Wähle ein Konto für diese Rücklage.',
-        'amount_exceeds_unallocated' => 'Der Betrag übersteigt den nicht zugeteilten Saldo.',
         'amount_exceeds_unallocated_available' => 'Der Betrag übersteigt den nicht zugeteilten Saldo (:amount verfügbar).',
         'amount_exceeds_pot_balance' => 'Der Betrag übersteigt den Saldo in :name (:amount verfügbar).',
+        'generic' => 'Der Topf konnte nicht gespeichert werden. Prüfen Sie die Felder und versuchen Sie es erneut.',
+        'amount_invalid' => 'Geben Sie einen Betrag größer als null ein.',
+        'goal_already_linked' => 'Dieses Ziel hat bereits einen aktiven verknüpften Topf. Archivieren Sie ihn zuerst.',
+        'account_cannot_hold_pots' => 'Eine Rücklage braucht ein Konto, auf dem Geld liegt. Wähle ein anderes Konto.',
+        'select_target_pot' => 'Wähle eine Rücklage, in die verschoben werden soll.',
+        'move_target_missing' => 'Diese Rücklage ist nicht mehr verfügbar. Wähle eine andere.',
+        'move_same_pot' => 'Eine Rücklage kann kein Geld an sich selbst verschieben. Wähle eine andere Rücklage.',
+        'move_cross_account' => 'Rücklagen tauschen Geld nur innerhalb eines Kontos, und :name liegt auf :account.',
+        'pot_missing' => 'Diese Rücklage ist nicht mehr verfügbar.',
+        'operation_failed' => 'Das hat nicht geklappt. Es wurde kein Geld verschoben — versuche es erneut.',
     ],
 
     'toast' => [

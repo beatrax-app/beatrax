@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\WeekStart;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -23,14 +24,12 @@ final readonly class SeriesEntryPlacer
 {
     use CoercesScalars;
 
-    private const int DAYS_PER_WEEK = 7;
-
     private const int MONTHS_PER_QUARTER = 3;
 
     private const int MONTHS_PER_YEAR = 12;
 
     // Bounds the placement loop against a pathological anchor; 60 steps
-    // covers any single month.
+    // covers any single Mon–Sun grid.
     private const int MAX_PLACEMENT_ITERATIONS = 60;
 
     public function __construct(
@@ -51,8 +50,8 @@ final readonly class SeriesEntryPlacer
         array $allSeries,
         array $accountIdForSeries,
         ?array $effectiveVisible,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
         User $user,
     ): array {
         $candidates = $this->entryCandidates($allSeries, $accountIdForSeries, $effectiveVisible);
@@ -60,7 +59,7 @@ final readonly class SeriesEntryPlacer
             return [];
         }
 
-        $placed = $this->placeCandidates($candidates, $monthStart, $monthEnd, $user);
+        $placed = $this->placeCandidates($candidates, $gridStart, $gridEnd, $user);
         if ($placed === []) {
             return [];
         }
@@ -102,8 +101,8 @@ final readonly class SeriesEntryPlacer
      */
     private function placeCandidates(
         array $candidates,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
         User $user,
     ): array {
         // The backward projection must not fabricate expected occurrences
@@ -114,10 +113,10 @@ final readonly class SeriesEntryPlacer
         $placed = [];
         foreach ($candidates as $candidate) {
             $series = $candidate['series'];
-            $occurrenceDates = $this->placeSeriesInMonth(
+            $occurrenceDates = $this->placeSeriesInRange(
                 $series,
-                $monthStart,
-                $monthEnd,
+                $gridStart,
+                $gridEnd,
                 $startFloors[$series->seriesId] ?? null,
             );
             if ($occurrenceDates === []) {
@@ -218,22 +217,22 @@ final readonly class SeriesEntryPlacer
     /**
      * @return list<CarbonImmutable>
      */
-    private function placeSeriesInMonth(
+    private function placeSeriesInRange(
         RecurringSeriesDto $series,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
         ?CarbonImmutable $seriesStart = null,
     ): array {
         $next = $series->nextExpectedAt;
-        if ($next === null || ($seriesStart !== null && $monthEnd->lt($seriesStart))) {
+        if ($next === null || ($seriesStart !== null && $gridEnd->lt($seriesStart))) {
             return [];
         }
 
         if ($series->cadence === SeriesCadence::Irregular) {
-            return $this->placeIrregular($next, $monthStart, $monthEnd);
+            return $this->placeIrregular($next, $gridStart, $gridEnd);
         }
 
-        return $this->placeRegular($next, $series->cadence, $monthStart, $monthEnd, $seriesStart);
+        return $this->placeRegular($next, $series->cadence, $gridStart, $gridEnd, $seriesStart, $series->billingDay);
     }
 
     /**
@@ -241,10 +240,10 @@ final readonly class SeriesEntryPlacer
      */
     private function placeIrregular(
         CarbonImmutable $next,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
     ): array {
-        if ($next->gte($monthStart) && $next->lte($monthEnd)) {
+        if ($next->gte($gridStart) && $next->lte($gridEnd)) {
             return [$next->startOfDay()];
         }
 
@@ -257,14 +256,15 @@ final readonly class SeriesEntryPlacer
     private function placeRegular(
         CarbonImmutable $next,
         SeriesCadence $cadence,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
         ?CarbonImmutable $seriesStart,
+        ?int $billingDay,
     ): array {
         // k runs negative below, for the history fill-in; SeriesCadence::occurrenceAt
         // is what makes both directions read off the same anchor.
         $anchor = $next->startOfDay();
-        $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
+        $k = $this->firstOccurrenceIndex($anchor, $cadence, $gridStart);
 
         // Backward steps are history fill-in. The anchor is the app's own
         // answer to when the next charge falls, and the forecast walks
@@ -272,19 +272,19 @@ final readonly class SeriesEntryPlacer
         // still to come is an entry no balance line will ever account for.
         $today = $this->clock->now()->startOfDay();
 
-        // Dates increase strictly in k, so the first one past monthEnd ends the
-        // walk; there is nothing behind it that could still land in the month.
+        // Dates increase strictly in k, so the first one past the grid's last
+        // day ends the walk; nothing behind it can still land on the grid.
         $results = [];
         $iterations = 0;
 
         while ($iterations < self::MAX_PLACEMENT_ITERATIONS) {
             $iterations++;
-            $occurrence = $cadence->occurrenceAt($anchor, $k);
+            $occurrence = $cadence->occurrenceAt($anchor, $k, $billingDay);
             $k++;
-            if ($occurrence === null || $occurrence->gt($monthEnd)) {
+            if ($occurrence === null || $occurrence->gt($gridEnd)) {
                 break;
             }
-            if ($occurrence->lt($monthStart)) {
+            if ($occurrence->lt($gridStart)) {
                 continue;
             }
             if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
@@ -299,18 +299,18 @@ final readonly class SeriesEntryPlacer
         return $results;
     }
 
-    // Estimates the first index that could land in the month, then backs off one
-    // step as a margin. Irregular never gets here; placeSeriesInMonth diverts it.
-    private function firstOccurrenceIndex(CarbonImmutable $anchor, SeriesCadence $cadence, CarbonImmutable $monthStart): int
+    // Estimates the first index that could land on the grid, then backs off one
+    // step as a margin. Irregular never gets here; placeSeriesInRange diverts it.
+    private function firstOccurrenceIndex(CarbonImmutable $anchor, SeriesCadence $cadence, CarbonImmutable $gridStart): int
     {
-        $monthsDelta = ($monthStart->year - $anchor->year) * self::MONTHS_PER_YEAR + ($monthStart->month - $anchor->month);
-        $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / Duration::Day->seconds());
+        $monthsDelta = ($gridStart->year - $anchor->year) * self::MONTHS_PER_YEAR + ($gridStart->month - $anchor->month);
+        $deltaDays = (int) floor(($gridStart->getTimestamp() - $anchor->getTimestamp()) / Duration::Day->seconds());
 
         return match ($cadence) {
-            SeriesCadence::Weekly => (int) floor($deltaDays / self::DAYS_PER_WEEK) - 1,
+            SeriesCadence::Weekly => (int) floor($deltaDays / WeekStart::DAYS_IN_WEEK) - 1,
             SeriesCadence::Monthly => $monthsDelta - 1,
             SeriesCadence::Quarterly => (int) floor($monthsDelta / self::MONTHS_PER_QUARTER) - 1,
-            SeriesCadence::Yearly => ($monthStart->year - $anchor->year) - 1,
+            SeriesCadence::Yearly => ($gridStart->year - $anchor->year) - 1,
             SeriesCadence::Irregular => 0,
         };
     }

@@ -24,6 +24,7 @@ return [
     'to' => 'to',
     'text_placeholder' => 'e.g. SPOTIFY',
     'remove_condition' => 'Remove condition',
+    'remove_condition_caption' => 'Remove',
     'add_condition' => '+ Add condition',
 
     'then' => 'Then',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Append',
     'deduction_category_aria' => 'Deduction category for action :number',
     'remove_action' => 'Remove action',
+    'remove_action_caption' => 'Remove',
     'add_action' => '+ Add action',
 
     'this_year_only' => 'This year only ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Tax tag actions apply on the next re-apply, not on the current import.',
 
     'priority' => 'Priority',
-    'priority_help' => 'Lower numbers run first. Rules with no shared fields never conflict.',
+    'priority_help' => 'Rules run from the lowest number up, so the highest number wins where two set the same field. Rules with no shared fields never conflict.',
 
     'cancel' => 'Cancel',
     'save_changes' => 'Save changes',

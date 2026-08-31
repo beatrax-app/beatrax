@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 
 uses(RefreshDatabase::class);
 
@@ -68,13 +69,7 @@ it('writes a Zulu expiry on the row a scanned QR seeds', function (): void {
     atTimezone('Europe/Amsterdam', '2026-06-15T18:30:00Z');
     $user = zuluUser('zulu-seed');
 
-    $this->service->seedFromInitiator(
-        (int) $user->id,
-        'the-desktop',
-        str_repeat('a', 64),
-        str_repeat('b', 64),
-        bin2hex(random_bytes(16)),
-    );
+    $this->service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('the-desktop', str_repeat('a', 64), str_repeat('b', 64)), bin2hex(random_bytes(16)));
 
     expect(expiryOf((int) $user->id))->toMatch(PAIRING_ZULU_SHAPE);
 });

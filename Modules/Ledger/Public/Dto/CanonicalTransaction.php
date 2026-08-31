@@ -6,7 +6,9 @@ namespace Modules\Ledger\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Spatie\LaravelData\Data;
 
 final class CanonicalTransaction extends Data
@@ -26,7 +28,6 @@ final class CanonicalTransaction extends Data
         public readonly string $currency,
         public readonly int $settledAmountMinor,
         public readonly string $settledCurrency,
-        public readonly ?string $fxRateUsed,
         public readonly ?string $counterpartyName,
         public readonly ?string $counterpartyIban,
         public readonly string $counterpartyNormalized,
@@ -60,7 +61,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -94,7 +94,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -131,7 +130,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -165,7 +163,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -199,7 +196,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -233,7 +229,6 @@ final class CanonicalTransaction extends Data
             currency: $this->currency,
             settledAmountMinor: $this->settledAmountMinor,
             settledCurrency: $this->settledCurrency,
-            fxRateUsed: $this->fxRateUsed,
             counterpartyName: $this->counterpartyName,
             counterpartyIban: $this->counterpartyIban,
             counterpartyNormalized: $this->counterpartyNormalized,
@@ -252,6 +247,23 @@ final class CanonicalTransaction extends Data
         );
     }
 
+    // Every row in the ledger is born here, so the four money columns leave
+    // through the seam that keeps them in step rather than however the caller
+    // held them: a migrated converted pair arrived under no rate, and its
+    // settled leg kept a credit sign its native leg did not have.
+    /**
+     * @link ../../../../.docs/conventions/invariants-from-shipped-failures.md#money-that-left-its-seam
+     */
+    public function amount(): TransactionAmount
+    {
+        return TransactionAmount::relate(
+            $this->amountMinor,
+            $this->currency,
+            $this->settledAmountMinor,
+            $this->settledCurrency,
+        );
+    }
+
     // Does not include the fingerprint columns or created_at/updated_at
     // — the recorder action adds those via the injected Clock so tests
     // can pin the value.
@@ -260,18 +272,13 @@ final class CanonicalTransaction extends Data
      */
     public function toAttributes(): array
     {
-        return [
+        return $this->amount()->toColumns() + [
             'user_id' => $this->userId,
             'account_id' => $this->accountId,
             'type' => $this->type,
             'posted_at' => $this->postedAt->toDateString(),
             'booked_at' => $this->bookedAt->toDateTimeString(),
             'value_date' => $this->valueDate->toDateString(),
-            'amount_minor' => $this->amountMinor,
-            'currency' => $this->currency,
-            'settled_amount_minor' => $this->settledAmountMinor,
-            'settled_currency' => $this->settledCurrency,
-            'fx_rate_used' => $this->fxRateUsed,
             'counterparty_name' => $this->counterpartyName,
             'counterparty_iban' => $this->counterpartyIban,
             'counterparty_normalized' => $this->counterpartyNormalized,
@@ -289,7 +296,9 @@ final class CanonicalTransaction extends Data
             'source_ref' => $this->sourceRef,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
-            'status' => $this->sourceFormat === 'manual' ? ClearedStatus::Uncleared->value : ClearedStatus::Cleared->value,
+            'status' => $this->sourceFormat === SyntheticSourceFormat::Manual->value
+                ? ClearedStatus::Uncleared->value
+                : ClearedStatus::Cleared->value,
         ];
     }
 }

@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Patroon is verplicht.',
         'name_required' => 'Naam is verplicht.',
+        'browser_refused' => 'Je browser kon niet worden geopend, dus er is niets verzonden en er heeft niets dit apparaat verlaten. Probeer het opnieuw, of plak de YAML-voorvertoning hierboven zelf in een pull request.',
     ],
 ];

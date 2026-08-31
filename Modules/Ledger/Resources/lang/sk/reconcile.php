@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'vyber účet',
+        'choose_date' => 'vyber dátum výpisu',
         'enter_balance' => 'zadaj zostatok podľa výpisu',
         'matched' => 'zhoda — :amount',
         'discrepancy' => 'rozdiel — :amount',
+        'reconciled_through' => 'odsúhlasené do :date',
     ],
 
     'mismatch_html' => 'Zostatok podľa výpisu sa zatiaľ nezhoduje s tvojím zúčtovaným zostatkom. Prepínaj zúčtované riadky v <a href=":url" class="underline">zozname transakcií</a> alebo uprav zadaný zostatok, kým rozdiel neklesne na nulu — tento postup nikdy nevytvára vyrovnávaciu položku.',
+    'unreachable_no_baseline_html' => 'Žiadna kombinácia riadkov nedokáže zrovnať tento rozdiel na nulu. Pri tomto účte nie je zaznamenaný počiatočný zostatok, takže sa jeho zostatok meria od nuly. Naimportuj výpis, ktorým účet začína, alebo nastav počiatočný zostatok v <a href=":url" class="underline">Nastaveniach</a>.',
+    'unreachable' => 'Žiadna kombinácia riadkov nedokáže zrovnať tento rozdiel na nulu: leží mimo rozsahu všetkých riadkov na tomto účte do zadaného dátumu. Skontroluj dátum výpisu a zadaný zostatok.',
 
     'check' => 'Skontrolovať',
     'complete' => 'Dokončiť odsúhlasenie',
+    'complete_unavailable' => 'K tomuto dátumu už nie je čo zamknúť — označ ďalšie riadky ako zúčtované alebo vyber neskorší dátum výpisu.',
 
     'errors' => [
         'choose_account' => 'Najprv vyber účet.',

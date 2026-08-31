@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Paiement enregistré',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list non comptabilisé — les paiements associés ne modifient pas le solde',
+    ],
+
     'panel' => [
         'aria' => 'Panneau de détail du jour',
         'close' => 'Fermer le panneau du jour',
+        'close_caption' => 'Fermer',
         'start_of_day' => 'Début de journée',
         'no_payments' => 'Aucun paiement ce jour-là.',
         'date_approximate' => '~ date approximative',

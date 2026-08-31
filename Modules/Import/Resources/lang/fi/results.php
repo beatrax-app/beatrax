@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Lähetä toinen tiliote',
 
+    'chain' => [
+        'heading' => 'Ratkaistaan ketjuja…',
+        'pending' => 'Jonossa. Ketjujen ratkaisu alkaa pian.',
+        'running' => 'Yhdistetään rahoitusketjuja ja puretaan tiliotteen tilityksiä.',
+    ],
+
     'issues' => [
         'row' => 'Rivi :row: :reason',
         'file_stopped' => 'Tiedostoa ei voitu lukea riviä :row pidemmälle. Mitään sen jälkeen ei tuotu.',

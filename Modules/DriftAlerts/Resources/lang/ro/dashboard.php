@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Alerte de abatere',
-    'aria' => 'Alerte de abatere — :count deschise, impact anualizat :amount',
+    'aria' => 'Alerte de abatere — :count deschise, :impact',
     'open' => 'deschise',
-    'annualized_impact' => 'impact anualizat',
+    'impact_rising' => 'impact anualizat :amount',
+    'impact_flat' => 'fără cost anual suplimentar',
 ];

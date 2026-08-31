@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Otključavanje',
 
-    'digits_entered' => 'unesenih znamenki',
+    'digits_entered' => 'unesena :count znamenka|unesene :count znamenke|uneseno :count znamenki',
     'pin_pad' => 'PIN tipkovnica',
     'digit' => 'Znamenka :digit',
     'backspace' => 'Backspace',

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Alertes de dérive',
-    'heading' => 'Alertes',
     'intro_anomaly' => 'Débits isolés qui sortent de l\'ordinaire pour toi.',
     'intro_drift' => 'Séries récurrentes approuvées dont le dernier débit est sorti de ton seuil.',
     'adjust_threshold' => 'Ajuster le seuil →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/an',
         'meta_prior_now' => 'avant :prior → maintenant :now',
         'meta_detected' => 'détecté le :date',
-        'meta_threshold' => 'seuil ±:percent%',
+        'meta_threshold' => 'seuil ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/an)',
         'cancel_impact' => 'Résilier → économise :amount/an',
         'cadence_flipped' => 'Fréquence modifiée — visible aussi dans',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Cette alerte n\'existe plus.',
         'acknowledged' => 'Pris en compte',
         'snoozed' => 'Reporté',
         'dismissed' => 'Ignorée',

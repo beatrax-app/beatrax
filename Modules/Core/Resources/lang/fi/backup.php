@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Tämä puhelin ei voi tallentaa sovelluksen antamaa tiedostoa, joten salattu varmuuskopio tehdään työpöytäsovelluksessa. Paritä tämä laite pitääksesi ne synkassa.',
+        'no_download_route' => 'Tämä sovellus ei voi luovuttaa tiedostoa laitteellesi, joten salattu varmuuskopio tehdään työpöytäsovelluksessa. Paritä tämä laite pitääksesi ne synkassa.',
         'unavailable' => 'Salatut varmuuskopiot ovat käytettävissä työpöytäversiossa (SQLite). Palvelintietokannassa käytä tietokannan omia varmuuskopiointityökaluja.',
         'intro' => 'Lataa salalauseella salattu kopio koko tietokannastasi — sitä voi turvallisesti säilyttää ulkoisella levyllä tai pilvitallennuksessa, koska se on lukukelvoton ilman salalausetta (kvanttiturvallinen XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Salalause',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Tiedoston lataus ei valmistunut. Se voi olla liian suuri tälle laitteelle — työpöytäsovelluksessa palauttaminen hyväksyy suuremman varmuuskopion.',
         'enter_passphrase' => 'Anna salalause, jolla varmuuskopio salattiin.',
         'unreadable' => 'Lähetettyä tiedostoa ei voitu lukea. Yritä uudelleen.',
+        'restore_wrong_passphrase' => 'Tuo salasanalause ei avannut tätä varmuuskopiota, eikä mitään ole muutettu. Kirjoita se uudelleen ja yritä uudestaan. Jos se on varmasti oikea, tiedostoa on muutettu sen tekemisen jälkeen — palauta silloin toisesta kopiosta.',
+        'restore_not_a_backup' => 'Tämä tiedosto ei ole salattu Beatrax-varmuuskopio, joten palautettavaa ei ole eikä mitään ole muutettu. Valitse .enc-tiedosto, jonka sovellus kirjoitti varmuuskopiota tehtäessä.',
+        'restore_contents_unreadable' => 'Varmuuskopio aukesi, mutta sen sisällä oleva tietokanta on vaurioitunut, joten sitä ei palautettu eikä mitään ole muutettu. Palauta vanhemmasta varmuuskopiosta.',
+        'restore_could_not_read' => 'Varmuuskopiotiedostoa ei voitu lukea, joten palautusta ei suoritettu eikä mitään ole muutettu. Tarkista, että laitteessa on vapaata tilaa, ja yritä uudelleen.',
+        'restore_not_supported' => 'Palautus toimii versiossa, joka pitää tietonsa yhdessä tiedostossa, eikä tämä ole sellainen, joten mitään ei ole muutettu. Palvelintietokannassa käytä sen omia palautustyökaluja.',
+        'restore_failed' => 'Palautusta ei suoritettu eikä mitään ole muutettu. Yritä uudelleen — jos se epäonnistuu toistuvasti, sovelluksen loki kertoo, mikä sen pysäytti.',
     ],
 ];

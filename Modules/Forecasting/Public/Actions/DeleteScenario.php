@@ -11,11 +11,11 @@ use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DeleteScenario
+final readonly class DeleteScenario
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $scenarioId, User $user): void

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Avvikelsevarningar',
-    'heading' => 'Varningar',
     'intro_anomaly' => 'Enskilda debiteringar som ser ovanliga ut för dig.',
     'intro_drift' => 'Godkända återkommande serier vars senaste debitering hamnade utanför ditt tröskelvärde.',
     'adjust_threshold' => 'Justera tröskelvärde →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/år',
         'meta_prior_now' => 'tidigare :prior → nu :now',
         'meta_detected' => 'upptäckt :date',
-        'meta_threshold' => 'tröskelvärde ±:percent%',
+        'meta_threshold' => 'tröskelvärde ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Säg upp den här → spara :amount/år',
         'cadence_flipped' => 'Intervallet har ändrats — visas även i',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Den här avisen finns inte längre.',
         'acknowledged' => 'Bekräftad',
         'snoozed' => 'Uppskjuten',
         'dismissed' => 'Stängd',

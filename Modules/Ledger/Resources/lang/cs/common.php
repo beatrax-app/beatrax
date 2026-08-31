@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorie',
+    'unavailable_category' => 'Kategorie není v tomto zařízení',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Zúčtováno',
         'uncleared' => 'Nezúčtováno',

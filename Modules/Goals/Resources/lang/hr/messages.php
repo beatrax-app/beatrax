@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: dovršeno :pct%',
+        'aria' => ':name: dovršeno :pct %',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Dodaj uplate da vidiš projekciju',
         'not_enough_history' => 'Još nema dovoljno povijesti za projekciju datuma',
         'no_recent_contributions' => 'Nema nedavnih uplata na temelju kojih bi se radila projekcija',
+        'too_far_to_date' => 'Pri ovom tempu predaleko za datum',
         'est' => 'Procj. :date ·',
         'projection_note' => '(projekcija)',
         'projected' => 'Projekcija: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Više radnji za :name',
         'mark_complete' => 'Označi kao dovršeno',
+        'mark_complete_caption' => 'Označi',
         'archive' => 'Arhiviraj',
         'restore' => 'Vrati',
     ],
 
-    'archived_disclosure' => 'Arhivirani ciljevi (:count)',
+    'archived_disclosure' => 'Arhivirani cilj (:count)|Arhivirana cilja (:count)|Arhiviranih ciljeva (:count)',
 
     'form' => [
         'title_edit' => 'Uredi cilj',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Upiši naziv svojeg cilja.',
         'date' => 'Odaberi ciljani datum.',
+        'date_invalid' => 'Odaberite stvarni datum.',
+        'date_before_start' => 'Odaberi datum na dan početka cilja ili poslije.',
+        'generic' => 'Cilj nije spremljen. Provjerite polja i pokušajte ponovno.',
         'amount' => 'Upiši ispravan iznos veći od nule.',
         'pot_linked_category' => 'Ova kasica povezana je s kategorijom. Prvo ukloni tu vezu na stranici Kasice.',
+        'pot_already_linked' => 'Ova kasica već financira drugi cilj. Prvo tamo ukloni poveznicu.',
+        'pot_missing' => 'Ta kasica više nije dostupna. Odaberi drugu ili ostavi ovaj cilj bez poveznice.',
     ],
 ];

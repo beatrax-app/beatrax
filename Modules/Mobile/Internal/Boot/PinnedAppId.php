@@ -6,12 +6,12 @@ namespace Modules\Mobile\Internal\Boot;
 
 final class PinnedAppId
 {
-    // Mirrors nativephp/mobile's own guard in InstallCommand::ensureAppIdIsSet()
-    // exactly. When this returns true that method early-returns, so the bundle
+    // Mirrors the app-id guard in nativephp/mobile's own install command
+    // exactly. When this returns true that guard early-returns, so the bundle
     // id cannot be generated; a looser test would let a generated one through.
-    private const PATTERN = '/^NATIVEPHP_APP_ID=(.+)$/m';
+    private const string PATTERN = '/^NATIVEPHP_APP_ID=(.+)$/m';
 
-    private const UNUSABLE = ['', '""', "''"];
+    private const array UNUSABLE = ['', '""', "''"];
 
     public static function isPinnedIn(string $envContents): bool
     {

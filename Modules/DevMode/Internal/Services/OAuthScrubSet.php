@@ -9,12 +9,21 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\EmailScan\Models\OAuthSecret;
 use Throwable;
 
 class OAuthScrubSet
 {
-    private const NOTHING_TO_SCRUB = '';
+    private const string NOTHING_TO_SCRUB = '';
+
+    // The tokens_blob fields OAuthSecretsRepository writes that are secrets.
+    // It writes `id`, `provider`, `email`, `scope` and `expires_at` beside
+    // them; those are ordinary words, and collecting them turned every log
+    // line that said "gmail" or carried a timestamp into [REDACTED].
+    /** @var list<string> */
+    private const array SECRET_BLOB_FIELDS = ['access_token', 'refresh_token'];
 
     /** @var list<string>|null */
     protected ?array $set = null;
@@ -24,6 +33,11 @@ class OAuthScrubSet
     // During boot a missing table or unbooted encrypter is expected and must
     // not halt boot; the identical failure at runtime means redaction is off.
     protected bool $bootPhase = true;
+
+    // compiledPattern() runs on every log record, so an unreachable table
+    // would raise one alert per line written; the operator needs the fact
+    // once, not a flood of it.
+    protected bool $runtimeFailureReported = false;
 
     // Without the shield the set would hold desktop safeStorage ciphertext,
     // and the plaintext that actually reaches the logs would go unredacted.
@@ -42,13 +56,7 @@ class OAuthScrubSet
      */
     public function all(): array
     {
-        if ($this->set !== null) {
-            return $this->set;
-        }
-
-        $this->set = $this->load();
-
-        return $this->set;
+        return $this->loadedSet() ?? [];
     }
 
     public function compiledPattern(): ?string
@@ -57,10 +65,16 @@ class OAuthScrubSet
             return $this->compiled === self::NOTHING_TO_SCRUB ? null : $this->compiled;
         }
 
-        $secrets = $this->all();
+        $secrets = $this->loadedSet();
+
+        // An empty set is memoised; a failed load is not. Memoising the failure
+        // would keep redaction off for the rest of the process after whatever
+        // caused it had cleared.
         if ($secrets === []) {
             $this->compiled = self::NOTHING_TO_SCRUB;
+        }
 
+        if ($secrets === null || $secrets === []) {
             return null;
         }
 
@@ -74,12 +88,33 @@ class OAuthScrubSet
         return $this->compiled;
     }
 
+    // Null means the load failed, which is not the same answer as an empty
+    // set: the caller retries rather than caching "nothing to scrub".
+    /**
+     * @return list<string>|null
+     */
+    private function loadedSet(): ?array
+    {
+        if ($this->set !== null) {
+            return $this->set;
+        }
+
+        $loaded = $this->load();
+        if ($loaded === null) {
+            return null;
+        }
+
+        $this->set = $loaded;
+
+        return $loaded;
+    }
+
     // Bypasses the per-user OAuthSecretsRepository because the scrub set is a
     // system-wide surface: every secret must be redacted for every reader.
     /**
-     * @return list<string>
+     * @return list<string>|null
      */
-    protected function load(): array
+    protected function load(): ?array
     {
         $collected = [];
 
@@ -89,17 +124,20 @@ class OAuthScrubSet
             foreach ($rows as $row) {
                 $this->collectRow($row, $collected);
             }
+
+            return array_keys($collected);
         } catch (Throwable $e) {
-            if (! $this->bootPhase) {
+            if (! $this->bootPhase && ! $this->runtimeFailureReported) {
+                $this->runtimeFailureReported = true;
                 $this->recordRuntimeFailure($e);
             }
 
-            return [];
+            return null;
+        } finally {
+            // Cleared on the failing path too: a load that failed the first
+            // time still ends boot, so the second failure is a runtime one.
+            $this->bootPhase = false;
         }
-
-        $this->bootPhase = false;
-
-        return array_keys($collected);
     }
 
     // A row encrypted under a superseded APP_KEY throws; reaching load()'s
@@ -132,12 +170,14 @@ class OAuthScrubSet
     protected function recordRuntimeFailure(Throwable $e): void
     {
         try {
+            $line = CopyLine::of('core::alerts.messages.oauth_scrub_set_failed');
+
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => OAuthAlertKind::ScrubSetFailed->value,
                 'severity' => SystemAlertSeverity::Critical->value,
-                'message' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
-                'metadata' => [
+                'message' => $line->sentence(),
+                'metadata' => StoredCopy::inParams($line) + [
                     'exception' => $e->getMessage(),
                     'exception_class' => get_class($e),
                 ],
@@ -148,18 +188,32 @@ class OAuthScrubSet
         }
     }
 
+    // Recursive because the blob is a map of inbox id → entry, and older rows
+    // hold one flat entry instead.
     /**
      * @param  array<array-key, mixed>  $values
      * @param  array<string, true>  $collected
      */
     private function collectStrings(array $values, array &$collected): void
     {
-        foreach ($values as $value) {
+        foreach ($values as $key => $value) {
             if (is_array($value)) {
                 $this->collectStrings($value, $collected);
-            } elseif (is_string($value) && trim($value) !== '') {
-                $collected[$value] = true;
+
+                continue;
             }
+
+            if (! is_string($value) || trim($value) === '' || ! self::isSecretField($key)) {
+                continue;
+            }
+
+            $collected[$value] = true;
         }
+    }
+
+    private static function isSecretField(int|string $key): bool
+    {
+        return is_string($key)
+            && in_array(strtolower($key), self::SECRET_BLOB_FIELDS, true);
     }
 }

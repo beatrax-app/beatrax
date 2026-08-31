@@ -15,9 +15,9 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 // LockStateManager, which is what the module-boundary rule forbids.
 final class AppLockTestHarness
 {
-    public const LOCKED_SESSION_KEY = LockStateManager::SESSION_KEY;
+    public const string LOCKED_SESSION_KEY = LockStateManager::SESSION_KEY;
 
-    public const HELD_KEY_SESSION_KEY = LockStateManager::DATA_KEY_SESSION;
+    public const string HELD_KEY_SESSION_KEY = LockStateManager::DATA_KEY_SESSION;
 
     public static function unlock(Session $session, string $dataKey): void
     {

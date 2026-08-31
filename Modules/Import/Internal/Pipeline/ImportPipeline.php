@@ -9,12 +9,13 @@ use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Support\Fmt;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\MessageNamesNoUserData;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Internal\Dto\PreviewHead;
+use Modules\Import\Internal\Dto\PreviewRun;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -34,11 +35,16 @@ use Modules\Ingestion\Public\Contracts\NamesAFormatMismatch;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Exceptions\OrphanedPaypalChildRowException;
+use Modules\Ingestion\Public\Exceptions\PdfHasNoTextLayerException;
+use Modules\Ingestion\Public\Exceptions\PdfPasswordProtectedException;
 use Modules\Ingestion\Public\Exceptions\PdfReaderUnavailableException;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Support\LedgerDay;
+use Modules\Receipts\Public\Support\ReceiptCaptureLog;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
 use Psr\Log\LoggerInterface;
@@ -47,39 +53,44 @@ use Throwable;
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md
  */
-final class ImportPipeline
+final readonly class ImportPipeline
 {
     public function __construct(
-        private readonly ParseStage $parse,
-        private readonly NormalizeStage $normalize,
-        private readonly ClassifyTransactionType $classifier,
-        private readonly PaymentTypeClassifierStage $paymentTypeClassifier,
-        private readonly AppliesAutoCategory $autoCategory,
-        private readonly ResolvesCounterparties $resolveCounterparty,
-        private readonly FingerprintStage $fingerprint,
-        private readonly SourceAdapterRegistry $adapters,
-        private readonly RecordsStatementSummary $statementSummaries,
-        private readonly MerchantNameResolver $merchantNameResolver,
-        private readonly LoggerInterface $logger,
-        private readonly Application $app,
+        private ParseStage $parse,
+        private NormalizeStage $normalize,
+        private ClassifyTransactionType $classifier,
+        private PaymentTypeClassifierStage $paymentTypeClassifier,
+        private AppliesAutoCategory $autoCategory,
+        private ResolvesCounterparties $resolveCounterparty,
+        private FingerprintStage $fingerprint,
+        private SourceAdapterRegistry $adapters,
+        private RecordsStatementSummary $statementSummaries,
+        private MerchantNameResolver $merchantNameResolver,
+        private LoggerInterface $logger,
+        private Application $app,
     ) {}
 
     public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?BankCsvFormatHint $formatHint = null): PreviewHead
     {
-        // The backstop at the contract boundary: CSV cannot self-disambiguate,
-        // so a caller that skipped the wizard's validation is still refused.
-        if ($formatHint === null && $sourceFormat === SourceFormat::AsnCsv->value) {
+        // Vestigial since every CSV dialect became a preset that names itself in
+        // its format id. Kept because callers outside this module still pass the
+        // hint and a silent relaxation would leave them asserting nothing.
+        if ($formatHint === null && $sourceFormat === CsvPresetRegistry::ASN) {
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
 
+        // Created here rather than inside the stage: ParseStage is resolved as
+        // a dependency of this singleton, so state held on it would outlive the
+        // run and, on the phone's single-process runtime, the request too.
+        $captures = new ReceiptCaptureLog;
+        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId);
+
         $built = $this->buildPreviewRows(
-            $this->parse->run($localPath, $sourceFormat, $accounts, $user),
-            $sourceFormat,
-            $accounts,
-            $user,
-            $importRunId,
+            $this->parse->run($localPath, $sourceFormat, $accounts, $user, $captures),
+            $run,
             $writer,
             $localPath,
+            $captures,
         );
 
         $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
@@ -94,14 +105,16 @@ final class ImportPipeline
      */
     public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): PreviewHead
     {
-        return $this->buildPreviewRows($sourceRows, $sourceFormat, $accounts, $user, $importRunId, $writer)['head'];
+        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId);
+
+        return $this->buildPreviewRows($sourceRows, $run, $writer)['head'];
     }
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
      * @return array{head: PreviewHead, lastResolvedAccountId: ?int}
      */
-    private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer, ?string $localPath = null): array
+    private function buildPreviewRows(iterable $sourceRows, PreviewRun $run, PreviewWriter $writer, ?string $localPath = null, ?ReceiptCaptureLog $captures = null): array
     {
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
@@ -113,12 +126,12 @@ final class ImportPipeline
 
         try {
             foreach ($sourceRows as $source) {
-                $resolution = $accounts->resolve($source->ownIban);
+                $resolution = $run->accounts->resolve($source->ownIban);
 
                 if ($resolution instanceof UnknownAccount) {
-                    $unknownIbans[$source->ownIban] = new UnknownIban(
-                        iban: $source->ownIban,
-                        seenCounterpartyName: $source->counterpartyName,
+                    $unknownIbans[$source->ownIban] = self::seenAgain(
+                        $unknownIbans[$source->ownIban] ?? null,
+                        $source,
                     );
                     $writer->addRow(self::failedRow($source, null, ImportFailureReason::UnknownAccount));
                     $rowsWritten++;
@@ -130,7 +143,7 @@ final class ImportPipeline
                 $accountId = $resolution->accountId;
                 $lastResolvedAccountId = $accountId;
 
-                $enriched = $this->enrichRow($source, $accountId, $user, $importRunId, $sourceFormat);
+                $enriched = $this->enrichRow($source, $accountId, $run);
                 if ($enriched instanceof PreviewRowDto) {
                     $writer->addRow($enriched);
                     $rowsWritten++;
@@ -138,8 +151,8 @@ final class ImportPipeline
                     continue;
                 }
 
-                $disposition = $this->fingerprint->classify($enriched, $user);
-                $writer->addRow($this->acceptedRow($source, $accountId, $enriched, $disposition, $user));
+                $disposition = $this->fingerprint->classify($enriched, $run->user);
+                $writer->addRow($this->acceptedRow($source, $accountId, $enriched, $disposition, $run->user));
                 $rowsWritten++;
 
                 if ($disposition->isNew()) {
@@ -148,8 +161,8 @@ final class ImportPipeline
                     $writer->addEnrichment(new PendingEnrichment(
                         existingTransactionId: $disposition->existingTransactionId,
                         newSourceRef: $disposition->toSourceRef,
-                        importRunId: $importRunId,
-                        sourceFormat: $sourceFormat,
+                        importRunId: $run->importRunId,
+                        sourceFormat: $run->sourceFormat,
                         conflictingFields: $disposition->conflictingFields,
                     ));
                 }
@@ -160,16 +173,16 @@ final class ImportPipeline
             // go with it: a file that arrived empty and a file that died on its
             // content are one line apart in a log, and identical on the screen.
             $this->logger->warning('ImportPipeline: parse failed.', [
-                'source_format' => $sourceFormat,
-                'import_run_id' => $importRunId,
+                'source_format' => $run->sourceFormat,
+                'import_run_id' => $run->importRunId,
                 'source_bytes' => self::sourceBytes($localPath),
                 'rows_read' => $rowsWritten,
                 ...SafeExceptionContext::describe($e),
                 'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
-                'exception_trace' => $e->getTraceAsString(),
+                'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
             ]);
             $fileFailureReason = self::fileReasonFor($e);
-            $fileFailureDetail = self::safeDetail($e);
+            $fileFailureDetail = self::fileDetail($e);
             // One preview row per source row, so the count is the index of the
             // one being read when it stopped. Counted rather than read out of
             // the message, which for most of these adapters quotes a cell and
@@ -183,6 +196,8 @@ final class ImportPipeline
                 $fileFailureReason,
                 $fileFailureDetail,
                 $fileFailureRowIndex,
+                $captures?->kept() ?? [],
+                $captures?->total() ?? 0,
             ),
             'lastResolvedAccountId' => $lastResolvedAccountId,
         ];
@@ -191,12 +206,14 @@ final class ImportPipeline
     // Every stage a row has to survive to become a transaction. One that fails
     // any of them is not the file failing: it comes back as the preview row
     // that says so, and the read carries on to the next row.
-    private function enrichRow(SourceTransactionDto $source, int $accountId, User $user, int $importRunId, string $sourceFormat): CanonicalTransaction|PreviewRowDto
+    private function enrichRow(SourceTransactionDto $source, int $accountId, PreviewRun $run): CanonicalTransaction|PreviewRowDto
     {
+        $user = $run->user;
+
         try {
-            $normalized = $this->normalize->run($source, $accountId, $user, $importRunId, $sourceFormat);
+            $normalized = $this->normalize->run($source, $accountId, $user, $run->importRunId, $run->sourceFormat);
             $normalized = $this->classifier->run($normalized, $user);
-            $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
+            $normalized = $this->paymentTypeClassifier->run($normalized, $user, $run->sourceFormat);
             $normalized = $this->autoCategory->apply($normalized, $user)->canonical;
 
             // Before the fingerprint stage, so counterparty_id rides the
@@ -207,8 +224,8 @@ final class ImportPipeline
             // log, wrong for a preview row, and it would repeat once per row of
             // the statement.
             $this->logger->warning('ImportPipeline: row refused — the app-lock key is not held.', [
-                'source_format' => $sourceFormat,
-                'import_run_id' => $importRunId,
+                'source_format' => $run->sourceFormat,
+                'import_run_id' => $run->importRunId,
                 ...SafeExceptionContext::describe($e),
             ]);
 
@@ -217,8 +234,8 @@ final class ImportPipeline
             // The preview row's message is short and loses the call site, so
             // the trace goes to the log instead.
             $this->logger->warning('ImportPipeline: row failed.', [
-                'source_format' => $sourceFormat,
-                'import_run_id' => $importRunId,
+                'source_format' => $run->sourceFormat,
+                'import_run_id' => $run->importRunId,
                 'row_index' => $source->sourceRowIndex,
                 ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
@@ -233,17 +250,35 @@ final class ImportPipeline
         }
     }
 
+    // The settled leg, because that is what the account itself moved by and
+    // what every balance in the app sums; a row's native leg is the merchant's
+    // money, not the account's. One row disagreeing leaves the denomination
+    // unanswered rather than picking a winner, so null here is absorbing.
+    /**
+     * @link ../../../../.docs/features/import/an-account-is-denominated-by-its-statement.md#one-file-many-currencies
+     */
+    private static function seenAgain(?UnknownIban $seen, SourceTransactionDto $source): UnknownIban
+    {
+        $settled = $source->settledCurrency ?? $source->currency;
+        $unanimous = $seen === null || $seen->statementCurrency === $settled;
+
+        return new UnknownIban(
+            iban: $source->ownIban,
+            seenCounterpartyName: $source->counterpartyName,
+            statementCurrency: $unanimous && $settled !== '' ? $settled : null,
+        );
+    }
+
     private static function failedRow(SourceTransactionDto $source, ?int $accountId, ImportFailureReason $reason, ?string $detail = null): PreviewRowDto
     {
         return new PreviewRowDto(
             rowIndex: $source->sourceRowIndex,
             status: PreviewRowStatus::Error,
             accountId: $accountId,
-            bookedAt: Fmt::shortDate($source->bookedAt),
+            postedAt: LedgerDay::shown($source->postedAt),
             counterpartyName: $source->counterpartyName,
             counterpartyIban: $source->counterpartyIban,
             description: self::trimToNull($source->description),
-            categoryName: null,
             amountMinor: $source->amountMinor,
             currency: $source->currency,
             error: $reason->label(),
@@ -264,11 +299,14 @@ final class ImportPipeline
             rowIndex: $source->sourceRowIndex,
             status: $disposition->status(),
             accountId: $accountId,
-            bookedAt: Fmt::shortDate($source->bookedAt),
+            // Off the canonical row, not off the source: this is the day the
+            // commit is about to write, and on a card statement the source's
+            // other day runs ahead of it — a month ahead on the row that
+            // straddles the turn.
+            postedAt: LedgerDay::shown($normalized->postedAt),
             counterpartyName: $source->counterpartyName,
             counterpartyIban: $source->counterpartyIban,
             description: $rowDescription,
-            categoryName: null,
             amountMinor: $source->amountMinor,
             currency: $source->currency,
             error: null,
@@ -331,6 +369,15 @@ final class ImportPipeline
             // default carries would send the reader to re-download a statement
             // that would fail again the same way.
             $e instanceof PdfReaderUnavailableException => ImportFailureReason::PdfReaderUnavailable,
+            // Three PDF refusals with three different answers. Collapsed onto
+            // one, a scan and an encrypted file both told the reader to go find
+            // a program, which fixes neither and is not even true of either.
+            $e instanceof PdfHasNoTextLayerException => ImportFailureReason::PdfHasNoTextLayer,
+            $e instanceof PdfPasswordProtectedException => ImportFailureReason::PdfPasswordProtected,
+            // A statement split at a month boundary strands the far half of a
+            // paired row. Naming the row unreadable told the reader nothing
+            // they could act on; the other file is the whole answer.
+            $e instanceof OrphanedPaypalChildRowException => ImportFailureReason::RowBelongsToAnotherStatement,
             default => $default,
         };
     }
@@ -350,15 +397,34 @@ final class ImportPipeline
         return $bytes === false ? null : $bytes;
     }
 
-    private static function safeDetail(Throwable $e): ?string
+    // An unmarked message is machine text and stays in the log, but a row that
+    // failed with nothing under it told the reader only that it failed. The
+    // class name carries neither the message nor the reader's id, and it is the
+    // one thing worth quoting in an issue.
+    private static function safeDetail(Throwable $e): string
     {
-        if (! $e instanceof MessageNamesNoUserData) {
-            return null;
-        }
+        return self::detailOr(
+            $e,
+            Lang::get('import::preview.errors.row_unreadable_detail', ['code' => SafeExceptionContext::shortName($e)]),
+        );
+    }
 
-        $message = trim($e->getMessage());
+    // The file-level twin. Sharing the row wording made a refused PDF report
+    // that one row could not be read, under a heading saying the whole file
+    // could not be read — of a file whose rows were never reached at all.
+    private static function fileDetail(Throwable $e): string
+    {
+        return self::detailOr(
+            $e,
+            Lang::get('import::preview.errors.file_unreadable_detail', ['code' => SafeExceptionContext::shortName($e)]),
+        );
+    }
 
-        return $message === '' ? null : $message;
+    private static function detailOr(Throwable $e, string $fallback): string
+    {
+        $message = $e instanceof MessageNamesNoUserData ? trim($e->getMessage()) : '';
+
+        return $message === '' ? $fallback : $message;
     }
 
     // The preview's name → iban → description → "—" chain is null-coalescing,

@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
     'heading' => 'App lock',
 
-    'moved_help' => "Your PIN, auto-lock timing and biometric unlock live with this device's sync settings.",
-    'moved_cta' => 'Open Sync & Device',
-
     'toggle_label' => 'Lock app with PIN',
     'toggle_description' => 'Replaces daily sign-in with a PIN. Sessions stay active for 30 days.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Keep PIN',
 
     'error_pin_too_short' => 'PIN must be at least 6 digits.',
-    'error_pin_digits' => 'PIN must be 6 to 10 digits — numbers only.',
+    'error_pin_digits' => 'PIN must be :min to :max digits — numbers only.',
     'error_pin_mismatch' => 'PINs don\'t match. Try again.',
     'error_pin_required' => 'Enter your PIN.',
     'error_pin_incorrect' => 'Incorrect PIN.',

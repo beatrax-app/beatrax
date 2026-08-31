@@ -14,17 +14,17 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // Suggests one "did you mean" word (levenshtein <= 2, no spellfix1 in
 // this SQLite build) for a zero-result query >= 4 chars, built from a
 // decrypt-then-tally corpus over a bounded most-recent window.
-final class DidYouMeanSuggester
+final readonly class DidYouMeanSuggester
 {
     // Bounds the number of raw rows decrypted to build the corpus so a
     // single suggestion never decrypts an entire multi-year history.
-    private const CANDIDATE_ROW_CAP = 2000;
+    private const int CANDIDATE_ROW_CAP = 2000;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
     ) {}
 
     public function suggest(User $user, string $query): ?string
@@ -123,7 +123,7 @@ final class DidYouMeanSuggester
 
         return array_values(array_filter(
             array_map('trim', $tokens),
-            static fn (string $w): bool => strlen($w) >= 3,
+            static fn (string $w): bool => strlen($w) >= SearchDocumentBody::TRIGRAM_WIDTH,
         ));
     }
 

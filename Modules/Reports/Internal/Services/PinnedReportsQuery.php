@@ -7,10 +7,9 @@ namespace Modules\Reports\Internal\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Reports\Internal\Dto\ReportDefinition;
-use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use Modules\Reports\Internal\Support\PinCap;
+use Modules\Reports\Internal\Support\ReportDefinitionFactory;
 use stdClass;
-use Throwable;
 
 final readonly class PinnedReportsQuery
 {
@@ -26,10 +25,14 @@ final readonly class PinnedReportsQuery
     public function forUser(User $user): array
     {
         /** @var iterable<stdClass> $rows */
+        // saved_reports replicates, and pin_order carries no UNIQUE, so two
+        // devices pinning at once converge on one value. Without the id
+        // tiebreak the MAX_PINS cut drops a different report on each.
         $rows = $this->db->connection()->table('saved_reports')
             ->where('user_id', $user->id)
             ->where('pinned', true)
             ->orderBy('pin_order')
+            ->orderBy('id')
             ->limit(self::MAX_PINS)
             ->get(['id', 'name', 'definition']);
 
@@ -40,21 +43,10 @@ final readonly class PinnedReportsQuery
                 continue;
             }
 
-            $name = is_string($row->name ?? null) ? $row->name : '';
-            $definitionArray = DefinitionJsonDecoder::decode($row->definition ?? null);
-
-            try {
-                $definition = ReportDefinition::from($definitionArray);
-            } catch (Throwable) {
-                // A malformed definition skips its row rather than 500 the
-                // whole dashboard.
-                continue;
-            }
-
             $result[] = [
                 'id' => $id,
-                'name' => $name,
-                'definition' => $definition,
+                'name' => is_string($row->name ?? null) ? $row->name : '',
+                'definition' => ReportDefinitionFactory::fromStored($row->definition ?? null),
             ];
         }
 

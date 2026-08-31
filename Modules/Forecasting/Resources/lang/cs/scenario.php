@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'řada',
 
+    'template' => [
+        'cancel' => 'Zrušení: :name',
+        'change_amount' => 'Změna částky: :name',
+    ],
+
     'summary' => [
         'cancel' => 'Zrušení: :name',
         'series_fallback' => 'řada #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scénář přejmenován.',
         'mutation_added' => 'Změna přidána.',
         'mutation_updated' => 'Změna upravena.',
-        'mutation_removed' => 'Změna odebrána. Vrátit zpět',
+        'mutation_removed' => 'Změna odebrána.',
     ],
 
     'errors' => [
         'name_empty' => 'Název scénáře nemůže být prázdný.',
         'name_too_long' => 'Název scénáře může mít nejvýš :max znak.|Název scénáře může mít nejvýš :max znaky.|Název scénáře může mít nejvýš :max znaků.',
         'name_taken' => 'Scénář s tímto názvem už existuje.',
+        'date_out_of_range' => 'Toto datum leží mimo každý horizont prognózy — ode dneška do :days dne dopředu — takže scénář by nic nezměnil.|Toto datum leží mimo každý horizont prognózy — ode dneška do :days dní dopředu — takže scénář by nic nezměnil.|Toto datum leží mimo každý horizont prognózy — ode dneška do :days dní dopředu — takže scénář by nic nezměnil.',
         'pick_kind_first' => 'Nejdřív vyber druh změny.',
         'amount_positive' => 'Částka musí být kladné číslo.',
+        'scenario_gone' => 'Tento scénář už neexistuje — byl smazán jinde. Vyber jiný scénář, nebo vytvoř nový.',
+        'mutation_gone' => 'Tato změna už neexistuje — byla odstraněna jinde. Zavři editor a přidej ji znovu, pokud ji stále chceš.',
     ],
 ];

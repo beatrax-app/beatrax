@@ -14,23 +14,24 @@ use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 
-final class MobileLockGateway
+final readonly class MobileLockGateway
 {
     // Two tiers because a lock arrives two ways: a middleware redirect leaves
     // `url.intended`, a client-engaged one leaves only the last page.
     // Published here because AppLockMiddleware is Internal to this module.
-    public const SESSION_INTENDED_URL = 'url.intended';
+    public const string SESSION_INTENDED_URL = 'url.intended';
 
-    public const SESSION_LAST_PAGE = AppLockMiddleware::SESSION_LAST_PAGE;
+    public const string SESSION_LAST_PAGE = AppLockMiddleware::SESSION_LAST_PAGE;
 
     public function __construct(
-        private readonly PinVerificationService $verifier,
-        private readonly BiometricDeviceStore $biometricStore,
-        private readonly PlatformDetector $detector,
-        private readonly DatabaseManager $db,
-        private readonly AppLockProvisioner $provisioner,
-        private readonly AppLockKeyService $keyService,
-        private readonly Clock $clock,
+        private PinVerificationService $verifier,
+        private BiometricDeviceStore $biometricStore,
+        private PlatformDetector $detector,
+        private DatabaseManager $db,
+        private AppLockProvisioner $provisioner,
+        private AppLockKeyService $keyService,
+        private Clock $clock,
+        private ColdStartEnrolmentFlag $coldStartFlag,
     ) {}
 
     public function unlockWithRecoveredKey(int $userId, string $dataKey, Session $session): void
@@ -44,21 +45,15 @@ final class MobileLockGateway
 
     public function markColdStartEnrolled(int $userId, bool $enrolled): void
     {
-        $this->db->connection()->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->update(['cold_start_biometric_enrolled' => $enrolled]);
+        $this->coldStartFlag->mark($userId, $enrolled);
     }
 
     public function isColdStartEnrolled(int $userId): bool
     {
-        $row = $this->db->connection()->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->first(['cold_start_biometric_enrolled']);
-
-        return $row !== null && (bool) $row->cold_start_biometric_enrolled === true;
+        return $this->coldStartFlag->isEnrolled($userId);
     }
 
-    public const PIN_FLOOR_DAYS = 14;
+    public const int PIN_FLOOR_DAYS = 14;
 
     public function pinFloorDue(int $userId, int $floorDays = self::PIN_FLOOR_DAYS): bool
     {

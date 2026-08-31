@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abonelikler →',
     'disclaimer' => 'Destek korpusundaki resmi bağlantılar — Beatrax senin adına hiçbir şeyi iptal etmez veya değiştirmez.',
     'dismiss_aria' => 'Öneriyi kapat',
+    'dismiss_caption' => 'Kapat',
 
     'insight' => [
         'cheaper_message' => ':name daha ucuz bir plan sunuyor olabilir — :monthly/ay ödüyorsun.',

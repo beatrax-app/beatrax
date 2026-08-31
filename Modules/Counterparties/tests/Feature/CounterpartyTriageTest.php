@@ -118,7 +118,7 @@ it('Test 16: renders progress copy verbatim with seen/total/percent/minutes', fu
 
     // Minutes is max(1, round(remaining * 0.4)), so three unknowns round to
     // 1.2 and then clamp up to the 1-minute floor.
-    $component->assertSee('0 of 3 · 0 % · ~1 min remaining', escape: false);
+    $component->assertSee('0 of 3 · 0% · ~1 min remaining', escape: false);
 });
 
 it('Test 17: suggestion banner renders verbatim copy + reasoning sub-line', function (): void {

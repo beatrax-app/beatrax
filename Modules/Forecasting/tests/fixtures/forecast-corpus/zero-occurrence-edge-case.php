@@ -29,7 +29,6 @@ return [
             'latest_currency' => 'EUR',
             'variance_tolerance_percent' => 10,
             'state' => 'approved',
-            'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-22',
             'occurrences' => [],
         ],

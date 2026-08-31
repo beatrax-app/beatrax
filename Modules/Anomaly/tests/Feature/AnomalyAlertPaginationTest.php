@@ -236,22 +236,49 @@ it('acts on the alert the browser named when the id arrives as a string', functi
     expect($state)->toBe('acknowledged');
 });
 
-it('pages on the cursor the browser hands back as a string', function (): void {
+// Following the cursor made "Load more" a REPLACE: page two shared no row
+// with page one, the twenty-six already read were gone, and nothing on the
+// screen went back. The rows already shown have to survive the press.
+it('extends the unusual-charges list rather than replacing it', function (): void {
     $userId = (int) $this->user->id;
 
-    foreach (['2026-06-11 09:00:00', '2026-06-12 09:00:00', '2026-06-13 09:00:00'] as $detectedAt) {
-        anomPageAlert($this->db, $userId, $detectedAt);
+    for ($i = 0; $i < 30; $i++) {
+        anomPageAlert($this->db, $userId, CarbonImmutable::parse('2026-06-01 09:00:00')->addDays($i)->toDateTimeString());
     }
 
-    $newest = $this->query->openForUser($this->user)[0];
+    $component = Livewire::actingAs($this->user)
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value]);
+
+    $firstPage = array_map(
+        static fn (object $row): int => $row->anomalyAlertId,
+        $component->viewData('anomalyRows'),
+    );
+    expect($firstPage)->toHaveCount(26);
+    expect($component->viewData('hasMoreAnomalies'))->toBeTrue();
+
+    $component->call('loadMore');
+
+    $extended = array_map(
+        static fn (object $row): int => $row->anomalyAlertId,
+        $component->viewData('anomalyRows'),
+    );
+
+    expect($extended)->toHaveCount(30)
+        ->and(array_slice($extended, 0, 26))->toBe($firstPage)
+        ->and(array_unique($extended))->toHaveCount(30);
+    expect($component->viewData('hasMoreAnomalies'))->toBeFalse();
+});
+
+it('offers no load more when the unusual-charges list is exactly one page', function (): void {
+    $userId = (int) $this->user->id;
+
+    for ($i = 0; $i < 26; $i++) {
+        anomPageAlert($this->db, $userId, CarbonImmutable::parse('2026-06-01 09:00:00')->addDays($i)->toDateTimeString());
+    }
 
     $component = Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
-        ->call('loadMoreAnomalies', $newest->detectedAt->toDateTimeString(), (string) $newest->anomalyAlertId);
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value]);
 
-    // Stored as a string so the next round trip does not round it, and still
-    // exact when read back as an integer.
-    $component->assertSet('anomalyCursorId', (string) $newest->anomalyAlertId);
-
-    expect((int) $component->get('anomalyCursorId'))->toBe($newest->anomalyAlertId);
+    expect($component->viewData('anomalyRows'))->toHaveCount(26);
+    expect($component->viewData('hasMoreAnomalies'))->toBeFalse();
 });

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Pokyčio įspėjimai',
-    'heading' => 'Įspėjimai',
     'intro_anomaly' => 'Pavieniai mokėjimai, kurie tau atrodo neįprasti.',
     'intro_drift' => 'Patvirtintos pasikartojančių mokėjimų serijos, kurių naujausias mokėjimas peržengė tavo ribą.',
     'adjust_threshold' => 'Keisti ribą →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/m.',
         'meta_prior_now' => 'anksčiau :prior → dabar :now',
         'meta_detected' => 'aptikta :date',
-        'meta_threshold' => 'riba ±:percent%',
+        'meta_threshold' => 'riba ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/m.)',
         'cancel_impact' => 'Nutrauk tai → sutaupysi :amount/m.',
         'cadence_flipped' => 'Dažnumas pasikeitė — taip pat rodoma čia:',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Šio įspėjimo nebėra.',
         'acknowledged' => 'Patvirtinta',
         'snoozed' => 'Atidėta',
         'dismissed' => 'Paslėpta',

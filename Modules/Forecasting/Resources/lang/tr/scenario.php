@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'seri',
 
+    'template' => [
+        'cancel' => ':name iptali',
+        'change_amount' => ':name tutarını değiştir',
+    ],
+
     'summary' => [
         'cancel' => ':name iptali',
         'series_fallback' => 'seri #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Senaryo yeniden adlandırıldı.',
         'mutation_added' => 'Değişiklik eklendi.',
         'mutation_updated' => 'Değişiklik güncellendi.',
-        'mutation_removed' => 'Değişiklik kaldırıldı. Geri al',
+        'mutation_removed' => 'Değişiklik kaldırıldı.',
     ],
 
     'errors' => [
         'name_empty' => 'Senaryo adı boş olamaz.',
         'name_too_long' => 'Senaryo adı en fazla :max karakter olmalıdır.',
         'name_taken' => 'Bu ada sahip bir senaryo zaten var.',
+        'date_out_of_range' => 'Bu tarih her tahmin ufkunun dışında — bugünden :days gün sonrasına kadar — bu yüzden senaryo hiçbir şeyi değiştirmez.',
         'pick_kind_first' => 'Önce bir değişiklik türü seç.',
         'amount_positive' => 'Tutar pozitif bir sayı olmalıdır.',
+        'scenario_gone' => 'Bu senaryo artık yok — başka bir yerde silinmiş. Başka bir senaryo seç ya da yeni bir tane oluştur.',
+        'mutation_gone' => 'Bu değişiklik artık yok — başka bir yerde kaldırılmış. Düzenleyiciyi kapat ve hâlâ istiyorsan yeniden ekle.',
     ],
 ];

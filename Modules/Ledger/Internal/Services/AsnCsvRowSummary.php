@@ -6,7 +6,7 @@ namespace Modules\Ledger\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Internal\Support\SweptRowSummary;
 use stdClass;
 
@@ -30,7 +30,7 @@ final readonly class AsnCsvRowSummary
         $row = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $userId)
-            ->where('source_format', SourceFormat::AsnCsv->value)
+            ->where('source_format', CsvPresetRegistry::ASN)
             ->selectRaw('COUNT(*) as row_count, COALESCE(SUM(id), 0) as id_sum')
             ->first();
 

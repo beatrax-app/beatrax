@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Categorie',
         'assigned' => 'Toegewezen',
+        'carried_in' => 'Overgedragen',
+        'moved' => 'Verplaatst',
         'spent' => 'Besteed',
         'available' => 'Beschikbaar',
         'if_overspent' => 'Bij overschrijding',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Geschiedenis verbergen ↑',
         'moved_from' => 'Verplaatst van :category',
         'moved_to' => 'Verplaatst naar :category',
+        'moved_unreadable' => 'Verplaatst met :category door een nieuwere versie van Beatrax',
         'undo' => 'Ongedaan maken',
     ],
 
     'phone' => [
         'spent' => 'Besteed :amount',
+        'carried_in' => 'Overgedragen :amount',
+        'moved' => 'Verplaatst :amount',
         'available' => 'Beschikbaar :amount',
         'notify_at' => 'Melden bij',
     ],

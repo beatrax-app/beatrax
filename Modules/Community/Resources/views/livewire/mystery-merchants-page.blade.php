@@ -59,6 +59,15 @@
                 </li>
             @endforeach
         </ul>
+
+        {{-- The tile above counts every distinct mystery; this list stops at 24
+             and there is no next page, so the gap is said out loud rather than
+             left for the reader to notice. --}}
+        @if ($stats['mysteryCount'] > $stats['shownCount'])
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="mystery-card-cap-note">
+                {{ Lang::get('community::mystery.showing_capped', ['shown' => $stats['shownCount'], 'total' => $stats['mysteryCount']]) }}
+            </p>
+        @endif
     @endif
 
     <footer class="border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">

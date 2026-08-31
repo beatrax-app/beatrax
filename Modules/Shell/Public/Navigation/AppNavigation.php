@@ -19,6 +19,14 @@ use Modules\Core\Public\Support\Lang;
 
 // Nothing is memoised: label and hint are locale-dependent, and the route
 // table is not built until every module has registered.
+
+// Two of the icons below end in an invisible U+FE0F. Without it the two phone
+// engines disagree about whether the character is a picture or a glyph, and
+// deleting one because the editor shows nothing there brings the disagreement
+// back.
+/**
+ * @link ../../../../.docs/conventions/emoji-presentation-selector.md
+ */
 final class AppNavigation
 {
     /**
@@ -161,7 +169,7 @@ final class AppNavigation
         return [
             ['destination' => Destination::Imports, 'icon' => '⊕', 'key' => 'imports', 'keywords' => ['upload', 'csv', 'mt940', 'camt', 'statement']],
             ['destination' => Destination::CashBook, 'icon' => '€', 'key' => 'cashbook', 'keywords' => ['cash', 'petty cash', 'manual', 'wallet']],
-            ['destination' => Destination::Email, 'icon' => '✉', 'key' => 'email', 'keywords' => ['inbox', 'gmail', 'imap', 'mail', 'senders', 'receipts']],
+            ['destination' => Destination::Email, 'icon' => '✉️', 'key' => 'email', 'keywords' => ['inbox', 'gmail', 'imap', 'mail', 'senders', 'receipts']],
         ];
     }
 
@@ -187,7 +195,7 @@ final class AppNavigation
     {
         return [
             ['destination' => Destination::DataDevices, 'icon' => '⇄', 'key' => 'data_devices', 'keywords' => ['sync', 'pair', 'device', 'backup', 'phone']],
-            ['destination' => Destination::Settings, 'icon' => '⚙', 'key' => 'settings', 'keywords' => ['preferences', 'config', 'profile', 'account', 'language']],
+            ['destination' => Destination::Settings, 'icon' => '⚙️', 'key' => 'settings', 'keywords' => ['preferences', 'config', 'profile', 'account', 'language']],
         ];
     }
 }

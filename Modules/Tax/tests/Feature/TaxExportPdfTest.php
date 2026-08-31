@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Tax\Internal\Services\TaxPdfRenderer;
 use Modules\Tax\Internal\Services\TaxYearQuery;
 
@@ -184,4 +185,36 @@ it('embeds the font the money is drawn with rather than naming a core font', fun
     expect($pdf)->toStartWith('%PDF-')
         ->and($pdf)->toContain('/FontFile2')
         ->and($pdf)->not->toContain('/BaseFont /Helvetica');
+});
+
+// The Subtotal row under each category table sits below a summary block headed
+// "Total deductions", and it folded a tagged income row into that figure.
+it('subtotals the category tables to the deductions figure the summary block states', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = tpdfUser($db, 'tpdf-mixed-subtotal');
+
+    $catId = tpdfCategory($db, $user->id, 'Zorgkosten');
+    tpdfTag($db, $user->id, tpdfTransaction($db, $user->id, [
+        'booked_at' => '2025-03-15 00:00:00',
+        'amount_minor' => -135_544,
+        'settled_amount_minor' => -135_544,
+    ]), $catId);
+    tpdfTag($db, $user->id, tpdfTransaction($db, $user->id, [
+        'booked_at' => '2025-04-15 00:00:00',
+        'amount_minor' => 20_000,
+        'settled_amount_minor' => 20_000,
+        'type' => 'income',
+    ]), $catId);
+
+    $data = app(TaxYearQuery::class)->forUser($user->id, 2025);
+    $html = view('tax::pdf.export', ['year' => 2025, 'data' => $data])->render();
+
+    preg_match_all('#<tr class="subtotal-row">.*?</tr>#s', $html, $rows);
+
+    expect($rows[0][0] ?? '')->toContain(e(Money::ofMinor(135_544, 'EUR')->format()))
+        ->not->toContain(e(Money::ofMinor(155_544, 'EUR')->format()));
+
+    expect($rows[0])->toHaveCount(2)
+        ->and($rows[0][1])->toContain(e(Money::ofMinor(20_000, 'EUR')->format()));
 });

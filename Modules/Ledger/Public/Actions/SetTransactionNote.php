@@ -10,19 +10,19 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
-use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // mode='set': trimmed $text replaces the note outright, blank input
 // normalises to NULL. mode='append': trimmed $text is concatenated
 // onto the current note separated by a newline; appending onto a
 // null/empty note is equivalent to set; a blank $text is a no-op.
-final class SetTransactionNote implements SetsTransactionNote
+final readonly class SetTransactionNote implements SetsTransactionNote
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function __invoke(int $transactionId, ?string $text, string $mode, User $user): int
@@ -35,7 +35,7 @@ final class SetTransactionNote implements SetsTransactionNote
 
         // A missing row and a reconciled one are the same answer to the
         // caller: the note was not written, and not because of an error.
-        if ($row === null || $row->status === ClearedStatus::Reconciled->value) {
+        if ($row === null || TransactionStatusQuery::locksEdits($row->status)) {
             return 0;
         }
 
@@ -69,14 +69,15 @@ final class SetTransactionNote implements SetsTransactionNote
 
     private static function appended(?string $currentNote, string $trimmed): ?string
     {
-        if ($trimmed === '') {
-            return $currentNote;
-        }
-
-        if ($currentNote === null || $currentNote === '') {
-            return $trimmed;
-        }
-
-        return $currentNote."\n".$trimmed;
+        // A rule's note action re-runs over the same rows every time the reader
+        // presses "re-apply to history". Unconditional concatenation made the
+        // change guard above unreachable, so the note grew one line per run and
+        // every run wrote an op every paired device replayed.
+        return match (true) {
+            $trimmed === '' => $currentNote,
+            $currentNote === null || $currentNote === '' => $trimmed,
+            in_array($trimmed, explode("\n", $currentNote), true) => $currentNote,
+            default => $currentNote."\n".$trimmed,
+        };
     }
 }

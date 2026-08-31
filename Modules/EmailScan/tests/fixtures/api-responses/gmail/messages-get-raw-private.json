@@ -1,0 +1,11 @@
+{
+    "id": "private-sample-private-mail",
+    "threadId": "thread-private-sample-private-mail",
+    "historyId": "12345",
+    "internalDate": "1755678661000",
+    "labelIds": [
+        "INBOX"
+    ],
+    "sizeEstimate": 713,
+    "raw": "UmV0dXJuLVBhdGg6IDxockBlbXBsb3llci5leGFtcGxlPg0KUmVjZWl2ZWQ6IGZyb20gbWFpbC5lbXBsb3llci5leGFtcGxlIChtYWlsLmVtcGxveWVyLmV4YW1wbGUgWzIwMy4wLjExMy40NF0pDQoJYnkgaW5ib3VuZC5leGFtcGxlLnRlc3QgKFBvc3RmaXgpIHdpdGggRVNNVFBTIGlkIDRQYVlCTTJrQ0R6M3dYeVQNCglmb3IgPGxvY2FsLXVzZXJAZXhhbXBsZS50ZXN0PjsgVGh1LCAyMCBBdWcgMjAyNiAwODozMTowMiArMDAwMCAoVVRDKQ0KRnJvbTogIlBlb3BsZSBUZWFtIiA8aHJAZW1wbG95ZXIuZXhhbXBsZT4NClRvOiAiU3ludGhldGljIFVzZXIiIDxsb2NhbC11c2VyQGV4YW1wbGUudGVzdD4NClN1YmplY3Q6IFlvdXIgYW5udWFsIHJldmlldyBub3Rlcw0KRGF0ZTogVGh1LCAyMCBBdWcgMjAyNiAwODozMTowMSArMDAwMA0KTWVzc2FnZS1JRDogPHN5bnRoZXRpYy1wcml2YXRlLTIwMjYwODIwMDgzMTAxQGVtcGxveWVyLmV4YW1wbGU-DQpNSU1FLVZlcnNpb246IDEuMA0KQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04DQpDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiA3Yml0DQoNClN5bnRoZXRpYyBwcml2YXRlIGNvcnJlc3BvbmRlbmNlLiBOb3QgYSByZWNlaXB0LCBub3QgZnJvbSBhbiBhbGxvdy1saXN0ZWQNCnNlbmRlciwgYW5kIG5ldmVyIHNvbWV0aGluZyB0aGlzIHByb2R1Y3QgbWF5IHdyaXRlIHRvIGRpc2suDQo"
+}

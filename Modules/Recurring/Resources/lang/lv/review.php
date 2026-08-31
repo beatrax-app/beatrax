@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Rediģēt nosaukumu',
     'edit_name_aria' => 'Pārdēvēt regulāro sēriju :id',
     'new_name_label' => 'Jauns nosaukums šai sērijai',
+    'load_more' => 'Ielādēt vairāk',
     'save' => 'Saglabāt',
 
     'toast' => [

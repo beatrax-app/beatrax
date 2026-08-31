@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Your PayPal account',
     'h1' => 'Connect your PayPal account',
 
-    'lede_html' => 'Drop your PayPal transaction details export — listed as <em lang="nl">Rapport Transactiegegevens</em> in a Dutch PayPal account. The balance report (<span lang="nl">Saldorapport</span>) won\'t work — we need per-event data.',
+    'lede_html' => 'Drop your PayPal activity export — one row per transaction, not the balance summary. PayPal names its reports in your account’s own language, and today we read the Dutch pair: <em lang="nl">Rapport Transactiegegevens</em>, not <span lang="nl">Saldorapport</span>. If yours comes out in another language, switch PayPal to Dutch before you download.',
 
     'format_group_aria' => 'PayPal exports as CSV only',
     'got_it_as' => 'Got it as:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Download as CSV',
     ],
 
-    'drop_lead' => 'Drop your transaction details CSV here',
+    'drop_lead' => 'Drop your activity export here',
     'browse_file' => 'or browse for a file',
 
     'file_ready' => '· ✓ ready',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Continue →',
 
     'errors' => [
-        'required' => 'Drop your PayPal Rapport Transactiegegevens CSV into the box first.',
-        'max' => 'That file is too large. PayPal Rapport Transactiegegevens exports are normally well under 10 MB.',
-        'extensions' => "That file doesn't look like a PayPal CSV. Download Rapport Transactiegegevens (not the Saldorapport balance report) as CSV from PayPal.",
+        'required' => 'Drop your PayPal activity export into the box first.',
+        'max' => 'That file is too large. A PayPal activity export is normally well under 10 MB.',
+        'extensions' => 'That file doesn\'t look like a PayPal CSV. Download the activity export — one row per transaction, not the balance summary — as CSV.',
         'unreadable' => 'Could not read this file. The full error is in /dev/logs.',
     ],
 ];

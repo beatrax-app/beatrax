@@ -325,10 +325,16 @@ it('isolates the resolver by user — other users are untouched', function (): v
 
 it('links a refund arriving after the statement closed back to its original charge and credits the next open statement', function (): void {
     // Not EUR: a writer that omitted the credit's currency would still land EUR
-    // from the column default, which would prove nothing about the credit.
+    // from the column default, which would prove nothing about the credit. The
+    // whole card side moves with it — a settlement is comparable only to
+    // charges denominated in the same money.
     CardStatement::query()->whereKey($this->statementId)->update(['currency' => 'USD']);
 
     seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
+    Account::query()->where('user_id', $this->user->id)->update(['default_currency' => 'USD']);
+    Transaction::query()->where('user_id', $this->user->id)
+        ->update(['currency' => 'USD', 'settled_currency' => 'USD']);
+
     $this->resolver->resolveForUser($this->user);
 
     /** @var CardStatement $may */
@@ -361,9 +367,9 @@ it('links a refund arriving after the statement closed back to its original char
         'booked_at' => '2026-05-20 12:00:00',
         'value_date' => '2026-05-20',
         'amount_minor' => -$original->settled_amount_minor,
-        'currency' => 'EUR',
+        'currency' => 'USD',
         'settled_amount_minor' => -$original->settled_amount_minor,
-        'settled_currency' => 'EUR',
+        'settled_currency' => 'USD',
         'counterparty_name' => 'Merchant 1',
         'counterparty_normalized' => 'merchant-1',
         'normalization_version' => 1,

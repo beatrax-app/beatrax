@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Internal\Enums\CounterpartyMetadataKey;
+use Modules\Counterparties\Internal\Enums\CounterpartySubcategory;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 
 function cpProfileUser(string $username = 'cp-profile-fixture'): User
@@ -16,7 +18,8 @@ function cpProfileUser(string $username = 'cp-profile-fixture'): User
     ]);
 }
 
-function cpProfileRow(int $userId, string $slug, string $name, string $type, ?string $iban = null): int
+/** @param array<string, mixed>|null $metadata */
+function cpProfileRow(int $userId, string $slug, string $name, string $type, ?string $iban = null, ?array $metadata = null): int
 {
     $now = now()->toDateTimeString();
 
@@ -27,7 +30,7 @@ function cpProfileRow(int $userId, string $slug, string $name, string $type, ?st
         'display_name' => $name,
         'iban' => $iban,
         'merchant_name' => $type === 'merchant' ? $name : null,
-        'metadata' => null,
+        'metadata' => $metadata === null ? null : json_encode($metadata),
         'created_at' => $now,
         'updated_at' => $now,
     ]);
@@ -81,9 +84,14 @@ it('Test 10: personal slug never contains the IBAN', function (): void {
     expect($html)->toContain('Alex Jordan');
 });
 
+// The fee-bar layout belongs to a row the bank-fee corpus claimed, which is
+// what metadata.subcategory records — a bank counterparty without it is an
+// institution, and ABankFeeIsNotTheSamePageAsABankTest pins that half.
 it('Test 11: bank profile renders the fee-bar layout', function (): void {
     $user = cpProfileUser('cp-profile-bank');
-    cpProfileRow($user->id, 'ics-fee', 'ICS Bank Fees', 'bank');
+    cpProfileRow($user->id, 'ics-fee', 'ICS Bank Fees', 'bank', null, [
+        CounterpartyMetadataKey::Subcategory->value => CounterpartySubcategory::Fee->value,
+    ]);
 
     $component = Livewire::actingAs($user)
         ->test(CounterpartyProfile::class, ['slug' => 'ics-fee']);

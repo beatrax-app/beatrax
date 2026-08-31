@@ -143,10 +143,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `EmailScan` module.
-
-## Behavioral contracts
-
 - **No IMAP path is supported.** Only Gmail API and Microsoft Graph.
   The project pins PHP 8.3.x partly to avoid the PHP 8.4 ext-imap
   removal; this module is the contractual reason.

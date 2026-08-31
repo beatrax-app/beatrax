@@ -16,12 +16,12 @@ use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Sync\Public\Events\EntityMutated;
 
-final class CreateScenario
+final readonly class CreateScenario
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(User $user, string $name, ?string $description = null): int

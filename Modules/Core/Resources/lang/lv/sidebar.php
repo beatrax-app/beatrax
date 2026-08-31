@@ -94,6 +94,7 @@ return [
         'heading' => 'Izstrādātājam',
         'open_console' => 'Atvērt izstrādes konsoli',
         'pulse' => 'Rinda :queue · Darbinieks :worker',
+        'worker_ago' => 'pirms :count s|pirms :count s|pirms :count s',
     ],
 
     'account' => [

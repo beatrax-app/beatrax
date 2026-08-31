@@ -17,7 +17,7 @@ use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 // "keep in tray" button (vs. the rose "quit") reinforces this.
 final class CloseWindowPrompt extends Component
 {
-    public const MODAL_NAME = 'close-window-prompt';
+    public const string MODAL_NAME = 'close-window-prompt';
 
     public bool $rememberChoice = true;
 

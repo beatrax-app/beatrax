@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\OpenBanking\Internal\Enums\ConsentStatus;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
 
 final class OpenBankingStatusRow extends Component
@@ -28,8 +29,13 @@ final class OpenBankingStatusRow extends Component
             return;
         }
 
-        if ($view->consentStatus === 'expired') {
-            $this->statusText = Lang::get('openbanking::messages.status_row.expired');
+        // Both endings read as red and offer the same fix, but they are not the
+        // same sentence: a consent the bank withdrew never expired, and naming
+        // the wrong cause sends the reader to check a date that is still fine.
+        if ($view->consentStatus->needsReconnect()) {
+            $this->statusText = Lang::get($view->consentStatus === ConsentStatus::Revoked
+                ? 'openbanking::messages.status_row.revoked'
+                : 'openbanking::messages.status_row.expired');
             $this->expired = true;
 
             return;

@@ -12,6 +12,7 @@ return [
         'locked' => 'Otključaj aplikaciju da nastaviš podešavanje.',
         'revoked' => 'Ovaj uređaj je uklonjen sa vašeg drugog uređaja. Ponovo ga uparite da biste nastavili sinhronizaciju.',
     ],
+    'unlock_cta' => 'Otključaj aplikaciju',
     'step' => [
         'connect' => 'Povezivanje sa tvojim drugim uređajem',
         'keys' => 'Primanje ključeva za šifrovanje',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Ponovna izgradnja tvoje istorije',
     ],
     'step_current' => 'trenutni korak',
-    'working' => [
-        'connect' => 'Uspostavljanje veze sa tvojim drugim uređajem…',
-        'keys' => 'Otključavanje tvojih podataka…',
-        'transfer' => 'Traženje tvoje istorije…',
-        'rebuild' => 'Ponovna izgradnja tvoje istorije — ovo može potrajati minut.',
-    ],
     'page_title' => 'Podešavanje…',
     'resuming' => 'Nastavak podešavanja…',
     'setting_up' => 'Podešavanje ovog uređaja…',
     'progress_aria' => 'Napredak podešavanja',
     'records' => ':count zapis|:count zapisa|:count zapisa',
-    'records_preparing' => 'Čeka se drugi uređaj…',
 ];

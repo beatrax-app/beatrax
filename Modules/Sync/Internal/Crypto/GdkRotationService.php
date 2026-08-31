@@ -8,7 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -20,18 +20,18 @@ use SodiumException;
 /**
  * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md
  */
-final class GdkRotationService
+final readonly class GdkRotationService
 {
     public function __construct(
-        private readonly GdkKeyringService $keyringService,
-        private readonly DeviceRegistryService $deviceRegistry,
-        private readonly RelayMailbox $relayMailbox,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly SodiumPrimitives $sodium,
-        private readonly DeviceIdentityLoader $identityLoader,
-        private readonly DeviceKeySigner $signer,
-        private readonly LocallyKeyedRowsProbe $keyedRows,
+        private GdkKeyringService $keyringService,
+        private DeviceRegistryService $deviceRegistry,
+        private RelayMailbox $relayMailbox,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private SodiumPrimitives $sodium,
+        private DeviceIdentityLoader $identityLoader,
+        private DeviceKeySigner $signer,
+        private LocallyKeyedRowsProbe $keyedRows,
     ) {}
 
     // $session is per-method, never constructor-held: this class is a
@@ -45,7 +45,7 @@ final class GdkRotationService
     public function rotateAndRevoke(int $userId, int $deviceRegistryId, Session $session): void
     {
         $connection = $this->db->connection();
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         // Livewire actions are client-invokable, so a crafted
         // removeDevice(selfRowId) is refused authoritatively here rather than
@@ -54,7 +54,7 @@ final class GdkRotationService
             ->where('id', $deviceRegistryId)
             ->where('user_id', $userId)
             ->value('is_self');
-        if ((bool) $targetIsSelf === true) {
+        if ((bool) $targetIsSelf) {
             throw new InvalidArgumentException(
                 "GdkRotationService::rotateAndRevoke — refusing to revoke the acting device (is_self) for user {$userId}.",
             );
@@ -309,7 +309,7 @@ final class GdkRotationService
         $pubHex = is_string($recipient->x25519_public_key_hex) ? $recipient->x25519_public_key_hex : null;
 
         if ($recipient->confirmed_at === null
-            || (bool) $recipient->is_self === true
+            || (bool) $recipient->is_self
             || $deviceId === null
             || $pubHex === null
         ) {

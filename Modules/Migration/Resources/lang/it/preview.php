@@ -16,7 +16,9 @@ return [
         'budget' => 'Mesi di budget',
     ],
 
-    'all_clean' => "Tutto mappato correttamente — non c'è nulla che richieda la tua attenzione prima di confermare.",
+    'all_clean' => "Tutto mappato correttamente — qui non c'è nulla da decidere.",
+
+    'nothing_staged' => "Questa esportazione non conteneva nulla da importare — qui non c'è nulla da confermare.",
 
     'groups' => [
         'conflict' => 'Richiede una tua decisione',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Questo creerà o aggiornerà i conteggi mostrati sopra nelle tue categorie, nei budget e nel registro.',
     'discard_button' => "Scarta l'importazione",
+    'discard_confirm' => "Scartare questa importazione? Tutto ciò che è stato letto dal tuo file di esportazione viene eliminato qui, e per riaverlo devi caricare e analizzare di nuovo l'intero file. Nel registro non è ancora arrivato nulla.",
     'confirm_button' => "Conferma l'importazione",
 ];

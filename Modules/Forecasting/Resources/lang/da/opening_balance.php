@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'PayPal-eksporter indeholder ingen saldolinjer, så angiv det manuelt.',
-    'help_asn' => 'Automatisk forankret ud fra dit seneste kontoudtog. Tilsidesæt kun, hvis du ved, at den reelle saldo afviger.',
     'help_default' => 'Tilsidesæt kun, hvis du ved, at den aktuelle saldo afviger fra det, Beatrax beregner.',
 
     'legend' => 'Startsaldo for prognosen for :name',
     'opening_label' => 'Startsaldo',
-    'opening_placeholder' => 'f.eks. 1.250,00',
+    'opening_placeholder' => 'f.eks. :amount',
     'as_of_label' => 'Startsaldo pr.',
     'as_of_help' => 'Den dato, tallet ovenfor gælder for.',
 
     'divergence' => 'Det afviger med mere end :threshold fra den saldo, Beatrax beregner ud fra dine importerede transaktioner. Er du sikker?',
+    'computed_is' => 'Beatrax beregner :amount.',
     'use_beatrax' => 'Brug tallet fra Beatrax',
     'use_mine' => 'Brug mit tal',
 

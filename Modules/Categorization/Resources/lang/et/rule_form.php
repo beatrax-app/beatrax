@@ -24,6 +24,7 @@ return [
     'to' => 'kuni',
     'text_placeholder' => 'nt SPOTIFY',
     'remove_condition' => 'Eemalda tingimus',
+    'remove_condition_caption' => 'Eemalda',
     'add_condition' => '+ Lisa tingimus',
 
     'then' => 'Siis',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Lisa lõppu',
     'deduction_category_aria' => 'Toimingu :number mahaarvamise kategooria',
     'remove_action' => 'Eemalda toiming',
+    'remove_action_caption' => 'Eemalda',
     'add_action' => '+ Lisa toiming',
 
     'this_year_only' => 'Ainult sel aastal ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Maksumärgendi toimingud rakenduvad järgmisel taasrakendamisel, mitte praegusel importimisel.',
 
     'priority' => 'Prioriteet',
-    'priority_help' => 'Väiksemad numbrid rakenduvad esimesena. Reeglid, millel pole ühiseid välju, ei satu kunagi vastuollu.',
+    'priority_help' => 'Reeglid käivituvad madalaimast numbrist ülespoole, nii et kui kaks määravad sama välja, võidab kõrgeim number. Reeglid, millel pole ühiseid välju, ei satu kunagi vastuollu.',
 
     'cancel' => 'Tühista',
     'save_changes' => 'Salvesta muudatused',

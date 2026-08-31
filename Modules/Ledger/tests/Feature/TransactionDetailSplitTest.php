@@ -410,8 +410,8 @@ it('autoUnsplitsWhenReclassifyingASplitToANonSplittableType', function (): void 
         endExclusive: CarbonImmutable::parse('2026-08-01'),
         label: 'July 2026',
     );
-    $spend = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $period, 'EUR');
-    expect($spend)->not->toHaveKey($this->household->id);
+    $spend = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $period);
+    expect($spend)->not->toHaveKey($this->household->id.'|EUR');
 })->group('phase-13.1');
 
 it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {

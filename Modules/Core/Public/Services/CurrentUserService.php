@@ -9,10 +9,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 
-final class CurrentUserService implements CurrentUser
+final readonly class CurrentUserService implements CurrentUser
 {
     public function __construct(
-        private readonly AuthFactory $auth,
+        private AuthFactory $auth,
     ) {}
 
     public function id(): int
@@ -29,7 +29,7 @@ final class CurrentUserService implements CurrentUser
     {
         $day = $this->resolveUser()->period_start_day;
 
-        return $day >= 1 ? $day : 1;
+        return max($day, 1);
     }
 
     public function isAuthenticated(): bool

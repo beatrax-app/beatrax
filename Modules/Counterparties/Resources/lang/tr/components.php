@@ -24,6 +24,10 @@ return [
         'unknown' => 'Bilinmeyen',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Banka ücreti',
+    ],
+
     'cp_card' => [
         'aria' => 'Karşı taraf: :name',
         'recent_aria' => 'Son etkinlik',

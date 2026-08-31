@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Ez nem tűnik olyan YNAB4-, nYNAB- vagy Actual-exportnak, amelyet be tudunk olvasni. Ellenőrizd a fájlt, és próbáld újra.',
         'file_too_large' => 'Ez a fájl túl nagy egy migrálási exporthoz.',
+        'archive_reader_unavailable' => 'Az alkalmazás ezen változatában nincs olyan ZIP-olvasó, amely ezt az exportot meg tudná nyitni, így itt nem olvasható. Importáld az asztali alkalmazásban, vagy csomagold újra az exportot szokásos tömörítéssel.',
+        'internal_detail' => 'Az alkalmazás nem tudta beolvasni ezt az exportot (:code). A teljes részletek az alkalmazásnaplóban vannak; hibabejelentéskor add meg ezt a kódot.',
     ],
 ];

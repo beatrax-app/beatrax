@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Vil du markere :count mere fra',
     'batch_after' => '?',
+    'batch_confirm' => 'Vil du markere alle resterende transaktioner fra :name som fradragsberettigede? De får hver især denne kategori og denne note. Markeringen kan kun fjernes igen én transaktion ad gangen.',
     'batch_tag_all' => 'Markér alle',
     'batch_dismiss' => 'Luk',
 ];

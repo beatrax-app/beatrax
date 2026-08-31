@@ -445,9 +445,10 @@ it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_s
     );
 });
 
-it('does not allow any file other than DriftAlertStateMachine to mutate drift_alerts.state (noOtherDriftAlertStateMutator)', function (): void {
-    // snoozed_until and actioned_at may be updated without the state machine, so
-    // the grep targets the `state` key inside the update payload specifically.
+it('does not allow any file other than DriftAlertStateMachine to mutate drift_alerts.state or snoozed_until (noOtherDriftAlertStateMutator)', function (): void {
+    // `snoozed_until` is a lifecycle column too: the Open tab decides whether an
+    // alert is open by reading it, and a raw update of it took no row lock, ran
+    // no edge guard and left no audit row. actioned_at is not on the list.
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
@@ -483,22 +484,26 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
         }
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
+        // `state` is matched anywhere in the payload, not only as its first key:
+        // anchored to the opening bracket, update(['updated_at' => ..., 'state'
+        // => ...]) walked straight past both halves of the guard.
         if (
-            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
-            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+            preg_match("/->table\(['\"]drift_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"](?:state|snoozed_until)['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/DriftAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"](?:state|snoozed_until)[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
     }
     expect($hits)->toBe(
         [],
-        "Only DriftAlertStateMachine may mutate drift_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+        "Only DriftAlertStateMachine may mutate drift_alerts.state or snoozed_until. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
-it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state (noOtherAnomalyAlertStateMutator)', function (): void {
-    // snoozed_until, actioned_at and dismissed_as may be updated without the
-    // state machine, so the grep targets the `state` key in the payload only.
+it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state or snoozed_until (noOtherAnomalyAlertStateMutator)', function (): void {
+    // `snoozed_until` is a lifecycle column too: the Open tab decides whether an
+    // alert is open by reading it. actioned_at and dismissed_as ride the
+    // dismissal transition and are not on the list.
     $hits = [];
     $anomalyDir = base_path('Modules/Anomaly');
     if (! is_dir($anomalyDir)) {
@@ -535,15 +540,15 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         if (
-            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
-            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[\s*[\'"]state[\'"]/', $stripped) === 1
+            preg_match("/->table\(['\"]anomaly_alerts['\"]\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"](?:state|snoozed_until)['\"]\\s*=>/", $stripped) === 1
+            || preg_match('/AnomalyAlert::query\(\)[^;]*->update\(\s*\[[^;]*[\'"](?:state|snoozed_until)[\'"]\s*=>/', $stripped) === 1
         ) {
             $hits[] = $path;
         }
     }
     expect($hits)->toBe(
         [],
-        "Only AnomalyAlertStateMachine may mutate anomaly_alerts.state. Offenders:\n  ".implode("\n  ", $hits),
+        "Only AnomalyAlertStateMachine may mutate anomaly_alerts.state or snoozed_until. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 
@@ -1045,7 +1050,7 @@ it('does not allow the impersonation surface to re-appear on disk (impersonation
     );
 });
 
-it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config (noDiederikLiteralAfterRename)', function (): void {
+it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config / .docs (noDiederikLiteralAfterRename)', function (): void {
     // The diederik -> Beatrax rename must stay complete. The three allow-listed
     // files deliberately house the literal as their assertion subject: this
     // invariant, the artisan-signature guard, and the sidebar render test.
@@ -1055,7 +1060,9 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
         'Modules/Shell/tests/Feature/AppSidebarRenderTest.php',
     ];
 
-    $roots = ['Modules', 'tests', 'resources', 'config'];
+    // .docs is in scope because AGENTS.md sends every new contributor to it
+    // first, which is exactly where a pre-rename brand name does most damage.
+    $roots = ['Modules', 'tests', 'resources', 'config', '.docs'];
 
     $hits = [];
     foreach ($roots as $root) {
@@ -1877,17 +1884,27 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php relay_mailbox 1',
         'Modules/Auth/Internal/Account/UserScopedDataPurge.php users 1',
         'Modules/Auth/Internal/Console/ResetPasswordCommand.php users 1',
-        'Modules/Auth/Internal/Http/Livewire/ChangePasswordPage.php sessions 1',
         'Modules/Auth/Internal/Http/Livewire/ChangePasswordPage.php users 1',
         'Modules/Auth/Internal/Http/Livewire/ManageUserPage.php users 1',
+        // Password changes and resets now sever sessions and rotate the recaller
+        // in one place; the sessions writes moved here out of the two callers.
+        'Modules/Auth/Internal/Services/SessionRevoker.php users 1',
         'Modules/Auth/Public/Actions/DeleteAccountAction.php transaction_search_fts 1',
         'Modules/Auth/Public/Actions/DeleteAccountAction.php users 1',
-        'Modules/Auth/Public/Actions/ResetPasswordAction.php sessions 1',
         'Modules/Auth/Public/Actions/ResetPasswordAction.php users 1',
         'Modules/Auth/Public/Actions/SignupAction.php users 1',
         'Modules/Budgets/Public/Services/EnvelopeActivationService.php users 2',
         'Modules/CashBook/Internal/Http/Livewire/CashBookPage.php transactions 1',
+        // The cash account is minted by this module and named by it, so the
+        // name follows whoever is reading rather than freezing in the language
+        // the first entry was typed in. The predicate is the synthetic IBAN
+        // only this module writes, so no account a person named is reachable.
+        'Modules/CashBook/Internal/Services/ManualEntryAnchors.php accounts 1',
         'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchant_memories 2',
+        // Nothing in production ever wrote `merchants`, so merchant memory
+        // could not grow: the listener that owns the memory now find-or-creates
+        // the merchant its NOT NULL FK points at, beside the memory itself.
+        'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchants 1',
         'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php transactions 1',
         'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
         // The enable-time sweep and its rollback restore reach six tables this
@@ -1896,7 +1913,7 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
         'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php transactions 1',
-        'Modules/DevMode/Internal/Queue/QueueActions.php jobs 3',
+        'Modules/DevMode/Internal/Queue/QueueActions.php jobs 2',
         'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php accounts 1',
         'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
@@ -1916,8 +1933,8 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
-        'Modules/Sync/Internal/Merge/TransferPairCascade.php transactions 1',
         'Modules/Transfers/Internal/Services/TransferPairer.php transactions 2',
+        'Modules/Transfers/Public/Services/PairUnlinker.php transactions 1',
     ];
 
     $ownership = boundaryTableOwnership();
@@ -2007,7 +2024,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
     // name in phpstan.neon as well.
     $pinnedProductionCrossings = [
         'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityLoader',
-        'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Transport\\Frame\\TransportFramer',
+        'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityState',
         'Modules/Mobile/Internal/Sync/InitialSyncPuller.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
         'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityDto',
@@ -2020,6 +2037,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/Internal/Sync/LanSyncClient.php -> Modules\\Sync\\Internal\\Transport\\SyncSession',
         'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityDto',
         'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityLoader',
+        'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityState',
         'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient',
         'Modules/Mobile/Internal/Sync/MobileSyncTriggerService.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
     ];
@@ -2028,19 +2046,42 @@ it('does not allow a cross-module Internal import outside the pinned production 
     // welds the test to a private shape its owner is entitled to change. Each line
     // is one import somebody chose to write.
     $pinnedTestCrossings = [
+        'Modules/Anomaly/tests/Feature/AMuteThatNeverLeftTheDeviceTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Anomaly/tests/Feature/APeerClosedTheRowBeforeTheClickLandedTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Anomaly/tests/Feature/AnomalyAlertPaginationTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Anomaly/tests/Feature/AnomalyAlertsHomeTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
+        'Modules/Anomaly/tests/Feature/ReSnoozingALapsedAlertIsNotA500Test.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Tax\\Internal\\Http\\Livewire\\TaxPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
+        'Modules/Auth/tests/Feature/OnlyTheOwnerManagesTheHouseholdTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Budgets/tests/Feature/AMoveKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Budgets/tests/Feature/AMoveKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Budgets/tests/Feature/AMoveKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogEntry',
+        'Modules/Budgets/tests/Feature/AMoveKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
+        'Modules/Budgets/tests/Feature/AMoveKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
+        // The collision only shows when the nav-count listener runs against a
+        // warmed cache table on the same connection, so the test builds the
+        // listener rather than hoping the event wiring reaches it. Neither it nor
+        // the migration window it takes has a Public spelling.
+        'Modules/Budgets/tests/Feature/ARekeyedAssignmentSyncsItsOwnIdTest.php -> Modules\\Core\\Internal\\Listeners\\ForgetNavCountsOnWrite',
+        'Modules/Budgets/tests/Feature/ARekeyedAssignmentSyncsItsOwnIdTest.php -> Modules\\Core\\Internal\\Support\\MigrationWindow',
+        'Modules/Budgets/tests/Feature/MovingTheBudgetMonthTakesThePlanWithItTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\DevMode\\Internal\\Navigation\\NavigationRegistryImpl',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
         'Modules/Categorization/tests/Feature/FieldProvenanceStampingTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Categorization/tests/Feature/RuleApplierSyncCaptureTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
         'Modules/Categorization/tests/Feature/RuleSchemaMigrationTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
-        'Modules/Chains/tests/Feature/WizardChainResolutionStatusTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\PreviewWizard',
+        // The committed real ICS statement is a .txt, not a PDF, so driving it
+        // through the shipped import means standing in for the extractor and
+        // forgetting the singletons holding the old one. Neither has a Public
+        // seam, and a hand-built statement would not be the evidence.
+        'Modules/Chains/tests/Feature/ASettlementOnThePrintedDueDateSettlesItsStatementTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
+        'Modules/Chains/tests/Feature/ASettlementOnThePrintedDueDateSettlesItsStatementTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ParseStage',
+        'Modules/Chains/tests/Feature/ASettlementOnThePrintedDueDateSettlesItsStatementTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Chains/tests/Feature/ASettlementOnThePrintedDueDateSettlesItsStatementTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Banking\\Camt053Adapter',
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
@@ -2048,6 +2089,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Feature/DatesFollowTheLanguageSwitchTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
         'Modules/Core/tests/Feature/DatesFollowTheLanguageSwitchTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Core/tests/Feature/TheSettingsCopyOfTheAmountToggleCannotDriftTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
@@ -2063,14 +2105,26 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayTlsMaterial',
         'Modules/Desktop/tests/Unit/DesktopColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
-        'Modules/Desktop/tests/Unit/DispatchOsNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/DevMode/tests/Feature/AppMenuDeveloperSubmenuTest.php -> Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
+        // The redaction has to be proved against the shape the generator actually
+        // emits: a hard-coded literal would pass while a change to the alphabet or
+        // grouping silently un-redacted live credentials. There is no Public seam
+        // for code minting.
+        'Modules/DevMode/tests/Feature/TheAuditLogKeepsARecoveryCodeToItselfTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeGenerator',
         'Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/EmailScan/tests/Feature/EmailScanHealthTileTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
         'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
         'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Forecasting/tests/Feature/TodayAgreesAcrossSurfacesTest.php -> Modules\\Calendar\\Internal\\Services\\DailyBalanceAggregator',
+        'Modules/Import/tests/Feature/ACardStatementImportsWithoutPdftotextTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Import/tests/Feature/ACardStatementImportsWithoutPdftotextTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
+        'Modules/Import/tests/Feature/AFileTypeOfferedByThePickerIsOneTheValidatorAcceptsTest.php -> Modules\\Migration\\Internal\\Http\\Livewire\\NewMigration',
+        // The committed ICS statement is a .txt, so driving the preview and the
+        // commit off the one file means standing in for the extractor, which has
+        // no Public contract and no binding to swap. The extractor only: the
+        // adapter is not a singleton, so forgetting the registry rebuilds it.
+        'Modules/Import/tests/Feature/APreviewDatesEveryRowTheDayTheLedgerWillTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Import/tests/Feature/LockedImportSaysSoWithoutNamingAClassTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
@@ -2079,6 +2133,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Import/tests/Feature/TheRevolutBalanceAgreesWithTheBankTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Csv\\GenericCsvAmountParser',
         'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
         'Modules/Ledger/tests/Feature/AmountsRemainAggregatableTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Ledger/tests/Feature/AnImportedCardStatementReconcilesToZeroTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
+        'Modules/Ledger/tests/Feature/AnImportedCardStatementReconcilesToZeroTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ParseStage',
+        'Modules/Ledger/tests/Feature/AnImportedCardStatementReconcilesToZeroTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
+        'Modules/Ledger/tests/Feature/AnImportedCardStatementReconcilesToZeroTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Ledger/tests/Feature/CounterpartyBlindIndexTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\FingerprintStage',
         'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpoch',
         'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
@@ -2159,10 +2217,27 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveredPeer',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveryMode',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\PeerDiscovery',
-        'Modules/Mobile/tests/Unit/DispatchMobileNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
+        'Modules/Mobile/tests/Feature/ThePhoneDerivesItsNotificationsFromARequestTest.php -> Modules\\Notifications\\Internal\\Http\\Middleware\\RunDeferredNotificationPasses',
+        // ForgetsSpentRecoveryCodes is the Auth middleware whose forgetting this
+        // test exists to prove, and a middleware is named by class or not at all.
+        // EnsureDatabaseReady is switched off the way three sibling Mobile tests
+        // already switch it off.
+        'Modules/Mobile/tests/Feature/TheRecoveryCodesDoNotOutliveTheScreenThatShowsThemTest.php -> Modules\\Auth\\Internal\\Http\\Middleware\\ForgetsSpentRecoveryCodes',
+        'Modules/Mobile/tests/Feature/TheRecoveryCodesDoNotOutliveTheScreenThatShowsThemTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
+        'Modules/Mobile/tests/Feature/TheSetupGateReprojectsWhatQuarantinedNotEverythingTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Mobile/tests/Feature/TheSetupGateReprojectsWhatQuarantinedNotEverythingTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/TheSetupGateReprojectsWhatQuarantinedNotEverythingTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        // A real sealed identity is what makes the burst reach a dial at all,
+        // and minting one has no Public seam — the same crossing every sibling
+        // Mobile test that needs one already makes.
+        'Modules/Mobile/tests/Feature/TheSyncButtonActuallyDialsTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Unit/Identity/BiometricKeyVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
         'Modules/Mobile/tests/Unit/PeerLanAddressTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Notifications/tests/Feature/ABudgetAlreadyBlownIsNotCalledNearlySpentTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
         'Modules/Notifications/tests/Feature/ABudgetNudgeNamesTheCategoryInTheReadersLanguageTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
+        'Modules/Notifications/tests/Feature/AHandTypedCashEntryIsNotAnnouncedAsAnImportTest.php -> Modules\\CashBook\\Internal\\Http\\Livewire\\CashBookPage',
+        'Modules/Notifications/tests/Feature/AMigrationIsNotAnnouncedAsAnImportTest.php -> Modules\\Migration\\Internal\\Pipeline\\PromoteStagingToDomain',
+        'Modules/Notifications/tests/Feature/AShortfallNamesTheFloorItActuallyCrossedTest.php -> Modules\\Forecasting\\Internal\\Pipeline\\ShortfallDetector',
         'Modules/Notifications/tests/Feature/BudgetNudgeTriggerTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
         'Modules/Notifications/tests/Feature/PaymentReminderTriggerTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Notifications/tests/Feature/PerTriggerToggleTest.php -> Modules\\Budgets\\Internal\\Jobs\\EmitBudgetNudgesJob',
@@ -2176,7 +2251,12 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Notifications/tests/Feature/QuietHoursDeferTest.php -> Modules\\Desktop\\Internal\\Native\\WindowFocusState',
         'Modules/Notifications/tests/Feature/ReminderSelfInvalidationTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Notifications/tests/Feature/SavingsPromptTriggerTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
+        'Modules/Notifications/tests/Feature/TheDigestScheduleActuallyDispatchesTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\EmitSavingsPromptsJob',
         'Modules/Notifications/tests/Feature/TheDigestScheduleActuallyDispatchesTest.php -> Modules\\Position\\Internal\\Jobs\\EmitPositionDigestJob',
+        'Modules/Notifications/tests/Feature/TheDigestScheduleActuallyDispatchesTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
+        'Modules/Notifications/tests/Feature/TwoRemindersFourWeeksApartDoNotShareOneTitleTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
+        'Modules/Onboarding/tests/Feature/AConfirmedStartingBalanceIsCheckedBeforeItIsWrittenTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/AFundingTagTookFourCharactersOffAStandInTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepCacheContentsTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepReuseExistingAccountTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConsolidatedPreviewLoadTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
@@ -2186,6 +2266,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Onboarding/tests/Feature/FirstImportStepStaleIdFilterTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/SignupRoutesToSetupTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\RecoveryCodesDisplay',
         'Modules/Onboarding/tests/Feature/SignupRoutesToSetupTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
+        'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\Merge\\OpLogReplayer',
+        'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogEntry',
+        'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
+        'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
         'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
         'Modules/Receipts/tests/Feature/ChainHintFromReceiptTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
@@ -2193,16 +2278,23 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Receipts/tests/Feature/EmlFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
         'Modules/Receipts/tests/Feature/MboxFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
         'Modules/Receipts/tests/Feature/RawPayloadDecryptChainHintListenerTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Receipts/tests/Feature/TheArchiveWasReadAsOneMessageTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\PreviewWizard',
+        'Modules/Receipts/tests/Feature/TheArchiveWasReadAsOneMessageTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
+        'Modules/Reports/tests/Feature/ADrilldownCarriesTheFiltersTheFigureWasNarrowedByTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Reports/tests/Feature/TheDrilldownListAddsUpToTheRowItWasOpenedFromTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/CounterpartyFilterTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
+        'Modules/Sync/tests/Feature/MerchantAliasEditsMustLeaveTheDeviceTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
         'Modules/Sync/tests/Feature/PairingStateLapsesWithItsTtlTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobilePairingScan',
         'Modules/Sync/tests/Feature/RenderedCiphertextGuardTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Lock\\PinVerificationService',
         'Modules/Sync/tests/Feature/SystemAlertSyncCaptureTest.php -> Modules\\Auth\\Internal\\Recovery\\RecoveryCodeAuthenticator',
+        'Modules/Tax/tests/Feature/ANameAlreadyTakenIsSaidOutLoudTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
+        'Modules/Tax/tests/Feature/ATamperedTaxPickerPayloadIsAFlashNotA500Test.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/LegScopedBadgeVisibilityTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/ReconciledLockTaxTagTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\CashBook\\Internal\\Http\\Livewire\\CashBookPage',
@@ -2212,11 +2304,30 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Tax/tests/Feature/TaxCountryPromptPointsAtTheControlTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Tax/tests/Feature/TaxWordingComesFromTheFilingCountryTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Tax/tests/Feature/ThePhoneSheetsNoteFieldCarriesItsOwnLabelTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
+        'Modules/Tax/tests/Feature/ThePickerCategoryListIsNotWireWritableTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
+        // The one guard that holds seven window pairs to one definition each has
+        // to reach the definitions themselves, and five of the seven are the
+        // private side of their own module. A Public spelling for any of them
+        // would be a seam opened for a test.
+        'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Calendar\\Internal\\Services\\CalendarGrid',
+        'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Calendar\\Internal\\Services\\CalendarMonthWindow',
+        'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Counterparties\\Internal\\Support\\RollingTwelveMonths',
+        'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Ledger\\Internal\\Enums\\DateRangePreset',
+        'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Reports\\Internal\\Aggregation\\PeriodPresetResolver',
+        // The guard reads the printed due date off the committed statement
+        // through the same named anchor the adapter reads it through, so a
+        // parser that stops recognising the paragraph fails there too. Spelling
+        // the literal a second time in the test would break exactly that link.
+        'tests/Contracts/ATuningNumberIsNamedOnceAndAnswersToTheRealStatementArchTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfExtractionMap',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
         'tests/Contracts/EveryAlertKindReadsInTheReadersLanguageArchTest.php -> Modules\\Core\\Internal\\Enums\\BackupAlertKind',
+        // The exemption is keyed on the component class, so the allow-list has to
+        // name it: a Livewire component stays Internal even where another module
+        // mounts it by alias.
+        'tests/Contracts/EveryWireCallableMethodIsReachableFromTheUiArchTest.php -> Modules\\Community\\Internal\\Http\\Livewire\\SharedListSettingsPanel',
         'tests/Contracts/ForecastingProjectionContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\ExpenseSeriesDetector',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\IncomeSeriesDetector',
@@ -2235,11 +2346,21 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
         'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
+        // The fixture rebaser and the importer must read a two-digit year the
+        // same way, and the only honest proof runs the real parser over the
+        // rebased line. SwiftDate carries the rule; the parser around it stays
+        // private.
+        'tests/Unit/AFixtureIsDatedTheWayTheParserWillReadItTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Banking\\Mt940Tag61Parser',
     ];
 
     // BoundaryRule hooks UseItem nodes, so a fully-qualified reference written
     // inline crosses the boundary without an import and neither guard sees it.
-    // Nothing does this today; the pin is empty so the first one has to argue.
+    // A guard naming a class as the SUBJECT of an assertion is the one honest
+    // form: importing it would claim a dependency the file does not have.
+    $pinnedInlineReferences = [
+        'tests/Contracts/AMigrationIsNotTheOnlyPathToPerUserStateArchTest.php -> Modules\\FX\\Internal\\Services\\SeedBundledExchangeRates',
+    ];
+
     $inlineReferences = [];
 
     // app/ is scanned as well: an App\ class sits in no module, so BoundaryRule's
@@ -2333,10 +2454,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
     );
 
     expect($inlineReferences)->toBe(
-        [],
+        $pinnedInlineReferences,
         'A cross-module Internal symbol is being named inline rather than imported. BoundaryRule hooks '
-        .'UseItem nodes and so misses that form entirely, which is why it is banned outright here rather '
-        ."than pinned. Offenders:\n  "
+        .'UseItem nodes and so misses that form entirely, so it is pinned here one reference at a time. '
+        .'Pin it only where the file names the class as the subject of an assertion and never calls it; '
+        ."anywhere else, import it so the crossing is a crossing. Offenders:\n  "
         .implode("\n  ", $inlineReferences),
     );
 });

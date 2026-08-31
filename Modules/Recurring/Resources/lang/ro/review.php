@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Editează numele',
     'edit_name_aria' => 'Redenumește seria recurentă :id',
     'new_name_label' => 'Nume nou pentru această serie',
+    'load_more' => 'Încarcă mai multe',
     'save' => 'Salvează',
 
     'toast' => [

@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Kuvio on pakollinen.',
         'name_required' => 'Nimi on pakollinen.',
+        'browser_refused' => 'Selaintasi ei voitu avata, joten mitään ei lähetetty eikä mikään poistunut tältä laitteelta. Yritä uudelleen tai kopioi yllä oleva YAML-esikatselu itse pull requestiin.',
     ],
 ];

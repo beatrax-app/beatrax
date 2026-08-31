@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
@@ -134,7 +135,7 @@ it('defensive clamp: months=0 is clamped up to 1 before dispatch + persist', fun
     });
 });
 
-it('cross-user 404: submit against another user\'s inbox raises NotFoundHttpException', function (): void {
+it('cross-user refusal: submit against another user\'s inbox writes nothing and answers in the modal', function (): void {
     Bus::fake();
     $userA = bwmUser('cross-a@example.com');
     $userB = bwmUser('cross-b@example.com');
@@ -146,7 +147,8 @@ it('cross-user 404: submit against another user\'s inbox raises NotFoundHttpExce
         ->call('open', $inboxA, 3)
         ->set('months', 3)
         ->call('submit')
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertSet('errorMessage', Lang::get('core::errors.no_longer_here'));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -156,11 +158,12 @@ it('cross-user 404: submit against another user\'s inbox raises NotFoundHttpExce
     Bus::assertNotDispatched(BackfillInboxJob::class);
 });
 
-it('submit with no inboxId set returns 404', function (): void {
+it('submit with no inboxId set answers in the modal', function (): void {
     $user = bwmUser('no-id@example.com');
     $this->actingAs($user);
 
     Livewire::test(BackfillWindowModal::class)
         ->call('submit')
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertSet('errorMessage', Lang::get('core::errors.no_longer_here'));
 });

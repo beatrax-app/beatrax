@@ -20,6 +20,7 @@ return [
         'manage' => 'Gérer l\'open banking',
         'not_connected' => 'Aucune banque connectée. Connectes-en une pour importer les transactions automatiquement.',
         'expired' => 'Consentement expiré — reconnexion nécessaire.',
+        'revoked' => 'Ta banque a mis fin à la connexion — reconnecte-toi.',
         'connected' => 'Connecté à :bank via Enable Banking. Dernière synchronisation :when.',
         'never' => 'jamais',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Expiré — reconnecte-toi',
         'pill_expiring' => 'Expire bientôt',
         'pill_connected' => 'Connecté',
+        'pill_revoked' => 'Interrompu par ta banque — reconnecte-toi',
         'whats_fetched_label' => 'Ce qui est récupéré',
         'whats_fetched' => 'Transactions comptabilisées + soldes, 90 derniers jours',
         'last_successful_sync_label' => 'Dernière synchronisation réussie',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — échec (:reason)',
         'reason_consent_expired' => 'consentement expiré',
         'reason_error' => 'erreur',
+        'reason_truncated' => 'arrêté prématurément',
+        'reason_nothing_imported' => 'rien n’a pu être enregistré',
+        'reason_consent_revoked' => 'interrompu par ta banque',
         'disconnect_button' => 'Déconnecter',
     ],
 
     'consent_banner' => [
         'heading' => 'Consentement expiré — reconnecte-toi',
+        'heading_revoked' => 'Ta banque a mis fin à la connexion',
         'body' => 'Ta dernière synchronisation réussie remonte à :when. Reconnecte-toi pour reprendre la synchronisation automatique.',
+        'body_revoked' => 'Ta banque ou Enable Banking a retiré l’accès, la synchronisation est donc arrêtée. Ta dernière synchronisation réussie remonte à :when. Reconnecte-toi pour la reprendre.',
         'never' => 'jamais',
         'reconnect' => 'Reconnecter',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking est temporairement indisponible. Réessaie dans un moment.',
         'new_found' => ':count nouvelle transaction trouvée.|:count nouvelles transactions trouvées.',
         'none' => 'Aucune nouvelle transaction.',
+        'none_importable' => 'Ta banque a envoyé des transactions, mais aucune n’a pu être enregistrée. Ouvre la vérification de l’import pour voir pourquoi.',
+        'in_progress' => 'Une synchronisation est déjà en cours. Réessayez dans un instant.',
+        'truncated' => 'Ta banque avait plus de transactions qu’une seule synchronisation ne peut en récupérer, cette exécution s’est donc arrêtée prématurément. Rien n’a été enregistré comme synchronisé — la prochaine synchronisation repartira du même point.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Reconnecte ta banque',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Termine d\'abord l\'assistant de configuration Open Banking.',
         'no_bank_chosen' => 'Choisis une banque avant de te connecter.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking a renvoyé une URL de consentement non sûre.',
         'no_authorization_code' => 'Le rappel d\'Enable Banking n\'a renvoyé aucun code d\'autorisation.',
         'no_session_id' => 'Enable Banking n\'a pas renvoyé d\'identifiant de session.',
+        'oauth_state_mismatch' => 'Ce lien de connexion a expiré ou a déjà été utilisé. Recommencez la connexion à votre banque.',
     ],
 ];

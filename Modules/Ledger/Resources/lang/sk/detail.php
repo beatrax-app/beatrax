@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transakcia',
     'heading' => 'Transakcia',
+    'booked_on' => 'Zaúčtované :date',
 
     'counterparty' => 'Protistrana',
     'description' => 'Popis',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Poznámka (voliteľné)',
         'tax_deductible' => 'Daňovo uznateľné',
         'remove_leg_aria' => 'Odstrániť túto kategóriu',
+        'remove_leg_caption' => 'Odstrániť',
         'add_category' => '+ Pridať kategóriu',
         'soft_cap' => ':count z ~20 kategórií — zváž zoskupenie malých súm.',
         'remaining_zero' => 'Zostáva :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Odstrániť transakciu',
         'help' => 'Natrvalo odstráni túto transakciu. Túto akciu nemožno vrátiť späť.',
         'button' => 'Odstrániť',
-        'confirm_prompt' => 'Naozaj?',
+        'confirm_prompt' => 'Odstrániť túto transakciu? Zmiznú s ňou poznámka, rozdelenie aj daňové štítky.',
         'confirm' => 'Áno, odstrániť',
         'cancel' => 'Zrušiť',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Zobraziť reťazec',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Odsúhlasená a uzamknutá',
+        'help' => 'Dokončené odsúhlasenie uzamklo túto transakciu. Jej kategória, poznámka, rozdelenie a daňové štítky zostávajú bez zmeny, kým ju neodomkneš.',
+        'button' => 'Odomknúť na úpravy',
+        'confirm_question' => 'Odomknúť túto transakciu na úpravy? Nič sa na nej nemení a ďalšie dokončené odsúhlasenie ju znova uzamkne.',
+        'cancel' => 'Nechať uzamknutú',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Táto transakcia je odsúhlasená. Ak ju chceš zmeniť, najprv zruš odsúhlasenie.',
         'reclassified_pair_removed' => 'Preklasifikované na :type — párovanie zrušené',
         'reclassified' => 'Preklasifikované na :type',
         'note_saved' => 'Poznámka uložená',
         'unreconciled' => 'Odsúhlasenie zrušené — transakciu môžeš znova upravovať.',
+        'note_too_long' => 'Poznámka má najviac :max znak.|Poznámka má najviac :max znaky.|Poznámka má najviac :max znakov.',
         'counterparty_updated' => 'Protistrana aktualizovaná',
         'goal_attributed' => 'Započítané do tohto cieľa',
         'goal_attribution_removed' => 'Už sa do tohto cieľa nezapočítava',

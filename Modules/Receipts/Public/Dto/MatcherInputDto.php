@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Dto;
 
 use DateTimeImmutable;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Spatie\LaravelData\Data;
 
@@ -38,7 +39,7 @@ final class MatcherInputDto extends Data
             senderEmail: $this->senderEmail,
             senderName: $this->senderName,
             subject: $this->subject,
-            status: 'fetched',
+            status: InboxMessageStatus::Fetched->value,
             fetchedAt: $this->internalDate,
         );
     }

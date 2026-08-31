@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Tvoja banka',
     'bank_desc' => 'Prevuci datoteku izvoda. Čitamo CSV, MT940 i CAMT.053 iz većine evropskih banaka.',
-    'card_title' => 'Tvoja kreditna kartica (ICS)',
-    'card_desc' => 'Prevuci mesečni PDF izvod sa Mijn ICS.',
+    'card_title' => 'Tvoja kreditna kartica',
+    'card_desc' => 'Prevuci mesečne PDF izvode svoje kartice. Zasad umemo da pročitamo izdavaoca ICS.',
     'email_title' => 'Potvrde iz e-pošte',
     'email_desc' => 'Poveži Gmail ili Outlook da automatski hvataš potvrde o kupovini.',
+    'email_desc_phone' => 'Potvrde o kupovini hvata aplikacija za računar; ovaj telefon sinhronizacijom pokazuje šta je našla.',
 
     'continue' => 'Nastavi →',
 ];

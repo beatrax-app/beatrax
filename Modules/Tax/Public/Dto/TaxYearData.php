@@ -6,8 +6,10 @@ namespace Modules\Tax\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Each $categories element has id/name/shortName/subtotalMinor/rows keys; see
-// TaxYearQuery::forYear() for the per-row key list.
+// Each $categories element has id/name/shortName/subtotalMinor/
+// incomeSubtotalMinor/rows keys; subtotalMinor is deductions only, so the
+// sections add up to $deductionsTotalMinor. See TaxYearQuery::forUser() for
+// the per-row key list.
 final class TaxYearData extends Data
 {
     /**

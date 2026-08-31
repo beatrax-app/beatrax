@@ -5,14 +5,24 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Enums;
 
 // Derived for display from (state, resolver, confidence) and never stored:
-// Deterministic has no chain_links.state counterpart. The capitalised backing
-// value is the badge label chain-node.blade.php renders verbatim, which is the
-// only reason this vocabulary is spelled differently from ChainLinkState.
+// Deterministic has no chain_links.state counterpart. The backing value is a
+// key fragment, not a label — spelled as English prose it went verbatim onto a
+// badge in 25 locales that had translated the screen around it.
 enum ConfidenceTier: string
 {
-    case Deterministic = 'Deterministic';
+    case Deterministic = 'deterministic';
 
-    case Confirmed = 'Confirmed';
+    case Confirmed = 'confirmed';
 
-    case Candidate = 'Candidate';
+    case Candidate = 'candidate';
+
+    public function labelKey(): string
+    {
+        return 'chains::drawer.confidence_tier.'.$this->value;
+    }
+
+    public function ariaKey(): string
+    {
+        return 'chains::drawer.confidence_aria.'.$this->value;
+    }
 }

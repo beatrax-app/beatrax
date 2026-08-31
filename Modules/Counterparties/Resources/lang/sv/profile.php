@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— inga finansieringskedjor för privata kontakter',
     'tab_note_bank' => '— en motpart för bankavgifter genererar inga finansieringskedjor',
+    'tab_note_bank_institution' => '— inga finansieringskedjor för institutionella motparter',
     'tab_note_government' => '— inga finansieringskedjor för myndighetsmotparter',
 
     'recent_activity' => 'Senaste aktivitet',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankavgifter per kategori',
+        'activity_heading' => 'Aktivitet per kategori',
         'no_fees' => 'Inga avgifter registrerade på den här motparten ännu.',
     ],
 

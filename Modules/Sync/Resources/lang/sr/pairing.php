@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Korak 3 od 3',
 
     'show_my_code' => 'Prikaži moj kod',
-    'show_my_code_help' => 'Prikaži QR kod i kod od reči ovog uređaja drugom uređaju.',
+    'show_my_code_help' => 'Prikazuje kod ovog uređaja da bi ga drugi uređaj pročitao.',
     'enter_a_code' => 'Unesi kod',
     'safety_number_changed' => 'Drugi uređaj se promenio dok si upoređivao. Pre potvrde ponovo proveri reči ispod.',
     'enter_a_code_help' => 'Upiši kod prikazan na drugom uređaju.',
 
     'show_this_code' => 'Prikaži ovaj kod',
     'enter_on_other' => 'Unesi ovaj kod na drugom uređaju ili mu dozvoli da skenira QR kod.',
+    'scan_on_other' => 'Skeniraj ovaj kod kamerom drugog uređaja. Računar nema kameru — prikaži njegov kod i unesi ga ovde.',
     'expires_in' => 'Ističe za',
     'code_expired' => 'Kod je istekao.',
     'generate_new_code' => 'Generiši novi kod',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Identitet tvog uređaja je zaključan. Otključaj aplikaciju i pokušaj ponovo.',
     'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj generiše novi.',
+    'code_incomplete' => 'Ovaj kod nije potpun. Uporedi ga sa drugim uređajem i unesi ga u celosti.',
+    'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kod. Proveri kod i da li ga drugi uređaj još uvek prikazuje.',
+    'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Proveri da li sinhronizacija radi na drugom uređaju.',
+    'no_peer_search' => 'Ovaj uređaj nije mogao da pretraži mrežu pa nije mogao da proveri kod. Umesto toga prikaži kod ovog uređaja i unesi ga na drugom.',
+    'rate_limited' => 'Previše pokušaja. Sačekaj minut i pokušaj ponovo.',
 ];

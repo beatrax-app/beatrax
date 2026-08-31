@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ledger\Public\ValueObjects\CurrencyScale;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
@@ -15,7 +16,11 @@ final class IcsAmountParser
     // come from Money so this does not become a second list of them.
     private const array ISO_CODES = ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'];
 
-    public function parse(string $raw): int
+    // A statement has two amount columns, and the left one is not in euros:
+    // ics-sample-1.txt prints "50,00 USD" and "8,99 GBP" there, and the adapter
+    // reads that column as the row's own amount. $currencyCode is the one the
+    // caller just read off the row; without one the euro column's scale holds.
+    public function parse(string $raw, ?string $currencyCode = null): int
     {
         $trimmed = trim($raw);
         if ($trimmed === '') {
@@ -37,27 +42,38 @@ final class IcsAmountParser
             $stripped = substr($stripped, 0, -1);
         }
 
-        // ICS writes one convention and only one: comma decimal, period
-        // thousands, always two fractional digits. Handing a looser figure to
-        // the shared parser would read a "6,06" that lost its comma as six
-        // hundred euros instead of refusing the row.
+        // ICS writes one notation and only one: comma decimal, period
+        // thousands, and exactly as many fractional digits as the currency
+        // has — a yen has none. Handing a looser figure to the shared parser
+        // would read a "6,06" that lost its comma as six hundred euros.
+        $decimals = CurrencyScale::decimals($currencyCode);
         $unsigned = str_replace('.', '', trim($stripped));
         $parts = explode(',', $unsigned);
-        if (
-            count($parts) !== 2
-            || ! ctype_digit($parts[0])
-            || ! ctype_digit($parts[1])
-            || strlen($parts[1]) !== 2
-        ) {
+        if (! self::shapeMatchesScale($parts, $decimals)) {
             throw new InvalidAmountException(sprintf('Invalid Dutch amount format: %s', $raw));
         }
 
-        $minor = MoneyInput::tryToMinor($unsigned);
+        $minor = MoneyInput::tryToMinor($unsigned, $currencyCode);
         if ($minor === null) {
             throw new InvalidAmountException(sprintf('Amount out of range: %s', $raw));
         }
 
         return $sign * $minor;
+    }
+
+    /**
+     * @param  list<string>  $parts  the figure split on its decimal comma
+     */
+    private static function shapeMatchesScale(array $parts, int $decimals): bool
+    {
+        if ($decimals === 0) {
+            return count($parts) === 1 && ctype_digit($parts[0]);
+        }
+
+        return count($parts) === 2
+            && ctype_digit($parts[0])
+            && ctype_digit($parts[1])
+            && strlen($parts[1]) === $decimals;
     }
 
     private static function currencyPattern(): string

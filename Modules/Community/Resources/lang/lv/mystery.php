@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Pagaidām nekā noslēpumaina. Importējiet konta izrakstus, un Beatrax šeit parādīs rindas, ko nespēja atpazīt.',
 
+    'showing_capped' => 'Rādīti pirmie :shown no :total.',
+
     'footer' => 'Kopīgotais saraksts ir YAML fails, kas nāk komplektā ar Beatrax. Ieteikuma iesniegšana atver GitHub jūsu pārlūkā; nekas cits šo ierīci nepamet.',
 
     'card' => [

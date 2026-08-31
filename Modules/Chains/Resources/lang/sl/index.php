@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Uvozi nekaj izpiskov (banka, PayPal, kartica) in resolver bo tu samodejno prikazal verige med računi.',
 
     'no_counterparty' => '(brez nasprotne stranke)',
-    'open_from_row' => 'Odpri izvorno vrstico',
-    'open_to_row' => 'Odpri ciljno vrstico',
     'leg_count' => ':count plačilo|:count plačili|:count plačila|:count plačil',
+    'legs_more' => '+ še :count',
     'state_aria' => 'Stanje: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Potrjeno',
+        'rejected' => 'Zavrnjeno',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Financiranje prek PayPala',

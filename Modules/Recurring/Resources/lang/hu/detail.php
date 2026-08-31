@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/hó',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Eltérési tűréshatár',
     'tolerance' => 'Tűréshatár',

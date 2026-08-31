@@ -6,7 +6,7 @@ namespace Modules\Migration\Internal\Parsers\Support;
 
 final class YnabTransferMatcher
 {
-    private const PREFIX = 'Transfer : ';
+    private const string PREFIX = 'Transfer : ';
 
     public function isTransferPayee(string $payee): bool
     {

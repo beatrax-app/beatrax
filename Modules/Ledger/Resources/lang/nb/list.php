@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Hele historikken.',
     'subtitle_recent' => 'Nylige transaksjoner (siste 90 dager).',
 
-    'currency_aria' => 'Valutavisning',
-    'currency_eur' => 'Bare :code',
-    'currency_original' => 'Opprinnelig valuta',
+    'currency_aria' => 'Vist beløp',
+    'currency_eur' => 'Oppgjort beløp',
+    'currency_original' => 'Opprinnelig beløp',
 
     'show_recent' => 'Vis bare de nyeste',
     'show_full' => 'Vis hele historikken',
 
     'empty_period' => 'Ingenting her for denne perioden.',
 
+    'empty_recent_has_older' => 'Ingenting de siste 90 dagene. De eldre posteringene dine er fortsatt her.',
+
+    'empty_history' => 'Ingen posteringer ennå.',
     'loading_more' => 'Laster flere transaksjoner',
     'load_more' => 'Last inn flere',
 

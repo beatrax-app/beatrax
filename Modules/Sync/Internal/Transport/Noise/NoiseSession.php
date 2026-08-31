@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Noise;
 
-final class NoiseSession
+final readonly class NoiseSession
 {
     // Created by NoiseHandshakeState::split(). The caller MUST verify
     // peerStaticPublicKey() against DeviceRegistryService::deviceX25519Keys()
@@ -16,9 +16,9 @@ final class NoiseSession
      * @param  string  $peerStaticPublicKey  32-byte X25519 public key of the remote peer.
      */
     public function __construct(
-        private readonly NoiseCipherState $sendCipher,
-        private readonly NoiseCipherState $recvCipher,
-        private readonly string $peerStaticPublicKey,
+        private NoiseCipherState $sendCipher,
+        private NoiseCipherState $recvCipher,
+        private string $peerStaticPublicKey,
     ) {}
 
     // No additional data (AD) is used for transport messages — post-split,

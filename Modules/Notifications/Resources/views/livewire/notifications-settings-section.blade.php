@@ -15,6 +15,8 @@
       - $quietHoursFrom : string (HH:MM)
       - $quietHoursTo : string (HH:MM)
       - $hideDetails : bool
+      - $preparedOnlyWhileOpen : bool
+      - $onPhone : bool
       - $saveError : string
       - $saved : bool
       - $otherDevices : list<array{name: string, summary: string}>
@@ -27,6 +29,10 @@
         {{-- ===== What to notify me about ===== --}}
         <div class="space-y-4">
             <x-core::section-heading :title="Lang::get('notifications::settings.what_heading')" :level="3" />
+
+            @if ($preparedOnlyWhileOpen)
+                <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="notifications-background-note">{{ Lang::get($onPhone ? 'notifications::settings.background_note_phone' : 'notifications::settings.background_note') }}</p>
+            @endif
 
             {{-- Payment reminders --}}
             <x-core::setting-row :label="Lang::get('notifications::settings.reminders.label')" :description="Lang::get('notifications::settings.reminders.help')">

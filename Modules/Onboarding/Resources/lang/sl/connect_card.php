@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Tvoja kreditna kartica (ICS)',
+    'eyebrow' => 'Tvoja kreditna kartica',
     'h1' => 'Prenesi svoje mesečne izpiske v PDF',
-    'lede' => 'Spusti vse svoje mesečne izpiske ICS v PDF — združili jih bomo v en predogled.',
+    'lede' => 'Spusti vse svoje mesečne izpiske v PDF — združili jih bomo v en predogled.',
 
     'format_group_aria' => 'ICS izvaža samo v PDF',
+    'issuer_note' => 'ICS je zaenkrat edini izdajatelj kartic, ki ga znamo prebrati, in to le njegov izpisek v nizozemščini. Če je tvoja kartica drugega izdajatelja, preskoči ta korak.',
     'got_it_as' => 'Imam jih kot:',
     'badge_only_format' => 'edini format',
 

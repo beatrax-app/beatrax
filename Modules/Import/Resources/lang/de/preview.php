@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Gib diesem Konto einen Namen.',
 
     'ics' => [
+        'name' => 'ICS-Karte',
         'heading' => 'Gib deinem ICS-Kartenkonto einen Namen.',
         'help' => 'Das ist das erste Mal, dass du ICS-Daten importierst. Gib dieser Karte einen Namen, damit sie überall in der App einheitlich auftaucht.',
         'placeholder' => 'z. B. ICS-Karte',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Gib deinem PayPal-Konto einen Namen.',
         'help' => 'Das ist das erste Mal, dass du PayPal-Daten importierst. Gib dieser Wallet einen Namen, damit sie überall in der App einheitlich auftaucht.',
         'placeholder' => 'z. B. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Gib deinem Google-Play-Konto einen Namen.',
+        'help' => 'Das ist das erste Mal, dass du einen Google-Play-Beleg importierst. Gib diesem Konto einen Namen, damit es überall in der App einheitlich auftaucht.',
+        'placeholder' => 'z. B. Google Play',
     ],
 
     'col_date' => 'Datum',
@@ -53,28 +62,41 @@ return [
         'error' => 'Fehler',
     ],
 
-    'chain' => [
-        'heading' => 'Ketten werden aufgelöst…',
-        'pending' => 'In der Warteschlange. Der Ketten-Resolver startet gleich.',
-        'running' => 'Finanzierungsketten werden verknüpft und Kontoauszugsabrechnungen zerlegt.',
-        'failed_prefix' => 'Auflösen der Ketten fehlgeschlagen:',
-        'failed_detail' => 'die Details stehen im Job-Log',
-        'open_horizon' => 'Horizon öffnen',
-        'failed_suffix' => 'zum erneuten Versuch oder zur Prüfung.',
-    ],
-
     'rows_shown' => 'Angezeigte Zeilen: :shown von :total',
 
     'show_more' => 'Mehr Zeilen anzeigen',
 
     'errors' => [
         'app_locked' => 'Entsperren Sie die App zum Importieren: Die Verschlüsselungsschlüssel können im gesperrten Zustand nicht verwendet werden.',
+        'archive_holds_one_message' => 'Diese Datei ist eine einzelne E-Mail-Nachricht, kein Postfach-Archiv; als Archiv gelesen steht nichts darin. Laden Sie sie erneut hoch, mit dem Format E-Mail-Nachricht.',
+        'email_file_is_an_archive' => 'Diese Datei ist ein Postfach-Archiv: Sie enthält mehr als eine Nachricht, und als einzelne Nachricht gelesen würde nur die erste übernommen. Laden Sie sie erneut hoch, mit dem Format Postfach-Archiv.',
         'file_stopped_short' => 'Die Kopfzeile passte, das Format ist also richtig. Das Lesen hörte vor dem Ende der Datei auf. Eine einzige unlesbare Zeile führt dazu, eine für dieses Gerät zu große Datei ebenfalls. Versuch es mit einem kürzeren Zeitraum.',
         'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
+        'file_unreadable_detail' => 'Die App konnte diese Datei nicht lesen (:code). Die vollständigen Angaben stehen im App-Protokoll; nennen Sie diesen Code, wenn Sie ein Problem melden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
-        'pdf_reader_unavailable' => 'PDF-Kontoauszüge brauchen das Programm pdftotext, das hier nicht installiert ist. Importiere diese Datei auf einem Desktop, der es hat, oder nutze stattdessen einen CSV-Export deiner Bank.',
+        'not_an_email_file' => 'Diese Datei ist weder eine E-Mail-Nachricht noch ein Postfach-Archiv, darin ist also nichts als Beleg zu lesen. Wählen Sie den Importtyp und das Format, die zu Ihrer Datei passen.',
+        'pdf_has_no_text_layer' => 'Dieses PDF enthält keinen Text — es ist ein Scan oder ein Foto eines Kontoauszugs, darin ist also nichts zu lesen. Laden Sie den Auszug selbst bei Ihrer Bank herunter oder nutzen Sie stattdessen einen CSV-Export.',
+        'pdf_password_protected' => 'Dieses PDF ist mit einem Passwort geschützt, kein Leseprogramm kann es also öffnen. Speichern Sie in Ihrem PDF-Betrachter eine ungeschützte Kopie und importieren Sie diese.',
+        'pdf_reader_unavailable' => 'Diese Version der App hat überhaupt keinen PDF-Leser, ein PDF-Kontoauszug lässt sich hier also nicht öffnen. Importieren Sie diese Datei auf einem anderen Gerät oder nutzen Sie stattdessen einen CSV-Export Ihrer Bank.',
+        'row_belongs_to_another_statement' => 'Diese Zeile gehört zu einer Transaktion in einer anderen Auszugsdatei. Importieren Sie diesen Auszug ebenfalls — beide werden zusammen gelesen.',
         'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',
+        'row_unreadable_detail' => 'Die App konnte diese Zeile nicht lesen (:code). Die vollständigen Angaben stehen im App-Protokoll; nennen Sie diesen Code, wenn Sie ein Problem melden.',
         'unknown_account' => 'Diese Zeile gehört zu einem Konto, das du noch nicht benannt hast.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Diese Datei wurde als E-Mail gelesen',
+        'saved' => 'Was sie enthielt, steht unten, und jede Nachricht ist gespeichert.',
+        'none_imported' => 'Nichts davon wurde zu einer Transaktion, es kam also nichts in dein Hauptbuch.',
+        'shown' => 'Angezeigte Nachrichten: :shown von :total',
+        'no_subject' => 'Kein Betreff',
+
+        'state' => [
+            'read' => 'Als Zahlung gelesen — bestätige diesen Import, damit sie in dein Hauptbuch kommt.',
+            'not_a_payment' => 'Keine Zahlung. Diese Nachricht kündigt etwas an, statt eine Zahlung zu bestätigen.',
+            'unreadable' => 'Gespeichert. Die App liest Belege dieses Absenders, fand in dieser Nachricht aber weder Betrag noch Händler noch Referenz.',
+            'unknown_sender' => 'Gespeichert. Die App liest keine Belege dieses Absenders und hat der Nachricht daher nichts entnommen.',
+        ],
     ],
 
     'failed' => [

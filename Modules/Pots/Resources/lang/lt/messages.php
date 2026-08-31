@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Taupyklės · Beatrax',
     'heading' => 'Taupyklės',
-    'subtitle' => 'Virtualūs daliniai likučiai, kurių suma visada atitinka tikrą sąskaitos likutį.',
+    'subtitle' => 'Virtualūs daliniai likučiai, atskirti nuo tikro sąskaitos likučio.',
     'add_pot' => 'Pridėti taupyklę',
 
     'pot_fallback' => 'taupyklė',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Rodyti istoriją ↓',
         'hide' => 'Slėpti istoriją ↑',
+        'truncated' => 'Paskutiniai judėjimai: :shown iš :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Išėmimas',
         'moved_from' => 'Perkelta iš :name',
         'moved_to' => 'Perkelta į :name',
+        'unreadable' => 'Įrašyta naujesnės Beatrax versijos',
+        'released_on_archive' => 'Atlaisvinta archyvuojant',
     ],
 
     'archived' => [
-        'toggle' => 'Archyvuotos taupyklės (:count)',
+        'toggle' => 'Archyvuota taupyklė (:count)|Archyvuotos taupyklės (:count)|Archyvuotų taupyklių (:count)',
         'badge' => 'Archyvuota',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Įvesk šios taupyklės pavadinimą.',
         'select_account' => 'Pasirink šios taupyklės sąskaitą.',
-        'amount_exceeds_unallocated' => 'Suma viršija nepaskirstytą likutį.',
         'amount_exceeds_unallocated_available' => 'Suma viršija nepaskirstytą likutį (galima :amount).',
         'amount_exceeds_pot_balance' => 'Suma viršija likutį taupyklėje :name (galima :amount).',
+        'generic' => 'Voko išsaugoti nepavyko. Patikrinkite laukus ir bandykite dar kartą.',
+        'amount_invalid' => 'Įveskite didesnę nei nulis sumą.',
+        'goal_already_linked' => 'Šis tikslas jau turi aktyvų susietą voką. Pirmiausia jį archyvuokite.',
+        'account_cannot_hold_pots' => 'Taupyklei reikia sąskaitos, kurioje laikomi pinigai. Pasirink kitą sąskaitą.',
+        'select_target_pot' => 'Pasirink taupyklę, į kurią perkelti.',
+        'move_target_missing' => 'Ši taupyklė nebepasiekiama. Pasirink kitą.',
+        'move_same_pot' => 'Taupyklė negali perkelti pinigų pati sau. Pasirink kitą taupyklę.',
+        'move_cross_account' => 'Taupyklės keičiasi pinigais tik vienoje sąskaitoje, o :name yra sąskaitoje :account.',
+        'pot_missing' => 'Ši taupyklė nebepasiekiama.',
+        'operation_failed' => 'Nepavyko. Pinigai nebuvo perkelti — bandyk dar kartą.',
     ],
 
     'toast' => [

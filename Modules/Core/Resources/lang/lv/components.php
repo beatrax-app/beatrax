@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Tiek rādīti :shown jaunākie no :count.',
+
     'drawer_nav' => 'Navigācija',
 
     'search_placeholder' => 'Meklēt…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Vēlaties redzēt savus datus arī telefonā?',
         'body' => 'Instalējiet Beatrax telefonā, lai ātri piekļūtu savām finansēm.',
         'dismiss_aria' => 'Aizvērt instalēšanas norādi',
+        'dismiss_caption' => 'Aizvērt',
         'install_app' => 'Instalēt lietotni',
 
         'desktop_html' => 'Atveriet Beatrax telefona pārlūkā un pieskarieties „Pievienot sākuma ekrānam” — vai pieskarieties ikonai <strong style="color: var(--color-text);">⚡</strong> Safari koplietošanas izvēlnē.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Izvēlēti faili: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Izvēlieties datumu',
         'prev_month' => 'Iepriekšējais mēnesis',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minūte',
         'empty' => 'laiks nav izvēlēts',
     ],
+
+    'toast_undo' => 'Atsaukt',
 
     'veil_locked' => 'Lietotne bloķēta',
 

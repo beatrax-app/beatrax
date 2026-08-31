@@ -6,21 +6,27 @@ namespace Modules\DriftAlerts\Public\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
+use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final class DriftThresholdEditor extends Component
 {
     use DispatchesToast;
 
     /** @var list<int> */
-    public const OPTIONS = DriftThresholdOptions::PERCENTS;
+    public const array OPTIONS = DriftThresholdOptions::PERCENTS;
 
+    // Locked because mount() proves nothing about it: on /drift the parent
+    // passes currentValueLoaded, so the ownership-bearing read is skipped
+    // entirely. Unlocked, a payload naming another series wrote that series'
+    // drift threshold through save() and replicated it to paired devices.
+    #[Locked]
     public int $recurringSeriesId = 0;
 
     public ?int $currentValue = null;
@@ -32,7 +38,7 @@ final class DriftThresholdEditor extends Component
     public function mount(
         int $recurringSeriesId,
         CurrentUser $currentUser,
-        DatabaseManager $db,
+        RecurringSeriesQuery $series,
         ?int $currentValue = null,
         bool $currentValueLoaded = false,
     ): void {
@@ -44,19 +50,7 @@ final class DriftThresholdEditor extends Component
             return;
         }
 
-        $row = $db->connection()->table('recurring_series')
-            ->where('id', $recurringSeriesId)
-            ->where('user_id', $currentUser->user()->id)
-            ->first(['drift_threshold_percent']);
-
-        if ($row === null) {
-            $this->currentValue = null;
-
-            return;
-        }
-
-        $raw = $row->drift_threshold_percent ?? null;
-        $this->currentValue = is_numeric($raw) ? (int) $raw : null;
+        $this->currentValue = $series->driftThresholdForSeries($recurringSeriesId, $currentUser->user());
     }
 
     public function save(int|string $newValue, CurrentUser $currentUser, SetDriftThresholdForSeries $action): void

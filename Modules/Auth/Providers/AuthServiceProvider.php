@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Providers;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Routing\Router;
@@ -25,6 +26,7 @@ use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Http\Middleware\FirstUserOnlyMiddleware;
 use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
+use Modules\Auth\Internal\Listeners\StartLockedOnLogin;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -114,6 +116,10 @@ final class AuthServiceProvider extends ServiceProvider
             ]);
         }
 
+        // Fires on the recaller path too, which reaches neither LoginAction
+        // nor Fortify's pipeline and so primed nothing at all.
+        $events->listen(Login::class, [StartLockedOnLogin::class, 'handle']);
+
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
 
@@ -128,8 +134,11 @@ final class AuthServiceProvider extends ServiceProvider
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
         // Livewire's update endpoint runs outside the route middleware group,
-        // so without this a locked session keeps working through /livewire/update.
+        // so without these a locked session — or one flagged for a forced
+        // password change, which is the answer to a suspected compromise —
+        // keeps driving every component whose snapshot it already holds.
         $livewire->addPersistentMiddleware(AppLockMiddleware::class);
+        $livewire->addPersistentMiddleware(ForcePasswordChangeMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);

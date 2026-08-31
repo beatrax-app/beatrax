@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Exportera PDF',
     'export_pdf_aria' => 'Exportera PDF',
     'export_pdf_title' => 'Ladda ner beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Stäng',
 
     'country_prompt_heading' => 'I vilket land deklarerar du?',
     'country_prompt_body' => 'Du kan ändra det när som helst under Inställningar → :section.',

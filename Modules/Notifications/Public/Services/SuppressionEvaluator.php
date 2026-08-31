@@ -6,31 +6,19 @@ namespace Modules\Notifications\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\DeliveryDecision;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Psr\Log\LoggerInterface;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 
 final class SuppressionEvaluator
 {
-    // Trigger types with no toggle. Without this list they would hit
-    // triggerEnabled()'s default arm, which suppresses and logs a wiring bug.
-    private const ALWAYS_DELIVERABLE = [
-        DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
-        DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
-        DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
-        DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
-        DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
-    ];
-
     private bool $seeding = false;
 
     public function __construct(
         private readonly NotificationPreferenceQuery $preferences,
-        private readonly LoggerInterface $logger,
     ) {}
 
-    public function shouldDeliver(int $userId, string $triggerType, CarbonImmutable $at): DeliveryDecision
+    public function shouldDeliver(int $userId, NotificationTrigger $trigger, CarbonImmutable $at): DeliveryDecision
     {
         /** @var User $user */
         $user = User::query()->findOrFail($userId);
@@ -39,7 +27,7 @@ final class SuppressionEvaluator
 
         return match (true) {
             $this->seeding => new DeliveryDecision(false, 'seeding', $prefs->hideDetails),
-            ! $this->triggerEnabled($prefs, $triggerType) => new DeliveryDecision(false, 'trigger_disabled', $prefs->hideDetails),
+            ! self::triggerEnabled($prefs, $trigger) => new DeliveryDecision(false, 'trigger_disabled', $prefs->hideDetails),
             $this->insideQuietHours($prefs, $at) => new DeliveryDecision(false, 'quiet_hours', $prefs->hideDetails),
             default => new DeliveryDecision(true, 'ok', $prefs->hideDetails),
         };
@@ -66,31 +54,25 @@ final class SuppressionEvaluator
         }
     }
 
-    private function triggerEnabled(NotificationPreferencesDto $prefs, string $triggerType): bool
+    // No default arm, so a new trigger is a static-analysis failure here
+    // rather than a notification written and never delivered. The seven that
+    // answer true carry no toggle; NotificationTrigger::requiresToggle() is
+    // the same partition, stated where the enum can be asked about it.
+    private static function triggerEnabled(NotificationPreferencesDto $prefs, NotificationTrigger $trigger): bool
     {
-        if (in_array($triggerType, self::ALWAYS_DELIVERABLE, strict: true)) {
-            return true;
-        }
-
-        return match ($triggerType) {
-            DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER => $prefs->remindersEnabled,
-            DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE => $prefs->budgetNudgesEnabled,
-            DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT => $prefs->savingsPromptsEnabled,
-            DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => ! $prefs->digestCadence->isOff(),
-            // No permissive default arm: an unrecognised trigger must fail
-            // loudly rather than bypass every toggle and quiet-hours window.
-            default => $this->rejectUnknownTrigger($triggerType),
+        return match ($trigger) {
+            NotificationTrigger::BudgetNudge => $prefs->budgetNudgesEnabled,
+            NotificationTrigger::PaymentReminder => $prefs->remindersEnabled,
+            NotificationTrigger::PositionDigest => ! $prefs->digestCadence->isOff(),
+            NotificationTrigger::SavingsPrompt => $prefs->savingsPromptsEnabled,
+            NotificationTrigger::DriftChanged,
+            NotificationTrigger::ForecastShortfall,
+            NotificationTrigger::IcsStatementReady,
+            NotificationTrigger::ImportFinished,
+            NotificationTrigger::ManualEntryRecorded,
+            NotificationTrigger::MigrationFinished,
+            NotificationTrigger::ReceiptsFound => true,
         };
-    }
-
-    private function rejectUnknownTrigger(string $triggerType): bool
-    {
-        $this->logger->warning(
-            'SuppressionEvaluator: unknown trigger type encountered — suppressing delivery.',
-            ['trigger_type' => $triggerType],
-        );
-
-        return false;
     }
 
     // Half-open [from, to). When from > to the window spans midnight, so the

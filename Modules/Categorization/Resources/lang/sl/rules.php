@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Pravila ostanejo v tej napravi. Ne delijo se z vašimi drugimi napravami.',
 
     'reapply' => 'Znova uporabi pravila na zgodovini',
+    'reapply_confirm' => 'Znova uporabim vsa pravila na celotni tvoji zgodovini? Vsaka kategorija, nasprotna stranka, opomba in davčna oznaka, ki jo je vpisalo pravilo, se prepiše. Kar je nastavljeno ročno, ostane, prav tako vse na usklajenem izpisku. Starih vrednosti nič ne vrne.',
     'reapplying' => 'Ponovna uporaba…',
     'new_rule' => 'Novo pravilo',
 
-    'reapply_progress_lead' => 'Ponovna uporaba pravil…',
-    'reapply_progress_of' => 'od',
-    'reapply_progress_trail' => 'preverjenih transakcij',
+    'reapply_progress' => 'Ponovna uporaba pravil… :checked od :count preverjene transakcije|Ponovna uporaba pravil… :checked od :count preverjenih transakcij|Ponovna uporaba pravil… :checked od :count preverjenih transakcij|Ponovna uporaba pravil… :checked od :count preverjenih transakcij',
 
     'empty_heading' => 'Pravil še ni',
     'empty_body' => 'Pravila prepoznajo transakcije po več pogojih in samodejno uveljavijo spremembe kategorije, nasprotne stranke, opombe in davčne oznake — ob uvozu in vsakič, ko jih znova uporabiš na obstoječi zgodovini.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Ustvarjeno',
     'col_row_actions' => 'Dejanja',
     'inactive_badge' => 'Izklopljeno',
+    'combinator_all' => 'VSI',
+    'combinator_any' => 'KATERI KOLI',
     'inactive_title' => 'To pravilo se ne izvaja. Pravilo se izklopi, ko se izbriše kategorija ali nasprotna stranka, na katero se sklicuje.',
 
     'more_conditions' => '+:count več',

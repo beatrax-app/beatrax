@@ -20,6 +20,7 @@ return [
         'manage' => 'Spravovat open banking',
         'not_connected' => 'Není připojená žádná banka. Připoj jednu a transakce se budou importovat automaticky.',
         'expired' => 'Souhlas vypršel — je potřeba se připojit znovu.',
+        'revoked' => 'Tvoje banka ukončila připojení — připoj se znovu.',
         'connected' => 'Připojeno přes Enable Banking. Banka: :bank. Poslední synchronizace: :when.',
         'never' => 'nikdy',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Vypršel — připoj znovu',
         'pill_expiring' => 'Brzy vyprší',
         'pill_connected' => 'Připojeno',
+        'pill_revoked' => 'Ukončeno bankou — připoj se znovu',
         'whats_fetched_label' => 'Co se stahuje',
         'whats_fetched' => 'Zaúčtované transakce + zůstatky, posledních 90 dní',
         'last_successful_sync_label' => 'Poslední úspěšná synchronizace',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — selhalo (:reason)',
         'reason_consent_expired' => 'souhlas vypršel',
         'reason_error' => 'chyba',
+        'reason_truncated' => 'zastaveno předčasně',
+        'reason_nothing_imported' => 'nic se nepodařilo zaznamenat',
+        'reason_consent_revoked' => 'ukončeno bankou',
         'disconnect_button' => 'Odpojit',
     ],
 
     'consent_banner' => [
         'heading' => 'Souhlas vypršel — připoj znovu',
+        'heading_revoked' => 'Tvoje banka ukončila připojení',
         'body' => 'Poslední úspěšná synchronizace: :when. Připoj se znovu a automatická synchronizace bude pokračovat.',
+        'body_revoked' => 'Tvoje banka nebo Enable Banking odebrala přístup, takže synchronizace se zastavila. Poslední úspěšná synchronizace: :when. Připoj se znovu a bude pokračovat.',
         'never' => 'nikdy',
         'reconnect' => 'Připojit znovu',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking je dočasně nedostupné. Zkus to za chvíli znovu.',
         'new_found' => 'Nalezena :count nová transakce.|Nalezeny :count nové transakce.|Nalezeno :count nových transakcí.',
         'none' => 'Žádné nové transakce.',
+        'none_importable' => 'Tvoje banka poslala transakce, ale ani jednu se nepodařilo zaznamenat. Otevři kontrolu importu a zjisti proč.',
+        'in_progress' => 'Synchronizace už běží. Zkuste to za chvíli znovu.',
+        'truncated' => 'Tvoje banka měla víc transakcí, než zvládne jedna synchronizace stáhnout, takže tento běh skončil předčasně. Nic se nezaznamenalo jako synchronizované — další synchronizace začne na stejném místě.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Připoj svou banku znovu',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Nejdřív dokonči průvodce nastavením Open Bankingu.',
         'no_bank_chosen' => 'Před připojením vyber banku.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking vrátilo nebezpečné URL souhlasu.',
         'no_authorization_code' => 'Zpětné volání Enable Banking nevrátilo autorizační kód.',
         'no_session_id' => 'Enable Banking nevrátilo identifikátor relace.',
+        'oauth_state_mismatch' => 'Tento odkaz pro připojení vypršel nebo již byl použit. Začněte připojení banky znovu.',
     ],
 ];

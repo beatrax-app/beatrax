@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'bir hesap seç',
+        'choose_date' => 'bir ekstre tarihi seç',
         'enter_balance' => 'bir ekstre bakiyesi gir',
         'matched' => 'eşleşti — :amount',
         'discrepancy' => 'fark var — :amount',
+        'reconciled_through' => ':date tarihine kadar mutabakatlı',
     ],
 
     'mismatch_html' => 'Ekstre bakiyesi henüz onaylanan bakiyenle eşleşmiyor. <a href=":url" class="underline">İşlem listesinde</a> satırların onay durumunu değiştir veya fark sıfıra ulaşana kadar girdiğin bakiyeyi ayarla — bu akış asla denkleştirme kaydı oluşturmaz.',
+    'unreachable_no_baseline_html' => 'Satırları açıp kapatmak bu farkı sıfıra indiremez. Bu hesap için açılış bakiyesi kayıtlı değil, bu yüzden bakiyesi sıfırdan ölçülüyor. Hesabın açıldığı ekstreyi içe aktar ya da açılış bakiyesini <a href=":url" class="underline">Ayarlar</a> bölümünde belirle.',
+    'unreachable' => 'Satırları açıp kapatmak bu farkı sıfıra indiremez: verilen tarihe kadar bu hesaptaki tüm satırların aralığının dışında kalıyor. Ekstre tarihini ve girdiğin bakiyeyi kontrol et.',
 
     'check' => 'Kontrol et',
     'complete' => 'Mutabakatı tamamla',
+    'complete_unavailable' => 'Bu tarihe kadar sabitlenecek başka bir şey yok — daha fazla satırı onaylanmış olarak işaretle ya da daha ileri bir ekstre tarihi seç.',
 
     'errors' => [
         'choose_account' => 'Önce bir hesap seç.',

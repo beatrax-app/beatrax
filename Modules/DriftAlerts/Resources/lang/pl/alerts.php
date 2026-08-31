@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Alerty odchyleń',
-    'heading' => 'Alerty',
     'intro_anomaly' => 'Pojedyncze obciążenia, które wyglądają nietypowo na tle Twoich wydatków.',
     'intro_drift' => 'Zatwierdzone serie cykliczne, w których ostatnie obciążenie wyszło poza próg.',
     'adjust_threshold' => 'Dostosuj próg →',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Tego alertu już nie ma.',
         'acknowledged' => 'Potwierdzono',
         'snoozed' => 'Odłożono',
         'dismissed' => 'Odrzucono',

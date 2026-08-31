@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'El patrón es obligatorio.',
         'name_required' => 'El nombre es obligatorio.',
+        'browser_refused' => 'No se ha podido abrir tu navegador, así que no se ha enviado nada y nada ha salido de este dispositivo. Inténtalo otra vez o copia tú mismo la vista previa YAML de arriba en una pull request.',
     ],
 ];

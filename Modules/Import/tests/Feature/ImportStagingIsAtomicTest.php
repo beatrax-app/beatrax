@@ -14,6 +14,7 @@ uses(RefreshDatabase::class);
 // lands, emptying a file the running parser already holds open — read as a CSV
 // with no rows, reported as zero inserted rather than as a failure.
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     $this->importer = $this->app->make(RunsImports::class);

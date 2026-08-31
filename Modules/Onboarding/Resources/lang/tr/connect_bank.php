@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'CAMT.053 dosyanı buraya bırak',
     'drop_lead_mt940' => 'MT940 dosyanı buraya bırak',
-    'drop_lead_asn' => 'ASN CSV dosyanı buraya bırak',
-    'drop_lead_ing' => 'ING CSV dosyanı buraya bırak',
+    'drop_lead_csv_layout' => ':layout CSV dosyanı buraya bırak',
     'drop_lead_pick_bank' => 'CSV dosyanı hangi bankanın dışa aktardığını seç — doğru okuyabilmek için bunu bilmemiz gerekiyor.',
     'drop_lead_default' => 'Hesap ekstresi dosyanı buraya bırak',
     'browse_file' => 'veya bir dosya seç',
 
-    'banks_mt940' => 'Desteklenen: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Desteklenen: ASN, ING — kullanıcılar örnek gönderdikçe yeni biçimler eklenecek.',
-    'banks_default' => 'Desteklenen: ASN, ING',
+    'format_help_camt053' => 'CAMT.053, XML biçiminde bir hesap ekstresidir — internet bankacılığında ekstreler ya da indirmeler altında bulunur.',
+    'format_help_mt940' => 'MT940, düz metin bir ekstredir; XML ve CSV indirmelerinin yanında .sta ya da .940 olarak sunulur.',
+    'format_help_csv' => 'CSV, hesap tablosu dışa aktarımıdır. Her banka sütunları farklı sıralar, bu yüzden eşleşen düzeni seç. Seninki listede yoksa bankandan CAMT.053 ya da MT940 iste.',
+
+    'account_name_default' => 'Banka hesabı',
+    'account_name_layout' => ':layout hesabı',
 
     'file_ready' => '· ✓ hazır',
 

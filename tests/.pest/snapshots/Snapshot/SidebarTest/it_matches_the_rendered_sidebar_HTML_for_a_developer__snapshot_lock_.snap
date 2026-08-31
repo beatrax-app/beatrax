@@ -135,7 +135,7 @@
     </a>
     
     <a href="https://beatrax.test/inboxes" class="side-item ">
-        <span class="ic" aria-hidden="true">✉</span>
+        <span class="ic" aria-hidden="true">✉️</span>
         Email
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
@@ -171,7 +171,7 @@
         Data &amp; devices
     </a>
     <a href="https://beatrax.test/settings" class="side-item ">
-        <span class="ic" aria-hidden="true">⚙</span>
+        <span class="ic" aria-hidden="true">⚙️</span>
         Settings
     </a>
 

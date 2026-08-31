@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Dölj från vyn (ändrar inte loggfilen)',
     'dismiss_aria' => 'Dölj loggposten från vyn',
     'totals' => [
-        'showing' => 'Visar',
-        'of' => 'av',
-        'received' => 'mottagna (buffertgräns 10k)',
-        'lines_today' => 'rader i dag',
+        'showing' => 'Visar :shown av :count mottagen rad (buffertgräns :cap)|Visar :shown av :count mottagna rader (buffertgräns :cap)',
+        'lines_today' => ':count rad i dag|:count rader i dag',
+        'lines_today_capped' => 'över :count rad i dag|över :count rader i dag',
         'today' => 'i dag',
-        'across' => 'fördelat på',
-        'daily_files' => 'dagliga filer',
+        'all_files' => ':size fördelat på :count daglig fil|:size fördelat på :count dagliga filer',
     ],
 
     'status' => [

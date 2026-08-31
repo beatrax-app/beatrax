@@ -20,6 +20,7 @@ return [
         'manage' => 'Pārvaldīt atvērto banku saskarni',
         'not_connected' => 'Nav pievienota neviena banka. Pievienojiet banku, lai darījumus importētu automātiski.',
         'expired' => 'Piekrišanas termiņš beidzies — nepieciešams atkārtots savienojums.',
+        'revoked' => 'Tava banka pārtrauca savienojumu — savienojies no jauna.',
         'connected' => 'Savienots ar :bank, izmantojot Enable Banking. Pēdējā sinhronizācija :when.',
         'never' => 'nekad',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Beidzies — savienojiet no jauna',
         'pill_expiring' => 'Drīz beigsies',
         'pill_connected' => 'Savienots',
+        'pill_revoked' => 'Pārtraukusi tava banka — savienoties no jauna',
         'whats_fetched_label' => 'Kas tiek ielādēts',
         'whats_fetched' => 'Grāmatotie darījumi un atlikumi, pēdējās 90 dienas',
         'last_successful_sync_label' => 'Pēdējā veiksmīgā sinhronizācija',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — neizdevās (:reason)',
         'reason_consent_expired' => 'piekrišanas termiņš beidzies',
         'reason_error' => 'kļūda',
+        'reason_truncated' => 'apturēts pāragri',
+        'reason_nothing_imported' => 'neko neizdevās reģistrēt',
+        'reason_consent_revoked' => 'pārtraukusi tava banka',
         'disconnect_button' => 'Atvienot',
     ],
 
     'consent_banner' => [
         'heading' => 'Piekrišanas termiņš beidzies — savienojiet no jauna',
+        'heading_revoked' => 'Tava banka pārtrauca savienojumu',
         'body' => 'Pēdējā veiksmīgā sinhronizācija bija :when. Savienojiet no jauna, lai atsāktu automātisko sinhronizāciju.',
+        'body_revoked' => 'Tava banka vai Enable Banking atsauca piekļuvi, tāpēc sinhronizācija apstājās. Pēdējā veiksmīgā sinhronizācija bija :when. Savienojies no jauna, lai tā turpinātos.',
         'never' => 'nekad',
         'reconnect' => 'Savienot no jauna',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking īslaicīgi nav pieejams. Mēģiniet vēlreiz pēc brīža.',
         'new_found' => 'Atrasti :count jaunu darījumu.|Atrasts :count jauns darījums.|Atrasti :count jauni darījumi.',
         'none' => 'Nav jaunu darījumu.',
+        'none_importable' => 'Tava banka atsūtīja darījumus, bet nevienu no tiem neizdevās reģistrēt. Atver importa pārskatu, lai redzētu kāpēc.',
+        'in_progress' => 'Sinhronizācija jau notiek. Mēģiniet vēlreiz pēc brīža.',
+        'truncated' => 'Tavai bankai bija vairāk darījumu, nekā viena sinhronizācija spēj ielādēt, tāpēc šī izpilde tika apturēta pāragri. Nekas netika reģistrēts kā sinhronizēts — nākamā sinhronizācija sāksies tajā pašā vietā.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Savienojiet banku no jauna',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Vispirms pabeidziet atvērtās banku saskarnes iestatīšanu.',
         'no_bank_chosen' => 'Pirms savienošanas izvēlieties banku.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking atgrieza nedrošu piekrišanas URL.',
         'no_authorization_code' => 'Enable Banking atzvana atbildē nebija autorizācijas koda.',
         'no_session_id' => 'Enable Banking neatgrieza sesijas id.',
+        'oauth_state_mismatch' => 'Šī savienojuma saite ir beigusies vai jau izmantota. Sāciet bankas savienošanu no jauna.',
     ],
 ];

@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Označiti još :count iz',
     'batch_after' => '?',
+    'batch_confirm' => 'Označiti sve preostale transakcije od :name kao porezno priznate? Svaka od njih dobiva ovu kategoriju i ovu bilješku. Oznaka se poslije skida jedna po jedna transakcija.',
     'batch_tag_all' => 'Označi sve',
     'batch_dismiss' => 'Odbaci',
 ];

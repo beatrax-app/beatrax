@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Încarcă alt extras de cont',
 
+    'chain' => [
+        'heading' => 'Se rezolvă lanțurile…',
+        'pending' => 'În coadă. Rezolvarea lanțurilor va începe în curând.',
+        'running' => 'Se leagă lanțurile de finanțare și se descompun decontările din extras.',
+    ],
+
     'issues' => [
         'row' => 'Rândul :row: :reason',
         'file_stopped' => 'Fișierul nu a putut fi citit dincolo de rândul :row. Nimic după acel rând nu a fost importat.',

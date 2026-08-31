@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Експортирай PDF',
     'export_pdf_aria' => 'Експортирай PDF',
     'export_pdf_title' => 'Изтегли beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Отхвърли',
 
     'country_prompt_heading' => 'В коя държава подаваш данъчна декларация?',
     'country_prompt_body' => 'Можеш да промениш това по всяко време от Настройки → :section.',

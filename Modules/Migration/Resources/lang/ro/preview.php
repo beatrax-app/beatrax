@@ -16,7 +16,9 @@ return [
         'budget' => 'Luni de buget',
     ],
 
-    'all_clean' => 'Totul a fost mapat curat — nimic nu îți cere atenția înainte de a confirma.',
+    'all_clean' => 'Totul a fost mapat curat — nu e nimic aici de decis.',
+
+    'nothing_staged' => 'Acest export nu conținea nimic de importat — nu este nimic de confirmat aici.',
 
     'groups' => [
         'conflict' => 'Necesită decizia ta',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Aceasta va crea sau actualiza numărul afișat mai sus în categoriile, bugetele și registrul tău.',
     'discard_button' => 'Renunță la import',
+    'discard_confirm' => 'Renunți la acest import? Tot ce a fost citit din fișierul tău de export se șterge aici, iar ca să îl recuperezi trebuie să încarci și să procesezi din nou tot fișierul. În registrul tău nu a ajuns încă nimic.',
     'confirm_button' => 'Confirmă importul',
 ];

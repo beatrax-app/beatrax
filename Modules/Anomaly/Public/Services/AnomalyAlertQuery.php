@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
 use Modules\Anomaly\Internal\Mapping\AnomalyAlertDtoMapper;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
@@ -21,9 +22,10 @@ final readonly class AnomalyAlertQuery
 {
     use CoercesScalars;
 
-    // Despite the name, nothing is held back: the page renders all 26 and reads
-    // a full 26 as "there may be more", seeding the next cursor off the last row.
-    public const PAGE_SIZE_WITH_LOOKAHEAD = 26;
+    // The default window when a caller names none. A caller that renders a page
+    // asks for one row more than it will show, so the extra row is the evidence
+    // of more rather than a full page being read as one.
+    public const int PAGE_SIZE_WITH_LOOKAHEAD = 26;
 
     public function __construct(
         private DatabaseManager $db,
@@ -100,11 +102,10 @@ final readonly class AnomalyAlertQuery
             ->get(['reasons']);
 
         $breakdown = [];
+        /** @var stdClass $row */
         foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $reasons = self::decodeReasons($row->reasons ?? null);
-            foreach ($reasons as $reason) {
-                $breakdown[$reason] = ($breakdown[$reason] ?? 0) + 1;
+            foreach (self::decodeReasons($row->reasons ?? null) as $reason) {
+                $breakdown[$reason->value] = ($breakdown[$reason->value] ?? 0) + 1;
             }
         }
 
@@ -164,7 +165,7 @@ final readonly class AnomalyAlertQuery
             /** @var stdClass $row */
             $txnId = self::toInt($row->transaction_id ?? null);
             $counterpartyId = $counterpartyByTxn[$txnId] ?? 0;
-            $result[] = AnomalyAlertDtoMapper::hydrate($row, $displayNames[$counterpartyId] ?? '', $this->baseCurrency->code());
+            $result[] = AnomalyAlertDtoMapper::hydrate($row, $displayNames[$counterpartyId] ?? '', $this->baseCurrency->forUser($user));
         }
 
         return $result;
@@ -247,7 +248,7 @@ final readonly class AnomalyAlertQuery
     }
 
     /**
-     * @return list<string>
+     * @return list<AnomalyDetector>
      */
     private static function decodeReasons(mixed $value): array
     {
@@ -255,14 +256,6 @@ final readonly class AnomalyAlertQuery
             return [];
         }
 
-        $decoded = json_decode($value, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map(static fn (mixed $r): string => is_string($r) ? $r : '', $decoded),
-            static fn (string $r): bool => $r !== '',
-        ));
+        return AnomalyDetector::listFrom(json_decode($value, true));
     }
 }

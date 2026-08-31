@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Säännöt pysyvät tässä laitteessa. Niitä ei jaeta muiden laitteidesi kanssa.',
 
     'reapply' => 'Käytä sääntöjä historiaan uudelleen',
+    'reapply_confirm' => 'Käytetäänkö kaikkia sääntöjä uudelleen koko historiaasi? Jokainen kategoria, vastapuoli, muistiinpano ja verotunniste, jonka sääntö on asettanut, kirjoitetaan yli. Käsin asettamasi tiedot säilyvät, samoin kaikki täsmäytetyllä tiliotteella oleva. Mikään ei palauta vanhoja arvoja.',
     'reapplying' => 'Käytetään uudelleen…',
     'new_rule' => 'Uusi sääntö',
 
-    'reapply_progress_lead' => 'Sääntöjä käytetään uudelleen…',
-    'reapply_progress_of' => '/',
-    'reapply_progress_trail' => 'tapahtumaa tarkistettu',
+    'reapply_progress' => 'Sääntöjä käytetään uudelleen… :checked / :count tapahtuma tarkistettu|Sääntöjä käytetään uudelleen… :checked / :count tapahtumaa tarkistettu',
 
     'empty_heading' => 'Ei vielä sääntöjä',
     'empty_body' => 'Säännöt tunnistavat tapahtumia useilla ehdoilla ja tekevät kategoria-, vastapuoli-, muistiinpano- ja verotunnistemuutokset automaattisesti — tuonnin yhteydessä ja aina kun käytät niitä uudelleen olemassa olevaan historiaasi.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Luotu',
     'col_row_actions' => 'Toiminnot',
     'inactive_badge' => 'Pois',
+    'combinator_all' => 'KAIKKI',
+    'combinator_any' => 'MIKÄ TAHANSA',
     'inactive_title' => 'Tämä sääntö ei ole käytössä. Sääntö kytkeytyy pois, kun sen osoittama luokka tai vastapuoli poistetaan.',
 
     'more_conditions' => '+:count muuta',

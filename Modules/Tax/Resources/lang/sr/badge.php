@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Izmeni poresku oznaku: :label',
     'tag' => 'Označi',
     'tag_aria' => 'Označi kao poreski relevantno',
+    'tag_caption' => 'Označi',
 ];

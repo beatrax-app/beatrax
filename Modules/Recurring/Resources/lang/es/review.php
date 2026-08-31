@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Editar el nombre',
     'edit_name_aria' => 'Cambiar el nombre de la serie recurrente :id',
     'new_name_label' => 'Nombre nuevo para esta serie',
+    'load_more' => 'Cargar más',
     'save' => 'Guardar',
 
     'toast' => [

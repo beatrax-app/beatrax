@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Elvetve — Visszavonás',
+        'dismissed' => 'Elvetve',
         'restored' => 'Visszaállítva',
     ],
 ];

@@ -5,10 +5,12 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
+use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
@@ -44,7 +46,7 @@ function rcreAccount(User $user): Account
 /**
  * @return array{tx: Transaction, conflictId: int}
  */
-function rcreSeed(User $user, Account $account, string $stored, string $incoming): array
+function rcreSeed(User $user, Account $account, string $stored, string $incoming, string $field = 'counterparty_name'): array
 {
     static $idx = 0;
     $idx++;
@@ -72,7 +74,8 @@ function rcreSeed(User $user, Account $account, string $stored, string $incoming
         'currency' => 'EUR',
         'settled_amount_minor' => -2500,
         'settled_currency' => 'EUR',
-        'counterparty_name' => $stored,
+        'counterparty_name' => $field === 'counterparty_name' ? $stored : 'RCRE MERCHANT',
+        'description' => $field === 'description' ? $stored : null,
         'counterparty_normalized' => 'rcre merchant',
         'normalization_version' => 1,
         'source_format' => 'paypal-csv',
@@ -86,7 +89,7 @@ function rcreSeed(User $user, Account $account, string $stored, string $incoming
     $conflictId = (int) app(DatabaseManager::class)->connection()->table('pending_enrichment_conflicts')->insertGetId([
         'user_id' => $user->id,
         'transaction_id' => $tx->id,
-        'field_name' => 'counterparty_name',
+        'field_name' => $field,
         'stored_value' => json_encode($stored, JSON_THROW_ON_ERROR),
         'incoming_value' => json_encode($incoming, JSON_THROW_ON_ERROR),
         'incoming_source_format' => 'paypal-receipt',
@@ -106,7 +109,7 @@ it('encrypts the incoming value before the transactions UPDATE for an encrypted 
     $seeded = rcreSeed($user, $account, stored: 'NLPAYPAL ALBERT HEIJN', incoming: 'Albert Heijn');
 
     $resolve = app(ApplyReceiptConflictResolution::class);
-    $count = $resolve($user, 'prefer_receipt');
+    $count = $resolve($user, ReceiptConflictChoice::PreferReceipt, $seeded['conflictId']);
 
     expect($count)->toBe(1);
 
@@ -129,7 +132,7 @@ it('keeps the stored value untouched for prefer_first_write under an encrypted u
     $seeded = rcreSeed($user, $account, stored: 'NLPAYPAL ALBERT HEIJN', incoming: 'Albert Heijn');
 
     $resolve = app(ApplyReceiptConflictResolution::class);
-    $resolve($user, 'prefer_first_write');
+    $resolve($user, ReceiptConflictChoice::PreferFirstWrite, $seeded['conflictId']);
 
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $seeded['tx']->id)->first();
     expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
@@ -142,10 +145,58 @@ it('stores plaintext for a non-encrypted user (pass-through parity, manual resol
     $seeded = rcreSeed($user, $account, stored: 'NLPAYPAL ALBERT HEIJN', incoming: 'Albert Heijn');
 
     $resolve = app(ApplyReceiptConflictResolution::class);
-    $resolve($user, 'prefer_receipt');
+    $resolve($user, ReceiptConflictChoice::PreferReceipt, $seeded['conflictId']);
 
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $seeded['tx']->id)->first();
     expect($row->counterparty_name)->toBe('Albert Heijn');
+})->group('ReceiptConflictEncryption');
+
+// The action carried its own copy of the encrypted-column list under a comment
+// saying it mirrored SensitiveFieldRegistry, and the copy had already gone
+// stale: the registry names five transactions columns and the copy named two.
+// A copy is only ever harmless by coincidence, and the failure it produces is a
+// plaintext write for an encrypted reader, which nothing else would catch.
+it('seals every conflict field the sync registry itself calls sensitive', function (): void {
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+
+    $sealable = array_values(array_filter(
+        EnrichmentConflictField::cases(),
+        static fn (EnrichmentConflictField $field): bool => $codec->isEncrypted('transactions', $field->value),
+    ));
+
+    expect($sealable)->not->toBeEmpty();
+
+    foreach ($sealable as $field) {
+        $user = rcreUser();
+        $session = $this->enablesEncryptionForUser($user);
+        $account = rcreAccount($user);
+
+        $seeded = rcreSeed($user, $account, stored: 'STORED '.$field->value, incoming: 'Receipt '.$field->value, field: $field->value);
+
+        $resolve = app(ApplyReceiptConflictResolution::class);
+        $resolve($user, ReceiptConflictChoice::PreferReceipt, $seeded['conflictId']);
+
+        $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $seeded['tx']->id)->first();
+        $stored = $row->{$field->value};
+
+        expect($stored)->not->toBe('Receipt '.$field->value, $field->value.' landed in plaintext for an encrypted reader.');
+        expect($codec->decryptValue('transactions', $field->value, $stored, $user->id, $session)['value'])
+            ->toBe('Receipt '.$field->value);
+    }
+})->group('ReceiptConflictEncryption');
+
+// The Sync module is the authority on which columns are sealed, and it answers
+// through a Public seam rather than a second list any caller has to keep.
+it('answers isEncrypted from the registry, for every conflict field and both ways', function (): void {
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+
+    expect($codec->isEncrypted('transactions', EnrichmentConflictField::CounterpartyName->value))->toBeTrue();
+    expect($codec->isEncrypted('transactions', EnrichmentConflictField::Description->value))->toBeTrue();
+    expect($codec->isEncrypted('transactions', EnrichmentConflictField::Currency->value))->toBeFalse();
+    expect($codec->isEncrypted('transactions', EnrichmentConflictField::AmountMinor->value))->toBeFalse();
+    expect($codec->isEncrypted('transactions', 'counterparty_iban'))->toBeTrue();
 })->group('ReceiptConflictEncryption');
 
 it('ReceiptConflictQuery displays the plaintext stored/incoming values (no ciphertext leak to the toast/UI)', function (): void {

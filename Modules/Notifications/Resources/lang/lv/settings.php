@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Par ko paziņot',
+    'background_note' => 'Beatrax tos sagatavo, kamēr lietotne ir atvērta. Plānota izpilde fonā to nespēj — lietotnes bloķēšana glabā vienīgo atslēgu — tāpēc gaidošie tiek paņemti, kamēr turpini lietot lietotni.',
+    'background_note_phone' => 'Beatrax tos sagatavo, kamēr lietotne ir atvērta. Fonā tā to nevar — lietotnes bloķēšana glabā vienīgo atslēgu — tāpēc gaidošie pienāks nākamreiz, kad atvērsi lietotni.',
 
     'reminders' => [
         'label' => 'Maksājumu atgādinājumi',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Slēpt detaļas paziņojumos',
-        'help' => 'Rādīt summas un tirgotāju nosaukumus pašā paziņojuma joslā. Izslēdziet, ja jūsu ekrānu var redzēt citi.',
+        'help' => 'Slēpt summas un tirgotāju nosaukumus pašā paziņojuma joslā. Ieslēdziet, ja jūsu ekrānu var redzēt citi.',
     ],
 
     'save' => 'Saglabāt paziņojumu iestatījumus',

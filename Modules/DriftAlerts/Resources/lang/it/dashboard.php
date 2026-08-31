@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Avvisi di scostamento',
-    'aria' => 'Avvisi di scostamento — :count aperti, :amount di impatto annualizzato',
+    'aria' => 'Avvisi di scostamento — :count aperti, :impact',
     'open' => 'aperti',
-    'annualized_impact' => 'di impatto annualizzato',
+    'impact_rising' => ':amount di impatto annualizzato',
+    'impact_flat' => 'nessun costo annuo aggiuntivo',
 ];

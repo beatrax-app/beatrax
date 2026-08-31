@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaktion',
     'heading' => 'Transaktion',
+    'booked_on' => 'Bokförd :date',
 
     'counterparty' => 'Motpart',
     'description' => 'Beskrivning',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Anteckning (valfritt)',
         'tax_deductible' => 'Avdragsgill',
         'remove_leg_aria' => 'Ta bort den här kategorin',
+        'remove_leg_caption' => 'Ta bort',
         'add_category' => '+ Lägg till kategori',
         'soft_cap' => ':count av ~20 kategorier — överväg att gruppera små belopp.',
         'remaining_zero' => 'Återstår :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Ta bort transaktionen',
         'help' => 'Tar bort den här transaktionen permanent. Åtgärden kan inte ångras.',
         'button' => 'Ta bort',
-        'confirm_prompt' => 'Är du säker?',
+        'confirm_prompt' => 'Ta bort den här transaktionen? Anteckning, uppdelning och skatteetiketter följer med.',
         'confirm' => 'Ja, ta bort',
         'cancel' => 'Avbryt',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Visa kedjan',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Avstämd och låst',
+        'help' => 'En slutförd avstämning låste den här transaktionen. Kategori, anteckning, uppdelning och skatteetiketter står kvar tills du låser upp den.',
+        'button' => 'Lås upp för redigering',
+        'confirm_question' => 'Låsa upp den här transaktionen för redigering? Inget på den ändras, och nästa slutförda avstämning låser den igen.',
+        'cancel' => 'Låt den vara låst',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Den här transaktionen är avstämd. Häv avstämningen för att göra ändringar.',
         'reclassified_pair_removed' => 'Omklassificerad till :type — paret borttaget',
         'reclassified' => 'Omklassificerad till :type',
         'note_saved' => 'Anteckningen sparad',
         'unreconciled' => 'Avstämningen hävd — du kan redigera transaktionen igen.',
+        'note_too_long' => 'En anteckning är högst :max tecken.|En anteckning är högst :max tecken.',
         'counterparty_updated' => 'Motparten uppdaterad',
         'goal_attributed' => 'Räknas mot det här målet',
         'goal_attribution_removed' => 'Räknas inte längre mot det här målet',

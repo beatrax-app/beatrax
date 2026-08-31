@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Il tuo dispositivo ha rifiutato di salvare la chiave. Lo sblocco biometrico non è disponibile.',
     'heading' => 'Blocco app',
 
-    'moved_help' => 'Il PIN, i tempi di blocco automatico e lo sblocco biometrico si trovano nelle impostazioni di sincronizzazione di questo dispositivo.',
-    'moved_cta' => 'Apri Sincronizzazione e dispositivo',
-
     'toggle_label' => "Blocca l'app con un PIN",
     'toggle_description' => "Sostituisce l'accesso quotidiano con un PIN. Le sessioni restano attive per 30 giorni.",
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Mantieni il PIN',
 
     'error_pin_too_short' => 'Il PIN deve avere almeno 6 cifre.',
-    'error_pin_digits' => 'Il PIN deve avere da 6 a 10 cifre — solo numeri.',
+    'error_pin_digits' => 'Il PIN deve avere da :min a :max cifre — solo numeri.',
     'error_pin_mismatch' => 'I PIN non coincidono. Riprova.',
     'error_pin_required' => 'Inserisci il tuo PIN.',
     'error_pin_incorrect' => 'PIN errato.',

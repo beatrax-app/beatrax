@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Zincir çözümleyicinin otomatik onaylayamadığı aday bağlantıları onayla veya reddet.',
 
     'empty_heading' => 'İncelenecek bir şey yok',
-    'empty_body' => 'Her zincir halkası onaylanmış ya da reddedilmiş durumda. Yeni adaylar, içe aktarmalar geldikçe burada görünür.',
+    'empty_body' => 'Çözümleyicinin eşleştirebildiği her bağlantı onaylanmış ya da reddedilmiş durumda. Yeni adaylar, içe aktarmalar geldikçe burada görünür.',
 
     'auto_confirm_nudge' => 'Bir onay daha verirsen benzer bağlantılar otomatik onaylanır.',
 

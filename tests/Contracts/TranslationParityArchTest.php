@@ -9,6 +9,11 @@ use Modules\Core\Public\Enums\Locale;
 // English (a proper noun, a symbol) still passes. Placeholders are checked too —
 // a dropped :count or %s renders the token literally to the reader.
 
+// Parity is agreement, which is not completeness. A key missing from all
+// twenty-six passes here by construction; EveryKeyACallSiteNamesResolvesToALine
+// and EveryTranslatedLineReachesAReader are the two rules that answer that.
+// @link ../../.docs/conventions/a-call-site-names-a-key-that-resolves.md
+
 /**
  * @param  array<array-key, mixed>  $translations
  * @return list<string>
@@ -230,6 +235,21 @@ it('carries every en placeholder into every supported locale', function (): void
     expect($problems)->toBe([], "translation placeholders broken:\n  ".implode("\n  ", $problems));
 });
 
+/**
+ * Whether a segment carries an explicit {0} or [2,*] range. MessageSelector
+ * matches those against the number BEFORE the rule table is consulted, and
+ * the regex is its own so the two spellings of "a range" cannot drift.
+ */
+function translationParityCarriesRange(string $segment): bool
+{
+    return preg_match('/^[\{\[]([-?\d|*,\.*]*)[\}\]](.*)/s', $segment, $matches) === 1
+        && count($matches) === 3;
+}
+
+// A floor and a ceiling. A segment past the count the locale selects between
+// is text no number can reach: trans_choice asks the rule table for an index
+// and returns that segment, so a second Turkish form renders for no count at
+// all and reads to its author as though it shipped.
 it('gives every pluralised string as many segments as the locale selects between', function (): void {
     $problems = [];
     foreach (translationParityTargetLocales() as $locale) {
@@ -253,9 +273,20 @@ it('gives every pluralised string as many segments as the locale selects between
                     continue;
                 }
 
-                $actual = substr_count($translatedStrings[$path], '|') + 1;
+                $segments = explode('|', $translatedStrings[$path]);
+                $actual = count($segments);
                 if ($actual < $forms) {
                     $problems[] = $rel.' ['.$path.'] '.$locale.': needs '.$forms.' segments, has '.$actual;
+                }
+
+                // stripConditions() keeps the whole list and the rule index
+                // addresses it, so a segment past the count the table selects
+                // between is reachable only through a range of its own.
+                foreach ($segments as $index => $segment) {
+                    if ($index >= $forms && ! translationParityCarriesRange($segment)) {
+                        $problems[] = $rel.' ['.$path.'] '.$locale.': segment '
+                            .($index + 1).' is past the '.$forms.' the rule table selects between, and carries no range';
+                    }
                 }
             }
         }

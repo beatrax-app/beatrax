@@ -12,6 +12,7 @@ return [
         'locked' => 'Atrakink programėlę, kad tęstum sąranką.',
         'revoked' => 'Šis įrenginys pašalintas kitame jūsų įrenginyje. Susiekite iš naujo, kad sinchronizavimas tęstųsi.',
     ],
+    'unlock_cta' => 'Atrakink programėlę',
     'step' => [
         'connect' => 'Jungiamasi prie kito įrenginio',
         'keys' => 'Gaunami šifravimo raktai',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Atkuriama tavo istorija',
     ],
     'step_current' => 'dabartinis žingsnis',
-    'working' => [
-        'connect' => 'Bandoma pasiekti kitą įrenginį…',
-        'keys' => 'Atrakinami tavo duomenys…',
-        'transfer' => 'Prašoma tavo istorijos…',
-        'rebuild' => 'Atkuriama tavo istorija — tai gali užtrukti minutę.',
-    ],
     'page_title' => 'Ruošiama…',
     'resuming' => 'Tęsiama sąranka…',
     'setting_up' => 'Ruošiamas šis įrenginys…',
     'progress_aria' => 'Sąrankos eiga',
     'records' => ':count įrašas|:count įrašai|:count įrašų',
-    'records_preparing' => 'Laukiama kito įrenginio…',
 ];

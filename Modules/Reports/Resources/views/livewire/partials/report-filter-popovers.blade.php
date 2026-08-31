@@ -13,7 +13,12 @@
     Variables in scope: $availableAccounts, $availableCategories,
     $availableCounterparties (list<array{id:int,name:string,...}>),
     $filterAccounts, $filterCategories, $filterCounterparties (list<int>),
-    $filterAmountMin, $filterAmountMax, $filterAmountDir (string).
+    $filterAmountMin, $filterAmountMax, $filterAmountDir (string),
+    $showTransactionFilters (bool).
+
+    The account chip is unconditional; the other three select on transactions,
+    which a net-worth balance has none of, so they are not offered for it
+    rather than being offered and then dropped.
 --}}
 
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
@@ -58,7 +63,7 @@
 @endif
 
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
-@if (! empty($availableCategories ?? []))
+@if (($showTransactionFilters ?? true) && ! empty($availableCategories ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
         <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
@@ -98,7 +103,7 @@
 @endif
 
 {{-- ─── Counterparty chip (999.6-02 — new dimension, no prior UI precedent) ── --}}
-@if (! empty($availableCounterparties ?? []))
+@if (($showTransactionFilters ?? true) && ! empty($availableCounterparties ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
         <span class="srch-chip {{ ! empty($filterCounterparties ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
@@ -138,8 +143,15 @@
 @endif
 
 {{-- ─── Amount chip ────────────────────────────────────────────────────── --}}
+@if ($showTransactionFilters ?? true)
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
+        // The reader's currency decides the SCALE as well as the symbol, on
+        // the same footing ReportAggregator::amountToMinor() reads the bound
+        // at: parsed at a hundredth, a yen reader's "5000" was labelled
+        // Y500,000 over a report narrowed at Y5,000.
+        $amountChipCurrency = BaseCurrency::value();
+
         $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value;
         $amountLabel = Lang::get('reports::builder.filter.amount').' &#9662;';
         if ($amountActive) {
@@ -150,14 +162,14 @@
             }
             if (($filterAmountMin ?? '') !== '') {
                 $amountLabel .= ' &gt; '.Money::ofMinor(
-                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? '')) ?? 0,
-                    BaseCurrency::value(),
+                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? ''), $amountChipCurrency) ?? 0,
+                    $amountChipCurrency,
                 )->format();
             }
             if (($filterAmountMax ?? '') !== '') {
                 $amountLabel .= ' &lt; '.Money::ofMinor(
-                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? '')) ?? 0,
-                    BaseCurrency::value(),
+                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? ''), $amountChipCurrency) ?? 0,
+                    $amountChipCurrency,
                 )->format();
             }
         }
@@ -187,10 +199,11 @@
             </div>
             <div class="srch-amount-range">
                 {{-- Debounced so rapid typing doesn't fire an overlapping Livewire round trip per keystroke (Livewire's own textbook race condition for un-debounced live text/number inputs). --}}
-                <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.min_aria') }}" />
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}" placeholder="{{ Lang::get('reports::builder.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.min_aria') }}" />
                 <span class="srch-date-sep">–</span>
-                <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.max_aria') }}" />
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}" placeholder="{{ Lang::get('reports::builder.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.max_aria') }}" />
             </div>
         </div>
     </div>
 </div>
+@endif

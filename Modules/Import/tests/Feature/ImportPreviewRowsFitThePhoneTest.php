@@ -84,7 +84,7 @@ it('stacks every name-this-account row on a phone, so its button has a row to it
     $blade = (string) file_get_contents(base_path('Modules/Import/Resources/views/livewire/preview-wizard.blade.php'));
 
     $rows = substr_count($blade, 'import::preview.save_name');
-    expect($rows)->toBe(3)
+    expect($rows)->toBe(4)
         ->and(substr_count($blade, 'flex flex-col gap-2 sm:flex-row sm:items-end'))->toBe($rows)
         ->and($blade)->not->toContain('<div class="flex items-end gap-2">');
 });

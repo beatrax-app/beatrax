@@ -79,7 +79,11 @@
                                 <span role="img" class="text-slate-500" aria-label="{{ Lang::get('dev::doctor.aria_info') }}">ℹ</span>
                         @endswitch
                         <span class="font-mono text-xs w-48 truncate">{{ $row['label'] }}</span>
-                        <span class="text-[var(--color-text-muted)] flex-1">{{ $row['detail'] }}</span>
+                        {{-- whitespace-pre-line: a probe message can span lines
+                             (sqlite3 prints its usage hint under its error) and
+                             the second line is usually the half that says what
+                             actually happened. --}}
+                        <span class="whitespace-pre-line text-[var(--color-text-muted)] flex-1">{{ $row['detail'] }}</span>
                     </li>
                 @endforeach
             </ul>

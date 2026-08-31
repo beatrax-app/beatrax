@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'baastase :baseline → tegelik: :actual',
+    'charged' => 'debiteeritud :actual',
     'detected' => 'tuvastatud :date',
     'sensitivity' => 'tundlikkus :percent 100-st',
 

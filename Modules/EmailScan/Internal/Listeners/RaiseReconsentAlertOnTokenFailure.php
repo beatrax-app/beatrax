@@ -9,22 +9,20 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class RaiseReconsentAlertOnTokenFailure
+final readonly class RaiseReconsentAlertOnTokenFailure
 {
-    private const MESSAGE_GMAIL = 'Reconnect your Gmail';
-
-    private const MESSAGE_MICROSOFT = 'Reconnect your Outlook';
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly LoggerInterface $logger,
-        private readonly SystemAlertWriter $alerts,
+        private DatabaseManager $db,
+        private LoggerInterface $logger,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function handle(InboxTokenFailed $event): void
@@ -40,12 +38,13 @@ final class RaiseReconsentAlertOnTokenFailure
             // A lapsed mail token is a fact about the account, not this
             // machine, so the row travels — otherwise the other device keeps
             // prompting long after the user reconnected.
+            $line = self::lineFor($event->provider);
             $this->alerts->raiseForUser(
                 userId: $userId,
                 kind: OAuthAlertKind::ReconsentRequired->value,
                 severity: SystemAlertSeverity::Warning->value,
-                message: $this->messageFor($event->provider),
-                metadata: [
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line) + [
                     'inbox_id' => $inboxId,
                     'provider' => $event->provider,
                 ],
@@ -100,11 +99,12 @@ final class RaiseReconsentAlertOnTokenFailure
             ->whereNull('acknowledged_at');
     }
 
-    private function messageFor(string $provider): string
+    // The provider is a brand and rides as a value; the sentence around it is
+    // the banner's own line, so both halves reach the reader the same way.
+    private static function lineFor(string $provider): CopyLine
     {
-        return match ($provider) {
-            MailProvider::Microsoft->value => self::MESSAGE_MICROSOFT,
-            default => self::MESSAGE_GMAIL,
-        };
+        return CopyLine::of('core::alerts.messages.oauth_reconsent', [
+            'provider' => $provider === MailProvider::Microsoft->value ? 'Outlook' : 'Gmail',
+        ]);
     }
 }

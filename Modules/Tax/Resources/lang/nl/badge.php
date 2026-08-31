@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Belastingtag bewerken: :label',
     'tag' => 'Taggen',
     'tag_aria' => 'Tag als belastingrelevant',
+    'tag_caption' => 'Tag',
 ];

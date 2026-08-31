@@ -12,8 +12,8 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class BackfillWindowModal extends Component
 {
@@ -37,8 +37,12 @@ final class BackfillWindowModal extends Component
         Dispatcher $bus,
         Clock $clock,
     ): void {
+        $this->errorMessage = '';
+
         if ($this->inboxId === null) {
-            throw new NotFoundHttpException('Inbox not found.');
+            $this->errorMessage = Lang::get('core::errors.no_longer_here');
+
+            return;
         }
 
         $user = $currentUser->user();
@@ -48,8 +52,13 @@ final class BackfillWindowModal extends Component
             ->where('user_id', $user->id)
             ->first(['id']);
 
+        // The modal outlives the row behind it: disconnect the mailbox in
+        // another tab and this submit still names its id. The message is the
+        // answer, not a 404 page over the top of the wizard.
         if ($row === null) {
-            throw new NotFoundHttpException('Inbox not found.');
+            $this->errorMessage = Lang::get('core::errors.no_longer_here');
+
+            return;
         }
 
         $clamped = max(1, min(12, $this->months));

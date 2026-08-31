@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Największe wydatki',
     'no_expenses' => 'Brak skategoryzowanych wydatków.',
+    'top_spending_refunded' => 'Poza rankingiem — :amount wróciło',
 
     'recent_transactions' => 'Ostatnie transakcje',
     'view_all' => 'Zobacz wszystkie',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategoria',
     'th_amount' => 'Kwota',
     'uncategorized' => 'Bez kategorii',
+
+    'jump_to_records' => [
+        'body' => 'Nic w tym okresie. Twoje najnowsze transakcje nadal tu są.',
+        'action' => 'Pokaż okres :period',
+    ],
 
     'reauth' => [
         'title' => 'Skrzynka wymaga ponownego połączenia.',

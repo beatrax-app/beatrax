@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Transport\FixedWindowThrottle;
 
 // Per-source-IP fixed-window throttle, so a pairing route cannot be used as a
 // cheap probe for whether a pairing is in flight. Each route holds its OWN
@@ -15,8 +16,6 @@ final class PairingOfferRateLimiter
     // A human types one code, gets it wrong once or twice, and is done.
     // Anything past a handful inside a minute is not that.
     public const int MAX_PER_WINDOW = 10;
-
-    private const int WINDOW_SECONDS = 60;
 
     // Cap on distinct source keys held at once: the prune sweep runs only
     // when the map grows past this, so ordinary traffic never pays for it.
@@ -42,7 +41,7 @@ final class PairingOfferRateLimiter
         $now = $this->clock->now()->getTimestamp();
         $window = $this->windows[$sourceKey] ?? null;
 
-        if ($window === null || $now - $window['start'] >= self::WINDOW_SECONDS) {
+        if ($window === null || $now - $window['start'] >= FixedWindowThrottle::windowSeconds()) {
             if ($window === null && count($this->windows) >= self::MAX_TRACKED_SOURCES) {
                 $this->pruneExpired($now);
             }
@@ -67,7 +66,7 @@ final class PairingOfferRateLimiter
     private function pruneExpired(int $now): void
     {
         foreach ($this->windows as $key => $window) {
-            if ($now - $window['start'] >= self::WINDOW_SECONDS) {
+            if ($now - $window['start'] >= FixedWindowThrottle::windowSeconds()) {
                 unset($this->windows[$key]);
             }
         }

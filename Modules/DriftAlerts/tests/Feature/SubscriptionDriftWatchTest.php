@@ -117,6 +117,67 @@ it('renders the drift watch page', function (): void {
         ->assertSee('Netflix');
 });
 
+// The evaluator refuses a zero prior rather than divide by it, and this page
+// answers the same question over the whole history. Taking magnitudes first
+// hid the refusal and printed a percentage of nothing.
+it('drops a series whose first charge was zero rather than call it +0.0%', function (): void {
+    $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'WaivedFirstMonth');
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-03-01', 0);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-05-01', -5000);
+
+    expect(app(SubscriptionDriftWatchQuery::class)->forUser($this->user))->toBe([]);
+});
+
+// A refund is not a price. -10.00, -10.00, +20.00 read as a +100.0% rise,
+// which the evaluator explicitly will not say.
+it('drops a series whose latest occurrence flipped sign', function (): void {
+    $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'RefundedPlan');
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-03-01', -1000);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-04-01', -1000);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-05-01', 2000);
+
+    expect(app(SubscriptionDriftWatchQuery::class)->forUser($this->user))->toBe([]);
+});
+
+it('keeps a series whose price genuinely fell', function (): void {
+    $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'CheaperNow');
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-03-01', -2000);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-05-01', -1500);
+
+    $rows = app(SubscriptionDriftWatchQuery::class)->forUser($this->user);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->deltaMinor)->toBe(-500)
+        ->and($rows[0]->direction())->toBe('down');
+});
+
+// A sign is a claim of movement. A subscription that has not moved carried
+// one anyway, and a change too small to render rounded to a signed zero.
+it('prints a flat subscription without a sign', function (): void {
+    $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'SteadyPlan');
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-03-01', -1799);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-05-01', -1799);
+
+    Livewire::test(SubscriptionDriftWatchPage::class)
+        ->assertOk()
+        ->assertSee('SteadyPlan')
+        ->assertDontSee('+€0.00')
+        ->assertDontSee('+0.0%')
+        ->assertSee('0.0%');
+});
+
+it('does not print a signed zero for a change that rounds away', function (): void {
+    $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'BarelyCheaper');
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-03-01', -100000);
+    driftWatchOccurrence($this->db, $this->user->id, $id, '2026-05-01', -99999);
+
+    Livewire::test(SubscriptionDriftWatchPage::class)
+        ->assertOk()
+        ->assertSee('BarelyCheaper')
+        ->assertDontSee('−0.0%')
+        ->assertSee('0.0%');
+});
+
 it('uses the true first charge as the baseline even past the chart point cap', function (): void {
     $id = driftWatchSeries($this->db, $this->user->id, 'expense', 'LongLived');
     // First charge €5.00, then 25 more at €15.00 — 26 points, past the 24-point
@@ -127,7 +188,7 @@ it('uses the true first charge as the baseline even past the chart point cap', f
             $this->db,
             $this->user->id,
             $id,
-            CarbonImmutable::parse('2024-01-01')->addMonths($m)->toDateString(),
+            CarbonImmutable::parse('2024-01-01')->addMonthsNoOverflow($m)->toDateString(),
             -1500,
         );
     }

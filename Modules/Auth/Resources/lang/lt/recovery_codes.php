@@ -23,5 +23,6 @@ return [
         'body' => 'Atkūrimo kodai yra vienintelis būdas grįžti į savo paskyrą, jei pamirši slaptažodį.',
         'warning' => 'Jie saugomi maiša, todėl jų parodyti iš naujo negalima. Naujas rinkinys iškart panaikina senąjį.',
         'regenerate' => 'Sukurti naujus kodus',
+        'regenerate_confirm' => 'Sukurti naują atkūrimo kodų rinkinį? Dabartinis rinkinys nustoja veikti tą akimirką, kai sukuriamas naujasis, ir daugiau jo parodyti nebus galima — atspausdinta ar nusirašyta kopija tampa nebenaudinga. Išsaugok naujus kodus dar šiame puslapyje.',
     ],
 ];

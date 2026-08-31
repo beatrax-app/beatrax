@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Slet :count job|Slet :count job',
     'empty_pending' => 'Køen er tom.',
     'empty_failed' => 'Ingen mislykkede job.',
-    'empty_batches' => 'Ingen aktive batches.',
+    'empty_batches' => 'Ingen batches.',
     'select_aria' => 'Vælg',
     'select_row_aria' => 'Vælg række :key',
     'col_id' => 'Id',
     'col_queue' => 'Kø',
     'col_attempts' => 'Forsøg',
+    'col_state' => 'Status',
     'col_created' => 'Oprettet',
     'col_uuid' => 'UUID',
     'col_failed' => 'Mislykket',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Afventende',
     'col_actions' => 'Handlinger',
     'delete_job' => 'Slet job',
+    'worker_running' => 'Worker kører den',
     'delete_pending_confirm' => 'Slet afventende job #:key?',
     'retry_job' => 'Prøv job igen',
     'forget_confirm' => 'Fjern mislykket job :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'De valgte mislykkede job bliver lagt i køen igen, så workeren kan prøve dem igen.',
     'cancel' => 'Annullér',
 
+    'state' => [
+        'available' => 'Klar',
+        'reserved' => 'Reserveret',
+        'scheduled' => 'Planlagt',
+    ],
+
     'tab' => [
         'pending' => 'Afventende',
         'failed' => 'Mislykkede',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Afventende job slettet',
+        'pending_already_gone' => 'Jobbet var der allerede ikke længere',
         'failed_requeued' => 'Mislykket job lagt i køen igen',
         'failed_removed' => 'Mislykket job fjernet',
         'batch_cancelled' => 'Batch annulleret',
         'batch_deleted' => 'Batch slettet',
         'batch_failures_requeued' => 'Mislykkede batchjob lagt i køen igen',
+        'batch_failures_none' => 'Ingen fejl tilbage i batchen at sætte i kø igen',
         'failed_jobs_requeued' => 'Mislykkede job lagt i køen igen',
+        'failed_jobs_none' => 'Ingen mislykkede job tilbage at sætte i kø igen',
         'bulk_refused' => 'Massesletning afvist — :reason',
         'rows_deleted' => 'Valgte rækker slettet',
     ],

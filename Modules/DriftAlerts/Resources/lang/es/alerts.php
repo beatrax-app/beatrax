@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Alertas de desviación',
-    'heading' => 'Alertas',
     'intro_anomaly' => 'Cargos concretos que parecen fuera de lo habitual en tu caso.',
     'intro_drift' => 'Series recurrentes aprobadas cuyo último cargo se ha salido de tu umbral.',
     'adjust_threshold' => 'Ajustar el umbral →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/año',
         'meta_prior_now' => 'antes :prior → ahora :now',
         'meta_detected' => 'detectado el :date',
-        'meta_threshold' => 'umbral ±:percent%',
+        'meta_threshold' => 'umbral ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/año)',
         'cancel_impact' => 'Cancela esto → ahorra :amount/año',
         'cadence_flipped' => 'La frecuencia ha cambiado — también aparece en',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Esa alerta ya no existe.',
         'acknowledged' => 'Confirmada',
         'snoozed' => 'Pospuesta',
         'dismissed' => 'Descartada',

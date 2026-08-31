@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Ukloni iz prikaza (ne mijenja log datoteku)',
     'dismiss_aria' => 'Ukloni unos zapisnika iz prikaza',
     'totals' => [
-        'showing' => 'Prikazano',
-        'of' => 'od',
-        'received' => 'primljeno (međuspremnik do 10 tis.)',
-        'lines_today' => 'redaka danas',
+        'showing' => 'Prikazano :shown od :count primljenog retka (međuspremnik do :cap)|Prikazano :shown od :count primljena retka (međuspremnik do :cap)|Prikazano :shown od :count primljenih redaka (međuspremnik do :cap)',
+        'lines_today' => ':count redak danas|:count retka danas|:count redaka danas',
+        'lines_today_capped' => 'više od :count retka danas|više od :count retka danas|više od :count redaka danas',
         'today' => 'danas',
-        'across' => 'u',
-        'daily_files' => 'dnevnih datoteka',
+        'all_files' => ':size u :count dnevnoj datoteci|:size u :count dnevne datoteke|:size u :count dnevnih datoteka',
     ],
 
     'status' => [

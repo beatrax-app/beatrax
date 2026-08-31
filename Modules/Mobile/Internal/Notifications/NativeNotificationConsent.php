@@ -13,9 +13,9 @@ use Throwable;
 // notification until POST_NOTIFICATIONS is granted, and the only way to be
 // granted is to ask; the OS shows its own dialog once and remembers the
 // answer, so calling this again after a refusal does nothing.
-final class NativeNotificationConsent implements SystemNotificationConsent
+final readonly class NativeNotificationConsent implements SystemNotificationConsent
 {
-    public function __construct(private readonly LoggerInterface $log) {}
+    public function __construct(private LoggerInterface $log) {}
 
     public function request(): void
     {

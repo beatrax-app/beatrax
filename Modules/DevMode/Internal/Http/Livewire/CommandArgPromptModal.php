@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Http\Livewire;
 
-use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
@@ -14,10 +13,12 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
+use Modules\DevMode\Internal\Process\CommandArgValidator;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
@@ -26,6 +27,17 @@ use Modules\DevMode\Public\Dto\CommandSpec;
 final class CommandArgPromptModal extends Component
 {
     use DispatchesToast;
+
+    // The layout mounts this component on every authenticated page, so the
+    // /dev route gate never sees it. EnsureDeveloperMode's predicate is
+    // restated here because a component reachable from the wire has to answer
+    // for itself; the layout condition below it is only the outer skin.
+    private static function isDeveloper(CurrentUser $user, DevConsoleBuildGate $build): bool
+    {
+        return $build->permits()
+            && $user->isAuthenticated()
+            && $user->user()->is_developer === true;
+    }
 
     // Locked because it selects the registry entry submit() resolves: a
     // client swap would spawn something other than what the user was shown.
@@ -48,8 +60,12 @@ final class CommandArgPromptModal extends Component
      * @param  array<string, mixed>  $prefill
      */
     #[On('command-args:prompt')]
-    public function open(string $name, DevCommandRegistry $registry, string $tier = CommandTier::Safe->value, array $prefill = []): void
+    public function open(string $name, DevCommandRegistry $registry, CurrentUser $user, DevConsoleBuildGate $build, string $tier = CommandTier::Safe->value, array $prefill = []): void
     {
+        if (! self::isDeveloper($user, $build)) {
+            return;
+        }
+
         $this->command = $name;
         $this->claimedTier = CommandTier::fromStored($tier);
         $this->values = [];
@@ -79,19 +95,21 @@ final class CommandArgPromptModal extends Component
         DevCommandRegistry $registry,
         CommandSpawner $spawner,
         CurrentUser $user,
-        ValidatorFactory $validator,
+        CommandArgValidator $validator,
+        DevConsoleBuildGate $build,
     ): void {
-        $this->submitError = '';
-
-        $spec = $this->spawnableSpec($registry);
-        if ($spec === null) {
+        if (! self::isDeveloper($user, $build)) {
             return;
         }
 
+        $this->submitError = '';
+
         // Null means a preflight refused the submission and has already put
         // its own message on $submitError.
-        $args = $this->acceptedArgs($spec, $validator);
-        if ($args === null) {
+        $spec = $this->spawnableSpec($registry);
+        $args = $spec === null ? null : $this->acceptedArgs($spec, $validator);
+
+        if ($spec === null || $args === null) {
             return;
         }
 
@@ -175,7 +193,7 @@ final class CommandArgPromptModal extends Component
     /**
      * @return array<string, mixed>|null
      */
-    private function acceptedArgs(CommandSpec $spec, ValidatorFactory $validator): ?array
+    private function acceptedArgs(CommandSpec $spec, CommandArgValidator $validator): ?array
     {
         $missing = $this->missingRequiredArgs($spec->argsSchema);
         if ($missing !== []) {
@@ -224,19 +242,10 @@ final class CommandArgPromptModal extends Component
     /**
      * @param  array<string, mixed>  $args
      */
-    private function argsSatisfyRules(CommandSpec $spec, array $args, ValidatorFactory $validator): bool
+    private function argsSatisfyRules(CommandSpec $spec, array $args, CommandArgValidator $validator): bool
     {
-        if ($spec->argsSchema === []) {
-            return true;
-        }
-
-        $argRules = [];
-        foreach ($spec->argsSchema as $argSpec) {
-            $argRules['args.'.$argSpec->name] = $argSpec->rules;
-        }
-
         try {
-            $validator->make(['args' => $args], $argRules)->validate();
+            $validator->assertValid($spec, $args);
         } catch (ValidationException $e) {
             $first = $e->validator->errors()->first();
             $this->submitError = $first !== ''
@@ -262,7 +271,7 @@ final class CommandArgPromptModal extends Component
             }
             $value = $this->values[$arg->name] ?? null;
             if ($value === null || $value === '' || $value === []) {
-                $missing[] = $arg->label !== '' ? $arg->label : $arg->name;
+                $missing[] = $arg->labelKey !== '' ? Lang::get($arg->labelKey) : $arg->name;
             }
         }
 

@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Vill du märka :count till från',
     'batch_after' => '?',
+    'batch_confirm' => 'Vill du märka alla återstående transaktioner från :name som avdragsgilla? Var och en får den här kategorin och den här anteckningen. Märkningen kan bara tas bort en transaktion i taget.',
     'batch_tag_all' => 'Märk alla',
     'batch_dismiss' => 'Stäng',
 ];

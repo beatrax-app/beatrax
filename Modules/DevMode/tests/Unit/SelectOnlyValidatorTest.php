@@ -70,12 +70,33 @@ it('accepts SELECT with leading block comment', function (): void {
     expect(true)->toBeTrue();
 });
 
-it('rejects a CTE that reads (first-token rule is uniform — WITH is always rejected)', function (): void {
-    // A read-only CTE is rejected on purpose: a first-token rule with no
-    // carve-outs cannot be talked past, and the operator can rewrite the CTE
-    // as a subquery.
-    expect(fn () => (new SelectOnlyValidator)->validate('WITH x AS (SELECT 1) SELECT * FROM x'))
+it('accepts a CTE that only reads', function (): void {
+    (new SelectOnlyValidator)->validate('WITH x AS (SELECT 1) SELECT * FROM x');
+    expect(true)->toBeTrue();
+});
+
+it('rejects a CTE whose body writes', function (): void {
+    expect(fn () => (new SelectOnlyValidator)->validate('WITH x AS (DELETE FROM t RETURNING *) SELECT * FROM x'))
         ->toThrow(ValidationException::class);
+});
+
+it('does not read a semicolon inside a string literal as a second statement', function (): void {
+    // A bank description carries semicolons, and the operator was told their
+    // WHERE clause was a stacked statement.
+    (new SelectOnlyValidator)->validate("SELECT * FROM transactions WHERE description = 'a; b'");
+    (new SelectOnlyValidator)->validate("SELECT ';' AS x");
+    expect(true)->toBeTrue();
+});
+
+it('does not read a semicolon inside a trailing comment as a second statement', function (): void {
+    (new SelectOnlyValidator)->validate('SELECT 1 -- note; still one statement');
+    (new SelectOnlyValidator)->validate('SELECT 1 /* note; still one statement */');
+    expect(true)->toBeTrue();
+});
+
+it('accepts a statement closed by a trailing semicolon', function (): void {
+    (new SelectOnlyValidator)->validate('SELECT 1;');
+    expect(true)->toBeTrue();
 });
 
 it('exposes the rejection reason on the ValidationException for diagnostics', function (): void {

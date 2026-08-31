@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Cihazın anahtarı saklamayı reddetti. Biyometrik kilit açma kullanılamıyor.',
     'heading' => 'Uygulama kilidi',
 
-    'moved_help' => 'PIN kodun, otomatik kilitleme süren ve biyometrik kilit açma, bu cihazın senkronizasyon ayarlarında yer alır.',
-    'moved_cta' => 'Senkronizasyon ve cihazı aç',
-
     'toggle_label' => 'Uygulamayı PIN ile kilitle',
     'toggle_description' => 'Günlük girişin yerini PIN alır. Oturumlar 30 gün açık kalır.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'PIN kodunu koru',
 
     'error_pin_too_short' => 'PIN en az 6 haneli olmalı.',
-    'error_pin_digits' => 'PIN 6 ila 10 haneli olmalı — yalnızca rakam.',
+    'error_pin_digits' => 'PIN :min ila :max haneli olmalı — yalnızca rakam.',
     'error_pin_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
     'error_pin_required' => 'PIN kodunu gir.',
     'error_pin_incorrect' => 'Hatalı PIN.',

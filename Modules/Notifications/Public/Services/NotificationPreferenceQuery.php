@@ -10,45 +10,63 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
-use Psr\Log\LoggerInterface;
 use stdClass;
 
 final readonly class NotificationPreferenceQuery
 {
     use CoercesScalars;
 
+    // The device_id an install with no sync identity writes under, which is
+    // the default state and a single-device install's whole life. Not a UUID
+    // on purpose: a real device_id always is, so this cannot collide with a
+    // peer's.
+    public const string UNPAIRED_DEVICE_ID = 'this-device';
+
     public function __construct(
         private DatabaseManager $db,
         private Dispatcher $events,
         private DeviceRegistryService $devices,
         private Clock $clock,
-        private LoggerInterface $logger,
     ) {}
 
-    // Falls back to the locked defaults when the device has no row or is
-    // unpaired; never throws, never returns null.
+    // Falls back to the locked defaults when this device has no row yet;
+    // never throws, never returns null.
     public function forCurrentDevice(User $user): NotificationPreferencesDto
     {
-        $deviceId = $this->devices->localDeviceId($user->id);
-
-        if ($deviceId === null) {
-            return NotificationPreferencesDto::defaults();
-        }
-
-        $row = $this->db->connection()->table('notification_preferences')
-            ->where('user_id', $user->id)
-            ->where('device_id', $deviceId)
-            ->first();
+        $deviceId = $this->deviceKey($user->id);
+        $row = $this->rowFor($user->id, $deviceId);
 
         if (! $row instanceof stdClass) {
             return NotificationPreferencesDto::defaults($deviceId);
         }
 
         return self::hydrate($row, $deviceId, '');
+    }
+
+    // What this device writes its own row under. Pairing gives it a sync
+    // identity and this starts answering with that instead, which is why
+    // saveForCurrentDevice() carries the older row over.
+    private function deviceKey(int $userId): string
+    {
+        return $this->devices->localDeviceId($userId) ?? self::UNPAIRED_DEVICE_ID;
+    }
+
+    // A row written before this device had a sync identity is still this
+    // device's row, and reading past it would silently reset a paired
+    // install's settings to the defaults.
+    private function rowFor(int $userId, string $deviceId): ?stdClass
+    {
+        $row = $this->db->connection()->table('notification_preferences')
+            ->where('user_id', $userId)
+            ->whereIn('device_id', array_unique([$deviceId, self::UNPAIRED_DEVICE_ID]))
+            ->orderByRaw('device_id = ? desc', [$deviceId])
+            ->first();
+
+        return $row instanceof stdClass ? $row : null;
     }
 
     // A device with a registry row but no preference row is omitted —
@@ -58,12 +76,11 @@ final readonly class NotificationPreferenceQuery
      */
     public function forOtherDevices(User $user): array
     {
-        $localDeviceId = $this->devices->localDeviceId($user->id);
         $names = $this->devices->otherDeviceNames($user->id);
 
         $rows = $this->db->connection()->table('notification_preferences')
             ->where('user_id', $user->id)
-            ->when($localDeviceId !== null, fn ($query) => $query->where('device_id', '!=', $localDeviceId))
+            ->whereNotIn('device_id', array_unique([$this->deviceKey($user->id), self::UNPAIRED_DEVICE_ID]))
             ->get();
 
         $result = [];
@@ -76,22 +93,12 @@ final readonly class NotificationPreferenceQuery
         return $result;
     }
 
-    // Out-of-range input throws rather than clamping, and an unpaired
-    // device is a logged no-op rather than a throw.
     public function saveForCurrentDevice(User $user, NotificationPreferencesDto $prefs): void
     {
         self::validate($prefs);
 
-        $deviceId = $this->devices->localDeviceId($user->id);
-
-        if ($deviceId === null) {
-            $this->logger->warning(
-                'NotificationPreferenceQuery: refusing to save preferences for an unpaired device.',
-                ['user_id' => $user->id],
-            );
-
-            return;
-        }
+        $deviceId = $this->deviceKey($user->id);
+        $this->carryOverUnpairedRow($user->id, $deviceId);
 
         $existing = $this->db->connection()->table('notification_preferences')
             ->where('user_id', $user->id)
@@ -135,6 +142,26 @@ final readonly class NotificationPreferenceQuery
             mutationType: $existing === null ? 'create' : 'edit',
             dirtyFields: $values,
         ));
+    }
+
+    // Renames the pre-pairing row onto this device's sync identity, so the
+    // settings a reader chose before they paired survive pairing. Skipped when
+    // a row already exists under the new key: the unique index would refuse it,
+    // and the newer row is the live one.
+    private function carryOverUnpairedRow(int $userId, string $deviceId): void
+    {
+        if ($deviceId === self::UNPAIRED_DEVICE_ID) {
+            return;
+        }
+
+        $rows = $this->db->connection()->table('notification_preferences')
+            ->where('user_id', $userId);
+
+        if ((clone $rows)->where('device_id', $deviceId)->exists()) {
+            return;
+        }
+
+        $rows->where('device_id', self::UNPAIRED_DEVICE_ID)->update(['device_id' => $deviceId]);
     }
 
     private static function validate(NotificationPreferencesDto $prefs): void

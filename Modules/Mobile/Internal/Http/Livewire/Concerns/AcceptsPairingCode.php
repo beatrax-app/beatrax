@@ -10,6 +10,7 @@ use LogicException;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -21,7 +22,7 @@ use Throwable;
 // announce the acceptance. They sit here rather than on the component because
 // extracting them took it past the method ceiling, and they move as one group.
 /**
- * @phpstan-type InitiatorIdentity array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string}
+ * @phpstan-type InitiatorIdentity array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}
  */
 trait AcceptsPairingCode
 {
@@ -79,7 +80,7 @@ trait AcceptsPairingCode
             // confident version of that guess; this one is true either way.
             $this->flashMessage = Lang::get(match ($discovered) {
                 PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
-                PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.invalid_code',
+                PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.code_incomplete',
                 PairingOfferLookup::NoPeerReached => $this->nothingAnsweredKey($gateway),
                 PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
             });
@@ -92,19 +93,35 @@ trait AcceptsPairingCode
 
     // Nothing answered is the EXPECTED outcome on iOS, which drops the app's
     // own multicast query, so that reader is sent to the camera rather than to
-    // their router. Neither line names a cause this device cannot observe: it
-    // knows only that it asked and heard nothing back.
+    // their router. No line names a cause this device cannot observe: it knows
+    // only that it asked and heard nothing back.
     /**
      * @link ../../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
      */
-    // Asked of the transport, not of the platform. A hardcoded iOS check keeps
-    // telling an iPhone the search cannot run on the day the entitlement lands
-    // and it can; reach() flips on its own, so the advice retires itself.
+    // Asked of the transport, not of the platform: reach() flips on its own the
+    // day the entitlement lands, so the advice retires itself. The third line is
+    // for the reader whose camera is the road that was refused — sending them
+    // back to it is the order the amber notice above has already ruled out.
     private function nothingAnsweredKey(PairingGateway $gateway): string
     {
-        return $gateway->lanDiscoveryReach()->silenceMeansNoPeers()
-            ? 'mobile::pairing.errors.no_peer_answered'
+        if ($gateway->lanDiscoveryReach()->silenceMeansNoPeers()) {
+            return 'mobile::pairing.errors.no_peer_answered';
+        }
+
+        return $this->cameraUnavailableNotice
+            ? 'mobile::pairing.errors.no_peer_answered_camera_off'
             : 'mobile::pairing.errors.no_peer_answered_ios';
+    }
+
+    // The same rule one step later, for an accept that could not be handed
+    // over. "Check the network" is advice only where a road existed to try; on
+    // a phone that cannot browse, holding a code that named no address and no
+    // relay, it sends the reader to fix what was never the reason.
+    private function undeliveredAcceptKey(PairingGateway $gateway, string $tokenHash, string $peerDeviceId): string
+    {
+        return $gateway->hadAnyRoadTo($tokenHash, $peerDeviceId)
+            ? 'mobile::pairing.errors.relay_unreachable'
+            : 'mobile::pairing.errors.no_road_home';
     }
 
     /**
@@ -121,13 +138,20 @@ trait AcceptsPairingCode
         // the seeded row is Pending and still faces the whole ceremony.
         $gateway->seedResponderToken(
             $identity['token'],
-            $identity['deviceId'],
-            $identity['ed25519PubHex'],
-            $identity['x25519PubHex'],
+            new PairingPeerIdentity(
+                $identity['deviceId'],
+                $identity['ed25519PubHex'],
+                $identity['x25519PubHex'],
+                // The scanned name, so the desktop is not admitted under the
+                // "Paired device" placeholder the registry falls back to.
+                $identity['deviceName'],
+                // Absent on the QR road, which never touched the initiator: that
+                // one arrives with a relay endpoint instead, and the sync dial
+                // falls back to browsing for an address it was not handed.
+                $identity['lanHost'] ?? null,
+                $identity['lanPort'] ?? null,
+            ),
             $userId,
-            // The scanned name, so the desktop is not admitted under the
-            // "Paired device" placeholder the registry falls back to.
-            $identity['deviceName'],
         );
     }
 

@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Uygulama içi Developer Console için operasyonel görünüm.',
     'worker_heartbeat' => 'Worker sinyali',
     'not_running' => 'ÇALIŞMIYOR',
+    'heartbeat_age' => ':count s önce · ttl :ttl s',
     'queue' => 'Kuyruk',
     'pending' => 'bekleyen',
     'failed' => 'başarısız',

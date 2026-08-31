@@ -87,6 +87,25 @@ wildcards.
 than throwing. `between` normalises its bounds with `min`/`max`, so a
 rule authored with the bounds reversed still behaves as the user meant.
 
+The bound is stored as bare minor units with no currency of its own, and
+the rule form writes it at the reader's reporting currency scale. So the
+comparison is made **only against rows settled in that same currency** —
+a row settled elsewhere never matches an amount condition. Two minor-unit
+integers from different denominations are not the same quantity: a bound
+of `5000` written as EUR 50.00 would otherwise fire on a JPY 13,840
+charge, and on a JPY 5,001 one worth about EUR 31. The rule falls silent
+rather than converting, for the same reason a cross-currency roll-up
+leaves out a currency it cannot price instead of counting it one to one
+(see [minor units and zero-decimal
+currencies](../ledger/minor-units-and-zero-decimal-currencies.md)).
+
+That scope reaches the box the bound is typed in. The amount input on the
+rule form kept a hardcoded `inputmode="decimal"` and a `0.00` placeholder
+after the scoping landed, so a yen reader was invited to type a fraction
+their own rule would refuse. Both now come from `MoneyInput` at
+`BaseCurrency::value()` — the same currency `MapsRuleRows` parses the typed
+figure at and `RuleEngine` tests rows against.
+
 **Date** compares `posted_at` with `before`, `after` or `between`. Both
 sides collapse to start-of-day first. That is what makes `between`'s
 inclusive upper bound behave: without it, a transaction posted at 14:00
@@ -133,7 +152,10 @@ survives, and that is the rule with the **highest** `priority` number
 So `priority` reads as "specificity", not as "urgency": a broad rule sits
 at a low number and a narrow override sits at a high number. A reader who
 assumes `priority = 1` means "wins" will author overrides that are
-silently discarded.
+silently discarded — which is why `rule_form.priority_help`, in all 26
+locales, names the highest number as the winner rather than stopping at
+"lower numbers run first". That half-sentence was true and was the exact
+half that invited the wrong conclusion.
 
 Because the map is keyed by type, rules compose across types. A rule
 setting only a category and a rule setting only a note both apply; they

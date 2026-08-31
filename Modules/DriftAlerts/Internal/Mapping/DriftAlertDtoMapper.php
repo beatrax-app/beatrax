@@ -7,8 +7,8 @@ namespace Modules\DriftAlerts\Internal\Mapping;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
-use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -21,11 +21,11 @@ final class DriftAlertDtoMapper
      * @param  string|null  $seriesDisplayName  resolved series display
      *                                          string supplied by the
      *                                          query layer
-     * @param  int|null  $eurEquivalentMinor  EUR-equivalent of the
-     *                                        delta when original
-     *                                        currency is non-EUR
+     * @param  Money|null  $baseEquivalent  the annualized impact in the
+     *                                      reader's reporting currency,
+     *                                      supplied by the query layer
      */
-    public static function hydrate(stdClass $row, ?string $seriesDisplayName = null, ?int $eurEquivalentMinor = null): DriftAlertDto
+    public static function hydrate(stdClass $row, ?string $seriesDisplayName = null, ?Money $baseEquivalent = null): DriftAlertDto
     {
         $currency = self::toString($row->currency);
         $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor), $currency);
@@ -33,10 +33,9 @@ final class DriftAlertDtoMapper
         $delta = Money::ofMinor(self::toInt($row->delta_minor), $currency);
         $annualizedImpact = Money::ofMinor(self::toInt($row->annualized_impact_minor), $currency);
 
-        $eurEquivalent = null;
-        if ($eurEquivalentMinor !== null && $currency !== Currency::Eur->value) {
-            $eurEquivalent = Money::ofMinor($eurEquivalentMinor, Currency::Eur->value);
-        }
+        // Withheld when it would restate the figure already on the row in the
+        // same currency.
+        $eurEquivalent = $baseEquivalent?->currency() === $currency ? null : $baseEquivalent;
 
         // Fail loud rather than letting Carbon raise a bare
         // InvalidFormatException out of an unscoped parse('').
@@ -73,7 +72,7 @@ final class DriftAlertDtoMapper
             annualizedImpact: $annualizedImpact,
             eurEquivalent: $eurEquivalent,
             thresholdPercentUsed: self::toInt($row->threshold_percent_used),
-            thresholdSource: self::toString($row->threshold_source),
+            thresholdSource: ThresholdSource::tryFrom(self::toString($row->threshold_source)) ?? ThresholdSource::Default,
             detectedAt: $detectedAt,
             actionedAt: $actionedAt,
             snoozedUntil: $snoozedUntil,

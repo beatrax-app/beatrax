@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Upuść wiadomość e-mail (.eml) albo archiwum skrzynki (.mbox). Mechanizm dopasowania rozpoznaje paragony PayPal i pokazuje je jako kanoniczne transakcje; nierozpoznani nadawcy zostają w dzienniku audytu do uporządkowania.',
-    ],
-
     'conflict' => [
 
         'field' => [

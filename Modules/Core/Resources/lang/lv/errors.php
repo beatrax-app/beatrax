@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Atpakaļ uz Beatrax',
 
+    'not_saved' => 'Nekas netika saglabāts. Jūsu dati nav mainīti — mēģiniet vēlreiz.',
+
+    'no_longer_here' => 'Tā vairs nav.',
+
     '404' => [
         'title' => 'Šīs lapas nav',
         'body' => 'Saite, iespējams, ir veca vai lapa ir pārdēvēta. Ar jūsu datiem viss ir kārtībā.',

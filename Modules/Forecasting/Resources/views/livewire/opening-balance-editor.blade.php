@@ -2,6 +2,7 @@
 @use('Modules\Forecasting\Public\Actions\SetAccountOpeningBalance')
 @use('Modules\Ledger\Public\Enums\AccountKind')
 @use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 {{--
     Per-account opening-balance editor — inline on /settings.
 
@@ -33,6 +34,11 @@
     // "£12.34" on the row beside it. Placement stays local — the glyph sits
     // before the input by form convention, which assemble() decides per locale.
     $symbol = Money::symbolFor($currency);
+
+    // One "1.250,00" served all 26 locales, so an English reader was shown a
+    // Dutch figure and a yen account an amount its own parser refuses. Written
+    // at the account's scale, with the reader's own marks.
+    $example = MoneyInput::formatAbsMinor(125_000, $currency);
     $helpText = match (true) {
         str_contains($accountKind, AccountKind::Paypal->value) => Lang::get('forecasting::opening_balance.help_paypal'),
         default => Lang::get('forecasting::opening_balance.help_default'),
@@ -51,10 +57,10 @@
                 <span class="text-sm text-slate-500 dark:text-slate-400" aria-hidden="true">{{ $symbol }}</span>
                 <input
                     type="text"
-                    inputmode="decimal"
+                    inputmode="{{ MoneyInput::decimalPlaces($currency) === 0 ? 'numeric' : 'decimal' }}"
                     id="opening-input-{{ $accountId }}"
                     wire:model="openingInput"
-                    placeholder="{{ Lang::get('forecasting::opening_balance.opening_placeholder') }}"
+                    placeholder="{{ Lang::get('forecasting::opening_balance.opening_placeholder', ['amount' => $example]) }}"
                     aria-describedby="opening-help-{{ $accountId }}"
                     class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                     style="font-variant-numeric: tabular-nums;"
@@ -80,6 +86,11 @@
         <x-core::alert tone="warning" aria-atomic="true" aria-live="polite" data-testid="opening-balance-divergence-banner">
             <p>
                 {{ Lang::get('forecasting::opening_balance.divergence', ['threshold' => Money::ofMinor(SetAccountOpeningBalance::DIVERGENCE_WARNING_THRESHOLD_MINOR, $currency)->formatWholeUnits()]) }}
+                @if ($beatraxsNumberMinor !== null)
+                    {{-- The button below overwrites the box with this figure,
+                         and the reader was asked to accept it unseen. --}}
+                    <span data-testid="opening-balance-computed">{{ Lang::get('forecasting::opening_balance.computed_is', ['amount' => Money::ofMinor($beatraxsNumberMinor, $currency)->format()]) }}</span>
+                @endif
             </p>
             <div class="mt-2 flex flex-wrap gap-3">
                 <button

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Сигнали за отклонение',
-    'aria' => 'Сигнали за отклонение — :count отворени, годишен ефект :amount',
+    'aria' => 'Сигнали за отклонение — :count отворени, :impact',
     'open' => 'отворени',
-    'annualized_impact' => 'годишен ефект',
+    'impact_rising' => 'годишен ефект :amount',
+    'impact_flat' => 'без допълнителни годишни разходи',
 ];

@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Vie PDF',
     'export_pdf_aria' => 'Vie PDF',
     'export_pdf_title' => 'Lataa beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Ohita',
 
     'country_prompt_heading' => 'Mihin maahan annat veroilmoituksesi?',
     'country_prompt_body' => 'Voit muuttaa tämän milloin tahansa kohdassa Asetukset → :section.',

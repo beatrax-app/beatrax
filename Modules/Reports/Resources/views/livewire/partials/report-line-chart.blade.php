@@ -8,13 +8,14 @@
     Variables in scope:
       $chartElementId : string
       $rows           : list<Modules\Reports\Internal\Dto\ReportResultRow>
+      $chartCurrency  : string        — the one currency this axis is drawn in
       $drilldownUrls  : list<string>  — parallel to $rows, one URL per point
       $metricLabel    : string
 --}}
-@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Reports\Internal\Support\ChartAmount')
 @php
     $categories = array_map(static fn ($row) => $row->groupLabel, $rows);
-    $data = array_map(static fn ($row) => $row->amountMinor / Money::MINOR_UNITS_PER_MAJOR, $rows);
+    $data = ChartAmount::series($rows);
 
     $options = [
         'chart' => [
@@ -30,6 +31,10 @@
         ],
         'stroke' => ['curve' => 'straight', 'width' => 2.5],
         'markers' => ['size' => 4],
+        // The axis is money, and which money only this partial knows: without
+        // it app.js stamps the READER's base currency on a chart that may be
+        // drawn in another, printing euro signs over yen.
+        'beatraxCurrency' => $chartCurrency,
         'colors' => ['#0F172A'],
         'xaxis' => [
             'categories' => $categories,

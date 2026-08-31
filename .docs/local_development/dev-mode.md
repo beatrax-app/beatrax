@@ -33,16 +33,17 @@ The supported path is the in-app Settings toggle. From any authenticated page:
 3. Flip it on. The middleware re-evaluates on the next request; the Dev Console pages
    become reachable immediately.
 
-The same flag is also flippable from the CLI when you do not have a working UI session
+The same flag can also be raised from the CLI when you do not have a working UI session
 (e.g. just after a destructive restore):
 
 ```sh
-php artisan beatrax:dev-mode --user=<username> --enable
+php artisan beatrax:grant-dev <username>
 ```
 
-The command is registered by the DevMode module and lives in the destructive tier of
-the artisan runner — it changes a user's security posture, so it warrants the same
-confirmation a password reset would.
+The command is registered by the Auth module (`GrantDevCommand`) and lives in the
+destructive tier of the artisan runner — it changes a user's security posture, so it
+warrants the same confirmation a password reset would. It takes the username as a
+positional argument, and it only ever grants.
 
 ## Why developer mode is per-user, not global
 
@@ -67,11 +68,8 @@ Two reasons:
 
 ## Turning developer mode off
 
-The same Settings toggle, or:
-
-```sh
-php artisan beatrax:dev-mode --user=<username> --disable
-```
+The Settings toggle, which is the only way back down: `beatrax:grant-dev` has no
+revoking counterpart at the CLI.
 
 The next request from that user no longer renders the Dev Console pages and no longer
 shows the Developer submenu in the native menu.

@@ -109,6 +109,51 @@ it('renders seeded anomaly rows with reason chips on the Open tab under ?type=an
         ->assertSeeText('Acknowledge');
 });
 
+// The evaluator leaves baseline_amount_minor null for a duplicate-only or
+// first-time-only alert, and the row used to hydrate that null to zero and
+// print "baseline EUR 0.00 -> actual: EUR 0.00" over a real charge.
+it('states the charge, not a EUR 0.00 movement, on an alert with no baseline', function (): void {
+    aahAlert($this->user, 'open', 'spotify', [
+        'reasons' => ['duplicate'],
+        'baseline_amount_minor' => null,
+        'latest_amount_minor' => -2349,
+    ]);
+
+    $content = (string) $this->actingAs($this->user)->get('/drift?type=anomaly')->getContent();
+
+    expect($content)->toContain('charged')
+        ->and($content)->toContain('23.49')
+        ->and($content)->not->toContain('→ actual:')
+        ->and($content)->not->toContain('0.00');
+});
+
+// An arrow is a claim about direction, and a row with nothing to compare
+// against has no direction to claim.
+it('draws no movement arrow on an alert with no baseline', function (): void {
+    aahAlert($this->user, 'open', 'spotify', [
+        'reasons' => ['duplicate'],
+        'baseline_amount_minor' => null,
+        'latest_amount_minor' => -2349,
+    ]);
+
+    $content = (string) $this->actingAs($this->user)->get('/drift?type=anomaly')->getContent();
+
+    expect($content)->not->toContain('M2.25 18 9 11.25')
+        ->and($content)->not->toContain('M2.25 6 9 12.75');
+});
+
+it('still draws the arrow when a baseline exists', function (): void {
+    aahAlert($this->user, 'open', 'spotify', [
+        'reasons' => ['large'],
+        'baseline_amount_minor' => -999,
+        'latest_amount_minor' => -2349,
+    ]);
+
+    $content = (string) $this->actingAs($this->user)->get('/drift?type=anomaly')->getContent();
+
+    expect($content)->toContain('M2.25 18 9 11.25');
+});
+
 it('defaults the type to drift so the plain /drift still renders drift rows', function (): void {
     aahAlert($this->user, 'open', 'spotify');
 

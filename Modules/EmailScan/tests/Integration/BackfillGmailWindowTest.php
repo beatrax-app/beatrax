@@ -165,3 +165,70 @@ it('plumbs a 12-month window correctly', function (): void {
 
     CarbonImmutable::setTestNow();
 });
+
+// A run on the 31st stepping back a month with plain month arithmetic lands in
+// the month AFTER the one the reader asked for — 31 March back one month is 3
+// March, not 28 February — so the oldest days of the window never get walked.
+it('does not overflow the window start out of a short month when the run lands on the 31st', function (): void {
+    $fixedNow = CarbonImmutable::create(2026, 3, 31, 12, 0, 0, 'UTC');
+    CarbonImmutable::setTestNow($fixedNow);
+
+    $clock = new class($fixedNow) implements Clock
+    {
+        public function __construct(private readonly CarbonImmutable $now) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->now;
+        }
+    };
+    $this->app->instance(Clock::class, $clock);
+
+    $user = User::query()->create([
+        'username' => 'gmail-window-eom',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = $fixedNow->toDateTimeString();
+
+    $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'email' => 'gmail-window-eom@example.com',
+        'backfill_window_months' => 1,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $user->id,
+        'inbox_id' => $inboxId,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GmailApiClientContract::class, $fake);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 1]);
+    $this->app->call([$job, 'handle']);
+
+    $calls = array_values(array_filter(
+        $fake->getRequestedCalls(),
+        static fn (array $c): bool => $c['method'] === 'listSenderMessages',
+    ));
+
+    expect($calls)->not->toBeEmpty();
+    expect($calls[0]['args']['windowStart'])
+        ->toBe($fixedNow->subMonthsNoOverflow(1)->format(DateTimeInterface::ATOM))
+        ->and($calls[0]['args']['windowStart'])->toStartWith('2026-02-28');
+
+    CarbonImmutable::setTestNow();
+});

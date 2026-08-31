@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Nicht kategorisiert',
+    'no_counterparty' => 'Kein Zahlungspartner',
+    'unavailable_counterparty' => 'Zahlungspartner nicht auf diesem Gerät',
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
     'subtitle' => 'Stelle einen Bericht aus deinem Hauptbuch zusammen.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Eigener Zeitraum',
         'from' => 'Von',
         'to' => 'Bis',
+        'error' => [
+            'incomplete' => 'Wähle sowohl ein Start- als auch ein Enddatum.',
+            'malformed' => 'Verwende ein gültiges Datum im Format JJJJ-MM-TT.',
+            'inverted' => 'Das Enddatum liegt vor dem Startdatum.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filter',
+        'net_worth_note' => 'Nettovermögen ist ein Saldo: nur der Kontofilter wirkt hier.',
     ],
 
     'compare' => 'Mit vorherigem Zeitraum vergleichen',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagramm in :currency — :list nicht dargestellt',
+        'undrawn' => 'Nicht im Ring — :amount fließt in die andere Richtung',
         'bar_title' => 'Klicke auf einen Balken, um die zugehörigen Transaktionen zu sehen',
         'line_title' => 'Klicke auf einen Punkt, um die zugehörigen Transaktionen zu sehen',
         'donut_title' => 'Klicke auf ein Segment, um die zugehörigen Transaktionen zu sehen',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Gebühren und Korrekturen (oben nicht enthalten)',
+    'other_movement_with_refunds' => 'Gebühren, Erstattungen und Korrekturen (oben nicht enthalten)',
 ];

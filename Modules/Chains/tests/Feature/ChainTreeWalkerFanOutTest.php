@@ -172,7 +172,7 @@ function ctwDump(ChainTree $tree, array $labels, array $linkLabels): string
             'currency' => $node->amount->currency(),
             'account' => $node->accountName,
             'slug' => $node->counterpartySlug,
-            'booked' => $node->bookedAt->toDateTimeString(),
+            'posted' => $node->postedAt->toDateTimeString(),
         ];
     }
 

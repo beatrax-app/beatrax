@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'A hitelkártyád (ICS)',
+    'eyebrow' => 'A hitelkártyád',
     'h1' => 'Szerezd be a havi kivonatok PDF-jeit',
-    'lede' => 'Húzd ide az összes havi ICS PDF-kivonatot — egyetlen előnézetbe fésüljük őket.',
+    'lede' => 'Húzd ide az összes havi PDF-kivonatot — egyetlen előnézetbe fésüljük őket.',
 
     'format_group_aria' => 'Az ICS csak PDF-be exportál',
+    'issuer_note' => 'Az ICS egyelőre az egyetlen kártyakibocsátó, amelyet el tudunk olvasni, és csak a holland nyelvű kivonatát. Ha a kártyád más kibocsátótól van, hagyd ki ezt a lépést.',
     'got_it_as' => 'Így kaptad meg:',
     'badge_only_format' => 'egyetlen formátum',
 

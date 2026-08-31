@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Services;
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Core\Public\Support\FileHead;
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
@@ -13,24 +13,23 @@ use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Ingestion\Public\Dto\CsvPreset;
+use Modules\Ingestion\Public\Dto\PositionalCsvPreset;
 use Modules\Ingestion\Public\Dto\SniffResult;
 use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
 use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 
-final class HeaderSniffer
+final readonly class HeaderSniffer
 {
-    private const EMPTY_FILE_MESSAGE = 'The file is empty.';
+    private const string EMPTY_FILE_MESSAGE = 'The file is empty.';
 
-    private const CSV_EXTENSION_REGEX = '/\.csv$/i';
+    private const string CSV_EXTENSION_REGEX = '/\.csv$/i';
 
-    private const HEAD_BYTES = 8192;
-
-    private const UTF8_BOM = "\xEF\xBB\xBF";
+    private const string UTF8_BOM = "\xEF\xBB\xBF";
 
     // The default arg lets a hand-constructed sniffer resolve presets without the
     // container; presets are static, so it behaves identically to the singleton.
     public function __construct(
-        private readonly CsvPresetRegistry $presets = new CsvPresetRegistry,
+        private CsvPresetRegistry $presets = new CsvPresetRegistry,
     ) {}
 
     public function sniff(string $localPath, string $declaredFormat): SniffResult
@@ -45,7 +44,7 @@ final class HeaderSniffer
         }
 
         try {
-            $head = (string) fread($handle, self::HEAD_BYTES);
+            $head = (string) fread($handle, FileHead::BYTES);
         } finally {
             fclose($handle);
         }
@@ -55,7 +54,6 @@ final class HeaderSniffer
         }
 
         return match ($declaredFormat) {
-            AsnCsvHeaderProfile::FORMAT => $this->sniffAsnCsv($localPath, $head),
             Camt053HeaderProfile::FORMAT => $this->sniffCamt053($localPath, $head),
             Mt940HeaderProfile::FORMAT => $this->sniffMt940($localPath, $head),
             IcsPdfHeaderProfile::FORMAT => $this->sniffIcsPdf($localPath, $head),
@@ -68,12 +66,65 @@ final class HeaderSniffer
 
     private function sniffByPresetFormat(string $declaredFormat, string $localPath, string $head): SniffResult
     {
+        $positional = $this->presets->positional($declaredFormat);
+        if ($positional !== null) {
+            return $this->sniffPositionalCsv($positional, $localPath, $head);
+        }
+
         $preset = $this->presets->get($declaredFormat);
         if ($preset === null) {
             throw new SniffMismatchException(sprintf('Unsupported sniff target: %s', $declaredFormat));
         }
 
         return $this->sniffPresetCsv($preset, $localPath, $head);
+    }
+
+    // Stricter than sniffPresetCsv(): a positional preset addresses cells by
+    // index, so the column COUNT and the leading header cells are what stand
+    // between the reader and a silently shifted row.
+    private function sniffPositionalCsv(PositionalCsvPreset $preset, string $path, string $head): SniffResult
+    {
+        if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
+            throw new SniffMismatchException(sprintf(
+                "That file doesn't look like a CSV. Drop in the %s CSV export.",
+                $preset->label,
+            ));
+        }
+
+        $firstLine = strtok($head, "\r\n");
+        if ($firstLine === false) {
+            throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
+        }
+
+        $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
+
+        if (! in_array(count($columns), $preset->acceptedColumnCounts, strict: true)) {
+            throw new SniffMismatchException(sprintf(
+                'Expected %s columns, got %d. This file does not match the %s CSV layout.',
+                implode(' or ', $preset->acceptedColumnCounts),
+                count($columns),
+                $preset->label,
+            ));
+        }
+
+        foreach ($preset->headerSignature as $position => $expected) {
+            if (($columns[$position] ?? null) !== $expected) {
+                throw new SniffMismatchException(sprintf(
+                    "This CSV doesn't match the expected %s column layout (header starts with '%s', got '%s'). If the export format changed, file an issue.",
+                    $preset->label,
+                    implode(',', $preset->headerSignature),
+                    implode(',', array_slice($columns, 0, count($preset->headerSignature))),
+                ));
+            }
+        }
+
+        return new SniffResult(
+            format: $preset->format,
+            delimiter: $preset->delimiter,
+            hasHeader: true,
+            encoding: $preset->encoding,
+            columnCount: count($columns),
+        );
     }
 
     private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
@@ -93,7 +144,7 @@ final class HeaderSniffer
         $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
         $present = array_map(static fn (?string $c): string => CsvPreset::normaliseHeader((string) $c), $columns);
 
-        foreach ($preset->headerSignature as $expected) {
+        foreach ($preset->requiredHeaders() as $expected) {
             if (! in_array(CsvPreset::normaliseHeader($expected), $present, strict: true)) {
                 throw new SniffMismatchException(sprintf(
                     "This CSV doesn't match the %s layout (missing the '%s' column). Make sure you picked the right bank.",
@@ -158,8 +209,8 @@ final class HeaderSniffer
         );
     }
 
-    // No fixed column count, unlike sniffAsnCsv(): PayPal varies it across language
-    // and format revisions.
+    // No fixed column count, unlike sniffPositionalCsv(): PayPal varies it across
+    // language and format revisions.
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
         if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
@@ -286,50 +337,6 @@ final class HeaderSniffer
             hasHeader: false,
             encoding: Camt053HeaderProfile::SOURCE_ENCODING,
             columnCount: 0,
-        );
-    }
-
-    private function sniffAsnCsv(string $path, string $head): SniffResult
-    {
-        if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
-            throw new SniffMismatchException(
-                "That file doesn't look like a CSV. Drop in the ASN CSV export you downloaded from the ASN portal."
-            );
-        }
-
-        $firstLine = strtok($head, "\r\n");
-        if ($firstLine === false) {
-            throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
-        }
-
-        $delim = AsnCsvHeaderProfile::DELIMITER;
-        $columns = str_getcsv($firstLine, $delim, '"', '');
-
-        if (! in_array(count($columns), AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS, strict: true)) {
-            throw new SniffMismatchException(sprintf(
-                'Expected %s columns, got %d. This file does not match the ASN CSV layout.',
-                implode(' or ', AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS),
-                count($columns),
-            ));
-        }
-
-        $expected = AsnCsvHeaderProfile::HEADER_SIGNATURE;
-        if ($columns[0] !== $expected[0] || $columns[1] !== $expected[1]) {
-            throw new SniffMismatchException(sprintf(
-                "This CSV doesn't match the expected ASN column layout (header starts with '%s,%s', got '%s,%s'). If ASN changed their export format, file an issue.",
-                $expected[0],
-                $expected[1],
-                $columns[0],
-                $columns[1],
-            ));
-        }
-
-        return new SniffResult(
-            format: AsnCsvHeaderProfile::FORMAT,
-            delimiter: $delim,
-            hasHeader: AsnCsvHeaderProfile::HAS_HEADER,
-            encoding: AsnCsvHeaderProfile::SOURCE_ENCODING,
-            columnCount: count($columns),
         );
     }
 }

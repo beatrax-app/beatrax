@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Kustuta :count töö|Kustuta :count tööd',
     'empty_pending' => 'Järjekord on tühi.',
     'empty_failed' => 'Ebaõnnestunud töid pole.',
-    'empty_batches' => 'Aktiivseid partiisid pole.',
+    'empty_batches' => 'Partiisid pole.',
     'select_aria' => 'Vali',
     'select_row_aria' => 'Vali rida :key',
     'col_id' => 'Id',
     'col_queue' => 'Järjekord',
     'col_attempts' => 'Katsed',
+    'col_state' => 'Olek',
     'col_created' => 'Loodud',
     'col_uuid' => 'UUID',
     'col_failed' => 'Ebaõnnestus',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Ootel',
     'col_actions' => 'Toimingud',
     'delete_job' => 'Kustuta töö',
+    'worker_running' => 'Worker töötleb',
     'delete_pending_confirm' => 'Kas kustutada ootel töö #:key?',
     'retry_job' => 'Proovi tööd uuesti',
     'forget_confirm' => 'Kas eemaldada ebaõnnestunud töö :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Valitud ebaõnnestunud tööd pannakse töötaja jaoks uuesti järjekorda.',
     'cancel' => 'Tühista',
 
+    'state' => [
+        'available' => 'Ootel',
+        'reserved' => 'Reserveeritud',
+        'scheduled' => 'Ajastatud',
+    ],
+
     'tab' => [
         'pending' => 'Ootel',
         'failed' => 'Ebaõnnestunud',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Ootel töö kustutatud',
+        'pending_already_gone' => 'See töö oli juba kadunud',
         'failed_requeued' => 'Ebaõnnestunud töö pandi uuesti järjekorda',
         'failed_removed' => 'Ebaõnnestunud töö eemaldatud',
         'batch_cancelled' => 'Partii tühistatud',
         'batch_deleted' => 'Partii kustutatud',
         'batch_failures_requeued' => 'Partii ebaõnnestumised pandi uuesti järjekorda',
+        'batch_failures_none' => 'Partiis pole enam tõrkeid, mida uuesti järjekorda panna',
         'failed_jobs_requeued' => 'Ebaõnnestunud tööd pandi uuesti järjekorda',
+        'failed_jobs_none' => 'Ebaõnnestunud töid pole enam järjekorda panna',
         'bulk_refused' => 'Hulgikustutusest keelduti — :reason',
         'rows_deleted' => 'Valitud read kustutatud',
     ],

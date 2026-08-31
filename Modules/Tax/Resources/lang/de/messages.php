@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Der Kategoriename darf nicht leer sein.',
         'name_duplicate' => 'Eine Kategorie mit diesem Namen existiert bereits.',
+        'category_not_saved' => 'Diese Kategorie konnte nicht gespeichert werden. Versuche es erneut.',
+        'tag_refused' => 'Diese Markierung konnte nicht gespeichert werden. Schließe die Auswahl und versuche es erneut.',
     ],
 ];

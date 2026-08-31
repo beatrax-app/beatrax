@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Ladda upp ett kontoutdrag till',
 
+    'chain' => [
+        'heading' => 'Löser upp kedjor…',
+        'pending' => 'I kö. Kedjelösaren startar snart.',
+        'running' => 'Länkar finansieringskedjor och delar upp avräkningar från kontoutdraget.',
+    ],
+
     'issues' => [
         'row' => 'Rad :row: :reason',
         'file_stopped' => 'Filen gick inte att läsa längre än till rad :row. Inget efter den raden importerades.',

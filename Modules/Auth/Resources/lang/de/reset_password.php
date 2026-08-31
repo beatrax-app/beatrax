@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Verwende mindestens 12 Zeichen.',
     'error_wrong_code' => 'Benutzername und Wiederherstellungscode passen nicht zusammen. Prüfe den Code genau — Großbuchstaben, keine Null, kein O, keine Eins, kein L.',
+    'error_throttled' => 'Zu viele Versuche — versuche es in :wait erneut.',
 ];

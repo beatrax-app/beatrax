@@ -94,6 +94,7 @@ return [
         'heading' => 'Προγραμματιστής',
         'open_console' => 'Άνοιγμα κονσόλας προγραμματιστή',
         'pulse' => 'Queue :queue · Worker :worker',
+        'worker_ago' => 'πριν από :count δλ|πριν από :count δλ',
     ],
 
     'account' => [

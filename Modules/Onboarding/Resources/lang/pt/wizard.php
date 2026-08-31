@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Passo :current de :total',
 
-    'step_dot_aria' => 'Passo :number de :total',
-
     'back' => 'Voltar',
     'back_aria' => 'Voltar — regressa ao passo de configuração anterior',
 

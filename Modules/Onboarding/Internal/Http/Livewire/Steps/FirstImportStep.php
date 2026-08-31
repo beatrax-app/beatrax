@@ -8,12 +8,14 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Iban;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
@@ -23,15 +25,19 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
+use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Services\StartingBalanceRule;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
 final class FirstImportStep extends Component
 {
-    /** @var array<int, array{minor: int, date: string}> */
+    /** @var array<array-key, mixed> Wire-writable, so both key and shape are checked before use. */
     public array $balanceConfirmations = [];
 
     // Private, because Livewire cannot hydrate a Spatie Data DTO across the
@@ -54,8 +60,11 @@ final class FirstImportStep extends Component
     public array $stashedImportRunIds = [];
 
     // Absolute per-section row cap, stepping 5 → 30 → 55 as the user clicks
-    // "Load more". A missing key means the default 5.
+    // "Load more". A missing key means the default 5. Locked because
+    // loadMoreRows() is the only writer and this reaches the preview query's
+    // row slice, which drew whatever number arrived here into one fragment.
     /** @var array<string, int> */
+    #[Locked]
     public array $expandedRowCount = [];
 
     public function mount(): void
@@ -65,15 +74,6 @@ final class FirstImportStep extends Component
         $this->isCommitting = false;
         $this->stashedImportRunIds = [];
         $this->expandedRowCount = [];
-    }
-
-    public function currentPreview(): ConsolidatedPreviewBatch
-    {
-        return $this->preview ?? new ConsolidatedPreviewBatch(
-            sections: [],
-            dedupedTotalCount: 0,
-            alreadyImportedCount: 0,
-        );
     }
 
     // accountId comes off a dispatch and is never trusted on the UPDATE:
@@ -104,6 +104,7 @@ final class FirstImportStep extends Component
         BuildConsolidatedPreviewQuery $buildPreview,
         LoggerInterface $logger,
         Application $app,
+        StartingBalanceRule $balanceRule,
     ): void {
         $this->commitError = '';
         $this->isCommitting = true;
@@ -126,7 +127,7 @@ final class FirstImportStep extends Component
             }
 
             $now = $clock->now()->toDateTimeString();
-            $balanceConfirmations = $this->balanceConfirmations;
+            $balanceConfirmations = $this->acceptedBalanceConfirmations($balanceRule);
 
             $db->connection()->transaction(fn () => $this->persistCommit($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations));
 
@@ -167,6 +168,25 @@ final class FirstImportStep extends Component
         }
 
         return $runIds;
+    }
+
+    // The map is a public property and onStartingBalanceConfirmed() is wire-
+    // callable, so a row reaching the write has been through the same rule the
+    // card applies to its own field — shape first, then range and date.
+    /**
+     * @return array<int, array{minor: int, date: string}>
+     */
+    private function acceptedBalanceConfirmations(StartingBalanceRule $balanceRule): array
+    {
+        $accepted = [];
+        foreach ($this->balanceConfirmations as $accountId => $confirmation) {
+            $confirmed = $balanceRule->confirmed($confirmation);
+            if ($confirmed !== null && is_numeric($accountId)) {
+                $accepted[(int) $accountId] = $confirmed;
+            }
+        }
+
+        return $accepted;
     }
 
     /**
@@ -222,6 +242,7 @@ final class FirstImportStep extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         BaseCurrency $baseCurrency,
+        CsvPresetRegistry $csvPresets,
     ): View {
         $user = $currentUser->user();
 
@@ -242,7 +263,31 @@ final class FirstImportStep extends Component
             'preview' => $this->preview,
             'startingBalances' => $this->startingBalances,
             'accountMeta' => $this->accountMeta,
+            'sourceFormatLabels' => $this->sourceFormatLabels($csvPresets),
         ]);
+    }
+
+    // Names the file type, never the institution: a starting-balance conflict
+    // asks which SOURCE a figure came from, and the reader picked a format. A
+    // CSV layout lends its own registered label, which is the one place a
+    // bank's name is data rather than a literal written into this app.
+    /**
+     * @return array<string, string> source format id => the label the reader sees
+     */
+    private function sourceFormatLabels(CsvPresetRegistry $csvPresets): array
+    {
+        $labels = [
+            SourceFormat::Camt053->value => 'CAMT.053',
+            SourceFormat::Mt940->value => 'MT940',
+            SourceFormat::IcsPdf->value => 'PDF',
+            SourceFormat::PaypalCsv->value => 'CSV',
+        ];
+
+        foreach ($csvPresets->allLayouts() as $preset) {
+            $labels[$preset->format] = $preset->label.' CSV';
+        }
+
+        return $labels;
     }
 
     // Raw table(), not WizardProgress::query(): BelongsToUser's global scope falls
@@ -331,17 +376,20 @@ final class FirstImportStep extends Component
             $currency = is_string($row->default_currency) ? $row->default_currency : $baseCurrency->code();
             $kind = is_string($row->kind) ? $row->kind : '';
 
-            $shortTail = strlen($iban) >= 4 ? substr($iban, -4) : $iban;
             $kindLabel = match ($kind) {
-                'asn' => 'ASNB',
-                'ics_card' => 'ICS',
-                'paypal' => 'PAYPAL',
+                AccountKind::IcsCard->value => 'ICS',
+                AccountKind::Paypal->value => 'PAYPAL',
                 default => strtoupper($kind),
             };
 
+            // The tail is the last four of an IBAN, so an account standing in
+            // for one has none to give and the kind alone is the whole badge.
+            // Taken anyway, a wallet's read "PAYPAL · YPAL".
             $meta[$id] = [
                 'label' => $name,
-                'short' => sprintf('%s · %s', $kindLabel, $shortTail),
+                'short' => Iban::isIban($iban)
+                    ? sprintf('%s · %s', $kindLabel, substr($iban, -4))
+                    : $kindLabel,
                 'currency' => $currency,
             ];
         }

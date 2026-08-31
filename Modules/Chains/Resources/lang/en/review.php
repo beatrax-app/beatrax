@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Confirm or reject candidate links the chain resolver could not auto-confirm.',
 
     'empty_heading' => 'Nothing to review',
-    'empty_body' => 'Every chain link is either confirmed or rejected. New candidates will appear here as imports land.',
+    'empty_body' => 'Every link the resolver could pair is confirmed or rejected. New candidates appear here as imports land.',
 
     'auto_confirm_nudge' => 'One more confirm and similar links auto-confirm.',
 

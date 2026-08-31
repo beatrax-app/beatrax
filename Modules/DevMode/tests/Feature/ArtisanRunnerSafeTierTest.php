@@ -56,7 +56,7 @@ it('shows worker pre-flight pill RUNNING when the heartbeat is fresh', function 
     $user = runnerDeveloper('runner-worker-on');
     /** @var Repository $cache */
     $cache = app(Repository::class);
-    $cache->put(WriteWorkerHeartbeat::CACHE_KEY, time(), WriteWorkerHeartbeat::TTL_SECONDS);
+    $cache->put(WriteWorkerHeartbeat::CACHE_KEY, time(), WriteWorkerHeartbeat::ttlSeconds());
 
     $response = $this->actingAs($user)->get('/dev/artisan');
 
@@ -106,8 +106,10 @@ it('renders GET /dev/audit with the audit-log table header + filter controls', f
     $response->assertStatus(200);
     $response->assertSee('Audit log');
     $response->assertSee('Tier');
-    $response->assertSee('Caller');
     $response->assertSee('Command');
+    // The page reads only the caller's own rows now, so there is no caller to
+    // filter by and no caller column to head.
+    $response->assertDontSee('Caller');
 });
 
 it('shows prior runs on /dev/audit with the tier chip + non-zero exit-code highlighting', function (): void {

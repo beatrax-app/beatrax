@@ -120,7 +120,7 @@ it('first row of CSV is the exact 17-column header', function (): void {
     $header = str_getcsv($lines[0]);
 
     expect($header)->toBe([
-        'tax_year', 'booked_date', 'account', 'counterparty',
+        'tax_year', 'posted_date', 'account', 'counterparty',
         'counterparty_iban', 'description', 'deduction_category',
         'note', 'settled_amount', 'settled_currency', 'original_amount',
         'original_currency', 'transaction_type', 'transaction_id',

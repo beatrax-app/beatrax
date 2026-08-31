@@ -7,13 +7,13 @@ namespace Modules\Core\Public\Bootstrap;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Core\Public\Services\UserDataPathService;
 
-final class EnsureAppKey
+final readonly class EnsureAppKey
 {
-    public const SENTINEL_FILENAME = 'first-launch.app-key-generated';
+    public const string SENTINEL_FILENAME = 'first-launch.app-key-generated';
 
     public function __construct(
-        private readonly UserDataPathService $paths,
-        private readonly ConsoleKernel $artisan,
+        private UserDataPathService $paths,
+        private ConsoleKernel $artisan,
     ) {}
 
     public function run(): void

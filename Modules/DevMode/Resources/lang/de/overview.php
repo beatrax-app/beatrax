@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Betriebsübersicht für die integrierte Developer Console.',
     'worker_heartbeat' => 'Worker-Heartbeat',
     'not_running' => 'LÄUFT NICHT',
+    'heartbeat_age' => 'vor :count s · ttl :ttl s|vor :count s · ttl :ttl s',
     'queue' => 'Queue',
     'pending' => 'ausstehend',
     'failed' => 'fehlgeschlagen',

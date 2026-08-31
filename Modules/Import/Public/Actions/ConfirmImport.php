@@ -19,7 +19,9 @@ use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
+use Modules\Import\Public\Exceptions\ImportNotConfirmableException;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Contracts\AnchorsStartingBalanceFromStatements;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
@@ -31,19 +33,20 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 /**
  * @link ../../../../.docs/architecture/measuring-write-cost.md
  */
-final class ConfirmImport implements ConfirmsImports
+final readonly class ConfirmImport implements ConfirmsImports
 {
     public function __construct(
-        private readonly RecordsTransactions $recorder,
-        private readonly AppliesEnrichments $applyEnrichments,
-        private readonly PreviewCache $cache,
-        private readonly Clock $clock,
-        private readonly DispatchesAnomalyDetection $anomalyDispatcher,
-        private readonly DispatchesChainResolution $chainDispatcher,
-        private readonly DispatchesRecurringDetection $recurringDispatcher,
-        private readonly UpsertsCardStatements $cardStatementUpserter,
-        private readonly DatabaseManager $db,
-        private readonly CapturesImportForSync $syncCapture,
+        private RecordsTransactions $recorder,
+        private AppliesEnrichments $applyEnrichments,
+        private PreviewCache $cache,
+        private Clock $clock,
+        private DispatchesAnomalyDetection $anomalyDispatcher,
+        private DispatchesChainResolution $chainDispatcher,
+        private DispatchesRecurringDetection $recurringDispatcher,
+        private UpsertsCardStatements $cardStatementUpserter,
+        private DatabaseManager $db,
+        private CapturesImportForSync $syncCapture,
+        private AnchorsStartingBalanceFromStatements $startingBalances,
     ) {}
 
     public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
@@ -72,6 +75,12 @@ final class ConfirmImport implements ConfirmsImports
             // The run keeps its previous status, or RunImport's SHA256
             // short-circuit would lock the user out of re-uploading.
             throw new PreviewExpiredException($importRunId);
+        }
+
+        $refusal = $head?->confirmRefusal();
+
+        if ($refusal !== null) {
+            throw new ImportNotConfirmableException($importRunId, $refusal);
         }
 
         $errorCount = 0;
@@ -139,6 +148,11 @@ final class ConfirmImport implements ConfirmsImports
             // every row is a duplicate still recovers a deleted
             // card_statements row.
             $this->cardStatementUpserter->upsertForImportRun($importRunId, $user);
+
+            // Beside the card-statement upsert and outside the same gate: the
+            // statement summary this run wrote is what anchors the account, and
+            // an account left at zero measures its whole balance from there.
+            $this->startingBalances->anchorForUser($user);
 
             if ($result->inserted > 0 || $result->enriched > 0) {
                 // Eloquent rather than a raw insert, so a cast or boot default

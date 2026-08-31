@@ -8,7 +8,10 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -30,11 +33,11 @@ use Modules\Migration\Internal\Parsers\Support\ActualGoalDefInterpreter;
 use Modules\Migration\Internal\Services\ActualSqliteReader;
 use PDOException;
 
-final class ActualParser implements ParsesMigrationSource
+final readonly class ActualParser implements ParsesMigrationSource
 {
     public function __construct(
-        private readonly ActualGoalDefInterpreter $goalDefInterpreter,
-        private readonly BaseCurrency $baseCurrency,
+        private ActualGoalDefInterpreter $goalDefInterpreter,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function format(): string
@@ -68,6 +71,7 @@ final class ActualParser implements ParsesMigrationSource
         $unmapped = new Collection;
 
         $currency = $this->resolveCurrency($reader, $user, $unmapped);
+        $this->reportAssumedBudgetType($reader, $unmapped);
 
         /** @var array<string, string> $categoryNames */
         $categoryNames = [];
@@ -102,7 +106,8 @@ final class ActualParser implements ParsesMigrationSource
         /** @var Collection<int, MigrationScheduleDto> $schedules */
         $schedules = new Collection;
         foreach ($reader->schedulesWithRules() as $row) {
-            $name = $row['name'] ?? 'Untitled schedule';
+            $named = $row['name'] ?? null;
+            $name = $named ?? Lang::get('migration::unmapped.label.schedule_untitled');
             $note = trim($name.' — '.$row['conditionsSummary']);
             $schedules->push(new MigrationScheduleDto(
                 sourceExternalId: $row['id'],
@@ -112,8 +117,8 @@ final class ActualParser implements ParsesMigrationSource
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
-                displayLabel: $name,
-                reason: 'Scheduled/recurring transactions have no Beatrax create-from-external-source path yet — preserved as a note only, not a live Recurring series',
+                displayLabel: $named ?? StoredCopy::of(CopyLine::of('migration::unmapped.label.schedule_untitled')),
+                reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.schedule_unsupported')),
             ));
         }
 
@@ -122,7 +127,7 @@ final class ActualParser implements ParsesMigrationSource
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
                 displayLabel: $row['name'],
-                reason: 'Saved reports/analysis configs have no Beatrax equivalent',
+                reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.saved_report_unsupported')),
             ));
         }
 
@@ -154,12 +159,31 @@ final class ActualParser implements ParsesMigrationSource
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: null,
-                displayLabel: 'Budget-file currency',
-                reason: "assumed {$currency} — no 'preferences.currencyCode' row found in this export",
+                displayLabel: StoredCopy::of(CopyLine::of('migration::unmapped.label.budget_file_currency')),
+                reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.assumed_currency', ['currency' => $currency])),
             ));
         }
 
         return $currency;
+    }
+
+    /**
+     * @param  Collection<int, UnmappedItemDto>  $unmapped
+     */
+    private function reportAssumedBudgetType(ActualSqliteReader $reader, Collection $unmapped): void
+    {
+        if ($reader->declaredBudgetType() !== null) {
+            return;
+        }
+
+        $assumed = ActualSqliteReader::DEFAULT_BUDGET_TYPE->value;
+
+        $unmapped->push(new UnmappedItemDto(
+            itemType: UnmappedItemType::Extra->value,
+            sourceExternalId: null,
+            displayLabel: StoredCopy::of(CopyLine::of('migration::unmapped.label.budget_file_mode')),
+            reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.assumed_budget_type', ['mode' => $assumed])),
+        ));
     }
 
     /**
@@ -243,8 +267,8 @@ final class ActualParser implements ParsesMigrationSource
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['category_id'],
-                displayLabel: $categoryName.' goal',
-                reason: 'categories.goal_def uses an unsupported (non-flat) template shape — the goal was not imported',
+                displayLabel: StoredCopy::of(CopyLine::of('migration::unmapped.label.category_goal', ['name' => $categoryName])),
+                reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.goal_def_unsupported')),
             ));
         }
 

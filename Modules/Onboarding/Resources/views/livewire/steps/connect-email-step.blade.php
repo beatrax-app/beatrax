@@ -15,10 +15,10 @@
 <section class="wiz-step" aria-labelledby="wiz-connect-email-h1">
     <x-onboarding::wiz-eyebrow step="connect-email" glyph="✉️">{{ Lang::get('onboarding::connect_email.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-email-h1" class="wiz-h1">
-        {{ Lang::get('onboarding::connect_email.h1') }}
+        {{ Lang::get($onPhone ? 'onboarding::connect_email.h1_phone' : 'onboarding::connect_email.h1') }}
     </h1>
     <p class="wiz-lede">
-        {{ Lang::get('onboarding::connect_email.lede') }}
+        {{ Lang::get($onPhone ? 'onboarding::connect_email.lede_phone' : 'onboarding::connect_email.lede') }}
     </p>
 
     <div class="mini-steps">

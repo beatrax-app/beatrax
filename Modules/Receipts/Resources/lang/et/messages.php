@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Lohista siia e-kiri (.eml) või postkasti arhiiv (.mbox). Sobitaja tunneb ära PayPali kviitungid ja toob need välja kanooniliste tehingutena; sobitamata saatjad jäävad auditilogisse sortimiseks.',
-    ],
-
     'conflict' => [
 
         'field' => [

@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Största utgifter',
     'no_expenses' => 'Inga kategoriserade utgifter än.',
+    'top_spending_refunded' => 'Inte rankad — :amount kom tillbaka',
 
     'recent_transactions' => 'Senaste transaktioner',
     'view_all' => 'Visa alla',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Belopp',
     'uncategorized' => 'Okategoriserat',
+
+    'jump_to_records' => [
+        'body' => 'Inget för den här perioden. Dina senaste transaktioner finns kvar.',
+        'action' => 'Visa :period',
+    ],
 
     'reauth' => [
         'title' => 'En inkorg behöver anslutas på nytt.',

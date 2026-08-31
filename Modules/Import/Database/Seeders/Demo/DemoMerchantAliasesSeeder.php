@@ -35,7 +35,7 @@ final class DemoMerchantAliasesSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::ALIASES as $row) {
                 MerchantAlias::query()->updateOrCreate(

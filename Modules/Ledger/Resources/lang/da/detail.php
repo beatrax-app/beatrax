@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaktion',
     'heading' => 'Transaktion',
+    'booked_on' => 'Bogført :date',
 
     'counterparty' => 'Modpart',
     'description' => 'Beskrivelse',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Note (valgfrit)',
         'tax_deductible' => 'Fradragsberettiget',
         'remove_leg_aria' => 'Fjern denne kategori',
+        'remove_leg_caption' => 'Fjern',
         'add_category' => '+ Tilføj kategori',
         'soft_cap' => ':count af ~20 kategorier — overvej at gruppere små beløb.',
         'remaining_zero' => 'Rest :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Slet transaktionen',
         'help' => 'Fjerner denne transaktion permanent. Handlingen kan ikke fortrydes.',
         'button' => 'Slet',
-        'confirm_prompt' => 'Er du sikker?',
+        'confirm_prompt' => 'Slet denne transaktion? Note, opdeling og skattemærker følger med.',
         'confirm' => 'Ja, slet',
         'cancel' => 'Annullér',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Vis kæden',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Afstemt og låst',
+        'help' => 'En gennemført afstemning har låst denne transaktion. Dens kategori, note, opdeling og skattemærker bliver, som de er, indtil du låser den op.',
+        'button' => 'Lås op for redigering',
+        'confirm_question' => 'Lås denne transaktion op for redigering? Intet på den ændres, og den næste gennemførte afstemning låser den igen.',
+        'cancel' => 'Lad den være låst',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Denne transaktion er afstemt. Ophæv afstemningen for at foretage ændringer.',
         'reclassified_pair_removed' => 'Omklassificeret til :type — parringen er fjernet',
         'reclassified' => 'Omklassificeret til :type',
         'note_saved' => 'Noten er gemt',
         'unreconciled' => 'Afstemningen er ophævet — du kan redigere transaktionen igen.',
+        'note_too_long' => 'En note er højst :max tegn.|En note er højst :max tegn.',
         'counterparty_updated' => 'Modparten er opdateret',
         'goal_attributed' => 'Tælles med i dette mål',
         'goal_attribution_removed' => 'Tælles ikke længere med i dette mål',

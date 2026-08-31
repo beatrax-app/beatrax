@@ -121,7 +121,7 @@
                             ])>{{ $displayName }}</p>
                             <p
                                 class="truncate font-mono text-slate-600 dark:text-slate-400"
-                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 11px;"
+                                style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px;"
                                 data-testid="peer-device-id"
                             >{{ $peerDeviceId }}</p>
 
@@ -156,6 +156,7 @@
                              rather than closing something. --}}
                         <x-core::emoji-action
                             :label="Lang::get('sync::status.dismiss_peer')"
+                            :caption="Lang::get('sync::status.dismiss_peer_caption')"
                             tone="danger"
                             wire:click="dismissPeer({{ Js::from($peerDeviceId) }})"
                             data-testid="peer-dismiss"

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Luokittelematon',
+    'no_counterparty' => 'Ei vastapuolta',
+    'unavailable_counterparty' => 'Vastapuolta ei ole tällä laitteella',
     'title' => 'Raportit',
     'page_title' => 'Raportit · Beatrax',
     'subtitle' => 'Kokoa raportti tilikirjastasi.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Mukautettu aikaväli',
         'from' => 'Alkaen',
         'to' => 'Asti',
+        'error' => [
+            'incomplete' => 'Valitse sekä alku- että loppupäivä.',
+            'malformed' => 'Käytä kelvollista päivämäärää muodossa VVVV-KK-PP.',
+            'inverted' => 'Loppupäivä on ennen alkupäivää.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Suodattimet',
+        'net_worth_note' => 'Nettovarallisuus on saldo: vain tilisuodatin vaikuttaa.',
     ],
 
     'compare' => 'Vertaa edelliseen jaksoon',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Kaavio valuutassa :currency — :list ei piirretä',
+        'undrawn' => 'Ei renkaassa — :amount kulkee toiseen suuntaan',
         'bar_title' => 'Napsauta pylvästä, niin näet sen tapahtumat',
         'line_title' => 'Napsauta pistettä, niin näet sen tapahtumat',
         'donut_title' => 'Napsauta segmenttiä, niin näet sen tapahtumat',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Palkkiot ja oikaisut (ei laskettu mukaan)',
+    'other_movement_with_refunds' => 'Palkkiot, hyvitykset ja oikaisut (ei laskettu mukaan)',
 ];

@@ -6,6 +6,13 @@
     zone wraps a multi-file `input`; each queued PDF renders as a
     chip below the drop zone with filename, size, and remove button.
 
+    The step is named for the category and states its one issuer in the
+    body, because IcsPdfAdapter reads the Dutch-language Mijn ICS layout
+    and nothing else — Dutch month names, "Af"/"Bij" amount markers, EUR
+    settlement. A reader on another issuer has no path here and the
+    issuer note says so rather than leaving them to find out by
+    uploading.
+
     Submission delegates per-file to the existing `RunsImports`
     pipeline with `ics-pdf` as the format key — the same path
     IcsPdfAdapter already consumes for /imports. The successful-submit
@@ -33,6 +40,8 @@
         <span class="format-chips-label">{{ Lang::get('onboarding::connect_card.got_it_as') }}</span>
         <x-onboarding::format-chip label="PDF" :badge="Lang::get('onboarding::connect_card.badge_only_format')" />
     </div>
+
+    <p class="format-bank-list">{{ Lang::get('onboarding::connect_card.issuer_note') }}</p>
 
     <x-onboarding::drop-zone
         wire-model="statements"

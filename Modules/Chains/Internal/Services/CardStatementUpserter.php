@@ -20,13 +20,13 @@ use Modules\Ledger\Public\Enums\Currency;
  * @internal Bound to UpsertsCardStatements in ChainsServiceProvider —
  *           call sites depend on the contract, not this class directly.
  */
-final class CardStatementUpserter implements UpsertsCardStatements
+final readonly class CardStatementUpserter implements UpsertsCardStatements
 {
-    private const CHUNK_SIZE = 200;
+    private const int CHUNK_SIZE = 200;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function upsertForImportRun(int $importRunId, User $user): int
@@ -76,6 +76,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'statement_summaries.period_end',
                 'statement_summaries.closing_balance_minor',
                 'statement_summaries.closing_balance_currency',
+                'statement_summaries.payment_due_date',
             );
     }
 
@@ -85,7 +86,8 @@ final class CardStatementUpserter implements UpsertsCardStatements
      *                                       import_run_id,
      *                                       period_start, period_end,
      *                                       closing_balance_minor,
-     *                                       closing_balance_currency
+     *                                       closing_balance_currency,
+     *                                       payment_due_date
      */
     private function promoteCandidates(array $candidates, User $user): int
     {
@@ -96,6 +98,8 @@ final class CardStatementUpserter implements UpsertsCardStatements
         $now = $this->clock->now()->toDateTimeString();
 
         $rows = [];
+        /** @var list<array{account_id: int, period_start: string, period_end: string, due_date: string}> $printed */
+        $printed = [];
         foreach ($candidates as $row) {
             $periodStart = self::nullableProp($row, 'period_start');
             $periodEnd = self::nullableProp($row, 'period_end');
@@ -104,6 +108,15 @@ final class CardStatementUpserter implements UpsertsCardStatements
             }
 
             $closing = self::intProp($row, 'closing_balance_minor');
+            $dueDate = self::nullableProp($row, 'payment_due_date');
+            if ($dueDate !== null) {
+                $printed[] = [
+                    'account_id' => self::intProp($row, 'account_id'),
+                    'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
+                    'due_date' => $dueDate,
+                ];
+            }
 
             $rows[] = [
                 'user_id' => $user->id,
@@ -111,6 +124,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'import_run_id' => self::intProp($row, 'import_run_id'),
                 'period_start' => $periodStart,
                 'period_end' => $periodEnd,
+                'due_date' => $dueDate,
                 'total_amount_minor' => $closing,
                 'open_balance_minor' => abs($closing),
                 'currency' => self::currencyOf($row),
@@ -127,7 +141,31 @@ final class CardStatementUpserter implements UpsertsCardStatements
         // UNIQUE(user_id, account_id, period_start, period_end) is what
         // decides which of these rows is new, and it decides for a whole
         // chunk in one statement as readily as for one row.
-        return $this->db->connection()->table('card_statements')->insertOrIgnore($rows);
+        $inserted = $this->db->connection()->table('card_statements')->insertOrIgnore($rows);
+
+        $this->fillPrintedDueDates($printed, $user);
+
+        return $inserted;
+    }
+
+    // A statement already on disk is left alone by insertOrIgnore, and every
+    // one written before the reader was parsed carries no due date at all.
+    // Filled only where it is still missing, so this reaches a shipped install
+    // once and is a no-op on every pass after it.
+    /**
+     * @param  list<array{account_id: int, period_start: string, period_end: string, due_date: string}>  $printed
+     */
+    private function fillPrintedDueDates(array $printed, User $user): void
+    {
+        foreach ($printed as $statement) {
+            $this->db->connection()->table('card_statements')
+                ->where('user_id', $user->id)
+                ->where('account_id', $statement['account_id'])
+                ->where('period_start', $statement['period_start'])
+                ->where('period_end', $statement['period_end'])
+                ->whereNull('due_date')
+                ->update(['due_date' => $statement['due_date']]);
+        }
     }
 
     // The summary the statement is promoted from states the currency its

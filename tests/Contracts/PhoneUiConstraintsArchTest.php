@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#two-phone-constraints-and-three-dialog-naming-failures
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-guard-that-lists-element-names-misses-the-one-nobody-listed
  */
 
 // Brace counting, not a nested-quantifier regex: the coarse-pointer floor grew
@@ -71,11 +72,29 @@ function phoneUiCoarsePointerBlocks(): array
     return $blocks;
 }
 
-/**
- * @return list<string> the class attribute of every element the coarse-pointer
- *                      44px floor selects, across all Blade views
- */
-function phoneUiButtonClassLists(): array
+// A match count of false is not "nothing found", it is "stopped reading", and
+// this file has already shipped a guard that reported the opposite of the truth
+// after PCRE gave up on a long block. Every pattern here answers through these.
+function phoneUiMatched(string $reading, int|false $count): int
+{
+    if ($count === false || preg_last_error() !== PREG_NO_ERROR) {
+        throw new RuntimeException($reading.' stopped reading: '.preg_last_error_msg());
+    }
+
+    return $count;
+}
+
+function phoneUiReplaced(string $reading, ?string $out): string
+{
+    if ($out === null || preg_last_error() !== PREG_NO_ERROR) {
+        throw new RuntimeException($reading.' stopped reading: '.preg_last_error_msg());
+    }
+
+    return $out;
+}
+
+/** @return list<string> every Blade view in the two roots that hold them */
+function phoneUiBladeViews(): array
 {
     $views = [];
     foreach (['Modules', 'resources'] as $root) {
@@ -87,14 +106,127 @@ function phoneUiButtonClassLists(): array
         }
     }
 
+    sort($views);
+
+    return $views;
+}
+
+// Blanked rather than cut, and newlines kept, so every offset and every line
+// number still points at the source the reader has open.
+/** @return string the view with its comments and PHP blocks blanked out */
+function phoneUiMarkupOnly(string $blade): string
+{
+    foreach (['/\{\{--.*?--\}\}/s', '/@php\b.*?@endphp/s', '/@props\s*\(\[.*?\]\)/s', '/<!--.*?-->/s'] as $pattern) {
+        phoneUiMatched('view scrub', preg_match_all($pattern, $blade, $found, PREG_OFFSET_CAPTURE));
+        foreach ($found[0] as [$text, $at]) {
+            $blank = phoneUiReplaced('blanking', preg_replace('/[^\n]/', ' ', $text));
+            $blade = substr_replace($blade, $blank, $at, strlen($text));
+        }
+    }
+
+    return $blade;
+}
+
+// `[^>]*` ends a tag at the first `>` it meets, and a Blade attribute is full of
+// them: `['id' => $x]` in an href, `$attributes->merge(...)` in a component. 113
+// of the 424 button and summary tags in this tree were read half-way by exactly
+// that pattern, class attribute included. Quotes and echoes are stepped over.
+/**
+ * @return list<array{0: int, 1: string, 2: string}> the offset, the start tag and
+ *                                                   the inner source of every
+ *                                                   `<$name>` element in $blade
+ */
+function phoneUiElements(string $blade, string $name): array
+{
+    $elements = [];
+    $length = strlen($blade);
+    $at = 0;
+
+    while (($at = strpos($blade, '<'.$name, $at)) !== false) {
+        $after = $blade[$at + strlen($name) + 1] ?? '';
+        if ($after !== '' && $after !== '>' && ! ctype_space($after)) {
+            $at += strlen($name) + 1;
+
+            continue;
+        }
+
+        $end = phoneUiTagEnd($blade, $at + strlen($name) + 1, $length);
+        $close = strpos($blade, '</'.$name, $end);
+        $elements[] = [
+            $at,
+            substr($blade, $at, $end - $at + 1),
+            $close === false ? '' : substr($blade, $end + 1, $close - $end - 1),
+        ];
+        $at = $end + 1;
+    }
+
+    return $elements;
+}
+
+/** @return int the offset of the `>` that closes the start tag opened before $from */
+function phoneUiTagEnd(string $blade, int $from, int $length): int
+{
+    $quote = '';
+    while ($from < $length) {
+        $character = $blade[$from];
+
+        if ($quote !== '') {
+            if ($character === $quote) {
+                $quote = '';
+            }
+        } elseif ($character === '"' || $character === "'") {
+            $quote = $character;
+        } elseif ($character === '{' && ($blade[$from + 1] ?? '') === '{') {
+            $echo = strpos($blade, '}}', $from);
+
+            return $echo === false ? $length - 1 : phoneUiTagEnd($blade, $echo + 2, $length);
+        } elseif ($character === '>') {
+            return $from;
+        }
+
+        $from++;
+    }
+
+    return $length - 1;
+}
+
+/**
+ * @return list<string> the class attribute of every element a finger reaches for,
+ *                      across all Blade views
+ */
+function phoneUiTouchControlClassLists(): array
+{
     $lists = [];
-    foreach ($views as $view) {
-        preg_match_all('/<(button|summary)\b([^>]*)>/s', (string) file_get_contents($view), $tags, PREG_SET_ORDER);
-        foreach ($tags as $tag) {
-            if (preg_match('/class="([^"]*)"/', $tag[2], $class) === 1) {
-                $lists[] = $class[1];
+    foreach (phoneUiBladeViews() as $view) {
+        $markup = phoneUiMarkupOnly((string) file_get_contents($view));
+        foreach (['button', 'summary', 'a'] as $name) {
+            foreach (phoneUiElements($markup, $name) as [, $tag]) {
+                $lists = array_merge($lists, phoneUiClassAttributes($tag));
             }
         }
+    }
+
+    return $lists;
+}
+
+// Two spellings, because a component builds its class list in PHP and merges it:
+// x-core::primary-button's link arm carries `tap-chip` only inside the echo.
+// A `{{ $x }}` inside a literal list is blanked rather than split, or the token
+// it is glued to reads as `side-item{{`.
+/** @return list<string> the class lists an element declares, merged ones included */
+function phoneUiClassAttributes(string $tag): array
+{
+    phoneUiMatched('class attribute', preg_match_all('/(?<![-:\w])class="([^"]*)"/s', $tag, $literal));
+
+    $lists = [];
+    foreach ($literal[1] as $list) {
+        $lists[] = phoneUiReplaced('class echo', preg_replace('/\{\{.*?\}\}/s', ' ', $list));
+    }
+
+    phoneUiMatched('tag echo', preg_match_all('/\{\{(.*?)\}\}/s', $tag, $echoes));
+    foreach ($echoes[1] as $php) {
+        phoneUiMatched('echo string', preg_match_all("/'([^']*)'/s", $php, $strings));
+        $lists = array_merge($lists, $strings[1]);
     }
 
     return $lists;
@@ -209,7 +341,7 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
     }
 
     $onButtons = [];
-    foreach (phoneUiButtonClassLists() as $classList) {
+    foreach (phoneUiTouchControlClassLists() as $classList) {
         foreach (preg_split('/\s+/', $classList) ?: [] as $class) {
             if (isset($drawnSmall[$class])) {
                 $onButtons[$class] = true;
@@ -227,7 +359,7 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
     ));
 
     expect($unprotected)->toBe([], sprintf(
-        '%s sit on a <button> at a fixed size below 44px and the coarse-pointer floor will deform them',
+        '%s sit on a touch control at a fixed size below 44px and the coarse-pointer floor will deform them',
         implode(', ', array_map(static fn (string $c): string => '.'.$c, $unprotected))
     ));
 });
@@ -342,11 +474,276 @@ it('defines the drawn chevron in both colour schemes', function (): void {
     expect($css)->toMatch('/:root\.dark\s*\{[^{}]*--select-chevron:/');
 });
 
-it('gives the login recovery-code link a touch reach', function (): void {
-    // A lone link in its own paragraph: 17px tall, and no floor covers an <a>.
-    $login = (string) file_get_contents(base_path('Modules/Auth/Resources/views/livewire/login-page.blade.php'));
+/** @return list<string> every class token an element carries */
+function phoneUiClassTokens(string $tag): array
+{
+    $tokens = [];
+    foreach (phoneUiClassAttributes($tag) as $list) {
+        foreach ((array) preg_split('/\s+/', trim($list)) as $token) {
+            if (is_string($token) && $token !== '') {
+                $tokens[] = $token;
+            }
+        }
+    }
 
-    expect($login)->toMatch('/<a\b[^>]*class="[^"]*\btap-link\b/s');
+    return $tokens;
+}
+
+// Blocks, and the controls that are not blocks but end a line of prose all the
+// same: the words inside a <button> are that button's label, not the sentence a
+// link after it is set in.
+/** Elements a link cannot be mid-sentence of, because they close the line before it. */
+const PHONE_UI_FLOW_BREAKS = 'address|article|aside|blockquote|button|dd|details|div|dl|dt'
+    .'|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|header|hr|label|li|main|nav'
+    .'|ol|p|pre|section|select|summary|table|tbody|td|textarea|tfoot|th|thead|tr|ul';
+
+/** @return array<string, float> every `--name: <length>` app.css defines, in px */
+function phoneUiCssLengths(string $css): array
+{
+    $lengths = [];
+    phoneUiMatched('custom properties', preg_match_all('/(--[a-z0-9-]+):\s*([^;}]+)[;}]/', $css, $found, PREG_SET_ORDER));
+    foreach ($found as $property) {
+        $px = phoneUiPixels($property[2], []);
+        if ($px !== null) {
+            $lengths[$property[1]] = $px;
+        }
+    }
+
+    return $lengths;
+}
+
+/** @param array<string, float> $lengths */
+function phoneUiPixels(string $value, array $lengths): ?float
+{
+    $value = trim($value);
+
+    if (preg_match('/^var\(\s*(--[a-z0-9-]+)\s*\)$/', $value, $token) === 1) {
+        return $lengths[$token[1]] ?? null;
+    }
+    if (preg_match('/^([0-9.]+)px$/', $value, $px) === 1) {
+        return (float) $px[1];
+    }
+
+    // The root is 17px on a coarse pointer, so 16 understates every rem and
+    // errs towards reporting a control rather than excusing one.
+    return preg_match('/^([0-9.]+)rem$/', $value, $rem) === 1 ? ((float) $rem[1]) * 16 : null;
+}
+
+// A single line of text is 20px in this app's `text-sm`, so a control clears the
+// floor on its own once it holds 12px of padding a side. That arithmetic is what
+// separates .card-list-item, which is exactly 44, from a `py-2` pill at 36.
+/** @return array<string, true> every class app.css itself sizes at or past the floor */
+function phoneUiSelfSizingClasses(string $css): array
+{
+    $lengths = phoneUiCssLengths($css);
+    $classes = [];
+
+    phoneUiMatched('rules', preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/s', $css, $rules, PREG_SET_ORDER));
+    foreach ($rules as $rule) {
+        if (! phoneUiRuleClearsTheFloor($rule['body'], $lengths)) {
+            continue;
+        }
+
+        foreach (explode(',', $rule['selector']) as $selector) {
+            phoneUiMatched('selector classes', preg_match_all('/\.([a-zA-Z_][a-zA-Z0-9_-]*)/', $selector, $named));
+            foreach ($named[1] as $class) {
+                $classes[$class] = true;
+            }
+        }
+    }
+
+    return $classes;
+}
+
+/** @param array<string, float> $lengths */
+function phoneUiRuleClearsTheFloor(string $body, array $lengths): bool
+{
+    if (preg_match('/(?<![a-z-])(?:min-)?height:\s*(?:44px|max\(100%,\s*44px\))/', $body) === 1) {
+        return true;
+    }
+
+    if (preg_match('/(?<![a-z-])padding(?:-block)?:\s*([^;]+);/', $body, $padding) !== 1) {
+        return false;
+    }
+
+    $vertical = phoneUiPixels((string) strtok(trim($padding[1]), ' '), $lengths);
+
+    return $vertical !== null && $vertical * 2 + 20 >= 44;
+}
+
+/** @return float the height one line of text takes in an element carrying these classes */
+function phoneUiLineBox(array $classes): float
+{
+    $scale = ['text-xs' => 16.0, 'text-base' => 24.0, 'text-lg' => 28.0, 'text-xl' => 28.0];
+    foreach ($classes as $class) {
+        if (isset($scale[$class])) {
+            return $scale[$class];
+        }
+    }
+
+    return 20.0;
+}
+
+/** @return float|null the px a Tailwind spacing step stands for, arbitrary values included */
+function phoneUiSpacingStep(string $step): ?float
+{
+    if (preg_match('/^\[(\d+)px\]$/', $step, $arbitrary) === 1) {
+        return (float) $arbitrary[1];
+    }
+
+    return preg_match('/^(\d+(?:\.\d+)?)$/', $step) === 1 ? ((float) $step) * 4 : null;
+}
+
+/** @return string|null the box a utility class draws, or null when it draws none */
+function phoneUiUtilityBox(string $class, float $line): ?string
+{
+    $class = phoneUiReplaced('variant prefix', preg_replace('/^[a-z]+:/', '', $class));
+
+    if (preg_match('/^(?:min-)?h-(.+)$/', $class, $height) === 1) {
+        $px = phoneUiSpacingStep($height[1]);
+        if ($px !== null && $px >= 44) {
+            return 'a height utility';
+        }
+    }
+
+    if (preg_match('/^(?:p|py|pt|pb)-(.+)$/', $class, $padding) === 1) {
+        $px = phoneUiSpacingStep($padding[1]);
+        if ($px !== null && $px * 2 + $line >= 44) {
+            return 'a padding utility';
+        }
+    }
+
+    return null;
+}
+
+/** @return string|null the box an element declares in its own class list */
+function phoneUiDeclaredBox(string $tag, array $classes, array $selfSizing): ?string
+{
+    foreach ($classes as $class) {
+        if (isset($selfSizing[$class])) {
+            return 'the class .'.$class;
+        }
+    }
+
+    $line = phoneUiLineBox($classes);
+    foreach ($classes as $class) {
+        $box = phoneUiUtilityBox($class, $line);
+        if ($box !== null) {
+            return $box;
+        }
+    }
+
+    if (preg_match('/(?<![-:\w])style="([^"]*)"/s', $tag, $style) !== 1) {
+        return null;
+    }
+
+    // A style attribute built in PHP is a box this guard cannot read, and a
+    // guard that cannot read a value must not claim it is too small.
+    if (str_contains($style[1], '{{')) {
+        return 'a style the call site computes';
+    }
+
+    return preg_match('/(?<![a-z-])(?:min-height|padding|height)(?:-block)?:/', $style[1]) === 1
+        ? 'an inline box'
+        : null;
+}
+
+/** @return bool whether the link stands inside a table cell */
+function phoneUiInsideTableCell(string $before): bool
+{
+    $opened = max((int) strrpos(' '.$before, '<td'), (int) strrpos(' '.$before, '<th'));
+    $closed = max((int) strrpos(' '.$before, '</td'), (int) strrpos(' '.$before, '</th'));
+
+    return $opened > 0 && $opened > $closed;
+}
+
+/** @return bool whether text of its own runs ahead of the link on the same line */
+function phoneUiFollowsText(string $before): bool
+{
+    $from = 0;
+    if (phoneUiMatched('block elements', preg_match_all('#</?(?:'.PHONE_UI_FLOW_BREAKS.')\b[^>]*>#s', $before, $blocks, PREG_OFFSET_CAPTURE)) > 0) {
+        $last = end($blocks[0]);
+        $from = $last[1] + strlen($last[0]);
+    }
+
+    $lead = substr($before, $from);
+    $lead = phoneUiReplaced('directives', preg_replace('/@[a-z]+\s*(\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?/s', '', $lead));
+    $lead = phoneUiReplaced('sibling links', preg_replace('#<a\b[^>]*>.*?</a>#s', '', $lead));
+
+    return trim(phoneUiReplaced('markup', preg_replace('/<[^>]*>/s', '', $lead))) !== '';
+}
+
+/**
+ * @param  array<string, true>  $selfSizing
+ * @return string|null the reason this link needs no halo, or null when its whole
+ *                     height is one line of text and nothing gives it reach
+ */
+function phoneUiLinkReach(string $markup, array $element, array $selfSizing): ?string
+{
+    [$at, $tag, $inner] = $element;
+
+    $box = phoneUiDeclaredBox($tag, phoneUiClassTokens($tag), $selfSizing);
+    if ($box !== null) {
+        return $box;
+    }
+
+    if (preg_match('/<(?:'.PHONE_UI_FLOW_BREAKS.')\b/s', $inner) === 1
+        || preg_match('/@(?:livewire|include)\s*\(/s', $inner) === 1
+        || str_contains($inner, '<x-')) {
+        return 'a block it wraps';
+    }
+
+    $before = substr($markup, 0, $at);
+
+    // app.css gives `td > a:only-child` a halo and its cell 44px of height, so a
+    // link in a table takes its reach from the cell.
+    if (phoneUiInsideTableCell($before)) {
+        return 'the table cell around it';
+    }
+
+    // The floor exempts a link inside a sentence, and so does the guideline: it
+    // cannot be 44px without breaking the line the sentence is set on.
+    return phoneUiFollowsText($before) ? 'the sentence it sits in' : null;
+}
+
+it('gives every link that is only as tall as its own text a 44px reach', function (): void {
+    // No floor covers an <a>, so a link the design draws as a line of text is
+    // whatever its font measures: 17px for the /chains settlement date, 20px for
+    // the login recovery-code link. The halo is what makes one reachable, and
+    // nothing required it — the guard read `<button|summary>` and nothing else.
+    $selfSizing = phoneUiSelfSizingClasses((string) file_get_contents(base_path('resources/css/app.css')));
+    expect(count($selfSizing))->toBeGreaterThan(20, 'app.css yielded almost no self-sizing classes, so this guard is excusing links it cannot size');
+
+    $views = phoneUiBladeViews();
+    expect(count($views))->toBeGreaterThan(200, 'the Blade walk found almost nothing, so a clean answer here means nothing');
+
+    $examined = 0;
+    $textSized = [];
+    foreach ($views as $view) {
+        $markup = phoneUiMarkupOnly((string) file_get_contents($view));
+        foreach (phoneUiElements($markup, 'a') as $element) {
+            $examined++;
+            if (phoneUiLinkReach($markup, $element, $selfSizing) === null) {
+                $textSized[] = str_replace(base_path().'/', '', $view)
+                    .':'.(substr_count($markup, "\n", 0, $element[0]) + 1);
+            }
+        }
+    }
+
+    expect($examined)->toBeGreaterThan(100, 'fewer links than this tree holds were read, so the walk stopped early');
+
+    expect($textSized)->toBe([], implode("\n", [
+        sprintf(
+            '%d of %d links across %d views stand at the height of their own text — 17 to 20px — against a 44px floor.',
+            count($textSized),
+            $examined,
+            count($views)
+        ),
+        'Each needs `tap-link`, which lays a 44px band over the link without moving it, or real height where',
+        'a flush-stacked list leaves the band nothing to take but its neighbour\'s. Check first what else is',
+        'stacked within 44px: two bands that overlap are resolved by markup order, not by which link was aimed at.',
+        ...$textSized,
+    ]));
 });
 
 it('lets the reader\'s text-size choice reach the type scale', function (): void {

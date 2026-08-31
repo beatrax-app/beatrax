@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Iestatīšanas gaita',
     'step_progress' => ':current. solis no :total',
-    'step_dot_aria' => ':number. solis no :total',
 
     'eyebrow_step' => ':number. solis — ',
 ];

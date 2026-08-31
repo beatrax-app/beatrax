@@ -11,7 +11,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
+use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -44,14 +46,17 @@ final readonly class CounterpartyIndexQuery
         // is on. orderBy('id') only makes iteration deterministic — the
         // user-facing order is the post-decrypt usort() below.
         /** @var iterable<stdClass> $cpRows */
-        $cpRows = $query->orderBy('id')->get(['id', 'slug', 'display_name', 'type']);
+        $cpRows = $query->orderBy('id')->get(['id', 'slug', 'display_name', 'type', 'metadata']);
 
-        $cutoffDate = $this->clock->now()->subYear()->toDateString();
+        // One window for the headline total, the average and the bars: read as
+        // a rolling year, the total held days the sparkline had no bar for.
+        $now = $this->clock->now();
+        $cutoffDate = RollingTwelveMonths::startDate($now);
 
         $buckets = $this->bucketsByCounterparty($user, $cutoffDate);
         $recentRows = $this->recentRowByCounterparty($user);
         $monthlyBuckets = $this->monthlyBucketsByCounterparty($user, $cutoffDate);
-        $sparklineMonths = $this->sparklineMonths();
+        $sparklineMonths = RollingTwelveMonths::months($now);
 
         // One rate lookup per currency for the whole page, not one per
         // counterparty or per sparkline month: convertToBase() reads the entire
@@ -106,11 +111,12 @@ final readonly class CounterpartyIndexQuery
         $displayName = $storedDisplayName === ''
             ? ''
             : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
+        $displayName = CounterpartyDefaultName::resolve($displayName, $cpRow->metadata ?? null);
         $type = is_string($cpRow->type ?? null) ? $cpRow->type : CounterpartyType::Unknown->value;
 
         $total = $totals[$cpId]['total'] ?? 0;
         $count = $totals[$cpId]['count'] ?? 0;
-        $avg = $count > 0 ? (int) round($total / 12) : 0;
+        $avg = $count > 0 ? (int) round($total / RollingTwelveMonths::MONTHS) : 0;
 
         $perMonth = $monthlyTotals[$cpId] ?? [];
         $sparkline = [];
@@ -285,21 +291,6 @@ final readonly class CounterpartyIndexQuery
         }
 
         return $monthly;
-    }
-
-    /**
-     * @return list<string> twelve `Y-m` keys, oldest first — the last is the current month
-     */
-    private function sparklineMonths(): array
-    {
-        $months = [];
-        $cursor = $this->clock->now()->subMonths(11)->startOfMonth();
-        for ($i = 0; $i < 12; $i++) {
-            $months[] = $cursor->format('Y-m');
-            $cursor = $cursor->addMonth();
-        }
-
-        return $months;
     }
 
     private function recentLineFrom(?stdClass $recent, int $userId): ?string

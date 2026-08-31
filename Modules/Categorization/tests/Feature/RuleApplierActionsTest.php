@@ -32,7 +32,6 @@ function baseCanonicalForRuleApplier(): CanonicalTransaction
         currency: 'EUR',
         settledAmountMinor: -1000,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Spotify AB',
         counterpartyIban: null,
         counterpartyNormalized: 'spotify ab',

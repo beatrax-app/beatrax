@@ -51,17 +51,38 @@ Two consequences worth keeping:
   there too, so the headline says "Resuming setup" instead of claiming this
   is a fresh start.
 - De-duplication is not invented here. The puller recounts applied records
-  on every step by asking the *same* watermark-scoped query the wire
-  protocol itself uses (`PeerCatchUpExchanger::opsAfterWatermark`), read
+  on every step by asking the *same* watermark-scoped question the wire
+  protocol itself asks (`PeerCatchUpExchanger::tallyFromAuthorAfter`), read
   against the cursor's persisted watermark rather than the device's own
   write-side clock. A watermark only ever advances, so calling `pull()`
   again over an unchanged one counts zero and advances nothing.
 
+  The *tally*, not the delta. The count used to be taken by asking for the
+  frames — `opsFromAuthorAfter`, an unbounded `get()`, every row hydrated
+  into an `OpLogEntry` and packed into 64 KB frames — and then decoding all
+  of them again to run `$count++`. That is O(the peer's whole history) in
+  memory for a number and a watermark, and the phone's ceiling is the
+  interpreter's compiled default of 128 MB, because NativePHP's Android
+  shell writes a `php.ini` with no `memory_limit` in it at all. Fifty
+  thousand entries — roughly 3,100 transactions, since
+  `MergeRulesRegistry` lists sixteen create-required fields for
+  `transactions` and `writeCreateRow()` emits one op per field — exhausted
+  it. Memory exhaustion is `E_ERROR`, not a `Throwable`, so
+  `SetupProgressScreen::poll()`'s `catch` could not see it; and the fatal
+  landed at step 4, *before* `persistCursor()`, so the watermark never
+  moved and the next tick redid the same doomed work. A permanent stall,
+  every two seconds, with nothing on screen and nothing in the log.
+  `COUNT(*)` and the highest `(hlc_l, hlc_c)` are both O(1) memory, and the
+  same 50k delta now counts in 0.4 s at 42.5 MB — the same figure 200k
+  entries costs.
+
 One subtlety in that count: the watermark covers *this* device's writes as
 well as the peer's. Counting everything after the watermark made a phone
 report its own locally seeded rows as records received from a desktop it had
-never reached. Only entries whose `device_id` is the resolved peer count as
-progress.
+never reached. Only entries the resolved peer *authored* count as progress,
+which is why the puller asks the single-author form of the query rather than
+the general one — that one treats an author it holds no cursor for as fully
+owed, and would frame every other device's history only to discard it.
 
 ## What one step actually does
 
@@ -73,9 +94,23 @@ constraint rather than a preference.
 
 A step, in order:
 
-1. Load the device identity. A null identity — app-lock engaged, no key, or
-   sync never enabled — means the step does nothing at all and mutates no
-   cursor.
+1. Load the device identity. A null identity means the step does nothing at
+   all and mutates no cursor — but *which* null it is decides what the
+   screen says, and folding them together is a defect this made twice.
+   `DeviceIdentityLoader::load()` answers null for a locked app-lock and for
+   an install where sync was never enabled alike, and the gate read both as
+   "no peer". On a locked phone that is a healthy, confirmed desktop being
+   reported as missing; and if the peer happened to be mid-pairing —
+   `paired_at` set, `confirmed_at` not yet — `peerRevokedUs()` matched and
+   the screen said *"This device was removed from your other device. Pair
+   again to resume syncing."* Terminal copy, about another machine, caused
+   by nothing but a lock screen. It never cleared on its own either:
+   `AppLockMiddleware` allow-lists `mobile.setup`, so the gate is never
+   bounced to the PIN pad and `GET /mobile/setup` keeps answering 200 with
+   `wire:poll` live. The step now asks `state()` — only once `load()` has
+   already answered null, so an unlocked tick pays nothing extra — and a
+   `Locked` state reports `SyncBlockedReason::Locked`, whose copy already
+   existed and had no producer on this path.
 2. Resolve the peer: the single confirmed non-self device in
    `device_registry`. Household pairing is one-to-one, so there is exactly
    one, and multi-peer selection is deliberately out of scope.
@@ -148,8 +183,17 @@ Point 3 exists because of the ordering above being imperfect in practice.
 Entries can arrive and quarantine *before* the keyring is populated — over
 the relay, for instance, where there is no single session imposing an order.
 The first `pull()` step to observe a non-empty keyring therefore re-projects
-the entire persisted op log exactly once per cursor, so anything quarantined
-earlier now decrypts and projects.
+what quarantined, exactly once per cursor, so anything held back earlier now
+decrypts and projects.
+
+*What* quarantined, not the whole log. That pass used to be
+`OpLogRebuilder::rebuild()` — snapshot the triggers, drop them, delete every
+row the log can recreate, replay the entire persisted op log, restore, reindex
+— and it is measured below as the third of four costs this gate could not
+afford. `HistoryReprojector::replayQuarantined()` is the same question asked of
+the rows that actually failed, and it is already the desktop's answer to the
+identical problem: `SealedLedgerRecovery` calls it for "peer entries a locked
+drain persisted but never projected".
 
 Re-projection blocks the request it runs in, which produced a UI bug worth
 knowing about. Running it in the same tick that finished the transfer made
@@ -177,7 +221,7 @@ without copy, so a new reason cannot ship as a blank line on screen.
 | `NoKeys` | Peer reached, keyring still empty. |
 | `Unreachable` | The sync burst ran and did not complete. |
 | `Reprojecting` | History rebuild announced or in progress. |
-| `Locked` | The app-lock key went away mid-flow. |
+| `Locked` | No app-lock key: engaged before the step, or gone mid-flow. |
 | `Revoked` | The peer says it no longer knows this device. |
 | `Retrying` | The poll tick itself threw. |
 
@@ -203,6 +247,13 @@ is only determinate during transfer when `records_expected` genuinely
 exceeds `records_applied` — since expected is derived from applied, treating
 it as a total renders a full bar the instant the first row lands.
 Everything else reports indeterminate, which is honest about not knowing.
+
+The settings screen's own progress block (`SyncScreen::hydrateProgress()`)
+reads the same cursor and answers the same two questions the same way: a total
+that merely equals what has landed is indeterminate, and the block stays on
+screen for `rebuilding` as well as `pulling` — `SyncPhase::isInitialSyncInFlight()`
+is where that pair is spelled once. Asking only about `pulling` made the block
+vanish for the whole of the slowest step.
 
 ## The one silent case left
 
@@ -248,6 +299,87 @@ Two pieces of state make that honest rather than merely quiet:
 
 Taking the exit does not spend the import: `/mobile/import` stays exempt and
 still leads back into `mobile.pair?mode=import`.
+
+## Four measured costs on the sync path
+
+The phone's ceiling is 128 MB — the interpreter's compiled default, because
+NativePHP's Android shell writes a `php.ini` with no `memory_limit` in it at
+all (see [the module architecture page](architecture.md)). Everything below was
+measured in a bare harness whose framework baseline is 40.5 MB; a routed `web`
+request costs about 10 MB more, so on the device each threshold arrives sooner
+than the number given.
+
+Scale, so the entry counts mean something: `OpLogBackfiller::columnsOf()` selects
+every column but `id` — 34 of them for `transactions` — and
+`OpLogWriter::writeCreateRow()` emits one op per field. Fifty thousand entries is
+roughly 1,500 transactions. One real device sync in this project moved 8,365
+records.
+
+| Where | Before | After |
+|---|---|---|
+| `PeerCatchUpExchanger::opsAfterWatermark()` | 80.5 MB at 20k, 98.5 MB at 30k, **fatal at 50k** | 40.5 MB flat to 630,360, at 60% more wall time |
+| the gate's re-projection | 124.5 MB at 130k, **fatal at 200k** — and that is the load step alone, before the replay | one query, 0.007 s, no growth |
+| `SyncStatusService::overallStatus()` | 106.5 MB at 130k, **fatal at 200k** | 40.5 MB flat, 0.11 s at 630,360 |
+| `OpLogWriter::writeIncrement()` | 6.2 ms and 2 MB per call after 5,000 increments, rising with every one | 0.10 ms, no growth |
+
+**The catch-up delta** is [counted, then streamed](../sync/peer-session-lifecycle.md#the-delta-is-counted-then-streamed).
+It reaches the phone through `LanSyncClient::runExchange()`, which
+`SyncScreen::syncNow()` — the "Sync now" button — drives through
+`MobileSyncTriggerService`, and which `InitialSyncPuller` drives on every tick of
+this gate.
+
+**The re-projection** is the quarantine-scoped replay described above. In the
+ordering the protocol actually imposes — epoch phase before catch-up — nothing
+quarantines, so the pass is one `exists()` and costs nothing. Its worst case is
+the relay-first arrival, where the sensitive columns of a whole ledger land
+before their keys: it is then bounded by the rows that quarantined rather than by
+the log, which is a smaller number and never a larger one. It is deliberately
+still a single `replay()` call rather than one per 400-pk chunk, because one call
+is what lets `parentsFirst()` and `childrenFirst()` order creates and tombstones
+across tables; chunked, a parent's tombstone can be applied before a child chunk
+that a foreign key still holds.
+
+**The status service** asked "has this device written anything since the last
+session closed" by plucking every `recorded_at` it had ever written and running
+`CarbonImmutable::parse()` on each. It is one `MAX()` — 0.12 s over 630,360 rows
+warm, 0.6 s on the first touch of a 242 MB file, against 8.6 s and 322 MB for the
+pluck given a 1 GB ceiling to survive in. The index is deliberately not widened:
+`op_log_entries_replay_idx` reaches only `user_id` here, so the aggregate scans
+that user's rows, and a tenth of a second at 630,360 is not what was wrong. The
+two timestamp formats still meet as parsed instants, never as strings —
+`sync_sessions` writes ISO8601 with an offset and this table writes
+`Y-m-d H:i:s`, and `' '` sorts before `'T'`.
+
+**The G-Counter increment** read back every op this device had ever written for
+`(table, pk, field)` and `json_decode`d each to find its own running maximum, so
+every increment cost the ones before it. `GCounterStrategy` merges as the sum of
+each device's maximum, so a total that does not rise is merged away; the newest
+op is therefore the maximum, and `writeIncrement()` now refuses a non-positive
+delta rather than letting that stop being true. One row, read backwards along
+`op_log_entries_table_pk_idx`, `limit 1`.
+
+### The op log has no floor, and should not grow one here
+
+Nothing anywhere deletes from `op_log_entries` outside account deletion and a
+rebuild's own replay. That is correct for a CRDT log — an op that is pruned on
+one device and not another is a divergence no later exchange can resolve, and
+per-device watermarks say what a *peer* has consumed, never what every peer ever
+will. So the log grows for the life of the install, and each of the four costs
+above grows with it.
+
+The answer is not a prune. It is that no reader of the log may be proportional to
+it, which is what the four fixes make true: three are now flat in the size of the
+log, and the fourth is flat in the size of the delta actually owed. A compaction
+scheme would need a device-set-wide floor nothing in the protocol currently
+carries, and inventing one to protect readers that no longer need protecting
+would trade a bounded cost for an unbounded correctness risk.
+
+One consequence worth writing down: `OpLogRebuilder::rebuild()` now has no
+production caller. It is exercised by `OpLogRebuilderTest`,
+`RebuildDeletionOrderTest` and `EncryptedRebuildConvergenceTest`, and it remains
+the only thing that can rebuild a projection from nothing — but nothing triggers
+it. Either it wants a deliberate entry point, or it wants deleting; it should not
+sit between the two.
 
 ## Related
 

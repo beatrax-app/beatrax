@@ -25,6 +25,7 @@
     @endif
     <x-core::emoji-action
         :label="Lang::get('calendar::messages.panel.close')"
+        :caption="Lang::get('calendar::messages.panel.close_caption')"
         class="ml-auto"
         wire:click="$set('selectedDay', null)"
         x-on:click="panelOpen = false"
@@ -37,7 +38,7 @@
 <div class="cal-panel-bal-row">
     <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.start_of_day') }}</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
-        @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
+        @if (! $dayDto->showsBalance() || $dayDto->sodBalanceMinor === null)
             —
         @else
             {{ Money::ofMinor($dayDto->sodBalanceMinor, $dayDto->currency)->format() }}
@@ -91,7 +92,12 @@
                                     style="color: var(--color-text-muted);"
                                     wire:navigate
                                 >{{ Lang::get('calendar::messages.panel.series') }}</a>
-                            @elseif ($entry->transactionId !== null)
+                            @endif
+                            {{-- Not an @elseif: one entry can carry both once a
+                                 booked row retires the occurrence a cadence
+                                 expected, and the reader is owed the row it was
+                                 paid by as well as the series it belongs to. --}}
+                            @if ($entry->transactionId !== null)
                                 <a
                                     href="{{ route('transactions.show', ['transactionId' => $entry->transactionId]) }}"
                                     class="tap-link font-medium underline-offset-2 hover:underline"
@@ -121,11 +127,25 @@
 {{-- EOD balance --}}
 <div class="cal-panel-bal-row mt-auto">
     <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.end_of_day') }}</span>
-    <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: {{ !$dayDto->isComputing && $dayDto->eodBalanceMinor < 0 ? 'var(--color-rose)' : 'var(--color-text)' }};">
-        @if ($dayDto->isComputing)
-            —
-        @else
+    <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: {{ $dayDto->showsBalance() && $dayDto->eodBalanceMinor < 0 ? 'var(--color-rose)' : 'var(--color-text)' }};">
+        @if ($dayDto->showsBalance())
             {{ Money::ofMinor($dayDto->eodBalanceMinor, $dayDto->currency)->format() }}
+        @else
+            —
         @endif
     </span>
 </div>
+@if ($dayDto->unconvertedCurrencies !== [])
+    <p data-not-converted="true" class="text-xs" style="color: var(--color-text-faint);">
+        {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $dayDto->unconvertedCurrencies)]) }}
+    </p>
+@endif
+{{-- The rows above are drawn from every visible account and the two figures
+     around them from the balance set alone. Where those disagree the panel
+     names the account, or it has printed a start and an end the payments
+     between them cannot reach. --}}
+@if ($dayDto->uncountedAccounts !== [])
+    <p data-not-counted="true" class="text-xs" style="color: var(--color-text-faint);">
+        {{ Lang::get('calendar::messages.balance.not_counted', ['list' => implode(', ', $dayDto->uncountedAccounts)]) }}
+    </p>
+@endif

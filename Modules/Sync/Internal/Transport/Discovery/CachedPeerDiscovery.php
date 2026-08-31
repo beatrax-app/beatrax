@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Discovery;
 
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 
 // One pairing poll asks the network three times over — the frame puller and
 // both courier deliveries — and each ask blocks for the full browse timeout.
 // Peers do not move mid-ceremony, so one answer serves the whole poll.
 final class CachedPeerDiscovery implements PeerDiscovery
 {
-    // Shorter than the three-second poll that drives it, so every poll still
-    // gets a fresh answer while the calls inside one poll share it.
-    private const float TTL_SECONDS = 2.5;
-
     /** @var array<string, array{answeredAt: float, peers: list<DiscoveredPeer>}> */
     private array $answers = [];
 
@@ -31,11 +28,11 @@ final class CachedPeerDiscovery implements PeerDiscovery
     /**
      * @return list<DiscoveredPeer>
      */
-    public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+    public function browse(string $serviceType, float $timeoutSeconds = ProtocolTimings::BROWSE_SECONDS): array
     {
         $answer = $this->answers[$serviceType] ?? null;
 
-        if ($answer !== null && (microtime(true) - $answer['answeredAt']) < self::TTL_SECONDS) {
+        if ($answer !== null && (microtime(true) - $answer['answeredAt']) < ProtocolTimings::DISCOVERY_CACHE_TTL_SECONDS) {
             return $answer['peers'];
         }
 

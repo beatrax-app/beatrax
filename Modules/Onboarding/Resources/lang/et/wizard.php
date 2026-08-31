@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Samm :current / :total',
 
-    'step_dot_aria' => 'Samm :number / :total',
-
     'back' => 'Tagasi',
     'back_aria' => 'Tagasi — naaseb eelmise seadistussammu juurde',
 

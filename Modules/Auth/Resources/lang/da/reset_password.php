@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Brug mindst 12 tegn.',
     'error_wrong_code' => 'Brugernavnet og gendannelseskoden passer ikke sammen. Tjek koden grundigt — store bogstaver og hverken nul, O, et-tal eller L.',
+    'error_throttled' => 'For mange forsøg — prøv igen om :wait.',
 ];

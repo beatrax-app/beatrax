@@ -3,11 +3,11 @@
     scenario panel pair on the /forecast page when a scenario is
     active.
 
-    Three direction-aware delta numerics at horizon day 30 / 60 / 90:
-    positive (scenario is BETTER than baseline) tints emerald-700,
-    negative (scenario is WORSE) tints rose-700, zero leaves the
-    numeric in default slate-900. The locale-aware Money formatter
-    uses the project's nl_NL EUR convention.
+    One direction-aware delta numeric per ForecastHorizon: positive
+    (scenario is BETTER than baseline) tints emerald-700, negative
+    (scenario is WORSE) tints rose-700, zero leaves the numeric in
+    default slate-900. The locale-aware Money formatter uses the
+    project's nl_NL EUR convention.
 
     Inputs:
       - $netDiff: array<int, int|null> keyed by horizon day with signed
@@ -15,9 +15,9 @@
         run does not reach that day, drawn as an em dash rather than
         as a zero that would claim the scenario changes nothing.
       - $netDiffCurrency: ISO 4217 currency string for the formatter.
-      - $horizonDays: list<int> of horizon days to render (the constant
-        ProjectForecastJob::HORIZON_DAYS passed in from ForecastPage so
-        the template stays in lock step with the canonical horizon set).
+      - $horizonDays: list<int> of horizon days to render. Required:
+        a default here was a second horizon set, and it was already
+        two cases behind the one forecast-page passes.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
@@ -28,8 +28,8 @@
 
 <section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="{{ Lang::get('forecasting::forecast.net_diff_section_aria') }}">
     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::forecast.net_diff') }}</p>
-    <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        @foreach (($horizonDays ?? [30, 60, 90]) as $horizonKey)
+    <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        @foreach ($horizonDays as $horizonKey)
             @php
                 // null is a checkpoint the loaded run does not reach. It used
                 // to arrive here as 0, which reads as "this scenario changes

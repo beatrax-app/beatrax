@@ -10,7 +10,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\Forecasting\Internal\Enums\ForecastPointSet;
+use Modules\Forecasting\Internal\Enums\SeriesConfidence;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
+use Modules\Forecasting\Internal\Mapping\ForecastWindow;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
@@ -24,15 +27,9 @@ final readonly class ForecastQuery
 {
     // The two non-terminal run states. 'complete' and 'failed' are answers;
     // these are the only ones the user is still waiting on.
-    private const IN_FLIGHT_STATUSES = [JobRunStatus::Pending->value, JobRunStatus::Running->value];
+    private const array IN_FLIGHT_STATUSES = [JobRunStatus::Pending->value, JobRunStatus::Running->value];
 
     use CoercesScalars;
-
-    // Bounds on the band ratio: full band width as a percentage of the point,
-    // which is twice the series' variance tolerance.
-    private const int HIGH_CONFIDENCE_MAX_BAND_RATIO = 10;
-
-    private const int MEDIUM_CONFIDENCE_MAX_BAND_RATIO = 25;
 
     public function __construct(
         private DatabaseManager $db,
@@ -43,7 +40,7 @@ final readonly class ForecastQuery
         private AccountBalanceQuery $balances,
     ) {}
 
-    public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user): ForecastDto
+    public function forUser(int $accountId, int $horizonDays, ?int $scenarioId, User $user, bool $viewByFunder = false): ForecastDto
     {
         $account = $this->db->connection()->table('accounts')
             ->where('id', $accountId)
@@ -69,7 +66,7 @@ final readonly class ForecastQuery
         }
         $row = $runQuery->orderByDesc('id')->first();
 
-        $asOf = $this->clock->now()->startOfDay();
+        $window = new ForecastWindow($horizonDays, $scenarioId, $this->clock->now()->startOfDay());
 
         $decoded = $this->decodeCompletedRun($row);
         if ($decoded === null) {
@@ -77,30 +74,40 @@ final readonly class ForecastQuery
             // never computed one has nothing pending, and claiming otherwise
             // left the calendar promising a projection that never arrived.
             return $this->isRunInFlight($row)
-                ? $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf)
-                : $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
+                ? $this->computingSentinel($accountId, $accountName, $defaultCurrency, $window)
+                : $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $window, $user, self::hasRunFailed($row));
         }
 
         $accountsBlock = is_array($decoded['accounts'] ?? null) ? $decoded['accounts'] : [];
         $accountResult = $accountsBlock[(string) $accountId] ?? $accountsBlock[$accountId] ?? null;
         if (! is_array($accountResult)) {
-            return $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
+            return $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $window, $user);
         }
 
         $runAsOf = isset($decoded['as_of']) && is_string($decoded['as_of']) && $decoded['as_of'] !== ''
             ? CarbonImmutable::parse($decoded['as_of'])
-            : $asOf;
+            : $window->asOf;
 
         $confidence = $this->resolveSeriesConfidenceForAccount($accountId, $user);
 
         return $this->mapper->mapForecast(
             accountResult: $accountResult,
-            horizonDays: $horizonDays,
-            scenarioId: $scenarioId,
-            asOf: $runAsOf,
+            window: $window->openingOn($runAsOf),
             isComputing: false,
             seriesConfidence: $confidence,
+            pointSet: ForecastPointSet::for($viewByFunder),
+            // The run opens on the day it was computed, so one that predates
+            // today draws days already spent under the word "today".
+            isStale: $runAsOf->lessThan($window->asOf),
         );
+    }
+
+    // A run that ended `failed` wrote no points, and the flat line drawn in its
+    // place is indistinguishable from a real projection with nothing in it. The
+    // scenario chart drew that line forever while every retry re-crashed.
+    private static function hasRunFailed(mixed $row): bool
+    {
+        return $row instanceof stdClass && self::toString($row->status ?? null) === JobRunStatus::Failed->value;
     }
 
     private function isRunInFlight(mixed $row): bool
@@ -154,15 +161,7 @@ final readonly class ForecastQuery
             if ($point === 0) {
                 continue;
             }
-            $tol = $series->varianceTolerancePercent;
-            $bandRatio = (2 * $tol);
-
-            $confidence = match (true) {
-                $bandRatio <= self::HIGH_CONFIDENCE_MAX_BAND_RATIO => 'high',
-                $bandRatio <= self::MEDIUM_CONFIDENCE_MAX_BAND_RATIO => 'medium',
-                default => 'low',
-            };
-
+            $bandRatio = 2 * $series->varianceTolerancePercent;
             $magnitude = abs($point);
             $bandWidthMinor = (int) round($magnitude * $bandRatio / 100);
 
@@ -173,8 +172,9 @@ final readonly class ForecastQuery
             $result[] = new SeriesConfidenceDto(
                 seriesId: $series->seriesId,
                 seriesName: $displayName,
-                confidence: $confidence,
+                confidence: SeriesConfidence::forBandRatio($bandRatio),
                 pointMinor: $point,
+                monthlyEquivalentMinor: $series->monthlyEquivalent->toMinor(),
                 bandWidthMinor: $bandWidthMinor,
                 currency: $series->latestAmount->currency(),
             );
@@ -187,17 +187,15 @@ final readonly class ForecastQuery
         int $accountId,
         string $accountName,
         string $defaultCurrency,
-        int $horizonDays,
-        ?int $scenarioId,
-        CarbonImmutable $asOf,
+        ForecastWindow $window,
     ): ForecastDto {
         return new ForecastDto(
             accountId: $accountId,
             accountName: $accountName,
             defaultCurrency: $defaultCurrency,
-            horizonDays: $horizonDays,
-            scenarioId: $scenarioId,
-            asOf: $asOf,
+            horizonDays: $window->horizonDays,
+            scenarioId: $window->scenarioId,
+            asOf: $window->asOf,
             todayBalanceMinor: 0,
             points: [],
             seriesConfidence: [],
@@ -234,11 +232,12 @@ final readonly class ForecastQuery
         int $accountId,
         string $accountName,
         string $defaultCurrency,
-        int $horizonDays,
-        ?int $scenarioId,
-        CarbonImmutable $asOf,
+        ForecastWindow $window,
         User $user,
+        bool $runFailed = false,
     ): ForecastDto {
+        $asOf = $window->asOf;
+        $horizonDays = $window->horizonDays;
         $anchorMinor = $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($defaultCurrency);
 
         // A booked row dated ahead of today is a certainty already in the
@@ -275,12 +274,13 @@ final readonly class ForecastQuery
             accountName: $accountName,
             defaultCurrency: $defaultCurrency,
             horizonDays: $horizonDays,
-            scenarioId: $scenarioId,
+            scenarioId: $window->scenarioId,
             asOf: $asOf,
             todayBalanceMinor: $anchorMinor,
             points: $points,
             seriesConfidence: [],
             isComputing: false,
+            runFailed: $runFailed,
         );
     }
 }

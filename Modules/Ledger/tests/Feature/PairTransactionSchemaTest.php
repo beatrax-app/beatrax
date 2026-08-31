@@ -142,7 +142,6 @@ it('returns a NEW CanonicalTransaction instance from withType() preserving every
         currency: 'EUR',
         settledAmountMinor: -1299,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'AH Amsterdam',
         counterpartyIban: 'NL57ASNB0123456789',
         counterpartyNormalized: 'ah amsterdam',

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/lună',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Toleranță la variație',
     'tolerance' => 'Toleranță',
@@ -25,5 +26,5 @@ return [
     'settled_equivalent' => 'Decontat în :code',
     'chart_requires_js' => 'Graficul necesită JavaScript.',
 
-    'tolerance_toast' => 'Toleranță: :percent%',
+    'tolerance_toast' => 'Toleranță: :percent %',
 ];

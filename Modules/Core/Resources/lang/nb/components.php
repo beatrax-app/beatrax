@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Viser de :shown nyeste av :count.',
+
     'drawer_nav' => 'Navigasjon',
 
     'search_placeholder' => 'Søk…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Vil du se dataene dine på mobilen også?',
         'body' => 'Installer Beatrax på mobilen for rask tilgang til økonomien din.',
         'dismiss_aria' => 'Lukk installasjonstipset',
+        'dismiss_caption' => 'Lukk',
         'install_app' => 'Installer appen',
 
         'desktop_html' => 'Åpne Beatrax i nettleseren på mobilen og trykk på "Legg til på Hjem-skjerm" — eller trykk på <strong style="color: var(--color-text);">⚡</strong>-ikonet i delingsmenyen i Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Filer valgt: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Velg en dato',
         'prev_month' => 'Forrige måned',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minutt',
         'empty' => 'intet tidspunkt valgt',
     ],
+
+    'toast_undo' => 'Angre',
 
     'veil_locked' => 'Appen er låst',
 

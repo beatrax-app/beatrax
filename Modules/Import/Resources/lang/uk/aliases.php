@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Розібрати й переглянути',
     'cancel_import' => 'Скасувати імпорт',
 
-    'diff_new' => 'нових,',
-    'diff_unchanged' => 'без змін,',
-    'diff_conflicts' => 'конфліктів.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count новий|:count нові|:count нових',
+    'diff_unchanged' => ':count без змін|:count без змін|:count без змін',
+    'diff_conflicts' => ':count конфлікт|:count конфлікти|:count конфліктів',
 
     'conflicts_heading' => 'Конфлікти',
     'conflict_name' => 'назва — наявна: :existing → у файлі: :file',
@@ -54,8 +55,10 @@ return [
     'test_heading' => 'Перевірити на моїх транзакціях',
     'test_help' => 'Відредагуй узагальнений шаблон рядка, щоб побачити, які транзакції він охопить.',
     'typing' => 'Введення…',
-    'matches_prefix' => 'Знайдено збігів:',
-    'matches_suffix' => '(у твоїй нещодавній історії транзакцій).',
+    // i18n-review: uk · matches — replaced a count label that kept the history in
+    // brackets. Відповідає governs the dative, which leaves the last two arms
+    // identical; whether a tally sentence wants that verb at all is the call.
+    'matches' => 'Відповідає :count транзакції у твоїй нещодавній історії.|Відповідає :count транзакціям у твоїй нещодавній історії.|Відповідає :count транзакціям у твоїй нещодавній історії.',
 
     'merge_modal_title' => 'Об’єднати :count псевдонім|Об’єднати :count псевдоніми|Об’єднати :count псевдонімів',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Файл не завантажено.',
         'unreadable' => 'Не вдалося прочитати завантажений файл.',
         'too_short' => 'Шаблон надто короткий для перевірки.',
+        'file_not_yaml' => 'Цей файл не є коректним YAML, тому з нього нічого не вдалося прочитати. Експортуй свої псевдоніми ще раз і завантаж отриманий файл.',
+        'file_unreadable_as_yaml' => 'Цей файл не вдалося прочитати як список псевдонімів. Експортуй свої псевдоніми ще раз і завантаж отриманий файл.',
+        'file_has_no_entries_list' => 'Цей файл не починається зі списку entries: верхнього рівня, тому в ньому немає псевдонімів для імпорту. Перевір, чи це той файл.',
+        'entry_is_not_a_mapping' => 'Запис :entry — це проста величина там, де очікувалися шаблон і назва. Додай обидва поля або вилучи цей запис і завантаж файл ще раз.',
+        'entry_is_missing_a_field' => 'У записі :entry бракує шаблона або назви, а псевдоніму потрібні обидва. Заповни те, чого бракує, або вилучи цей запис і завантаж файл ще раз.',
     ],
 ];

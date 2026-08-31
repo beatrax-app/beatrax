@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Be kategorijos',
+    'unavailable_category' => 'Kategorijos šiame įrenginyje nėra',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Įvykdyta',
         'uncleared' => 'Neįvykdyta',

@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Confirmă sau respinge legăturile candidate pe care rezolvatorul de lanțuri nu le-a putut confirma automat.',
 
     'empty_heading' => 'Nimic de verificat',
-    'empty_body' => 'Fiecare legătură de lanț este fie confirmată, fie respinsă. Candidații noi vor apărea aici pe măsură ce sosesc importuri.',
+    'empty_body' => 'Fiecare legătură pe care rezolvatorul a putut-o împerechea este confirmată sau respinsă. Candidații noi vor apărea aici pe măsură ce sosesc importuri.',
 
     'auto_confirm_nudge' => 'Încă o confirmare și legăturile similare se confirmă automat.',
 

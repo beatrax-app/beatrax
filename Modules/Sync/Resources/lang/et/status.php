@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Eemaldatud seade',
     'dismiss_peer' => 'Peida see seade',
+    'dismiss_peer_caption' => 'Peida',
     'dismiss_stale' => 'Eemalda seadmed, mis pole enam seotud',
     'not_synced_yet' => 'Pole veel sünkroonitud',
     'error' => 'Sünkroonimise viga ühes või mitmes seadmes',

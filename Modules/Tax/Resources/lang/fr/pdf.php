@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Montant',
 
     'subtotal' => 'Sous-total',
+    'subtotal_income' => 'Sous-total des revenus',
 
     'footer' => 'Généré par Beatrax — finances personnelles 100 % locales — :year',
 ];

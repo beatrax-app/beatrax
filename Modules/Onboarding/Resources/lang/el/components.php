@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Πρόοδος ρύθμισης',
     'step_progress' => 'Βήμα :current από :total',
-    'step_dot_aria' => 'Βήμα :number από :total',
 
     'eyebrow_step' => 'Βήμα :number — ',
 ];

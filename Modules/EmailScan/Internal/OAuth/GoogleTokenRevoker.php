@@ -9,15 +9,15 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class GoogleTokenRevoker
+final readonly class GoogleTokenRevoker
 {
-    private const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
+    private const string REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 
-    private const TIMEOUT_SECONDS = 10;
+    private const int TIMEOUT_SECONDS = 10;
 
     public function __construct(
-        private readonly HttpClient $http,
-        private readonly LoggerInterface $logger,
+        private HttpClient $http,
+        private LoggerInterface $logger,
     ) {}
 
     // Best-effort: a failed revoke must not block the local disconnect. The

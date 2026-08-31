@@ -14,12 +14,13 @@ return [
     'bulk_delete' => ':count Job löschen|:count Jobs löschen',
     'empty_pending' => 'Die Queue ist leer.',
     'empty_failed' => 'Keine fehlgeschlagenen Jobs.',
-    'empty_batches' => 'Keine aktiven Batches.',
+    'empty_batches' => 'Keine Batches.',
     'select_aria' => 'Auswählen',
     'select_row_aria' => 'Zeile :key auswählen',
     'col_id' => 'Id',
     'col_queue' => 'Queue',
     'col_attempts' => 'Versuche',
+    'col_state' => 'Status',
     'col_created' => 'Erstellt',
     'col_uuid' => 'UUID',
     'col_failed' => 'Fehlgeschlagen',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Ausstehend',
     'col_actions' => 'Aktionen',
     'delete_job' => 'Job löschen',
+    'worker_running' => 'Worker führt ihn aus',
     'delete_pending_confirm' => 'Ausstehenden Job #:key löschen?',
     'retry_job' => 'Job erneut versuchen',
     'forget_confirm' => 'Fehlgeschlagenen Job :uuid entfernen?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Die ausgewählten fehlgeschlagenen Jobs werden erneut in die Queue gestellt, damit der Worker sie noch einmal versucht.',
     'cancel' => 'Abbrechen',
 
+    'state' => [
+        'available' => 'Bereit',
+        'reserved' => 'Reserviert',
+        'scheduled' => 'Geplant',
+    ],
+
     'tab' => [
         'pending' => 'Ausstehend',
         'failed' => 'Fehlgeschlagen',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Ausstehender Job gelöscht',
+        'pending_already_gone' => 'Der Job war bereits weg',
         'failed_requeued' => 'Fehlgeschlagener Job erneut eingereiht',
         'failed_removed' => 'Fehlgeschlagener Job entfernt',
         'batch_cancelled' => 'Batch abgebrochen',
         'batch_deleted' => 'Batch gelöscht',
         'batch_failures_requeued' => 'Fehlgeschlagene Batch-Jobs erneut eingereiht',
+        'batch_failures_none' => 'Keine Batch-Fehler mehr zum erneuten Einreihen',
         'failed_jobs_requeued' => 'Fehlgeschlagene Jobs erneut eingereiht',
+        'failed_jobs_none' => 'Keine fehlgeschlagenen Jobs mehr zum erneuten Einreihen',
         'bulk_refused' => 'Massenlöschung abgelehnt — :reason',
         'rows_deleted' => 'Ausgewählte Zeilen gelöscht',
     ],

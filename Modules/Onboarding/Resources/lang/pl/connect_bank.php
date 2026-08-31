@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Upuść tutaj plik CAMT.053',
     'drop_lead_mt940' => 'Upuść tutaj plik MT940',
-    'drop_lead_asn' => 'Upuść tutaj plik CSV z ASN',
-    'drop_lead_ing' => 'Upuść tutaj plik CSV z ING',
+    'drop_lead_csv_layout' => 'Upuść tutaj plik CSV z :layout',
     'drop_lead_pick_bank' => 'Wybierz bank, który wyeksportował Twój plik CSV — bez tego nie odczytamy go poprawnie.',
     'drop_lead_default' => 'Upuść tutaj plik wyciągu',
     'browse_file' => 'lub wybierz plik z dysku',
 
-    'banks_mt940' => 'Obsługiwane: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Obsługiwane: ASN, ING — kolejne formaty pojawią się wraz z próbkami od użytkowników.',
-    'banks_default' => 'Obsługiwane: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 to wyciąg w formacie XML — poszukaj go w bankowości internetowej wśród wyciągów lub pobrań.',
+    'format_help_mt940' => 'MT940 to wyciąg w zwykłym tekście, oferowany jako .sta lub .940 obok plików XML i CSV.',
+    'format_help_csv' => 'CSV to eksport do arkusza. Każdy bank inaczej układa kolumny, więc wybierz pasujący układ. Jeśli twojego nie ma na liście, poproś bank o CAMT.053 lub MT940.',
+
+    'account_name_default' => 'Rachunek bankowy',
+    'account_name_layout' => 'Rachunek :layout',
 
     'file_ready' => '· ✓ gotowe',
 

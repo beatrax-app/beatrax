@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Passordene er ikke like.',
         'password_length' => 'Bruk minst 12 tegn.',
         'pin_length' => 'PIN-koden må ha minst 6 sifre.',
+        'pin_digits' => 'PIN-koden må ha 6 til 10 sifre — bare tall.',
         'pins_mismatch' => 'PIN-kodene er ikke like. Prøv igjen.',
         'session_expired' => 'Økten din utløp før oppsettet ble fullført. Skriv inn PIN-koden og passordet ditt på nytt.',
         'retry_failed' => 'Oppsettet av denne enheten kunne fortsatt ikke fullføres. Prøv igjen.',

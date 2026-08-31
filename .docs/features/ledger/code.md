@@ -30,6 +30,7 @@ Modules/Ledger/
 │   ├── Services/
 │   │   ├── FingerprintComposer.php
 │   │   ├── PeriodQuery.php
+│   │   ├── PopulatedPeriodQuery.php
 │   │   ├── StatementSummaryWriter.php
 │   │   ├── ThisPeriodAtAGlanceQuery.php
 │   │   ├── TopCategoriesByPeriodQuery.php
@@ -105,8 +106,14 @@ Modules/Ledger/
     resolver. Transient binding (depends on `CurrentUser`).
   - `ThisPeriodAtAGlanceQuery::for($user): DashboardSummary` —
     single dashboard read.
+  - `PopulatedPeriodQuery::latestWithRecords($user, $inView):
+    ?Period` — the latest period the reader has records in, or
+    null when the period in view already has them and null again
+    when the ledger is empty.
   - `TopCategoriesByPeriodQuery::for($user, $period):
-    list<TopCategoryRow>`.
+    TopCategories` — `(rows: list<TopCategoryRow>, refunded:
+    Money, refundedCategoryCount)`, narrowed by
+    `Public/Support/OutwardSpend`.
   - `TransactionListQuery::recent($user, $daysBack = 90,
     $cursorId = null, $limit = 50, $cursorPostedAt = null,
     $currency = null): TransactionListPage` and
@@ -118,6 +125,12 @@ Modules/Ledger/
 
 ## Internal services
 
+- `Internal/Services/ConvertedSpendByCategory::forUserAndPeriod()` —
+  the one place category spend crosses currencies; shared by
+  `TopCategoriesByPeriodQuery` and `CategorySpendTrendQuery` so the
+  dashboard's two spend panels cannot disagree. Returns
+  `Internal/Dto/ConvertedCategorySpend` (converted map + the codes no
+  rate reached).
 - `Internal/Services/FingerprintRederiveService::run()` —
   re-derives every fingerprint to the current algorithm version.
 - `Internal/Console/RederiveFingerprintsCommand` —
@@ -125,9 +138,10 @@ Modules/Ledger/
   `runningInConsole()` guard.
 - `Internal/Http/Livewire/TransactionsList` — `/transactions`
   page Livewire SFC. Drives the `TransactionListQuery`.
-- `Internal/Http/Livewire/TransactionDetail` — per-row detail.
-  Reads `AssignCategory::readPriorProvenance` (Categorization)
-  through the static helper to render auto-category provenance.
+- `Internal/Http/Livewire/TransactionDetail` — per-row detail. It
+  mounts Categorization's `CategorizationProvenancePanel` and no longer
+  reads provenance itself: the panel's own render-time read is the
+  single path from the column to the screen.
 
 ## Models + migrations
 
@@ -157,8 +171,7 @@ Modules/Ledger/
 Migrations (17 total, summarised by purpose):
 
 - Initial schema: currencies, accounts, categories,
-  import_runs, transactions, merchants, merchant_memories
-  (the Phase 1 set).
+  import_runs, transactions, merchants, merchant_memories.
 - `2026_05_13_010001_rederive_fingerprints_to_v3.php` — the
   v2 → v3 migration that re-derived every row.
 - `2026_05_13_010002_add_enriched_from_to_transactions.php` —

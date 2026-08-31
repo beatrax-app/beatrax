@@ -29,6 +29,10 @@ final class StatementSummaryData extends Data
         public readonly ?CarbonImmutable $closingBalanceDate,
         public readonly int $entryCount,
         public readonly ?array $extras = null,
+        // Only a source that prints its own deadline fills this; MT940,
+        // CAMT.053 and every CSV print none, and their statements are dated
+        // from the period they bill.
+        public readonly ?CarbonImmutable $paymentDueDate = null,
     ) {}
 
     public function withImportRunId(int $importRunId): self
@@ -48,6 +52,7 @@ final class StatementSummaryData extends Data
             closingBalanceDate: $this->closingBalanceDate,
             entryCount: $this->entryCount,
             extras: $this->extras,
+            paymentDueDate: $this->paymentDueDate,
         );
     }
 
@@ -68,6 +73,7 @@ final class StatementSummaryData extends Data
             closingBalanceDate: $this->closingBalanceDate,
             entryCount: $this->entryCount,
             extras: $this->extras,
+            paymentDueDate: $this->paymentDueDate,
         );
     }
 }

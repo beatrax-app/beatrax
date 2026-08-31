@@ -10,7 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -70,7 +70,7 @@ function donForecastDeliverable(int $userId): NotificationDeliverable
     return new NotificationDeliverable(
         notificationId: hash('sha256', 'don-forecast-'.$userId),
         userId: $userId,
-        triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        triggerType: NotificationTrigger::ForecastShortfall,
         title: (string) Lang::get('notifications::copy.title.forecast'),
         body: 'Your projected balance dips below zero within the next 30 days.',
         deepLinkRoute: '/forecast',
@@ -82,7 +82,7 @@ function donDriftDeliverable(int $userId): NotificationDeliverable
     return new NotificationDeliverable(
         notificationId: hash('sha256', 'don-drift-'.$userId),
         userId: $userId,
-        triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
+        triggerType: NotificationTrigger::DriftChanged,
         title: (string) Lang::get('notifications::copy.title.drift'),
         body: 'A recurring charge moved up by 2.50 EUR.',
         deepLinkRoute: '/drift',
@@ -94,7 +94,7 @@ function donImportDeliverable(int $userId): NotificationDeliverable
     return new NotificationDeliverable(
         notificationId: hash('sha256', 'don-import-'.$userId),
         userId: $userId,
-        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        triggerType: NotificationTrigger::ImportFinished,
         title: (string) Lang::get('notifications::copy.title.import_finished'),
         body: 'Beatrax imported 124 transactions.',
         deepLinkRoute: '/imports',
@@ -106,7 +106,7 @@ function donReceiptsDeliverable(int $userId): NotificationDeliverable
     return new NotificationDeliverable(
         notificationId: hash('sha256', 'don-receipts-'.$userId),
         userId: $userId,
-        triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
+        triggerType: NotificationTrigger::ReceiptsFound,
         title: (string) Lang::get('notifications::copy.title.receipts'),
         body: 'Beatrax found 3 receipts in your inbox.',
         deepLinkRoute: '/receipts',

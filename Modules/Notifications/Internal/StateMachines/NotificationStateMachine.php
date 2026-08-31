@@ -10,20 +10,19 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\Notifications\Public\Enums\NotificationState;
 
-final class NotificationStateMachine
+final readonly class NotificationStateMachine
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function resolve(string $notificationId, int $userId): void
     {
         $this->db->connection()->transaction(function () use ($notificationId, $userId): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table('notifications')
                 ->where('id', $notificationId)

@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -50,7 +50,7 @@ it('renders a notification written in English into Dutch once the reader switche
     app()->setLocale('nl');
     /** @var NotificationQuery $query */
     $query = app(NotificationQuery::class);
-    $rows = $query->allForUser($user);
+    $rows = $query->allForUser($user)['rows'];
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->title)->toBe('Import voltooid');
@@ -65,7 +65,7 @@ it('picks the plural form for the reading language, not the writing one', functi
     app()->setLocale('nl');
     /** @var NotificationQuery $query */
     $query = app(NotificationQuery::class);
-    $rows = $query->allForUser($user);
+    $rows = $query->allForUser($user)['rows'];
 
     expect($rows[0]->body)->toBe('1 transactie geïmporteerd.');
 });
@@ -86,7 +86,7 @@ it('keeps the stored sentence for a row written before the copy spec existed', f
         // Exactly what the device database held: the target, and nothing
         // that could re-render the sentence.
         'params' => '{"target_kind":"import"}',
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        'trigger_type' => NotificationTrigger::ImportFinished,
         'created_at' => '2026-07-18 09:00:00',
         'updated_at' => '2026-07-18 09:00:00',
     ]);
@@ -94,7 +94,7 @@ it('keeps the stored sentence for a row written before the copy spec existed', f
     app()->setLocale('nl');
     /** @var NotificationQuery $query */
     $query = app(NotificationQuery::class);
-    $rows = $query->allForUser($user);
+    $rows = $query->allForUser($user)['rows'];
 
     expect($rows[0]->title)->toBe('Import finished');
     expect($rows[0]->body)->toBe('22 transactions imported.');
@@ -171,7 +171,7 @@ it('falls back to the stored sentence when a later release removed the copy key'
                 'body' => [['key' => 'notifications::copy.body.retired_key', 'replace' => [], 'count' => null]],
             ],
         ], JSON_THROW_ON_ERROR),
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        'trigger_type' => NotificationTrigger::ImportFinished,
         'created_at' => '2026-07-18 09:00:00',
         'updated_at' => '2026-07-18 09:00:00',
     ]);
@@ -179,7 +179,7 @@ it('falls back to the stored sentence when a later release removed the copy key'
     app()->setLocale('nl');
     /** @var NotificationQuery $query */
     $query = app(NotificationQuery::class);
-    $rows = $query->allForUser($user);
+    $rows = $query->allForUser($user)['rows'];
 
     expect($rows[0]->title)->toBe('Import finished')
         ->and($rows[0]->body)->toBe('22 transactions imported.');
@@ -208,10 +208,10 @@ it('re-renders a nudge s money when the reader switches language', function (): 
     $query = app(NotificationQuery::class);
 
     app()->setLocale('en');
-    $english = $query->allForUser($user)[0]->body;
+    $english = $query->allForUser($user)['rows'][0]->body;
 
     app()->setLocale('nl');
-    $dutch = $query->allForUser($user)[0]->body;
+    $dutch = $query->allForUser($user)['rows'][0]->body;
 
     expect($english)->toContain('1,234.56')
         ->and($dutch)->toContain('1.234,56');

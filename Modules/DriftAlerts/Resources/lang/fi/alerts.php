@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Hinnanmuutoshälytykset',
-    'heading' => 'Hälytykset',
     'intro_anomaly' => 'Yksittäiset veloitukset, jotka näyttävät sinulle epätavallisilta.',
     'intro_drift' => 'Hyväksytyt toistuvat sarjat, joiden viimeisin veloitus ylitti asettamasi rajan.',
     'adjust_threshold' => 'Säädä rajaa →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/v',
         'meta_prior_now' => 'ennen :prior → nyt :now',
         'meta_detected' => 'havaittu :date',
-        'meta_threshold' => 'raja ±:percent%',
+        'meta_threshold' => 'raja ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/v)',
         'cancel_impact' => 'Irtisano tämä → säästä :amount/v',
         'cadence_flipped' => 'Maksuväli vaihtui — näkyy myös kohdassa',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Tätä ilmoitusta ei enää ole.',
         'acknowledged' => 'Kuitattu',
         'snoozed' => 'Torkutettu',
         'dismissed' => 'Ohitettu',

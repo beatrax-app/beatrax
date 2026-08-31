@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Aún no hay nada misterioso. Importa algunos extractos y Beatrax mostrará aquí las filas que no haya podido identificar.',
 
+    'showing_capped' => 'Se muestran los primeros :shown de :total.',
+
     'footer' => 'La lista compartida es un archivo YAML incluido con Beatrax. Al enviar una sugerencia se abre GitHub en tu navegador; nada más sale de este dispositivo.',
 
     'card' => [

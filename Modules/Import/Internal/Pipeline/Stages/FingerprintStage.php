@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Dto\FingerprintDisposition;
+use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -18,16 +19,16 @@ use stdClass;
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#8-fingerprint-fingerprintstage
  */
-final class FingerprintStage
+final readonly class FingerprintStage
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly FingerprintComposer $fingerprints,
-        private readonly DatabaseManager $db,
-        private readonly SourceRefRanker $ranker,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private FingerprintComposer $fingerprints,
+        private DatabaseManager $db,
+        private SourceRefRanker $ranker,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
@@ -83,8 +84,8 @@ final class FingerprintStage
     private function detectConflicts(stdClass $existing, CanonicalTransaction $tx, User $user): array
     {
         return array_merge(
-            $this->encryptedTextConflict('counterparty_name', $existing->counterparty_name, $tx->counterpartyName, $user),
-            $this->encryptedTextConflict('description', $existing->description, $tx->description, $user),
+            $this->encryptedTextConflict(EnrichmentConflictField::CounterpartyName, $existing->counterparty_name, $tx->counterpartyName, $user),
+            $this->encryptedTextConflict(EnrichmentConflictField::Description, $existing->description, $tx->description, $user),
             self::currencyConflict($existing->currency, $tx->currency),
             self::amountConflict($existing->amount_minor, $tx->amountMinor),
         );
@@ -95,18 +96,18 @@ final class FingerprintStage
     /**
      * @return array<string, array{stored: mixed, incoming: mixed}>
      */
-    private function encryptedTextConflict(string $column, mixed $rawStored, ?string $incoming, User $user): array
+    private function encryptedTextConflict(EnrichmentConflictField $field, mixed $rawStored, ?string $incoming, User $user): array
     {
         $stored = is_string($rawStored) ? $rawStored : null;
         if ($stored !== null) {
-            $stored = $this->codec->decryptValue('transactions', $column, $stored, $user->id, ($this->session)())['value'];
+            $stored = $this->codec->decryptValue('transactions', $field->value, $stored, $user->id, ($this->session)())['value'];
         }
 
         if ($stored === null || $incoming === null || ! self::stringsDiffer($stored, $incoming)) {
             return [];
         }
 
-        return [$column => ['stored' => $stored, 'incoming' => $incoming]];
+        return [$field->value => ['stored' => $stored, 'incoming' => $incoming]];
     }
 
     /**
@@ -119,7 +120,7 @@ final class FingerprintStage
             return [];
         }
 
-        return ['currency' => ['stored' => $stored, 'incoming' => $incoming]];
+        return [EnrichmentConflictField::Currency->value => ['stored' => $stored, 'incoming' => $incoming]];
     }
 
     /**
@@ -132,7 +133,7 @@ final class FingerprintStage
             return [];
         }
 
-        return ['amount_minor' => ['stored' => $stored, 'incoming' => $incoming]];
+        return [EnrichmentConflictField::AmountMinor->value => ['stored' => $stored, 'incoming' => $incoming]];
     }
 
     private static function stringsDiffer(string $a, string $b): bool

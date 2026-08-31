@@ -48,7 +48,6 @@ final readonly class ForecastRunStateMachine
 
         $this->db->connection()->transaction(function () use ($runId, $toStatus, $extraColumns, $run): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table('forecast_runs')
                 ->where('id', $runId)

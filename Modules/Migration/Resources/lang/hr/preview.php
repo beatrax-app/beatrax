@@ -16,7 +16,9 @@ return [
         'budget' => 'Mjeseci proračuna',
     ],
 
-    'all_clean' => 'Sve je uredno mapirano — ništa ne traži tvoju pažnju prije potvrde.',
+    'all_clean' => 'Sve je uredno mapirano — ovdje nema ništa za odlučiti.',
+
+    'nothing_staged' => 'Ovaj izvoz nije sadržavao ništa za uvoz — ovdje nema ništa za potvrditi.',
 
     'groups' => [
         'conflict' => 'Traži tvoju odluku',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Ovo će stvoriti ili ažurirati gore prikazane brojeve u tvojim kategorijama, proračunima i glavnoj knjizi.',
     'discard_button' => 'Odbaci uvoz',
+    'discard_confirm' => 'Odbaciti ovaj uvoz? Sve što je pročitano iz tvoje datoteke izvoza briše se ovdje, a natrag se dobiva samo ponovnim učitavanjem i obradom cijele datoteke. U glavnu knjigu još ništa nije stiglo.',
     'confirm_button' => 'Potvrdi uvoz',
 ];

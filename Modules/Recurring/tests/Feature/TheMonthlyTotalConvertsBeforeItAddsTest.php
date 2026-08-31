@@ -10,6 +10,7 @@ use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
+use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
@@ -148,4 +149,28 @@ it('shadows a foreign row with a converted amount, not the same integer relabell
     }
 
     expect($shadows)->toBe(['-€50.00']);
+});
+
+// The series page's own header prints a per-month figure under the reader's
+// sign. It read latest_currency's minor units and stamped the euro on them, so
+// a USD10.00 subscription said -EUR10.00/mo while being worth EUR5.00/mo.
+it('converts the per-month figure in the series header instead of relabelling its cents', function (): void {
+    $seriesId = recSeries($this->db, $this->user->id, Direction::Expense->value, -10_000, Currency::Usd->value);
+    recRate($this->db, Currency::Usd->value, '2.0');
+
+    $html = Livewire::test(RecurringSeriesDetailPage::class, ['seriesId' => $seriesId])->html();
+
+    expect($html)->toContain('-€50.00/mo')
+        ->and($html)->not->toContain('-€100.00/mo');
+});
+
+// No rate for the pair means no figure in the reader's currency, so the header
+// falls back to the currency the series is actually denominated in rather than
+// printing an unconverted integer under the euro sign.
+it('falls back to the series own currency in the header when no rate reaches the pair', function (): void {
+    $seriesId = recSeries($this->db, $this->user->id, Direction::Expense->value, -10_000, Currency::Jpy->value);
+
+    $html = Livewire::test(RecurringSeriesDetailPage::class, ['seriesId' => $seriesId])->html();
+
+    expect($html)->not->toContain('-€100.00/mo');
 });

@@ -210,30 +210,51 @@ it('skips the name-your-account step on subsequent ICS uploads', function (): vo
         ->assertSee('Confirm import', false);
 })->group('phase-3');
 
-it('names the missing PDF reader instead of blaming the header row', function (): void {
-    // What a phone build is: no pdftotext on the device, and no way to add one.
+it('names an image-only PDF for what it is instead of blaming the header row', function (): void {
     // The reason has to survive to the screen, or the reader is sent to check a
-    // header row that was never read.
-    $this->app->bind(
-        PdfTextExtractor::class,
-        static fn (): PdfTextExtractor => new PdfTextExtractor('/usr/bin/beatrax-no-such-pdftotext'),
-    );
-    $this->app->forgetInstance(SourceAdapterRegistry::class);
-    $this->app->forgetInstance(ImportPipeline::class);
-    /** @var RunsImports $importer */
-    $importer = $this->app->make(RunsImports::class);
+    // header row that was never read. It also has to be the RIGHT reason: this
+    // file has no words on it, and no program anyone installs would change that.
+    $content = "0 0 1 rg 10 10 120 120 re f\n";
+    $objects = [
+        1 => '<< /Type /Catalog /Pages 2 0 R >>',
+        2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>',
+        4 => '<< /Length '.strlen($content).' >>'."\nstream\n".$content.'endstream',
+    ];
+    $pdf = "%PDF-1.4\n";
+    $offsets = [];
+    foreach ($objects as $number => $body) {
+        $offsets[$number] = strlen($pdf);
+        $pdf .= $number." 0 obj\n".$body."\nendobj\n";
+    }
+    $startxref = strlen($pdf);
+    $pdf .= "xref\n0 ".(count($objects) + 1)."\n0000000000 65535 f \n";
+    foreach (array_keys($objects) as $number) {
+        $pdf .= sprintf("%010d 00000 n \n", $offsets[$number]);
+    }
+    $pdf .= "trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n".$startxref."\n%%EOF\n";
 
-    $preview = $importer->runFromUpload(
-        $this->tinyPdf,
-        'ics-pdf',
-        $this->fixtureUser,
-        basename($this->tinyPdf),
-    );
+    $scan = tempnam(sys_get_temp_dir(), 'ics-scan').'.pdf';
+    file_put_contents($scan, $pdf);
 
-    expect($preview->fileFailureReason)->toBe(ImportFailureReason::PdfReaderUnavailable);
+    try {
+        /** @var RunsImports $importer */
+        $importer = $this->app->make(RunsImports::class);
 
-    $html = (string) preg_replace('/\s+/', ' ', Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])->html());
+        $preview = $importer->runFromUpload($scan, 'ics-pdf', $this->fixtureUser, basename($scan));
 
-    expect($html)->toContain('pdftotext');
-    expect($html)->not->toContain('header row that does not match the source you chose');
+        expect($preview->fileFailureReason)->toBe(ImportFailureReason::PdfHasNoTextLayer);
+
+        $html = (string) preg_replace('/\s+/', ' ', Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])->html());
+
+        expect($html)->toContain('scan or a photo of a statement');
+        expect($html)->not->toContain('header row that does not match the source you chose');
+        expect($html)->not->toContain('pdftotext');
+        // The file was refused before a row existed, so the sentence under the
+        // heading has to say file. Sharing the row wording told the reader one
+        // row could not be read, of a file whose rows were never reached.
+        expect($html)->toContain('could not read this file');
+    } finally {
+        @unlink($scan);
+    }
 })->group('phase-3');

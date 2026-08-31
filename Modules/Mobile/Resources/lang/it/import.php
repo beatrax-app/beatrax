@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Le password non coincidono.',
         'password_length' => 'Usa almeno 12 caratteri.',
         'pin_length' => 'Il PIN deve avere almeno 6 cifre.',
+        'pin_digits' => 'Il PIN deve avere da 6 a 10 cifre — solo numeri.',
         'pins_mismatch' => 'I PIN non coincidono. Riprova.',
         'session_expired' => 'La sessione è scaduta prima che la configurazione finisse. Inserisci di nuovo il PIN e la password.',
         'retry_failed' => 'Non è stato ancora possibile completare la configurazione di questo dispositivo. Riprova.',

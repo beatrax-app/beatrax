@@ -10,12 +10,13 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
-use Modules\Import\Public\Pipeline\NormalizeStage;
+use Modules\Import\Public\Actions\EnsureGooglePlayAccountAction;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
-use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
+use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
-use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 use Modules\Receipts\Tests\Doubles\FakeInboxMessageQuery;
 
 beforeEach(function (): void {
@@ -103,9 +104,7 @@ it('transitions one PayPal receipt to parsed, one login notice to skipped, one u
         $this->app->make(InboxMessageQuery::class),
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
-        $this->app->make(ReceiptSourceAdapter::class),
-        $this->app->make(NormalizeStage::class),
-        $this->app->make(RecordsTransactions::class),
+        $this->app->make(ReceiptLedgerBridge::class),
     );
 
     $rows = DB::table('inbox_messages')->where('user_id', $this->fixtureUser->id)->orderBy('id')->get();
@@ -150,9 +149,7 @@ it('does not touch rows whose userId mismatches the job target (cross-user defen
         $this->app->make(InboxMessageQuery::class),
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
-        $this->app->make(ReceiptSourceAdapter::class),
-        $this->app->make(NormalizeStage::class),
-        $this->app->make(RecordsTransactions::class),
+        $this->app->make(ReceiptLedgerBridge::class),
     );
 
     $row = DB::table('inbox_messages')->where('user_id', $otherUser->id)->first();
@@ -218,15 +215,13 @@ it('marks a fetched row unmatched when its blob is missing (re-fetch, not phanto
         $this->app->make(InboxMessageQuery::class),
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
-        $this->app->make(ReceiptSourceAdapter::class),
-        $this->app->make(NormalizeStage::class),
-        $this->app->make(RecordsTransactions::class),
+        $this->app->make(ReceiptLedgerBridge::class),
     );
 
     expect(DB::table('inbox_messages')->where('id', $rowId)->value('status'))->toBe('unmatched');
 });
 
-it('records a parsed receipt but writes no transaction when no Account matches the synthetic IBAN', function (): void {
+it('lands a Google Play receipt in the ledger once its synthetic account exists', function (): void {
     DB::table('inboxes')->insert([
         'user_id' => $this->fixtureUser->id,
         'provider' => 'gmail',
@@ -236,10 +231,58 @@ it('records a parsed receipt but writes no transaction when no Account matches t
     ]);
     $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
 
-    // A Google Play receipt resolves to the synthetic IBAN GOOGLE-PLAY,
-    // for which the fixture user has NO Account — so bridgeToLedger
-    // returns early and no canonical transaction is written, while the
-    // inbox row still transitions to parsed.
+    // EnsureGooglePlayAccountAction is the ONLY thing in the app that can mint
+    // this account; before it existed the matcher's synthetic IBAN resolved to
+    // nothing on every path and the receipt could never reach the ledger.
+    /** @var EnsureGooglePlayAccountAction $ensure */
+    $ensure = app(EnsureGooglePlayAccountAction::class);
+    expect($ensure($this->fixtureUser))->toBeTrue();
+
+    $googleBytes = (string) file_get_contents(__DIR__.'/../fixtures/googleplay/current-receipt.eml');
+    $seed = $this->seedInboxRowAndBlob;
+    $row = $seed($this->fixtureUser->id, $inboxId, 'rcpt-gp-lands', 'googleplay-noreply@google.com', 'Your Google Play Order Receipt', new DateTimeImmutable('2026-05-17T09:30:00+00:00'), $googleBytes);
+
+    $this->app->instance(
+        InboxMessageQuery::class,
+        new FakeInboxMessageQuery([$row], $this->app->make(DatabaseManager::class)),
+    );
+
+    $job = new ProcessFetchedInboxMessagesJob($this->fixtureUser->id);
+    $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        $this->app->make(Filesystem::class),
+        $this->app->make(InboxMessageQuery::class),
+        $this->app->make(EmlBlobStore::class),
+        $this->app->make(RecordReceipt::class),
+        $this->app->make(ReceiptLedgerBridge::class),
+    );
+
+    $account = Account::query()
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('iban', EnsureGooglePlayAccountAction::GOOGLE_PLAY_OWN_IBAN)
+        ->firstOrFail();
+    expect($account->kind)->toBe(AccountKind::GooglePlay->value);
+
+    expect(DB::table('inbox_messages')->where('id', $row->id)->value('status'))->toBe('parsed');
+    expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->where('account_id', $account->id)->count())->toBe(1);
+    expect(Transaction::query()->where('account_id', $account->id)->value('source_ref'))->toBe('GPA.1234-5678-9012-34567');
+});
+
+it('records a parsed receipt but writes no transaction while the reader has not named the account', function (): void {
+    DB::table('inboxes')->insert([
+        'user_id' => $this->fixtureUser->id,
+        'provider' => 'gmail',
+        'email' => 'cardholder@gmail.test',
+        'created_at' => '2026-05-17 00:00:00',
+        'updated_at' => '2026-05-17 00:00:00',
+    ]);
+    $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
+
+    // Unnamed is a state the reader can leave: the preview wizard's Google Play
+    // arm mints the account, after which the sibling test above lands the row.
+    // The parse itself is still recorded so the naming prompt has something to
+    // re-run over.
     $googleBytes = (string) file_get_contents(__DIR__.'/../fixtures/googleplay/current-receipt.eml');
     $seed = $this->seedInboxRowAndBlob;
     $row = $seed($this->fixtureUser->id, $inboxId, 'rcpt-noacct', 'googleplay-noreply@google.com', 'Your Google Play Order Receipt', new DateTimeImmutable('2026-05-17T09:30:00+00:00'), $googleBytes);
@@ -257,9 +300,7 @@ it('records a parsed receipt but writes no transaction when no Account matches t
         $this->app->make(InboxMessageQuery::class),
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
-        $this->app->make(ReceiptSourceAdapter::class),
-        $this->app->make(NormalizeStage::class),
-        $this->app->make(RecordsTransactions::class),
+        $this->app->make(ReceiptLedgerBridge::class),
     );
 
     expect(DB::table('inbox_messages')->where('id', $row->id)->value('status'))->toBe('parsed');

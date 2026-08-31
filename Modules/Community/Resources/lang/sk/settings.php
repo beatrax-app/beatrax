@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'O zdieľanom zozname',
     'about_body' => 'Priložený YAML súbor, ktorý mapuje kryptické kódy z bankových výpisov na zrozumiteľné mená obchodníkov. Po zapnutí môže Beatrax tento zoznam čítať pri importe; odoslanie návrhu otvorí GitHub v prehliadači.',
 
-    'mappings' => 'Mapovania',
-    'contributors' => 'Prispievatelia',
+    'mappings' => ':count mapovanie|:count mapovania|:count mapovaní',
+    'contributors' => ':count prispievateľ|:count prispievatelia|:count prispievateľov',
 
     'use_shared_list' => [
         'title' => 'Používať zdieľaný zoznam obchodníkov',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Aktualizovať zdieľaný zoznam pri aktualizáciách aplikácie',
         'help' => 'Obnoví priložený zoznam vždy, keď sa Beatrax aktualizuje.',
+        'help_phone' => 'Obnoví priložený zoznam vždy, keď sa z App Store alebo Google Play nainštaluje nová verzia Beatraxu.',
         'note' => 'Aktivuje sa s budúcou aktualizáciou aplikácie — aktuálnu verziu nájdeš v časti Nastavenia → O aplikácii.',
     ],
 ];

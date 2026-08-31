@@ -34,7 +34,7 @@ final readonly class PairingPeerOutbox
             return false;
         }
 
-        return $this->mailbox->deliverIfUnderQuota($senderDid, $recipientDid, $blob, self::MAX_PENDING_PER_PEER);
+        return $this->mailbox->deliverIfUnderQuota($senderDid, $recipientDid, $blob, self::MAX_PENDING_PER_PEER, foldIdentical: true);
     }
 
     // Anything that is not a pairing frame is left where it is. Nothing is

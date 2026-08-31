@@ -104,7 +104,6 @@ it('the real import path (RecordTransactions, genuinely encrypted) still indexes
             currency: 'EUR',
             settledAmountMinor: -1299,
             settledCurrency: 'EUR',
-            fxRateUsed: null,
             counterpartyName: 'Real Import Merchant',
             counterpartyIban: null,
             counterpartyNormalized: 'real import merchant',

@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Je apparaten',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Koppelen, apparaatnamen en versleuteling staan nu bij je synchronisatiestatus.',
-    'moved_cta' => 'Synchronisatie & apparaat openen',
     'device_name' => 'Apparaatnaam',
     'save' => 'Opslaan',
     'peer_default_name' => 'Gekoppeld apparaat',
     'rename_device' => 'Apparaat hernoemen',
+    'rename_device_caption' => 'Hernoemen',
     'this_device' => 'Dit apparaat',
     'removed' => 'Verwijderd',
     'confirmed' => 'Bevestigd',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relay-endpoint',
     'relay_endpoint_help' => 'Optioneel. Als dit is ingesteld, synchroniseren offline apparaten via deze relay. Laat leeg voor alleen LAN&#8209;direct.',
+    'relay_endpoint_help_phone' => 'Optioneel. Als dit is ingesteld, reizen wijzigingen via deze relay, ook als je apparaten niet op hetzelfde netwerk zitten. Dit apparaat haalt ze op wanneer je vanaf dit scherm synchroniseert — nooit op de achtergrond, want de app-vergrendeling heeft de enige sleutel. Laat leeg voor alleen LAN&#8209;direct.',
     'relay_endpoint_aria' => 'Relay-endpoint-URL',
     'relay_insecure_warning' => 'Dit relay-endpoint gebruikt gewoon HTTP. De relay ontsleutelt je gegevens weliswaar nooit, maar een onbeveiligde verbinding stelt versleutelde groottes en timing bloot aan waarnemers op het netwerk. Gebruik een <strong>https://</strong>-endpoint voor de beste privacy.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Verwijderen:',
     'remove_rotates_key' => 'Dit apparaat verwijderen roteert de versleutelingssleutel zodat het geen toekomstige updates meer ontvangt.',
     'remove_cannot_erase' => 'Het kan gegevens die al op dat apparaat staan niet wissen. Als dit apparaat verloren of gestolen is, beschouw alle gegevens die het bevatte dan als blootgesteld.',
+    'remove_is_local' => 'Je andere apparaten houden hun eigen lijst bij. Zolang je het daar niet ook verwijdert, blijven ze ermee synchroniseren.',
     'remove_device' => 'Apparaat verwijderen',
     'keep_device' => 'Apparaat behouden',
     'rotating_key' => 'Versleutelingssleutel roteren…',

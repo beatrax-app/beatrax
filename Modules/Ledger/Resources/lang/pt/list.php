@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Histórico completo.',
     'subtitle_recent' => 'Transações recentes (últimos 90 dias).',
 
-    'currency_aria' => 'Vista por moeda',
-    'currency_eur' => 'Só :code',
-    'currency_original' => 'Moeda original',
+    'currency_aria' => 'Montante apresentado',
+    'currency_eur' => 'Montante liquidado',
+    'currency_original' => 'Montante original',
 
     'show_recent' => 'Mostrar só as recentes',
     'show_full' => 'Mostrar o histórico completo',
 
     'empty_period' => 'Não há nada neste período.',
 
+    'empty_recent_has_older' => 'Nada nos últimos 90 dias. Os seus movimentos mais antigos continuam aqui.',
+
+    'empty_history' => 'Ainda não há movimentos.',
     'loading_more' => 'A carregar mais transações',
     'load_more' => 'Carregar mais',
 

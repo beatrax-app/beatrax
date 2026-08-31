@@ -12,6 +12,7 @@ return [
         'locked' => 'Oldd fel az alkalmazást a beállítás folytatásához.',
         'revoked' => 'Ezt az eszközt eltávolították a másik eszközéről. Párosítsa újra a szinkronizálás folytatásához.',
     ],
+    'unlock_cta' => 'Oldd fel az alkalmazást',
     'step' => [
         'connect' => 'Csatlakozás a másik eszközödhöz',
         'keys' => 'Titkosítási kulcsok fogadása',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Az előzményeid újraépítése',
     ],
     'step_current' => 'aktuális lépés',
-    'working' => [
-        'connect' => 'Kapcsolatfelvétel a másik eszközöddel…',
-        'keys' => 'Az adataid feloldása…',
-        'transfer' => 'Az előzményeid lekérése…',
-        'rebuild' => 'Az előzményeid újraépítése — ez eltarthat egy percig.',
-    ],
     'page_title' => 'Beállítás…',
     'resuming' => 'A beállítás folytatása…',
     'setting_up' => 'Ennek az eszköznek a beállítása…',
     'progress_aria' => 'Beállítás folyamata',
     'records' => ':count rekord|:count rekord',
-    'records_preparing' => 'Várakozás a másik eszközre…',
 ];

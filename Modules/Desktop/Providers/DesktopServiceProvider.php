@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Desktop\Providers;
 
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Queue\QueueManager;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
@@ -22,6 +24,7 @@ use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
+use Modules\Desktop\Internal\Http\Middleware\ContinueToStagedFile;
 use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
@@ -29,12 +32,14 @@ use Modules\Desktop\Internal\Listeners\ForgetColdStartVaultOnKeyRotation;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
 use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
+use Modules\Desktop\Internal\Listeners\RebuildAppMenuOnAuthChange;
 use Modules\Desktop\Internal\Listeners\StartSyncListenerOnEnable;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Listeners\TriggerUpdateDownload;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+use Modules\Desktop\Internal\Native\BoundedNativeApiClient;
 use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
@@ -49,6 +54,7 @@ use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
+use Native\Desktop\Client\Client as NativeApiClient;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
@@ -86,6 +92,12 @@ final class DesktopServiceProvider extends ServiceProvider
 
         $this->app->singleton(DesktopKeyCustodian::class);
 
+        // Every NativePHP API call goes through this one client, and its own
+        // hour-long timeout is what lets a hung Electron hold the single-process
+        // backend. Bound here rather than in vendor, and globally rather than at
+        // the one caller a web request reaches it from.
+        $this->app->bind(NativeApiClient::class, BoundedNativeApiClient::class);
+
         // Nothing below is bound outside the bundle, so local dev, CI and the web
         // app keep the pass-through session custody and the app layout's bound()
         // check falls through to its client-side pre-paint theme script.
@@ -119,8 +131,13 @@ final class DesktopServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(LivewireManager $livewire, Dispatcher $events): void
+    public function boot(LivewireManager $livewire, Dispatcher $events, Router $router): void
     {
+        // NOT bundle-gated, for the same reason the Login listener below is not:
+        // the file-open round-trip has to work in local dev and in tests, and
+        // the intent it reads is session-scoped, so it is absent everywhere else.
+        $router->pushMiddlewareToGroup('web', ContinueToStagedFile::class);
+
         $this->loadModuleResources('desktop');
 
         $livewire->component('desktop.setup-screen', SetupScreen::class);
@@ -149,6 +166,11 @@ final class DesktopServiceProvider extends ServiceProvider
         // NOT bundle-gated: the pending-intent round-trip must work in local dev and
         // tests too, and the listener touches only the Session contract, no facade.
         $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
+
+        // Signing in and out are the only two moments the developer submenu's
+        // answer changes, and the boot-time build never sees either.
+        $events->listen(Login::class, [RebuildAppMenuOnAuthChange::class, 'handle']);
+        $events->listen(Logout::class, [RebuildAppMenuOnAuthChange::class, 'handle']);
 
         $events->listen(
             AppLockPassphraseChanged::class,

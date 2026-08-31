@@ -13,11 +13,11 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 // sender that stops matching loses the import without saying anything.
 final class PairingEntryUrl
 {
-    private const ROUTE = 'mobile.pair';
+    private const string ROUTE = 'mobile.pair';
 
-    public const MODE_PARAM = 'mode';
+    public const string MODE_PARAM = 'mode';
 
-    public const MODE_IMPORT = 'import';
+    public const string MODE_IMPORT = 'import';
 
     public static function importingFrom(UrlGenerator $urls): string
     {

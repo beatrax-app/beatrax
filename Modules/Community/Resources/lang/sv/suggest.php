@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Mönster är obligatoriskt.',
         'name_required' => 'Namn är obligatoriskt.',
+        'browser_refused' => 'Din webbläsare gick inte att öppna, så inget skickades och inget lämnade den här enheten. Försök igen, eller kopiera YAML-förhandsvisningen ovan till en pull request själv.',
     ],
 ];

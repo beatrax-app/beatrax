@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Použij aspoň 12 znaků.',
     'error_wrong_code' => 'Toto uživatelské jméno a záložní kód k sobě nepasují. Zkontroluj kód pečlivě — jen velká písmena, žádná nula, žádné O, žádná jednička, žádné L.',
+    'error_throttled' => 'Příliš mnoho pokusů — zkus to znovu za :wait.',
 ];

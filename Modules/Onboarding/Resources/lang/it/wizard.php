@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Passaggio :current di :total',
 
-    'step_dot_aria' => 'Passaggio :number di :total',
-
     'back' => 'Indietro',
     'back_aria' => 'Indietro — torna al passaggio di configurazione precedente',
 

@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Visualizzazione della valuta',
+        'heading' => 'Visualizzazione dell\'importo',
         'label' => 'Vista predefinita nella lista delle transazioni',
-        'eur_only' => 'Solo :code',
-        'original' => 'Valuta originale',
+        'eur_only' => 'Importo regolato',
+        'original' => 'Importo originale',
         'help' => 'Puoi comunque cambiarla pagina per pagina dalla lista delle transazioni.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Vengono usati i tassi inclusi nel pacchetto. Nessun dato lascia questo dispositivo.',
         'fetch_aria' => 'Scarica online i tassi di cambio correnti',
         'refreshing' => 'Aggiornamento…',
-        'next_refresh' => 'Prossimo aggiornamento automatico: ogni giorno alle 09:00',
+        'next_refresh' => 'Aggiornamento automatico: una volta al giorno',
         'refresh_gave_up' => 'Impossibile aggiornare i tassi. Restano in uso quelli già presenti su questo dispositivo.',
         'refresh_now' => 'Aggiorna ora',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Periodo',
         'label' => 'Il periodo inizia il giorno',
         'help' => 'Numerato da 1 a 28. La maggior parte degli utenti lo lascia su 1 (mese solare). Usa 25 se lo stipendio arriva il 25 e per te «il tuo mese» inizia da lì.',
+
+        'move_confirm' => 'Se il periodo inizia il giorno :day, tutti gli importi delle buste vengono riarchiviati e sommati a due a due dove due mesi si fondono in uno. Riportare indietro il giorno non li separa di nuovo.',
+        'move_cancel' => 'Annulla',
+        'move_apply' => 'Applica',
     ],
 
     'recurring' => [
         'heading' => 'Rilevamento delle ricorrenze',
         'window_label' => 'Finestra di rilevamento (mesi)',
         'window_help' => 'Quanti mesi di cronologia analizzare quando le transazioni vengono raggruppate in schemi ricorrenti.',
-        'income_label' => 'Entrate minime (centesimi)',
-        'income_help' => 'Le entrate sotto questa soglia non vengono raggruppate in automatico. Memorizzate in centesimi — 200000 corrisponde a :example. Imposta 0 per disattivare la soglia.',
+        'income_label' => 'Entrate minime (unità minori)',
+        'income_help' => 'Le entrate sotto questa soglia non vengono raggruppate in automatico. Memorizzate in unità minori — :minor corrisponde a :example. Imposta 0 per disattivare la soglia.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'La cartella di deposito è attiva. Beatrax controlla <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> ogni 5 minuti per cercare nuovi file.',
         'inactive_html' => 'Quando è attiva, Beatrax controlla <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> ogni 5 minuti per cercare file <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> e <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> e li importa con la stessa pipeline di abbinamento della procedura guidata. I file elaborati vengono spostati in <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> in modo che non vengano mai importati due volte.',
+        'active_phone_html' => 'La cartella di deposito è attiva. Beatrax controlla <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> in background per cercare nuovi file. Quando parte un controllo in background lo decide il tuo telefono, quindi possono passare minuti oppure ore.',
+        'inactive_phone_html' => 'Quando è attiva, Beatrax controlla <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> in background per cercare file <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> e <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> e li importa con la stessa pipeline di abbinamento della procedura guidata. Quando parte un controllo in background lo decide il tuo telefono, quindi possono passare minuti oppure ore. I file elaborati vengono spostati in <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> in modo che non vengano mai importati due volte.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Fisco',
-    'shared_merchant_heading' => 'Lista condivisa degli esercenti',
     'data_backup_heading' => 'Dati e backup',
-    'install_heading' => 'Installazione',
 
     'about_updates' => [
         'heading' => 'Informazioni sugli aggiornamenti',
         'body' => "Una volta installato, Beatrax si aggiorna da solo. Dopo aver installato la primissima versione, le versioni successive arrivano tramite un banner nell'app — non devi tornare su GitHub. Se in futuro un aggiornamento non dovesse riuscire, puoi sempre riscaricare a mano l'ultimo installer dalla pagina delle release.",
+        'body_phone' => 'Qui Beatrax non si aggiorna da solo. Le nuove versioni dell\'app per telefono arrivano dall\'App Store o da Google Play, come le tue altre app. La pagina delle release elenca che cosa è cambiato in ciascuna.',
         'open_releases' => 'Apri la pagina delle release →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Non è stato possibile spostare il mese di budget, quindi è rimasto dov’era.',
         'currency_required' => 'Scegli una valuta.',
         'window_months' => 'Scegli un valore tra 2 e 60 mesi.',
         'threshold' => 'Scegli una soglia tra 1%, 2%, 5%, 10%, 25% o 50%.',

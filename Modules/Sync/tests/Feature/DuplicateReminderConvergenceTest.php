@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
@@ -100,7 +101,7 @@ function dupReminderGenerateOnDevice(
     int $userId,
     string $deviceId,
     string $notificationId,
-    string $triggerType,
+    NotificationTrigger $triggerType,
 ): array {
     $pk = dupReminderBindDeviceWriter($userId, $deviceId);
     $watermark = dupReminderMaxOpLogId($db);
@@ -109,7 +110,7 @@ function dupReminderGenerateOnDevice(
         'user_id' => $userId,
         'title' => 'Payment due',
         'body' => 'Your ICS bill is due soon.',
-        'trigger_type' => $triggerType,
+        'trigger_type' => $triggerType->value,
     ];
 
     $db->connection()->table('notifications')->insert([
@@ -146,7 +147,7 @@ it('two independent devices generating the same reminder converge to exactly one
     $deriver = new DeterministicKeyDeriver;
     $seriesKey = 'ics-bill-series-'.bin2hex(random_bytes(4));
     $dueDate = '2026-08-01';
-    $trigger = DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER;
+    $trigger = NotificationTrigger::PaymentReminder;
 
     // Both devices derive the pk from an identical tuple, and that shared
     // identity is the entire convergence mechanism.
@@ -179,7 +180,7 @@ it('two different due dates for the same series produce two distinct notificatio
 
     $deriver = new DeterministicKeyDeriver;
     $seriesKey = 'ics-bill-series-'.bin2hex(random_bytes(4));
-    $trigger = DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER;
+    $trigger = NotificationTrigger::PaymentReminder;
 
     $idAugust = $deriver->derive((int) $this->user->id, $trigger, $seriesKey, '2026-08-01');
     $idSeptember = $deriver->derive((int) $this->user->id, $trigger, $seriesKey, '2026-09-01');

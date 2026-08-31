@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Înapoi la Beatrax',
 
+    'not_saved' => 'Nu s-a salvat nimic. Datele tale sunt neschimbate — încearcă din nou.',
+
+    'no_longer_here' => 'Acest lucru nu mai există.',
+
     '404' => [
         'title' => 'Pagina asta nu există',
         'body' => 'Linkul poate fi vechi sau pagina a fost redenumită. Datele tale sunt în regulă.',

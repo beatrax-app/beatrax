@@ -52,7 +52,12 @@ What the module explicitly does NOT do:
     queries.
 - **Actions/**
   - `PromoteDiscoveredSender::__invoke($senderId, $user)` — move a
-    discovered sender into the `known_senders` allow-list.
+    discovered sender into the `known_senders` allow-list. The
+    `EntityMutated` sync signal is returned out of the transaction
+    closure and dispatched once the commit returns, never from inside
+    it: a listener firing mid-transaction reads the pre-transaction row,
+    and a rollback afterwards leaves it having acted on a promotion that
+    never happened (`DispatchAfterCommitArchTest`).
   - `DismissDiscoveredSender::__invoke($senderId, $user)` — hide a
     discovered sender from the panel.
 - **DTOs/**
@@ -73,13 +78,16 @@ What the module explicitly does NOT do:
   exceptions (`InvalidGrantException`, `InvalidStateException`,
   `ReconsentRequiredException`, `OAuthExchangeFailed`).
 - **Internal/Clients/** — `GmailApiClient` +
-  `GmailApiClientContract`, `GraphApiClient` +
+  `GmailApiClientContract`, `GmailInboxResources` (the authorized
+  Gmail resources the client calls through), `GraphApiClient` +
   `GraphApiClientContract`, the typed exceptions
   (`CursorExpiredException`, `RateLimitedException`), and the
   in-test `Fake*ApiClient` fakes.
 - **Internal/Jobs/** — `DiscoveryScanJob` (the initial sender
   discovery), `IncrementalScanJob` (the on-cadence message pull),
-  `BackfillInboxJob` (the user-triggered historical backfill).
+  `BackfillInboxJob` (the user-triggered historical backfill), and
+  `GraphDeltaWalk`, the one collaborator both scan jobs use to follow a
+  `$delta` across its `@odata.nextLink` pages.
 - **Internal/InboxScanStateMachine** — the SOLE sanctioned mutator
   of `inbox_scan_state.status`. Throws
   `InvalidStateTransitionException` on any illegal transition.
@@ -249,9 +257,15 @@ rows; the reconnect path instead surfaces a flash, since a prior
 refresh token Google already invalidated cannot be un-rotated. On
 success the controller acknowledges any active
 `oauth_reconsent_required` `system_alerts` row for the inbox (with a
-LIKE-based fallback for SQLite builds without the JSON1 extension) and
-redirects to `/inboxes` with a flash that auto-opens the backfill
-window modal. Provider errors at the consent screen itself (e.g. user
+LIKE-based fallback for SQLite builds without the JSON1 extension),
+lifts a `needs_reauth` scan state back to `idle` through
+`InboxScanStateMachine` (the sole sanctioned mutator), and redirects to
+`/inboxes` with a flash that auto-opens the backfill window modal. That
+lift is the whole point of the Reconnect button: `needs_reauth` is
+terminal for both scan jobs, so rotating the secret while leaving the
+status alone hands the user a working grant on a permanently dead
+inbox. Only that one status is lifted — a row mid-backfill keeps its
+own lifecycle. Provider errors at the consent screen itself (e.g. user
 canceled) arrive via the `error` query parameter and are handled before
 the state is consumed; token-exchange failures
 (`InvalidGrantException`, `OAuthExchangeFailed`) redirect back with a
@@ -308,7 +322,10 @@ forgery cannot act on another user's row — the same response shape as
 a genuinely missing inbox. `scanNow` additionally no-ops with a toast
 when the inbox is already `backfilling`/`scanning` (the Blade also
 disables the button in those states, so the no-op path is only
-reachable via forged payload); its dispatched `IncrementalScanJob`
+reachable via forged payload), and answers a `needs_reauth` inbox with
+"reconnect first" rather than dispatching — the job exits on its first
+status read for a revoked grant, so dispatching there reported a scan
+that never ran; its dispatched `IncrementalScanJob`
 carries its own `ShouldBeUnique` constraint as the authoritative
 dedup. `reconnect` redirects to
 `/oauth/connect/{provider}?inbox_id={id}` so `OAuthConnectController`
@@ -326,6 +343,29 @@ discovered-senders query entirely when the user has no connected
 inboxes, since the panel has nothing to attach to and the join would
 always return zero rows — this saves a query on every empty-state
 render and `wire:poll` tick.
+
+`mount()` also reads `Modules\Core\Public\Services\UserDataPathService::platform()`
+once into a `#[Locked] bool $onPhone`, and the Blade picks the `_phone` half of
+five copy pairs from it: `intro_phone`, `connect_body_phone`,
+`not_scanned_yet_phone`, `gmail_card_body_phone` and
+`microsoft_card_body_phone`, plus a `phone_heading`/`phone_body` notice rendered
+above the OAuth banners and the hero. `/inboxes` is in the phone sidebar and
+ungated — `MobileSurfaceParityTest` renders it as a primary surface — while
+every one of this module's five schedule entries sits in
+`Modules\Core\Public\Scheduling\MobileBackgroundSchedule::desktopOnly()` as a
+`Schedule::call()` closure, which `SchedulerManifestGenerator` drops because
+`$event->command` is null. Nothing on a phone scans a mailbox on a schedule, no
+inbox table is in the sync merge registry so a mailbox connected on the desktop
+never appears in this list on a phone, and `DiscoveryScanJob` has exactly one
+dispatcher in the tree — the dropped `email-scan.discovery` closure — so the
+discovered-senders panel is unreachable there. The desktop strings are unchanged
+and still say what the desktop scheduler really does; see
+[a screen that keeps its promise on one platform](../../conventions/invariants-from-shipped-failures.md#a-screen-that-keeps-its-promise-on-one-of-the-platforms-it-ships-to).
+
+`OAuthCallbackController::missingRefreshTokenMessage()` branches on the same
+signal. The desktop refusal explains itself by an access token that dies "within
+the hour", which reads as a promise of hourly scanning; the `_phone` variants
+keep the step that fixes the refusal and drop that half of the sentence.
 
 `OAuthClientWizardModal` is the Flux modal SFC for bring-your-own
 OAuth client registration. A single component renders both the Gmail
@@ -351,6 +391,39 @@ the next render); the wizard then redirects into the per-inbox consent
 flow, threading `$reconnectInboxId` back through to
 `OAuthConnectController` on the re-consent path so the existing inbox
 row is preserved rather than a new one created.
+
+## A device that schedules no scan cannot be behind one
+
+The dashboard's "Email scan health" tile paints one dot per connected inbox,
+and the amber one means *stale*: a scan was due and did not happen. That is a
+diagnosis, and it needs a schedule to be a diagnosis of. On a phone there is
+none — every email-scan entry is a `Schedule::call()` closure named in
+`MobileBackgroundSchedule::desktopOnly()`, and `SchedulerManifestGenerator`
+drops each one because `$event->command` is null — so `last_scan_at` stays
+null for as long as the mailbox is connected and the dot stayed amber forever,
+for the ordinary condition, with nothing the reader could do to clear it.
+
+The state is reachable: `/inboxes` and both OAuth routes are registered under
+plain `web`/`auth` with no platform gate, the Connect buttons are deliberately
+live on a phone, and `inboxes` is in no sync merge rule — so a row on a phone
+is one connected *there*. Only `InboxScanStateMachine` writes `last_scan_at`,
+on success-shaped transitions from the two scan jobs, which nothing on a phone
+dispatches without a Scan-now tap.
+
+`Modules\EmailScan\Public\Services\InboxScanSchedule::runsOnThisDevice()` is
+the seam. It answers true off-device, and on a phone it asks whether
+`email-scan.incremental` is still listed in `desktopOnly()` — so a phone that
+one day gains the scan retires this by moving that one line, rather than by
+somebody remembering a hardcoded platform check exists.
+`ThisPeriodAtAGlanceQuery::lineStatusFor()` reads it and answers
+`'unscheduled'` where it is false, at any age including never. The tile draws
+that neutral, beside the copy that already tells a phone reader the same thing
+(`email-scan::health.not_scanned_yet_phone`, "not scanned on this phone") —
+a screen explaining a state is normal while its own dot flagged it as a problem
+was the contradiction this closes.
+
+`'healthy'` still means what it says on a phone, because a Scan-now tap is a
+real scan; it is only the absence of one that stops being a fault.
 
 ## `InboxScanStateMachine`
 
@@ -383,6 +456,14 @@ so callers can funnel "no new cursor learned" through the same gate as
 a real write, and a provider mismatch against the inbox row's own
 provider raises `InvalidArgumentException` so a Gmail cursor can never
 land on a Microsoft inbox row.
+
+`recordBackfillProgress()`'s payload carries `fetched_count`,
+`total_estimated` and `last_message_date` for the UI, plus
+`page_cursor` and `window_months` for the walk itself: they are what a
+retried `BackfillInboxJob` resumes from, and the window is part of the
+key so a fresh backfill over a different range never adopts the old
+range's cursor. `InboxQuery` reads only the first two and ignores the
+rest.
 
 `ALLOWED_TRANSITIONS` has a few entries that look unusual at first
 glance: `idle → idle` is a re-entrant no-op so the backfill job's
@@ -423,6 +504,11 @@ helper from `config('cache.locks_store')`. `tries = 3` +
 the per-inbox state machine's `rate_limited`/`error` transitions ride
 the same curve.
 
+The window lower bound is `subMonthsNoOverflow`, matching
+`Ledger`'s `PeriodQuery`: plain month arithmetic on a run landing on the
+31st overflows into the month *after* the one the reader selected, and
+the oldest days of the chosen window are then never walked.
+
 **Provider dispatch:** Gmail walks `users.messages.list` +
 `users.messages.get?format=raw`. `users.messages.list` carries no
 historyId of its own, so the baseline cursor comes from a single
@@ -431,11 +517,16 @@ mid-walk then sits above the baseline and the first incremental tick
 replays it, where a post-walk read would skip it permanently.
 Microsoft walks `/me/messages` with an
 OData `$filter` over the sender allow-list + a `receivedDateTime`
-lower bound; after the walk completes, a single
+lower bound; after the walk completes, a
 `/me/mailFolders/inbox/messages/delta` baseline call captures the
 `@odata.deltaLink` cursor (a two-phase pattern, since Graph's delta
 endpoint doesn't support a historical window filter the way the plain
-messages endpoint does). The wall-clock anchor for that baseline call
+messages endpoint does). That baseline goes through `GraphDeltaWalk`,
+not a single `deltaPage` call: Graph puts `@odata.deltaLink` on the
+LAST page only, so a baseline that paginates hands back a `nextLink`
+and no cursor at all — and with no cursor written,
+`runMicrosoftIncremental` returns immediately on every tick from then
+on, with no Gmail-style historyId recovery to fall back to. The wall-clock anchor for that baseline call
 is captured before any provider call so the post-walk
 `deltaPage(null, anchor)` filter uses the pre-walk timestamp — this
 closes the multi-hour-backfill race window where a message arriving
@@ -448,6 +539,27 @@ Gmail's `users.messages.list` has no per-message `receivedDateTime`, so
 its branch falls back to in-body `Date:` header parsing via the
 project `Clock` (never a raw `new DateTimeImmutable('now')`, so
 test-frozen time is honoured).
+
+**Per-page walk contract.** The next cursor is read *before* the page's
+emptiness is considered: both providers legitimately answer an empty
+page while still handing back a link to the next one, and treating the
+emptiness as "walk finished" silently dropped every message past it.
+The walk resumes rather than restarts — `page_cursor` and
+`fetched_count` are persisted through `recordBackfillProgress` on every
+page, and a retried attempt picks up from them when
+`window_months` matches, so a run interrupted at page nine does not
+re-walk pages one to eight. The count is of messages *indexed*, not
+rows inserted: a page a prior attempt already landed inserts nothing,
+and counting inserts made the progress bar run backwards on every
+retry. `MAX_WALK_PAGES` (200) is defence in depth against a provider
+answering every page with another link; at two seconds a page the 280s
+job timeout bites long before it, so reaching the ceiling means the
+walk was not making progress. The entry `idle → backfilling`
+transition is guarded the way `IncrementalScanJob` guards
+`→ scanning`: a `needs_reauth` inbox is skipped rather than throwing an
+`InvalidStateTransitionException` from outside the try that records
+failures, where neither `transitionOnScanError` nor `failed()` could
+have recorded it.
 
 **Per-message walk** (`walkAndPersist`, shared by both providers via
 closures — `fetchNextPage`, `extractMessageId`, `fetchRawEml`,
@@ -474,9 +586,9 @@ alongside status/cursor columns) and the loop sleeps two seconds via
 `Sleep::sleep` (fakeable via `Sleep::fake()`) so the provider quota
 envelope isn't exhausted by a tight loop.
 
-**Cooperative-shutdown trade-off (acknowledged, not fixed):**
-`Sleep::sleep` blocks the worker for the full two seconds without
-checking whether `queue:restart` has signalled a restart (workers
+**Cooperative-shutdown trade-off:** `Sleep::sleep` blocks the worker for
+the full two seconds without checking whether `queue:restart` has
+signalled a restart (workers
 honour that signal between jobs, not mid-sleep), so a long backfill
 extends a restart's completion lag by up to a few minutes per inbox.
 Acceptable for the single-user v1 deployment; the cleaner shape for
@@ -486,9 +598,13 @@ per-page accumulators currently live on `handle()`'s stack frame).
 
 **Error envelope** (both provider branches): `RateLimitedException` →
 transition to `rate_limited`, rethrow so the queue worker schedules the
-next attempt. `InvalidGrantException` → transition to `needs_reauth`
-and swallow the throw (the user must reconnect; another retry cannot
-make progress). Any other throwable → transition to `error` (with the
+next attempt. `InvalidGrantException` and `InboxNotConfiguredException`
+→ transition to `needs_reauth` and swallow the throw. Both are
+permanent: a revoked grant needs a Reconnect and an inbox with no
+persisted credentials needs the wizard, and neither is something a
+later attempt can reach. Rethrowing is what schedules the retry, so
+only a condition a later attempt could clear may leave through it. Any
+other throwable → transition to `error` (with the
 first 500 chars of the message) and rethrow so the job-failed listener
 can surface the failure. `failed()` (Laravel's post-retry-exhaustion
 hook) applies the same terminal `error` transition; if that write
@@ -533,9 +649,10 @@ codebase already relies on, so no second dedup mechanism is introduced
 here.
 
 Sender allow-list + subject pattern are read from the tunable
-`email-scan.ics_statement_ready` config block (no real ICS
-statement-ready email sample existed at authoring time), correctable
-without a redeploy once a real sample surfaces during UAT.
+`email-scan.ics_statement_ready` config block: they are a best guess,
+because no real ICS statement-ready email sample was ever available to
+derive them from, so a config-only correction fixes them once a real
+sample surfaces — no redeploy.
 
 ## `DiscoveryScanJob`
 
@@ -550,6 +667,13 @@ promotion-threshold cap (occurrences within a window) lives in the
 panel-rendering query (`DiscoveredSenderQuery`), not here — this job
 collects every observation so the UI's threshold/all-observations
 toggle has a complete picture to work from.
+
+`last_seen_at` only ever moves forward: the upsert takes
+`max(existing, new)`. Graph rejects `$orderby` alongside `$search`, so
+discovery results arrive unordered and an older message can follow a
+newer one. Stamping it verbatim walked the value backwards out of
+`DiscoveredSenderQuery`'s 90-day window, and the sender vanished from
+the panel on the exact pass that took it to `MIN_OCCURRENCES`.
 
 **Discovery-loop invariants:** no `.eml` blobs are ever persisted from
 this surface — the Gmail client calls
@@ -646,18 +770,32 @@ outside both the walk's filter and the new baseline's lower bound.
 `RateLimitedException` flips status to `rate_limited` via
 `applyRateLimited` (bumps `retry_attempts`, stamps "Retry after Xs")
 and rethrows so the queue worker honours the project-wide backoff.
-`InvalidGrantException` transitions to `needs_reauth` and is swallowed
-(terminal until the user hits Reconnect). Any other `Throwable`
+`InvalidGrantException` and `InboxNotConfiguredException` transition to
+`needs_reauth` and are swallowed (both terminal until the user hits
+Reconnect or finishes the OAuth-client wizard; rethrowing either would
+spend the whole retry budget on a condition no attempt can clear). Any
+other `Throwable`
 transitions to `error` (first 500 chars of the message) and rethrows
 so the job-failed listener can surface the failure. `failed()`
 (Laravel's post-retry-exhaustion hook) applies the same terminal
 `error` transition via container-resolved `InboxScanStateMachine`,
-swallowing an invalid transition (e.g. an already-`needs_reauth` inbox
-failing again) rather than escalating it into a hard queue-worker
-error — this replaced an earlier `JobFailed` listener that regex-parsed
-the serialized job payload, which was fragile against
-serializer-format changes and any future job class whose property name
-happened to share a prefix with `inboxId`.
+swallowing an invalid transition rather than escalating it into a hard
+queue-worker error. The swallow that matters is `needs_reauth → error`,
+and it is deliberate in both directions: `needs_reauth` is the *more*
+actionable state — it is what raises the Reconnect banner, where
+`error` only says "try again later" — so a later failure must not
+degrade it. The per-job `failed()` hook replaced an earlier
+`JobFailed` listener that regex-parsed the serialized job payload,
+which was fragile against serializer-format changes and any future job
+class whose property name happened to share a prefix with `inboxId`.
+
+**A message the provider will not hand over does not stall the walk.**
+`MessageUnavailableException` (a `users.messages.get` 404) and
+`GmailRawDecodeException` are permanent for that id, so the fetch is
+skipped and the batch carries on to the cursor write. Letting either
+out would leave the cursor where it was, and every later tick would
+read the same history, meet the same message and abort again — one
+unfetchable message freezing the mailbox for good.
 
 **Two early-exit paths skip the provider call entirely:** a
 `needs_reauth` inbox exits immediately on the first status read (no
@@ -677,12 +815,33 @@ any provider call, since the history/delta walk (and the fallback
 walk) can legitimately re-surface a message a prior pass already
 persisted, and refetching would burn quota for nothing (`insertOrIgnore`
 would short-circuit the DB write regardless, and the atomic `.eml`
-rename would just overwrite an identical file). The Microsoft branch
-additionally applies a client-side sender-pattern post-filter on delta
-messages, since Graph's delta endpoint doesn't honour a from-address
-`$filter` server-side the way the plain messages endpoint does (the
-fallback walk already filters server-side via
-`listSenderMessagesPaged`).
+rename would just overwrite an identical file).
+
+**Both branches apply the sender allow-list client-side, and neither
+may skip it.** Graph's delta endpoint doesn't honour a from-address
+`$filter` server-side the way the plain messages endpoint does, and
+`users.history.list` has no sender filter at all — its records carry
+only a message id. The Microsoft branch filters on the delta page's own
+`from` metadata before fetching bytes. Gmail cannot: it has to pull the
+raw message, parse its headers once via
+`InboxScanContext::parseHeaders`, and gate on the parsed sender before
+anything reaches `storeParsedMessage`. Nothing is written for a sender
+outside the allow-list — no `.eml` on disk, no `inbox_messages` row —
+and the cursor still advances, so a filtered-out message never stalls
+the walk. Without that gate this reads "only the senders you
+allow-listed" and writes the user's entire incoming mail stream to
+disk, sender and subject in plaintext columns. (Both fallback walks
+filter server-side via `listSenderMessages`/`listSenderMessagesPaged`
+already.)
+
+**A Graph delta spans pages.** `fetchGraphDelta` goes through
+`GraphDeltaWalk`, which follows `@odata.nextLink` until the page
+carrying `@odata.deltaLink` arrives. Reading only the first page lost
+every message after it AND left the cursor unmoved, with `status=idle`
+so the UI showed a healthy inbox while all later mail was dropped.
+`GraphDeltaWalk::PAGE_CAP` (25) bounds one tick; the `nextLink` it
+stops on is itself a resumable delta URL, so it is recorded as the
+cursor and the next tick continues from there rather than re-walking.
 
 ## OAuth alert listeners
 
@@ -764,11 +923,22 @@ are non-final so feature tests can substitute a stub subclass via
 `$this->app->instance(...)` — the contract is enforced by the
 singleton binding + constructor signature, not the `final` modifier,
 the same pattern `OAuthSecretsRepository` uses for its
-`performRename()` failure-injection hook. `GoogleOAuthProvider`
-persists the full `gmail.readonly + userinfo.email` scope string
-(rather than just `gmail.readonly`) so a later out-of-band revoke of
-`userinfo` surfaces as the actionable `needs_reauth` signal instead of
-a generic `OAuthExchangeFailed`. `MicrosoftOAuthProvider::readEmail`
+`performRename()` failure-injection hook. Both providers persist the scope the token response
+*granted*, falling back to the full requested string only when the
+response omits one. The consent screen lets a user untick a scope; a
+recorded "requested" scope then leaves an inbox the app believes can
+read mail, and the first scan 403s into a generic `error` rather than
+the actionable `needs_reauth`. The requested fallback is the full
+`gmail.readonly + userinfo.email` pair rather than just
+`gmail.readonly`, so a later out-of-band revoke of `userinfo` also
+surfaces as `needs_reauth`.
+
+`MicrosoftOAuthProvider::mapIdentityProviderException` reads the error
+body through the PSR-7 stream the league Azure provider actually
+passes — the previous `is_array()` arm never ran. It went unnoticed
+because the flat `{"error":"invalid_grant"}` body repeats the code in
+the exception message; Azure's nested `{"error":{"code":…}}` shape does
+not, and that one fell through to a retryable `OAuthExchangeFailed`. `MicrosoftOAuthProvider::readEmail`
 reads Microsoft Graph's `/me` response, preferring `mail` and falling
 back to `userPrincipalName` — for consumer Outlook.com accounts `mail`
 is often null and `userPrincipalName` holds the routable address, while
@@ -1085,7 +1255,24 @@ the live provider APIs. The production `GmailApiClient` /
 `GraphApiClient` wrap live HTTP calls; `FakeGmailApiClient` /
 `FakeGraphApiClient` replay synthesised JSON fixtures against the same
 interface so background-job tests drive the pipeline end-to-end
-without a real OAuth grant. Both contracts share three error
+without a real OAuth grant.
+
+A fake that cannot express a shape hides every bug that lives in it.
+`FakeGraphApiClient::deltaPage` used to read `delta-baseline.json` for
+every call — an empty `value` with no `nextLink` — so no test anywhere
+persisted a message from a Microsoft delta page, and the missing
+`nextLink` walk was invisible. It now answers a baseline call
+(`$deltaLink === null`) with that empty body and a cursor walk with
+`delta-page-1.json`, which carries a real allow-listed message, and
+`queueDeltaResponse()` queues explicit multi-page deltas. Likewise
+`listSenderMessagesPaged` hard-coded `messages-page-2-empty.json` for
+any non-null `nextLink`, and that fixture's empty page is always last,
+so a mid-walk empty page was unproducible; `queueSenderPage()` and
+`queueSenderPageRateLimit()` now express both that and an interruption
+at a chosen page. `messages-get-raw-private.json` +
+`eml/private/sample-private-mail.eml` supply the one thing the Gmail
+fixtures never did — a sender that is *not* on the allow-list, which is
+what the incremental filter has to be tested against. Both contracts share three error
 sentinels: `RateLimitedException` (HTTP 429 / 403 quota errors,
 `retryAfterSeconds` carries the provider-suggested back-off),
 `CursorExpiredException` (Gmail 404 historyId expiry / Graph 410
@@ -1100,10 +1287,28 @@ Gmail's `after:` operator so the cursor-expiry fallback walk can be
 date-bounded to `last_scan_at - 7 days` rather than the full
 allow-list history. `getRawMessage` calls
 `users.messages.get?format=raw` and decodes the base64url payload.
-`listHistory` calls `users.history.list` and replays
-messagesAdded/messagesDeleted since the cursor. `listDiscoveryCandidates`
+`listHistory` calls `users.history.list` with
+`historyTypes=messageAdded` and unpacks each `History` record into the
+`messagesAdded[].message.id` shape `ScanMessageMapper` reads; the other
+record kinds carry no id the fetcher could pull bytes for. It follows
+`nextPageToken` to the end of the walk and then reports the mailbox's
+current `historyId`. A walk stopped early by `HISTORY_PAGE_CAP` reports
+the last record's own id instead, because the mailbox's current
+historyId would carry the cursor over records the walk never read —
+unless the capped walk consumed no records at all, which Gmail answers
+whenever `historyTypes=messageAdded` matched nothing on a page
+(`nextPageToken` present, `history` absent). There is no watermark to
+resume from there, so the mailbox's own historyId is reported: without
+it the cursor never moved and every later tick burned the same 25 API
+calls re-reading the same pages, forever, with `status=idle`.
+`listDiscoveryCandidates`
 runs a broad `subject:(...)` keyword query minus the known-sender
-allow-list, pairing the list call with a per-message
+allow-list, bounded at `MAX_DISCOVERY_QUERY_LENGTH` (1800 characters)
+— the exclude list grows by one entry for every sender ever promoted
+or dismissed, and past Gmail's `q=` ceiling every discovery call would
+400. Dropping the overflow is safe because `DiscoveryScanJob`
+re-applies the same exclude list client-side before any upsert. The
+call pairs the list request with a per-message
 `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
 fetch so the response carries sender + date without the full RFC 822
 body — no `.eml` blob is ever persisted from this path. Discovered
@@ -1118,6 +1323,14 @@ seam so both providers rebind identically via
 on the first page and follows `@odata.nextLink` verbatim afterward.
 `getRawMessage` calls `GET /me/messages/{id}/$value`, which returns
 raw RFC 822 bytes directly (unlike Gmail's base64url `raw` field).
+
+"Verbatim" is load-bearing and was once only aspirational: Guzzle's
+`query` request option *replaces* the URI's own query string rather
+than merging into it, and an empty array still counts as set. Every
+`@odata.nextLink` / `@odata.deltaLink` call passed one, so
+`$skiptoken`, `$deltatoken`, `$filter`, `$select`, `$top` and `$search`
+were all stripped off the URL before it went out. The option is now
+omitted entirely unless there is a composed query to send.
 `deltaPage` establishes or walks the `$delta` cursor: a null
 `$deltaLink` is the post-backfill baseline call, returning an empty
 `value` plus the first `@odata.deltaLink` to persist into
@@ -1181,16 +1394,26 @@ clouds (`graph.microsoft.de`, `graph.microsoft.us`) are deliberately
 excluded from the v1 host allow-list — adding one is a reviewed
 config-flip decision, not something silently permitted here.
 
-**Production error mapping:** both `GmailApiClient` and `GraphApiClient`
-rebuild their HTTP client around a freshly-refreshed access token on
-every call (`ensureFreshAccessToken` refreshes when the cached token
-is missing or within 60 seconds of its stamped expiry), so a stale
-cached token never reaches the wire. Quota-shaped provider errors
-(`rateLimitExceeded`/`userRateLimitExceeded`/`dailyLimitExceeded` for
-Gmail, HTTP 429 for Graph) become `RateLimitedException` so the caller
-can transition the inbox state and let the queue worker reschedule.
+**Production error mapping:** both `GmailApiClient` (through
+`GmailInboxResources`) and `GraphApiClient` rebuild their HTTP client
+around a freshly-refreshed access token on every call
+(`ensureFreshAccessToken` refreshes when the cached token is missing or
+within 60 seconds of its stamped expiry), so a stale cached token never
+reaches the wire. Quota-shaped provider errors become `RateLimitedException` so the
+caller can transition the inbox state and let the queue worker
+reschedule. For Gmail that is the legacy
+`rateLimitExceeded`/`userRateLimitExceeded`/`dailyLimitExceeded`
+reason the SDK unpacks into `getErrors()`, plus HTTP 429 and the newer
+`error.status` shape (`RESOURCE_EXHAUSTED`/`UNAVAILABLE`) Google
+returns with no `error.errors[]` array at all. For Graph it is 429,
+503 and 509 — Microsoft documents all three as throttling, each
+carrying `Retry-After`; mapping only 429 flipped a throttled inbox to
+`error` (a red badge, not "rate limited"), never bumped
+`retry_attempts`, and discarded the provider's own delay.
 `users.history.list` 404 / Graph `$delta` 410 become
-`CursorExpiredException`. Token payloads never appear in a thrown
+`CursorExpiredException`; a `users.messages.get` 404 becomes
+`MessageUnavailableException`, which is the signal the incremental scan
+uses to skip that id rather than stall the cursor behind it. Token payloads never appear in a thrown
 exception message. The discovery surface deliberately never calls
 `getRawMessage` — only the `format=metadata` / minimal-field fetch —
 so no `.eml` blob is ever persisted from a discovery walk.

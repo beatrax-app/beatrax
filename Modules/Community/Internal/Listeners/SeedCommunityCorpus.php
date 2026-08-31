@@ -16,13 +16,13 @@ use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
-final class SeedCommunityCorpus
+final readonly class SeedCommunityCorpus
 {
     public function __construct(
-        private readonly CorpusLoader $loader,
-        private readonly DatabaseManager $db,
-        private readonly LoggerInterface $logger,
-        private readonly Clock $clock,
+        private CorpusLoader $loader,
+        private DatabaseManager $db,
+        private LoggerInterface $logger,
+        private Clock $clock,
     ) {}
 
     // One INSERT per row costs one implicit transaction per entry — thousands

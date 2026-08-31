@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Eliminar :count tarefa|Eliminar :count tarefas',
     'empty_pending' => 'A fila está vazia.',
     'empty_failed' => 'Sem tarefas falhadas.',
-    'empty_batches' => 'Sem lotes ativos.',
+    'empty_batches' => 'Sem lotes.',
     'select_aria' => 'Selecionar',
     'select_row_aria' => 'Selecionar a linha :key',
     'col_id' => 'Id',
     'col_queue' => 'Fila',
     'col_attempts' => 'Tentativas',
+    'col_state' => 'Estado',
     'col_created' => 'Criada',
     'col_uuid' => 'UUID',
     'col_failed' => 'Falhou em',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Pendentes',
     'col_actions' => 'Ações',
     'delete_job' => 'Eliminar a tarefa',
+    'worker_running' => 'Um worker está a executá-la',
     'delete_pending_confirm' => 'Eliminar a tarefa pendente #:key?',
     'retry_job' => 'Repetir a tarefa',
     'forget_confirm' => 'Remover a tarefa falhada :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'As tarefas falhadas selecionadas voltam para a fila para o worker as repetir.',
     'cancel' => 'Cancelar',
 
+    'state' => [
+        'available' => 'Disponível',
+        'reserved' => 'Reservada',
+        'scheduled' => 'Agendada',
+    ],
+
     'tab' => [
         'pending' => 'Pendentes',
         'failed' => 'Falhadas',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Tarefa pendente eliminada',
+        'pending_already_gone' => 'Essa tarefa já não existia',
         'failed_requeued' => 'Tarefa falhada recolocada na fila',
         'failed_removed' => 'Tarefa falhada removida',
         'batch_cancelled' => 'Lote cancelado',
         'batch_deleted' => 'Lote eliminado',
         'batch_failures_requeued' => 'Falhas do lote recolocadas na fila',
+        'batch_failures_none' => 'Já não há falhas do lote para voltar a colocar em fila',
         'failed_jobs_requeued' => 'Tarefas falhadas recolocadas na fila',
+        'failed_jobs_none' => 'Já não há tarefas falhadas para voltar a colocar em fila',
         'bulk_refused' => 'Eliminação em massa recusada — :reason',
         'rows_deleted' => 'Linhas selecionadas eliminadas',
     ],

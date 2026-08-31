@@ -6,8 +6,8 @@ namespace Modules\Search\Internal\Services;
 
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
-use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\LedgerDay;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Public\Dto\SearchRowDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -17,13 +17,13 @@ use stdClass;
 // (plus its optional FTS highlight row) into a SearchRowDto — decrypting
 // the counterparty name, resolving the secondary-currency leg, and
 // converting match sentinels into XSS-safe <mark> markup.
-final class SearchRowMapper
+final readonly class SearchRowMapper
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function map(stdClass $row, ?stdClass $highlight, int $userId): SearchRowDto
@@ -40,7 +40,7 @@ final class SearchRowMapper
 
         return new SearchRowDto(
             id: self::toInt($row->id),
-            bookedAt: Fmt::shortDate(self::toString($row->booked_at)),
+            postedAt: LedgerDay::shown(self::toString($row->posted_at)),
             counterpartyName: $counterpartyName,
             counterpartySlug: $this->counterpartySlug($row),
             categoryId: $row->category_id === null ? null : self::toInt($row->category_id),

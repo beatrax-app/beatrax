@@ -10,16 +10,16 @@ use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 final class YnabCsvColumnMap
 {
     /** @var list<string> */
-    private const REGISTER_COMMON_HEADERS = ['Account', 'Date', 'Payee', 'Memo', 'Outflow', 'Inflow', 'Cleared'];
+    private const array REGISTER_COMMON_HEADERS = ['Account', 'Date', 'Payee', 'Memo', 'Outflow', 'Inflow', 'Cleared'];
 
     /** @var list<string> */
-    private const REGISTER_YNAB4_EXTRA_HEADERS = ['Master Category', 'Sub Category'];
+    private const array REGISTER_YNAB4_EXTRA_HEADERS = ['Master Category', 'Sub Category'];
 
     /** @var list<string> */
-    private const REGISTER_NYNAB_EXTRA_HEADERS = ['Category Group/Category'];
+    private const array REGISTER_NYNAB_EXTRA_HEADERS = ['Category Group/Category'];
 
     /** @var list<string> */
-    private const BUDGET_HEADERS = ['Month', 'Category Group', 'Category', 'Budgeted'];
+    private const array BUDGET_HEADERS = ['Month', 'Category Group', 'Category', 'Budgeted'];
 
     /**
      * @param  array<string>  $header

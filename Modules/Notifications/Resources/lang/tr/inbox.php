@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Kapatıldı — Geri al',
+        'dismissed' => 'Kapatıldı',
         'restored' => 'Geri yüklendi',
     ],
 ];

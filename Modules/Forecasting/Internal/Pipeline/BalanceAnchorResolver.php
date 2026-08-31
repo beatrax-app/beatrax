@@ -41,15 +41,13 @@ final readonly class BalanceAnchorResolver
 
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        // A card takes its statement, then a baseline the reader confirmed,
-        // then zero, rather than the ledger balance: with nothing to anchor on,
-        // summing would double-count the billing events the projection is
-        // about to re-emit.
+        // A card takes its statement first; without one it falls back to the
+        // ledger balance every other kind takes. Anchored at zero instead, the
+        // all-accounts curve stood the card's whole debt above the net worth
+        // on the dashboard one click away -- EUR6,681.85 against EUR6,127.85.
         if (self::toString($account->getAttribute('kind')) === AccountKind::IcsCard->value) {
             return $this->fromCardStatements($accountId, $user, $defaultCurrency)
-                ?? ($this->hasReaderConfirmedBaseline($account)
-                    ? $this->fromLedgerBalance($accountId, $user, $defaultCurrency)
-                    : $this->icsCardZeroAnchor($accountId, $defaultCurrency));
+                ?? $this->fromLedgerBalance($accountId, $user, $defaultCurrency);
         }
 
         return $this->fromLedgerBalance($accountId, $user, $defaultCurrency);
@@ -71,16 +69,6 @@ final readonly class BalanceAnchorResolver
             openingBalanceMinor: $this->balances->currentBalanceAsOf($accountId, $user, $asOf)->in($currency),
             currency: $currency,
             source: 'sum_of_transactions',
-        );
-    }
-
-    private function icsCardZeroAnchor(int $accountId, string $defaultCurrency): BalanceAnchorDto
-    {
-        return new BalanceAnchorDto(
-            accountId: $accountId,
-            openingBalanceMinor: 0,
-            currency: $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code(),
-            source: 'ics_card_zero_anchor',
         );
     }
 
@@ -132,13 +120,5 @@ final readonly class BalanceAnchorResolver
             ->where('posted_at', '>', $closedOn->toDateString())
             ->where('posted_at', '<=', $this->clock->now()->startOfDay()->toDateString())
             ->sum('settled_amount_minor');
-    }
-
-    // Both columns AccountStartingBalanceQuery reads: the Settings override the
-    // reader types, and the baseline the wizard asks every new user to confirm.
-    private function hasReaderConfirmedBaseline(Account $account): bool
-    {
-        return is_numeric($account->getAttribute('opening_balance_minor'))
-            || is_numeric($account->getAttribute('starting_balance_minor'));
     }
 }

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Tundmatud',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Pangatasu',
+    ],
+
     'cp_card' => [
         'aria' => 'Vastaspool: :name',
         'recent_aria' => 'Hiljutine tegevus',

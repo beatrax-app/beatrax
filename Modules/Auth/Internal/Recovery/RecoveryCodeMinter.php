@@ -8,15 +8,15 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
-final class RecoveryCodeMinter
+final readonly class RecoveryCodeMinter
 {
     private const int SHEET_SIZE = 10;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
-        private readonly Clock $clock,
-        private readonly RecoveryCodeGenerator $generator,
+        private DatabaseManager $db,
+        private Hasher $hasher,
+        private Clock $clock,
+        private RecoveryCodeGenerator $generator,
     ) {}
 
     /**

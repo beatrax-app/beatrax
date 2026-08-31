@@ -9,7 +9,7 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 
 uses(RefreshDatabase::class);
 
-// Regression: with nothing to label the header read "0 of 0 · 100 % · ~1 min
+// Regression: with nothing to label the header read "0 of 0 · 100% · ~1 min
 // remaining" over a full progress bar. "Nothing to do" is not "done".
 
 it('shows no progress figure or bar when nothing is queued', function (): void {

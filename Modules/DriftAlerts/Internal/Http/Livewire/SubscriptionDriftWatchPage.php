@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\DriftAlerts\Public\Dto\SubscriptionDriftRow;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 
 final class SubscriptionDriftWatchPage extends Component
@@ -18,7 +19,7 @@ final class SubscriptionDriftWatchPage extends Component
         $user = $currentUser->user();
         $rows = $query->forUser($user);
 
-        $driftedUp = array_filter($rows, static fn ($row): bool => $row->deltaMinor > 0);
+        $driftedUp = array_filter($rows, static fn (SubscriptionDriftRow $row): bool => $row->deltaMinor > 0);
 
         $view = $views->make('drift-alerts::livewire.drift-watch-page', [
             'rows' => $rows,

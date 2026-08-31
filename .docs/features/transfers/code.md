@@ -11,9 +11,15 @@ Modules/Transfers/
 │   │   └── PairsTransferLegs.php
 │   ├── Enums/
 │   │   └── CounterLegOrder.php
-│   └── Services/
-│       └── PairLookup.php
+│   ├── Services/
+│   │   ├── PairLookup.php
+│   │   └── PairUnlinker.php
+│   └── Support/
+│       ├── CounterLegMatch.php
+│       └── CounterLegWindow.php
 ├── Internal/
+│   ├── Exceptions/
+│   │   └── MismatchedTransferUserException.php
 │   ├── Services/
 │   │   └── TransferPairer.php
 │   └── Listeners/
@@ -40,16 +46,25 @@ No `Models/`, `Database/Migrations/`, `Routes/`, or
   - `PairLookup::isPaired(int $txId, User $user): bool` and
     `PairLookup::partnerId(int $txId, User $user): ?int` — read
     the persisted `pair_transaction_id` for a row.
-  - `PairLookup::counterLegOnAccount(int $accountId, int
-    $amountMinor, list<TransactionType> $types, CarbonImmutable
-    $bookedAt, int $windowDays, ?string $currency, bool
-    $unpairedOnly, ?int $excludeTransactionId, CounterLegOrder
-    $order, User $user): ?int` — the single counter-leg search.
-    Every predicate is a required parameter, so neither caller
-    inherits a bound it did not ask for. Consumed by
+  - `PairLookup::counterLegOnAccount(CounterLegMatch $match,
+    CounterLegWindow $window, User $user): ?int` — the single
+    counter-leg search. Every predicate is a required constructor
+    argument of the two value objects, so neither caller inherits
+    a bound it did not ask for. Consumed by
     [`Chains`](../chains/code.md)'s `PaypalFundingResolver`
     deterministic arm and by this module's own `TransferPairer`
     forward arm.
+  - `PairUnlinker::unpair(int $userId, int $survivorId,
+    TransactionType $deletedType): ?TransactionType` — the
+    implementation of [`Ledger`](../ledger/code.md)'s
+    `UnpairsTransferLegs`. Returns the survivor's new type, or
+    null when nothing was retyped.
+- **Support/**
+  - `CounterLegMatch` / `CounterLegWindow` — the two value
+    objects `counterLegOnAccount` takes. Neither carries a
+    default; the window owns the ordering because
+    `NearestToCentre` measures from the date the window centres
+    on.
 - **Enums/**
   - `CounterLegOrder` — `NearestToCentre` (chain resolution) /
     `EarliestBooked` (the pairer). Both run out through
@@ -63,7 +78,9 @@ No `Models/`, `Database/Migrations/`, `Routes/`, or
   own: it resolves the partner account, then asks
   `PairLookup::counterLegOnAccount`.
 - `Internal/Listeners/PairTransferCandidates::handle($event)`
-  — per-row listener auto-resolved via constructor DI.
+  — per-row listener auto-resolved via constructor DI. Raises
+  `Internal/Exceptions/MismatchedTransferUserException` when the
+  event's `user` and the transaction's `user_id` disagree.
 
 ## Models + migrations
 

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -98,7 +99,7 @@ it('encrypts the incoming counterparty_name/description before the prefer_receip
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL',
             importRunId: 1,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],
                 'description' => ['stored' => null, 'incoming' => 'Weekly groceries'],
@@ -135,7 +136,7 @@ it('leaves currency/amount_minor conflict values unencrypted (never sensitive)',
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL-2',
             importRunId: 1,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'currency' => ['stored' => 'EUR', 'incoming' => 'USD'],
             ],
@@ -158,7 +159,7 @@ it('stores tax_transaction_tags-analogue plaintext for a non-encrypted user (pas
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL-3',
             importRunId: 1,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],
             ],
@@ -184,7 +185,7 @@ it('holdConflicts persists + dispatches PLAINTEXT stored/incoming values for an 
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL-4',
             importRunId: $tx->import_run_id,
-            sourceFormat: 'paypal-receipt',
+            sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 // 'stored' arrives already decrypted from FingerprintStage::detectConflicts.
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],

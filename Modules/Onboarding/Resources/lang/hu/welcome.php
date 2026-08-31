@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'A bankod',
     'bank_desc' => 'Húzz be egy számlakivonat fájlt. A legtöbb európai bank CSV, MT940 és CAMT.053 fájljait olvassuk.',
-    'card_title' => 'A hitelkártyád (ICS)',
-    'card_desc' => 'Húzd be a Mijn ICS havi PDF-kivonatát.',
+    'card_title' => 'A hitelkártyád',
+    'card_desc' => 'Húzd be a kártyád havi PDF-kivonatait. Egyelőre az ICS kibocsátót tudjuk olvasni.',
     'email_title' => 'Bizonylatok e-mailből',
     'email_desc' => 'Kösd össze a Gmailt vagy az Outlookot, hogy automatikusan begyűjtsük a vásárlási visszaigazolásokat.',
+    'email_desc_phone' => 'A vásárlási visszaigazolásokat az asztali alkalmazás gyűjti be; ez a telefon szinkronizálással mutatja, mit talált.',
 
     'continue' => 'Folytatás →',
 ];

@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Tai nepanašu į YNAB4, nYNAB ar Actual eksportą, kurį galėtume perskaityti. Patikrink failą ir bandyk dar kartą.',
         'file_too_large' => 'Šis failas per didelis perkėlimo eksportui.',
+        'archive_reader_unavailable' => 'Ši programos versija neturi ZIP skaitytuvo, kuris atvertų šį eksportą, tad čia jo perskaityti nepavyks. Importuok jį kompiuterio programoje arba supakuok eksportą iš naujo įprastu glaudinimu.',
+        'internal_detail' => 'Programai nepavyko perskaityti šio eksporto (:code). Visa informacija yra programos žurnale; pranešdamas apie problemą nurodyk šį kodą.',
     ],
 ];

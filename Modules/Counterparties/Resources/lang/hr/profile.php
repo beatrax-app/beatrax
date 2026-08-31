@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— nema lanaca financiranja za osobne kontakte',
     'tab_note_bank' => '— protustranka za bankovne naknade ne stvara lance financiranja',
+    'tab_note_bank_institution' => '— nema lanaca financiranja za institucionalne protustranke',
     'tab_note_government' => '— nema lanaca financiranja za državne ustanove',
 
     'recent_activity' => 'Nedavna aktivnost',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankovne naknade po kategoriji',
+        'activity_heading' => 'Aktivnost po kategoriji',
         'no_fees' => 'Za ovu protustranku još nema zabilježenih naknada.',
     ],
 

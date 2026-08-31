@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Sobre la lista compartida',
     'about_body' => 'Un archivo YAML incluido que relaciona códigos crípticos de los extractos bancarios con nombres de comercio legibles. Al activarlo, Beatrax lee la lista cuando importas; al enviar una sugerencia se abre GitHub en tu navegador.',
 
-    'mappings' => 'Correspondencias',
-    'contributors' => 'Colaboradores',
+    'mappings' => ':count correspondencia|:count correspondencias',
+    'contributors' => ':count colaborador|:count colaboradores',
 
     'use_shared_list' => [
         'title' => 'Usar la lista compartida de comercios',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Actualizar la lista compartida con las actualizaciones de la app',
         'help' => 'Actualiza la lista incluida cada vez que Beatrax se actualice.',
+        'help_phone' => 'Actualiza la lista incluida cada vez que se instale una nueva versión de Beatrax desde la App Store o Google Play.',
         'note' => 'Se activará con una futura actualización de la app — consulta Ajustes → Acerca de para ver la versión actual.',
     ],
 ];

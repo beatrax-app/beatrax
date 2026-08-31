@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Tus dispositivos',
 
-    'moved_help' => 'La vinculación, los nombres de dispositivo y el cifrado están ahora junto a tu estado de sincronización.',
-    'moved_cta' => 'Abrir Sincronización y dispositivo',
     'device_name' => 'Nombre del dispositivo',
     'save' => 'Guardar',
     'peer_default_name' => 'Dispositivo vinculado',
     'rename_device' => 'Cambiar el nombre del dispositivo',
+    'rename_device_caption' => 'Cambiar',
     'this_device' => 'Este dispositivo',
     'removed' => 'Eliminado',
     'confirmed' => 'Confirmado',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Endpoint del relay',
     'relay_endpoint_help' => 'Opcional. Si se define, los dispositivos sin conexión se sincronizan a través de este relay. Déjalo vacío para usar solo LAN&#8209;directa.',
+    'relay_endpoint_help_phone' => 'Opcional. Si se define, los cambios viajan por este relay incluso cuando tus dispositivos no están en la misma red. Este dispositivo los recoge cuando sincronizas desde esta pantalla — nunca en segundo plano, porque el bloqueo de la app guarda la única clave. Déjalo vacío para usar solo LAN&#8209;directa.',
     'relay_endpoint_aria' => 'URL del endpoint del relay',
     'relay_insecure_warning' => 'Este endpoint de relay usa HTTP sin cifrar. Aunque el relay nunca descifra tus datos, una conexión insegura expone los tamaños cifrados y los tiempos a quien observe la red. Usa un endpoint <strong>https://</strong> para tener la mejor privacidad.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Eliminando:',
     'remove_rotates_key' => 'Al eliminar este dispositivo se rota la clave de cifrado, de modo que no recibirá ninguna actualización futura.',
     'remove_cannot_erase' => 'No puede borrar los datos que ya estén en ese dispositivo. Si el dispositivo se ha perdido o te lo han robado, da por expuestos todos los datos que contuviera.',
+    'remove_is_local' => 'Tus otros dispositivos mantienen su propia lista. Mientras no lo elimines también allí, seguirán sincronizándose con él.',
     'remove_device' => 'Eliminar el dispositivo',
     'keep_device' => 'Mantener el dispositivo',
     'rotating_key' => 'Rotando la clave de cifrado…',

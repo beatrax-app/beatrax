@@ -63,6 +63,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         return app($component)();
     })->name('data-devices.index');
 
+    // The one screen a half-built database can reach. Named outside the
+    // mobile.setup prefix so the initial-sync gate's exemptions do not also
+    // exempt it — a device that never finished migrating has no sync to gate.
+    Route::get('/mobile/database-incomplete', static function () {
+        $component = 'Modules\Mobile\Internal\Http\Livewire\SchemaIncompleteScreen';
+        abort_unless(class_exists($component), 404);
+
+        return app($component)();
+    })->name('mobile.database-incomplete');
+
     Route::get('/mobile/lock', static function () {
         $component = 'Modules\Mobile\Internal\Http\Livewire\MobileLockScreen';
         abort_unless(class_exists($component), 404);

@@ -45,11 +45,18 @@ function pageShellFiles(): array
 
 it('never starts a page shell wider than px-4 on a phone', function (): void {
     $offenders = [];
+    $columns = 0;
 
     foreach (pageShellFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        preg_match_all('/class="mx-auto[^"]*"/', $source, $matches);
+        // Anchored on `class="mx-auto`, this read seven page containers as
+        // having no column at all: `max-w-5xl mx-auto px-6` puts the width
+        // first, and /settings/aliases shipped the 24px phone gutter this rule
+        // exists to forbid while the rule reported green.
+        preg_match_all('/class="[^"]*\bmx-auto\b[^"]*"/', $source, $matches);
+
+        $columns += count($matches[0]);
 
         foreach ($matches[0] as $class) {
             // A responsive bump (sm:px-8) is the intended shape; a bare
@@ -59,6 +66,8 @@ it('never starts a page shell wider than px-4 on a phone', function (): void {
             }
         }
     }
+
+    expect($columns)->toBeGreaterThan(30, 'The column scan found almost nothing, so this rule went blind rather than the tree being clean.');
 
     expect($offenders)->toBe([], sprintf(
         "These page shells are wider than px-4 at phone width:\n  - %s",

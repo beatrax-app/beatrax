@@ -79,7 +79,6 @@ abstract class GuardedStateMachine
 
         $this->db->connection()->transaction(function () use ($id, $toState, $reason, $actor, $notes, $extraColumns): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table($this->table())
                 ->where('id', $id)

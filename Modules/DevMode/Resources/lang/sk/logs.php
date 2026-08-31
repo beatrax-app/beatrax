@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Zamietnuť záznam a skryť ho zo zobrazenia (log súbor sa nemení)',
     'dismiss_aria' => 'Zamietnuť záznam logu a skryť ho zo zobrazenia',
     'totals' => [
-        'showing' => 'Zobrazené',
-        'of' => 'z',
-        'received' => 'prijatých (limit vyrovnávacej pamäte 10k)',
-        'lines_today' => 'riadkov dnes',
+        'showing' => 'Zobrazuje sa :shown z :count prijatého riadka (limit vyrovnávacej pamäte :cap)|Zobrazuje sa :shown z :count prijatých riadkov (limit vyrovnávacej pamäte :cap)|Zobrazuje sa :shown z :count prijatých riadkov (limit vyrovnávacej pamäte :cap)',
+        'lines_today' => ':count riadok dnes|:count riadky dnes|:count riadkov dnes',
+        'lines_today_capped' => 'viac než :count riadok dnes|viac než :count riadky dnes|viac než :count riadkov dnes',
         'today' => 'dnes',
-        'across' => 'v',
-        'daily_files' => 'denných súboroch',
+        'all_files' => ':size v :count dennom súbore|:size v :count denných súboroch|:size v :count denných súboroch',
     ],
 
     'status' => [

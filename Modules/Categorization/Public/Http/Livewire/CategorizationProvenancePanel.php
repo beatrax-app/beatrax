@@ -7,9 +7,10 @@ namespace Modules\Categorization\Public\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
-use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Enums\ActionType;
@@ -23,10 +24,15 @@ final class CategorizationProvenancePanel extends Component
 {
     use HoldsFlashMessage;
 
+    // Both are mount-assigned and server-derived, and removeRule() deletes by
+    // the rule id it finds here. An action method runs before render(), so an
+    // unlocked pair would let the browser name the row it acts on.
+    #[Locked]
     public int $transactionId = 0;
 
     public string $variant = 'none';
 
+    #[Locked]
     public ?int $ruleId = null;
 
     public string $conditionSummary = '';

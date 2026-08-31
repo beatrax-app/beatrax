@@ -11,6 +11,11 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Events\TransactionMutated;
 
+// x-ledger::cleared-badge dispatches `cleared-toggle` carrying the row id, and
+// HandlesClearedStatus::toggleClearedRow is what receives it. The detail page
+// had a second, no-argument wrapper around the same write that no badge and no
+// blade ever called.
+
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'toggle-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
     $this->actingAs($this->user);
@@ -34,7 +39,7 @@ it('flips a cleared transaction to uncleared', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared']);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->call('toggleCleared');
+        ->call('toggleClearedRow', $tx->id);
 
     expect(Transaction::query()->find($tx->id)->status)->toBe('uncleared');
 });
@@ -43,7 +48,7 @@ it('flips an uncleared transaction to cleared', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'uncleared']);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->call('toggleCleared');
+        ->call('toggleClearedRow', $tx->id);
 
     expect(Transaction::query()->find($tx->id)->status)->toBe('cleared');
 });
@@ -55,7 +60,7 @@ it('bumps updated_at when it flips the status', function (): void {
     DB::table('transactions')->where('id', $tx->id)->update(['updated_at' => '2000-01-01 00:00:00']);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->call('toggleCleared');
+        ->call('toggleClearedRow', $tx->id);
 
     expect(DB::table('transactions')->where('id', $tx->id)->value('updated_at'))
         ->not->toBe('2000-01-01 00:00:00');
@@ -69,7 +74,7 @@ it('a cross-user transaction id never seats the component, so nothing is toggled
 
     expect(
         fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-            ->call('toggleCleared'),
+            ->call('toggleClearedRow', $tx->id),
     )->toThrow(Exception::class);
 
     // Raw query builder — bypasses the BelongsToUser global scope, which is
@@ -81,7 +86,7 @@ it('refuses to toggle a reconciled row', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'reconciled']);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->call('toggleCleared');
+        ->call('toggleClearedRow', $tx->id);
 
     expect(Transaction::query()->find($tx->id)->status)->toBe('reconciled');
 });

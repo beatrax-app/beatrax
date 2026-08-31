@@ -13,17 +13,17 @@
       :sublink    — secondary line ("or browse for a file").
       :glyph      — single emoji ("📥").
       :accept     — HTML accept attribute (".csv,.xml,.sta,.mt940,.940"
-                     for ASN; ".pdf" for ICS).
-      :fileLabel  — the format's own name ("ASN CSV", "PDF"), untranslated
+                     for a bank statement; ".pdf" for a card statement).
+      :fileLabel  — the format's own name ("CSV", "PDF"), untranslated
                      like the format chips. Keeps the touch copy specific.
-      :multiple   — allow several files at once (the ICS statements step).
+      :multiple   — allow several files at once (the card statements step).
 
     The drop-zone is purely visual — Livewire's `wire:model` on the
     nested `input` is the upload pipeline; no JavaScript drag
     handlers live here.
 
     Which is why the phone runtime gets different copy. The whole label is
-    the file picker, so tapping it has always worked — but "Drop your ASN CSV
+    the file picker, so tapping it has always worked — but "Drop your CSV
     here" names a gesture the device does not have, and the only line that
     described a reachable action was the smaller one underneath. The caller's
     format is not thrown away with the gesture: the touch lead names it too,

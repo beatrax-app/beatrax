@@ -25,6 +25,7 @@ final class TaxSummaryCard extends Component
                 'total' => null,
                 'count' => 0,
                 'year' => 0,
+                'unconvertedList' => '',
             ]);
         }
 
@@ -32,10 +33,14 @@ final class TaxSummaryCard extends Component
 
         $summary = $query->summaryForUser($currentUser->user()->id, $year);
 
+        // The cockpit this tile links to names the currency it could not price,
+        // and a tile stating a smaller total without saying so is the two
+        // screens disagreeing about money with only one of them explaining.
         return $views->make('tax::livewire.tax-summary-card', [
             'total' => $summary->totalMinor,
             'count' => $summary->count,
             'year' => $year,
+            'unconvertedList' => $summary->isPartial() ? $summary->unconvertedList() : '',
         ]);
     }
 }

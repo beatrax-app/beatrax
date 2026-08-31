@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Koristi bar 12 znakova.',
     'error_wrong_code' => 'To korisničko ime i kod za oporavak se ne poklapaju. Pažljivo proveri kod — sva slova su velika, bez nule, bez slova O, bez jedinice, bez slova L.',
+    'error_throttled' => 'Previše pokušaja — probaj ponovo za :wait.',
 ];

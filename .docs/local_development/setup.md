@@ -88,7 +88,7 @@ and anomaly alerts, notifications, and a rebuilt search index:
 docker compose run --rm -e DB_CONNECTION=sqlite php php artisan demo:seed --reset
 ```
 
-It finishes by printing the login it created (`demo-1@beatrax.local`). `--reset` clears
+It finishes by printing the login it created (`demo-1`). `--reset` clears
 any previous demo rows first, so it is safe to re-run.
 
 `beatrax:install` is idempotent. It enables WAL mode + `synchronous=NORMAL` on the
@@ -146,10 +146,8 @@ The shipped app is packaged via NativePHP (Electron under the hood). To produce 
 # One-time: install Electron build tooling
 npm ci
 
-# Stage the brand assets the prebuild hook expects
-php artisan native:prebuild
-
-# Build the macOS bundle
+# Build the macOS bundle. The `prebuild` hooks in config/nativephp.php run
+# first, staging the brand assets and patching the Electron scaffold.
 php artisan native:build mac
 ```
 
@@ -214,10 +212,13 @@ them; this one skips them.
 
 ## A seeded environment to click through
 
-`demo:seed` stands up a realistic dataset — two users, five accounts, ~165
+`demo:seed` stands up a realistic dataset — two users, seven accounts, ~185
 transactions, plus chains, recurring series, forecasts, drift alerts, receipts,
-goals, pots, saved reports, anomalies and notifications — so every surface has
-something in it.
+goals, pots, cash-book entries, saved reports, anomalies and notifications — so
+every surface has something in it. Two of those accounts are denominated in yen,
+which has no minor unit; [what the demo zero-decimal account has to
+show](../features/ledger/what-the-demo-zero-decimal-account-has-to-show.md) says
+which surfaces that is there to prove.
 
 **Which connection you seed depends on how you are going to run the app**, and
 getting it wrong is quiet rather than loud: the seeder reports success, the
@@ -248,7 +249,7 @@ NATIVEPHP_RUNNING=true php artisan tinker \
 Both seeds pass `--reset`, whose teardown is scoped to demo rows only — it
 never touches a real user you created by hand, so either is safe to re-run.
 
-Sign in as `demo-1@beatrax.local` with the password `demo-only`.
+Sign in as `demo-1` with the password `demo-only`.
 
 `dev:serve` binds loopback rather than the `.test` host on purpose:
 `LoopbackOnly` rejects any request whose `SERVER_ADDR` is not a loopback

@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'En az 12 karakter kullan.',
     'error_wrong_code' => 'Bu kullanıcı adı ile kurtarma kodu eşleşmiyor. Kodu dikkatle kontrol et — hepsi büyük harf, sıfır yok, O yok, bir yok, L yok.',
+    'error_throttled' => 'Çok fazla deneme — :wait sonra yeniden dene.',
 ];

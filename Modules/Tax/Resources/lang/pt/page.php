@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Exportar PDF',
     'export_pdf_aria' => 'Exportar PDF',
     'export_pdf_title' => 'Transferir beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Dispensar',
 
     'country_prompt_heading' => 'Em que país entregas os impostos?',
     'country_prompt_body' => 'Podes alterar isto em Definições → :section a qualquer momento.',

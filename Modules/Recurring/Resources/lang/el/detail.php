@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/μήνα',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Ανοχή διακύμανσης',
     'tolerance' => 'Ανοχή',

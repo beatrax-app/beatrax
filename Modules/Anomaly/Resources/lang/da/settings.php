@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Hvor let Beatrax kalder en hævning usædvanlig for den forhandler eller kategori, fra 1 til 100. Højere markerer flere.',
 
     'min_amount_label' => 'Mindste posteringsbeløb',
-    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i cent (:symbol) — 1000 betyder :example.',
+    'min_amount_help' => 'Ignorér anomalier på posteringer under dette beløb. Gemmes i mindste enheder (:symbol) — :minor betyder :example.',
 
     'save' => 'Gem anomaliindstillinger',
     'saved' => 'Gemt.',

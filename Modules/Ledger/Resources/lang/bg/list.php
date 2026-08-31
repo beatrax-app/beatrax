@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Пълна история.',
     'subtitle_recent' => 'Скорошни транзакции (последните 90 дни).',
 
-    'currency_aria' => 'Изглед по валута',
-    'currency_eur' => 'Само :code',
-    'currency_original' => 'Оригинална валута',
+    'currency_aria' => 'Показана сума',
+    'currency_eur' => 'Уредена сума',
+    'currency_original' => 'Оригинална сума',
 
     'show_recent' => 'Покажи само скорошните',
     'show_full' => 'Покажи цялата история',
 
     'empty_period' => 'Няма нищо за този период.',
 
+    'empty_recent_has_older' => 'Нищо през последните 90 дни. По-старите ви трансакции са тук.',
+
+    'empty_history' => 'Още няма трансакции.',
     'loading_more' => 'Зареждане на още транзакции',
     'load_more' => 'Зареди още',
 

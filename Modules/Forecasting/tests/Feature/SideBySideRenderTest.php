@@ -208,7 +208,10 @@ it('does NOT render the wire:poll.2s element when both runs are complete', funct
         ->assertDontSee('wire:poll.2s');
 });
 
-it('returns 404 when scenarioId belongs to another user', function (): void {
+// Refusing a foreign scenario id and rendering an absent one told a caller
+// which ids exist elsewhere. Both drop to the baseline now; the page carries
+// none of the neighbour's rows either way.
+it('drops a scenarioId belonging to another user rather than confirming it exists', function (): void {
     $other = sbsUser('other');
     /** @var ForecastScenario $scenario */
     $scenario = ForecastScenario::query()->create([
@@ -218,7 +221,8 @@ it('returns 404 when scenarioId belongs to another user', function (): void {
     sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
     $this->actingAs($this->user)
         ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
-        ->assertNotFound();
+        ->assertOk()
+        ->assertDontSee($scenario->name);
 });
 
 it('computes a shared y-axis range across both panels', function (): void {

@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategorian nimi ei voi olla tyhjä.',
         'name_duplicate' => 'Tämänniminen kategoria on jo olemassa.',
+        'category_not_saved' => 'Tätä kategoriaa ei voitu tallentaa. Yritä uudelleen.',
+        'tag_refused' => 'Tätä merkintää ei voitu tallentaa. Sulje valitsin ja yritä uudelleen.',
     ],
 ];

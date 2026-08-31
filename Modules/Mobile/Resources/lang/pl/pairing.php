@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Wpisz kod',
     'camera_off' => 'Dostęp do aparatu jest wyłączony. Zamiast tego wpisz kod z drugiego urządzenia.',
+    'camera_off_no_search' => 'Dostęp do aparatu jest wyłączony, a wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa — wpisany kod nie ma więc czym go znaleźć. Włącz z powrotem dostęp do aparatu dla Beatrax w ustawieniach urządzenia i zeskanuj kod z drugiego urządzenia.',
+    'no_search' => 'Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, więc wpisany kod nie ma czego znaleźć. Zeskanuj kod aparatem — aparat nie musi niczego szukać w sieci.',
     'word_code_aria' => 'Wpisz kod słowny z drugiego urządzenia',
     'submit_code' => 'Wyślij kod',
     'cancel' => 'Anuluj',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Nie można połączyć się z drugim urządzeniem. Upewnij się, że oba są w tej samej sieci, a synchronizacja na komputerze jest włączona.',
+        'no_road_home' => 'To urządzenie nie może przeszukać sieci, a zeskanowany kod nie zawiera adresu drugiego urządzenia. Poproś o nowy kod i zeskanuj go.',
         'invalid_code' => 'Ten kod jest nieprawidłowy lub wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
+        'code_incomplete' => 'Ten kod nie jest kompletny. Porównaj go z drugim urządzeniem i wpisz go w całości.',
         'code_not_accepted' => 'Żadne urządzenie w tej sieci nie przyjęło tego kodu. Sprawdź kod i czy drugie urządzenie nadal go pokazuje.',
         'no_peer_answered' => 'Nic w tej sieci nie odpowiedziało na ten kod. Sprawdź, czy na drugim urządzeniu działa synchronizacja, albo zeskanuj jego kod aparatem — aparat nie musi niczego szukać w sieci.',
         'no_peer_answered_ios' => 'Nic w tej sieci nie odpowiedziało na ten kod. Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, więc zeskanuj jego kod aparatem.',
+        'no_peer_answered_camera_off' => 'Nic w tej sieci nie odpowiedziało na ten kod. Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, a dostęp do aparatu jest wyłączony — włącz więc z powrotem dostęp do aparatu dla Beatrax w ustawieniach urządzenia i zeskanuj kod z drugiego urządzenia.',
         'rate_limited' => 'Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie.',
         'identity_locked' => 'Tożsamość Twojego urządzenia jest zablokowana. Odblokuj aplikację i spróbuj ponownie.',
         'identity_needs_lock' => 'Najpierw skonfiguruj blokadę aplikacji — to ona chroni tożsamość urządzenia.',

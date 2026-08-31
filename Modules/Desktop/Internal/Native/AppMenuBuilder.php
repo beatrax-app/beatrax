@@ -6,16 +6,26 @@ namespace Modules\Desktop\Internal\Native;
 
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ProjectLinks;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
-final class AppMenuBuilder
+final readonly class AppMenuBuilder
 {
     public function __construct(
-        private readonly CurrentUser $currentUser,
+        private CurrentUser $currentUser,
+        private DevConsoleBuildGate $console,
     ) {}
+
+    // Menu::create() replaces the whole menu, and the boot-time call runs from
+    // POST /_native/api/booted — a route with no session, so the entries that
+    // depend on who is signed in have to be re-applied when that changes.
+    public function install(): void
+    {
+        Menu::create(...$this->build());
+    }
 
     /**
      * @return list<MenuItem>
@@ -57,9 +67,11 @@ final class AppMenuBuilder
         return $items;
     }
 
+    // Cmd+. is an OS accelerator: on a shipped build it would carry the user
+    // to an address that answers 404, which is worse than an absent menu.
     private function isDeveloper(): bool
     {
-        if (! $this->currentUser->isAuthenticated()) {
+        if (! $this->console->permits() || ! $this->currentUser->isAuthenticated()) {
             return false;
         }
 

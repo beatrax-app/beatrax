@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Search\Public\Dto\SearchFilters;
@@ -97,4 +98,32 @@ it('resolves the configured base through the service rather than the raw key', f
     config()->set('currency.base', '');
 
     expect(app(BaseCurrency::class)->code())->toBe(Currency::Eur->value);
+});
+
+// A total that leaves money out has to say so. The bucketing and the
+// conversion were right; the codes no rate reached were read off
+// ConvertedTotal and then dropped, and the strip printed a figure under the
+// reader's sign that was quietly short of the rows beneath it.
+it('names the currency the strip could not price rather than being quietly short', function (): void {
+    // The bundled snapshot prices the rand, and this case is about a pair the
+    // table cannot reach at all.
+    app(DatabaseManager::class)->connection()->table('exchange_rates')->where('quote_currency', 'ZAR')->delete();
+
+    $this->searchTestTransaction($this->reader->id, searchTotalsRow($this->readerAccount->id, Currency::Eur->value, -4990, 'Probe'));
+    $this->searchTestTransaction($this->reader->id, searchTotalsRow($this->readerAccount->id, 'ZAR', -99900, 'Probe'));
+
+    $page = app(SearchQuery::class)->search($this->reader->fresh(), 'Probe', SearchFilters::empty());
+
+    expect($page->totalCount)->toBe(2)
+        ->and($page->totalOutMinor)->toBe(-4990)
+        ->and($page->unconvertedCurrencies)->toBe(['ZAR'])
+        ->and($page->isPartial())->toBeTrue();
+});
+
+it('reports nothing unconverted when every row priced', function (): void {
+    $this->searchTestTransaction($this->reader->id, searchTotalsRow($this->readerAccount->id, Currency::Eur->value, -4990, 'Probe'));
+
+    $page = app(SearchQuery::class)->search($this->reader->fresh(), 'Probe', SearchFilters::empty());
+
+    expect($page->isPartial())->toBeFalse();
 });

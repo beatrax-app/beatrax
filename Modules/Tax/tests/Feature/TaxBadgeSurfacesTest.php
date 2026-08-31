@@ -16,6 +16,18 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 
 uses(RefreshDatabase::class);
 
+// The fixtures below book at a fixed 2026-06-01 and TransactionsList queries a
+// rolling recent(daysBack: 90) off the real clock, so these passed until the
+// day that gap reached 91 — 2026-08-31 — and would have failed every day after.
+// Freezing the clock is what makes an absolute fixture date mean something.
+beforeEach(function (): void {
+    CarbonImmutable::setTestNow('2026-06-14 10:00:00');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
+
 function badgeUser(string $username = 'badge-user'): User
 {
     return User::query()->create([
@@ -400,7 +412,7 @@ describe('TransactionsList tax badge', function (): void {
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $txId);
 
-        expect($component->get('pickerBookedYear'))->toBe(2024);
+        expect($component->get('pickerPostedYear'))->toBe(2024);
         expect($component->get('pickerTaxYear'))->toBe(2026);
         $component->assertSee('Assign to tax year');
 
@@ -428,7 +440,7 @@ describe('TransactionsList tax badge', function (): void {
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $txId);
 
-        expect($component->get('pickerBookedYear'))->toBe(2026);
+        expect($component->get('pickerPostedYear'))->toBe(2026);
         $component->assertDontSee('Assign to tax year');
     });
 

@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
@@ -22,12 +23,20 @@ final class AccountBufferEditor extends Component
 {
     use DispatchesToast;
 
+    // Locked: mount() checks this id against the reader's own accounts, and
+    // save()/clear() write to whatever it holds afterwards. Unlocked, the
+    // checked id and the written id were allowed to be different accounts.
+    #[Locked]
     public int $accountId = 0;
 
     public string $accountName = '';
 
     public ?int $currentBufferMinor = null;
 
+    // Locked: the account's own denomination, and parseInputToMinor() reads
+    // the typed figure at its scale. Unlocked, a payload naming JPY made
+    // "150" on a EUR account persist as 150 minor rather than 15000.
+    #[Locked]
     public string $currency = Currency::Eur->value;
 
     public string $bufferInput = '';
@@ -57,7 +66,7 @@ final class AccountBufferEditor extends Component
         $this->currency = $currency;
         $this->accountName = $accountName;
         $this->bufferInput = $currentBufferMinor !== null
-            ? MoneyInput::formatMinor($currentBufferMinor)
+            ? MoneyInput::formatMinor($currentBufferMinor, $currency)
             : '';
     }
 
@@ -114,7 +123,7 @@ final class AccountBufferEditor extends Component
         }
 
         try {
-            return AmountStringParser::toMinor($input, allowNegative: false);
+            return AmountStringParser::toMinor($input, $this->currency, allowNegative: false);
         } catch (InvalidArgumentException) {
             return false;
         }

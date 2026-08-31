@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Operational surface for the in-app Developer Console.',
     'worker_heartbeat' => 'Worker heartbeat',
     'not_running' => 'NOT RUNNING',
+    'heartbeat_age' => ':count s ago · ttl :ttl s|:count s ago · ttl :ttl s',
     'queue' => 'Queue',
     'pending' => 'pending',
     'failed' => 'failed',

@@ -24,7 +24,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md#preview-vs-confirm
  */
-final class PreviewCache
+final readonly class PreviewCache
 {
     private const int TTL_MINUTES = 30;
 
@@ -40,8 +40,8 @@ final class PreviewCache
     public const int RESULT_ROW_WINDOW = 500;
 
     public function __construct(
-        private readonly Repository $cache,
-        private readonly Clock $clock,
+        private Repository $cache,
+        private Clock $clock,
     ) {}
 
     public function writer(int $importRunId): PreviewWriter
@@ -77,6 +77,8 @@ final class PreviewCache
             $result->fileFailureReason,
             $result->fileFailureDetail,
             $result->fileFailureRowIndex,
+            $result->receiptCaptures,
+            $result->receiptCaptureCount,
         );
     }
 
@@ -163,6 +165,8 @@ final class PreviewCache
             totalRowCount: $head->rowCount,
             errorRowCount: $head->errorCount,
             duplicateRowCount: $head->duplicateCount,
+            receiptCaptures: $head->receiptCaptures,
+            receiptCaptureCount: $head->receiptCaptureCount,
         );
     }
 
@@ -301,24 +305,24 @@ final class PreviewCache
         $this->cache->forget(PreviewKeys::head($importRunId));
     }
 
-    // False rather than a throw on a missing run or an out-of-range index, so
-    // a stale dispatch is silent. Only the chunk holding the row is rewritten,
-    // and the head only when the renamed row is one of the sampled ones.
+    // False rather than a throw on a missing run or an index no row carries,
+    // so a stale dispatch is silent. Only the chunk holding the row is
+    // rewritten, and the head only when the renamed row is one of the sampled ones.
     public function applyAliasInPlace(int $importRunId, int $rowIndex, string $friendlyName): bool
     {
         $head = $this->head($importRunId);
 
-        if ($head === null || $rowIndex < 0 || $rowIndex >= $head->rowCount) {
+        if ($head === null || $rowIndex < 0) {
             return false;
         }
 
-        $chunkIndex = intdiv($rowIndex, PreviewKeys::CHUNK_ROWS);
-        $within = $rowIndex % PreviewKeys::CHUNK_ROWS;
-        $entries = $this->rowChunk($importRunId, $chunkIndex);
+        $located = $this->locateRow($importRunId, $head->rowChunkCount, $rowIndex);
 
-        if (! array_key_exists($within, $entries)) {
+        if ($located === null) {
             return false;
         }
+
+        [$chunkIndex, $within, $entries] = $located;
 
         $updated = self::renamed($entries[$within], $friendlyName);
         $entries[$within] = $updated;
@@ -351,17 +355,38 @@ final class PreviewCache
         return true;
     }
 
+    // PreviewRowDto::$rowIndex is the adapter's index into the SOURCE, not the
+    // row's position in the preview: ParseStage's mbox arm counts every message
+    // and yields only the ones that parsed, so the two diverge and arithmetic
+    // off CHUNK_ROWS addresses a row the reader never clicked.
+    /**
+     * @return array{int, int, list<PreviewRowDto>}|null
+     */
+    private function locateRow(int $importRunId, int $chunkCount, int $rowIndex): ?array
+    {
+        for ($chunk = 0; $chunk < $chunkCount; $chunk++) {
+            $entries = $this->rowChunk($importRunId, $chunk);
+
+            foreach ($entries as $position => $entry) {
+                if ($entry->rowIndex === $rowIndex) {
+                    return [$chunk, $position, $entries];
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static function renamed(PreviewRowDto $existing, string $friendlyName): PreviewRowDto
     {
         return new PreviewRowDto(
             rowIndex: $existing->rowIndex,
             status: $existing->status,
             accountId: $existing->accountId,
-            bookedAt: $existing->bookedAt,
+            postedAt: $existing->postedAt,
             counterpartyName: $existing->counterpartyName,
             counterpartyIban: $existing->counterpartyIban,
             description: $existing->description,
-            categoryName: $existing->categoryName,
             amountMinor: $existing->amountMinor,
             currency: $existing->currency,
             error: $existing->error,
@@ -396,6 +421,8 @@ final class PreviewCache
             fileFailureReason: $head->fileFailureReason,
             fileFailureDetail: $head->fileFailureDetail,
             fileFailureRowIndex: $head->fileFailureRowIndex,
+            receiptCaptures: $head->receiptCaptures,
+            receiptCaptureCount: $head->receiptCaptureCount,
         );
     }
 

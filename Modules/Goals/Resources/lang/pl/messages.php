@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Dodaj wpłaty, aby zobaczyć prognozę',
         'not_enough_history' => 'Za mało historii, aby przewidzieć datę',
         'no_recent_contributions' => 'Brak niedawnych wpłat, na których można oprzeć prognozę',
+        'too_far_to_date' => 'W tym tempie zbyt daleko, by podać datę',
         'est' => 'Szac. :date ·',
         'projection_note' => '(prognoza)',
         'projected' => 'Prognoza: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Więcej działań — cel: :name',
         'mark_complete' => 'Oznacz jako zakończony',
+        'mark_complete_caption' => 'Oznacz',
         'archive' => 'Archiwizuj',
         'restore' => 'Przywróć',
     ],
 
-    'archived_disclosure' => 'Zarchiwizowane cele (:count)',
+    'archived_disclosure' => 'Zarchiwizowany cel (:count)|Zarchiwizowane cele (:count)|Zarchiwizowanych celów (:count)',
 
     'form' => [
         'title_edit' => 'Edytuj cel',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Podaj nazwę celu.',
         'date' => 'Wybierz datę docelową.',
+        'date_invalid' => 'Wybierz prawdziwą datę.',
+        'date_before_start' => 'Wybierz datę w dniu rozpoczęcia celu lub późniejszą.',
+        'generic' => 'Nie udało się zapisać celu. Sprawdź pola i spróbuj ponownie.',
         'amount' => 'Podaj prawidłową kwotę większą od zera.',
         'pot_linked_category' => 'Ta skarbonka jest powiązana z kategorią. Najpierw usuń to powiązanie na stronie Skarbonki.',
+        'pot_already_linked' => 'Ta skarbonka już finansuje inny cel. Najpierw usuń tam powiązanie.',
+        'pot_missing' => 'Ta skarbonka nie jest już dostępna. Wybierz inną albo zostaw ten cel bez powiązania.',
     ],
 ];

@@ -19,7 +19,7 @@ return [
 
     'editing_h3' => 'Muuda oma :label algsaldot',
     'input_label' => 'ALGSALDO',
-    'minor_units' => '(sentides)',
+    'minor_units' => '(väikseimates ühikutes)',
     'on_date_label' => 'KUUPÄEVAL',
     'cancel' => 'Tühista',
     'save' => 'Salvesta',

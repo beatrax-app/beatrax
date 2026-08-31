@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Ikke kategoriseret',
+    'no_counterparty' => 'Ingen modpart',
+    'unavailable_counterparty' => 'Modpart findes ikke på denne enhed',
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'subtitle' => 'Sammensæt en rapport ud fra dine transaktioner.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Tilpasset interval',
         'from' => 'Fra',
         'to' => 'Til',
+        'error' => [
+            'incomplete' => 'Vælg både en start- og en slutdato.',
+            'malformed' => 'Brug en gyldig dato i formatet ÅÅÅÅ-MM-DD.',
+            'inverted' => 'Slutdatoen ligger før startdatoen.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Nettoformue er en saldo: kun kontofilteret gælder.',
     ],
 
     'compare' => 'Sammenlign med forrige periode',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagram i :currency — :list vises ikke',
+        'undrawn' => 'Ikke i ringen — :amount går den anden vej',
         'bar_title' => 'Klik på en søjle for at se dens transaktioner',
         'line_title' => 'Klik på et punkt for at se dets transaktioner',
         'donut_title' => 'Klik på et segment for at se dets transaktioner',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Gebyrer og reguleringer (ikke medregnet)',
+    'other_movement_with_refunds' => 'Gebyrer, refusioner og reguleringer (ikke medregnet)',
 ];

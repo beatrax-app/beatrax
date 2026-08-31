@@ -6,7 +6,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
+use Modules\Sync\Internal\Transport\PeerCatchUpCursors;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
@@ -80,12 +82,13 @@ it('catch-up request correctly identifies ops missing from the peer (HLC waterma
     $exchanger = new PeerCatchUpExchanger(
         db: app(DatabaseManager::class),
         framer: $framer,
+        log: new NullLogger,
     );
 
     // The watermark deliberately sits between op1 and op2.
-    $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_150, peerHlcC: 0);
+    $frames = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::of(['device-a' => [1_718_000_000_150, 0]]));
 
-    expect($frames)->not->toBeEmpty('ops newer than watermark must be returned');
+    expect($frames)->not->toHaveCount(0, 'ops newer than watermark must be returned');
 
     $entries = [];
     foreach ($frames as $frame) {
@@ -105,9 +108,10 @@ it('catch-up delivers missing ops to the peer and both ends converge', function 
     $exchanger = new PeerCatchUpExchanger(
         db: app(DatabaseManager::class),
         framer: $framer,
+        log: new NullLogger,
     );
 
-    $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
+    $frames = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::none());
 
     $entries = [];
     foreach ($frames as $frame) {
@@ -118,8 +122,8 @@ it('catch-up delivers missing ops to the peer and both ends converge', function 
 
     // A peer that absorbed both ops reports the max as its watermark, and the
     // exchange must then have nothing left to send.
-    $framesAfterSync = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_200, peerHlcC: 5);
-    expect($framesAfterSync)->toBeEmpty('after sync, watermark at max hlc → no gap → empty response');
+    $framesAfterSync = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::of(['device-a' => [1_718_000_000_200, 5]]));
+    expect($framesAfterSync)->toHaveCount(0, 'after sync, watermark at max hlc → no gap → empty response');
 });
 
 it('catch-up with no gap (peer already up to date) sends an empty CATCH_UP_RESPONSE', function (): void {
@@ -128,13 +132,14 @@ it('catch-up with no gap (peer already up to date) sends an empty CATCH_UP_RESPO
     $exchanger = new PeerCatchUpExchanger(
         db: app(DatabaseManager::class),
         framer: new TransportFramer,
+        log: new NullLogger,
     );
 
-    $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_100, peerHlcC: 0);
-    expect($frames)->toBeEmpty('equal watermark means peer is up to date → empty response');
+    $frames = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::of(['device-a' => [1_718_000_000_100, 0]]));
+    expect($frames)->toHaveCount(0, 'equal watermark means peer is up to date → empty response');
 
-    $frames2 = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_999_999, peerHlcC: 0);
-    expect($frames2)->toBeEmpty('watermark above all ops → still empty response');
+    $frames2 = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::of(['device-a' => [1_718_000_999_999, 0]]));
+    expect($frames2)->toHaveCount(0, 'watermark above all ops → still empty response');
 });
 
 it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', function (): void {
@@ -168,9 +173,10 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
     $exchanger = new PeerCatchUpExchanger(
         db: app(DatabaseManager::class),
         framer: $framer,
+        log: new NullLogger,
     );
 
-    $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
+    $frames = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::none());
 
     expect(count($frames))->toBeGreaterThanOrEqual(3, '2100 ops / 1024 max per frame → at least 3 frames');
 
@@ -192,9 +198,10 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
     $exchanger = new PeerCatchUpExchanger(
         db: app(DatabaseManager::class),
         framer: $framer,
+        log: new NullLogger,
     );
 
-    $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
+    $frames = $exchanger->opsAfterWatermark(1, PeerCatchUpCursors::none());
     $entries = [];
     foreach ($frames as $frame) {
         $entries = array_merge($entries, $framer->decode($frame));
@@ -203,7 +210,7 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
     expect($entries)->toHaveCount(1, 'user-scoped catch-up must return only user 1 ops (T-13-11, I2 guard)');
     expect($entries[0]->userId)->toBe(1, 'returned entry must belong to user 1');
 
-    $frames2 = $exchanger->opsAfterWatermark(userId: 2, peerHlcL: 0, peerHlcC: 0);
+    $frames2 = $exchanger->opsAfterWatermark(2, PeerCatchUpCursors::none());
     $entries2 = [];
     foreach ($frames2 as $frame) {
         $entries2 = array_merge($entries2, $framer->decode($frame));
@@ -225,10 +232,10 @@ it('never ships an entry signed by a device the registry has forgotten', functio
     DB::table('device_registry')->where('device_id', 'device-retired')->delete();
 
     $framer = new TransportFramer;
-    $exchanger = new PeerCatchUpExchanger(db: app(DatabaseManager::class), framer: $framer);
+    $exchanger = new PeerCatchUpExchanger(db: app(DatabaseManager::class), framer: $framer, log: new NullLogger);
 
     $entries = [];
-    foreach ($exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0) as $frame) {
+    foreach ($exchanger->opsAfterWatermark(1, PeerCatchUpCursors::none()) as $frame) {
         foreach ($framer->decode($frame) as $entry) {
             $entries[] = $entry->deviceId;
         }

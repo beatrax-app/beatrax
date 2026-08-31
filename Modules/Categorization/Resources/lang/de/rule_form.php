@@ -24,6 +24,7 @@ return [
     'to' => 'bis',
     'text_placeholder' => 'z. B. SPOTIFY',
     'remove_condition' => 'Bedingung entfernen',
+    'remove_condition_caption' => 'Entfernen',
     'add_condition' => '+ Bedingung hinzufügen',
 
     'then' => 'Dann',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Anhängen',
     'deduction_category_aria' => 'Abzugskategorie für Aktion :number',
     'remove_action' => 'Aktion entfernen',
+    'remove_action_caption' => 'Entfernen',
     'add_action' => '+ Aktion hinzufügen',
 
     'this_year_only' => 'Nur dieses Jahr ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Aktionen mit Steuer-Markierung greifen bei der nächsten erneuten Anwendung, nicht beim aktuellen Import.',
 
     'priority' => 'Priorität',
-    'priority_help' => 'Niedrigere Zahlen laufen zuerst. Regeln ohne gemeinsame Felder geraten nie in Konflikt.',
+    'priority_help' => 'Regeln laufen von der niedrigsten Zahl aufwärts, also gewinnt die höchste Zahl, wenn zwei dasselbe Feld setzen. Regeln ohne gemeinsame Felder geraten nie in Konflikt.',
 
     'cancel' => 'Abbrechen',
     'save_changes' => 'Änderungen speichern',

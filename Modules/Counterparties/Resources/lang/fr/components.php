@@ -24,6 +24,10 @@ return [
         'unknown' => 'Inconnus',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Frais bancaires',
+    ],
+
     'cp_card' => [
         'aria' => 'Tiers : :name',
         'recent_aria' => 'Activité récente',

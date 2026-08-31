@@ -94,8 +94,12 @@ retired with it — more than one settings button may decide.
 
 ## Staging plaintext secrets
 
-Both the identity file and the GDK keyring are written and read through the same pattern, and
-the details are the point:
+Both the identity file and the GDK keyring are written and read through
+`Modules\Sync\Internal\Identity\SealedJsonFile`, which owns both directions. It is one
+class rather than a pattern each caller retypes because the details below are the whole point
+of it: a recipe whose value is that *every* step happens is exactly the kind that must not be
+copied, and it had been copied three times — twice for reading, twice for writing — before one
+of the copies was found to be missing the lock-down entirely.
 
 - The temp file is created **inside the same 0700 directory** as the encrypted file — never
   `sys_get_temp_dir()`, which is world-traversable (`/tmp` at mode 1777).

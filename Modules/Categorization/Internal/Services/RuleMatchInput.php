@@ -15,6 +15,7 @@ final readonly class RuleMatchInput
         public ?string $counterpartyName,
         public ?string $description,
         public int $settledAmountMinor,
+        public string $settledCurrency,
         public CarbonImmutable $postedAt,
     ) {}
 
@@ -24,6 +25,7 @@ final readonly class RuleMatchInput
             counterpartyName: $tx->counterpartyName,
             description: $tx->description,
             settledAmountMinor: $tx->settledAmountMinor,
+            settledCurrency: $tx->settledCurrency,
             postedAt: $tx->postedAt,
         );
     }

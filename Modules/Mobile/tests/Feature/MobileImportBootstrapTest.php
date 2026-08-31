@@ -66,24 +66,26 @@ it('provisions a local user + app-lock + sync identity (no epoch) and advances t
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
-it('continueToPairing() forgets the recovery-codes session key and redirects into mobile.pair?mode=import', function (): void {
+// The way onward is a plain link, never a wire action: the Livewire round-trip
+// it replaced returned 419 on device and took the codes with it. What forgets
+// them is the next request, whichever one it turns out to be — see
+// TheRecoveryCodesDoNotOutliveTheScreenThatShowsThemTest.
+
+it('leaves the recovery-codes step by a plain link into mobile.pair?mode=import', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
-    $component = Livewire::test(MobileImportBootstrap::class)
+    $html = (string) Livewire::test(MobileImportBootstrap::class)
         ->set('username', 'phone-owner-continue')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
         ->set('pin', '426900')
         ->set('confirmPin', '426900')
         ->call('submit')
-        ->assertSet('step', 'recovery_codes');
+        ->assertSet('step', 'recovery_codes')
+        ->html();
 
-    expect(session('auth.signup.recovery_codes_plain'))->not->toBeNull();
-
-    $component->call('continueToPairing')
-        ->assertRedirect(route('mobile.pair', ['mode' => 'import']));
-
-    expect(session('auth.signup.recovery_codes_plain'))->toBeNull('the recovery-codes ceremony must forget the session key exactly once, mirroring RecoveryCodesDisplay');
+    expect($html)->toContain('href="'.route('mobile.pair', ['mode' => 'import']).'"');
+    expect(session('auth.signup.recovery_codes_plain'))->not->toBeNull('the codes are still owed to the reader on the screen that shows them');
 });
 
 // Cancelling out of the pairing ceremony walks back onto this route, which
@@ -409,4 +411,90 @@ it('says nothing when a rejected submit leaves the reader on the step they were 
         ->call('submit')
         ->assertSet('step', 'collect_pin')
         ->assertNotDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
+});
+
+// This screen's PIN gate runs BEFORE SignupAction commits the account, and the
+// provisioner's own floor runs after it. A gate that admits what the floor
+// refuses makes the account and then cannot finish the device it belongs to.
+
+it('refuses an eleven-digit PIN on the form instead of committing the account and stranding the device', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('username', 'phone-owner-long-pin')
+        ->set('password', 'a-genuinely-long-password')
+        ->set('passwordConfirmation', 'a-genuinely-long-password')
+        ->set('pin', '12345678901')
+        ->set('confirmPin', '12345678901')
+        ->call('submit')
+        ->assertSet('step', 'collect_pin')
+        ->assertHasErrors(['pin' => 'PIN must be 6 to 10 digits — numbers only.']);
+
+    expect(User::query()->count())->toBe(0, 'no account may be committed behind a PIN the provisioner is going to refuse');
+    expect(session('mobile.import.pending_credentials'))->toBeNull();
+});
+
+it('refuses a PIN the numeric keypad could never type back', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->set('username', 'phone-owner-letters')
+        ->set('password', 'a-genuinely-long-password')
+        ->set('passwordConfirmation', 'a-genuinely-long-password')
+        ->set('pin', '4269ab')
+        ->set('confirmPin', '4269ab')
+        ->call('submit')
+        ->assertSet('step', 'collect_pin')
+        ->assertHasErrors(['pin' => 'PIN must be 6 to 10 digits — numbers only.']);
+
+    expect(User::query()->count())->toBe(0);
+});
+
+it('returns a reload after a failed provisioning to the failure rather than walking past it into the recovery codes', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $user = User::query()->create([
+        'username' => 'phone-owner-reloads',
+        'password' => bcrypt('a-genuinely-long-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    test()->actingAs($user);
+
+    session()->put('mobile.import.pending_credentials', [
+        'pin' => '426900',
+        'password' => 'a-genuinely-long-password',
+    ]);
+    session()->put('auth.signup.recovery_codes_plain', ['AAAA-BBBB-CCCC']);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->assertSet('step', 'provisioning_failed')
+        ->assertSet('alreadyProvisioned', false);
+});
+
+it('names the rule when provisioning refuses the stashed PIN instead of offering a retry that repeats the same answer', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $user = User::query()->create([
+        'username' => 'phone-owner-bad-stash',
+        'password' => bcrypt('a-genuinely-long-password'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    test()->actingAs($user);
+
+    session()->put('mobile.import.pending_credentials', [
+        'pin' => '12345678901',
+        'password' => 'a-genuinely-long-password',
+    ]);
+
+    Livewire::test(MobileImportBootstrap::class)
+        ->assertSet('step', 'provisioning_failed')
+        ->call('retryProvisioning')
+        ->assertSet('step', 'provisioning_failed')
+        ->assertSet('flashMessage', 'PIN must be 6 to 10 digits — numbers only.');
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = app(AppLockProvisioner::class);
+    expect($provisioner->isEnabled((int) $user->id))->toBeFalse();
 });

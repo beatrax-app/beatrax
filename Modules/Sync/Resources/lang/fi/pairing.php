@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Vaihe 3 / 3',
 
     'show_my_code' => 'Näytä koodini',
-    'show_my_code_help' => 'Näytä tämän laitteen QR- ja sanakoodi toiselle laitteelle.',
+    'show_my_code_help' => 'Näyttää tämän laitteen koodin toisen laitteen luettavaksi.',
     'enter_a_code' => 'Syötä koodi',
     'safety_number_changed' => 'Toinen laite muuttui vertailun aikana. Tarkista alla olevat sanat uudelleen ennen vahvistamista.',
     'enter_a_code_help' => 'Kirjoita toisella laitteella näkyvä koodi.',
 
     'show_this_code' => 'Näytä tämä koodi',
     'enter_on_other' => 'Syötä tämä koodi toiselle laitteelle tai anna sen skannata QR-koodi.',
+    'scan_on_other' => 'Skannaa tämä koodi toisen laitteen kameralla. Tietokoneessa ei ole kameraa — näytä sen koodi ja syötä se tähän.',
     'expires_in' => 'Vanhenee',
     'code_expired' => 'Koodi vanhentui.',
     'generate_new_code' => 'Luo uusi koodi',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Laitteesi identiteetti on lukittu. Avaa sovelluksen lukitus ja yritä uudelleen.',
     'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
+    'code_incomplete' => 'Tämä koodi ei ole kokonainen. Vertaa sitä toiseen laitteeseen ja syötä se kokonaan.',
+    'code_not_accepted' => 'Mikään tämän verkon laite ei hyväksynyt koodia. Tarkista koodi ja se, näyttääkö toinen laite sitä yhä.',
+    'no_peer_answered' => 'Mikään tässä verkossa ei vastannut koodiin. Tarkista, että synkronointi on käynnissä toisella laitteella.',
+    'no_peer_search' => 'Tämä laite ei voinut etsiä verkosta eikä siksi voinut tarkistaa koodia. Näytä sen sijaan tämän laitteen koodi ja syötä se toiselle laitteelle.',
+    'rate_limited' => 'Liian monta yritystä. Odota minuutti ja yritä uudelleen.',
 ];

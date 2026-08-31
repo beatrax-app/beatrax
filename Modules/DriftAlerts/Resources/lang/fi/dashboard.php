@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Hinnanmuutoshälytykset',
-    'aria' => 'Hinnanmuutoshälytykset — :count avointa, :amount vuositason vaikutus',
+    'aria' => 'Hinnanmuutoshälytykset — :count avointa, :impact',
     'open' => 'avointa',
-    'annualized_impact' => 'vuositason vaikutus',
+    'impact_rising' => ':amount vuositason vaikutus',
+    'impact_flat' => 'ei lisäkustannuksia vuodessa',
 ];

@@ -131,7 +131,7 @@ it('TransactionsList with ?counterparty[]= enters search mode and shows only tha
     ]);
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('filterCounterparties', [$cpId]);
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -147,7 +147,7 @@ it('TransactionsList clearSearch resets filterCounterparties', function (): void
     $this->actingAs($fixture['user']);
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('filterCounterparties', [1]);
 
     expect($component->instance()->isSearchActive())->toBeTrue();

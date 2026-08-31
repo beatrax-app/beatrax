@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Категория',
         'assigned' => 'Разпределено',
+        'carried_in' => 'Пренесено',
+        'moved' => 'Прехвърлено',
         'spent' => 'Изразходвано',
         'available' => 'Налично',
         'if_overspent' => 'При преразход',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Скрий историята ↑',
         'moved_from' => 'Преместено от :category',
         'moved_to' => 'Преместено в :category',
+        'moved_unreadable' => 'Преместено с :category от по-нова версия на Beatrax',
         'undo' => 'Отмени',
     ],
 
     'phone' => [
         'spent' => 'Изразходвани :amount',
+        'carried_in' => 'Пренесено :amount',
+        'moved' => 'Прехвърлено :amount',
         'available' => 'Налични :amount',
         'notify_at' => 'Известие при',
     ],

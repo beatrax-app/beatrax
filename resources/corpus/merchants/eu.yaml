@@ -1,5 +1,5 @@
 # Merchant corpus — pan-European / global services that bill across borders.
-# region defaults to EU. Schema: see merchants/nl.yaml.
+# region is EU, which the lookup answers to every country. Schema: see merchants/nl.yaml.
 #
 # This file also carries the single authoritative row for a brand whose
 # statement descriptor reads the same in several countries (LIDL, VODAFONE,

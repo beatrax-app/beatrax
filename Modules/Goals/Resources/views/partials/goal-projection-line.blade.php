@@ -11,24 +11,32 @@
     beyond-horizon estimate, so a phone reader saw a bare date where a
     desktop reader saw an estimate. One chain, so the two surfaces can no
     longer disagree about what a date means.
+
+    The branches are ordered by the state the projection reported, not by
+    the level: asking "is the sum zero" first collapsed three different
+    reasons for having no date into "Add contributions to see a
+    projection", which is a false sentence for two of them.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Goals\Internal\Enums\GoalProgressState')
+@use('Modules\Goals\Public\Dto\GoalProgressRow')
+@use('Modules\Goals\Public\Enums\GoalProgressState')
 <p class="{{ $class }}">
     @if ($row->progressState === GoalProgressState::Reached->value)
         {{ Lang::get('goals::messages.projection.target_reached') }}
     @elseif ($row->isCompleted())
         {{ Lang::get('goals::messages.projection.closed_short') }}
-    @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
+    @elseif ($row->projectedFinishDate === null && $row->projectionBeyondHorizon)
+        {{ Lang::get('goals::messages.projection.too_far_to_date') }}
+    @elseif ($row->projectedFinishDate === null && ! $row->hasContributions)
         {{ Lang::get('goals::messages.projection.add_contributions') }}
     @elseif ($row->projectedFinishDate === null && $row->projectionStalled)
         {{ Lang::get('goals::messages.projection.no_recent_contributions') }}
     @elseif ($row->projectedFinishDate === null)
         {{ Lang::get('goals::messages.projection.not_enough_history') }}
     @elseif ($row->projectionBeyondHorizon)
-        {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
+        {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat(GoalProgressRow::DATE_FORMAT)]) }}
         <span class="text-slate-600 dark:text-slate-400">{{ Lang::get('goals::messages.projection.projection_note') }}</span>
     @else
-        {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
+        {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat(GoalProgressRow::DATE_FORMAT)]) }}
     @endif
 </p>

@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Muokkaa nimeä',
     'edit_name_aria' => 'Nimeä toistuva sarja :id uudelleen',
     'new_name_label' => 'Uusi nimi tälle sarjalle',
+    'load_more' => 'Lataa lisää',
     'save' => 'Tallenna',
 
     'toast' => [

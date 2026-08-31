@@ -11,9 +11,9 @@ use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 // The User lookup lives here so the seeder keeps its run(User $user)
 // signature; a userId that no longer resolves is a Core bug, so
 // findOrFail() is deliberate.
-final class SeedDefaultKnownCounterpartyIbans
+final readonly class SeedDefaultKnownCounterpartyIbans
 {
-    public function __construct(private readonly DefaultKnownCounterpartyIbansSeeder $seeder) {}
+    public function __construct(private DefaultKnownCounterpartyIbansSeeder $seeder) {}
 
     public function handle(UserInstalled $event): void
     {

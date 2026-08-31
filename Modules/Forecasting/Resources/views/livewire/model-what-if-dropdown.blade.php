@@ -10,6 +10,7 @@
     the second launchpad + redirects).
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 <div class="relative inline-block">
     @if ($mode === 'closed')
         <button
@@ -58,7 +59,8 @@
                     type="text"
                     wire:model.live="newAmountInput"
                     wire:keydown.enter.prevent="saveAmountChange"
-                    placeholder="11,49"
+                    inputmode="{{ MoneyInput::decimalPlaces($currency) === 0 ? 'numeric' : 'decimal' }}"
+                    placeholder="{{ MoneyInput::formatAbsMinor(1149, $currency) }}"
                     class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700"
                 >
             </label>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Operacija',
     'heading' => 'Operacija',
+    'booked_on' => 'Užregistruota :date',
 
     'counterparty' => 'Kita šalis',
     'description' => 'Aprašymas',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Pastaba (neprivaloma)',
         'tax_deductible' => 'Atskaitoma iš mokesčių',
         'remove_leg_aria' => 'Pašalinti šią kategoriją',
+        'remove_leg_caption' => 'Pašalinti',
         'add_category' => '+ Pridėti kategoriją',
         'soft_cap' => ':count iš ~20 kategorijų — mažas sumas verta sugrupuoti.',
         'remaining_zero' => 'Liko :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Ištrinti operaciją',
         'help' => 'Visam laikui pašalina šią operaciją. Šio veiksmo atšaukti negalima.',
         'button' => 'Ištrinti',
-        'confirm_prompt' => 'Ar tikrai?',
+        'confirm_prompt' => 'Ištrinti šią operaciją? Kartu dings pastaba, skaidymas ir mokesčių žymos.',
         'confirm' => 'Taip, ištrinti',
         'cancel' => 'Atšaukti',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Peržiūrėti grandinę',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Suderinta ir užrakinta',
+        'help' => 'Užbaigtas suderinimas užrakino šią operaciją. Jos kategorija, pastaba, skaidymas ir mokesčių žymos lieka tokios pačios, kol jos neatrakinsi.',
+        'button' => 'Atrakinti redagavimui',
+        'confirm_question' => 'Atrakinti šią operaciją redagavimui? Joje niekas nepasikeis, o kitas užbaigtas suderinimas ją vėl užrakins.',
+        'cancel' => 'Palikti užrakintą',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Ši operacija suderinta. Kad galėtum ją keisti, panaikink suderinimą.',
         'reclassified_pair_removed' => 'Perklasifikuota į :type — susiejimas pašalintas',
         'reclassified' => 'Perklasifikuota į :type',
         'note_saved' => 'Pastaba išsaugota',
         'unreconciled' => 'Suderinimas panaikintas — šią operaciją vėl gali redaguoti.',
+        'note_too_long' => 'Pastaba yra ne daugiau kaip :max simbolis.|Pastaba yra ne daugiau kaip :max simboliai.|Pastaba yra ne daugiau kaip :max simbolių.',
         'counterparty_updated' => 'Kita šalis atnaujinta',
         'goal_attributed' => 'Įskaityta į šį tikslą',
         'goal_attribution_removed' => 'Nebeįskaitoma į šį tikslą',

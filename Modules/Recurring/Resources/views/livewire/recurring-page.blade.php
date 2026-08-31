@@ -10,8 +10,7 @@
     applies the per-cadence multiplier at write time so this read
     site only formats), a
     chain badge when a confirmed/candidate funding chain is attached,
-    a category badge (read-only via MerchantMemoryQuery), and the
-    next-expected-charge text — rendered dim/italic via
+    and the next-expected-charge text — rendered dim/italic via
     `data-confidence-low="true"` when the cadence standard deviation
     tripped the low-confidence signal.
 
@@ -33,7 +32,7 @@
     $sectionEmpty = count($expenses) === 0 && count($income) === 0;
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-8">
         {{-- The button takes 172 of 343px and left the heading 154, which is
              15px under what "Terugkerend" measures, so the heading broke
@@ -126,7 +125,7 @@
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
                                         <a
                                             href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
-                                            class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
+                                            class="tap-link font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)
@@ -201,7 +200,7 @@
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
                                         <a
                                             href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
-                                            class="font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
+                                            class="tap-link font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                                         >{{ $row->displayName() }}</a>
                                         <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                                         @if ($row->latestAmount->currency() !== $baseCurrency && $row->eurEquivalent !== null)

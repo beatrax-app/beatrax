@@ -121,10 +121,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Onboarding` module.
-
-## Behavioral contracts
-
 - **The seed listener is idempotent.** Re-dispatching
   `UserInstalled` does not duplicate `wizard_progress` rows.
   `UNIQUE(user_id, step_key)` is the schema-level backstop, but
@@ -149,8 +145,8 @@ The behavioural contract for the `Onboarding` module.
 - **A skipped step persists as skipped.**
   Skip-this-step lands on the next step and sets that row's
   `wizard_progress.status` to `'skipped'` — the status column,
-  not a flag inside the JSON. "Resume later" (`skipRest`) flips
-  every remaining non-done row the same way in one call.
+  not a flag inside the JSON. "Resume later" (`leaveForNow()`) is the
+  other exit and writes nothing, so the remaining rows stay pending.
   (`tests/Feature/SkipWizardStepTest.php`)
 - **The connector steps stash their resulting `ImportRun.id`
   on `wizard_progress.data`.** The first-import step's
@@ -231,9 +227,13 @@ The behavioural contract for the `Onboarding` module.
   advancing past the last step sets `allComplete` in the
   already-mounted component. A fresh visit afterwards does not
   re-render it. `tests/Feature/ReRunWizardTest.php` asserts
-  both halves: the redirect to `/` when every step is done and
-  no force flag is set, and the `?force=1` reset that puts a
-  finished user back at `welcome`.
+  four things: the done step rendering when every step is done
+  and no force flag is set, the signed `?force=1` reset that puts
+  a finished user back at `welcome`, and the two refusals — an
+  unsigned `?force=1`, and one carrying a signature minted for a
+  different URL, both leave every row alone. The reset is a
+  destructive write on a GET, and the signature is the only thing
+  telling the Settings link apart from a cross-site one.
 - **A PayPal upload that fatally fails to parse** — the step
   does NOT get an exception to surface. `ImportPipeline` turns
   a typed parse failure into error ROWS rather than raising, so

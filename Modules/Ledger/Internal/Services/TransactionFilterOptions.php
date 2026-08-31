@@ -6,17 +6,34 @@ namespace Modules\Ledger\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LocaleCollator;
+use Modules\Ledger\Internal\Enums\DateRangePreset;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
-use stdClass;
+use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Support\CategoryPathName;
 
 // What the filter chips can be set to, which is a different question from what
 // the list is showing: both pickers span rows the current page never contains,
 // so they are read from the tables rather than from the page.
 final readonly class TransactionFilterOptions
 {
-    public function __construct(private DatabaseManager $db, private BaseCurrency $baseCurrency) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private BaseCurrency $baseCurrency,
+        private PeriodQuery $periods,
+        private Clock $clock,
+    ) {}
+
+    // Resolved here rather than in the blade: the ranges turn on the reader's
+    // own period_start_day, and a template that reached for it would be a
+    // second place deciding what a month is.
+    /** @return array<string, array{0: string, 1: string}> */
+    public function dateRanges(User $user): array
+    {
+        return DateRangePreset::rangesFrom($this->periods, $this->clock->now(), $user->period_start_day);
+    }
 
     /** @return list<array{id: int, name: string, currency: string}> */
     public function accounts(int $userId): array
@@ -47,20 +64,22 @@ final readonly class TransactionFilterOptions
     {
         // Global (user_id IS NULL) OR user-owned: filtering on user_id alone
         // hid the chip on installs using only the seeded default tree.
-        $rows = $this->db->connection()
-            ->table('categories')
+        $rows = CategoryPathName::joinParent($this->db->connection()->table('categories as c'), $userId, 'c', 'cp')
             ->where(static function (Builder $query) use ($userId): void {
-                $query->whereNull('user_id')->orWhere('user_id', $userId);
+                $query->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
-            ->get(['id', ...CategoryDisplayName::bareColumns()])
+            ->get(['c.id', ...CategoryPathName::columns('c', 'cp')])
             ->all();
 
-        $options = array_values(array_map(static function (stdClass $row): array {
-            return [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => CategoryDisplayName::fromRow($row) ?? '',
-            ];
-        }, $rows));
+        $paths = [];
+        foreach ($rows as $row) {
+            $paths[is_numeric($row->id) ? (int) $row->id : 0] = CategoryPathName::fromRow($row) ?? '';
+        }
+
+        $options = [];
+        foreach (CategoryPathName::distinct($paths) as $id => $name) {
+            $options[] = ['id' => $id, 'name' => $name];
+        }
 
         // Sorted on what the reader sees; the stored English orders a
         // translated picker by a word that is not on screen.

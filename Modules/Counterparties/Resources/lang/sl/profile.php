@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— za osebne stike ni verig financiranja',
     'tab_note_bank' => '— nasprotna stranka za bančne provizije ne ustvarja verig financiranja',
+    'tab_note_bank_institution' => '— za institucionalne nasprotne stranke ni verig financiranja',
     'tab_note_government' => '— za državne ustanove ni verig financiranja',
 
     'recent_activity' => 'Nedavna dejavnost',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bančne provizije po kategoriji',
+        'activity_heading' => 'Dejavnost po kategoriji',
         'no_fees' => 'Za to nasprotno stranko še ni zabeleženih provizij.',
     ],
 

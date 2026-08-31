@@ -23,5 +23,6 @@ return [
         'body' => 'Gendannelseskoder er den eneste vej tilbage til din konto, hvis du glemmer din adgangskode.',
         'warning' => 'De gemmes hashet og kan derfor ikke vises igen. Et nyt sæt ugyldiggør det gamle med det samme.',
         'regenerate' => 'Lav nye koder',
+        'regenerate_confirm' => 'Vil du lave et nyt sæt gendannelseskoder? Det sæt, du har nu, holder op med at virke i samme øjeblik det nye bliver lavet, og det kan ikke vises igen — en udskrevet eller nedskrevet kopi bliver ubrugelig. Gem de nye koder, før du forlader denne side.',
     ],
 ];

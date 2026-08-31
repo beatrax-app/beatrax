@@ -8,11 +8,17 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 
 final readonly class RedactionExcerptCap
 {
-    public const DEFAULT_MAX_BYTES = 8192;
+    public const int DEFAULT_MAX_BYTES = 8192;
 
-    private const BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';
+    private const string BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';
 
-    private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
+    private const string JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
+
+    // beatrax:regenerate-recovery-codes prints ten live single-use credentials
+    // to stdout, and this excerpt is what the audit row stores. The shape is
+    // RecoveryCodeGenerator's exactly: five groups of four, drawn from an
+    // alphabet with no I, L, O, 0 or 1.
+    private const string RECOVERY_CODE_PATTERN = '/(?<![A-Z0-9-])[A-HJKMNP-Z2-9]{4}(?:-[A-HJKMNP-Z2-9]{4}){4}(?![A-Z0-9-])/';
 
     public function __construct(
         private ?OAuthScrubSet $scrubSet = null,
@@ -36,6 +42,7 @@ final readonly class RedactionExcerptCap
 
         $scrubbed = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $scrubbed);
         $scrubbed = (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $scrubbed);
+        $scrubbed = (string) preg_replace(self::RECOVERY_CODE_PATTERN, '[REDACTED]', $scrubbed);
 
         if (strlen($scrubbed) <= $maxBytes) {
             return $scrubbed;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Perselyek · Beatrax',
     'heading' => 'Perselyek',
-    'subtitle' => 'Virtuális részegyenlegek, amelyek összege mindig a valós számlaegyenleged adja ki.',
+    'subtitle' => 'Virtuális részegyenlegek, a valós számlaegyenlegből elkülönítve.',
     'add_pot' => 'Persely hozzáadása',
 
     'pot_fallback' => 'persely',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Előzmények megjelenítése ↓',
         'hide' => 'Előzmények elrejtése ↑',
+        'truncated' => 'Legutóbbi mozgások: :shown / :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Kivétel',
         'moved_from' => 'Áthelyezve innen: :name',
         'moved_to' => 'Áthelyezve ide: :name',
+        'unreadable' => 'A Beatrax egy újabb verziója rögzítette',
+        'released_on_archive' => 'Felszabadítva archiváláskor',
     ],
 
     'archived' => [
-        'toggle' => 'Archivált perselyek (:count)',
+        'toggle' => 'Archivált persely (:count)|Archivált perselyek (:count)',
         'badge' => 'Archiválva',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Adj nevet ennek a perselynek.',
         'select_account' => 'Válassz számlát ehhez a perselyhez.',
-        'amount_exceeds_unallocated' => 'Az összeg meghaladja a kiosztatlan egyenleget.',
         'amount_exceeds_unallocated_available' => 'Az összeg meghaladja a kiosztatlan egyenleget (:amount érhető el).',
         'amount_exceeds_pot_balance' => 'Az összeg meghaladja a(z) :name egyenlegét (:amount érhető el).',
+        'generic' => 'A kasszát nem sikerült menteni. Ellenőrizze a mezőket, és próbálja újra.',
+        'amount_invalid' => 'Adjon meg nullánál nagyobb összeget.',
+        'goal_already_linked' => 'Ehhez a célhoz már tartozik aktív kassza. Előbb archiválja.',
+        'account_cannot_hold_pots' => 'A persely olyan számlát igényel, amelyen pénz van. Válassz másik számlát.',
+        'select_target_pot' => 'Válassz perselyt, amelybe átmozgatod.',
+        'move_target_missing' => 'Ez a persely már nem érhető el. Válassz másikat.',
+        'move_same_pot' => 'Persely nem mozgathat pénzt önmagába. Válassz másik perselyt.',
+        'move_cross_account' => 'A perselyek csak egy számlán belül cserélnek pénzt, és a(z) :name a(z) :account számlán van.',
+        'pot_missing' => 'Ez a persely már nem érhető el.',
+        'operation_failed' => 'Nem ment át. Nem mozgott pénz — próbáld újra.',
     ],
 
     'toast' => [

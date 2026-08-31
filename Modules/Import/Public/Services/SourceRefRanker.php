@@ -5,19 +5,25 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Services;
 
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 
 // One ranking, so FingerprintStage and ApplyEnrichments agree and the
 // preview-then-confirm TOCTOU window closes.
 final class SourceRefRanker
 {
-    /**
-     * @var list<string>
-     */
-    private const RECEIPT_FORMATS = ['paypal-receipt', 'ics-receipt', 'google-play-receipt'];
+    // A receipt's own reference beats the statement export's slug: it carries
+    // the canonical PayPal Transaction ID where the CSV renders an `O-...`
+    // slug, and a clean "Verkoper: <name>" where the ICS PDF fuses the merchant
+    // with a city fragment.
+    private const int RECEIPT_RANK = 2;
 
+    // Which formats those are is SourceFormat's answer, not a second list here:
+    // a copy that omitted one broke every receipt once already. A matcher key
+    // is a different vocabulary and reaches neither caller, both of which pass
+    // a stored source_format column.
     public function isReceiptFormat(string $sourceFormat): bool
     {
-        return in_array($sourceFormat, self::RECEIPT_FORMATS, true);
+        return SourceFormat::tryFrom($sourceFormat)?->isReceiptFile() === true;
     }
 
     public function rank(?string $ref, string $format): int
@@ -26,21 +32,18 @@ final class SourceRefRanker
             return 0;
         }
 
+        if ($this->isReceiptFormat($format)) {
+            return self::RECEIPT_RANK;
+        }
+
         return match ($format) {
             SourceFormat::Camt053->value => 4,
             SourceFormat::Mt940->value => 2,
-            // Above paypal-csv: the receipt carries the canonical PayPal
-            // Transaction ID where the CSV renders it as an `O-...` slug.
-            'paypal-receipt' => 2,
-            // Above ics-pdf: the receipt carries a clean "Verkoper: <name>"
-            // where the PDF fuses the merchant with a city fragment.
-            'ics-receipt' => 2,
-            'ics-pdf' => 1,
-            'google-play-receipt' => 1,
-            SourceFormat::AsnCsv->value => 1,
+            SourceFormat::IcsPdf->value => 1,
+            CsvPresetRegistry::ASN => 1,
             // Same band as asn-csv: disjoint account_id values keep the two
             // from ever colliding under the fingerprint tuple.
-            'paypal-csv' => 1,
+            SourceFormat::PaypalCsv->value => 1,
             default => 0,
         };
     }

@@ -7,10 +7,10 @@ namespace Modules\Ingestion\Public\Services;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
 
-final class SourceAdapterRegistry
+final readonly class SourceAdapterRegistry
 {
     /** @param array<string, SourceAdapter> $byFormat */
-    public function __construct(private readonly array $byFormat) {}
+    public function __construct(private array $byFormat) {}
 
     /** @throws UnsupportedFormatException */
     public function for(string $format): SourceAdapter

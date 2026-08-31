@@ -14,14 +14,20 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
  */
 final class AddRecurringPayload extends ScenarioMutationPayload
 {
+    public readonly string $currency;
+
+    public readonly string $startDate;
+
     public function __construct(
-        public readonly string $startDate,
+        string $startDate,
         public readonly int $amountMinor,
-        public readonly string $currency,
+        string $currency,
         public readonly string $direction,
         public readonly string $cadence,
         public readonly ?string $note = null,
     ) {
+        $this->startDate = self::assertCalendarDay($startDate, 'startDate');
+        $this->currency = self::normalisedCurrency($currency);
         // Unchecked, an unknown cadence yields zero occurrences and a typo'd
         // direction flips the sign — both silently.
         if (Direction::tryFrom($direction) === null) {

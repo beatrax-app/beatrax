@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Non catégorisé',
+    'no_counterparty' => 'Aucun tiers',
+    'unavailable_counterparty' => 'Tiers absent de cet appareil',
     'title' => 'Rapports',
     'page_title' => 'Rapports · Beatrax',
     'subtitle' => 'Compose un rapport à partir de ton registre.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Plage personnalisée',
         'from' => 'Du',
         'to' => 'Au',
+        'error' => [
+            'incomplete' => 'Choisissez une date de début et une date de fin.',
+            'malformed' => 'Utilisez une date valide au format AAAA-MM-JJ.',
+            'inverted' => 'La date de fin précède la date de début.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtres',
+        'net_worth_note' => 'La valeur nette est un solde : seul le filtre de compte s’applique.',
     ],
 
     'compare' => 'Comparer à la période précédente',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Graphique en :currency — :list non représenté',
+        'undrawn' => 'Absent de l’anneau — :amount va dans l’autre sens',
         'bar_title' => 'Clique sur une barre pour voir ses transactions',
         'line_title' => 'Clique sur un point pour voir ses transactions',
         'donut_title' => 'Clique sur un segment pour voir ses transactions',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Frais et ajustements (non comptés ci-dessus)',
+    'other_movement_with_refunds' => 'Frais, remboursements et ajustements (non comptés ci-dessus)',
 ];

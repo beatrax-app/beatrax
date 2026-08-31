@@ -7,27 +7,27 @@ namespace Modules\Mobile\Internal\Identity;
 /**
  * @see BiometricKeyVault::recover()
  */
-final class BiometricRecoverResult
+final readonly class BiometricRecoverResult
 {
-    public const RECOVERED = 'recovered';
+    public const string RECOVERED = 'recovered';
 
-    public const PENDING_ASYNC = 'pending_async';
+    public const string PENDING_ASYNC = 'pending_async';
 
-    public const CANCELED = 'canceled';
+    public const string CANCELED = 'canceled';
 
     // Biometric authentication actively failed (wrong finger, lockout) or
     // a transient native error - distinct from MISSING (nothing
     // enrolled). The device IS enrolled; the caller must stay put and
     // offer the PIN, never conclude "no cold-start credential exists".
-    public const FAILED = 'failed';
+    public const string FAILED = 'failed';
 
-    public const MISSING = 'missing';
+    public const string MISSING = 'missing';
 
-    public const UNAVAILABLE = 'unavailable';
+    public const string UNAVAILABLE = 'unavailable';
 
     private function __construct(
-        public readonly string $status,
-        public readonly ?string $dataKey = null,
+        public string $status,
+        public ?string $dataKey = null,
     ) {}
 
     public static function recovered(string $dataKey): self

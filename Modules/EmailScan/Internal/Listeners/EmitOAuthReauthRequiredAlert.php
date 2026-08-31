@@ -11,29 +11,34 @@ use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 
-final class EmitOAuthReauthRequiredAlert
+final readonly class EmitOAuthReauthRequiredAlert
 {
-    private const BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
-
-    private const MESSAGE = 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to email-oauth.json.pre-phase-12.bak for rollback.';
+    private const string BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
 
     public function __construct(
-        private readonly Filesystem $files,
-        private readonly CurrentUser $currentUser,
-        private readonly DatabaseManager $db,
-        private readonly UserDataPathService $paths,
-        private readonly SystemAlertWriter $alerts,
+        private Filesystem $files,
+        private CurrentUser $currentUser,
+        private DatabaseManager $db,
+        private UserDataPathService $paths,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function handle(): void
     {
         if ($this->shouldEmitAlert()) {
+            // The filename is a path on disk, not copy, so it is substituted
+            // into the banner's line exactly as the banner substitutes it.
+            $line = CopyLine::of('core::alerts.messages.oauth_reauth_required', ['file' => self::BACKUP_FILENAME]);
+
             $this->alerts->raiseForUser(
                 userId: $this->currentUser->id(),
                 kind: OAuthAlertKind::ReauthRequired->value,
                 severity: SystemAlertSeverity::Warning->value,
-                message: self::MESSAGE,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line),
             );
         }
     }

@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Reports\Internal\Enums\ReportCurrencyMode')
 @use('Modules\Reports\Internal\Enums\ReportGranularity')
+@use('Modules\Reports\Internal\Enums\ReportGroupHeading')
 @use('Modules\Reports\Internal\Enums\ReportPeriodPreset')
 @use('Modules\Reports\Internal\Enums\ReportViz')
 {{--
@@ -13,10 +14,15 @@
     Variables in scope (Modules\Reports\Internal\Http\Livewire\ReportBuilder::render()):
       $result                 ReportResultDto
       $displayRows             list<ReportResultRow>  — comparisonRows when compare is on, else $result->rows
+      $chartSeries              ChartSeries              — the drawable subset, its currency, and what it left out
       $definition               ReportDefinition
       $drilldownUrls            list<string>            — parallel to $displayRows
+      $periodError              string                   — '' unless the custom range cannot resolve
       $showDimension            bool                     — hidden entirely when metric=net_worth
       $showGranularity          bool                     — shown only for time-series reports
+      $showTransactionFilters   bool                     — category/counterparty/amount filters, which a balance cannot honour
+      $ignoredFilterNote        string                   — '' unless a net-worth URL still carries them
+      $otherMovementLabel       string                   — names whichever types the metric leaves out
       $availableAccounts / $availableCategories / $availableCounterparties  list<array{id:int,name:string,...}>
 
     Public component properties (metric, dimension, periodPreset, customFrom,
@@ -62,28 +68,24 @@
         ReportViz::Donut->value => Lang::get('reports::builder.viz.donut'),
     ];
 
-    $groupHeader = match ($definition->dimension) {
-        'category' => Lang::get('reports::builder.group_header.category'),
-        'counterparty' => Lang::get('reports::builder.group_header.counterparty'),
-        'account' => Lang::get('reports::builder.group_header.account'),
-        'time_bucket' => Lang::get('reports::builder.group_header.month'),
-        default => Lang::get('reports::builder.group_header.default'),
-    };
+    // Read from the definition as a whole, never the dimension alone: net_worth
+    // hides the picker but keeps whatever the URL last said, which headed a
+    // column of months with "Category" while the CSV of the same report said
+    // "Period".
+    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label();
 
     $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 
     $hasResults = $displayRows !== [];
 
-    // Headline delta — current total minus the previous-period
-    // total, derived from $displayRows' previousAmountMinor (only
-    // populated when compare is on and $displayRows is $result->comparisonRows).
-    $previousTotal = 0;
-    if ($definition->compare) {
-        foreach ($displayRows as $dRow) {
-            $previousTotal += $dRow->previousAmountMinor ?? 0;
-        }
-    }
-    $headlineDelta = $result->totalMinor - $previousTotal;
+    // The previous period's own headline total, computed the way this one was.
+    // Summing the rows' previousAmountMinor added USD cents into a EUR figure
+    // in 'original' mode and added a balance up once per bucket for net worth.
+    // A delta across two different currencies is not a number, so it is not shown.
+    $comparable = $definition->compare
+        && $result->previousTotalMinor !== null
+        && $result->previousCurrency === $result->currency;
+    $headlineDelta = $comparable ? $result->totalMinor - $result->previousTotalMinor : null;
 @endphp
 
 <div class="space-y-8">
@@ -195,6 +197,9 @@
                 <div class="srch-chips" style="flex-wrap: wrap;">
                     @include('reports::livewire.partials.report-filter-popovers')
                 </div>
+                @if ($ignoredFilterNote !== '')
+                    <p class="text-xs mt-2" style="color: var(--color-amber);">{{ $ignoredFilterNote }}</p>
+                @endif
             </div>
 
             {{-- Compare to previous period --}}
@@ -269,7 +274,14 @@
                 >{{ Lang::get('reports::builder.updating') }}</span>
             </div>
 
-            @if (! $hasResults)
+            @if ($periodError !== '')
+                {{-- The composition is untouched: only the range needs fixing,
+                     and the rail still holds every other choice the reader made. --}}
+                <div class="srch-no-results" aria-live="polite" aria-atomic="true" role="alert">
+                    <p class="srch-no-results__heading">{{ Lang::get('reports::builder.period.heading') }}</p>
+                    <p class="srch-no-results__body">{{ $periodError }}</p>
+                </div>
+            @elseif (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
                 <div class="srch-no-results" aria-live="polite" aria-atomic="true">
                     <p class="srch-no-results__heading">{{ Lang::get('reports::builder.empty.heading') }}</p>
@@ -292,18 +304,46 @@
                     $chartElementId = 'report-chart-'.$definition->viz;
                 @endphp
 
+                @php
+                    $chartArgs = [
+                        'chartElementId' => $chartElementId,
+                        'rows' => $chartSeries->rows,
+                        'drilldownUrls' => $chartSeries->drilldownUrls,
+                        'chartCurrency' => $chartSeries->currency,
+                        'metricLabel' => $metricLabel,
+                    ];
+                @endphp
+
                 @if ($viz === ReportViz::Bar->value)
-                    @include('reports::livewire.partials.report-bar-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-bar-chart', $chartArgs)
                 @elseif ($viz === ReportViz::Line->value)
-                    @include('reports::livewire.partials.report-line-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-line-chart', $chartArgs)
                 @elseif ($viz === ReportViz::Donut->value)
-                    @include('reports::livewire.partials.report-donut-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
+                    @include('reports::livewire.partials.report-donut-chart', $chartArgs)
+                @endif
+
+                {{-- What the chart could not draw, said where the chart is.
+                     One axis carries one currency and one ring one direction;
+                     the table below still lists every row. --}}
+                @if ($viz !== ReportViz::Table->value && $chartSeries->otherCurrencies !== [])
+                    <p class="text-xs" style="color: var(--color-text-muted);" data-chart-omission="currencies">
+                        {{ Lang::get('reports::builder.chart.other_currencies', ['currency' => $chartSeries->currency, 'list' => implode(', ', $chartSeries->otherCurrencies)]) }}
+                    </p>
+                @endif
+                @if ($viz === ReportViz::Donut->value && $chartSeries->undrawnMinor !== 0)
+                    <p class="text-xs" style="color: var(--color-text-muted);" data-chart-omission="undrawn">
+                        {{ Lang::get('reports::builder.chart.undrawn', ['amount' => $fmt(abs($chartSeries->undrawnMinor), $chartSeries->currency)]) }}
+                    </p>
                 @endif
 
                 {{-- Total + FX exclusion note + headline delta --}}
                 <div class="space-y-1">
                     <div class="flex flex-wrap items-baseline justify-between gap-4">
-                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ strtolower($metricLabel) }}</span>
+                        {{-- The metric label is a translated noun, and strtolower() lowercased the
+                             German one while doing nothing at all to Greek or Cyrillic. CSS
+                             uppercases the line, so the damage only ever reached the DOM and
+                             the screen reader. --}}
+                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ $metricLabel }}</span>
                         <span class="{{ $amountClass($result->totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
                             {{ $fmt($result->totalMinor, $result->currency) }}
                         </span>
@@ -311,27 +351,42 @@
                     @if ($definition->compare)
                         <div class="flex items-center justify-end gap-2">
                             <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.vs_previous') }}</span>
-                            <span
-                                style="font-variant-numeric: tabular-nums; font-weight: 600;"
-                                class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
-                            >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
+                            @if ($headlineDelta === null)
+                                <span class="text-slate-600 dark:text-slate-400">—</span>
+                            @else
+                                <span
+                                    style="font-variant-numeric: tabular-nums; font-weight: 600;"
+                                    class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
+                                >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
+                            @endif
                         </div>
                     @endif
                     {{-- Fees and adjustments are in no metric, by design: a bank
                          fee is not category spending. Shown beside the total
                          rather than folded into it, so a total that omits money
-                         does not read as everything that left the account. --}}
-                    @if ($result->otherMovementMinor !== 0)
+                         does not read as everything that left the account. One
+                         line PER currency, since 'original' mode converts none
+                         of them and a non-headline bucket had nowhere to go. --}}
+                    @foreach ($result->otherMovementsByCurrency as $otherCurrency => $otherMinor)
                         <div class="flex flex-wrap items-baseline justify-between gap-4">
-                            <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.other_movement') }}</span>
+                            <span class="text-xs" style="color: var(--color-text-muted);">{{ $otherMovementLabel }}</span>
                             <span class="text-xs" style="color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
-                                {{ $fmt($result->otherMovementMinor, $result->currency) }}
+                                {{ $fmt($otherMinor, $otherCurrency) }}
                             </span>
                         </div>
+                    @endforeach
+                    {{-- Currencies for a transaction metric, accounts for a
+                         balance: one counter used to say "1 account" over four
+                         unconvertible ARS accounts, because it was counting
+                         currencies and the sentence named accounts. --}}
+                    @if ($result->excludedCurrencies !== [])
+                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
+                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedCurrencies)]) }}
+                        </p>
                     @endif
-                    @if ($result->hasExcludedAccounts)
+                    @if ($result->excludedAccountIds !== [])
                         <p class="text-xs" style="color: var(--color-amber);">
-                            {{ Lang::choice('reports::builder.fx_excluded', $result->accountsWithoutRate, ['count' => $result->accountsWithoutRate]) }}
+                            {{ Lang::choice('reports::builder.fx_excluded', count($result->excludedAccountIds), ['count' => count($result->excludedAccountIds)]) }}
                         </p>
                     @endif
                 </div>
@@ -379,9 +434,13 @@
                         </td>
                         @if ($definition->compare)
                             <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
-                                <span class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
-                                    {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
-                                </span>
+                                @if ($headlineDelta === null)
+                                    <span class="text-slate-600 dark:text-slate-400">—</span>
+                                @else
+                                    <span class="{{ $headlineDelta >= 0 ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}">
+                                        {{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}
+                                    </span>
+                                @endif
                             </td>
                         @endif
                     </x-slot:foot>

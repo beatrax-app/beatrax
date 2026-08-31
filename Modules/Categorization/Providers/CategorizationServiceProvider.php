@@ -8,7 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Categorization\Database\Seeders\DefaultCategorizationRuleSeeder;
-use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
+use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Internal\Http\Livewire\TriageInbox;
@@ -18,7 +18,6 @@ use Modules\Categorization\Internal\Listeners\SeedDefaultCategorizationRules;
 use Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree;
 use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleEvaluator;
-use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
@@ -33,6 +32,7 @@ use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Sync\Public\Events\EntityMutated;
 
 final class CategorizationServiceProvider extends ServiceProvider
 {
@@ -72,11 +72,15 @@ final class CategorizationServiceProvider extends ServiceProvider
         $events->listen('eloquent.deleting: Modules\Ledger\Models\Category', [DeactivateRulesOnReferentDelete::class, 'handleCategoryDeleting']);
         $events->listen('eloquent.deleting: Modules\Counterparties\Models\Counterparty', [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyDeleting']);
 
+        // The counterparty garbage collector deletes through the query builder,
+        // so the model event above never fires for the one production path that
+        // deletes a counterparty at all.
+        $events->listen(EntityMutated::class, [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyPruned']);
+
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);
         $livewire->component('categorization.rules-page', RulesPage::class);
         $livewire->component('categorization.rule-form-modal', RuleFormModal::class);
         $livewire->component('categorization.categorization-provenance-panel', CategorizationProvenancePanel::class);
-        $livewire->component('categorization.correction-divergence-toast', CorrectionDivergenceToast::class);
     }
 }

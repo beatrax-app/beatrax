@@ -121,9 +121,9 @@ it('opens the past-day line on a dateless baseline instead of on zero', function
 
     $map = cpsbJuneMap($user, [$accountId]);
 
-    expect($map['2026-06-01'][0])->toBe(335_000);
-    expect($map['2026-06-10'][0])->toBe(334_000);
-    expect($map['2026-06-11'][0])->toBe(334_000);
+    expect($map['2026-06-01']->minor)->toBe(335_000);
+    expect($map['2026-06-10']->minor)->toBe(334_000);
+    expect($map['2026-06-11']->minor)->toBe(334_000);
 });
 
 it('holds a dated baseline flat over rows posted before it and steps on the row posted on it', function (): void {
@@ -141,9 +141,9 @@ it('holds a dated baseline flat over rows posted before it and steps on the row 
 
     $map = cpsbJuneMap($user, [$accountId]);
 
-    expect($map['2026-06-01'][0])->toBe(100_000);
-    expect($map['2026-06-05'][0])->toBe(99_000);
-    expect($map['2026-06-11'][0])->toBe(97_000);
+    expect($map['2026-06-01']->minor)->toBe(100_000);
+    expect($map['2026-06-05']->minor)->toBe(99_000);
+    expect($map['2026-06-11']->minor)->toBe(97_000);
 });
 
 it('leaves an account carrying no baseline on the bare cumulative sum', function (): void {
@@ -157,6 +157,6 @@ it('leaves an account carrying no baseline on the bare cumulative sum', function
 
     $map = cpsbJuneMap($user, [$accountId]);
 
-    expect($map['2026-06-01'][0])->toBe(50_000);
-    expect($map['2026-06-11'][0])->toBe(49_000);
+    expect($map['2026-06-01']->minor)->toBe(50_000);
+    expect($map['2026-06-11']->minor)->toBe(49_000);
 });

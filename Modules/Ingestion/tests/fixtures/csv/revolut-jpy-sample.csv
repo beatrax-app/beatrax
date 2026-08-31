@@ -1,0 +1,3 @@
+Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+CARD_PAYMENT,Current,2026-07-28 09:00:00,2026-07-28 09:00:00,Konbini,-1000,0,JPY,COMPLETED,49000
+TOPUP,Current,2026-07-29 09:00:00,2026-07-29 09:00:00,Salary,50000,0,JPY,COMPLETED,99000

@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Paroolid ei kattu.',
         'password_length' => 'Kasuta vähemalt 12 märki.',
         'pin_length' => 'PIN-kood peab olema vähemalt 6 numbrit.',
+        'pin_digits' => 'PIN-kood peab olema 6–10 numbrit — ainult numbrid.',
         'pins_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
         'session_expired' => 'Sinu sessioon aegus enne seadistamise lõppu. Sisesta PIN-kood ja parool uuesti.',
         'retry_failed' => 'Selle seadme seadistamist ei õnnestunud ikka lõpetada. Palun proovi uuesti.',

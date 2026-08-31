@@ -9,27 +9,38 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Goals\Public\Dto\GoalAttributionRow;
 use Modules\Goals\Public\Enums\GoalStatus;
+use Modules\Pots\Public\Services\PotBalanceQuery;
 
-final class GoalContributionQuery
+final readonly class GoalContributionQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
+        private PotBalanceQuery $potBalance,
     ) {}
 
+    // A pot-linked goal takes its whole progress figure from that pot, so an
+    // attribution to one is discarded on the next render. It was offered here
+    // anyway, and the transaction then reported the discarded claim as fact.
     /**
      * @return list<GoalAttributionRow>
      */
     public function attributableGoals(User $user): array
     {
-        $rows = $this->db->connection()
+        $query = $this->db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
             ->where('status', GoalStatus::Active->value)
             ->orderBy('name')
-            ->orderBy('id')
-            ->get(['id', 'name']);
+            ->orderBy('id');
+
+        $potFunded = $this->potBalance->goalIdsWithAnActivePot($user);
+        if ($potFunded !== []) {
+            $query->whereNotIn('id', $potFunded);
+        }
+
+        $rows = $query->get(['id', 'name']);
 
         $out = [];
         foreach ($rows as $row) {

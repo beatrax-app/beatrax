@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Tu cuenta de PayPal',
     'h1' => 'Conecta tu cuenta de PayPal',
 
-    'lede_html' => 'Suelta aquí tu exportación de PayPal con el detalle de las transacciones — aparece como <em lang="nl">Rapport Transactiegegevens</em> en una cuenta de PayPal neerlandesa. El informe de saldo (<span lang="nl">Saldorapport</span>) no sirve — necesitamos los datos evento a evento.',
+    'lede_html' => 'Suelta la exportación de movimientos de PayPal — una fila por transacción, no el resumen de saldo. PayPal nombra sus informes en el idioma de tu cuenta, y de momento leemos el par neerlandés: <em lang="nl">Rapport Transactiegegevens</em>, no <span lang="nl">Saldorapport</span>. Si el tuyo sale en otro idioma, cambia PayPal a neerlandés antes de descargarlo.',
 
     'format_group_aria' => 'PayPal solo exporta en CSV',
     'got_it_as' => 'Lo tengo como:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Descargar en CSV',
     ],
 
-    'drop_lead' => 'Suelta aquí tu CSV con el detalle de las transacciones',
+    'drop_lead' => 'Suelta aquí tu exportación de movimientos',
     'browse_file' => 'o busca un archivo',
 
     'file_ready' => '· ✓ listo',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Continuar →',
 
     'errors' => [
-        'required' => 'Suelta primero en el recuadro tu CSV «Rapport Transactiegegevens» de PayPal.',
-        'max' => 'Ese archivo es demasiado grande. Las exportaciones «Rapport Transactiegegevens» de PayPal suelen ocupar bastante menos de 10 MB.',
-        'extensions' => 'Ese archivo no parece un CSV de PayPal. Descarga desde PayPal «Rapport Transactiegegevens» (no el informe de saldo «Saldorapport») en CSV.',
+        'required' => 'Suelta primero en el recuadro la exportación de movimientos de PayPal.',
+        'max' => 'Ese archivo es demasiado grande. Una exportación de movimientos de PayPal suele ocupar bastante menos de 10 MB.',
+        'extensions' => 'Ese archivo no parece un CSV de PayPal. Descarga la exportación de movimientos — una fila por transacción, no el resumen de saldo — en CSV.',
         'unreadable' => 'No se ha podido leer este archivo. El error completo está en /dev/logs.',
     ],
 ];

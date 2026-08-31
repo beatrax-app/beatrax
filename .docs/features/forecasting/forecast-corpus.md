@@ -181,17 +181,25 @@ not asserted here.
 
 ### `fx-only-usd-subscription`
 
-One EUR bank account and a Netflix US series priced at $11.99 with a
-stored FX rate of 0.9050.
+One EUR bank account and a Netflix US series priced at $11.99, with no
+rate of its own on the series row.
 
 The currency-boundary fixture. The contribution stays in USD all the
-way through projection and routing; only `DailyFold` converts, using
-the rate captured with the series. The account chart is EUR
-throughout, the band reflects EUR-converted amounts, and the
-per-series legend still shows the native price. It is also the fixture
-that would catch a regression dropping `latest_fx_rate_used`, since a
-cross-currency contribution with a null rate raises rather than
-folding at face value.
+way through projection and routing; only `DailyFold` converts, at the
+rate `exchange_rates` holds for the pair today. The account chart is
+EUR throughout, the band reflects EUR-converted amounts, and the
+per-series legend still shows the native price.
+
+This fixture used to hand the pipeline a `latest_fx_rate_used` of
+0.9050 — a column no production writer has ever filled, so every real
+dollar series reached the fold with a null rate and raised, taking the
+whole projection with it. Six green tests sat on top of that. The
+fixture now supplies what the field supplies, which is nothing, and
+`FixtureCorpusTest` fails if a rate is put back on any series row. Its
+expected triples are the bundled snapshot's EUR 1 = USD 1.1359 read
+the other way round, 0.88035919, applied to each bound before the band
+is taken; a snapshot refresh moves them, and re-deriving them is the
+point of the exercise.
 
 ### `salary-and-side-income`
 
@@ -259,8 +267,9 @@ holds when accounts and series are interleaved: each account's fold
 sees only its own contributions, each carries its own anchor and its
 own currency, and the PayPal account's tiny €50 opening balance does
 not borrow headroom from the €2,000 bank account. It also covers the
-ICS card's zero-anchor fallback, since account 2 has neither a
-statement nor a user-entered opening balance.
+ICS card's no-statement fallback: account 2 has no statement, so it
+anchors on the ledger balance every other kind takes — the −€119.97 its
+own six past charges sum to — and not on zero.
 
 ### `booked-future-row`
 

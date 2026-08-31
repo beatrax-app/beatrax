@@ -10,37 +10,46 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Budgets\Models\EnvelopeSetting;
+use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\IdReadBack;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
-final class EnvelopeWriter
+final readonly class EnvelopeWriter
 {
     use CoercesScalars;
 
-    public const MIN_NOTIFY_THRESHOLD_PERCENT = 1;
+    public const int MIN_NOTIFY_THRESHOLD_PERCENT = 1;
 
-    public const MAX_NOTIFY_THRESHOLD_PERCENT = 200;
+    public const int MAX_NOTIFY_THRESHOLD_PERCENT = 200;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
-        private readonly BudgetProgressQuery $query,
-        private readonly BaseCurrency $baseCurrency,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
+        private BudgetProgressQuery $query,
+        private BaseCurrency $baseCurrency,
+        private PeriodQuery $periods,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     /**
      * @throws InvalidArgumentException category not owned/global (IDOR)
+     * @throws IdReadBackFailedException the inserted row could not be read back, so the write rolled back
      */
     public function setAssigned(User $user, int $categoryId, CarbonImmutable $periodStart, int $minor): void
     {
@@ -50,83 +59,17 @@ final class EnvelopeWriter
             throw new InvalidArgumentException(Lang::get('budgets::messages.errors.assigned_negative'));
         }
 
-        $periodDate = $periodStart->toDateString();
+        // CarryoverQuery matches period_start exactly, so a date that is not the
+        // owner's own period start keys a row no period the fold walks can find.
+        // Normalised here rather than at each caller: an import writing a source
+        // file's month boundary must land where the reader's calendar puts it.
+        $periodDate = $this->periods->containingForUser($user, $periodStart)->start->toDateString();
 
         /** @var EnvelopeAssignmentMutated|null $event */
         $event = null;
 
         $this->db->connection()->transaction(function () use ($user, $categoryId, $periodDate, $minor, &$event): void {
-            // Query builder, not the EnvelopeAssignment model: its 'date' cast
-            // writes a "00:00:00" suffix that misses the fold's exact
-            // where('period_start', 'Y-m-d') string match.
-            $connection = $this->db->connection();
-
-            /** @var \stdClass|null $existing */
-            $existing = $connection->table('envelope_assignments')
-                ->where('user_id', $user->id)
-                ->where('category_id', $categoryId)
-                ->where('period_start', $periodDate)
-                ->first(['id', 'assigned_minor']);
-
-            if ($minor === 0) {
-                if ($existing !== null) {
-                    $id = self::toInt($existing->id);
-                    $connection->table('envelope_assignments')->where('id', $id)->delete();
-                    $event = new EnvelopeAssignmentMutated(
-                        assignmentId: $id,
-                        userId: $user->id,
-                        mutationType: 'delete',
-                    );
-                }
-
-                return;
-            }
-
-            if ($existing !== null) {
-                $id = self::toInt($existing->id);
-                if (self::toInt($existing->assigned_minor) === $minor) {
-                    return;
-                }
-
-                $connection->table('envelope_assignments')->where('id', $id)->update([
-                    'assigned_minor' => $minor,
-                    'currency' => $this->baseCurrency->code(),
-                    'updated_at' => $this->clock->now(),
-                ]);
-
-                $event = new EnvelopeAssignmentMutated(
-                    assignmentId: $id,
-                    userId: $user->id,
-                    mutationType: 'edit',
-                    dirtyFields: ['assigned_minor' => $minor],
-                );
-
-                return;
-            }
-
-            $now = $this->clock->now();
-            $newId = self::toInt($connection->table('envelope_assignments')->insertGetId([
-                'user_id' => $user->id,
-                'category_id' => $categoryId,
-                'period_start' => $periodDate,
-                'assigned_minor' => $minor,
-                'currency' => $this->baseCurrency->code(),
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]));
-
-            $event = new EnvelopeAssignmentMutated(
-                assignmentId: $newId,
-                userId: $user->id,
-                mutationType: 'create',
-                dirtyFields: [
-                    'user_id' => $user->id,
-                    'category_id' => $categoryId,
-                    'period_start' => $periodDate,
-                    'assigned_minor' => $minor,
-                    'currency' => $this->baseCurrency->code(),
-                ],
-            );
+            $event = $this->applyAssignment($user, $categoryId, $periodDate, $minor);
         });
 
         if ($event !== null) {
@@ -134,17 +77,111 @@ final class EnvelopeWriter
         }
     }
 
+    // The one assignment write, shared by setAssigned() and copyFromPeriod() so
+    // the latter can put a whole month inside one transaction. The caller owns
+    // the transaction and the after-commit dispatch.
     /**
-     * @throws InvalidArgumentException category not owned/global (IDOR), or
-     *                                  an unrecognised mode
+     * @link ../../../../.docs/features/core/an-id-read-after-an-insert.md
      */
-    public function setOverspendMode(User $user, int $categoryId, string $mode): void
+    private function applyAssignment(User $user, int $categoryId, string $periodDate, int $minor, ?string $currency = null): ?EnvelopeAssignmentMutated
+    {
+        // Query builder, not the EnvelopeAssignment model: its 'date' cast
+        // writes a "00:00:00" suffix that misses the fold's exact
+        // where('period_start', 'Y-m-d') string match.
+        $connection = $this->db->connection();
+        $currency ??= $this->baseCurrency->forUser($user);
+
+        /** @var \stdClass|null $existing */
+        $existing = $connection->table('envelope_assignments')
+            ->where('user_id', $user->id)
+            ->where('category_id', $categoryId)
+            ->where('period_start', $periodDate)
+            ->first(['id', 'assigned_minor', 'currency']);
+
+        // The currency is half the amount. A reader who switched their reporting
+        // currency and re-typed the figure the grid showed them sent the same
+        // minor under a different sign, and dropping that as "unchanged" left
+        // the row denominated in the old one.
+        $unchanged = $existing !== null
+            && self::toInt($existing->assigned_minor) === $minor
+            && self::toString($existing->currency) === $currency;
+
+        // Clearing a row that is not there writes nothing, and neither does
+        // re-sending the figure already stored.
+        if ($unchanged || ($minor === 0 && $existing === null)) {
+            return null;
+        }
+
+        if ($existing !== null) {
+            $id = self::toInt($existing->id);
+
+            if ($minor === 0) {
+                $connection->table('envelope_assignments')->where('id', $id)->delete();
+
+                $mutation = new EnvelopeAssignmentMutated(
+                    assignmentId: $id,
+                    userId: $user->id,
+                    mutationType: 'delete',
+                );
+            } else {
+                $connection->table('envelope_assignments')->where('id', $id)->update([
+                    'assigned_minor' => $minor,
+                    'currency' => $currency,
+                    'updated_at' => $this->clock->now(),
+                ]);
+
+                $mutation = new EnvelopeAssignmentMutated(
+                    assignmentId: $id,
+                    userId: $user->id,
+                    mutationType: 'edit',
+                    dirtyFields: ['assigned_minor' => $minor, 'currency' => $currency],
+                );
+            }
+
+            return $mutation;
+        }
+
+        $now = $this->clock->now();
+        $connection->table('envelope_assignments')->insert([
+            'user_id' => $user->id,
+            'category_id' => $categoryId,
+            'period_start' => $periodDate,
+            'assigned_minor' => $minor,
+            'currency' => $currency,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        // The id is read back by the same three columns the lookup above uses,
+        // never taken from insertGetId(): lastInsertId() is per connection, and
+        // the sidebar's badge listener writes a `cache` row from inside this
+        // INSERT's own event. A wrong id here is a sync op against a stranger.
+        $newId = IdReadBack::of($connection, 'envelope_assignments', [
+            'user_id' => $user->id,
+            'category_id' => $categoryId,
+            'period_start' => $periodDate,
+        ]);
+
+        return new EnvelopeAssignmentMutated(
+            assignmentId: $newId,
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $user->id,
+                'category_id' => $categoryId,
+                'period_start' => $periodDate,
+                'assigned_minor' => $minor,
+                'currency' => $currency,
+            ],
+        );
+    }
+
+    /**
+     * @throws InvalidArgumentException category not owned/global (IDOR)
+     */
+    public function setOverspendMode(User $user, int $categoryId, OverspendMode $mode): void
     {
         $this->assertCategoryAccessible($user, $categoryId);
-
-        if (! in_array($mode, [OverspendMode::ReduceToBudget->value, OverspendMode::CarryNegative->value], true)) {
-            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.invalid_overspend_mode'));
-        }
 
         /** @var EnvelopeSettingMutated|null $event */
         $event = null;
@@ -158,18 +195,18 @@ final class EnvelopeWriter
                 ->first();
 
             if ($existing instanceof EnvelopeSetting) {
-                if ($existing->overspend_mode === $mode) {
+                if ($existing->overspend_mode === $mode->value) {
                     return;
                 }
 
-                $existing->overspend_mode = $mode;
+                $existing->overspend_mode = $mode->value;
                 $existing->save();
 
                 $event = new EnvelopeSettingMutated(
                     settingId: $existing->id,
                     userId: $user->id,
                     mutationType: 'edit',
-                    dirtyFields: ['overspend_mode' => $mode],
+                    dirtyFields: ['overspend_mode' => $mode->value],
                 );
 
                 return;
@@ -179,7 +216,7 @@ final class EnvelopeWriter
             $created = EnvelopeSetting::query()->withoutGlobalScope(UserScope::class)->create([
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
-                'overspend_mode' => $mode,
+                'overspend_mode' => $mode->value,
             ]);
 
             $event = new EnvelopeSettingMutated(
@@ -189,7 +226,7 @@ final class EnvelopeWriter
                 dirtyFields: [
                     'user_id' => $user->id,
                     'category_id' => $categoryId,
-                    'overspend_mode' => $mode,
+                    'overspend_mode' => $mode->value,
                 ],
             );
         });
@@ -286,20 +323,68 @@ final class EnvelopeWriter
             ->table('envelope_assignments')
             ->where('user_id', $user->id)
             ->where('period_start', $fromPeriod->start->toDateString())
-            ->get(['category_id', 'assigned_minor']);
+            ->get(['category_id', 'assigned_minor', 'currency']);
 
-        foreach ($rows as $row) {
-            $categoryId = self::toInt($row->category_id);
-            $minor = self::toInt($row->assigned_minor);
+        $periodDate = $this->periods->containingForUser($user, $toPeriod->start)->start->toDateString();
+        $baseCurrency = $this->baseCurrency->forUser($user);
+        $rates = $this->fx->ratesTo(
+            array_values(array_map(static fn (\stdClass $row): string => self::toString($row->currency), $rows->all())),
+            $baseCurrency,
+        );
 
-            if (isset($existingTargetCategoryIds[$categoryId])) {
-                continue;
+        /** @var list<EnvelopeAssignmentMutated> $dispatchAfterCommit */
+        $dispatchAfterCommit = [];
+
+        // One transaction for the whole month: a copy that stopped half-way left
+        // a partially-assigned period indistinguishable from a deliberate one.
+        $this->db->connection()->transaction(function () use ($user, $rows, $existingTargetCategoryIds, $periodDate, $baseCurrency, $rates, &$dispatchAfterCommit): void {
+            foreach ($rows as $row) {
+                $event = $this->copyAssignment($user, $row, $existingTargetCategoryIds, $periodDate, $baseCurrency, $rates);
+
+                if ($event !== null) {
+                    $dispatchAfterCommit[] = $event;
+                }
             }
+        });
 
-            if ($minor > 0) {
-                $this->setAssigned($user, $categoryId, $toPeriod->start, $minor);
-            }
+        foreach ($dispatchAfterCommit as $event) {
+            $this->events->dispatch($event);
         }
+    }
+
+    // The source row records the currency it was written in, which is not
+    // necessarily the one the reader budgets in today: handing the raw minor
+    // on invented the difference between the two on every envelope of the
+    // month, from one click.
+    /**
+     * @param  array<array-key, mixed>  $existingTargetCategoryIds  keyed by the category ids already assigned in the target period
+     * @param  array<string, string>  $rates
+     *
+     * @throws InvalidArgumentException category not owned/global (IDOR)
+     */
+    private function copyAssignment(
+        User $user,
+        \stdClass $row,
+        array $existingTargetCategoryIds,
+        string $periodDate,
+        string $baseCurrency,
+        array $rates,
+    ): ?EnvelopeAssignmentMutated {
+        $categoryId = self::toInt($row->category_id);
+        $minor = self::toInt($row->assigned_minor);
+
+        if ($minor <= 0 || isset($existingTargetCategoryIds[$categoryId])) {
+            return null;
+        }
+
+        $this->assertCategoryAccessible($user, $categoryId);
+
+        $source = Money::tryOfMinor($minor, self::toString($row->currency));
+        $converted = $source === null ? null : $this->fx->convert($source, $baseCurrency, $rates);
+
+        return $converted === null
+            ? $this->applyAssignment($user, $categoryId, $periodDate, $minor, self::toString($row->currency))
+            : $this->applyAssignment($user, $categoryId, $periodDate, $converted->toMinor(), $baseCurrency);
     }
 
     /**
@@ -322,14 +407,17 @@ final class EnvelopeWriter
         $this->assertCategoryAccessible($user, $fromCategoryId);
         $this->assertCategoryAccessible($user, $toCategoryId);
 
-        $periodDate = $periodStart->toDateString();
+        // Same key the fold matches assignments on, so a move made from a date
+        // inside the period lands in the period rather than beside it.
+        $periodDate = $this->periods->containingForUser($user, $periodStart)->start->toDateString();
+        $currency = $this->baseCurrency->forUser($user);
 
         // Shared by both rows so undoMove() finds the counterpart deterministically,
         // not by a created_at that is only second-precision.
         $groupId = (string) Str::uuid();
 
         /** @var array{debitId: int, creditId: int} $ids */
-        $ids = $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, $groupId): array {
+        $ids = $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $currency, $minor, $memo, $groupId): array {
             $connection = $this->db->connection();
             $now = $this->clock->now();
 
@@ -339,8 +427,8 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $toCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => -$minor,
-                'currency' => $this->baseCurrency->code(),
-                'kind' => 'move_out',
+                'currency' => $currency,
+                'kind' => EnvelopeMoveKind::MoveOut->value,
                 'memo' => $memo,
                 'move_group_id' => $groupId,
                 'created_at' => $now,
@@ -353,8 +441,8 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $fromCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => $minor,
-                'currency' => $this->baseCurrency->code(),
-                'kind' => 'move_in',
+                'currency' => $currency,
+                'kind' => EnvelopeMoveKind::MoveIn->value,
                 'memo' => $memo,
                 'move_group_id' => $groupId,
                 'created_at' => $now,
@@ -374,8 +462,8 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $toCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => -$minor,
-                'currency' => $this->baseCurrency->code(),
-                'kind' => 'move_out',
+                'currency' => $currency,
+                'kind' => EnvelopeMoveKind::MoveOut->value,
                 'move_group_id' => $groupId,
             ],
         ));
@@ -390,8 +478,8 @@ final class EnvelopeWriter
                 'counterpart_category_id' => $fromCategoryId,
                 'period_start' => $periodDate,
                 'amount_minor' => $minor,
-                'currency' => $this->baseCurrency->code(),
-                'kind' => 'move_in',
+                'currency' => $currency,
+                'kind' => EnvelopeMoveKind::MoveIn->value,
                 'move_group_id' => $groupId,
             ],
         ));
@@ -457,9 +545,12 @@ final class EnvelopeWriter
         }
     }
 
-    public function parseAmount(string $value): ?int
+    // The denomination the envelope is kept in, which is the reader's own
+    // reporting currency: a yen has no hundredth, so a plan typed as 50000 was
+    // banked as ¥5,000,000 against a grid still reading ¥50,000.
+    public function parseAmount(string $value, ?string $currencyCode = null): ?int
     {
-        return MoneyInput::tryToPositiveMinor($value);
+        return MoneyInput::tryToPositiveMinor($value, $currencyCode);
     }
 
     /**

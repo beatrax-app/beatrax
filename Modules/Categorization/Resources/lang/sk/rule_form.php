@@ -24,6 +24,7 @@ return [
     'to' => 'do',
     'text_placeholder' => 'napr. SPOTIFY',
     'remove_condition' => 'Odstrániť podmienku',
+    'remove_condition_caption' => 'Odstrániť',
     'add_condition' => '+ Pridať podmienku',
 
     'then' => 'Potom',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Pripojiť',
     'deduction_category_aria' => 'Kategória odpočtu pre akciu :number',
     'remove_action' => 'Odstrániť akciu',
+    'remove_action_caption' => 'Odstrániť',
     'add_action' => '+ Pridať akciu',
 
     'this_year_only' => 'Len tento rok ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Akcie s daňovou značkou sa uplatnia až pri ďalšom použití pravidiel, nie pri tomto importe.',
 
     'priority' => 'Priorita',
-    'priority_help' => 'Nižšie čísla sa vykonajú skôr. Pravidlá bez spoločných polí si nikdy neodporujú.',
+    'priority_help' => 'Pravidlá sa spúšťajú od najnižšieho čísla nahor, takže keď dve nastavujú rovnaké pole, vyhráva najvyššie číslo. Pravidlá bez spoločných polí si nikdy neodporujú.',
 
     'cancel' => 'Zrušiť',
     'save_changes' => 'Uložiť zmeny',

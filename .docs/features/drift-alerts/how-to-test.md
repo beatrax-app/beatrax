@@ -91,14 +91,13 @@ composer test
   intent. The dismiss flow is what removes the alert from the open
   list.
 - **A drift alert that the user expected, but did not fire** — walk
-  the threshold ladder: per-series override → user-global → 5%
-  floor (max). The most common cause is a per-series override above
-  the actual ratio.
+  the threshold ladder: per-series override, else user-global, else
+  the 5% default. The most common cause is a per-series override
+  above the actual ratio.
 - **The corpus fixture passes in isolation but the evaluator fails
   in production** — every fixture must mirror a real-world shape;
-  manually-injected unrealistic rows are forbidden (a lesson from an
-  earlier wave on `Chains`). Inspect the failing input vs the
-  fixture for shape drift.
+  manually-injected unrealistic rows are forbidden. Inspect the
+  failing input vs the fixture for shape drift.
 - **`DriftAlertOpened` not firing on a new alert** — confirm the
   evaluator returned a fresh insert (not a unique-constraint
   no-op). The event dispatch is gated on the insert returning a
@@ -124,26 +123,56 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `DriftAlerts` module.
-
-## Behavioral contracts
-
 - **The evaluator never imports `Recurring`'s internals.** Every
   read of a recurring series flows through
   `Modules\Recurring\Public\Services\RecurringSeriesQuery`. The
   evaluator never runs a raw SELECT on `recurring_series`.
   (`tests/Unit/DriftEvaluatorTest.php`)
-- **The effective threshold is
-  `max(perSeriesOverride, userGlobal, 5%)`.** A user-global override
-  below 5% does not silence drift; a per-series override below the
-  user-global does not silence below the user's chosen floor.
+- **The effective threshold is the most specific setting that
+  exists**: per-series override, else user-global, else the 5%
+  default. There is no floor over the top — the settings ladder
+  offers 1% and 2%, and a floor would make both inert while the
+  screen went on reading back the number the reader chose. A lower
+  threshold reports more drift, never less.
   (`tests/Unit/DriftEvaluatorEffectiveThresholdTest.php`,
+  `tests/fixtures/drift-corpus/sub-five-global-threshold.php`,
   `tests/Feature/GlobalDriftThresholdSettingTest.php`,
   `tests/Feature/DriftThresholdOverrideEditorTest.php`)
-- **The evaluator is idempotent.** Re-running for the same
-  `(seriesId, latestOccurrenceId)` pair is caught at the UNIQUE
-  constraint and treated as a no-op via the `QueryException`
-  catch. (`tests/Unit/DriftEvaluatorTest.php`)
+- **Every corpus fixture is replayed through the real evaluator.**
+  Each transaction lands, becomes an occurrence, and the evaluator
+  runs before the next arrives; the resulting `drift_alerts` rows are
+  compared column by column against the fixture's `expected.alerts`.
+  The corpus previously checked a fixture's literals against its own
+  other literals, so the evaluator could return anything.
+  (`tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php`)
+- **The occurrence read is bounded.** The evaluator asks for the newest
+  three occurrences rather than hydrating a series' whole history to
+  reach the newest two.
+  (`tests/Feature/TheEvaluatorHydratedEveryOccurrenceToReadTwoTest.php`)
+- **A movement has to be one.** A zero prior, a currency change
+  mid-series and a sign flip (a refund against a charge) are each
+  refused rather than subtracted.
+  (`tests/fixtures/drift-corpus/prior-zero.php`,
+  `mixed-currency-within-series.php`, `sign-flip-refund.php`)
+- **A cadence restructure is annualised per side.** Monthly EUR 10
+  becoming yearly EUR 100 is a EUR 20/yr saving, not EUR 90/yr extra.
+  (`tests/fixtures/drift-corpus/cadence-restructure.php`)
+- **An already-actioned alert no-ops rather than raising.** A second
+  tab acknowledging a dismissed row, or re-snoozing a lapsed snooze to
+  a new date, leaves the row consistent instead of returning a 500.
+  (`tests/Feature/AnAlreadyActionedDriftAlertRaisesInsteadOfNoOppingTest.php`)
+- **The dashboard total counts rises only.** A price drop cannot
+  cancel a price rise out of "potential annualized cost".
+  (`tests/Feature/APriceDropCancelsAPriceRiseInTheDashboardTotalTest.php`)
+- **Load more extends the list.** The rows already on screen stay
+  there, and the Open tab is bounded rather than unpaged.
+  (`tests/Feature/LoadMoreReplacedTheListInsteadOfExtendingItTest.php`)
+- **The evaluator is idempotent, and only for the right reason.**
+  Re-running for the same `(seriesId, latestOccurrenceId)` pair is
+  caught at the UNIQUE constraint and treated as a no-op; any other
+  write failure is re-raised rather than silently suppressing the
+  alert. (`tests/Unit/DriftEvaluatorTest.php`,
+  `tests/Feature/AFailedAlertWriteWasSwallowedAsIfItWereADuplicateTest.php`)
 - **Prior amount of zero does not divide.** The
   `prior-zero.php` fixture covers the path; the evaluator skips the
   ratio computation and the row stays absent.
@@ -213,9 +242,9 @@ The behavioural contract for the `DriftAlerts` module.
   applied to the per-occurrence amount, not annualised.
   (`tests/fixtures/drift-corpus/quarterly-cadence.php` etc.)
 - **Per-series snooze covering the series itself** — the
-  `snoozed-at-series-level-ignored.php` fixture covers the path;
-  the evaluator does not produce a fresh alert for a series-level
-  snooze window.
+  `snoozed-at-series-level-ignored.php` fixture covers the path. A
+  snoozed series has `state = 'snoozed'`, which is outside the
+  projectable set, so the evaluator never sees it.
 - **Multi-drift in a single batch refresh** — each `(user, series)`
   gets its own dispatched job; the unique lock keys are distinct.
   (`tests/fixtures/drift-corpus/multi-drift.php`)
@@ -243,12 +272,13 @@ The behavioural contract for the `DriftAlerts` module.
 
 ## Configuration + feature flags
 
-- `users.drift_threshold_pct` — per-user global threshold (default
-  null = use the 5% floor).
-- `recurring_series.drift_threshold_pct` (per-series override) —
-  takes precedence over the user-global when set; clamped by the
-  5% floor.
-- The 5% hard floor is fixed in the evaluator source — no config
-  knob; lowering it would weaken the watchdog.
+- `users.drift_alert_threshold_percent` — per-user global threshold
+  (unset = use the 5% default).
+- `recurring_series.drift_threshold_percent` (per-series override) —
+  takes precedence over the user-global when set, in both directions:
+  a series can be watched more closely as well as less.
+- The 5% default is fixed in the evaluator source — no config knob.
+  It is what applies when neither setting is present, not a bound on
+  either.
 - The snooze-revival job runs via the scheduler tick (every
   minute under `schedule:work`); no per-user opt-out.

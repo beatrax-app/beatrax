@@ -55,6 +55,19 @@ function countedNounIsCountToken(string $name): bool
         || countedNounReadsAsPlural($name);
 }
 
+// preg_match_all answers false when the engine gives up -- a backtrack limit, a
+// JIT stack limit on a long template -- and every rule in this file reads its
+// answer as "nothing matched". A guard that stops reading has to say so: a
+// silent false here is a clean tree reported over a scan that never ran.
+function countedNounScanned(int|false $matched, string $what): int
+{
+    if ($matched === false) {
+        throw new RuntimeException('the counted-noun '.$what.' scan stopped reading: '.preg_last_error_msg());
+    }
+
+    return $matched;
+}
+
 /**
  * @param  array<array-key, mixed>  $translations
  * @return array<string, string>
@@ -77,9 +90,7 @@ function countedNounStrings(array $translations, string $prefix = ''): array
 /** @return string|null the offending fragment, or null when the line is clean */
 function countedNounOffence(string $line): ?string
 {
-    if (preg_match_all('/:([a-zA-Z_][a-zA-Z0-9_]*)((?:\s+[A-Za-z][\w\'\/-]*){1,3})/', $line, $matches, PREG_SET_ORDER) === false) {
-        return null;
-    }
+    countedNounScanned(preg_match_all('/:([a-zA-Z_][a-zA-Z0-9_]*)((?:\s+[A-Za-z][\w\'\/-]*){1,3})/', $line, $matches, PREG_SET_ORDER), 'lang line');
 
     foreach ($matches as $match) {
         if (! countedNounIsCountToken($match[1])) {
@@ -211,9 +222,7 @@ it('reads every pluralised line through Lang::choice', function (): void {
 
     foreach (countedNounCallSites() as $file) {
         $source = (string) $file->getContents();
-        if (preg_match_all("/(?:Lang::get|__|@lang|trans)\(\s*'([^']+)'/", $source, $matches) === false) {
-            continue;
-        }
+        countedNounScanned(preg_match_all("/(?:Lang::get|__|@lang|trans)\(\s*'([^']+)'/", $source, $matches), 'call site key');
 
         foreach ($matches[1] as $key) {
             if (array_key_exists($key, $pluralised)) {
@@ -356,9 +365,10 @@ it('never ships a plural segment the locale can never select', function (): void
 // one reads it out of a PHP variable name, off the last word so $openCount and
 // $rowCount qualify by the same vocabulary and $rows does not. A property is
 // read the same way: $preview->dedupedTotalCount names its count where it sits.
+// JavaScript reaches the same property with a `.`, so the walk splits on it too.
 function countedNounIsCountVariable(string $name): bool
 {
-    $reached = preg_split('/->|\?->/', $name) ?: [];
+    $reached = preg_split('/->|\?->|\./', $name) ?: [];
     $words = preg_split('/(?=[A-Z])|_/', (string) end($reached)) ?: [];
 
     return in_array(mb_strtolower((string) end($words)), COUNTED_NOUN_COUNT_TOKENS, true);
@@ -384,18 +394,15 @@ const COUNTED_NOUN_GAP = '(?:[^<>"{}]{0,16}|[ \t\r\n]*<\/[a-zA-Z][a-zA-Z0-9]*>[ 
 function countedNounTranslatedVariables(string $source, string $call): string
 {
     $names = [];
-    if (preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*'.$call.'/', $source, $direct) !== false) {
-        $names = $direct[1];
-    }
+    countedNounScanned(preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*'.$call.'/', $source, $direct), 'held line');
+    $names = $direct[1];
 
     // An array of translated lines walked by foreach is the same variable one
     // hop later, and is how a breakdown line gets assembled a part at a time.
-    if (preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*\[[^;]*?'.$call.'[^;]*?\];/s', $source, $arrays) !== false) {
-        foreach ($arrays[1] as $array) {
-            if (preg_match_all('/foreach\s*\(\s*\$'.preg_quote($array, '/').'\s+as\s+(?:\$\w+\s*=>\s*)?\$(\w+)\s*\)/', $source, $loops) !== false) {
-                $names = array_merge($names, $loops[1]);
-            }
-        }
+    countedNounScanned(preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*\[[^;]*?'.$call.'[^;]*?\];/s', $source, $arrays), 'held line array');
+    foreach ($arrays[1] as $array) {
+        countedNounScanned(preg_match_all('/foreach\s*\(\s*\$'.preg_quote($array, '/').'\s+as\s+(?:\$\w+\s*=>\s*)?\$(\w+)\s*\)/', $source, $loops), 'held line loop');
+        $names = array_merge($names, $loops[1]);
     }
 
     $names = array_values(array_unique(array_filter($names)));
@@ -416,9 +423,7 @@ function countedNounNumberBesideLine(string $source, string $call): array
 
     $hits = [];
     foreach ($patterns as $pattern) {
-        if (preg_match_all($pattern, $source, $matches, PREG_SET_ORDER) === false) {
-            continue;
-        }
+        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'number beside line');
         foreach ($matches as $match) {
             if (countedNounIsCountVariable($match[1])) {
                 $hits[] = trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
@@ -473,6 +478,60 @@ it('never sets a number beside a line that has no form to choose', function (): 
     ]));
 });
 
+// A number the template FORMATS rather than echoes. The rules above read a
+// count off a variable name, and none of them can see one: Fmt::number(...),
+// number_format(...) and count(...) are calls, and the count they carry is
+// inside the parentheses where no name test reaches it.
+const COUNTED_NOUN_FORMATTED_NUMBER = '(?:Fmt::number|number_format|count)\s*\(';
+
+it('never sets a formatted number beside a translated line', function (): void {
+    $files = 0;
+    $offenders = [];
+
+    $pattern = '/\{\{\s*'.COUNTED_NOUN_FORMATTED_NUMBER.'[^{}]*\}\}'.COUNTED_NOUN_GAP
+        .'\{\{[^{}]{0,160}(?:'.COUNTED_NOUN_FLAT_CALL.'|'.COUNTED_NOUN_CHOOSING_CALL.')/';
+
+    foreach (countedNounCallSites() as $file) {
+        $files++;
+        $source = (string) $file->getContents();
+        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'formatted number beside line');
+
+        foreach ($matches as $match) {
+            $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+        }
+    }
+
+    $offenders = array_values(array_unique($offenders));
+
+    expect($files)->toBeGreaterThan(0, 'No call site was scanned, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These put a formatted number next to a translated line:',
+        ...$offenders,
+        '',
+        'It is the numeral-then-word order the two rules above forbid, written so that',
+        'neither of them can see it. Those read the count off a variable name, and there',
+        'is no variable here to read: the count sits inside Fmt::number(), number_format()',
+        'or count(), and what stands beside the line is a call. Every instance this rule',
+        'was written for read correctly in English and wrongly at one — "1 Mappings",',
+        '"1 new, 1 unchanged, 1 conflicts.", "Matches 1 transactions in your recent',
+        'history." — and none of them could be fixed by a translator, because the noun',
+        'they were handed had no arms and no numeral to agree with.',
+        '',
+        'A call is matched rather than a name because a formatted number is unambiguous:',
+        'nothing formats a value that way except to show a reader a quantity. Move the',
+        'numeral into the line and read it with Lang::choice($key, $n) — choice() fills',
+        ':count through Fmt::number() itself, so the grouping marks the call site was',
+        'reaching for come with it. Where the phrase carries a SECOND number, that one',
+        'stays a replacement: Lang::choice($key, $total, [\'fetched\' => Fmt::number($n)]).',
+        '',
+        'Where two translated fragments bracket the number — a _prefix, a numeral, a',
+        '_suffix — the same fix collapses all three into one line. A sentence assembled',
+        'from parts pins the word order for twenty-six languages at once, and a translator',
+        'handed "Matches" and "transactions in your recent history." cannot move either.',
+    ]));
+});
+
 it('never sets a number beside the line that was given the number', function (): void {
     $files = iterator_count(countedNounCallSites());
     $offenders = countedNounOffendingCallSites(COUNTED_NOUN_CHOOSING_CALL);
@@ -497,5 +556,121 @@ it('never sets a number beside the line that was given the number', function ():
         'phrase — tabular-nums still only reaches digits there, and a weight or colour',
         'that covered one number now covers the phrase it belongs to. That is a layout',
         'change to make deliberately; leaving the numeral outside is not the way to dodge it.',
+    ]));
+});
+
+// Every rule above reads a count PHP holds while it renders. An Alpine
+// expression is evaluated after the response has left, where no locale rule
+// table exists and Lang::choice cannot be handed a number that does not exist
+// yet -- so a count reaching the reader from there is invisible to all of them.
+const COUNTED_NOUN_ALPINE_ATTRIBUTE = '\bx-(?:text|html|data|init|effect|bind:[\w.\-]+)\s*=\s*"([^"]*)"';
+
+// A translated line rendered into a JavaScript expression, in the spellings
+// this tree writes it: @js(Lang::get(...)), {{ Js::from(Lang::get(...)) }} and
+// a bare {{ }} echo. The trailing parenthesis and braces are optional because
+// the same key is written all three ways within one template.
+const COUNTED_NOUN_JS_LINE = '(?:@js\(\s*|\{\{\s*(?:Js::from\(\s*)?)Lang::(?:get|choice)\(\s*\'[^\']+\'\s*(?:,[^()]*)?\)\s*\)?\s*(?:\}\})?';
+
+// A count reached in JavaScript: a dotted identifier chain and nothing else.
+// A call is deliberately not matched -- humanBytes(x) and formatCount(x) are
+// both on this tree and neither is a count governing the word beside it.
+const COUNTED_NOUN_JS_NUMBER = '[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*';
+
+/** @return list<string> every Alpine expression attribute value in $source */
+function countedNounAlpineExpressions(string $source): array
+{
+    countedNounScanned(preg_match_all('/'.COUNTED_NOUN_ALPINE_ATTRIBUTE.'/', $source, $matches), 'Alpine attribute');
+
+    return $matches[1];
+}
+
+it('never assembles a translated line from fragments in the browser', function (): void {
+    $expressions = 0;
+    $offenders = [];
+
+    foreach (countedNounCallSites() as $file) {
+        foreach (countedNounAlpineExpressions((string) $file->getContents()) as $expression) {
+            $expressions++;
+
+            $pattern = '/(?:\+\s*\'?\s*'.COUNTED_NOUN_JS_LINE.')|(?:'.COUNTED_NOUN_JS_LINE.'\s*\'?\s*\+)/';
+            if (countedNounScanned(preg_match_all($pattern, $expression, $matches), 'browser line glue') === 0) {
+                continue;
+            }
+
+            $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $expression) ?? '');
+        }
+    }
+
+    $offenders = array_values(array_unique($offenders));
+
+    expect($expressions)->toBeGreaterThan(0, 'No Alpine expression was scanned, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These build a sentence in the browser by concatenating translated fragments:',
+        ...$offenders,
+        '',
+        'A prefix, a value and a suffix glued with + is one sentence split into pieces,',
+        'and the split is the damage. It pins the word order — numeral in the middle,',
+        'noun after it — for every language at once, and hands each of twenty-six',
+        'translators two halves with no way to say their language puts the value',
+        'somewhere else. Slovak and Ukrainian already answered this palette by moving',
+        'the count into brackets, which is a translator working around a call site.',
+        '',
+        'Where the value is a COUNT it is also wrong in English at one. "See all " + 1 +',
+        '" results" reads "See all 1 results", and no rule in this file above could see',
+        'it: there is no :placeholder in the lang line, because the number never passes',
+        'through PHP at all.',
+        '',
+        'Write one line with the placeholder where the language wants it, and fill it in',
+        'the browser: Lang::get(...) with :query in the middle, read through $line(); a',
+        'counted line through Lang::arms(...) and $plural(), which carries the arms and',
+        'the reader locale\'s own selection table so the browser picks the arm PHP would.',
+        'A JavaScript n === 1 ? a : b is not the fix — it is English\'s two forms written',
+        'where no locale rule can reach them, which the PHP rule above already forbids.',
+    ]));
+});
+
+it('never sets a browser-rendered number beside a line that has no form to choose', function (): void {
+    $files = 0;
+    $offenders = [];
+
+    $pattern = '/x-(?:text|html)\s*=\s*"\s*('.COUNTED_NOUN_JS_NUMBER.')\s*"[^<>]*>'
+        .COUNTED_NOUN_GAP.'\{\{[^}]{0,140}(?:'.COUNTED_NOUN_FLAT_CALL.'|'.COUNTED_NOUN_CHOOSING_CALL.')/';
+
+    foreach (countedNounCallSites() as $file) {
+        $files++;
+        $source = (string) $file->getContents();
+        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'browser number beside line');
+
+        foreach ($matches as $match) {
+            if (countedNounIsCountVariable($match[1])) {
+                $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+            }
+        }
+    }
+
+    $offenders = array_values(array_unique($offenders));
+
+    expect($files)->toBeGreaterThan(0, 'No call site was scanned, so this rule checked nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These print a number from Alpine next to a translated line beside it:',
+        ...$offenders,
+        '',
+        'This is the rule above it one layer out. The template has decided the numeral',
+        'comes first and the word follows, and the word was written to fit — so it reads',
+        'as finished in English and is wrong in every language that inflects the noun for',
+        'the number, which the lang file gives it no way to do.',
+        '',
+        'It is worse than the PHP case in one respect: Lang::choice cannot rescue it,',
+        'because the number is not known until the response has been delivered. Hand the',
+        'arms to the browser instead — Lang::arms($key) carries every form plus the',
+        'reader locale\'s selection table, taken from Laravel\'s own MessageSelector — and',
+        'read it with the $plural() magic, whose :count lands inside the chosen arm.',
+        '',
+        'The number is read off the expression the same way the PHP rules read a variable',
+        'name: off the last word, so stats.allFiles.count and visibleLines.length qualify',
+        'and hit.amount does not. A call is not matched — humanBytes(bytes) is a size, not',
+        'a count of the noun beside it — and the gap does not cross an opening tag.',
     ]));
 });

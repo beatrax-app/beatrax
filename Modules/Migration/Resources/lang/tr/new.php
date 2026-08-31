@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Bu, okuyabileceğimiz bir YNAB4, nYNAB veya Actual dışa aktarmasına benzemiyor. Dosyayı kontrol edip yeniden dene.',
         'file_too_large' => 'Bu dosya bir geçiş dışa aktarması için fazla büyük.',
+        'archive_reader_unavailable' => 'Uygulamanın bu sürümünde bu dışa aktarımı açabilecek bir ZIP okuyucu yok, bu yüzden burada okunamıyor. Onu masaüstü uygulamasında içe aktar ya da dışa aktarımı sıradan sıkıştırmayla yeniden paketle.',
+        'internal_detail' => 'Uygulama bu dışa aktarımı okuyamadı (:code). Ayrıntıların tamamı uygulama günlüğünde; bir sorun bildirirsen bu kodu belirt.',
     ],
 ];

@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Public\Enums\FileExportOutcome;
+use Modules\Mobile\Public\Services\ShareSheetExport;
+use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Http\Livewire\ReportsIndex;
 use Modules\Reports\Internal\Http\ReportDefinitionRequestFactory;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 // loadRoutesFrom() uses a plain require, so this file can re-execute in one
@@ -20,7 +27,9 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         ReportCsvExporter $exporter,
         CurrentUser $currentUser,
         ReportDefinitionRequestFactory $definitions,
-    ): StreamedResponse {
+        PeriodPresetResolver $periodPresetResolver,
+        ShareSheetExport $shareSheet,
+    ): Response|StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
                 // Empty on purpose, and it may not stay that way by accident.
@@ -33,13 +42,46 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         $user = $currentUser->user();
         $definition = $definitions->fromExportQuery($request);
 
-        return $responses->streamDownload(
-            static function () use ($exporter, $user, $definition): void {
-                echo $exporter->export($user, $definition);
-            },
-            "beatrax-report-{$definition->slug()}.csv",
-            ['Content-Type' => 'text/csv; charset=UTF-8'],
-        );
+        // Resolved before the stream opens: an exception from inside the
+        // download callback has already sent 200 plus the CSV headers, so the
+        // reader would get a truncated file rather than the reason.
+        try {
+            $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
+        } catch (InvalidReportPeriod $problem) {
+            return $responses->make(
+                Lang::get('reports::builder.period.error.'.$problem->problem->value),
+                SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY,
+                ['Content-Type' => 'text/plain; charset=UTF-8'],
+            );
+        }
+
+        $filename = "beatrax-report-{$definition->slug()}.csv";
+
+        // This route is a plain navigation, so on a shell that drops the
+        // download the reader is left on a page that never changed. The file
+        // goes to the OS share sheet and the body says which of the three
+        // things happened to it.
+        if ($shareSheet->replacesWebViewDownload()) {
+            $outcome = $shareSheet->export($filename, $exporter->export($user, $definition));
+
+            $delivered = $responses->make(
+                $outcome->message(),
+                $outcome === FileExportOutcome::Shared
+                    ? SymfonyResponse::HTTP_OK
+                    : SymfonyResponse::HTTP_SERVICE_UNAVAILABLE,
+                ['Content-Type' => 'text/plain; charset=UTF-8'],
+            );
+        } else {
+            $delivered = $responses->streamDownload(
+                static function () use ($exporter, $user, $definition): void {
+                    echo $exporter->export($user, $definition);
+                },
+                $filename,
+                ['Content-Type' => 'text/csv; charset=UTF-8'],
+            );
+        }
+
+        return $delivered;
     })->name('reports.export');
 
     // ?report={id} is resolved into a view variable here so the Blade view does

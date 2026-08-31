@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 
 final class IcsStatementSenderSeeder extends Seeder
 {
@@ -48,7 +50,10 @@ final class IcsStatementSenderSeeder extends Seeder
             $connection->table('known_senders')->insert([
                 'user_id' => null,
                 'email_pattern' => $pattern,
-                'label' => 'ICS Cards (statements)',
+                // The issuer's own name is the same in every language, so the
+                // whole label is one line rather than a brand glued to a
+                // translated fragment; KnownSenderQuery resolves it per reader.
+                'label' => StoredCopy::of(CopyLine::of('email-scan::inboxes.known_sender.ics_statements')),
                 'source' => 'system',
                 'added_at' => $now,
                 'created_at' => $now,

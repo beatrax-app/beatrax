@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Далі за цією ланкою ланцюга фінансування не знайдено.',
 
     'covers_charges' => 'Покриває :count списання ICS|Покриває :count списання ICS|Покриває :count списань ICS',
-    'no_ics_charges' => 'У цьому розрахунку немає списань ICS',
     'show_more_fanout' => 'Показати ще :count · :shown з :total',
 
     'confirm' => 'Підтвердити',
     'reject' => 'Відхилити',
     'confirm_aria' => 'Підтвердити ланку ланцюга :id',
     'reject_aria' => 'Відхилити ланку ланцюга :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Детермінований',
+        'confirmed' => 'Підтверджено',
+        'candidate' => 'Кандидат',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Впевненість: детермінований збіг',

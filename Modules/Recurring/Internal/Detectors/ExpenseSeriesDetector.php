@@ -14,52 +14,41 @@ use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
+use Modules\Recurring\Internal\InferredCadence;
+use Modules\Recurring\Internal\Support\DerivedSeriesId;
+use Modules\Recurring\Internal\Support\SeriesDetectionGate;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
-use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
+use Modules\Recurring\Public\Support\RecurringDetectionWindow;
+use Modules\Sync\Public\Events\EntityMutated;
+use Psr\Log\LoggerInterface;
 use stdClass;
 
 /**
  * @phpstan-type SeriesIndex array{cluster: array<string, RecurringSeries>, counterparty: array<string, RecurringSeries>, tolerance: array<string, int>}
  */
-final class ExpenseSeriesDetector implements SeriesDetector
+final readonly class ExpenseSeriesDetector implements SeriesDetector
 {
     use CoercesScalars;
 
-    private const DEFAULT_WINDOW_MONTHS = 2;
-
-    private const DEFAULT_VARIANCE_TOLERANCE_PERCENT = 25;
-
-    private const MIN_OCCURRENCES = 2;
-
-    private const TOLERANCE_STATES = [
-        RecurringSeriesState::Pending->value,
-        RecurringSeriesState::Approved->value,
-        RecurringSeriesState::CadenceChanged->value,
-        RecurringSeriesState::Snoozed->value,
-    ];
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly CadenceInferrer $cadenceInferrer,
-        private readonly ClusterKeyComposer $clusterKeyComposer,
-        private readonly Dispatcher $events,
-        private readonly OccurrenceWriter $occurrences,
-        private readonly SeriesRefresher $refresher,
-        private readonly MerchantDisplayName $merchantNames,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private CadenceInferrer $cadenceInferrer,
+        private ClusterKeyComposer $clusterKeyComposer,
+        private Dispatcher $events,
+        private OccurrenceWriter $occurrences,
+        private SeriesRefresher $refresher,
+        private MerchantDisplayName $merchantNames,
+        private LoggerInterface $logger,
     ) {}
 
     public function detectForUser(User $user): void
     {
-        $windowMonths = $user->recurring_detection_window_months;
-        if ($windowMonths <= 0) {
-            $windowMonths = self::DEFAULT_WINDOW_MONTHS;
-        }
-        $since = $this->clock->now()->subMonths($windowMonths)->toDateString();
+        $since = RecurringDetectionWindow::opensOn($user, $this->clock);
 
         $rows = $this->db->connection()->table('transactions')
             ->select([
@@ -75,7 +64,10 @@ final class ExpenseSeriesDetector implements SeriesDetector
                 'counterparty_iban',
             ])
             ->where('user_id', $user->id)
-            ->whereIn('type', [TransactionType::Expense->value, TransactionType::Fee->value, TransactionType::Refund->value])
+            // Refund is Direction::Income and positive: inside an expense
+            // cluster it outranked the subscription as the newest row and the
+            // fixed-payments card rendered a +EUR 10.99/month subscription.
+            ->whereIn('type', [TransactionType::Expense->value, TransactionType::Fee->value])
             ->where('posted_at', '>=', $since)
             ->orderBy('posted_at')
             ->get();
@@ -104,8 +96,20 @@ final class ExpenseSeriesDetector implements SeriesDetector
 
         $index = $this->existingSeriesIndex($user, array_values(array_unique($currencies)));
 
+        $deferred = 0;
         foreach ($groups as $group) {
-            $this->processCluster($user, $group['counterparty_normalized'], $group['currency'], $group['rows'], $index);
+            $deferred += $this->processCluster($user, $group['counterparty_normalized'], $group['currency'], $group['rows'], $index) ? 0 : 1;
+        }
+
+        // Without a KEK the only readable name source left is the user's own
+        // `merchants` row, so a keyed cluster with none is held back rather
+        // than written as a digest. Silent, it was indistinguishable from a
+        // user who simply has no recurring expenses.
+        if ($deferred > 0) {
+            $this->logger->warning(
+                'ExpenseSeriesDetector: clusters held back this sweep because no readable merchant name resolved for their counterparty key; the next sweep that can read one picks them up.',
+                ['user_id' => $user->id, 'deferred_clusters' => $deferred],
+            );
         }
     }
 
@@ -171,7 +175,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             $index['counterparty'][$key] = $row;
         }
 
-        if (in_array($row->state, self::TOLERANCE_STATES, true) && ! array_key_exists($key, $index['tolerance'])) {
+        if (in_array($row->state, SeriesDetectionGate::TOLERANCE_STATES, true) && ! array_key_exists($key, $index['tolerance'])) {
             $index['tolerance'][$key] = $row->variance_tolerance_percent;
         }
     }
@@ -184,13 +188,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
     /**
      * @param  list<stdClass>  $rows
      * @param  SeriesIndex  $index
+     * @return bool false only when the cluster qualified but had no readable name
      */
-    private function processCluster(User $user, string $counterparty, string $currency, array $rows, array &$index): void
+    private function processCluster(User $user, string $counterparty, string $currency, array $rows, array &$index): bool
     {
         $counterpartyKey = self::indexKey($counterparty, $currency);
         $qualified = $this->qualifyCluster($index['tolerance'][$counterpartyKey] ?? null, $rows);
         if ($qualified === null) {
-            return;
+            return true;
         }
         [$filtered, $cadenceResult] = $qualified;
 
@@ -198,7 +203,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             Direction::Expense->value,
             $counterparty,
             $currency,
-            $cadenceResult['cadence']->value,
+            $cadenceResult->cadence->value,
         );
 
         // cluster_key encodes cadence + currency, so this only matches a series
@@ -213,28 +218,28 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $filtered);
 
         if ($existing === null) {
-            $this->insertNewSeries($user, $counterparty, $detected, $index);
-
-            return;
+            return $this->insertNewSeries($user, $counterparty, $detected, $index);
         }
 
         // Rejection covers the whole (counterparty, currency) pair across every
         // cadence variant. Refreshing a snoozed row would change the amount the
         // user paused on; the next sweep's expiry pass unpauses it first.
-        if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
-            return;
+        $paused = in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true);
+
+        if (! $paused) {
+            $this->refresher->refresh(
+                $existing,
+                $counterparty,
+                $detected,
+                $user,
+                Direction::Expense->value,
+                $this->merchantNames->healed($existing->detected_name, $user->id, $counterparty),
+            );
+
+            self::reindexRefreshed($index, $existing, $clusterKey, $currency);
         }
 
-        $this->refresher->refresh(
-            $existing,
-            $counterparty,
-            $detected,
-            $user,
-            Direction::Expense->value,
-            $this->merchantNames->healed($existing->detected_name, $user->id, $counterparty),
-        );
-
-        self::reindexRefreshed($index, $existing, $clusterKey, $currency);
+        return true;
     }
 
     // A refresh rewrites cluster_key and latest_currency on the row, and a
@@ -262,17 +267,17 @@ final class ExpenseSeriesDetector implements SeriesDetector
      *                                       a user-edited value so a widened tolerance does not
      *                                       fragment the cluster on the next sweep
      * @param  list<stdClass>  $rows
-     * @return array{0: list<stdClass>, 1: array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}}|null
+     * @return array{0: list<stdClass>, 1: InferredCadence}|null
      */
     private function qualifyCluster(?int $existingTolerance, array $rows): ?array
     {
-        if (count($rows) < self::MIN_OCCURRENCES) {
+        if (count($rows) < SeriesDetectionGate::MIN_OCCURRENCES) {
             return null;
         }
 
-        $tolerance = $existingTolerance ?? self::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
-        $filtered = self::applyVarianceFilter($rows, $tolerance);
-        if (count($filtered) < self::MIN_OCCURRENCES) {
+        $tolerance = $existingTolerance ?? SeriesDetectionGate::DEFAULT_VARIANCE_TOLERANCE_PERCENT;
+        $filtered = ClusterAmountFilter::keep($rows, $tolerance);
+        if (count($filtered) < SeriesDetectionGate::MIN_OCCURRENCES) {
             return null;
         }
 
@@ -282,47 +287,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
         }
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
 
-        return $cadenceResult['cadence']->isRegular() ? [$filtered, $cadenceResult] : null;
-    }
-
-    /**
-     * @param  list<stdClass>  $rows
-     * @return list<stdClass>
-     */
-    private static function applyVarianceFilter(array $rows, int $tolerancePercent): array
-    {
-        $absolutes = [];
-        foreach ($rows as $row) {
-            $absolutes[] = abs(self::toInt($row->amount_minor));
-        }
-        sort($absolutes);
-        $count = count($absolutes);
-        $mid = intdiv($count, 2);
-        $median = $count % 2 === 1
-            ? $absolutes[$mid]
-            : ($absolutes[$mid - 1] + $absolutes[$mid]) / 2;
-        if ($median <= 0) {
-            return $rows;
-        }
-
-        $lower = $median * (100 - $tolerancePercent) / 100;
-        $upper = $median * (100 + $tolerancePercent) / 100;
-
-        $kept = [];
-        foreach ($rows as $row) {
-            $abs = abs(self::toInt($row->amount_minor));
-            if ($abs >= $lower && $abs <= $upper) {
-                $kept[] = $row;
-            }
-        }
-
-        return $kept;
+        return $cadenceResult->cadence->isRegular() ? [$filtered, $cadenceResult] : null;
     }
 
     /**
      * @param  SeriesIndex  $index
+     * @return bool false when the row was deferred for want of a readable name
      */
-    private function insertNewSeries(User $user, string $counterparty, DetectedSeries $detected, array &$index): void
+    private function insertNewSeries(User $user, string $counterparty, DetectedSeries $detected, array &$index): bool
     {
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
@@ -333,10 +305,13 @@ final class ExpenseSeriesDetector implements SeriesDetector
         // the next one rather than inserting a digest into a shown column.
         $displayName = $this->merchantNames->forStoredKey($user->id, $counterparty);
         if ($displayName === null) {
-            return;
+            return false;
         }
 
-        $newId = $connection->table('recurring_series')->insertGetId([
+        $userId = self::toInt($user->id);
+        $newId = DerivedSeriesId::for($userId, Direction::Expense->value, $counterparty, $detected->currency);
+
+        $row = [
             'user_id' => $user->id,
             'direction' => Direction::Expense->value,
             'detected_name' => $displayName,
@@ -345,14 +320,17 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'latest_amount_minor' => $detected->latestAmountMinor,
             'latest_currency' => $detected->currency,
             'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
-            'variance_tolerance_percent' => self::DEFAULT_VARIANCE_TOLERANCE_PERCENT,
+            'variance_tolerance_percent' => SeriesDetectionGate::DEFAULT_VARIANCE_TOLERANCE_PERCENT,
             'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
             'next_expected_confidence_low' => $detected->confidenceLow,
+            'billing_day' => $detected->billingDay,
             'cluster_key' => $detected->clusterKey,
             'cluster_counterparty_key' => $counterparty,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        $connection->table('recurring_series')->insert(['id' => $newId] + $row);
 
         // Two merchant keys can normalise onto one cluster_key — an ampersand
         // and a space both become a hyphen — so a later cluster in this sweep
@@ -361,6 +339,18 @@ final class ExpenseSeriesDetector implements SeriesDetector
         if ($inserted !== null) {
             self::indexSeries($index, $inserted);
         }
+
+        // Before the occurrences: each one names this series through a NOT NULL
+        // foreign key, so a peer receiving the child op first has nothing to
+        // hang it on. `$row` omits `id` — the pk carries it, which is the same
+        // create-op shape the pairing backfill emits.
+        $this->events->dispatch(new EntityMutated(
+            table: 'recurring_series',
+            pk: $newId,
+            userId: $userId,
+            mutationType: 'create',
+            dirtyFields: $row,
+        ));
 
         $this->occurrences->write($user->id, $newId, $detected->rows, $detected->currency);
 
@@ -380,5 +370,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,
         ));
+
+        return true;
     }
 }

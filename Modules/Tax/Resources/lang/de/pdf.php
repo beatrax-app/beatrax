@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Betrag',
 
     'subtotal' => 'Zwischensumme',
+    'subtotal_income' => 'Zwischensumme Einnahmen',
 
     'footer' => 'Erstellt mit Beatrax — persönliche Finanzen, nur lokal — :year',
 ];

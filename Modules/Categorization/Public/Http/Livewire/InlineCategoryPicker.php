@@ -7,6 +7,7 @@ namespace Modules\Categorization\Public\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
@@ -21,6 +22,9 @@ final class InlineCategoryPicker extends Component
 {
     use DispatchesToast;
 
+    // The row the picker writes to, taken from mount. categoryId below is the
+    // reader's actual choice and stays writable.
+    #[Locked]
     public int $transactionId = 0;
 
     public ?int $categoryId = null;

@@ -9,5 +9,5 @@ namespace Modules\FX\Public\Support;
 // provider for the same pair and day outranks it.
 final class BundledRates
 {
-    public const SOURCE = 'bundled';
+    public const string SOURCE = 'bundled';
 }

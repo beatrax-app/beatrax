@@ -15,11 +15,14 @@ beforeEach(function (): void {
     $this->fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
 });
 
-it('imports the redacted fixture end-to-end with 41 canonical rows', function (): void {
+// 41 purchase parents plus the 41 funding legs that settled them. The legs
+// used to fold into their parent and contribute nothing, which left the
+// bank-side debit unpaired and the same euros counted twice.
+it('imports the redacted fixture end-to-end with 82 canonical rows', function (): void {
     $result = $this->importer->runAndConfirm($this->fixture, 'paypal-csv', $this->fixtureUser);
 
-    expect($result->inserted)->toBe(41);
-    expect(Transaction::count())->toBe(41);
+    expect($result->inserted)->toBe(82);
+    expect(Transaction::count())->toBe(82);
 })->group('phase-4');
 
 it('persists source_format = paypal-csv on every imported row', function (): void {
@@ -76,9 +79,9 @@ it('returns zero new rows when re-importing the same PayPal CSV (idempotency)', 
     $first = $this->importer->runAndConfirm($this->fixture, 'paypal-csv', $this->fixtureUser);
     $second = $this->importer->runAndConfirm($this->fixture, 'paypal-csv', $this->fixtureUser);
 
-    expect($first->inserted)->toBe(41);
+    expect($first->inserted)->toBe(82);
     expect($second->inserted)->toBe(0);
-    expect($second->duplicates)->toBe(41);
+    expect($second->duplicates)->toBe(82);
 })->group('phase-4');
 
 it('prompts the user to name the PayPal Account on the first PayPal upload', function (): void {

@@ -8,7 +8,6 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
-use Modules\Auth\Internal\Account\UserScopedDataPurge;
 use Modules\Auth\Internal\Account\UserScopedFilePurge;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Models\User;
@@ -24,16 +23,16 @@ use Throwable;
 // Deleting the administrator while a partner remains would leave a device
 // nobody can administer behind a closed signup route, so the oldest survivor
 // is promoted in the same transaction.
-final class DeleteAccountAction
+final readonly class DeleteAccountAction
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
-        private readonly UserScopedDataPurge $purgeData,
-        private readonly UserScopedFilePurge $purgeFiles,
-        private readonly ColdStartVault $coldStartVault,
-        private readonly LogoutAction $logout,
-        private readonly LoggerInterface $log,
+        private DatabaseManager $db,
+        private Hasher $hasher,
+        private PurgeUserDataAction $purgeData,
+        private UserScopedFilePurge $purgeFiles,
+        private ColdStartVault $coldStartVault,
+        private LogoutAction $logout,
+        private LoggerInterface $log,
     ) {}
 
     public function __invoke(User $user, string $password): void
@@ -56,10 +55,9 @@ final class DeleteAccountAction
         $userId = $user->id;
         $connection = $this->db->connection();
 
-        $deviceIds = $this->deviceIdsOf($connection, $userId);
         $successorId = $this->successorAdministratorId($connection, $user);
 
-        $connection->transaction(function () use ($connection, $userId, $successorId, $deviceIds): void {
+        $connection->transaction(function () use ($connection, $userId, $successorId): void {
             if ($successorId !== null) {
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
@@ -69,7 +67,7 @@ final class DeleteAccountAction
             // Inside the transaction, though the keychain clear cannot be.
             $this->coldStartVault->forget($userId);
 
-            ($this->purgeData)($connection, $userId, $deviceIds);
+            ($this->purgeData)($connection, $userId);
         });
 
         $this->settleAfterPurge($connection, $userId);
@@ -97,24 +95,6 @@ final class DeleteAccountAction
         } catch (Throwable $e) {
             $this->log->error('DeleteAccountAction: logout failed after the purge committed.', SafeExceptionContext::describe($e));
         }
-    }
-
-    /** @return list<string> this account's own device identifiers */
-    private function deviceIdsOf(Connection $connection, int $userId): array
-    {
-        if (! $connection->getSchemaBuilder()->hasTable('device_registry')) {
-            return [];
-        }
-
-        $deviceIds = [];
-
-        foreach ($connection->table('device_registry')->where('user_id', $userId)->pluck('device_id') as $deviceId) {
-            if (is_string($deviceId)) {
-                $deviceIds[] = $deviceId;
-            }
-        }
-
-        return $deviceIds;
     }
 
     // Null unless the account leaving is the only administrator and somebody

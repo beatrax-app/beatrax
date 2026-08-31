@@ -15,19 +15,19 @@ use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use stdClass;
 use Throwable;
 
-final class DiscoveredSenderQuery
+final readonly class DiscoveredSenderQuery
 {
     use CoercesScalars;
 
-    public const MIN_OCCURRENCES = 2;
+    public const int MIN_OCCURRENCES = 2;
 
-    public const WITHIN_DAYS = 90;
+    public const int WITHIN_DAYS = 90;
 
-    public const PANEL_PAGE_SIZE = 25;
+    public const int PANEL_PAGE_SIZE = 25;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     /**

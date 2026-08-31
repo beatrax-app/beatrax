@@ -9,12 +9,15 @@ return [
     'device_local_note' => 'Noteikumi paliek šajā ierīcē. Tie netiek koplietoti ar citām tavām ierīcēm.',
 
     'reapply' => 'Piemērot noteikumus vēsturei',
+    'reapply_confirm' => 'Vai piemērot visus noteikumus visai jūsu vēsturei? Katra kategorija, darījuma partneris, piezīme un nodokļu atzīme, ko ievietojis noteikums, tiek pārrakstīta. Tas, ko iestatījāt ar roku, paliek, tāpat kā viss, kas ir saskaņotā konta izrakstā. Vecās vērtības neatgriež nekas.',
     'reapplying' => 'Piemēro…',
     'new_rule' => 'Jauns noteikums',
 
-    'reapply_progress_lead' => 'Piemēro noteikumus…',
-    'reapply_progress_of' => 'no',
-    'reapply_progress_trail' => 'darījumiem pārbaudīti',
+    // i18n-review: lv · reapply_progress — pārbaudīts/pārbaudīti follows the arm :count
+    // selects, yet it predicates on :checked, and Latvian arm 1 also covers 21, where
+    // :checked can exceed one. A native reader decides whether a fixed plural, or a
+    // colon-label shape, is the better answer.
+    'reapply_progress' => 'Piemēro noteikumus… :checked no :count darījumiem pārbaudīti|Piemēro noteikumus… :checked no :count darījuma pārbaudīts|Piemēro noteikumus… :checked no :count darījumiem pārbaudīti',
 
     'empty_heading' => 'Vēl nav neviena noteikuma',
     'empty_body' => 'Noteikumi atlasa darījumus pēc vairākiem nosacījumiem un automātiski maina kategoriju, darījuma partneri, piezīmi un nodokļu atzīmi — importa laikā un ikreiz, kad tos piemēro esošajai vēsturei.',
@@ -27,6 +30,8 @@ return [
     'col_created' => 'Izveidots',
     'col_row_actions' => 'Darbības',
     'inactive_badge' => 'Izslēgts',
+    'combinator_all' => 'VISI',
+    'combinator_any' => 'JEBKURŠ',
     'inactive_title' => 'Šis noteikums nedarbojas. Noteikums izslēdzas, kad tiek dzēsta kategorija vai darījuma partneris, uz ko tas norāda.',
 
     'more_conditions' => 'vēl +:count',

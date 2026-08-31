@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Hva du vil varsles om',
+    'background_note' => 'Beatrax forbereder dem mens appen er åpen. En planlagt kjøring i bakgrunnen klarer det ikke — applåsen har den eneste nøkkelen — så det som venter, hentes mens du bruker appen videre.',
+    'background_note_phone' => 'Beatrax forbereder dem mens appen er åpen. I bakgrunnen kan den ikke — applåsen har den eneste nøkkelen — så det som venter, kommer neste gang du åpner appen.',
 
     'reminders' => [
         'label' => 'Betalingspåminnelser',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Skjul detaljer i varsler',
-        'help' => 'Vis beløp og forhandlernavn i selve varselbanneret. Slå av hvis skjermen din kan ses av andre.',
+        'help' => 'Skjul beløp og forhandlernavn i selve varselbanneret. Slå på hvis skjermen din kan ses av andre.',
     ],
 
     'save' => 'Lagre varselinnstillinger',

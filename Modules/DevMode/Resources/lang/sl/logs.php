@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Odstrani iz prikaza (datoteke dnevnika ne spremeni)',
     'dismiss_aria' => 'Odstrani vnos dnevnika iz prikaza',
     'totals' => [
-        'showing' => 'Prikazano',
-        'of' => 'od',
-        'received' => 'prejeto (medpomnilnik do 10 tis.)',
-        'lines_today' => 'vrstic danes',
+        'showing' => 'Prikazano :shown od :count prejete vrstice (medpomnilnik do :cap)|Prikazano :shown od :count prejetih vrstic (medpomnilnik do :cap)|Prikazano :shown od :count prejetih vrstic (medpomnilnik do :cap)|Prikazano :shown od :count prejetih vrstic (medpomnilnik do :cap)',
+        'lines_today' => ':count vrstica danes|:count vrstici danes|:count vrstice danes|:count vrstic danes',
+        'lines_today_capped' => 'več kot :count vrstica danes|več kot :count vrstici danes|več kot :count vrstice danes|več kot :count vrstic danes',
         'today' => 'danes',
-        'across' => 'v',
-        'daily_files' => 'dnevnih datotekah',
+        'all_files' => ':size v :count dnevni datoteki|:size v :count dnevnih datotekah|:size v :count dnevnih datotekah|:size v :count dnevnih datotekah',
     ],
 
     'status' => [

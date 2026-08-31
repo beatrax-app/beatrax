@@ -12,6 +12,8 @@
      `modal-close` so any page can listen for the resulting refresh. --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 @use('Modules\Categorization\Public\Enums\ActionType')
 @use('Modules\Categorization\Public\Enums\ConditionOperator')
 @use('Modules\Categorization\Public\Enums\ConditionValueType')
@@ -47,6 +49,15 @@
                         <p class="text-sm text-rose-600 dark:text-rose-500">{{ $errorConditions }}</p>
                     @endif
 
+                    {{-- A rule's amount condition IS scoped to one currency:
+                         MapsRuleRows writes the threshold at the reader's base
+                         and RuleEngine only tests rows that settled in it, so
+                         the box follows that money's own scale. --}}
+                    @php
+                        $ruleCurrency = BaseCurrency::value();
+                        $ruleAmountMode = MoneyInput::decimalPlaces($ruleCurrency) === 0 ? 'numeric' : 'decimal';
+                        $ruleAmountPlaceholder = MoneyInput::formatAbsMinor(0, $ruleCurrency);
+                    @endphp
                     @foreach ($conditions as $i => $condition)
                         @php
                             $valueType = \Modules\Categorization\Internal\Http\Livewire\RuleFormModal::valueTypeFor($condition['field']);
@@ -94,8 +105,8 @@
                                 @elseif ($valueType === ConditionValueType::Amount->value)
                                     <input
                                         type="text"
-                                        inputmode="decimal"
-                                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                        inputmode="{{ $ruleAmountMode }}"
+                                        placeholder="{{ $ruleAmountPlaceholder }}"
                                         wire:model.lazy="conditions.{{ $i }}.value"
                                         aria-label="{{ $isBetween ? Lang::get('categorization::rule_form.condition_value_from_aria', ['number' => $i + 1]) : Lang::get('categorization::rule_form.condition_value_aria', ['number' => $i + 1]) }}"
                                         class="w-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -104,8 +115,8 @@
                                         <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rule_form.to') }}</span>
                                         <input
                                             type="text"
-                                            inputmode="decimal"
-                                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                            inputmode="{{ $ruleAmountMode }}"
+                                            placeholder="{{ $ruleAmountPlaceholder }}"
                                             wire:model.lazy="conditions.{{ $i }}.value2"
                                             aria-label="{{ Lang::get('categorization::rule_form.condition_value_to_aria', ['number' => $i + 1]) }}"
                                             class="w-28 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -123,6 +134,7 @@
 
                                 <x-core::emoji-action
                                     :label="Lang::get('categorization::rule_form.remove_condition')"
+                                    :caption="Lang::get('categorization::rule_form.remove_condition_caption')"
                                     tone="danger"
                                     wire:click="removeCondition({{ $i }})"
                                     :disabled="count($conditions) <= 1"
@@ -221,6 +233,7 @@
 
                                 <x-core::emoji-action
                                     :label="Lang::get('categorization::rule_form.remove_action')"
+                                    :caption="Lang::get('categorization::rule_form.remove_action_caption')"
                                     tone="danger"
                                     wire:click="removeAction({{ $i }})"
                                     :disabled="count($actions) <= 1"

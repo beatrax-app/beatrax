@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Knjiženo plačilo',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list se ne šteje — tamkajšnja plačila ne spremenijo stanja',
+    ],
+
     'panel' => [
         'aria' => 'Plošča s podrobnostmi dneva',
         'close' => 'Zapri ploščo dneva',
+        'close_caption' => 'Zapri',
         'start_of_day' => 'Začetek dneva',
         'no_payments' => 'Na ta dan ni plačil.',
         'date_approximate' => '~ datum približen',

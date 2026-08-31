@@ -85,7 +85,7 @@ What the module explicitly does NOT do:
     is no single filtered list entry point; each review-page
     state has its own method, plus `cadenceChangedForUser` and
     the unpaged `allApprovedForUser`.
-  - `RecurringSeriesQuery::occurrencesForSeries($seriesId,
+  - `RecurringOccurrenceQuery::occurrencesForSeries($seriesId,
     $user)` — every occurrence row that contributed to the
     series, ordered `observed_at` DESC. This is the read
     `DriftAlerts::DriftEvaluator` consumes; it takes the first
@@ -169,7 +169,7 @@ What the module explicitly does NOT do:
   or the user moved the series is not an audit row.
 - `BusRecurringDetectionDispatcher::dispatchForUser($userId)` —
   dispatches `DetectRecurringSeriesJob` per user.
-- `RecurringSeriesQuery::occurrencesForSeries` — the occurrence
+- `RecurringOccurrenceQuery::occurrencesForSeries` — the occurrence
   read surface `DriftAlerts` consumes. It is not the only method
   `DriftAlerts` calls: `DriftEvaluator` also uses `forSeries` and
   `driftThresholdForSeries`, `DriftAlertQuery` uses
@@ -224,7 +224,7 @@ lookup (skipped when no expense rows surface). The n-plus-one-budget
 feature test enforces ≤ 3 queries for N≥10.
 
 **Transfers ship empty in v1:** neither the expense detector
-(`type='expense'|'fee'|'refund'`) nor the income detector
+(`type='expense'|'fee'`) nor the income detector
 (`type='income'`) reads `transfer_out`/`transfer_in` transactions, so no
 `recurring_series` row currently models a recurring transfer. The empty
 list is reserved structure for future detector work; the `/recurring` page
@@ -246,11 +246,14 @@ of mutating Public Actions, not read services.
 ## Detection algorithm internals
 
 `CadenceInferrer` is a stateless cadence-class inferrer over a
-sorted-ascending list of occurrence timestamps. It returns the snap-band
-cadence (weekly / monthly / quarterly / yearly / irregular), the median
-interval in days, a projected next-expected-at timestamp, a low-confidence
-signal (flagged when the interval stddev exceeds five days), and the
-missed-occurrence count.
+sorted-ascending list of occurrence timestamps. It returns an
+`InferredCadence`: the snap-band cadence (weekly / monthly / quarterly /
+yearly / irregular), the median interval in days, a projected
+next-expected-at timestamp, a low-confidence signal (flagged when the
+interval stddev exceeds five days), and the missed-occurrence count. It
+is a value object rather than a five-key array because the array shape
+had to be restated in a docblock on each of the three callers that pass
+it through, and only two of its keys are read past the detector.
 
 Snap bands cover the four canonical billing cadences personal-finance
 recurring subscriptions land on; intervals outside every band classify as
@@ -269,20 +272,27 @@ refined one) so a noisy cluster with one genuinely-out-of-band outlier
 the filtered series better approximates the underlying cadence once a
 clearly-missed period is discounted.
 
-`ExpenseSeriesDetector` reads transactions of type `expense`, `fee`,
-`refund` for the user inside the detection window (per-user
-`recurring_detection_window_months`, 18-month default) and clusters rows
+`ExpenseSeriesDetector` reads transactions of type `expense` and `fee`
+for the user inside the detection window (per-user
+`recurring_detection_window_months`, two-month default, opened by
+`Modules\Recurring\Public\Support\RecurringDetectionWindow`) and clusters rows
 by `(counterparty_normalized, original_currency)` — original-currency
 clustering keeps a USD subscription stable when the settled-EUR amount
 drifts with FX rate noise. `IncomeSeriesDetector` mirrors this for
-`income`-type transactions, clustering by IBAN first (falling back to
+`income`-type transactions, opening its window through the same
+`RecurringDetectionWindow` — the two passes merge into one series set, so a
+window either of them computed for itself would give that set two different
+spans — and clustering by IBAN first (falling back to
 `counterparty_normalized`) with a minimum-amount floor
-(`recurring_income_min_amount_minor`, default €2000) so small refunds and
+(`recurring_income_min_amount_minor`, defaulting to
+`User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR`, €2000) so small refunds and
 cashbacks never pollute the income-series surface.
 
-Both detectors share the same per-cluster pipeline: apply a
-variance-tolerance filter (default ±25%/expense of the cluster median
-absolute amount) → run `CadenceInferrer` → skip `irregular` cadences →
+Both detectors share the same per-cluster pipeline: run
+`ClusterAmountFilter` (drop rows whose sign disagrees with the cluster's,
+then rows outside ±25% of the cluster median absolute amount, tolerance
+read off any existing series for the pair) → run `CadenceInferrer` →
+skip `irregular` cadences →
 either insert a new `pending` series or refresh metrics on an existing
 one. Approved series whose cadence class flips through a pass transition
 to `cadence_changed` via the state machine, dispatching
@@ -335,17 +345,22 @@ scheduled daemon) and decides whether to pass a session at all; every
 other caller resolving this class through the generic `SeriesDetector`
 interface still compiles and runs unchanged.
 
-**Known plaintext-derivative exception, income path only:** the decrypted
-IBAN is persisted verbatim into the unencrypted
-`recurring_series.cluster_counterparty_key` as a deterministic lookup key
-— random-nonce ciphertext cannot serve as a stable WHERE key, so this
-column is deliberately kept plaintext on that path and recorded as a
-reviewed exception. The **expense** path no longer is: its cluster key is
-whatever `transactions.counterparty_normalized` holds, which for a user
-with at-rest encryption on is a keyed blind index. The income path was left
-alone because its key is recomputed from the transaction's IBAN each sweep
-and never keyed, so converting the stored copy would leave the lookup
-matching nothing. See
+**Both paths store a keyed value, under different domains.** The expense
+cluster key is whatever `transactions.counterparty_normalized` holds,
+which for an encrypted user is a blind index under
+`DOMAIN_COUNTERPARTY_NORMALIZED`. The income path decrypts the IBAN to
+compute its key and then runs it through
+`CounterpartyKey::forIban()` — `DOMAIN_COUNTERPARTY_IBAN` — before
+storing it, because the decrypted IBAN written verbatim put the salary
+payer, the benefits agency and the pension provider back in the clear in
+an unencrypted column.
+
+The two domains are the reason
+`TransactionSeriesMembershipQuery::seriesIdsForTransactionIds()` cannot
+resolve an income series with a plain SQL join: the column it compares
+against, `transactions.counterparty_normalized`, is keyed under the other
+domain. It derives the IBAN key in PHP for the rows the join left
+unresolved. See
 [Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
 
 ## `DetectRecurringSeriesJob` concurrency contract
@@ -398,8 +413,8 @@ explicitly skipped (never invoked) and a warning is logged naming the
 user — `ExpenseSeriesDetector` (which does not depend on
 `counterparty_iban`) still runs unaffected. A non-encrypted user's sweep
 is unaffected either way (the codec's decrypt call is a documented no-op
-pass-through for plaintext). **Known limitation:** until a future phase
-provides a headless-KEK mechanism, an encrypted user's income-series
+pass-through for plaintext). **Known limitation:** with no headless-KEK
+mechanism available, an encrypted user's income-series
 detection only actually clusters via the in-app "Detect now" button — the
 daily background sweep skips the iban-dependent pass for that user and
 logs why, rather than running it and reporting nothing.
@@ -415,10 +430,11 @@ context.
 Per-user scheduled reminder evaluation: emits `PaymentReminderDue` for
 every approved recurring series whose `nextExpectedAt` falls inside
 `[today, today + leadDays]` inclusive, skipping any candidate whose
-before-fire settlement check finds it already paid (`occurrencesForSeries()`
-returns rows ordered `observed_at DESC`, so the first entry's date tells
-whether the due charge already landed and the detector simply hasn't
-re-swept `next_expected_at` forward yet).
+before-fire settlement check finds it already paid
+(`RecurringOccurrenceQuery::latestObservedAtForSeriesIds()` answers the
+newest `observed_at` per series in one read, so that date tells whether the
+due charge already landed and the detector simply hasn't re-swept
+`next_expected_at` forward yet).
 
 `$leadDays` is a constructor parameter, not read from the notification
 store's preference query in here — this module reading that Public
@@ -474,14 +490,24 @@ at the database level.
 (`lockForUpdate()`), writes the new state + `updated_at`, and inserts one
 row in `recurring_series_transitions` carrying the full audit metadata.
 Throws `InvalidStateTransitionException` for an illegal target,
-`InvalidArgumentException` for an unknown actor, and `RuntimeException`
-when the series row is missing. This SQLite contention guard means two
-concurrent sweep jobs that briefly contend on the same series row
-serialise rather than fail. `InvalidStateTransitionException` is caught
-separately from a generic `RuntimeException` so the queued sweep job and
-review-surface actions can distinguish "the state machine rejected this
-transition" (a programming or race condition) from "the row vanished
-mid-flight" (a transient cascade delete).
+`InvalidArgumentException` for an unknown actor, and
+`SeriesRowVanishedException` when the series row is missing under the
+lock. This SQLite contention guard means two concurrent sweep jobs that
+briefly contend on the same series row serialise rather than fail.
+
+Both exceptions are caught where a concurrent move is a normal outcome
+rather than a defect, and only there:
+
+- `DetectRecurringSeriesJob::expireSnoozes()` — `dispatchSync` bypasses
+  the uniqueness lock, so two sweeps overlap on the request path and the
+  loser reads a row that has already moved off `snoozed`. Uncaught, one
+  refused row aborted the whole detection pass.
+- `RecurringReviewPage` — a row can move under a second tab or a sweep
+  between the render and the click. The action writes nothing, raises no
+  toast, and the re-render shows the reader the row's real state instead
+  of a 500.
+
+Neither is caught anywhere a refusal would mean a programming error.
 
 ## Write-action security & idempotency contracts
 

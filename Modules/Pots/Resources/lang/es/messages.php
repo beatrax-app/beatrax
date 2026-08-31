@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Huchas · Beatrax',
     'heading' => 'Huchas',
-    'subtitle' => 'Subsaldos virtuales que siempre suman el saldo real de tu cuenta.',
+    'subtitle' => 'Subsaldos virtuales separados del saldo real de la cuenta.',
     'add_pot' => 'Añadir hucha',
 
     'pot_fallback' => 'hucha',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Mostrar historial ↓',
         'hide' => 'Ocultar historial ↑',
+        'truncated' => 'Movimientos recientes: :shown de :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Retirada',
         'moved_from' => 'Movido desde :name',
         'moved_to' => 'Movido a :name',
+        'unreadable' => 'Registrado por una versión más reciente de Beatrax',
+        'released_on_archive' => 'Liberado al archivar',
     ],
 
     'archived' => [
-        'toggle' => 'Huchas archivadas (:count)',
+        'toggle' => 'Hucha archivada (:count)|Huchas archivadas (:count)',
         'badge' => 'Archivada',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Escribe un nombre para esta hucha.',
         'select_account' => 'Selecciona una cuenta para esta hucha.',
-        'amount_exceeds_unallocated' => 'El importe supera el saldo sin asignar.',
         'amount_exceeds_unallocated_available' => 'El importe supera el saldo sin asignar (:amount disponible).',
         'amount_exceeds_pot_balance' => 'El importe supera el saldo de :name (:amount disponible).',
+        'generic' => 'No se pudo guardar el bote. Revisa los campos e inténtalo de nuevo.',
+        'amount_invalid' => 'Introduce un importe mayor que cero.',
+        'goal_already_linked' => 'Este objetivo ya tiene un bote vinculado activo. Archívalo primero.',
+        'account_cannot_hold_pots' => 'Una hucha necesita una cuenta con dinero. Elige otra cuenta.',
+        'select_target_pot' => 'Selecciona una hucha a la que mover.',
+        'move_target_missing' => 'Esa hucha ya no está disponible. Elige otra.',
+        'move_same_pot' => 'Una hucha no puede moverse dinero a sí misma. Elige otra hucha.',
+        'move_cross_account' => 'Las huchas solo intercambian dinero dentro de una misma cuenta, y :name está en :account.',
+        'pot_missing' => 'Esa hucha ya no está disponible.',
+        'operation_failed' => 'No se ha completado. No se ha movido dinero: inténtalo de nuevo.',
     ],
 
     'toast' => [

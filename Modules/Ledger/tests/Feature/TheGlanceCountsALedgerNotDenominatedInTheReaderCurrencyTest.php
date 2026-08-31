@@ -109,7 +109,7 @@ it('converts the top categories rather than reporting no spend at all', function
         'posted_at' => '2026-05-08', 'category_id' => $category->id,
     ]);
 
-    $rows = $this->topCategories->for($this->fixtureUser, $this->period);
+    $rows = $this->topCategories->for($this->fixtureUser, $this->period)->rows;
 
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->spend->currency())->toBe(Currency::Gbp->value)

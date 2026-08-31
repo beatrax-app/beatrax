@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'E-postadan fişler (isteğe bağlı)',
     'h1' => 'Beatrax satın alma e-postalarını izlesin',
     'lede' => 'Gmail veya Outlook hesabını bağla; sipariş onayları ve abonelik fişleri işlemlerine otomatik olarak eklensin. Bu adımı atlayıp daha sonra da ekleyebilirsin.',
+    'h1_phone' => 'Satın alma e-postaları masaüstünde izlenir',
+    'lede_phone' => 'Sipariş onayları ve abonelik fişleri masaüstü uygulamasında işlemlerine otomatik olarak eklenir ve eşitleme yoluyla bu telefona ulaşır. Bu telefonda hiçbir şey postanı okumaz; bu adımı burada atla ve masaüstünde bağla.',
 
     'mini' => [
         'signin_label' => 'Giriş yap',

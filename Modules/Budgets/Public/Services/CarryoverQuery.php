@@ -24,30 +24,32 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-final class CarryoverQuery
+final readonly class CarryoverQuery
 {
     use CoercesScalars;
 
-    private const DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget->value;
+    private const OverspendMode DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget;
 
     // Fallback when envelope_settings.threshold_percent is null. Resolved here
     // so the nudge job reads EnvelopeRow::$notifyThresholdPercent, never the default.
-    public const DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
+    public const int DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
 
-    private const FUTURE_HORIZON_PERIODS = 12;
+    // Public because BudgetsPage bounds its month-forward control on the same
+    // number: nav past the fold's forward walk limit reads an unfolded period.
+    public const int FUTURE_HORIZON_PERIODS = 12;
 
-    private const MAX_WALK_PERIODS = 1000;
+    private const int MAX_WALK_PERIODS = 1000;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PeriodQuery $periods,
-        private readonly SpendByCategoryQuery $spendByCategory,
-        private readonly ThisPeriodAtAGlanceQuery $glance,
-        private readonly BudgetProgressQuery $budgetProgress,
-        private readonly Clock $clock,
-        private readonly LoggerInterface $log,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CrossCurrencyTotal $fx,
+        private DatabaseManager $db,
+        private PeriodQuery $periods,
+        private SpendByCategoryQuery $spendByCategory,
+        private ThisPeriodAtAGlanceQuery $glance,
+        private BudgetProgressQuery $budgetProgress,
+        private Clock $clock,
+        private LoggerInterface $log,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     // Nothing is budgeted, carried or moved before the first assignment — but
@@ -61,7 +63,7 @@ final class CarryoverQuery
     {
         $settings = $this->envelopeSettings($user);
         $currency = $this->baseCurrency->code();
-        $spendByCategory = $this->spendForPeriod($user, $target, $currency);
+        $spendByCategory = $this->batchSpend($user, [$target], $target)[$target->start->toDateString()] ?? [];
 
         $rows = [];
         $overspentCount = 0;
@@ -82,12 +84,13 @@ final class CarryoverQuery
                 carriedInMinor: 0,
                 netMovedMinor: 0,
                 availableMinor: $available,
-                overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
+                overspendMode: OverspendMode::tryFrom($settings['modes'][$categoryId] ?? '') ?? self::DEFAULT_OVERSPEND_MODE,
                 currency: $currency,
                 unconvertedSpentMinor: $spendByCategory[$categoryId]['unconverted'] ?? 0,
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
+                categoryPath: $naming['path'],
             );
         }
 
@@ -115,21 +118,9 @@ final class CarryoverQuery
             ];
         }
 
-        $currentPeriod = $this->periods->containing($this->clock->now());
-        $maxPeriod = $currentPeriod;
-        for ($i = 0; $i < self::FUTURE_HORIZON_PERIODS; $i++) {
-            $maxPeriod = $this->periods->next($maxPeriod);
-        }
+        $targetBounded = $this->bound($genesisPeriod, $target);
 
-        $targetBounded = $target;
-        if ($targetBounded->start->greaterThan($maxPeriod->start)) {
-            $targetBounded = $maxPeriod;
-        }
-        if ($targetBounded->start->lessThan($genesisPeriod->start)) {
-            $targetBounded = $genesisPeriod;
-        }
-
-        $periodsWalk = $this->walkPeriods($genesisPeriod, $targetBounded);
+        $periodsWalk = $this->walkPeriods($user, $genesisPeriod, $targetBounded);
 
         $expenseCategories = $this->budgetProgress->expenseCategoryNaming($user);
 
@@ -148,16 +139,22 @@ final class CarryoverQuery
         $context = new FoldContext($expenseCategories, $overspendModeByCategory, $notifyThresholdByCategory);
         $result = null;
 
+        // The walk can start at genesis, so reading spend, income and FX per
+        // period cost a round trip per month of the reader's whole history.
+        $span = new Period($periodsWalk[0]->start, end($periodsWalk)->endExclusive, '');
+        $spendByPeriod = $this->batchSpend($user, $periodsWalk, $span);
+        $incomeByPeriod = $this->batchIncome($user, $periodsWalk, $span);
+
         foreach ($periodsWalk as $period) {
             $periodKey = $period->start->toDateString();
             $step = $this->foldPeriod(
-                $user,
-                $period,
                 $context,
                 $assignedByPeriod[$periodKey] ?? [],
                 $movedByPeriod[$periodKey] ?? [],
                 $poolCarry,
                 $carriedIn,
+                $spendByPeriod[$periodKey] ?? [],
+                $incomeByPeriod[$periodKey] ?? 0,
             );
 
             $poolCarry = $step->poolCarry;
@@ -173,19 +170,44 @@ final class CarryoverQuery
         }
 
         if ($result === null) {
-            // Only reachable if MAX_WALK_PERIODS tripped first; target is bounded
-            // to current+12. A degraded read beats a fatal budgets page.
-            $this->log->warning('CarryoverQuery fold hit the walk cap before reaching the target period; returning all-zero.', [
+            // walkPeriods() ends on the target, so this is an invariant break
+            // rather than any input the reader can hold. A degraded read beats
+            // a fatal budgets page.
+            $this->log->warning('CarryoverQuery fold walked a range not containing its own target period; returning all-zero.', [
                 'user_id' => $user->id,
                 'genesis' => $genesisPeriod->start->toDateString(),
                 'target' => $targetBounded->start->toDateString(),
-                'max_walk_periods' => self::MAX_WALK_PERIODS,
+                'walked_from' => $periodsWalk[0]->start->toDateString(),
             ]);
 
             return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
         }
 
         return $result;
+    }
+
+    // The month the fold will answer for, which is not always the one it was
+    // asked for. BudgetsPage renders THIS period rather than the anchor it
+    // resolved, or the heading names one month while the grid draws another.
+    public function boundedPeriodFor(User $user, Period $target): Period
+    {
+        $genesisPeriod = $this->genesisPeriodFor($user);
+
+        return $genesisPeriod === null ? $target : $this->bound($genesisPeriod, $target);
+    }
+
+    private function bound(Period $genesisPeriod, Period $target): Period
+    {
+        $maxPeriod = $this->periods->containing($this->clock->now());
+        for ($i = 0; $i < self::FUTURE_HORIZON_PERIODS; $i++) {
+            $maxPeriod = $this->periods->next($maxPeriod);
+        }
+
+        if ($target->start->greaterThan($maxPeriod->start)) {
+            $target = $maxPeriod;
+        }
+
+        return $target->start->lessThan($genesisPeriod->start) ? $genesisPeriod : $target;
     }
 
     // The one anchor: the fold clamps back-navigation to it and the budgets page
@@ -207,39 +229,52 @@ final class CarryoverQuery
             ->where('id', $user->id)
             ->value('envelope_activated_at');
 
-        return SafeDate::parseOrNull(self::toString($raw)) ?? $this->earliestAssignedPeriodFor($user);
+        return SafeDate::parseOrNull(self::toString($raw)) ?? $this->earliestEnvelopeActivityFor($user);
     }
 
-    // envelope_activated_at is absent from the merge registry, so a device that
-    // joined by pairing has it null forever and reported every synced assignment
-    // as zero. The earliest assigned month is the honest anchor.
-    private function earliestAssignedPeriodFor(User $user): ?CarbonImmutable
+    // The earliest month the reader touched an envelope at all, which moving
+    // money is: read from assignments alone, a reader whose whole history was
+    // moves had no genesis, so every move folded to nought while the button
+    // that made it kept confirming them.
+    private function earliestEnvelopeActivityFor(User $user): ?CarbonImmutable
     {
-        $earliest = $this->db->connection()
-            ->table('envelope_assignments')
-            ->where('user_id', $user->id)
-            ->min('period_start');
+        $earliest = null;
 
-        return is_string($earliest) ? SafeDate::parseOrNull($earliest) : null;
+        foreach (['envelope_assignments', 'envelope_moves'] as $table) {
+            $candidate = $this->db->connection()
+                ->table($table)
+                ->where('user_id', $user->id)
+                ->min('period_start');
+
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $parsed = SafeDate::parseOrNull($candidate);
+            if ($parsed instanceof CarbonImmutable && ($earliest === null || $parsed->lessThan($earliest))) {
+                $earliest = $parsed;
+            }
+        }
+
+        return $earliest;
     }
 
     /**
      * @param  array<int, int>  $assignedByCategory
      * @param  array<int, int>  $movedByCategory
      * @param  array<int, int>  $carriedIn
+     * @param  array<int, array{spent: int, unconverted: int}>  $spendByCategory
      */
     private function foldPeriod(
-        User $user,
-        Period $period,
         FoldContext $context,
         array $assignedByCategory,
         array $movedByCategory,
         int $poolCarry,
         array $carriedIn,
+        array $spendByCategory,
+        int $income,
     ): FoldStep {
         $currency = $this->baseCurrency->code();
-        $spendByCategory = $this->spendForPeriod($user, $period, $currency);
-        $income = $this->glance->incomeForPeriod($user, $period, $currency);
 
         $totalAssignedMoney = Money::ofMinor(0, $currency);
         foreach ($assignedByCategory as $assignedMinor) {
@@ -268,13 +303,14 @@ final class CarryoverQuery
                 ->minus(Money::ofMinor($spent, $currency));
             $available = $availableMoney->toMinor();
 
-            $mode = $context->overspendModeByCategory[$categoryId] ?? self::DEFAULT_OVERSPEND_MODE;
+            $mode = OverspendMode::tryFrom($context->overspendModeByCategory[$categoryId] ?? '')
+                ?? self::DEFAULT_OVERSPEND_MODE;
             $notifyThreshold = $context->notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
             // The overspend modes differ in who absorbs a negative envelope:
             // reduce_to_budget hands the shortfall to the shared pool once per
             // period, carry_negative leaves it in the envelope and off the pool.
-            if ($available < 0 && $mode === self::DEFAULT_OVERSPEND_MODE) {
+            if ($available < 0 && $mode->absorbsShortfallIntoPool()) {
                 $shortfallMoney = $shortfallMoney->plus($availableMoney);
                 $nextCarriedIn[$categoryId] = 0;
             } else {
@@ -299,6 +335,7 @@ final class CarryoverQuery
                 notifyThresholdPercent: $notifyThreshold,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
+                categoryPath: $naming['path'],
             );
         }
 
@@ -311,32 +348,81 @@ final class CarryoverQuery
         );
     }
 
-    /**
-     * @param  array<array-key, mixed>  $spentByKey
-     */
     // Reuses the shared spend query: a fresh GROUP BY would double-count a split
     // transaction, already legs union unsplit parents. Buckets are converted
     // into the currency the fold runs in, and one the rate table cannot reach
     // stays out of it, surfaced beside the row rather than counted at par.
     /**
-     * @return array<int, array{spent: int, unconverted: int}>
+     * @param  list<Period>  $periodsWalk
+     * @return array<string, array<int, array{spent: int, unconverted: int}>>
      */
-    private function spendForPeriod(User $user, Period $period, string $currency): array
+    private function batchSpend(User $user, array $periodsWalk, Period $span): array
     {
-        $buckets = [];
-        foreach ($this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period) as $key => $minor) {
-            [$categoryId, $bucketCurrency] = explode('|', self::toString($key), 2) + [1 => ''];
-            $buckets[(int) $categoryId][$bucketCurrency] = self::toInt($minor);
-        }
+        $currency = $this->baseCurrency->code();
+        $byDay = $this->spendByCategory->forUserAndSpanByCurrencyPerDay($user->id, $span);
 
+        $bucketsByPeriod = [];
         $currencies = [];
-        foreach ($buckets as $byCurrency) {
-            foreach (array_keys($byCurrency) as $bucketCurrency) {
-                $currencies[] = $bucketCurrency;
+        foreach ($periodsWalk as $period) {
+            $buckets = self::bucketsForPeriod($byDay, $period);
+            $bucketsByPeriod[$period->start->toDateString()] = $buckets;
+
+            foreach ($buckets as $byCurrency) {
+                $currencies = array_merge($currencies, array_keys($byCurrency));
             }
         }
+
+        // One rate lookup for the walk: the base currency never changes across
+        // it, so asking per period was the same answer fetched N times.
         $rates = $this->fx->ratesTo($currencies, $currency);
 
+        $spendByPeriod = [];
+        foreach ($bucketsByPeriod as $periodKey => $buckets) {
+            $spendByPeriod[$periodKey] = $this->spendFromBuckets($buckets, $currency, $rates);
+        }
+
+        return $spendByPeriod;
+    }
+
+    // Both ends are 'Y-m-d', so the string order is the calendar order and the
+    // exclusive end has to be compared with >=: a day equal to it belongs to
+    // the next period, and a period that claimed it counted the same spend
+    // twice across the walk.
+    /**
+     * @param  array<string, array<string, int>>  $byDay
+     * @return array<int, array<string, int>>
+     */
+    private static function bucketsForPeriod(array $byDay, Period $period): array
+    {
+        $startKey = $period->start->toDateString();
+        $endKey = $period->endExclusive->toDateString();
+
+        $buckets = [];
+        foreach ($byDay as $day => $keys) {
+            if ($day < $startKey || $day >= $endKey) {
+                continue;
+            }
+
+            foreach ($keys as $key => $minor) {
+                [$categoryId, $bucketCurrency] = explode('|', self::toString($key), 2) + [1 => ''];
+                $buckets[(int) $categoryId][$bucketCurrency]
+                    = ($buckets[(int) $categoryId][$bucketCurrency] ?? 0) + $minor;
+            }
+        }
+
+        return $buckets;
+    }
+
+    // The unconverted figure is summed from the buckets the rate table could
+    // not reach, not from the difference between two totals: a converted total
+    // is rounded and the subtraction would report the rounding as unpriced.
+    /**
+     * @param  array<int, array<string, int>>  $buckets
+     * @param  array<string, string>  $rates
+     * @return array<int, array{spent: int, unconverted: int}>
+     */
+    private function spendFromBuckets(array $buckets, string $currency, array $rates): array
+    {
         $spend = [];
         foreach ($buckets as $categoryId => $byCurrency) {
             $converted = $this->fx->withRates($byCurrency, $currency, $rates);
@@ -353,21 +439,72 @@ final class CarryoverQuery
     }
 
     /**
-     * @return list<Period>
+     * @param  list<Period>  $periodsWalk
+     * @return array<string, int>
      */
-    private function walkPeriods(Period $genesis, Period $target): array
+    private function batchIncome(User $user, array $periodsWalk, Period $span): array
     {
-        $cursor = $genesis;
-        $periods = [$cursor];
-        $guard = 0;
+        $currency = $this->baseCurrency->code();
+        $byDay = $this->glance->incomeForSpanByCurrencyPerDay($user, $span);
 
-        while ($cursor->start->lessThan($target->start) && $guard < self::MAX_WALK_PERIODS) {
-            $cursor = $this->periods->next($cursor);
-            $periods[] = $cursor;
-            $guard++;
+        $byPeriod = [];
+        $currencies = [];
+        foreach ($periodsWalk as $period) {
+            $periodKey = $period->start->toDateString();
+            $totals = [];
+
+            foreach ($byDay as $day => $perCurrency) {
+                if ($day < $periodKey || $day >= $period->endExclusive->toDateString()) {
+                    continue;
+                }
+
+                foreach ($perCurrency as $code => $minor) {
+                    $totals[$code] = ($totals[$code] ?? 0) + $minor;
+                    $currencies[] = $code;
+                }
+            }
+
+            $byPeriod[$periodKey] = $totals;
         }
 
-        return $periods;
+        $rates = $this->fx->ratesTo($currencies, $currency);
+
+        return array_map(
+            fn (array $totals): int => $this->fx->withRates($totals, $currency, $rates)->minor,
+            $byPeriod,
+        );
+    }
+
+    // Built backwards from the target so the month asked for is always folded.
+    // Walking forward from genesis, a cap reached first left the target
+    // unfolded and the grid answered with no envelopes at all — the empty
+    // state that tells a reader to add an expense category, at two dozen.
+    /**
+     * @return non-empty-list<Period>
+     */
+    private function walkPeriods(User $user, Period $genesis, Period $target): array
+    {
+        $periods = [$target];
+        $cursor = $target;
+
+        while ($cursor->start->greaterThan($genesis->start)) {
+            if (count($periods) >= self::MAX_WALK_PERIODS) {
+                $this->log->warning('CarryoverQuery fold reached its walk cap; carry into the oldest period it folded is dropped.', [
+                    'user_id' => $user->id,
+                    'genesis' => $genesis->start->toDateString(),
+                    'folded_from' => $cursor->start->toDateString(),
+                    'target' => $target->start->toDateString(),
+                    'max_walk_periods' => self::MAX_WALK_PERIODS,
+                ]);
+
+                break;
+            }
+
+            $cursor = $this->periods->previous($cursor);
+            $periods[] = $cursor;
+        }
+
+        return array_reverse($periods);
     }
 
     /**

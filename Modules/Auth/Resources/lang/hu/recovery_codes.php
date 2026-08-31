@@ -23,5 +23,6 @@ return [
         'body' => 'A helyreállítási kódok az egyetlen út vissza a fiókodba, ha elfelejted a jelszavad.',
         'warning' => 'Hashelve tároljuk őket, ezért nem jeleníthetők meg újra. Egy új készlet azonnal érvényteleníti a régit.',
         'regenerate' => 'Új kódok létrehozása',
+        'regenerate_confirm' => 'Létrehozol egy új helyreállítási kódkészletet? A mostani készlet abban a pillanatban érvényét veszti, amikor az új elkészül, és többé nem jeleníthető meg — a kinyomtatott vagy leírt példány használhatatlanná válik. Mentsd el az új kódokat, mielőtt elhagynád ezt az oldalt.',
     ],
 ];

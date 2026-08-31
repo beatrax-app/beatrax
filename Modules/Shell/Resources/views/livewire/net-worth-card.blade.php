@@ -2,6 +2,7 @@
 @use('Modules\FX\Public\Support\BundledRates')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\Rate;
 
     $baseCurrency = $netWorth->currency;
 
@@ -34,8 +35,9 @@
         : Lang::get('core::net_worth.stale_old');
 
     // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
-    // (brick/money cross-rate). Render it as a fixed 4-decimal value for the
-    // popover — display only, never used for money math.
+    // (brick/money cross-rate). Rate::forDisplay(), not a fixed four places:
+    // euro-per-yen is 0.00628536 and four decimals wrote 0.0063, two
+    // significant digits, which no longer reaches the ≈ figure beside it.
     $fmtRate = static function (?string $rate): ?string {
         if ($rate === null || $rate === '') {
             return null;
@@ -45,14 +47,10 @@
             if (! is_numeric($num) || ! is_numeric($den) || (float) $den === 0.0) {
                 return null;
             }
-            $value = (float) $num / (float) $den;
-        } elseif (is_numeric($rate)) {
-            $value = (float) $rate;
-        } else {
-            return null;
+            $rate = sprintf('%.'.Rate::SCALE.'F', (float) $num / (float) $den);
         }
 
-        return number_format($value, 4, '.', '');
+        return Rate::of($rate)?->forDisplay();
     };
 @endphp
 

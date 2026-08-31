@@ -12,6 +12,7 @@ return [
         'locked' => 'Otključaj aplikaciju za nastavak postavljanja.',
         'revoked' => 'Ovaj je uređaj uklonjen s vašeg drugog uređaja. Ponovno ga uparite za nastavak sinkronizacije.',
     ],
+    'unlock_cta' => 'Otključaj aplikaciju',
     'step' => [
         'connect' => 'Povezivanje s tvojim drugim uređajem',
         'keys' => 'Primanje ključeva za šifriranje',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Ponovna izgradnja tvoje povijesti',
     ],
     'step_current' => 'trenutni korak',
-    'working' => [
-        'connect' => 'Uspostavljanje veze s tvojim drugim uređajem…',
-        'keys' => 'Otključavanje tvojih podataka…',
-        'transfer' => 'Traženje tvoje povijesti…',
-        'rebuild' => 'Ponovna izgradnja tvoje povijesti — ovo može potrajati minutu.',
-    ],
     'page_title' => 'Postavljanje…',
     'resuming' => 'Nastavak postavljanja…',
     'setting_up' => 'Postavljanje ovog uređaja…',
     'progress_aria' => 'Napredak postavljanja',
     'records' => ':count zapis|:count zapisa|:count zapisa',
-    'records_preparing' => 'Čeka se drugi uređaj…',
 ];

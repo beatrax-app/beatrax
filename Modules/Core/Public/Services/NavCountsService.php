@@ -13,21 +13,49 @@ use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 
-final class NavCountsService
+final readonly class NavCountsService
 {
-    private const CACHE_TTL = 300;
+    private const int CACHE_TTL = 300;
+
+    // Bumped by ForgetNavCountsOnWrite on any write to the tables below, and
+    // folded into every cache key. The documented contract was that each
+    // writing module calls forget(); one out of eight ever did, so seven
+    // badges sat five minutes behind the reader's own action.
+    private const string GENERATION_KEY = 'nav-counts:generation';
+
+    // Badge => the table its count is read from, and through that the single
+    // list of tables a write to which makes every badge stale. A badge added
+    // without an entry here is a badge that never refreshes.
+    private const array TABLES = [
+        'transactions' => 'transactions',
+        'recurring' => 'recurring_series',
+        'counterparties' => 'counterparties',
+        'drift' => 'drift_alerts',
+        'budgets' => 'envelope_assignments',
+        'subscriptions' => 'recurring_series',
+        'imports' => 'import_runs',
+        'tax_tagged' => 'tax_transaction_tags',
+    ];
 
     /** @var list<string> recurring states considered "active". */
-    private const ACTIVE_STATES = [
+    private const array ACTIVE_STATES = [
         RecurringSeriesState::Approved->value,
         RecurringSeriesState::CadenceChanged->value,
     ];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly CacheRepository $cache,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private CacheRepository $cache,
+        private Clock $clock,
     ) {}
+
+    /**
+     * @return list<string>
+     */
+    public static function countedTables(): array
+    {
+        return array_values(array_unique(array_values(self::TABLES)));
+    }
 
     /**
      * @return array<string, int>
@@ -44,6 +72,19 @@ final class NavCountsService
     public function forget(int $userId): void
     {
         $this->cache->forget($this->cacheKey($userId));
+    }
+
+    // Retires every user's entry at once. A household is two accounts, so
+    // recomputing both costs less than working out whose write this was —
+    // and a queued job writes with no authenticated user to attribute it to.
+    public function bumpGeneration(): void
+    {
+        if ($this->cache->increment(self::GENERATION_KEY) === false) {
+            // A store that will not increment a key it does not hold. Seeded
+            // without a TTL on purpose: a generation that expires puts the
+            // reader back on the entries it was bumped to retire.
+            $this->cache->forever(self::GENERATION_KEY, 1);
+        }
     }
 
     /**
@@ -97,21 +138,20 @@ final class NavCountsService
         );
 
         return [
-            'transactions' => $count('transactions'),
-            'recurring' => $count('recurring_series', $active),
-            'counterparties' => $count('counterparties'),
-            'drift' => $count('drift_alerts', $openOrRevived),
-            // The flat category_budgets table is write-dead after the
-            // envelope cutover. The "Budgets" badge now reflects how many
-            // distinct categories the user budgets via envelope_assignments.
-            'budgets' => $countDistinct('envelope_assignments', 'category_id'),
-            'subscriptions' => $count('recurring_series', static fn (Builder $query): Builder => $query->where('direction', Direction::Expense->value)->whereIn('state', self::ACTIVE_STATES)),
-            'imports' => $count('import_runs'),
+            'transactions' => $count(self::TABLES['transactions']),
+            'recurring' => $count(self::TABLES['recurring'], $active),
+            'counterparties' => $count(self::TABLES['counterparties']),
+            'drift' => $count(self::TABLES['drift'], $openOrRevived),
+            // The badge counts how many distinct categories the reader
+            // budgets, so one category assigned in six months is one.
+            'budgets' => $countDistinct(self::TABLES['budgets'], 'category_id'),
+            'subscriptions' => $count(self::TABLES['subscriptions'], static fn (Builder $query): Builder => $query->where('direction', Direction::Expense->value)->whereIn('state', self::ACTIVE_STATES)),
+            'imports' => $count(self::TABLES['imports']),
             // Total tagged transactions for the sidebar badge (lifetime count,
             // no year filter). A raw row count would double-count a transaction
             // that has both a stale whole-tx tag row and leg-scoped tag rows for
             // its splits, so superseded whole-tx rows are excluded here too.
-            'tax_tagged' => $count('tax_transaction_tags', static function (Builder $query) use ($connection): void {
+            'tax_tagged' => $count(self::TABLES['tax_tagged'], static function (Builder $query) use ($connection): void {
                 $query->where(static function (Builder $q) use ($connection): void {
                     $q->whereNotNull('transaction_split_id')
                         ->orWhereNotExists(static function (Builder $sub) use ($connection): void {
@@ -128,6 +168,8 @@ final class NavCountsService
 
     private function cacheKey(int $userId): string
     {
-        return 'nav-counts:'.$userId;
+        $generation = $this->cache->get(self::GENERATION_KEY, 0);
+
+        return 'nav-counts:'.(is_numeric($generation) ? (int) $generation : 0).':'.$userId;
     }
 }

@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Ponle nombre a esta cuenta.',
 
     'ics' => [
+        'name' => 'Tarjeta ICS',
         'heading' => 'Ponle nombre a tu cuenta de tarjeta ICS.',
         'help' => 'Es la primera vez que importas datos de ICS. Ponle un nombre a esta tarjeta para que aparezca igual en toda la app.',
         'placeholder' => 'p. ej. Tarjeta ICS',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Ponle nombre a tu cuenta de PayPal.',
         'help' => 'Es la primera vez que importas datos de PayPal. Ponle un nombre a este monedero para que aparezca igual en toda la app.',
         'placeholder' => 'p. ej. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Ponle nombre a tu cuenta de Google Play.',
+        'help' => 'Es la primera vez que importas un recibo de Google Play. Ponle un nombre a esta cuenta para que aparezca igual en toda la app.',
+        'placeholder' => 'p. ej. Google Play',
     ],
 
     'col_date' => 'Fecha',
@@ -53,28 +62,41 @@ return [
         'error' => 'Error',
     ],
 
-    'chain' => [
-        'heading' => 'Resolviendo cadenas…',
-        'pending' => 'En cola. El resolutor de cadenas empezará en breve.',
-        'running' => 'Enlazando cadenas de financiación y descomponiendo liquidaciones del extracto.',
-        'failed_prefix' => 'La resolución de cadenas ha fallado:',
-        'failed_detail' => 'los detalles están en el registro de trabajos',
-        'open_horizon' => 'Abre Horizon',
-        'failed_suffix' => 'para reintentarlo o revisarlo.',
-    ],
-
     'rows_shown' => 'Filas mostradas: :shown de :total',
 
     'show_more' => 'Mostrar más filas',
 
     'errors' => [
         'app_locked' => 'Desbloquea la aplicación para importar: las claves de cifrado no se pueden usar mientras está bloqueada.',
+        'archive_holds_one_message' => 'Este archivo es un solo mensaje de correo, no un archivo de buzón, así que leído como buzón no tiene nada dentro. Súbelo otra vez con el formato en Mensaje de correo.',
+        'email_file_is_an_archive' => 'Este archivo es un archivo de buzón: contiene más de un mensaje, y leído como un solo mensaje solo tomaría el primero. Súbelo otra vez con el formato en Archivo de buzón.',
         'file_stopped_short' => 'La fila de encabezado coincidía, así que el formato es correcto. La lectura se detuvo antes del final del archivo. Lo provoca una sola fila ilegible, y también un archivo demasiado grande para este dispositivo. Prueba con un periodo más corto.',
         'file_unreadable' => 'No se ha podido leer este archivo.',
+        'file_unreadable_detail' => 'La aplicación no ha podido leer este archivo (:code). Los detalles completos están en el registro de la aplicación; cita este código si informas de un problema.',
         'iban_not_in_preview' => 'Este IBAN no forma parte de la vista previa actual.',
-        'pdf_reader_unavailable' => 'Los extractos en PDF necesitan el programa pdftotext, que no está instalado aquí. Importa este archivo en un escritorio que lo tenga, o usa una exportación CSV de tu banco.',
+        'not_an_email_file' => 'Este archivo no es ni un mensaje de correo ni un archivo de buzón, así que no hay nada en él que leer como recibo. Elige el tipo de importación y el formato que coincidan con tu archivo.',
+        'pdf_has_no_text_layer' => 'Este PDF no contiene texto: es un escaneo o una foto de un extracto, así que no hay nada que leer en él. Descarga el extracto en sí de tu banco, o usa una exportación CSV.',
+        'pdf_password_protected' => 'Este PDF está protegido con contraseña, así que ningún lector puede abrirlo. Guarda una copia sin protección desde tu visor de PDF e importa esa.',
+        'pdf_reader_unavailable' => 'Esta versión de la aplicación no tiene ningún lector de PDF, así que aquí no se puede abrir un extracto en PDF. Importa este archivo en otro dispositivo, o usa una exportación CSV de tu banco.',
+        'row_belongs_to_another_statement' => 'Esta fila pertenece a una transacción de otro archivo de extracto. Importa también ese extracto: los dos se leen juntos.',
         'row_unreadable' => 'No se ha podido leer esta fila.',
+        'row_unreadable_detail' => 'La aplicación no ha podido leer esta fila (:code). Los detalles completos están en el registro de la aplicación; cita este código si informas de un problema.',
         'unknown_account' => 'Esta fila pertenece a una cuenta a la que aún no has puesto nombre.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Este archivo se ha leído como correo',
+        'saved' => 'Lo que traía está abajo, y cada mensaje se ha guardado.',
+        'none_imported' => 'Nada de esto se ha convertido en transacción, así que no se ha añadido nada a tu libro mayor.',
+        'shown' => 'Mensajes mostrados: :shown de :total',
+        'no_subject' => 'Sin asunto',
+
+        'state' => [
+            'read' => 'Leído como pago — confirma esta importación para añadirlo a tu libro mayor.',
+            'not_a_payment' => 'No es un pago. Este mensaje anuncia algo en lugar de confirmar un pago.',
+            'unreadable' => 'Guardado. La app lee recibos de este remitente, pero no ha encontrado importe, comercio ni referencia en el mensaje.',
+            'unknown_sender' => 'Guardado. La app no lee recibos de este remitente, así que no ha tomado nada del mensaje.',
+        ],
     ],
 
     'failed' => [

@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abonementi →',
     'disclaimer' => 'Oficiālās saites no atbalsta datu krājuma — Beatrax jūsu vietā neko neatceļ un nemaina.',
     'dismiss_aria' => 'Aizvērt ieteikumu',
+    'dismiss_caption' => 'Aizvērt',
 
     'insight' => [
         'cheaper_message' => ':name, iespējams, ir lētāks plāns — jūs maksājat :monthly/mēn.',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Usunięte urządzenie',
     'dismiss_peer' => 'Odrzuć to urządzenie',
+    'dismiss_peer_caption' => 'Odrzuć',
     'dismiss_stale' => 'Wyczyść urządzenia, które nie są już sparowane',
     'not_synced_yet' => 'Jeszcze nie zsynchronizowano',
     'error' => 'Błąd synchronizacji na co najmniej jednym urządzeniu',

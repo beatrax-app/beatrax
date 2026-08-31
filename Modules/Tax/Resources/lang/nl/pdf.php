@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Bedrag',
 
     'subtotal' => 'Subtotaal',
+    'subtotal_income' => 'Subtotaal inkomsten',
 
     'footer' => 'Gegenereerd door Beatrax — alleen lokale persoonlijke financiën — :year',
 ];

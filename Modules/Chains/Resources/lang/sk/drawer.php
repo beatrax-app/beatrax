@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Za týmto úsekom sa nenašiel žiadny finančný reťazec.',
 
     'covers_charges' => 'Pokrýva :count platbu ICS|Pokrýva :count platby ICS|Pokrýva :count platieb ICS',
-    'no_ics_charges' => 'V tomto zúčtovaní nie sú žiadne platby ICS',
     'show_more_fanout' => 'Zobraziť ďalšie: :count · :shown z :total',
 
     'confirm' => 'Potvrdiť',
     'reject' => 'Odmietnuť',
     'confirm_aria' => 'Potvrdiť článok reťazca :id',
     'reject_aria' => 'Odmietnuť článok reťazca :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministická',
+        'confirmed' => 'Potvrdené',
+        'candidate' => 'Kandidát',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Istota: deterministická zhoda',

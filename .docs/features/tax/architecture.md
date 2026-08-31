@@ -9,9 +9,14 @@ year override, then rolls those tags up into a per-year cockpit
 ## Year resolution and the override
 
 Every query resolves the *effective* tax year as
-`COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.booked_at) AS
+`COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.posted_at) AS
 INTEGER))`, so a manually-overridden tax year always takes precedence
-over the transaction's booked date. Every read is scoped to the tagging
+over the year of the day the reader paid. `posted_at` and not `booked_at`:
+a card swiped on 31 December books on 1 January, and every corpus that
+ships here files a cash-basis deduction in the year of payment — [which
+day the year is taken
+from](tax-year-resolution.md#which-day-the-year-is-taken-from) carries the
+citations. Every read is scoped to the tagging
 user via `where('tag.user_id', $userId)` as the first filter on every
 query — a structural ownership guard, not a defense-in-depth
 afterthought. [Tax year resolution](tax-year-resolution.md) covers the
@@ -30,6 +35,17 @@ works through the arithmetic; [the tag write
 contract](tag-write-contract.md) covers the supersession rule and the
 uniqueness indexes behind it.
 
+Both rules, and the year expression above, live in
+`Internal\Support\TaggedRowScope` and are applied from there by every
+query in this module that reads tagged rows — the cockpit, the year
+switcher and the dashboard card. They were written out per query before,
+and the dashboard card was missing both: it counted a superseded
+whole-tx tag *and* summed the parent's amount for a leg-scoped one,
+over-reporting against the cockpit it links to. `Core`'s
+`NavCountsService` applies the supersession filter from its own copy —
+the sidebar badge counts these rows from outside the module, so it
+cannot reach `Internal`.
+
 The category name shown for a leg-scoped tag always resolves from
 `tag.deduction_category_id` (the tax deduction category), never from
 the leg's own `category_id` (the spend category on
@@ -42,7 +58,7 @@ conflated.
 the exported CSV and the on-screen cockpit share the same
 COALESCE year-override resolution and can never diverge; the export is
 therefore automatically user-scoped by construction. The CSV emits a
-fixed, tested 17-column order (`tax_year`, `booked_date`, `account`,
+fixed, tested 17-column order (`tax_year`, `posted_date`, `account`,
 `counterparty`, `counterparty_iban`, `description`,
 `deduction_category`, `note`, `settled_amount`, `settled_currency`,
 `original_amount`, `original_currency`, `transaction_type`,
@@ -51,7 +67,11 @@ fixed, tested 17-column order (`tax_year`, `booked_date`, `account`,
 the column could hold dollars: a per-row currency needs a per-row code
 beside it, not a currency in the header — an audit-extra shape
 richer than the on-screen cockpit, meant to be opened directly by an
-accountant. Every cell is passed through `League\Csv\EscapeFormula` to
+accountant. Both money columns are leg-scoped on a leg-scoped tag —
+`original_amount` reported the whole parent beside a leg-sized
+`settled_amount` on exactly the row an accountant opens directly, which
+[tax year resolution](tax-year-resolution.md#amounts-follow-the-tags-scope-not-the-transactions-total)
+works through. Every cell is passed through `League\Csv\EscapeFormula` to
 mitigate spreadsheet formula injection (a cell starting with `=`, `+`,
 `-`, `@`, tab, or CR is prefixed with a single quote), since
 descriptions/counterparties/notes are free text. Money values are
@@ -61,7 +81,10 @@ monetary calculation in this class uses floats.
 
 `TaxPdfRenderer` uses dompdf v3 with `isHtml5ParserEnabled=true`,
 `isRemoteEnabled=false` (local-only app; no remote CSS/image fetches),
-and `defaultFont=Helvetica` (bundled, no network fetch). The PDF Blade
+and `defaultFont=DejaVu Sans` — an *embedded* font, not one of the PDF
+core fourteen. Helvetica is a core font, which means it ships no glyphs
+at all: a reader whose substitute font had no euro sign drew one at the
+core metrics' width, over the first digit of every amount. The PDF Blade
 template (`tax::pdf.export`) is CSS 2.1 table-only layout — no
 Tailwind/Flexbox/Grid, since dompdf's CSS 2.1 engine doesn't support
 them — and every dynamic value uses Blade's `{{ }}` auto-escaping to
@@ -75,6 +98,17 @@ every one of these is ciphertext at rest once encryption is enabled
 for the user. `TaxYearQuery` decrypts each field on read via
 `SensitiveColumnCodec`; the decrypt is a pass-through no-op when
 encryption is not enabled.
+
+The counterparty name gets a second step after that one. A row the
+resolver had to name itself stores the app's own English in
+`display_name`, and `metadata.default_name` says so, so
+`TaxYearQuery::counterpartyName()` and the batch banner's read in
+`TaxTagQuery::untaggedCountForCounterparty()` both hand the decrypted
+value to `CounterpartyDefaultName::resolve()` before it reaches a
+screen, a CSV or a PDF. The order matters and only works this way
+round: the seam reads a plaintext name, and `metadata` is not a
+`SensitiveFieldRegistry` column, so it is readable either way — see
+[the app's own words](../counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name).
 
 ## Tag / untag write contract
 
@@ -216,10 +250,59 @@ row, and treat absence from the result map as "untagged." [The tag
 write contract](tag-write-contract.md) explains what dropping the
 whole-transaction filter breaks, and why the breakage is silent.
 
+Both also select the badge's label as
+`COALESCE(cat.short_name, cat.name)`. `short_name` is optional and only
+the corpus fills it in, so every category a reader adds — from the
+picker's quick-add or from Settings, neither of which asks for one —
+has none, and the badge fell all the way through to the generic
+`tax::badge.default_label`. The row then said "Tax" for a tag that had
+a category, on the one surface that shows the category at all: the
+cockpit, the PDF and the CSV all print `cat.name`.
+
+`TaxCategoryStore` refuses a new category for two unrelated reasons, and both
+arrive as a `RuntimeException`: `DuplicateTaxCategoryNameException` when the
+name is taken, `CategoryPersistenceException` when the row went in and its id
+could not be read back. Both call sites used to take the pair in one arm —
+Settings printed whichever message the throw site carried, so the second one
+reached the reader as *"Failed to retrieve new category id."* in English only,
+and the picker's quick-add swallowed both in silence, leaving the typed name in
+a box that said nothing. They are caught apart now: the clash says
+`errors.name_duplicate`, the persistence failure says
+`errors.category_not_saved`, and the quick-add raises the same sentence as a
+toast rather than nothing at all.
+
+The **per-category subtotal is the deductions subtotal**, not the sum of
+everything filed under the category. The picker lets any tagged row carry a
+deduction category, including an income one, and folding those into one figure
+put sections adding to €1,555.44 under a "Total deductions €1,355.44"
+headline — on the page and, labelled `Subtotal`, in the PDF. `TaxYearQuery`
+buckets each category by currency twice, deductions and income apart;
+`subtotalMinor` and `incomeSubtotalMinor` reach the renderers separately, and
+both surfaces print the income figure beside the subtotal rather than inside
+it, exactly as the year-totals strip already did.
+
+The headline is then **the sum of those sections**, not a second conversion of
+the same rows. Converting the year's bucket and each section's slice of it
+separately is enough to round them apart: three USD3.33/3.33/3.34 sections each
+round down where the whole USD10.00 rounds up, and the page printed sections a
+cent under the figure above them — the same drift
+[`CrossCurrencyTotal::distribute()`](../fx/architecture.md) exists to prevent
+and that `Reports`' `CurrencyModeApplier` and `Ledger`'s
+`ConvertedSpendByCategory` already call it for. `TaxYearQuery` groups by
+currency, converts each currency's whole bucket once, and hands the difference
+back to the sections, so they add up to their headline by construction.
+
 `summaryForUser()`'s `totalMinor` is the deductions total only
 (non-income rows), while `count` covers every tagged item regardless of
 type — the two deliberately describe different sets of rows, as
-[tax year resolution](tax-year-resolution.md) sets out.
+[tax year resolution](tax-year-resolution.md) sets out. It applies the
+same supersession filter and the same leg-aware amount the cockpit
+does, from `TaggedRowScope`, so the card and the page it links to agree
+on both figures by construction rather than by two queries happening to
+say the same thing. `TaxYearSummary::isPartial()`/`unconvertedList()` name
+the currencies left out of the figure for want of a rate, and the dashboard
+tile calls them: it stated a smaller total than `/tax` and, unlike `/tax`,
+did not say why.
 
 ## Year cockpit (`/tax`)
 
@@ -227,7 +310,19 @@ type — the two deliberately describe different sets of rows, as
 previous year and May-December to the current year (matching the
 Dutch `aangifte` filing season) when no `?year=` query param is
 present; the `#[Url]` attribute makes the resolved year deep-linkable
-and back-button-safe. The "first visit" guided empty state is driven
+and back-button-safe. A year that *is* given is clamped to
+`Public\Support\TaxYearBounds` — the same current-year ±10 window
+`TagTransaction` bounds `tax_year_override` to, because `?year=` is the
+same figure arriving by a different door. `Tax -1` and `Tax 100000` both
+rendered a heading, a year switcher and an empty cockpit for a year no tag
+can be filed under. The clamp runs in `mount()` for the URL and again in
+`render()` for the switcher's `$set`, which never passes through `mount()`.
+
+The layout writes `<title>` once, on the full page load, so the in-page year
+switcher left the browser tab and the desktop app's OS window naming the year
+the reader had just left. `render()` builds the title string once and passes
+it both to the layout and to the page, where a `wire:key`-ed element re-titles
+the document on every year the morph replaces it for. The "first visit" guided empty state is driven
 by whether the reader has a country, read through `UserCountry`
 (the column isn't typed on `User`, and the seam is the only reader of
 it). Both `exportCsv()`/`exportPdf()` pass only the acting
@@ -303,6 +398,11 @@ singleton `TaxServiceProvider` binds and constructs a fresh internal
 instance per call, so external consumers (TaxPage, exporters, the
 year-switcher, other modules' tax-tagging surfaces) never reach into
 `Modules\Tax\Internal\*`.
+
+`Internal/Support/TaggedRowScope` sits behind both: it is the module's
+only definition of the effective-year expression, the leg-aware settled
+amount, and the supersession filter, and `Public/Services/TaxTagQuery`
+reaches into it directly (same module, so `Internal` is not crossed).
 
 `Public/Http/Livewire/Concerns/HandlesTaxTagging` is the shared trait
 any Livewire component embeds to get tax-tag state + the tag/untag

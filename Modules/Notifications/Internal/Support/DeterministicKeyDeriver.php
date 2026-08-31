@@ -4,32 +4,25 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
+use Modules\Notifications\Public\Enums\NotificationTrigger;
+
 final class DeterministicKeyDeriver
 {
-    public const TRIGGER_IMPORT_FINISHED = 'import_finished';
+    // The derived id is the dedupe key, so whatever tells two notifications
+    // apart has to be inside the subject. Two accounts dipping on one day share
+    // (user, trigger, occurrence): under a bare 'forecast' they collapsed onto
+    // one row and the second account's shortfall was never announced.
+    public static function forecastShortfallSubject(int $accountId): string
+    {
+        return 'forecast:account:'.$accountId;
+    }
 
-    public const TRIGGER_RECEIPTS_FOUND = 'receipts_found';
-
-    public const TRIGGER_DRIFT_CHANGED = 'drift_changed';
-
-    public const TRIGGER_FORECAST_SHORTFALL = 'forecast_shortfall';
-
-    public const TRIGGER_PAYMENT_REMINDER = 'payment_reminder';
-
-    public const TRIGGER_POSITION_DIGEST = 'position_digest';
-
-    public const TRIGGER_BUDGET_NUDGE = 'budget_nudge';
-
-    public const TRIGGER_SAVINGS_PROMPT = 'savings_prompt';
-
-    public const TRIGGER_ICS_STATEMENT_READY = 'ics_statement_ready';
-
-    public function derive(int $userId, string $triggerType, string $subjectKey, string $occurrence): string
+    public function derive(int $userId, NotificationTrigger $trigger, string $subjectKey, string $occurrence): string
     {
         $payload = json_encode(
             [
                 'user_id' => $userId,
-                'trigger_type' => $triggerType,
+                'trigger_type' => $trigger->value,
                 'subject_key' => $subjectKey,
                 'occurrence' => $occurrence,
             ],

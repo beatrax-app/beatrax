@@ -9,12 +9,13 @@ fails when it is not.
 ## The seam
 
 `Modules\Core\Public\Support\Lang` is the only translator views and components
-call. It has two methods and the difference between them is the whole subject:
+call. Which of its reads a line takes is the whole subject:
 
 | Call | When |
 |---|---|
 | `Lang::get($key, $replace)` | The line's wording does not depend on a number |
 | `Lang::choice($key, $number, $replace)` | It does |
+| `Lang::arms(...$keys)` | It does, and the number is only known in the browser |
 
 `choice()` fills `:count` from `$number` itself, so a line whose only
 placeholder is the count needs no `$replace` at all. Any *other* placeholder in
@@ -65,6 +66,15 @@ which no locale here selects on — is written as an explicit `{0}` range
 instead. Those are matched against the number before the rule table is
 consulted, so they are exempt from the ceiling. Bulgarian and Hungarian use
 them for exactly that.
+
+A range does **not** shift the segments after it. `MessageSelector::choose()`
+tries every range first; failing that it calls `stripConditions()`, which
+takes the prefixes off but keeps the whole list, and the rule index then
+addresses that list. So `{0} …|A|B` in a two-form locale reaches `{0}` at 0
+and `A` at 1, and `B` is dead. The ceiling is therefore not "count the
+unranged segments" but "no segment past the count the table selects between,
+unless it carries a range of its own" — which is what the arch test asserts,
+using `MessageSelector`'s own range regex so the two spellings cannot drift.
 
 ## Where the numeral lives
 
@@ -151,6 +161,49 @@ tag, so a badge's `aria-label` is not read as the next badge's noun, and both
 allow exactly one closing tag between the two — a numeral in its own `<span>`
 is still standing next to the word it counts.
 
+## A number the template formats
+
+Both rules above read the count off a **variable name**, and there are three
+spellings they cannot see: `Fmt::number($n)`, `number_format($n)` and
+`count($rows)`. The count is inside the parentheses, and what stands beside the
+translated line is a call.
+
+```blade
+{{ Fmt::number($mappingsCount) }} {{ Lang::get('community::settings.mappings') }}
+```
+
+That shipped `1 Mappings`. So did `<strong>{{ count($diff['new']) }}</strong>
+{{ Lang::get('…diff_new') }}` over the fragment `'new,'`, and a prefix/number/
+suffix trio over `'Matches'` and `'transactions in your recent history.'`.
+
+A third rule matches the call rather than a name, because a formatted number is
+unambiguous: nothing formats a value that way except to show a reader a
+quantity. The fix does not change — the numeral moves into the line and the site
+reads `Lang::choice()`, which fills `:count` through `Fmt::number()` itself, so
+the grouping marks the call site was reaching for arrive with it:
+
+```blade
+{{ Lang::choice('community::settings.mappings', $mappingsCount) }}
+```
+
+Where the phrase carries a **second** number, that one stays a replacement and
+the line is chosen on whichever number the wording agrees with:
+
+```php
+'backfill_progress' => ':fetched / ~:count message|:fetched / ~:count messages',
+```
+
+```blade
+{{ Lang::choice('email-scan::inboxes.backfill_progress', $total, ['fetched' => Fmt::number($fetched)]) }}
+```
+
+A sentence built from a translated prefix, a number and a translated suffix is
+the same rule's other half. The split pins numeral-then-noun for twenty-six
+languages at once and hands each translator a fragment they cannot reorder,
+decline, or move the numeral inside. Collapsing the three into one line is the
+fix, and the rule sees it because the numeral is still standing beside a
+translated line.
+
 ## A phrase carrying a count and a cap
 
 "2/3 pinned" is worse than a bare adjective, because the word agrees with
@@ -211,13 +264,75 @@ because each placeholder holds a self-contained phrase. Keep the frame free of
 case government where the target languages decline — a colon list reads well in
 all of them.
 
+## A count the browser works out
+
+`Lang::choice()` needs the number, and a count Alpine tallies — rows matched,
+digits typed, log files on disk — does not exist while PHP renders. That is a
+real constraint and not a licence: the palette shipped "See all 1 results" to a
+phone by concatenating a prefix, the number and a suffix in JavaScript, and no
+rule reading lang files could see it because no lang file held a counted line.
+
+Three answers, in order of preference.
+
+**The count is bounded.** Render every announcement server-side and index it.
+The lock screen's PIN pad holds at most ten digits, so it renders eleven lines
+through `Lang::choice()` and Alpine picks one:
+
+```blade
+@php
+    $digitAnnouncements = array_map(
+        static fn (int $count): string => Lang::choice('mobile::lock.digits_entered', $count, ['count' => $count]),
+        range(0, 10),
+    );
+@endphp
+<div x-bind:aria-label="@js($digitAnnouncements)[pin.length]">
+```
+
+**The count is unbounded.** `Lang::arms()` hands the browser the line's arms and
+the reader locale's own plural index table, and the `$plural` magic reads it:
+
+```blade
+<span x-text="$plural(arms, 'dev::palette.results', results.length)"></span>
+```
+
+Both halves come from Laravel's `MessageSelector`, so no plural rule is written
+twice. The table holds one entry per number below a hundred and one per residue
+above it, which is exact because no rule in `MessageSelector` compares the
+number itself to anything that large — asserted in
+[the test](../../Modules/DevMode/tests/Feature/ACountedPhraseTheBrowserAssemblesPicksTheReadersArmTest.php)
+rather than trusted, because a rule added later that does would make every large
+count pick the wrong arm. That test runs the shipped `resources/js/lang.js`
+under Node against every locale and compares it to `trans_choice`.
+
+A line read this way may not carry a `{0}` or `[2,*]` range: a range is matched
+against the number before the rule table is consulted at all, and it can name a
+number past the end of the table. `Lang::arms()` throws rather than ship an arm
+chosen a different way in the browser than on the server.
+
+**No count is involved, only a value.** A line whose placeholder is filled
+client-side stays one line with the placeholder in it, read through `$line`:
+
+```blade
+<div x-text="$line(@js(Lang::get('dev::palette.no_transactions')), { query })"></div>
+```
+
+What is refused, in the browser as in PHP, is `n === 1 ? a : b`. It is English's
+two forms written where no locale rule can reach them, and it passes an English
+test while answering wrongly for Slovenian at 3, Polish at 5 and Latvian at 0.
+
+Two arch rules hold the seam, both reading Alpine expression attributes: a
+translated line joined by `+` to anything is a sentence assembled from
+fragments, and an Alpine-rendered count standing beside a translated line in the
+template is the numeral-then-noun order pinned one layer out from where the PHP
+rules catch it.
+
 ## Rewording is a fix
 
 Moving the noun out of agreement position is as legitimate as pluralising, and
 is the better answer where no plural selector can run:
 
-- `core::components.file.count` is interpolated by Alpine in the browser, where
-  no locale rule table exists. It reads `Files selected: :count`.
+- `core::components.file.count` is interpolated by Alpine in the browser and its
+  count needs no agreement at all. It reads `Files selected: :count`.
 - A badge whose entire content is a quantity often reads better as a label.
 
 What is not a fix is a comparison in PHP. `count($x) === 1 ? Lang::get($a) :

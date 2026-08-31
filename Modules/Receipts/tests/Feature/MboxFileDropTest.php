@@ -25,7 +25,7 @@ it('iterates a 3-message mbox archive and routes each through the matcher pipeli
     $file = UploadedFile::fake()->createWithContent('paypal-mixed.mbox', $mboxBytes);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'email-file')
+        ->set('importType', 'email')
         ->set('sourceFormat', 'mbox')
         ->set('file', $file)
         ->call('submit')

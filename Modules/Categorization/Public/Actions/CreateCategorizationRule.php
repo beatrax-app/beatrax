@@ -13,13 +13,13 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\QueryFailure;
 
-final class CreateCategorizationRule
+final readonly class CreateCategorizationRule
 {
     use NormalisesRuleInput;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     // $input->conditions/$input->actions are untrusted, caller-supplied

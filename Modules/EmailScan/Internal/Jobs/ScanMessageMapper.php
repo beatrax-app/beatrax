@@ -10,9 +10,9 @@ use Throwable;
 
 // Owns the project Clock so every unparseable-date fallback here honours
 // frozen time.
-final class ScanMessageMapper
+final readonly class ScanMessageMapper
 {
-    public function __construct(private readonly Clock $clock) {}
+    public function __construct(private Clock $clock) {}
 
     // Only messagesAdded carries a fetchable id; the messagesDeleted and
     // labelAdded shapes are ignored.

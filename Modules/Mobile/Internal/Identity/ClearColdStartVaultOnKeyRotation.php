@@ -6,10 +6,10 @@ namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 
-final class ClearColdStartVaultOnKeyRotation
+final readonly class ClearColdStartVaultOnKeyRotation
 {
     public function __construct(
-        private readonly ColdStartEnrollmentService $enrollment,
+        private ColdStartEnrollmentService $enrollment,
     ) {}
 
     public function handle(AppLockPassphraseChanged $event): void

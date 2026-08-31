@@ -93,6 +93,11 @@ it('composes a swept cluster_key exactly as ClusterKeyComposer would', function 
 })->with([
     'income payer IBAN' => [Direction::Income->value, 'NL22INGB0006543210'],
     'expense merchant key' => [Direction::Expense->value, 'spotify ab'],
+    // CounterpartyKeyBackfill carries its own copy of normalisePart() and that
+    // copy is ASCII-only, so these two pin the claim the copy relies on: the
+    // sweep keys the counterparty before it composes, and a keyed value is hex.
+    'expense merchant key in Cyrillic' => [Direction::Expense->value, 'мосэнерго'],
+    'expense merchant key with an ampersand' => [Direction::Expense->value, 'a&b'],
 ]);
 
 // A digest is 64 characters and normalisePart() caps a part at 60, so the

@@ -16,7 +16,9 @@ return [
         'budget' => 'Biudžeto mėnesiai',
     ],
 
-    'all_clean' => 'Viskas susieta švariai — prieš patvirtinant tavo dėmesio niekas nereikalauja.',
+    'all_clean' => 'Viskas susieta švariai — čia nėra ko spręsti.',
+
+    'nothing_staged' => 'Šiame eksporte nebuvo ko importuoti — čia nėra ką patvirtinti.',
 
     'groups' => [
         'conflict' => 'Reikia tavo sprendimo',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Aukščiau parodytas įrašų kiekis bus sukurtas arba atnaujintas tavo kategorijose, biudžetuose ir didžiojoje knygoje.',
     'discard_button' => 'Atmesti importą',
+    'discard_confirm' => 'Atmesti šį importą? Viskas, kas nuskaityta iš tavo eksporto failo, čia ištrinama, o susigrąžinti tai galima tik iš naujo įkėlus ir apdorojus visą failą. Į didžiąją knygą dar nieko nepateko.',
     'confirm_button' => 'Patvirtinti importą',
 ];

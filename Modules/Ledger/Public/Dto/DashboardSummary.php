@@ -12,7 +12,6 @@ use Spatie\LaravelData\Data;
 final class DashboardSummary extends Data
 {
     /**
-     * @param  array<TopCategoryRow>  $topCategories
      * @param  array<TransactionRowDto>  $recentTransactions
      * @param  list<string>  $unconvertedCurrencies  codes left out of the tiles for want of a rate
      */
@@ -21,7 +20,7 @@ final class DashboardSummary extends Data
         public readonly Money $inflow,
         public readonly Money $outflow,
         public readonly Money $net,
-        public readonly array $topCategories,
+        public readonly TopCategories $topCategories,
         public readonly array $recentTransactions,
         public readonly int $uncategorizedCount,
         public readonly bool $isFirstRun,

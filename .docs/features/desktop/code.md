@@ -16,6 +16,7 @@ Modules/Desktop/
 ├── Internal/
 │   ├── NativeAppServiceProvider.php
 │   ├── Native/
+│   │   ├── BoundedNativeApiClient.php
 │   │   ├── FirstLaunchBootstrap.php
 │   │   ├── AppMenuBuilder.php
 │   │   ├── WindowCloseBehavior.php
@@ -77,7 +78,11 @@ separate, longer-lived UI element.
 - `Internal/NativeAppServiceProvider` — the second provider this
   module registers. Owns the NativePHP-side bindings: the
   close-intercept hook, the persistent menu, and the desktop
-  shell's bootstrap.
+  shell's bootstrap. `phpIni()` is the bundle's whole ini override
+  set — the 20M upload pair, the 120s execution ceiling, and
+  `zend.exception_ignore_args=1`, without which anything rendering a
+  stack trace writes the first 15 characters of every string
+  argument into the daily log.
 - `Internal/Native/FirstLaunchBootstrap` — `runPendingMigrations()`
   chains the framework migrator with `Core::EnsureAppKey`. Both steps
   idempotent on every launch.
@@ -93,6 +98,10 @@ separate, longer-lived UI element.
   focused / blurred flag. Flipped by closures registered in the
   provider's boot on `WindowFocused` / `WindowBlurred`.
 - `Internal/Native/OsThemeProbe` — concrete `OsThemeSignal`.
+- `Internal/Native/BoundedNativeApiClient` — bound over NativePHP's
+  `Client` in `DesktopServiceProvider`, holding every Electron API
+  call to 15 seconds against the vendor's hour. `system/prompt-touch-id`
+  is widened to 120s because that one waits on a person.
 - `Internal/Native/FileOpenIntake::receive(string $path)` — the
   security boundary. Canonicalises with realpath, then checks the
   extension allow-list and the per-extension size cap; raises

@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Hela historiken.',
     'subtitle_recent' => 'Senaste transaktionerna (senaste 90 dagarna).',
 
-    'currency_aria' => 'Valutavy',
-    'currency_eur' => 'Endast :code',
-    'currency_original' => 'Ursprunglig valuta',
+    'currency_aria' => 'Visat belopp',
+    'currency_eur' => 'Reglerat belopp',
+    'currency_original' => 'Ursprungligt belopp',
 
     'show_recent' => 'Visa endast de senaste',
     'show_full' => 'Visa hela historiken',
 
     'empty_period' => 'Inget här för den här perioden.',
 
+    'empty_recent_has_older' => 'Inget de senaste 90 dagarna. Dina äldre transaktioner finns kvar.',
+
+    'empty_history' => 'Inga transaktioner ännu.',
     'loading_more' => 'Laddar fler transaktioner',
     'load_more' => 'Ladda fler',
 

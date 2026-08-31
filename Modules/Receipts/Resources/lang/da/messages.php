@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Slip en e-mail (.eml) eller et postkassearkiv (.mbox). Matcheren genkender PayPal-kvitteringer og viser dem som kanoniske transaktioner; afsendere uden match bliver liggende i revisionsloggen til sortering.',
-    ],
-
     'conflict' => [
 
         'field' => [

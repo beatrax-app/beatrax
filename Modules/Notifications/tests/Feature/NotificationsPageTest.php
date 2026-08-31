@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 
 uses(RefreshDatabase::class);
 
@@ -36,7 +36,7 @@ function npInsertNotification(DatabaseManager $db, int $userId, string $id, arra
         'title' => 'Import finished',
         'body' => '3 transactions imported.',
         'params' => json_encode(['target_kind' => 'dashboard'], JSON_THROW_ON_ERROR),
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        'trigger_type' => NotificationTrigger::ImportFinished,
         'created_at' => '2026-07-18 09:00:00',
         'updated_at' => '2026-07-18 09:00:00',
     ], $overrides));

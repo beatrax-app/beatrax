@@ -94,6 +94,10 @@ return [
         'heading' => 'Fejlesztő',
         'open_console' => 'Fejlesztői konzol megnyitása',
         'pulse' => 'Várólista :queue · Worker :worker',
+        // i18n-review: hu · dev.worker_ago — the instrumental suffix on an SI symbol
+        // is correct Hungarian (5 km-rel), but reads formally for a compact pulse.
+        // A native reader may want the spelled unit, :count mp, instead.
+        'worker_ago' => ':count s-mal ezelőtt|:count s-mal ezelőtt',
     ],
 
     'account' => [

@@ -13,6 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
+use Modules\Auth\Internal\Lock\AppLockPinShape;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -73,8 +74,8 @@ final class LockScreen extends Component
         ColdStartVault $vault,
         MobileLockGateway $gateway,
     ): void {
-        if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
-            $this->flashMessage = Lang::get('auth::lock_screen.error_too_short');
+        if (! AppLockPinShape::isWellFormed($pin)) {
+            $this->flashMessage = Lang::get('auth::lock_screen.error_pin_shape', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]);
 
             return;
         }

@@ -10,10 +10,10 @@ use Native\Desktop\Events\App\OpenFile;
 // Bridges NativePHP's macOS app.on('open-file') event — and the argv /
 // second-instance paths the published Electron main.js extends to Windows and
 // Linux — to FileOpenIntake.
-final class HandleNativeOpenFile
+final readonly class HandleNativeOpenFile
 {
     public function __construct(
-        private readonly FileOpenIntake $intake,
+        private FileOpenIntake $intake,
     ) {}
 
     public function handle(OpenFile $event): void

@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
@@ -22,7 +23,7 @@ beforeEach(function (): void {
     // Genesis anchor well before "current" so the copy-last-month fixtures
     // below always have a real prior period to read from.
     DB::table('users')->where('id', $this->user->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
     ]);
 
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'envgrid-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
@@ -92,7 +93,7 @@ it('toggles the overspend mode for an envelope', function (): void {
         ->call('setOverspendMode', $this->groceries->id, 'carry_negative');
 
     $rows = $component->viewData('rows');
-    expect($rows[$this->groceries->id]->overspendMode)->toBe('carry_negative');
+    expect($rows[$this->groceries->id]->overspendMode)->toBe(OverspendMode::CarryNegative);
 });
 
 it('copies last months assignments only when the selected month has none and the prior month has some', function (): void {

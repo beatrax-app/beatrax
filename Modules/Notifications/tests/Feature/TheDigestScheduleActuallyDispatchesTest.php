@@ -2,43 +2,68 @@
 
 declare(strict_types=1);
 
-use Illuminate\Console\Scheduling\Event as ScheduledEvent;
-use Illuminate\Console\Scheduling\Schedule;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Modules\Core\Models\User;
+use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
 use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
+use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 
-// ScheduleWiringTest proves the entry is registered at the right minute.
-// Nothing ran the closure, so an argument the callee cannot accept stayed
-// invisible: the scheduler reports the throw and the digest never fires.
+// ScheduleWiringTest proves the entry is registered on a minute the phone's
+// runner can express. Nothing ran the work, so an argument the callee cannot
+// accept stayed invisible: the scheduler reports the throw and nothing fires.
 
-function tdsRun(string $description): void
+function tdsReader(string $username): User
 {
-    /** @var Schedule $schedule */
-    $schedule = app(Schedule::class);
-
-    foreach ($schedule->events() as $event) {
-        /** @var ScheduledEvent $event */
-        if ($event->description === $description) {
-            $event->run(app());
-
-            return;
-        }
-    }
-
-    throw new RuntimeException('No scheduled entry named '.$description);
-}
-
-it('dispatches a position digest for each user when the schedule fires', function (): void {
-    Bus::fake();
-
-    User::query()->create([
-        'username' => 'tds-reader',
+    return User::query()->create([
+        'username' => $username,
         'password' => 'fixture',
         'period_start_day' => 1,
     ]);
+}
 
-    tdsRun('notifications.digest');
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
 
+it('dispatches all three daily triggers for each user once the local window opens', function (): void {
+    CarbonImmutable::setTestNow('2026-08-29 09:15:00');
+    Bus::fake();
+
+    tdsReader('tds-reader');
+
+    Artisan::call('notifications:daily-triggers');
+
+    Bus::assertDispatched(EmitPaymentRemindersJob::class);
     Bus::assertDispatched(EmitPositionDigestJob::class);
+    Bus::assertDispatched(EmitSavingsPromptsJob::class);
+});
+
+// The runner has no wall clock, so the command ticks all day and the gate is
+// the only thing standing between a 09:15 digest and a 00:15 one.
+it('dispatches nothing before the local window opens', function (): void {
+    CarbonImmutable::setTestNow('2026-08-29 00:15:00');
+    Bus::fake();
+
+    tdsReader('tds-early-reader');
+
+    Artisan::call('notifications:daily-triggers');
+
+    Bus::assertNotDispatched(EmitPositionDigestJob::class);
+});
+
+it('dispatches once per local day, however many times the runner fires it', function (): void {
+    CarbonImmutable::setTestNow('2026-08-29 09:15:00');
+    Bus::fake();
+
+    tdsReader('tds-repeat-reader');
+
+    Artisan::call('notifications:daily-triggers');
+    CarbonImmutable::setTestNow('2026-08-29 09:30:00');
+    Artisan::call('notifications:daily-triggers');
+    CarbonImmutable::setTestNow('2026-08-29 23:45:00');
+    Artisan::call('notifications:daily-triggers');
+
+    Bus::assertDispatchedTimes(EmitPositionDigestJob::class, 1);
 });

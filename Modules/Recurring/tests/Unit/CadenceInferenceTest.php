@@ -40,14 +40,14 @@ function cinfNextExpected(array $dates): string
 {
     $result = (new CadenceInferrer)->infer(cinfPostings($dates));
 
-    return $result['next_expected_at']?->toDateString() ?? 'null';
+    return $result->nextExpectedAt?->toDateString() ?? 'null';
 }
 
 it('infers the expected cadence band', function (array $intervals, string $expectedCadence): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', $intervals));
 
-    expect($result['cadence']->value)->toBe($expectedCadence);
+    expect($result->cadence->value)->toBe($expectedCadence);
 })->with([
     'weekly · four points · 7d gaps' => [[7, 7, 7], 'weekly'],
     'weekly · lower boundary · 9d gaps' => [[9, 9, 9], 'weekly'],
@@ -70,24 +70,24 @@ it('flags confidence_low when interval stddev exceeds 5 days', function (): void
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [25, 30, 35, 40]));
 
-    expect($result['cadence']->value)->toBe('monthly');
-    expect($result['confidence_low'])->toBeTrue();
+    expect($result->cadence->value)->toBe('monthly');
+    expect($result->confidenceLow)->toBeTrue();
 });
 
 it('leaves confidence_low false on tight monthly intervals', function (): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [30, 30, 30, 30]));
 
-    expect($result['cadence']->value)->toBe('monthly');
-    expect($result['confidence_low'])->toBeFalse();
+    expect($result->cadence->value)->toBe('monthly');
+    expect($result->confidenceLow)->toBeFalse();
 });
 
 it('counts intervals above the 1.8x missed-interval multiplier as missed', function (): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [30, 65, 30, 30]));
 
-    expect($result['cadence']->value)->toBe('monthly');
-    expect($result['missed_count'])->toBe(1);
+    expect($result->cadence->value)->toBe('monthly');
+    expect($result->missedCount)->toBe(1);
 });
 
 it('projects next_expected_at one cadence step past the last posting', function (array $postings, string $expected): void {
@@ -116,9 +116,9 @@ it('projects one month past the last posting when a monthly series skipped two p
     $postings = ['2026-03-01', '2026-04-01', '2026-05-01', '2026-06-01', '2026-09-01'];
     $result = (new CadenceInferrer)->infer(cinfPostings($postings));
 
-    expect($result['cadence']->value)->toBe('monthly');
-    expect($result['missed_count'])->toBe(1);
-    expect($result['next_expected_at']?->toDateString())->toBe('2026-10-01');
+    expect($result->cadence->value)->toBe('monthly');
+    expect($result->missedCount)->toBe(1);
+    expect($result->nextExpectedAt?->toDateString())->toBe('2026-10-01');
 });
 
 it('still flags a widening monthly series low-confidence and still steps the cadence', function (): void {
@@ -127,36 +127,53 @@ it('still flags a widening monthly series low-confidence and still steps the cad
     $postings = ['2026-01-01', '2026-01-26', '2026-02-25', '2026-03-31', '2026-05-10'];
     $result = (new CadenceInferrer)->infer(cinfPostings($postings));
 
-    expect($result['cadence']->value)->toBe('monthly');
-    expect($result['confidence_low'])->toBeTrue();
-    expect($result['next_expected_at']?->toDateString())->toBe('2026-06-01');
+    expect($result->cadence->value)->toBe('monthly');
+    expect($result->confidenceLow)->toBeTrue();
+    expect($result->nextExpectedAt?->toDateString())->toBe('2026-06-01');
 });
 
 it('leaves an irregular cluster with no projection at all', function (): void {
     $postings = ['2024-01-01', '2024-01-06', '2024-02-15', '2024-04-25', '2024-08-23'];
     $result = (new CadenceInferrer)->infer(cinfPostings($postings));
 
-    expect($result['cadence']->value)->toBe('irregular');
-    expect($result['next_expected_at'])->toBeNull();
-    expect($result['confidence_low'])->toBeTrue();
-    expect($result['median_interval_days'])->toBe(40.0);
-    expect($result['missed_count'])->toBe(1);
+    expect($result->cadence->value)->toBe('irregular');
+    expect($result->nextExpectedAt)->toBeNull();
+    expect($result->confidenceLow)->toBeTrue();
+    expect($result->medianIntervalDays)->toBe(40.0);
+    expect($result->missedCount)->toBe(1);
 });
 
 it('returns next_expected_at=null when cadence is irregular', function (): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [46, 46, 46]));
 
-    expect($result['cadence']->value)->toBe('irregular');
-    expect($result['next_expected_at'])->toBeNull();
+    expect($result->cadence->value)->toBe('irregular');
+    expect($result->nextExpectedAt)->toBeNull();
 });
 
 it('returns irregular and zero metrics for the empty-list edge case', function (): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer([]);
 
-    expect($result['cadence']->value)->toBe('irregular');
-    expect($result['median_interval_days'])->toBe(0.0);
-    expect($result['missed_count'])->toBe(0);
-    expect($result['confidence_low'])->toBeFalse();
+    expect($result->cadence->value)->toBe('irregular');
+    expect($result->medianIntervalDays)->toBe(0.0);
+    expect($result->missedCount)->toBe(0);
+    expect($result->confidenceLow)->toBeFalse();
+});
+
+it('projects a month-end bill onto the same day whichever month is oldest in the window', function (): void {
+    // Two-month windows over the same 31st-of-the-month series. Anchored on the
+    // window's oldest row the answer moved with February.
+    expect(cinfNextExpected(['2026-01-31', '2026-02-28']))->toBe('2026-03-31');
+    expect(cinfNextExpected(['2026-02-28', '2026-03-31']))->toBe('2026-04-30');
+    expect(cinfNextExpected(['2026-03-31', '2026-04-30']))->toBe('2026-05-31');
+});
+
+it('keeps the billing day of a series whose postings never agree on one', function (): void {
+    expect(cinfNextExpected(['2026-01-01', '2026-01-26', '2026-02-25', '2026-03-31', '2026-05-10']))
+        ->toBe('2026-06-01');
+});
+
+it('takes the day the postings agree on rather than the first one it saw', function (): void {
+    expect(cinfNextExpected(['2026-01-03', '2026-02-05', '2026-03-05', '2026-04-05']))->toBe('2026-05-05');
 });

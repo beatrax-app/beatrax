@@ -14,12 +14,13 @@ return [
     'bulk_delete' => ':count işi sil',
     'empty_pending' => 'Kuyruk boş.',
     'empty_failed' => 'Başarısız iş yok.',
-    'empty_batches' => 'Aktif batch yok.',
+    'empty_batches' => 'Toplu iş yok.',
     'select_aria' => 'Seç',
     'select_row_aria' => ':key satırını seç',
     'col_id' => 'Id',
     'col_queue' => 'Kuyruk',
     'col_attempts' => 'Deneme',
+    'col_state' => 'Durum',
     'col_created' => 'Oluşturulma',
     'col_uuid' => 'UUID',
     'col_failed' => 'Başarısız',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Bekleyen',
     'col_actions' => 'Eylemler',
     'delete_job' => 'İşi sil',
+    'worker_running' => 'Worker çalıştırıyor',
     'delete_pending_confirm' => 'Bekleyen #:key işi silinsin mi?',
     'retry_job' => 'İşi yeniden dene',
     'forget_confirm' => ':uuid başarısız işi kaldırılsın mı?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Seçilen başarısız işler, worker yeniden denesin diye kuyruğa geri alınır.',
     'cancel' => 'İptal',
 
+    'state' => [
+        'available' => 'Hazır',
+        'reserved' => 'Ayrılmış',
+        'scheduled' => 'Zamanlanmış',
+    ],
+
     'tab' => [
         'pending' => 'Bekleyen',
         'failed' => 'Başarısız',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Bekleyen iş silindi',
+        'pending_already_gone' => 'Bu iş zaten yoktu',
         'failed_requeued' => 'Başarısız iş yeniden kuyruğa alındı',
         'failed_removed' => 'Başarısız iş kaldırıldı',
         'batch_cancelled' => 'Batch iptal edildi',
         'batch_deleted' => 'Batch silindi',
         'batch_failures_requeued' => 'Batch içindeki başarısızlar yeniden kuyruğa alındı',
+        'batch_failures_none' => 'Yeniden kuyruğa alınacak toplu iş hatası kalmadı',
         'failed_jobs_requeued' => 'Başarısız işler yeniden kuyruğa alındı',
+        'failed_jobs_none' => 'Yeniden kuyruğa alınacak başarısız iş kalmadı',
         'bulk_refused' => 'Toplu silme reddedildi — :reason',
         'rows_deleted' => 'Seçili satırlar silindi',
     ],

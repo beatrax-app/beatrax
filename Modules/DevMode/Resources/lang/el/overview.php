@@ -7,6 +7,11 @@ return [
     'subtitle' => 'Λειτουργική εικόνα της ενσωματωμένης κονσόλας προγραμματιστή.',
     'worker_heartbeat' => 'Παλμός worker',
     'not_running' => 'ΔΕΝ ΕΚΤΕΛΕΙΤΑΙ',
+    // i18n-review: el · heartbeat_age — δλ is the symbol this locale already uses
+    // for a compact duration in emailscan::inboxes.retry_seconds, while
+    // mobile::lock.errors.too_many_attempts writes δευτ. core::sidebar.dev.worker_ago
+    // follows this one; a native reader settles which of the two the app keeps.
+    'heartbeat_age' => 'πριν από :count δλ · ttl :ttl δλ|πριν από :count δλ · ttl :ttl δλ',
     'queue' => 'Ουρά',
     'pending' => 'σε αναμονή',
     'failed' => 'απέτυχαν',

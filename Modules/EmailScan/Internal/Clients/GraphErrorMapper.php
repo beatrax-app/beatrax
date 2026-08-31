@@ -11,11 +11,25 @@ use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
-final class GraphErrorMapper
+final readonly class GraphErrorMapper
 {
-    private const UNRECOGNISED_ERROR_BODY = 'unrecognised error body';
+    private const string UNRECOGNISED_ERROR_BODY = 'unrecognised error body';
 
-    public function __construct(private readonly Clock $clock) {}
+    // Not in Symfony's Response: 509 is an Apache extension Microsoft
+    // nonetheless documents Graph as returning under throttling.
+    private const int HTTP_BANDWIDTH_LIMIT_EXCEEDED = 509;
+
+    // Microsoft documents all three as throttling, each carrying Retry-After.
+    // Only 429 was mapped, so a 503 flipped the inbox to `error` rather than
+    // `rate_limited` and discarded the provider's own delay.
+    /** @var list<int> */
+    private const array THROTTLING_STATUSES = [
+        Response::HTTP_TOO_MANY_REQUESTS,
+        Response::HTTP_SERVICE_UNAVAILABLE,
+        self::HTTP_BANDWIDTH_LIMIT_EXCEEDED,
+    ];
+
+    public function __construct(private Clock $clock) {}
 
     public function mapErrorResponse(
         ?ResponseInterface $response,
@@ -32,7 +46,7 @@ final class GraphErrorMapper
         $safeBodyMessage = $this->extractErrorMessage((string) $response->getBody());
 
         return match (true) {
-            $status === Response::HTTP_TOO_MANY_REQUESTS => new RateLimitedException(
+            in_array($status, self::THROTTLING_STATUSES, strict: true) => new RateLimitedException(
                 retryAfterSeconds: $this->parseRetryAfter($response->getHeaderLine('Retry-After')),
                 message: 'Microsoft Graph rate limit exceeded: '.$safeBodyMessage,
             ),

@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Avanzamento della configurazione',
     'step_progress' => 'Passaggio :current di :total',
-    'step_dot_aria' => 'Passaggio :number di :total',
 
     'eyebrow_step' => 'Passaggio :number — ',
 ];

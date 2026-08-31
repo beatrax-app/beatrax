@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Cagnottes · Beatrax',
     'heading' => 'Cagnottes',
-    'subtitle' => 'Des sous-soldes virtuels dont la somme correspond toujours au solde réel de ton compte.',
+    'subtitle' => 'Des sous-soldes virtuels prélevés sur le solde réel du compte.',
     'add_pot' => 'Ajouter une cagnotte',
 
     'pot_fallback' => 'cagnotte',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Afficher l\'historique ↓',
         'hide' => 'Masquer l\'historique ↑',
+        'truncated' => 'Derniers mouvements : :shown sur :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Retrait',
         'moved_from' => 'Déplacé depuis :name',
         'moved_to' => 'Déplacé vers :name',
+        'unreadable' => 'Enregistré par une version plus récente de Beatrax',
+        'released_on_archive' => 'Libéré lors de l\'archivage',
     ],
 
     'archived' => [
-        'toggle' => 'Cagnottes archivées (:count)',
+        'toggle' => 'Cagnotte archivée (:count)|Cagnottes archivées (:count)',
         'badge' => 'Archivée',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Saisis un nom pour cette cagnotte.',
         'select_account' => 'Choisis un compte pour cette cagnotte.',
-        'amount_exceeds_unallocated' => 'Le montant dépasse le solde non affecté.',
         'amount_exceeds_unallocated_available' => 'Le montant dépasse le solde non affecté (:amount disponible).',
         'amount_exceeds_pot_balance' => 'Le montant dépasse le solde de :name (:amount disponible).',
+        'generic' => 'L\'enveloppe n\'a pas pu être enregistrée. Vérifiez les champs et réessayez.',
+        'amount_invalid' => 'Saisissez un montant supérieur à zéro.',
+        'goal_already_linked' => 'Cet objectif a déjà une enveloppe liée active. Archivez-la d\'abord.',
+        'account_cannot_hold_pots' => 'Une cagnotte a besoin d\'un compte qui détient de l\'argent. Choisis un autre compte.',
+        'select_target_pot' => 'Choisis une cagnotte vers laquelle déplacer.',
+        'move_target_missing' => 'Cette cagnotte n\'est plus disponible. Choisis-en une autre.',
+        'move_same_pot' => 'Une cagnotte ne peut pas se déplacer de l\'argent à elle-même. Choisis une autre cagnotte.',
+        'move_cross_account' => 'Les cagnottes n\'échangent de l\'argent qu\'au sein d\'un même compte, et :name est dans :account.',
+        'pot_missing' => 'Cette cagnotte n\'est plus disponible.',
+        'operation_failed' => 'Cela n\'a pas abouti. Aucun argent n\'a été déplacé — réessaie.',
     ],
 
     'toast' => [

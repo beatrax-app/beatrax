@@ -19,8 +19,6 @@
     for this step (UI-SPEC §"Density rules"). Every other wizard step
     is 620px; this one needs the room for the preview table.
 --}}
-@use('Modules\Ingestion\Public\Enums\SourceFormat')
-@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewBatch $preview */
@@ -29,6 +27,7 @@
     /** @var string $commitError */
     /** @var bool $isCommitting */
     /** @var array<int, array{label: string, short: string, currency: string}> $accountMeta */
+    /** @var array<string, string> $sourceFormatLabels */
 
     $hasAnyReadySection = false;
     foreach ($preview->sections as $section) {
@@ -114,15 +113,7 @@
                             $cardState = $isConflict ? 'conflict' : 'detected';
                             $alternativeCandidates = [];
                             foreach ($candidates as $candidate) {
-                                $sourceLabel = match ($candidate->sourceFormat) {
-                                    SourceFormat::Camt053->value => 'CAMT.053',
-                                    SourceFormat::Mt940->value => 'MT940',
-                                    SourceFormat::AsnCsv->value => 'ASN CSV',
-                                    CsvPresetRegistry::ING_NL => 'ING CSV',
-                                    SourceFormat::IcsPdf->value => 'ICS PDF',
-                                    SourceFormat::PaypalCsv->value => 'PayPal CSV',
-                                    default => $candidate->sourceFormat,
-                                };
+                                $sourceLabel = $sourceFormatLabels[$candidate->sourceFormat] ?? $candidate->sourceFormat;
                                 $alternativeCandidates[] = [
                                     'minor' => $candidate->openingBalanceMinor,
                                     'date' => $candidate->openingBalanceDate,

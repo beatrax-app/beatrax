@@ -7,98 +7,49 @@ namespace Modules\Migration\Internal\Parsers\Support;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Migration\Internal\Exceptions\ExtractionDirectoryException;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
-use ZipArchive;
 
+/**
+ * @link ../../../../../.docs/features/migration/reading-a-zip-without-ext-zip.md
+ */
 final class ZipExtractor
 {
-    private const DEFAULT_MAX_ENTRIES = 500;
+    private const int DEFAULT_MAX_ENTRIES = 500;
 
     private const DEFAULT_MAX_TOTAL_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
-
-    private const UNIX_MODE_FMT_MASK = 0o170000;
-
-    private const UNIX_MODE_SYMLINK = 0o120000;
 
     private ?string $extractedDir = null;
 
     public function __construct(
         private readonly int $maxEntries = self::DEFAULT_MAX_ENTRIES,
         private readonly int $maxTotalUncompressedBytes = self::DEFAULT_MAX_TOTAL_UNCOMPRESSED_BYTES,
+        private readonly ArchiveReaderFactory $readers = new ArchiveReaderFactory,
     ) {}
 
     public function extract(string $zipPath): string
     {
         // Throws before writing a single byte if the archive fails to open,
         // exceeds either cap, or contains a path-traversal/symlink entry.
-        $zip = new ZipArchive;
-        $opened = $zip->open($zipPath);
-        if ($opened !== true) {
-            throw new UnrecognizedMigrationFileException("could not open zip archive at '{$zipPath}' (code {$opened})");
-        }
+        $reader = $this->readers->make();
+        $reader->open($zipPath);
 
-        $entryCount = $zip->numFiles;
-        if ($entryCount > $this->maxEntries) {
-            $zip->close();
+        try {
+            $this->guardArchiveShape($reader);
 
-            throw new UnrecognizedMigrationFileException(sprintf(
-                'archive contains %d entries, exceeding the allowed maximum of %d (zip-bomb guard)',
-                $entryCount,
-                $this->maxEntries,
-            ));
-        }
-
-        $totalUncompressed = 0;
-        for ($i = 0; $i < $entryCount; $i++) {
-            $stat = $zip->statIndex($i);
-            if ($stat === false) {
-                $zip->close();
-
-                throw new UnrecognizedMigrationFileException("could not read zip entry metadata at index {$i}");
+            $targetDir = UserDataPathService::appPath('migration-extracts/'.uniqid('run-', true));
+            // Suppressed so the is_dir() clause decides: unsuppressed, a concurrent
+            // creator's EEXIST becomes an ErrorException instead of an absorbed race.
+            if (! @mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
+                throw new ExtractionDirectoryException($targetDir);
             }
 
-            $totalUncompressed += $stat['size'];
-            if ($totalUncompressed > $this->maxTotalUncompressedBytes) {
-                $zip->close();
+            // Tracked before extractTo(), so a partway failure still leaves cleanup()
+            // able to find what was written rather than leaking $targetDir.
+            $this->extractedDir = $targetDir;
 
-                throw new UnrecognizedMigrationFileException(sprintf(
-                    'archive exceeds the maximum allowed total uncompressed size of %d bytes (zip-bomb guard)',
-                    $this->maxTotalUncompressedBytes,
-                ));
-            }
-
-            $name = $stat['name'];
-            if ($this->escapesExtractionScope($name)) {
-                $zip->close();
-
-                throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$name}' resolves outside the extraction directory (zip-slip guard)",
-                );
-            }
-
-            if ($this->isSymlinkEntry($zip, $i)) {
-                $zip->close();
-
-                throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$name}' is a symlink, which is not permitted (zip-slip guard)",
-                );
-            }
+            $extracted = $reader->extractTo($targetDir);
+        } finally {
+            $reader->close();
         }
-
-        $targetDir = UserDataPathService::appPath('migration-extracts/'.uniqid('run-', true));
-        // Suppressed so the is_dir() clause decides: unsuppressed, a concurrent
-        // creator's EEXIST becomes an ErrorException instead of an absorbed race.
-        if (! @mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
-            $zip->close();
-
-            throw new ExtractionDirectoryException($targetDir);
-        }
-
-        // Tracked before extractTo(), so a partway failure still leaves cleanup()
-        // able to find what was written rather than leaking $targetDir.
-        $this->extractedDir = $targetDir;
-
-        $extracted = $zip->extractTo($targetDir);
-        $zip->close();
 
         if ($extracted === false) {
             throw new UnrecognizedMigrationFileException('failed to extract archive contents');
@@ -119,6 +70,41 @@ final class ZipExtractor
         $this->extractedDir = null;
     }
 
+    private function guardArchiveShape(ArchiveReader $reader): void
+    {
+        $entryCount = $reader->entryCount();
+        if ($entryCount > $this->maxEntries) {
+            throw new UnrecognizedMigrationFileException(sprintf(
+                'archive contains %d entries, exceeding the allowed maximum of %d (zip-bomb guard)',
+                $entryCount,
+                $this->maxEntries,
+            ));
+        }
+
+        $totalUncompressed = 0;
+        foreach ($reader->index() as $entry) {
+            $totalUncompressed += $entry->uncompressedSize;
+            if ($totalUncompressed > $this->maxTotalUncompressedBytes) {
+                throw new UnrecognizedMigrationFileException(sprintf(
+                    'archive exceeds the maximum allowed total uncompressed size of %d bytes (zip-bomb guard)',
+                    $this->maxTotalUncompressedBytes,
+                ));
+            }
+
+            if ($this->escapesExtractionScope($entry->name)) {
+                throw new UnrecognizedMigrationFileException(
+                    "archive entry '{$entry->name}' resolves outside the extraction directory (zip-slip guard)",
+                );
+            }
+
+            if ($entry->isSymlink) {
+                throw new UnrecognizedMigrationFileException(
+                    "archive entry '{$entry->name}' is a symlink, which is not permitted (zip-slip guard)",
+                );
+            }
+        }
+    }
+
     private function escapesExtractionScope(string $entryName): bool
     {
         $normalised = str_replace('\\', '/', $entryName);
@@ -129,26 +115,6 @@ final class ZipExtractor
         $segments = explode('/', $normalised);
 
         return in_array('..', $segments, true);
-    }
-
-    private function isSymlinkEntry(ZipArchive $zip, int $index): bool
-    {
-        // Only OPSYS_UNIX entries carry a Unix mode in the upper 16 bits of the
-        // external attributes, so on any other OS this is a no-op rather than a
-        // false positive.
-        $opsys = 0;
-        $attr = 0;
-        if (! $zip->getExternalAttributesIndex($index, $opsys, $attr)) {
-            return false;
-        }
-
-        if ($opsys !== ZipArchive::OPSYS_UNIX) {
-            return false;
-        }
-
-        $mode = (is_int($attr) ? $attr : 0) >> 16 & self::UNIX_MODE_FMT_MASK;
-
-        return $mode === self::UNIX_MODE_SYMLINK;
     }
 
     private function removeRecursively(string $dir): void

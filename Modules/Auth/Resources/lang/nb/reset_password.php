@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Bruk minst 12 tegn.',
     'error_wrong_code' => 'Brukernavnet og gjenopprettingskoden stemmer ikke overens. Sjekk koden nøye — store bokstaver og verken null, O, ener eller L.',
+    'error_throttled' => 'For mange forsøk — prøv igjen om :wait.',
 ];

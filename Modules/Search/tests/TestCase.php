@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Modules\Search\Tests;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Tests\TestCase as RootTestCase;
 
-// The fixtures seed the FTS tables themselves so search tests do not depend on
-// SearchIndexWriter. A test that adds a tax note after the fact has to call
-// seedFtsIndex() again, or the note never reaches the corpus.
+// The fixtures index through the real SearchIndexWriter: a harness that builds
+// the document itself is green against a writer nothing ships. A test that adds
+// a tax note after the fact has to call seedFtsIndex() again, or the note never
+// reaches the corpus.
 abstract class TestCase extends RootTestCase
 {
     protected function searchTestUser(string $username): int
@@ -94,53 +96,8 @@ abstract class TestCase extends RootTestCase
         return $txId;
     }
 
-    // Builds the same denormalized body SearchIndexWriter produces. The chr(12)
-    // separator is not trigram-indexable, so joining the fields cannot conjure a
-    // match that straddles two of them.
     protected function seedFtsIndex(int $txId, int $userId): void
     {
-        $db = $this->app->make(DatabaseManager::class)->connection();
-
-        $tx = $db->table('transactions')
-            ->where('id', $txId)
-            ->first(['counterparty_name', 'description']);
-
-        if ($tx === null) {
-            return;
-        }
-
-        $note = $db->table('tax_transaction_tags')
-            ->where('transaction_id', $txId)
-            ->value('note');
-
-        $counterpartyName = is_string($tx->counterparty_name) ? $tx->counterparty_name : '';
-        $description = is_string($tx->description) ? $tx->description : '';
-        $noteStr = is_string($note) ? $note : '';
-
-        $body = $counterpartyName.chr(12).$description.chr(12).$noteStr;
-
-        // FTS5 needs the old body handed back to it to delete the old posting.
-        $existing = $db->table('transaction_search_docs')
-            ->where('transaction_id', $txId)
-            ->first(['search_body']);
-
-        $oldBody = $existing !== null && is_string($existing->search_body) ? $existing->search_body : '';
-
-        $db->table('transaction_search_docs')->upsert(
-            ['transaction_id' => $txId, 'user_id' => $userId, 'search_body' => $body],
-            ['transaction_id'],
-            ['user_id', 'search_body'],
-        );
-
-        if ($oldBody !== '') {
-            $db->statement(
-                "INSERT INTO transaction_search_fts(transaction_search_fts, rowid, search_body) VALUES('delete', ?, ?)",
-                [$txId, $oldBody],
-            );
-        }
-        $db->statement(
-            'INSERT INTO transaction_search_fts(rowid, search_body) VALUES(?, ?)',
-            [$txId, $body],
-        );
+        $this->app->make(SearchIndexWriterContract::class)->upsertForTransaction($txId, $userId);
     }
 }

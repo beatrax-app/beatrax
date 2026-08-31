@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Rediger navnet',
     'edit_name_aria' => 'Gi gjentakende serie :id nytt navn',
     'new_name_label' => 'Nytt navn for denne serien',
+    'load_more' => 'Last inn flere',
     'save' => 'Lagre',
 
     'toast' => [

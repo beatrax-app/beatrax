@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Iza ove deonice nije pronađen lanac finansiranja.',
 
     'covers_charges' => 'Pokriva :count ICS zaduženje|Pokriva :count ICS zaduženja|Pokriva :count ICS zaduženja',
-    'no_ics_charges' => 'U ovom poravnanju nema ICS zaduženja',
     'show_more_fanout' => 'Prikaži još :count · :shown od :total',
 
     'confirm' => 'Potvrdi',
     'reject' => 'Odbij',
     'confirm_aria' => 'Potvrdi vezu lanca :id',
     'reject_aria' => 'Odbij vezu lanca :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Determinističko',
+        'confirmed' => 'Potvrđeno',
+        'candidate' => 'Kandidat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Pouzdanost: determinističko poklapanje',

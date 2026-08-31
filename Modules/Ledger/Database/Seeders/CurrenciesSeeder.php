@@ -18,6 +18,11 @@ final class CurrenciesSeeder extends Seeder
             ['code' => CurrencyCode::Eur->value, 'name' => 'Euro', 'minor_unit' => 2],
             ['code' => 'USD', 'name' => 'US Dollar', 'minor_unit' => 2],
             ['code' => 'GBP', 'name' => 'Pound Sterling', 'minor_unit' => 2],
+            // The only zero-decimal code the app carries, and the reason it is
+            // here: Currency, Money's symbol map and the ICS parser all already
+            // speak JPY, so leaving it out of this table made every ÷100
+            // assumption unreachable through the UI and therefore untested.
+            ['code' => CurrencyCode::Jpy->value, 'name' => 'Japanese Yen', 'minor_unit' => 0],
         ] as $row) {
             Currency::query()->updateOrInsert(['code' => $row['code']], $row);
         }

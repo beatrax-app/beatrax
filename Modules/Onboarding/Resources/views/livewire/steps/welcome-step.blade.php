@@ -36,7 +36,7 @@
         <x-onboarding::vd-glyph
             glyph="✉️"
             :title="Lang::get('onboarding::welcome.email_title')"
-            :description="Lang::get('onboarding::welcome.email_desc')"
+            :description="Lang::get($onPhone ? 'onboarding::welcome.email_desc_phone' : 'onboarding::welcome.email_desc')"
             :optional="true"
         />
     </ul>

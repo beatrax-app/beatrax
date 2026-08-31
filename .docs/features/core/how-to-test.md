@@ -9,6 +9,12 @@ Practical recipes for exercising the `Core` module in isolation.
   `BackupRetentionPolicy`, `SafeTrace`. The richer surface is in
   feature tests because most of `Core` only makes sense against a
   bootable app.
+- **`SafeTrace` is tested with `zend.exception_ignore_args` forced
+  Off.** The bundled ini sets it On, so a test that took the ambient
+  value would pass against `getTraceAsString()` too and prove nothing.
+  The file's `beforeEach` sets it to `0` and the `afterEach` restores
+  it — the directive is PHP_INI_ALL, and it is read when the exception
+  is thrown.
 
 ## Feature tests
 
@@ -129,10 +135,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Core` module.
-
-## Behavioral contracts
 
 - **`BelongsToUser` is the only sanctioned way for a domain model to
   scope to the user.** The `UserScope` global scope is the single

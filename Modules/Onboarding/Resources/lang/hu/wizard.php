@@ -10,8 +10,6 @@ return [
 
     'step_progress' => ':current. lépés :total közül',
 
-    'step_dot_aria' => ':number. lépés :total közül',
-
     'back' => 'Vissza',
     'back_aria' => 'Vissza — visszatér az előző beállítási lépéshez',
 

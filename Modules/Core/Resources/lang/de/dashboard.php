@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Größte Ausgaben',
     'no_expenses' => 'Noch keine kategorisierten Ausgaben.',
+    'top_spending_refunded' => 'Nicht gewertet — :amount kam zurück',
 
     'recent_transactions' => 'Letzte Transaktionen',
     'view_all' => 'Alle anzeigen',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategorie',
     'th_amount' => 'Betrag',
     'uncategorized' => 'Nicht kategorisiert',
+
+    'jump_to_records' => [
+        'body' => 'Nichts in diesem Zeitraum. Ihre neuesten Buchungen sind weiterhin da.',
+        'action' => 'Zeitraum :period anzeigen',
+    ],
 
     'reauth' => [
         'title' => 'Ein Postfach muss neu verbunden werden.',

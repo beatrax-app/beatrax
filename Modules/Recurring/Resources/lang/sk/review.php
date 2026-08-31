@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Upraviť názov',
     'edit_name_aria' => 'Premenovať opakovanú sériu :id',
     'new_name_label' => 'Nový názov pre túto sériu',
+    'load_more' => 'Načítať ďalšie',
     'save' => 'Uložiť',
 
     'toast' => [

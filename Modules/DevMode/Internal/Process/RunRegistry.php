@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\DevMode\Internal\Enums\CommandTier;
 
 // Cached rather than request-scoped so a page refresh mid-command reconnects
@@ -15,9 +16,14 @@ use Modules\DevMode\Internal\Enums\CommandTier;
 // copy the stdout/stderr excerpts before the entry expires.
 final readonly class RunRegistry
 {
-    private const KEY_PREFIX = 'dev_mode.run.';
+    private const string KEY_PREFIX = 'dev_mode.run.';
 
-    private const TTL_SECONDS = 86_400;
+    // A run record outlives the console that started it, so a reader who
+    // comes back the next morning still finds what ran.
+    private static function ttlSeconds(): int
+    {
+        return Duration::Day->seconds();
+    }
 
     public function __construct(
         private CacheRepository $cache,
@@ -26,7 +32,7 @@ final readonly class RunRegistry
 
     public function store(RunRecord $record): void
     {
-        $this->cache->put(self::KEY_PREFIX.$record->runId, $this->serialize($record), self::TTL_SECONDS);
+        $this->cache->put(self::KEY_PREFIX.$record->runId, $this->serialize($record), self::ttlSeconds());
     }
 
     public function find(string $runId): ?RunRecord
@@ -62,7 +68,7 @@ final readonly class RunRegistry
             finishedAt: $finishedAt ?? $this->clock->now(),
         );
 
-        $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($updated), self::TTL_SECONDS);
+        $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($updated), self::ttlSeconds());
     }
 
     public function markCancelled(string $runId): void
@@ -86,7 +92,7 @@ final readonly class RunRegistry
             finishedAt: $this->clock->now(),
         );
 
-        $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($updated), self::TTL_SECONDS);
+        $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($updated), self::ttlSeconds());
     }
 
     // Dates go through ISO 8601 strings and CarbonImmutable::parse() rather

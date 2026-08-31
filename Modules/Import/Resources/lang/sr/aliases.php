@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Obradi i pregledaj',
     'cancel_import' => 'Otkaži uvoz',
 
-    'diff_new' => 'novih,',
-    'diff_unchanged' => 'nepromenjenih,',
-    'diff_conflicts' => 'sukoba.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: sr · diff_new, diff_unchanged — same call as the Croatian file:
+    // the first arm is the definite novi against the indefinite nov, with the
+    // paucal in the genitive singular of the elided alijas.
+    'diff_new' => ':count novi|:count nova|:count novih',
+    'diff_unchanged' => ':count nepromenjeni|:count nepromenjena|:count nepromenjenih',
+    'diff_conflicts' => ':count sukob|:count sukoba|:count sukoba',
 
     'conflicts_heading' => 'Sukobi',
     'conflict_name' => 'naziv — postojeće: :existing → datoteka: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Testiraj na mojim transakcijama',
     'test_help' => 'Izmeni generalizovani obrazac u redu da vidiš kojim bi transakcijama odgovarao.',
     'typing' => 'Kucanje…',
-    'matches_prefix' => 'Odgovara',
-    'matches_suffix' => 'transakcija u tvojoj skorašnjoj istoriji.',
+    'matches' => 'Odgovara :count transakciji u tvojoj skorašnjoj istoriji.|Odgovara :count transakcijama u tvojoj skorašnjoj istoriji.|Odgovara :count transakcijama u tvojoj skorašnjoj istoriji.',
 
     'merge_modal_title' => 'Spoji :count alijas|Spoji :count alijasa|Spoji :count alijasa',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Nijedna datoteka nije otpremljena.',
         'unreadable' => 'Otpremljenu datoteku nije moguće pročitati.',
         'too_short' => 'Obrazac je prekratak za testiranje.',
+        'file_not_yaml' => 'Ova datoteka nije važeći YAML, pa iz nje nije bilo moguće ništa pročitati. Izvezi svoje alijase ponovo i otpremi dobijenu datoteku.',
+        'file_unreadable_as_yaml' => 'Ovu datoteku nije bilo moguće pročitati kao spisak alijasa. Izvezi svoje alijase ponovo i otpremi dobijenu datoteku.',
+        'file_has_no_entries_list' => 'Ova datoteka ne počinje spiskom entries: na najvišem nivou, pa u njoj nema alijasa za uvoz. Proveri da li je to prava datoteka.',
+        'entry_is_not_a_mapping' => 'Unos :entry je obična vrednost tamo gde su očekivani obrazac i naziv. Dodaj mu oba polja ili ga ukloni, pa ponovo otpremi datoteku.',
+        'entry_is_missing_a_field' => 'Unosu :entry nedostaje obrazac ili naziv, a alijas treba oboje. Dopuni ono što nedostaje ili ukloni taj unos, pa ponovo otpremi datoteku.',
     ],
 ];

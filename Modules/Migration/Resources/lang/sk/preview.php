@@ -16,7 +16,9 @@ return [
         'budget' => 'Mesiace rozpočtu',
     ],
 
-    'all_clean' => 'Všetko je namapované čisto — pred potvrdením nič nevyžaduje tvoju pozornosť.',
+    'all_clean' => 'Všetko je namapované čisto — nie je tu nič na rozhodnutie.',
+
+    'nothing_staged' => 'Tento export neobsahoval nič na import — nie je tu čo potvrdzovať.',
 
     'groups' => [
         'conflict' => 'Vyžaduje tvoje rozhodnutie',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Vytvorí alebo aktualizuje to počty uvedené vyššie v tvojich kategóriách, rozpočtoch a v knihe.',
     'discard_button' => 'Zahodiť import',
+    'discard_confirm' => 'Zahodiť tento import? Všetko, čo sa z tvojho súboru s exportom načítalo, sa tu vymaže a späť to dostaneš len tak, že celý súbor znova nahráš a necháš spracovať. Do knihy zatiaľ nič nedošlo.',
     'confirm_button' => 'Potvrdiť import',
 ];

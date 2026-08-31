@@ -9,7 +9,9 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
+use Illuminate\Routing\UrlGenerator;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
@@ -34,9 +36,11 @@ final class SetupWizard extends Component
 
     public string $currentStepKey = 'welcome';
 
-    // Rebuilt on every mount, so tampering with it client-side survives
-    // only until the next page render.
+    // mount() does not run on an update, so "rebuilt on every mount" was never
+    // a defence against a payload: the strip reads $progress[$key]['status'],
+    // and a string in a step's slot is a subscript on a string.
     /** @var array<string, array{status: string, completed_at: ?string}> */
+    #[Locked]
     public array $progress = [];
 
     public bool $isResuming = false;
@@ -53,6 +57,7 @@ final class SetupWizard extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         Request $request,
+        UrlGenerator $urls,
         Clock $clock,
         LoggerInterface $logger,
     ): void {
@@ -62,7 +67,20 @@ final class SetupWizard extends Component
         // listener; initialize() is idempotent.
         $initializer->initialize($user->id);
 
-        if ($request->boolean('force')) {
+        $forced = $request->boolean('force');
+
+        // Wiping every wizard row is a destructive write reached by a GET, so
+        // the only thing keeping a cross-site page from it was SESSION_SAME_SITE
+        // — one env var. The Settings entry point signs its link instead.
+        if ($forced && ! $urls->hasValidSignature($request, absolute: false)) {
+            $logger->warning('SetupWizard: ?force=1 arrived unsigned and was ignored.', [
+                'user_id' => $user->id,
+            ]);
+
+            $forced = false;
+        }
+
+        if ($forced) {
             // The log line surfaces a bookmarked ?force=1 URL: with nothing
             // yet in progress the reset itself is a no-op.
             $hadInProgress = $db->connection()
@@ -102,32 +120,45 @@ final class SetupWizard extends Component
             return;
         }
 
-        $this->isResuming = $resumeKey !== 'welcome' && ! $request->boolean('force');
+        $this->isResuming = $resumeKey !== 'welcome' && ! $forced;
         $this->currentStepKey = $resumeKey;
         $this->allComplete = false;
     }
 
     public function goToStep(string $stepKey, WizardStepRegistry $registry, CurrentUser $currentUser, WizardProgressQuery $query): void
     {
-        $steps = $registry->steps();
-        $targetIndex = array_search($stepKey, $steps, strict: true);
-        if ($targetIndex === false) {
-            return;
-        }
-
         $progress = $query->list($currentUser->id());
-
-        for ($i = 0; $i < $targetIndex; $i++) {
-            $priorStep = $steps[$i];
-            $priorStatus = $progress[$priorStep]['status'] ?? WizardStepStatus::Pending->value;
-            if ($priorStatus !== WizardStepStatus::Done->value && $priorStatus !== WizardStepStatus::Skipped->value) {
-                return;
-            }
+        if (! self::isReachable($stepKey, $registry, $progress)) {
+            return;
         }
 
         $this->currentStepKey = $stepKey;
         $this->progress = $progress;
         $this->announceStepChange();
+    }
+
+    // The gate belongs to the value, not to the one method that asks for it:
+    // currentStepKey is a public property, so a payload reaches any step by
+    // setting it and then completing it, without ever calling goToStep().
+    /**
+     * @param  array<string, array{status: string, completed_at: ?string}>  $progress
+     */
+    private static function isReachable(string $stepKey, WizardStepRegistry $registry, array $progress): bool
+    {
+        $steps = $registry->steps();
+        $targetIndex = array_search($stepKey, $steps, strict: true);
+        if ($targetIndex === false) {
+            return false;
+        }
+
+        for ($i = 0; $i < $targetIndex; $i++) {
+            $priorStatus = $progress[$steps[$i]]['status'] ?? WizardStepStatus::Pending->value;
+            if ($priorStatus !== WizardStepStatus::Done->value && $priorStatus !== WizardStepStatus::Skipped->value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     #[On('wizard.step.completed')]
@@ -200,6 +231,11 @@ final class SetupWizard extends Component
         string $terminalStatus,
     ): void {
         $userId = $currentUser->id();
+        $progress = $query->list($userId);
+        if (! self::isReachable($this->currentStepKey, $registry, $progress)) {
+            return;
+        }
+
         $now = $clock->now()->toDateTimeString();
 
         $db->connection()

@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— ingen finansieringskjeder for private kontakter',
     'tab_note_bank' => '— en motpart for bankgebyrer genererer ikke finansieringskjeder',
+    'tab_note_bank_institution' => '— ingen finansieringskjeder for institusjonelle motparter',
     'tab_note_government' => '— ingen finansieringskjeder for offentlige motparter',
 
     'recent_activity' => 'Siste aktivitet',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankgebyrer per kategori',
+        'activity_heading' => 'Aktivitet per kategori',
         'no_fees' => 'Ingen gebyrer registrert på denne motparten ennå.',
     ],
 

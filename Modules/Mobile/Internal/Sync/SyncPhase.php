@@ -18,6 +18,14 @@ enum SyncPhase: string
 
     case Complete = 'complete';
 
+    // Rebuilding belongs here with Pulling: it is the slowest step of the
+    // initial sync, and a screen that asked only about Pulling dropped its
+    // whole progress block for the duration of it.
+    public function isInitialSyncInFlight(): bool
+    {
+        return $this === self::Pulling || $this === self::Rebuilding;
+    }
+
     // A row written by an older build, or by hand, must still hydrate: an
     // unreadable phase resumes the gate from the start rather than throwing.
     public static function fromStorage(mixed $stored): self

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Nežinomos',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Banko mokestis',
+    ],
+
     'cp_card' => [
         'aria' => 'Kita šalis: :name',
         'recent_aria' => 'Naujausia veikla',

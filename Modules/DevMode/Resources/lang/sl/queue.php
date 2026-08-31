@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Izbriši :count opravilo|Izbriši :count opravili|Izbriši :count opravila|Izbriši :count opravil',
     'empty_pending' => 'Čakalna vrsta je prazna.',
     'empty_failed' => 'Ni neuspelih opravil.',
-    'empty_batches' => 'Ni aktivnih paketov.',
+    'empty_batches' => 'Ni paketov.',
     'select_aria' => 'Izberi',
     'select_row_aria' => 'Izberi vrstico :key',
     'col_id' => 'Id',
     'col_queue' => 'Čakalna vrsta',
     'col_attempts' => 'Poskusi',
+    'col_state' => 'Stanje',
     'col_created' => 'Ustvarjeno',
     'col_uuid' => 'UUID',
     'col_failed' => 'Neuspelo',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'V čakanju',
     'col_actions' => 'Dejanja',
     'delete_job' => 'Izbriši opravilo',
+    'worker_running' => 'Worker jo izvaja',
     'delete_pending_confirm' => 'Izbrišem čakajoče opravilo #:key?',
     'retry_job' => 'Znova poskusi opravilo',
     'forget_confirm' => 'Odstranim neuspelo opravilo :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Izbrana neuspela opravila bodo vrnjena v čakalno vrsto, da jih worker znova izvede.',
     'cancel' => 'Prekliči',
 
+    'state' => [
+        'available' => 'Pripravljeno',
+        'reserved' => 'Rezervirano',
+        'scheduled' => 'Načrtovano',
+    ],
+
     'tab' => [
         'pending' => 'V čakanju',
         'failed' => 'Neuspela',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Čakajoče opravilo izbrisano',
+        'pending_already_gone' => 'Tega opravila ni bilo več',
         'failed_requeued' => 'Neuspelo opravilo vrnjeno v čakalno vrsto',
         'failed_removed' => 'Neuspelo opravilo odstranjeno',
         'batch_cancelled' => 'Paket preklican',
         'batch_deleted' => 'Paket izbrisan',
         'batch_failures_requeued' => 'Neuspela opravila paketa vrnjena v čakalno vrsto',
+        'batch_failures_none' => 'V paketu ni več napak za ponovno uvrstitev v vrsto',
         'failed_jobs_requeued' => 'Neuspela opravila vrnjena v čakalno vrsto',
+        'failed_jobs_none' => 'Ni več neuspelih opravil za ponovno uvrstitev v vrsto',
         'bulk_refused' => 'Množično brisanje zavrnjeno — :reason',
         'rows_deleted' => 'Izbrane vrstice izbrisane',
     ],

@@ -4,7 +4,8 @@ The `FX` module owns base-currency conversion: turning a `Money` value in
 any currency into the user's reporting currency, backed by a
 priority-ordered chain of rate providers with a cache-backed circuit
 breaker, and stored on the `exchange_rates` table so historical figures
-convert at the rate that was actually in effect on their date.
+convert at the rate that was in effect on their date — meaning the
+newest rate published on or before that date, not one keyed to it.
 
 ## Provider chain and circuit breaker
 
@@ -27,8 +28,10 @@ provider that fails more often than once per six hours would slide its
 window forever and the circuit would never auto-heal once the outage
 ends. A success resets the counter. When every provider in the chain
 fails or is circuit-open, `RateProviderRegistry::fetchCurrentRates()`
-throws `AllProvidersFailed`; callers that need a safe result catch it and
-fall back to the passthrough / original-currency path.
+throws `AllProvidersFailed`. `FetchFxRatesJob` catches it, records the
+attempt through `FxRefreshStatus` and rethrows so the retry profile still
+runs; conversion itself is unaffected, because it reads the table rather
+than the feed and the rows already there stay in use.
 
 `BundledSnapshotProvider` and `FrankfurterRateProvider` both treat an
 HTTP-200-but-empty rate set as a failure (throwing `RateFetchException`)
@@ -63,22 +66,93 @@ on `now()` would produce a false "today" row. Rate values are validated
 against a plausible range (0.00001–100000) before upsert; values outside
 that range are logged and skipped rather than written.
 
+### When the refresh comes back with nothing
+
+`FxRefreshStatus` holds the last refresh attempt that produced no rows,
+per user, so a screen waiting on one can say what happened instead of
+timing out and guessing. Settings polls for a write to `exchange_rates`
+and gives up after fifteen polls; the retry backoff runs to twenty
+minutes, so without a record the reader watched a spinner die and was
+told nothing about why.
+
+Two things write it. `handle()` records `AllProvidersFailed` on the
+attempt that raised it and rethrows, which is what puts the reason in
+front of the reader inside the poll window rather than after the last
+retry. `failed()` records the exhausted run, mapping anything that is not
+`AllProvidersFailed` to `FxRefreshFailureReason::Unexpected` — Laravel
+calls it as a bare `$command->failed($e)` with no container resolution,
+so it resolves its collaborators from the container itself. A feed that
+answered with rates the range guard threw all away writes no row either,
+and records `NoUsableRates` rather than returning in silence.
+
+The record is cleared by the next successful upsert, and by the gate that
+returns early for a user who has turned online fetch off — with no
+outbound fetch there is no failure to report. It lives in the cache
+beside the provider circuit breaker rather than in a table: which rates a
+device could reach is that device's own state and must not travel on the
+op log.
+
 ## Conversion: passthrough, staleness, and cross-rates
 
 `ExchangeRateService` is the single cross-module entry point for
 currency conversion, exposing two methods:
 
-- `convertToBase()` — for current-snapshot figures, uses the latest
-  available rate from `exchange_rates`, ordered by `rate_date` DESC.
-- `convertAtDate()` — for historical figures, prefers the caller-supplied
-  known rate (`transactions.fx_rate_used`) and falls back to the dated
-  snapshot row when no known rate is supplied.
+- `convertToBase()` — for current-snapshot figures, uses the newest
+  `rate_date` each pair has.
+- `convertAtDate()` — for historical figures, uses the newest `rate_date`
+  each pair has **on or before** the requested date.
+
+`convertAtDate()` resolves that date per pair, not once for the whole
+table: a pair last quoted a week before the date still answers, where a
+single table-wide cut-off would have dropped it. An exact-date match was
+what it used to do, and because ECB publishes on business days only,
+every weekend date, every holiday and every date older than the first
+stored row found no rows at all — the amount fell through unconverted
+and the account vanished from that point of the series. The dashboard
+card and `/reports?metric=net_worth` then disagreed about net worth by
+four figures on the same install.
+
+Where a pair has no row on or before the date, the lookup falls
+**forward** to the oldest row that pair does have. A rate published after
+a date is not the rate that was in effect on it, and the result says so —
+`asOf` carries the row's real date, which is what a disclosure line
+renders. It is chosen anyway because the alternative is the defect above:
+silently dropping the whole account out of every early bucket, which
+understates net worth without ever saying it did. A bundled snapshot
+ships dated `2026-06-05`, so on a fresh install every figure older than
+that takes this path.
+
+The rows for one date are memoised for the life of the resolved service.
+A net-worth series asks for the same bucket date once per account
+currency line, and which row a date resolves to cannot change while a
+single render is in flight.
 
 Both methods short-circuit to `ConversionResult::passthrough()` when the
 figure's currency already equals the target currency — no DB query
 fires, and the result carries no rate metadata so the Blade disclosure
 affordance skips rendering entirely. This is the zero-cost path every
 already-base-currency figure takes.
+
+A conversion that found no usable rate returns `ConversionResult::noRate()`
+instead, which is a **different** `ConversionOutcome` from a passthrough.
+Both leave the amount in its original currency, and reporting the failure
+as "already in the base currency" is how a caller ends up adding foreign
+minor units into a base-currency total. `isPassthrough` is derived from
+the outcome rather than passed in, so the flag and the outcome cannot
+disagree.
+
+There is no per-transaction rate path. `transactions.fx_rate_used` is a
+display artifact — the detail screen's "Effective rate" line — and a
+balance as of a date is a sum of many transactions carrying many
+different stored rates, so there is nothing a caller could hand in. It
+reads **settled currency per one native unit**, which is what the detail
+screen draws it as (`€0.924 / USD`), and it is a magnitude: the value is
+`Rate::between(settled, native)` over a pair whose two legs
+`Ledger::TransactionAmount` has already given one shared sign, so a
+negative rate is not a value this column can hold. The
+`$knownRate` argument that claimed precedence over the dated row was
+never passed by any caller, and it registered whatever it was given as an
+uninverted direct pair on the caller's word.
 
 Conversion uses Brick Money's `BaseCurrencyProvider` with EUR as the
 base, so a cross-rate such as USD→GBP is derived exactly from two

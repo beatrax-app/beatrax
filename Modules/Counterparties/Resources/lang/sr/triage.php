@@ -6,7 +6,7 @@ return [
     'page_title' => 'Trijaža drugih strana',
     'heading' => 'Trijaža nepoznatih drugih strana',
 
-    'progress' => ':seen od :total · :percent % · još ~:minutes min',
+    'progress' => ':seen od :total · :percent% · još ~:minutes min',
     'progress_aria' => 'Napredak trijaže',
 
     'all_caught_aria' => 'Sve druge strane su označene',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Još nema zabeleženih transakcija.',
 
     'label_manually' => 'Ili označi ručno',
+    'label_question' => 'Šta je ova druga strana?',
     'display_name_label' => 'Prikazani naziv',
-    'display_name_placeholder' => 'Prikazani naziv…',
     'type_label' => 'Tip',
     'type_merchant' => 'Trgovac',
     'type_personal' => 'Fizičko lice',
     'type_bank' => 'Banka',
     'type_government' => 'Državna ustanova',
     'save_label' => 'Sačuvaj oznaku',
+    'name_required' => 'Prvo daj naziv ovoj drugoj strani.',
+    'draft_kept' => 'Ono što upišeš ostaje sačuvano dok se krećeš kroz red.',
 
     'skip' => 'Preskoči zasad',
-    'mark_ignored' => 'Označi kao zanemareno',
+    'mark_ignored' => 'Više ne pitaj za ovu',
+    'not_now_note' => 'Nijedno ne menja drugu stranu — još uvek možeš da je označiš kasnije na stranici Druge strane.',
     'previous' => 'Prethodna nepoznata',
-    'next' => 'Dalje',
 
     'kbd_yes' => 'da',
     'kbd_no' => 'ne',

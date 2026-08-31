@@ -15,12 +15,18 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 /**
  * @link ../../../../.docs/features/sync/device-identity-key-files.md
  */
-final class DeviceIdentityLoader
+final readonly class DeviceIdentityLoader
 {
+    private const string STAGING_PREFIX = 'beatrax_identity_read_';
+
+    private SealedJsonFile $sealedFile;
+
     public function __construct(
-        private readonly AppLockKeyService $appLockKeyService,
-        private readonly FileEncryptor $backupEncryptor,
-    ) {}
+        private AppLockKeyService $appLockKeyService,
+        FileEncryptor $backupEncryptor,
+    ) {
+        $this->sealedFile = new SealedJsonFile($backupEncryptor);
+    }
 
     // Whether a key-file exists at all, WITHOUT needing the KEK. load()
     // folds "never enabled" and "locked" into the same null, and a caller
@@ -43,6 +49,19 @@ final class DeviceIdentityLoader
         [, $identity] = $this->read($userId, $session);
 
         return $identity;
+    }
+
+    // Both answers from one decrypt, for a caller that uses the identity when
+    // there is one and names the state to a reader when there is not. Asking
+    // load() then state() reads and unseals the same file twice.
+    /**
+     * @return array{DeviceIdentityState, ?DeviceIdentityDto}
+     *
+     * @throws SecretFileException on an I/O failure reading an EXISTING key-file.
+     */
+    public function loadWithState(int $userId, Session $session): array
+    {
+        return $this->read($userId, $session);
     }
 
     /**
@@ -84,34 +103,15 @@ final class DeviceIdentityLoader
      */
     private function open(string $encPath, string $kek): array
     {
-        // Stage the decrypted plaintext inside the identity directory itself
-        // — NEVER sys_get_temp_dir(), which is world-traversable (e.g. /tmp
-        // at mode 1777).
-        $identityDir = dirname($encPath);
-        $tmpPath = $identityDir.DIRECTORY_SEPARATOR.'beatrax_identity_read_'.bin2hex(random_bytes(8)).'.tmp';
         try {
-            try {
-                $this->backupEncryptor->decrypt($encPath, $tmpPath, $kek);
-            } catch (BackupDecryptionException|BackupFormatException) {
-                // The key-file outlives the database that wraps the KEK, so a
-                // restored or replaced database leaves one that opens for
-                // nobody. That is a state of this device, not a fault — every
-                // caller of load() reads a settings screen or a poll handler.
-                return [DeviceIdentityState::Unreadable, null];
-            }
-            // BackupEncryptor renames its own internal staging file onto
-            // $tmpPath, which lands at the process umask default — lock it
-            // to 0600 before ever reading the plaintext back out.
-            SecureTempFile::lockDown($tmpPath);
-            // Suppressed so the `=== false` check decides. Unsuppressed, a
-            // failed read raises E_WARNING, which Laravel's handler turns into
-            // an ErrorException before the comparison runs.
-            $json = @file_get_contents($tmpPath);
-            if ($json === false) {
-                throw SecretFileException::couldNotReadIdentity();
-            }
+            $json = $this->sealedFile->readPlaintext($encPath, $kek, self::STAGING_PREFIX);
+        } catch (BackupDecryptionException|BackupFormatException) {
+            // The key-file outlives the database that wraps the KEK, so a
+            // restored or replaced database leaves one that opens for nobody.
+            // That is a state of this device, not a fault — every caller of
+            // load() reads a settings screen or a poll handler.
+            return [DeviceIdentityState::Unreadable, null];
         } finally {
-            @unlink($tmpPath);
             sodium_memzero($kek);
         }
 

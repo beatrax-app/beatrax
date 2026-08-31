@@ -6,11 +6,13 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
+use Psr\Log\LoggerInterface;
 
 final readonly class OpLogEntryApplier
 {
@@ -20,8 +22,10 @@ final readonly class OpLogEntryApplier
         private OpLogValueProjector $projector,
         private OpLogQuarantine $quarantine,
         private RowOwnership $ownership,
+        private SuppliedDateGate $suppliedDates,
         private SelfReferenceDeferral $selfReferences,
         private TransferPairCascade $pairCascade,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -204,9 +208,10 @@ final readonly class OpLogEntryApplier
             && $this->ownership->parentBelongsToUser($table, $payload, $userId);
     }
 
-    // Writes one created row, quarantining it if the database refuses the
-    // reference it names. Mirrors applyFieldMerge(): a single unusable op is
-    // isolated rather than allowed to roll back every op replayed with it.
+    // Mirrors applyFieldMerge(): one unusable op is isolated, not allowed to
+    // roll back every op replayed with it. A plain insert, NOT insertOrIgnore:
+    // OR IGNORE silences a NOT NULL violation as readily as a duplicate, so a
+    // create split across two frames wrote no row and reported success.
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
@@ -214,18 +219,41 @@ final readonly class OpLogEntryApplier
     private function insertCreatedRow(string $table, array $payload, array $fields, string $now): bool
     {
         try {
-            $this->db->connection()->table($table)->insertOrIgnore($payload);
+            $this->db->connection()->table($table)->insert($payload);
 
             return true;
-        } catch (QueryException) {
-            $firstField = reset($fields);
-
-            if ($firstField !== false) {
-                $this->quarantine->record($firstField[0], QuarantineReason::MissingReference, $now);
-            }
-
-            return false;
+        } catch (QueryException $e) {
+            return $this->recordRefusedInsert($table, $e, $fields, $now);
         }
+    }
+
+    // A row the database already holds — by pk or by any other unique index —
+    // is the idempotent re-apply replay is built on, so it stays silent and
+    // counts as written. Every other refusal is a real loss and says so.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): bool
+    {
+        $failure = CreateRowInsertFailure::classify($e);
+
+        if ($failure === CreateRowInsertFailure::AlreadyPresent) {
+            return true;
+        }
+
+        $firstField = reset($fields);
+
+        if ($firstField !== false && $firstField !== []) {
+            $this->quarantine->record($firstField[0], $failure->quarantineReason(), $now);
+        }
+
+        $this->logger?->warning('OpLogEntryApplier: the database refused a replayed CreateRow.', [
+            'table' => $table,
+            'reason' => $failure->quarantineReason()->value,
+            ...SafeExceptionContext::describe($e),
+        ]);
+
+        return false;
     }
 
     // Delete-wins: true when the tombstone HLC is >= the highest field HLC
@@ -309,6 +337,15 @@ final readonly class OpLogEntryApplier
         foreach ($fields as $field => $fieldEntries) {
             try {
                 $resolved = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
+
+                // Read before the re-encryption, which is the last point the
+                // value is still the day the peer wrote.
+                if ($this->suppliedDates->refuses($table, $field, $resolved)) {
+                    $this->quarantine->record($fieldEntries[0], QuarantineReason::ImpossibleDate, $now);
+
+                    return null;
+                }
+
                 $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
             } catch (\Throwable) {
                 $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
@@ -330,30 +367,30 @@ final readonly class OpLogEntryApplier
         return $payload;
     }
 
+    // Deletions are collected here rather than run here: a tombstone for a
+    // parent and one for its own child are two rows of two tables, and the
+    // order the merge happens to reach them in is not an order the foreign
+    // keys accept. applyDeletions() runs them children-first, once.
     /**
      * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
-     * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
+     * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes
      * @param  list<int>  $touchedTransactionIds
-     * @param  list<int>  $tombstonedTransactionIds
      */
     public function applyFieldMerges(
         array $candidatesByField,
         array $tombstones,
         int $userId,
         string $now,
-        array &$pairCascades,
+        array &$pendingDeletes,
         array &$touchedTransactionIds,
-        array &$tombstonedTransactionIds,
     ): void {
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
                 $tomb = $tombstones[$table][$pk] ?? null;
 
                 if ($tomb !== null && $this->tombstoneWins($tomb, $fields)) {
-                    $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
-                    $this->deleteRow($table, $pk, $userId);
-                    $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
+                    $pendingDeletes[$table][$pk] = $tomb;
 
                     continue;
                 }
@@ -378,6 +415,15 @@ final readonly class OpLogEntryApplier
     {
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
+
+            // A Set rewrites the same column a create gated, so the day is
+            // read on both paths or on neither.
+            if ($this->suppliedDates->refuses($table, $field, $columnValue)) {
+                $this->quarantine->record($fieldEntries[0], QuarantineReason::ImpossibleDate, $now);
+
+                return;
+            }
+
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
 
             // The create path gates the ids a row NAMES, but a Set rewrites
@@ -390,9 +436,14 @@ final readonly class OpLogEntryApplier
                 return;
             }
 
-            $query = $this->db->connection()
-                ->table($table)
-                ->where('id', $pk);
+            $query = $this->db->connection()->table($table);
+
+            // A self-scoped row is found by the session's own id, never by the
+            // wire pk: two devices mint different autoincrements for the same
+            // reader, so naming the origin's would update nothing.
+            if (! $this->ownership->isSelfScoped($table)) {
+                $query->where('id', $pk);
+            }
 
             $this->ownership->scopeToUser($query, $table, $userId)
                 ->update([$field => $columnValue]);
@@ -402,21 +453,18 @@ final readonly class OpLogEntryApplier
     }
 
     // Tombstones for (table, pk) pairs that had NO field SET entries — pairs
-    // that did carry a SET are already deleted in applyFieldMerges.
+    // that did carry a SET are already collected in applyFieldMerges.
     /**
      * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
-     * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
-     * @param  list<int>  $tombstonedTransactionIds
      * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $creates
+     * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes
      */
-    public function applyBareTombstones(
+    public function collectBareTombstones(
         array $candidatesByField,
         array $tombstones,
-        int $userId,
-        array &$pairCascades,
-        array &$tombstonedTransactionIds,
-        array $creates = [],
+        array $creates,
+        array &$pendingDeletes,
     ): void {
         foreach ($tombstones as $table => $pks) {
             foreach ($pks as $pk => $tomb) {
@@ -434,15 +482,79 @@ final readonly class OpLogEntryApplier
                     continue;
                 }
 
-                $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
-                $this->deleteRow($table, $pk, $userId);
-                $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
+                $pendingDeletes[$table][$pk] = $tomb;
             }
         }
     }
 
-    private function deleteRow(string $table, int|string $pk, int $userId): void
+    // One ordered pass over everything the merge decided to delete. The caller
+    // supplies the table order; a row still refused after the whole pass is
+    // retried once, because a cycle the topological order had to break can
+    // leave a child behind that the first attempt had not reached yet.
+    /**
+     * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes  Children-first table order.
+     * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
+     * @param  list<int>  $tombstonedTransactionIds
+     */
+    public function applyDeletions(
+        array $pendingDeletes,
+        int $userId,
+        string $now,
+        array &$pairCascades,
+        array &$tombstonedTransactionIds,
+    ): void {
+        /** @var list<array{table: string, pk: int|string, tomb: OpLogEntry}> $refused */
+        $refused = [];
+
+        foreach ($pendingDeletes as $table => $pks) {
+            foreach ($pks as $pk => $tomb) {
+                $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
+
+                if ($this->deleteRow($table, $pk, $userId)) {
+                    $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
+
+                    continue;
+                }
+
+                $refused[] = ['table' => $table, 'pk' => $pk, 'tomb' => $tomb];
+            }
+        }
+
+        foreach ($refused as $blocked) {
+            if ($this->deleteRow($blocked['table'], $blocked['pk'], $userId)) {
+                $this->trackTransaction($blocked['table'], $blocked['pk'], $tombstonedTransactionIds);
+
+                continue;
+            }
+
+            $this->recordBlockedDelete($blocked['table'], $blocked['pk'], $blocked['tomb'], $now);
+        }
+    }
+
+    // A row this device holds that no op deletes still references the one the
+    // tombstone names, so the two devices now disagree about it. Swallowed,
+    // that disagreement had nothing anywhere reporting it.
+    private function recordBlockedDelete(string $table, int|string $pk, OpLogEntry $tomb, string $now): void
     {
+        $this->quarantine->record($tomb, QuarantineReason::DeleteBlockedByReference, $now);
+
+        $this->logger?->warning('OpLogEntryApplier: the database refused a replayed tombstone.', [
+            'table' => $table,
+            'pk' => $pk,
+            'reason' => QuarantineReason::DeleteBlockedByReference->value,
+        ]);
+    }
+
+    // False ONLY when the database refused the delete under a foreign key. A
+    // self-scoped table is a deliberate no-op and counts as applied.
+    private function deleteRow(string $table, int|string $pk, int $userId): bool
+    {
+        // The account row itself. A peer may edit the reader's settings; a
+        // tombstone that removed the reader is not an op this side applies.
+        if ($this->ownership->isSelfScoped($table)) {
+            return true;
+        }
+
         try {
             // Unscoped child tables have no user_id column at all, so a literal
             // where('user_id') raised "no such column" and aborted the replay.
@@ -451,11 +563,10 @@ final readonly class OpLogEntryApplier
                 $table,
                 $userId,
             )->delete();
+
+            return true;
         } catch (QueryException) {
-            // Rows still reference this one under an ON DELETE NO ACTION FK
-            // (import_runs, categories). The tombstone is simply not applied
-            // yet — it re-applies once the children are gone, which beats
-            // aborting every other op replayed alongside it.
+            return false;
         }
     }
 

@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Kirjendatud makse',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list ei arvestata — sealsed maksed ei muuda saldot',
+    ],
+
     'panel' => [
         'aria' => 'Päeva üksikasjade paneel',
         'close' => 'Sulge päevapaneel',
+        'close_caption' => 'Sulge',
         'start_of_day' => 'Päeva algus',
         'no_payments' => 'Sel päeval makseid pole.',
         'date_approximate' => '~ kuupäev on ligikaudne',

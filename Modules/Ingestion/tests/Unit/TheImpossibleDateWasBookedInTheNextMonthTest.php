@@ -3,13 +3,14 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\SafeDate;
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalDateParser;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
+use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 // createFromFormat() rolls an out-of-range component forward rather than
 // refusing it, and only PeriodPresetResolver ever guarded against that. Every
@@ -63,7 +64,7 @@ it('refuses an ASN row dated 31 February rather than booking it in March', funct
 
     try {
         expect(fn () => iterator_to_array(
-            $this->app->make(AsnCsvAdapter::class)->parse($path, $this->resolver),
+            $this->app->make(SourceAdapterRegistry::class)->for(CsvPresetRegistry::ASN)->parse($path, $this->resolver),
             preserve_keys: false,
         ))->toThrow(InvalidAmountException::class);
     } finally {

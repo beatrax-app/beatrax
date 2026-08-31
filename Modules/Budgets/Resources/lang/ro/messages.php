@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Categorie',
         'assigned' => 'Alocat',
+        'carried_in' => 'Reportat',
+        'moved' => 'Mutat',
         'spent' => 'Cheltuit',
         'available' => 'Disponibil',
         'if_overspent' => 'Dacă se depășește',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Ascunde istoricul ↑',
         'moved_from' => 'Mutat din :category',
         'moved_to' => 'Mutat în :category',
+        'moved_unreadable' => 'Mutat cu :category de o versiune mai nouă a Beatrax',
         'undo' => 'Anulează acțiunea',
     ],
 
     'phone' => [
         'spent' => 'Cheltuit :amount',
+        'carried_in' => 'Reportat :amount',
+        'moved' => 'Mutat :amount',
         'available' => 'Disponibil :amount',
         'notify_at' => 'Notifică la',
     ],

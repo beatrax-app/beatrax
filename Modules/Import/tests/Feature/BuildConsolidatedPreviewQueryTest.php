@@ -104,11 +104,10 @@ function seedConsolidatedPreview(int $importRunId, array $rowStatuses): void
             rowIndex: $index,
             status: $status,
             accountId: 1,
-            bookedAt: '2026-05-10',
+            postedAt: '2026-05-10',
             counterpartyName: 'Fixture '.$index,
             counterpartyIban: null,
             description: 'fixture-row-'.$index,
-            categoryName: null,
             amountMinor: -1000 - $index,
             currency: 'EUR',
             error: null,
@@ -291,6 +290,28 @@ it('clamps the override naturally when it exceeds the section totalRows', functi
     expect($batch->sections[0]->sampleRows)->toHaveCount(10);
 })->group('phase-16.1.2');
 
+// The override reaches a SQL slice size, and the ceiling is what keeps that a
+// preview: without it, a section drew every committable row of a statement into
+// one fragment. Seeded past MAX_SAMPLE_ROW_LIMIT so the clamp and the natural
+// "fewer rows than asked for" bound are told apart.
+it('clamps an override above MAX_SAMPLE_ROW_LIMIT to the ceiling', function (): void {
+    $run = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreviewRows($run, BuildConsolidatedPreviewQuery::MAX_SAMPLE_ROW_LIMIT + 40);
+
+    /** @var BuildConsolidatedPreviewQuery $query */
+    $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
+
+    $batch = $query->build(
+        [$run],
+        $this->userA,
+        sectionLimitOverrides: ['asn-csv' => 1_000_000],
+    );
+
+    expect($batch->sections)->toHaveCount(1);
+    expect($batch->sections[0]->sampleRows)->toHaveCount(BuildConsolidatedPreviewQuery::MAX_SAMPLE_ROW_LIMIT);
+    expect($batch->sections[0]->totalRows)->toBe(BuildConsolidatedPreviewQuery::MAX_SAMPLE_ROW_LIMIT + 40);
+})->group('phase-16.1.2');
+
 it('ignores non-positive overrides and falls back to the default 5-row cap', function (): void {
     $run = seedConsolidatedRun($this->userA->id, 'asn-csv');
     seedConsolidatedPreviewRows($run, 30);
@@ -393,11 +414,10 @@ function seedPartiallyReadFile(int $importRunId, string $reason): void
             rowIndex: $index,
             status: PreviewRowStatus::NewRow,
             accountId: 1,
-            bookedAt: '2026-05-10',
+            postedAt: '2026-05-10',
             counterpartyName: 'Fixture '.$index,
             counterpartyIban: null,
             description: 'fixture-row-'.$index,
-            categoryName: null,
             amountMinor: -1000 - $index,
             currency: 'EUR',
             error: null,

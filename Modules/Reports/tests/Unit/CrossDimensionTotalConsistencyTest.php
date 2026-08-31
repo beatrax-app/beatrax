@@ -12,6 +12,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\CategorySpendQuery;
 use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
+use Modules\Reports\Internal\Aggregation\SpendQueryFilters;
 use Modules\Reports\Internal\Aggregation\TimeBucketSpendQuery;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 
@@ -216,3 +217,76 @@ it('captures a genuinely-unsplit $0.00 transaction in CategorySpendQuery, matchi
     expect($counterpartyRows)->toHaveCount(1);
     expect($timeBucketRows)->toHaveCount(1);
 });
+
+function xdcSplit(DatabaseManager $db, User $user, int $transactionId, Category $category, int $minor): void
+{
+    $db->connection()->table('transaction_splits')->insert([
+        'user_id' => $user->id,
+        'transaction_id' => $transactionId,
+        'category_id' => $category->id,
+        'settled_amount_minor' => $minor,
+        'settled_currency' => 'EUR',
+        'sort_order' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+// "The same report" includes its filters, and every case above passed the
+// default empty set. The one predicate the category dimension wrote against the
+// split LEG rather than the transaction was therefore never exercised: tapping
+// "Account" moved the headline by the leg's own amount.
+it('produces the identical grand total across all four dimensions for the same filters, not only the same period', function (array $filterArgs): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = xdcUser();
+    $account = xdcAccount($user, 'ASN');
+    $electronics = xdcCategory('Electronics');
+    $accessories = xdcCategory('Accessories');
+
+    // A 124.50 parent split into a 100.00 leg and a 24.50 one: the parent
+    // clears an amount_min of 50 and the smaller leg does not.
+    $splitParent = xdcTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => -12_450,
+        'category_id' => null,
+        'posted_at' => '2026-03-11', 'booked_at' => '2026-03-11 09:00:00', 'value_date' => '2026-03-11',
+    ]);
+    xdcSplit($db, $user, $splitParent, $electronics, -10_000);
+    xdcSplit($db, $user, $splitParent, $accessories, -2_450);
+
+    xdcTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => -6_000,
+        'category_id' => $electronics->id,
+        'posted_at' => '2026-03-14', 'booked_at' => '2026-03-14 09:00:00', 'value_date' => '2026-03-14',
+    ]);
+    xdcTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => -4_000,
+        'category_id' => $accessories->id,
+        'posted_at' => '2026-03-18', 'booked_at' => '2026-03-18 09:00:00', 'value_date' => '2026-03-18',
+    ]);
+
+    $period = new Period(
+        start: CarbonImmutable::parse('2026-03-01'),
+        endExclusive: CarbonImmutable::parse('2026-04-01'),
+        label: 'March 2026',
+    );
+
+    $filters = new SpendQueryFilters(...$filterArgs);
+
+    $sum = static fn (array $rows): int => array_sum(array_map(static fn ($r): int => $r->amountMinor, $rows));
+
+    $categoryTotal = $sum(app(CategorySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', $filters));
+    $counterpartyTotal = $sum(app(CounterpartySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', $filters));
+    $accountTotal = $sum(app(AccountSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', $filters));
+    $timeBucketTotal = $sum(app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', ReportGranularity::Monthly, $filters));
+
+    expect($categoryTotal)->toBe($counterpartyTotal, 'category vs counterparty diverged under a filter')
+        ->and($categoryTotal)->toBe($accountTotal, 'category vs account diverged under a filter')
+        ->and($categoryTotal)->toBe($timeBucketTotal, 'category vs time_bucket diverged under a filter');
+})->with([
+    // 124.50 + 60.00 pass; 40.00 does not. The 24.50 leg used to drop out of
+    // the category dimension alone.
+    'amount_min' => [['amountMinMinor' => 5_000]],
+    // 40.00 alone passes; the 24.50 leg used to be counted here as well.
+    'amount_max' => [['amountMaxMinor' => 5_000]],
+]);

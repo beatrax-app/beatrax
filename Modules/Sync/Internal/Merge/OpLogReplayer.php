@@ -10,14 +10,19 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Internal\Clock\RemoteClockAdvance;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
+use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Transfers\Public\Services\PairUnlinker;
+use Psr\Log\LoggerInterface;
 
 /**
  * @link ../../../../.docs/features/sync/op-log-merge-rules.md
@@ -43,6 +48,12 @@ final readonly class OpLogReplayer
     private SearchIndexRefresher $searchRefresher;
 
     private TransferPairCascade $pairCascade;
+
+    private RemoteClockAdvance $remoteClock;
+
+    private RowHistoryRehydration $rowHistory;
+
+    private CoveredTableOrder $tableOrder;
 
     /**
      * @param  DatabaseManager  $db  Raw DB access (bypasses Eloquent model events).
@@ -97,19 +108,29 @@ final readonly class OpLogReplayer
             $keyringService,
             $session,
             $quarantine,
+            new PriorAuthorship($db, new DeviceRegistryService($db)),
         );
         $ownership = new RowOwnership($db);
-        $this->pairCascade = new TransferPairCascade($db);
+        $this->pairCascade = new TransferPairCascade($db, new PairUnlinker($db));
         $this->applier = new OpLogEntryApplier(
             $db,
             $rules,
             $this->projector,
             $quarantine,
             $ownership,
+            new SuppliedDateGate($db),
             new SelfReferenceDeferral($db, $ownership),
             $this->pairCascade,
+            $this->resolveFromContainer(LoggerInterface::class),
         );
+        // Built, not resolved: Container::bound() answers false for a concrete
+        // class nobody registered, so asking the container handed back null on
+        // every replay and both ordering passes below were inert — children
+        // reached the database first and their foreign keys refused them.
+        $this->tableOrder = new CoveredTableOrder($db, $rules);
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
+        $this->remoteClock = new RemoteClockAdvance($db);
+        $this->rowHistory = new RowHistoryRehydration(new PersistedOpLogEntries($db), $this->verifier);
     }
 
     // Creates arrive grouped by table in HLC order, which says nothing about
@@ -121,15 +142,9 @@ final readonly class OpLogReplayer
      */
     private function parentsFirst(array $creates): array
     {
-        $order = $this->resolveFromContainer(CoveredTableOrder::class);
-
-        if ($order === null) {
-            return $creates;
-        }
-
         $ordered = [];
 
-        foreach ($order->insertionOrder() as $table) {
+        foreach ($this->tableOrder->insertionOrder() as $table) {
             if (isset($creates[$table])) {
                 $ordered[$table] = $creates[$table];
             }
@@ -138,6 +153,33 @@ final readonly class OpLogReplayer
         // Anything the order does not know about keeps its original position
         // rather than being silently dropped.
         foreach ($creates as $table => $rows) {
+            if (! isset($ordered[$table])) {
+                $ordered[$table] = $rows;
+            }
+        }
+
+        return $ordered;
+    }
+
+    // The exact reverse of parentsFirst(), for the same reason: HLC order puts
+    // a parent's tombstone wherever its clock fell, and deleting a parent
+    // whose child row is still there is refused outright by an ON DELETE NO
+    // ACTION foreign key (import_runs, categories).
+    /**
+     * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes
+     * @return array<string, array<int|string, OpLogEntry>>
+     */
+    private function childrenFirst(array $pendingDeletes): array
+    {
+        $ordered = [];
+
+        foreach ($this->tableOrder->deletionOrder() as $table) {
+            if (isset($pendingDeletes[$table])) {
+                $ordered[$table] = $pendingDeletes[$table];
+            }
+        }
+
+        foreach ($pendingDeletes as $table => $rows) {
             if (! isset($ordered[$table])) {
                 $ordered[$table] = $rows;
             }
@@ -195,20 +237,30 @@ final readonly class OpLogReplayer
         return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
     }
 
-    // Replays a merged set of op-log entries against the real SQLite schema:
-    // filter + verify signatures (rejected -> quarantine only), sort by HLC
-    // total order, single-pass resolve per (table, pk, field) via strategy
-    // dispatch, then apply in a DB transaction scoped to $userId (see @link).
+    // Verify signatures (rejected -> quarantine only), widen to the durable
+    // history of every row named, sort by HLC total order, resolve per
+    // (table, pk, field), apply in a transaction scoped to $userId.
     /**
      * @param  list<OpLogEntry>  $entries  Entries from all devices (any order).
      * @param  int  $userId  Scope all DB writes to this user.
+     * @param  RowHistoryPolicy  $history  AsGiven ONLY when $entries already holds every
+     *                                     op for the rows it names.
      */
-    public function replay(array $entries, int $userId): void
+    public function replay(array $entries, int $userId, RowHistoryPolicy $history = RowHistoryPolicy::FromDurableLog): void
     {
         $now = $this->clock->now()->toDateTimeString();
 
         $verified = $this->verifier->verifyPersistAndPrepare($entries, $userId, $now);
-        $sorted = $this->applier->sortByHlc($verified);
+
+        // Before the clock absorb, not after: absorbing re-read history would
+        // drag this device's HLC over ops it has already accounted for.
+        $this->remoteClock->absorb($verified, $userId, $now);
+
+        $resolvable = $history === RowHistoryPolicy::AsGiven
+            ? $verified
+            : $this->rowHistory->augment($verified, $userId);
+
+        $sorted = $this->applier->sortByHlc($resolvable);
         [$candidatesByField, $tombstones, $creates] = $this->applier->partitionByOpType($sorted);
 
         // Pair-link cascade deletions and FTS5 freshness ids are collected
@@ -235,23 +287,25 @@ final readonly class OpLogReplayer
                 &$touchedTransactionIds,
                 &$tombstonedTransactionIds,
             ): void {
+                /** @var array<string, array<int|string, OpLogEntry>> $pendingDeletes */
+                $pendingDeletes = [];
+
                 $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $touchedTransactionIds);
                 $this->applier->applyFieldMerges(
                     $candidatesByField,
                     $tombstones,
                     $userId,
                     $now,
-                    $pairCascades,
+                    $pendingDeletes,
                     $touchedTransactionIds,
-                    $tombstonedTransactionIds,
                 );
-                $this->applier->applyBareTombstones(
-                    $candidatesByField,
-                    $tombstones,
+                $this->applier->collectBareTombstones($candidatesByField, $tombstones, $creates, $pendingDeletes);
+                $this->applier->applyDeletions(
+                    $this->childrenFirst($pendingDeletes),
                     $userId,
+                    $now,
                     $pairCascades,
                     $tombstonedTransactionIds,
-                    $creates,
                 );
             },
         );

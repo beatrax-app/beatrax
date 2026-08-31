@@ -13,9 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 // A server redirect never moved the address bar in the Android shell, so
 // /login rendered the dashboard under /login.
-final class ClientSideRedirect
+final readonly class ClientSideRedirect
 {
-    public function __construct(private readonly Vite $vite) {}
+    public function __construct(private Vite $vite) {}
 
     /**
      * @param  Closure(Request): Response  $next

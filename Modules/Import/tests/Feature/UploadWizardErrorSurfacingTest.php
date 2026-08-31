@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Mockery\MockInterface;
+use Modules\Import\Internal\Enums\ImportType;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Ledger\Models\ImportRun;
 use Tests\Helpers\UploadIsolation;
@@ -28,7 +29,7 @@ it('logs ImportPipeline parse failures via the injected logger when the PayPal l
     $logSpy = Log::spy();
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'paypal')
+        ->set('importType', ImportType::Csv->value)
         ->set('sourceFormat', 'paypal-csv')
         ->set('file', $file)
         ->call('submit')
@@ -54,7 +55,7 @@ it('logs ImportPipeline parse failures via the injected logger when an ASN CSV h
     $logSpy = Log::spy();
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'asn')
+        ->set('importType', ImportType::Csv->value)
         ->set('sourceFormat', 'asn-csv')
         ->set('file', $file)
         ->call('submit')
@@ -77,7 +78,7 @@ it('persists the ImportRun in previewed state even when the pipeline produced on
     $file = UploadedFile::fake()->createWithContent('paypal-unknown-lang.csv', $csv);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'paypal')
+        ->set('importType', ImportType::Csv->value)
         ->set('sourceFormat', 'paypal-csv')
         ->set('file', $file)
         ->call('submit')
@@ -91,7 +92,7 @@ it('leaves uploadError null on the happy path and redirects to the preview scree
     $file = UploadedFile::fake()->createWithContent('paypal-activity.csv', $contents !== false ? $contents : '');
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'paypal')
+        ->set('importType', ImportType::Csv->value)
         ->set('sourceFormat', 'paypal-csv')
         ->set('file', $file)
         ->call('submit')

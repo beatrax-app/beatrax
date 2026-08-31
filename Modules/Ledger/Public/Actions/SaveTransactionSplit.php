@@ -15,28 +15,30 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
-use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
+use Modules\Ledger\Public\Services\FieldProvenanceWriter;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-final class SaveTransactionSplit implements SavesTransactionSplit
+final readonly class SaveTransactionSplit implements SavesTransactionSplit
 {
     // A missing row and a cross-user row are deliberately the same
     // message: telling them apart would confirm the row exists.
-    private const NOT_FOUND_KEY = 'ledger::detail.errors.not_found_or_unowned';
+    private const string NOT_FOUND_KEY = 'ledger::detail.errors.not_found_or_unowned';
 
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private Dispatcher $events,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private FieldProvenanceWriter $provenance,
     ) {}
 
     /**
@@ -96,7 +98,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
     {
         // TransactionDetail's catch blocks turn this into a warn toast, so
         // the reconciled lock stays warn-first end to end.
-        if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
+        if (TransactionStatusQuery::locksEdits($parent->status)) {
             throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
         }
 
@@ -341,7 +343,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 throw new InvalidArgumentException(Lang::get(self::NOT_FOUND_KEY));
             }
 
-            if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
+            if (TransactionStatusQuery::locksEdits($parent->status)) {
                 throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
             }
 
@@ -372,6 +374,12 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
                 ->update(['category_id' => $survivingCategoryId]);
+
+            // No rule ever writes a leg category — the re-apply job skips
+            // split parents outright — so a surviving leg category is always
+            // one the reader picked, and 'manual' is the only value that stops
+            // RuleApplier::applyAtReapply() taking that choice back.
+            $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
         });
 
         foreach ($removedIds as $removedId) {

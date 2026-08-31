@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serie',
 
+    'template' => [
+        'cancel' => 'Opsig :name',
+        'change_amount' => 'Ændr beløbet for :name',
+    ],
+
     'summary' => [
         'cancel' => 'Opsig :name',
         'series_fallback' => 'serie #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenariet har fået nyt navn.',
         'mutation_added' => 'Ændringen er tilføjet.',
         'mutation_updated' => 'Ændringen er opdateret.',
-        'mutation_removed' => 'Ændringen er fjernet. Fortryd',
+        'mutation_removed' => 'Ændringen er fjernet.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenarienavnet må ikke være tomt.',
         'name_too_long' => 'Scenarienavnet må højst være på :max tegn.|Scenarienavnet må højst være på :max tegn.',
         'name_taken' => 'Der findes allerede et scenarie med det navn.',
+        'date_out_of_range' => 'Datoen ligger uden for enhver prognosehorisont — fra i dag til :days dag frem — så scenariet ville ikke ændre noget.|Datoen ligger uden for enhver prognosehorisont — fra i dag til :days dage frem — så scenariet ville ikke ændre noget.',
         'pick_kind_first' => 'Vælg først en type ændring.',
         'amount_positive' => 'Beløbet skal være et positivt tal.',
+        'scenario_gone' => 'Dette scenarie findes ikke længere — det blev slettet et andet sted. Vælg et andet scenarie, eller lav et nyt.',
+        'mutation_gone' => 'Denne ændring findes ikke længere — den blev fjernet et andet sted. Luk editoren, og tilføj den igen, hvis du stadig vil have den.',
     ],
 ];

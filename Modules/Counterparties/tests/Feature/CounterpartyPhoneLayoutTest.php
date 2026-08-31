@@ -32,22 +32,25 @@ it('gives a profile tab one column on a phone', function (): void {
 
 // Measured on the Samsung at the phone's own maximum font size: the triage
 // queue scrolled sideways, 377px of content in a 347px shell. A fieldset
-// carries min-width: min-content from the browser, so it will not shrink below
-// the intrinsic width of the name box inside it, and the box — flex: 1 1 240px
-// with the default min-width: auto — will not shrink either. The fieldset alone
-// left the box 61px past it; both together put everything back inside the card.
-it('lets the manual-label fieldset and its name box shrink to the phone', function (): void {
+// carries min-width: min-content from the browser, so the block is a column of
+// full-width controls now and every box in it is still told it may shrink.
+it('lets the manual-label block and its name box shrink to the phone', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
     $triage = (string) file_get_contents(
         base_path('Modules/Counterparties/Resources/views/livewire/counterparty-triage.blade.php'),
     );
 
-    expect($css)->toContain("    .triage-section {\n        display: flex;\n        flex-direction: column;\n        gap: var(--space-4);\n        min-width: 0;\n    }");
+    expect($css)->toContain("    .triage-section {\n        display: flex;\n        flex-direction: column;\n        gap: var(--space-4);\n        min-width: 0;\n    }")
+        ->and($css)->toContain("    .triage-decide {\n        display: block;\n        min-width: 0;")
+        ->and($css)->toContain("    .triage-stack {\n        display: flex;\n        flex-direction: column;\n        gap: var(--space-2);\n        min-width: 0;\n    }");
 
-    $start = strpos($triage, 'id="triage-manual-name"');
+    // The seven inline flex / padding / border declarations that opted this
+    // section out of the grid every other screen uses are gone with it.
+    $start = strpos($triage, 'class="triage-decide"');
     expect($start)->not->toBeFalse();
 
-    $input = substr($triage, (int) $start, 400);
-    expect($input)->toContain('flex: 1 1 240px')
-        ->and($input)->toContain('min-width: 0');
+    $block = substr($triage, (int) $start, 2600);
+    expect($block)->not->toContain('flex: 1 1 240px')
+        ->and($block)->not->toContain('style="display: flex')
+        ->and($block)->toContain('x-core::form-field');
 });

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Hranilniki · Beatrax',
     'heading' => 'Hranilniki',
-    'subtitle' => 'Navidezna delna stanja, ki se vedno seštejejo v dejansko stanje računa.',
+    'subtitle' => 'Navidezna delna stanja, izločena iz dejanskega stanja računa.',
     'add_pot' => 'Dodaj hranilnik',
 
     'pot_fallback' => 'hranilnik',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Prikaži zgodovino ↓',
         'hide' => 'Skrij zgodovino ↑',
+        'truncated' => 'Zadnji premiki: :shown od :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Dvig',
         'moved_from' => 'Preneseno iz hranilnika :name',
         'moved_to' => 'Preneseno v hranilnik :name',
+        'unreadable' => 'Zabeleženo z novejšo različico Beatraxa',
+        'released_on_archive' => 'Sproščeno ob arhiviranju',
     ],
 
     'archived' => [
-        'toggle' => 'Arhivirani hranilniki (:count)',
+        'toggle' => 'Arhiviran hranilnik (:count)|Arhivirana hranilnika (:count)|Arhivirani hranilniki (:count)|Arhiviranih hranilnikov (:count)',
         'badge' => 'Arhivirano',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Vnesi ime za ta hranilnik.',
         'select_account' => 'Izberi račun za ta hranilnik.',
-        'amount_exceeds_unallocated' => 'Znesek presega nerazporejeno stanje.',
         'amount_exceeds_unallocated_available' => 'Znesek presega nerazporejeno stanje (na voljo: :amount).',
         'amount_exceeds_pot_balance' => 'Znesek presega stanje v hranilniku :name (na voljo: :amount).',
+        'generic' => 'Sklada ni bilo mogoče shraniti. Preverite polja in poskusite znova.',
+        'amount_invalid' => 'Vnesite znesek, večji od nič.',
+        'goal_already_linked' => 'Ta cilj že ima aktiven povezan sklad. Najprej ga arhivirajte.',
+        'account_cannot_hold_pots' => 'Hranilnik potrebuje račun, na katerem je denar. Izberi drug račun.',
+        'select_target_pot' => 'Izberi hranilnik, v katerega prenesti.',
+        'move_target_missing' => 'Ta hranilnik ni več na voljo. Izberi drugega.',
+        'move_same_pot' => 'Hranilnik ne more prenesti denarja vase. Izberi drug hranilnik.',
+        'move_cross_account' => 'Hranilniki si izmenjujejo denar samo znotraj enega računa, :name pa je na računu :account.',
+        'pot_missing' => 'Ta hranilnik ni več na voljo.',
+        'operation_failed' => 'Ni šlo skozi. Noben denar ni bil prenesen — poskusi znova.',
     ],
 
     'toast' => [

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Sparepotter · Beatrax',
     'heading' => 'Sparepotter',
-    'subtitle' => 'Virtuelle delsaldoer som alltid summerer seg til den faktiske kontosaldoen din.',
+    'subtitle' => 'Virtuelle delsaldoer skilt ut fra den faktiske kontosaldoen.',
     'add_pot' => 'Legg til sparepott',
 
     'pot_fallback' => 'sparepott',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Vis historikk ↓',
         'hide' => 'Skjul historikk ↑',
+        'truncated' => 'Siste bevegelser: :shown av :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Uttak',
         'moved_from' => 'Flyttet fra :name',
         'moved_to' => 'Flyttet til :name',
+        'unreadable' => 'Registrert av en nyere versjon av Beatrax',
+        'released_on_archive' => 'Frigitt ved arkivering',
     ],
 
     'archived' => [
-        'toggle' => 'Arkiverte sparepotter (:count)',
+        'toggle' => 'Arkivert sparepott (:count)|Arkiverte sparepotter (:count)',
         'badge' => 'Arkivert',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Skriv inn et navn på denne sparepotten.',
         'select_account' => 'Velg en konto for denne sparepotten.',
-        'amount_exceeds_unallocated' => 'Beløpet overstiger den ufordelte saldoen.',
         'amount_exceeds_unallocated_available' => 'Beløpet overstiger den ufordelte saldoen (:amount tilgjengelig).',
         'amount_exceeds_pot_balance' => 'Beløpet overstiger saldoen i :name (:amount tilgjengelig).',
+        'generic' => 'Potten kunne ikke lagres. Sjekk feltene og prøv igjen.',
+        'amount_invalid' => 'Angi et beløp større enn null.',
+        'goal_already_linked' => 'Dette målet har allerede en aktiv tilknyttet pott. Arkiver den først.',
+        'account_cannot_hold_pots' => 'En sparepott krever en konto som rommer penger. Velg en annen konto.',
+        'select_target_pot' => 'Velg en sparepott å flytte til.',
+        'move_target_missing' => 'Den sparepotten er ikke lenger tilgjengelig. Velg en annen.',
+        'move_same_pot' => 'En sparepott kan ikke flytte penger til seg selv. Velg en annen sparepott.',
+        'move_cross_account' => 'Sparepotter bytter bare penger innenfor én konto, og :name ligger på :account.',
+        'pot_missing' => 'Den sparepotten er ikke lenger tilgjengelig.',
+        'operation_failed' => 'Det gikk ikke igjennom. Ingen penger ble flyttet — prøv igjen.',
     ],
 
     'toast' => [

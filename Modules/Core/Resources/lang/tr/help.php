@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => ':subject hakkında',
+        'close' => 'Kapat',
+    ],
+
     'page_title' => 'Verilerim nerede?',
     'intro' => 'Beatrax her şeyi bu cihazda saklar. Hiçbir şey sunucuya gönderilmez, hiçbir şey buluta senkronize edilmez, sen dışa aktarmadıkça hiçbir şey bu cihazdan çıkmaz.',
 

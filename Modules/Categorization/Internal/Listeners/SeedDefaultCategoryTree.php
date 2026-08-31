@@ -6,9 +6,9 @@ namespace Modules\Categorization\Internal\Listeners;
 
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
 
-final class SeedDefaultCategoryTree
+final readonly class SeedDefaultCategoryTree
 {
-    public function __construct(private readonly DefaultCategoryTreeSeeder $seeder) {}
+    public function __construct(private DefaultCategoryTreeSeeder $seeder) {}
 
     public function handle(): void
     {

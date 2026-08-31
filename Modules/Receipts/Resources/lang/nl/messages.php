@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Sleep een e-mailbericht (.eml) of een mailboxarchief (.mbox) hierheen. De matcher herkent PayPal-bonnen en toont ze als canonieke transacties; niet-herkende afzenders blijven in het auditlogboek voor triage.',
-    ],
-
     'conflict' => [
         'field' => [
             'amount_minor' => 'bedrag',

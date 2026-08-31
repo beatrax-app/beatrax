@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Beatrax\'a dön',
 
+    'not_saved' => 'Hiçbir şey kaydedilmedi. Verilerin değişmedi — tekrar dene.',
+
+    'no_longer_here' => 'Bu artık yok.',
+
     '404' => [
         'title' => 'Bu sayfa yok',
         'body' => 'Bağlantı eski olabilir ya da sayfanın adı değişmiş olabilir. Verilerinde bir sorun yok.',

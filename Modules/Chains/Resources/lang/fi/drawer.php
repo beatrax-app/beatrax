@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Tämän osuuden jälkeen ei löytynyt rahoitusketjua.',
 
     'covers_charges' => 'Kattaa :count ICS-veloituksen|Kattaa :count ICS-veloitusta',
-    'no_ics_charges' => 'Tässä tilityksessä ei ole ICS-veloituksia',
     'show_more_fanout' => 'Näytä :count lisää · :shown / :total',
 
     'confirm' => 'Vahvista',
     'reject' => 'Hylkää',
     'confirm_aria' => 'Vahvista ketjulinkki :id',
     'reject_aria' => 'Hylkää ketjulinkki :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministinen',
+        'confirmed' => 'Vahvistettu',
+        'candidate' => 'Ehdokas',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Varmuus: deterministinen osuma',

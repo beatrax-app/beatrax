@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
@@ -25,26 +26,38 @@ final class AccountCurrencyEditor extends Component
 {
     use DispatchesToast;
 
+    #[Locked]
     public int $accountId = 0;
 
+    #[Locked]
     public string $accountName = '';
 
+    // The one property the browser writes: the <select> is wire:model-bound to
+    // it. Everything below is the server's, and the warning banner hands three
+    // of them to Money::ofMinor(), which throws on a code or a shape it cannot
+    // read rather than on the payload that chose it.
     public string $currency = Currency::Eur->value;
 
     // What the row holds, kept apart from the bound $currency so cancelling
     // the warning can put the <select> back to it. The two differ only
     // between choosing a currency and answering for it.
+    #[Locked]
     public string $storedCurrency = Currency::Eur->value;
 
+    #[Locked]
     public ?string $errorMessage = null;
 
+    #[Locked]
     public bool $showingRelabelBanner = false;
 
+    #[Locked]
     public ?int $relabelBaselineMinor = null;
 
     /** @var array<string, int> */
+    #[Locked]
     public array $relabelLines = [];
 
+    #[Locked]
     public bool $saved = false;
 
     public function mount(

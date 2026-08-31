@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Belopp',
 
     'subtotal' => 'Delsumma',
+    'subtotal_income' => 'Delsumma inkomster',
 
     'footer' => 'Skapad av Beatrax — privatekonomi enbart lokalt — :year',
 ];

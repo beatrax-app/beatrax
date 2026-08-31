@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Izmaiņu brīdinājumi',
-    'heading' => 'Brīdinājumi',
     'intro_anomaly' => 'Atsevišķi maksājumi, kas jums izskatās neierasti.',
     'intro_drift' => 'Apstiprinātās regulāro maksājumu sērijas, kuru jaunākais maksājums pārsniedza jūsu slieksni.',
     'adjust_threshold' => 'Pielāgot slieksni →',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Šī brīdinājuma vairs nav.',
         'acknowledged' => 'Pieņemts zināšanai',
         'snoozed' => 'Atlikts',
         'dismissed' => 'Aizvērts',

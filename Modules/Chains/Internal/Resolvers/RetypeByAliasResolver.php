@@ -18,7 +18,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/architecture/chain-resolution.md
  */
-final class RetypeByAliasResolver
+final readonly class RetypeByAliasResolver
 {
     use CoercesScalars;
 
@@ -27,10 +27,10 @@ final class RetypeByAliasResolver
     private const int CANDIDATE_CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     /**
@@ -144,13 +144,7 @@ final class RetypeByAliasResolver
      */
     private static function hasAccountOtherThan(array $targetAccountIds, int $ownAccountId): bool
     {
-        foreach ($targetAccountIds as $targetAccountId) {
-            if ($targetAccountId !== $ownAccountId) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($targetAccountIds, fn (int $targetAccountId): bool => $targetAccountId !== $ownAccountId);
     }
 
     /**

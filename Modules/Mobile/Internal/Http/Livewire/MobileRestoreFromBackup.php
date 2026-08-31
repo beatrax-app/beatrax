@@ -9,10 +9,13 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 // The route back from a wipe. Before this a reader holding a .enc had to
@@ -41,7 +44,7 @@ final class MobileRestoreFromBackup extends Component
         $this->error = Lang::get('core::backup.errors.upload_failed');
     }
 
-    public function restore(RestoreEncryptedBackup $restore, MobileFirstLaunchBootstrap $bootstrap): void
+    public function restore(RestoreEncryptedBackup $restore, MobileFirstLaunchBootstrap $bootstrap, LoggerInterface $logger): void
     {
         $this->error = '';
 
@@ -72,7 +75,8 @@ final class MobileRestoreFromBackup extends Component
         try {
             $restore($path, $this->passphrase);
         } catch (RuntimeException $e) {
-            $this->error = $e->getMessage();
+            $logger->warning('MobileRestoreFromBackup: restore refused.', SafeExceptionContext::describe($e));
+            $this->error = RestoreRefusal::forThrowable($e)->sentence();
 
             return;
         }

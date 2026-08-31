@@ -23,9 +23,9 @@ isolation.
     direction, the self-pair id guard, the window edge), that
     the pairer links exactly the id `counterLegOnAccount`
     returns for the same ask, and that both orderings are total.
-    The pin cases were written and run green against the
-    hand-rolled query the forward arm used to carry, so a
-    regression in WHICH leg pairs fails here.
+    The pin cases characterise the hand-rolled query the
+    forward arm used to carry, so a regression in WHICH leg
+    pairs fails here.
     `counterLegOnAccount` is also covered from its other
     caller's side, in
     [`Chains`](../chains/how-to-test.md)'s
@@ -36,14 +36,26 @@ isolation.
   - `PairTransferCandidatesAliasBridgeTest` — the
     reverse-direction IBAN reconciliation via
     `Import::ResolvesKnownCounterpartyIban`.
+  - `BothLegsOfATransferSitOnTwoAccountsTest` — the forward arm
+    refuses a partner account that resolved back to the account
+    the firing leg already sits on, by literal IBAN and through
+    the alias bridge, and still pairs across two accounts.
+  - `TheSurvivorFollowsItsOwnMoneyTest` — `PairUnlinker` reads
+    the survivor's direction off the survivor's own amount, so a
+    pair whose two legs share a type (a PayPal withdrawal) does
+    not retype the arriving survivor as an expense.
 
 ## Contract / arch invariants
 
-- The repo-wide
-  `noPairTransactionIdWritesOutsideTransferPairer` — only
-  `Internal\Services\TransferPairer` may write
-  `transactions.pair_transaction_id`. Any other writer is a
-  bypass that breaks the dedup-on-pair guarantee.
+- `Modules/Chains/tests/Contracts/PaypalFundingCounterLegParityTest`
+  — the other caller of `PairLookup::counterLegOnAccount` keeps
+  asking through it rather than growing a second copy of the
+  query, and links the id the lookup returns.
+
+There is no arch test pinning `Internal\Services\TransferPairer`
+as the only writer of `transactions.pair_transaction_id`; the
+single-writer rule is held by review and by the module's own
+feature tests.
 
 ## How to run the suite for just this module
 
@@ -113,10 +125,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Transfers` module.
-
-## Behavioral contracts
-
 - **`TransferPairer` is deterministic.** Same inputs produce
   the same pairing decision; the matcher has no per-instance
   state and no time-of-day dependence beyond the
@@ -144,6 +152,7 @@ The behavioural contract for the `Transfers` module.
   `whereNull('pair_transaction_id')`.
 - **Match rules:**
   - same user;
+  - two DIFFERENT accounts;
   - amount equal-and-opposite, same currency;
   - `booked_at` within ±WINDOW_DAYS calendar days;
   - both legs typed `transfer_in` / `transfer_out`;
@@ -177,6 +186,25 @@ The behavioural contract for the `Transfers` module.
   same instant — resolve by rule and not by whichever index
   SQLite chose. Held by the two ordering cases in
   `CounterLegSearchTest`.
+- **The orphan sweep's own order is total.** `pairOrphansForUser`
+  decides which orphan asks for a partner first and `pairOne`
+  persists that answer, so its candidate read ends on `id` too —
+  ASN books every row at 12:00:00, so a booked_at tie is the
+  ordinary case. Held by
+  `Modules/Transfers/tests/Feature/OrphanSweepOrderingIsTotalTest.php`.
+- **A transfer's two legs sit on two different accounts.** The
+  reverse arm says so in SQL; the forward arm resolves a partner
+  ACCOUNT first and refuses one that came back as the account the
+  firing leg is already on — which the alias bridge returns
+  whenever that leg sits on the lowest-id account of the aliased
+  kind. Held by
+  `Modules/Transfers/tests/Feature/BothLegsOfATransferSitOnTwoAccountsTest.php`.
+- **The survivor of a deleted leg follows its own money.**
+  `PairUnlinker` reads the direction off the SURVIVOR's amount,
+  not off the deleted leg's type: the two legs of a pair do not
+  always carry opposite types, and a survivor that is no longer a
+  transfer leg is left alone. Held by
+  `Modules/Transfers/tests/Feature/TheSurvivorFollowsItsOwnMoneyTest.php`.
 - **Cross-user reads / writes are invisible.** Every query
   filters by `$user->id`; a foreign user's transfer cannot
   pair with the current user's.
@@ -192,8 +220,9 @@ The behavioural contract for the `Transfers` module.
   manually intervene if needed (currently a CLI / dev-mode
   escape hatch).
 - **A user with three legs of the same amount in the
-  window** — the matcher's deterministic order picks the
-  closest in time; the third leg remains unpaired pending a
+  window** — the matcher asks with `EarliestBooked`, so it
+  takes the leg that was on the books first, not the one
+  nearest the firing leg; the third stays unpaired pending a
   later partner.
 - **A re-imported row whose fingerprint already exists** —
   `Import::RecordsTransactions` dedups at the fingerprint

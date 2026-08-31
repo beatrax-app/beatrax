@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Pretplate →',
     'disclaimer' => 'Službene poveznice iz baze podrške — Beatrax umjesto tebe ništa ne otkazuje niti mijenja.',
     'dismiss_aria' => 'Odbaci prijedlog',
+    'dismiss_caption' => 'Odbaci',
 
     'insight' => [
         'cheaper_message' => ':name možda ima jeftiniji paket — plaćaš :monthly/mj.',

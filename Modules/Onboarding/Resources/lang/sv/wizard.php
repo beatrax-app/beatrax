@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Steg :current av :total',
 
-    'step_dot_aria' => 'Steg :number av :total',
-
     'back' => 'Tillbaka',
     'back_aria' => 'Tillbaka — går tillbaka till föregående konfigurationssteg',
 

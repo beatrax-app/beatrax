@@ -39,6 +39,7 @@ Modules/Core/
 │   │   └── UserScope.php
 │   ├── Services/
 │   │   ├── CurrentUserService.php
+│   │   ├── DevConsoleBuildGate.php
 │   │   ├── ElectronUpdateChannel.php
 │   │   ├── SecretsColumnRegistry.php
 │   │   ├── SystemAlertQuery.php
@@ -71,6 +72,7 @@ Modules/Core/
 │   │   │   └── SynchronousModeProbe.php
 │   │   └── Support/
 │   │       ├── BackupRetentionPolicy.php
+│   │       ├── BackupSidecar.php
 │   │       └── DurationParser.php
 │   ├── Http/
 │   │   ├── Middleware/
@@ -136,6 +138,13 @@ Modules/Core/
     `appRelative($name)`, `storagePath($subdir)`, `backupsPath()`.
     The single sanctioned `base_path()` caller; the
     `NATIVEPHP_STORAGE_PATH` env var redirects every accessor.
+  - `DevConsoleBuildGate::permits()` — whether this build carries the
+    Dev Console at all. `local` and `testing` are the development
+    environments, held as an allow-list so no other spelling of a
+    shipped build reads as a checkout. It lives here rather than in
+    `DevMode` because `Shell` and `Desktop` both have to ask, and
+    `DevMode` already reads `Shell`; see
+    [the console on a shipped build](../dev-mode/the-console-on-a-shipped-build.md).
   - `ElectronUpdateChannel::poll()`, `verifyManifest($manifest)`,
     `verifyBinary($binaryPath, $expectedSha512)`.
   - `SecretsColumnRegistry::columns()` (static), `all()` (instance) —
@@ -167,7 +176,8 @@ Modules/Core/
     `MobileImportBootstrap`.
 - **Support/**
   - `LockStore::forUniqueJobs()` — wraps the Cache facade.
-  - `SafeTrace` — redacts sensitive args from stack traces.
+  - `SafeTrace::cap($throwable, $basePath, $maxLines)` — a trace built
+    from the frames, so no argument of any frame is rendered.
 
 ## Internal services
 
@@ -180,7 +190,7 @@ Modules/Core/
 - `Internal/Console/InstallCommand` — `beatrax:install`. Creates the
   user (or confirms an existing one), dispatches `UserInstalled` so
   listeners re-seed reference data, prints the recovery codes once.
-- `Internal/Console/DoctorCommand` — `diederik:doctor`. Runs every
+- `Internal/Console/DoctorCommand` — `beatrax:doctor`. Runs every
   probe (PHP / Composer / Node / SQLite CLI / external tools / backup
   freshness / WAL / synchronous mode) and prints a coloured pass /
   warn / fail report.

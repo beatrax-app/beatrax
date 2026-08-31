@@ -8,7 +8,6 @@ return [
 
     'progress_aria' => 'Voortgang van het instellen',
     'step_progress' => 'Stap :current van :total',
-    'step_dot_aria' => 'Stap :number van :total',
 
     'back' => 'Terug',
     'back_aria' => 'Terug — gaat terug naar de vorige installatiestap',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Pašalintas įrenginys',
     'dismiss_peer' => 'Slėpti šį įrenginį',
+    'dismiss_peer_caption' => 'Slėpti',
     'dismiss_stale' => 'Išvalyti nebesusietus įrenginius',
     'not_synced_yet' => 'Dar nesinchronizuota',
     'error' => 'Sinchronizavimo klaida viename ar keliuose įrenginiuose',

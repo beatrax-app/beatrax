@@ -6,13 +6,14 @@ namespace Modules\Import\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
+use Modules\Community\Public\Services\CommunitySettings;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Public\Services\UserCountry;
 use stdClass;
 
 final class MerchantNameResolver
 {
-    private const GENERALIZED_SCAN_LIMIT = 500;
+    private const int GENERALIZED_SCAN_LIMIT = 500;
 
     /** @var array<int, array{exact: array<string, string>, generalized: list<array{needle: string, friendly: string}>}> */
     private array $aliasesByUser = [];
@@ -21,19 +22,26 @@ final class MerchantNameResolver
         private readonly DatabaseManager $db,
         private readonly CommunityCorpusQuery $corpus,
         private readonly UserCountry $countries,
+        private readonly CommunitySettings $community,
     ) {}
 
     // The reader's own aliases are not region-scoped — they are theirs wherever
     // they live. Only the shared corpus is, because it holds every country's
-    // merchants at once and short tokens collide across them.
+    // merchants at once and short tokens collide across them. The opt-out gates
+    // the corpus tiers alone; a reader's own aliases are never community data.
     public function resolve(string $rawDescription, int $userId): ?string
     {
-        $region = $this->regionFor($userId);
         $aliases = $this->aliasesFor($userId);
+        $own = $aliases['exact'][$rawDescription]
+            ?? self::generalizedMatch($aliases['generalized'], $rawDescription);
 
-        return $aliases['exact'][$rawDescription]
-            ?? self::generalizedMatch($aliases['generalized'], $rawDescription)
-            ?? $this->corpus->lookupExact($rawDescription, $region)
+        if ($own !== null || ! $this->community->usesSharedList($userId)) {
+            return $own;
+        }
+
+        $region = $this->regionFor($userId);
+
+        return $this->corpus->lookupExact($rawDescription, $region)
             ?? $this->corpus->lookupGeneralized($rawDescription, $region)
             ?? $this->corpus->lookupRegex($rawDescription, $region);
     }

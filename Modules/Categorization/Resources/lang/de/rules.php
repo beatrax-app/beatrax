@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Regeln bleiben auf diesem Gerät. Sie werden nicht mit deinen anderen Geräten geteilt.',
 
     'reapply' => 'Regeln erneut auf den Verlauf anwenden',
+    'reapply_confirm' => 'Alle Regeln erneut auf deinen gesamten Verlauf anwenden? Jede Kategorie, jeder Zahlungspartner, jede Notiz und jede Steuer-Markierung, die eine Regel gesetzt hat, wird überschrieben. Was du von Hand gesetzt hast, bleibt, und ebenso alles auf einem abgeglichenen Kontoauszug. Die alten Werte holt nichts zurück.',
     'reapplying' => 'Wird erneut angewendet…',
     'new_rule' => 'Neue Regel',
 
-    'reapply_progress_lead' => 'Regeln werden erneut angewendet…',
-    'reapply_progress_of' => 'von',
-    'reapply_progress_trail' => 'Transaktionen geprüft',
+    'reapply_progress' => 'Regeln werden erneut angewendet… :checked von :count Transaktion geprüft|Regeln werden erneut angewendet… :checked von :count Transaktionen geprüft',
 
     'empty_heading' => 'Noch keine Regeln',
     'empty_body' => 'Regeln prüfen Transaktionen anhand mehrerer Bedingungen und übernehmen Änderungen an Kategorie, Zahlungspartner, Notiz und Steuer-Markierung automatisch — beim Import und jedes Mal, wenn du sie erneut auf deinen bestehenden Verlauf anwendest.',
@@ -27,6 +26,11 @@ return [
     'col_created' => 'Erstellt',
     'col_row_actions' => 'Aktionen',
     'inactive_badge' => 'Aus',
+    'combinator_all' => 'ALLE',
+    // i18n-review: de · combinator_any — EINE is the quantifier rule_form.match_any
+    // chose, read here as a logic chip beside ALLE. BELIEBIG is the alternative a
+    // native reader may prefer.
+    'combinator_any' => 'EINE',
     'inactive_title' => 'Diese Regel läuft nicht. Eine Regel schaltet sich ab, wenn die Kategorie oder Gegenpartei, auf die sie verweist, gelöscht wird.',
 
     'more_conditions' => '+:count weitere',

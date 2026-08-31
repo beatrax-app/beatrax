@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Desbloquear',
 
-    'digits_entered' => 'dígitos introducidos',
+    'digits_entered' => ':count dígito introducido|:count dígitos introducidos',
     'pin_pad' => 'Teclado del PIN',
     'digit' => 'Dígito :digit',
     'backspace' => 'Retroceso',

@@ -8,12 +8,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 
 uses(RefreshDatabase::class);
 
 // The segmented control used to hard-code [30, 60, 90]; these pin it to the
-// HORIZON_DAYS constant instead.
+// ForecastHorizon enum instead.
 
 function fphUser(string $suffix = 'fph'): User
 {
@@ -70,19 +70,19 @@ it('renders a horizon button with wire:click="setHorizon(365)"', function (): vo
         ->assertSee('wire:click="setHorizon(365)"', false);
 });
 
-it('renders all five HORIZON_DAYS options in the segmented control', function (): void {
+it('renders every ForecastHorizon option in the segmented control', function (): void {
     $user = fphUser('fph-all');
     fphAccount($user->id);
 
     $component = Livewire::actingAs($user)->test(ForecastPage::class);
 
-    foreach (ProjectForecastJob::HORIZON_DAYS as $days) {
+    foreach (ForecastHorizon::days() as $days) {
         $component->assertSee("setHorizon({$days})", false);
     }
 });
 
-it('HORIZON_DAYS constant contains exactly [30, 60, 90, 180, 365]', function (): void {
-    expect(ProjectForecastJob::HORIZON_DAYS)->toBe([30, 60, 90, 180, 365]);
+it('ForecastHorizon names exactly [30, 60, 90, 180, 365]', function (): void {
+    expect(ForecastHorizon::days())->toBe([30, 60, 90, 180, 365]);
 });
 
 it('falls back to the opening horizon when the address bar names one the rail does not offer', function (): void {
@@ -103,7 +103,7 @@ it('keeps a horizon the rail does offer', function (): void {
     fphAccount((int) $user->id);
     test()->actingAs($user);
 
-    expect(ProjectForecastJob::HORIZON_DAYS)->toContain(90);
+    expect(ForecastHorizon::days())->toContain(90);
 
     Livewire::withQueryParams(['horizon' => 90])
         ->test(ForecastPage::class)

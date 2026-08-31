@@ -12,13 +12,13 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
-final class AccountSpendQuery
+final readonly class AccountSpendQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SpendFilterApplier $filterApplier,
+        private DatabaseManager $db,
+        private SpendFilterApplier $filterApplier,
     ) {}
 
     /**

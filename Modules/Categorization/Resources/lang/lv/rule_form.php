@@ -24,6 +24,7 @@ return [
     'to' => 'līdz',
     'text_placeholder' => 'piem. SPOTIFY',
     'remove_condition' => 'Noņemt nosacījumu',
+    'remove_condition_caption' => 'Noņemt',
     'add_condition' => '+ Pievienot nosacījumu',
 
     'then' => 'Tad',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Pievienot beigās',
     'deduction_category_aria' => 'Atvieglojuma kategorija darbībai :number',
     'remove_action' => 'Noņemt darbību',
+    'remove_action_caption' => 'Noņemt',
     'add_action' => '+ Pievienot darbību',
 
     'this_year_only' => 'Tikai šogad ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Nodokļu atzīmju darbības tiek piemērotas nākamajā atkārtotajā piemērošanā, nevis pašreizējā importā.',
 
     'priority' => 'Prioritāte',
-    'priority_help' => 'Mazāki skaitļi tiek izpildīti pirmie. Noteikumi bez kopīgiem laukiem nekad nekonfliktē.',
+    'priority_help' => 'Noteikumi tiek izpildīti no zemākā numura uz augšu, tāpēc uzvar augstākais numurs, ja divi iestata vienu un to pašu lauku. Noteikumi bez kopīgiem laukiem nekad nekonfliktē.',
 
     'cancel' => 'Atcelt',
     'save_changes' => 'Saglabāt izmaiņas',

@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Βήμα :current από :total',
 
-    'step_dot_aria' => 'Βήμα :number από :total',
-
     'back' => 'Πίσω',
     'back_aria' => 'Πίσω — επιστρέφει στο προηγούμενο βήμα ρύθμισης',
 

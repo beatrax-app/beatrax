@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Currency display',
+        'heading' => 'Amount display',
         'label' => 'Default view on the transactions list',
-        'eur_only' => ':code only',
-        'original' => 'Original currency',
+        'eur_only' => 'Settled amount',
+        'original' => 'Original amount',
         'help' => 'You can still switch per page from the transactions list.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Bundled rates are used. No data leaves this device.',
         'fetch_aria' => 'Fetch current exchange rates online',
         'refreshing' => 'Refreshing…',
-        'next_refresh' => 'Next auto-refresh: daily at 09:00',
+        'next_refresh' => 'Auto-refresh: once a day',
         'refresh_gave_up' => 'Could not refresh the rates. The rates already on this device are still in use.',
         'refresh_now' => 'Refresh now',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Period',
         'label' => 'Period starts on day',
         'help' => 'Numbered 1 to 28. Most users keep this on 1 (calendar month). Use 25 if your salary lands on the 25th and you think of "your month" as starting then.',
+
+        'move_confirm' => 'Starting the period on day :day re-files every envelope amount, adding two together wherever two months fold into one. Moving the day back does not split them again.',
+        'move_cancel' => 'Cancel',
+        'move_apply' => 'Apply',
     ],
 
     'recurring' => [
         'heading' => 'Recurring detection',
         'window_label' => 'Detection window (months)',
         'window_help' => 'How many months of history to scan when clustering transactions into recurring patterns.',
-        'income_label' => 'Income minimum (cents)',
-        'income_help' => 'Incomes below this threshold are not auto-clustered. Stored in cents — 200000 means :example. Set to 0 to disable the threshold.',
+        'income_label' => 'Income minimum (minor units)',
+        'income_help' => 'Incomes below this threshold are not auto-clustered. Stored in minor units — :minor means :example. Set to 0 to disable the threshold.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Drop folder is active. Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for new files.',
         'inactive_html' => 'When on, Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they\'re never imported twice.',
+        'active_phone_html' => 'Drop folder is active. Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> for new files in the background. Your phone decides when a background scan runs, so it can be minutes or hours.',
+        'inactive_phone_html' => 'When on, Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> in the background for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Your phone decides when a background scan runs, so it can be minutes or hours. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they\'re never imported twice.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Tax',
-    'shared_merchant_heading' => 'Shared merchant list',
     'data_backup_heading' => 'Data & backup',
-    'install_heading' => 'Install',
 
     'about_updates' => [
         'heading' => 'About updates',
         'body' => "Beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.",
+        'body_phone' => 'Beatrax does not update itself here. New versions of the phone app arrive through the App Store or Google Play, the same way your other apps do. The releases page lists what changed in each one.',
         'open_releases' => 'Open releases page →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'The budget month could not be moved, so it was left where it was.',
         'currency_required' => 'Please choose a currency.',
         'window_months' => 'Choose between 2 and 60 months.',
         'threshold' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',

@@ -14,13 +14,13 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // value object so the replayer constructor stays within its parameter budget.
 // Every field is nullable; a null field (or a null context) means "resolve
 // from the container", preserving the fail-closed-outside-a-booted-app path.
-final class OpLogReplayCrypto
+final readonly class OpLogReplayCrypto
 {
     public function __construct(
-        public readonly ?SensitiveFieldRegistry $sensitiveFields = null,
-        public readonly ?OpLogFieldCrypto $fieldCrypto = null,
-        public readonly ?GdkKeyringService $keyringService = null,
-        public readonly ?SensitiveColumnCodec $columnCodec = null,
-        public readonly ?Session $session = null,
+        public ?SensitiveFieldRegistry $sensitiveFields = null,
+        public ?OpLogFieldCrypto $fieldCrypto = null,
+        public ?GdkKeyringService $keyringService = null,
+        public ?SensitiveColumnCodec $columnCodec = null,
+        public ?Session $session = null,
     ) {}
 }

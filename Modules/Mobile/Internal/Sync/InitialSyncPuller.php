@@ -7,28 +7,30 @@ namespace Modules\Mobile\Internal\Sync;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
-use Modules\Sync\Internal\Transport\Frame\TransportFramer;
+use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\HistoryReprojector;
+use Modules\Sync\Public\Services\PeerLanAddressBook;
 use Psr\Log\LoggerInterface;
 
 /**
  * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md
  */
-final class InitialSyncPuller
+final readonly class InitialSyncPuller
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly MobileSyncTriggerService $trigger,
-        private readonly DeviceIdentityLoader $identityLoader,
-        private readonly DeviceRegistryService $registryService,
-        private readonly PeerCatchUpExchanger $catchUp,
-        private readonly TransportFramer $framer,
-        private readonly Clock $clock,
-        private readonly HistoryReprojector $reprojector,
-        private readonly LoggerInterface $logger,
+        private DatabaseManager $db,
+        private MobileSyncTriggerService $trigger,
+        private DeviceIdentityLoader $identityLoader,
+        private DeviceRegistryService $registryService,
+        private PeerCatchUpExchanger $catchUp,
+        private Clock $clock,
+        private HistoryReprojector $reprojector,
+        private PeerLanAddressBook $addresses,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -41,18 +43,29 @@ final class InitialSyncPuller
         ?int $lanPort = null,
     ): array {
         $identity = $this->identityLoader->load($userId, $session);
+
+        // A locked app-lock also returns a null identity, and reporting that as
+        // a peer problem told the reader a healthy device had removed them —
+        // terminal copy for a screen a PIN entry would have cleared. Asked only
+        // once load() has already answered null, so an unlocked tick pays nothing.
+        $locked = $identity === null
+            && $this->identityLoader->state($userId, $session) === DeviceIdentityState::Locked;
+
         $peerDeviceId = $identity === null
             ? null
             : $this->resolvePeerDeviceId($userId, $identity->deviceId);
 
-        if ($peerDeviceId === null) {
+        if ($locked || $peerDeviceId === null) {
             // A peer that once confirmed and withdrew it reads identically to
             // one that never paired, and calling that "waiting for the other
             // device" left the screen turning on a pairing that cannot return.
-            return [
-                ...$this->progress($userId),
-                'blocked' => $this->peerRevokedUs($userId) ? SyncBlockedReason::Revoked : SyncBlockedReason::NoPeer,
-            ];
+            $blocked = match (true) {
+                $locked => SyncBlockedReason::Locked,
+                $this->peerRevokedUs($userId) => SyncBlockedReason::Revoked,
+                default => SyncBlockedReason::NoPeer,
+            };
+
+            return [...$this->progress($userId), 'blocked' => $blocked];
         }
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
@@ -65,7 +78,7 @@ final class InitialSyncPuller
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}  $cursor
+     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string, reproject_attempts: int}  $cursor
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
      */
     private function advance(
@@ -76,6 +89,16 @@ final class InitialSyncPuller
         ?string $lanHost,
         ?int $lanPort,
     ): array {
+        // The caller's address comes from a scanned QR's relay endpoint and is
+        // null for every other road in. Resolving it here instead is what makes
+        // the typed-code arm work at all: this is the first point that knows
+        // WHICH device to look for, so the browse can be aimed and remembered.
+        if ($lanHost === null) {
+            $located = $this->addresses->locate($userId, $peerDeviceId);
+            $lanHost = $located['host'] ?? null;
+            $lanPort = $located['port'] ?? $lanPort;
+        }
+
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
         if ($result === null) {
@@ -101,7 +124,7 @@ final class InitialSyncPuller
         $reprojectedAt = $cursor['reprojected_at'];
         $announceRebuild = $reprojectedAt === null
             && $keysInstalled
-            && $result === true
+            && $result
             && $cursor['phase'] !== SyncPhase::Rebuilding;
 
         if ($announceRebuild) {
@@ -123,27 +146,17 @@ final class InitialSyncPuller
             ];
         }
 
-        // The first step to see a non-empty keyring re-projects the whole
-        // op-log, so entries quarantined before the keys arrived decrypt.
-        // At most once per (user, peer) cursor.
+        // The first step to see a non-empty keyring re-projects what arrived
+        // before the keys did, so those entries decrypt. At most once per
+        // (user, peer) cursor.
         if ($reprojectedAt === null && $keysInstalled) {
-            try {
-                $this->reprojector->reproject($userId);
-                $reprojectedAt = $this->clock->now()->toIso8601String();
-            } catch (\Throwable $e) {
-                // Leaving reprojected_at null keeps completion gated below,
-                // so the next pull() retries instead of crashing the poll.
-                $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
-                    'user_id' => $userId,
-                    'exception' => $e,
-                ]);
-            }
+            $reprojectedAt = $this->reproject($userId, $session, $peerDeviceId, $cursor['reproject_attempts']);
         }
 
         // Finishing the sync leg is necessary but not sufficient: without the
         // epochs and the re-projection, an import reports complete onto a
         // dashboard of rows it cannot decrypt.
-        $isComplete = $result === true && $keysInstalled && $reprojectedAt !== null;
+        $isComplete = $result && $keysInstalled && $reprojectedAt !== null;
 
         $phase = $isComplete ? SyncPhase::Complete : SyncPhase::Pulling;
         $recordsExpected = $isComplete
@@ -185,6 +198,62 @@ final class InitialSyncPuller
             'phase' => $phase,
             'blocked' => $blocked,
         ];
+    }
+
+    // The rows a keyless arrival quarantined, replayed through the same pass
+    // the desktop's own recovery uses — not the whole persisted op log. The
+    // whole-log rebuild cost 645 bytes per entry and exhausted the phone's
+    // 128 MB ceiling at 200,000 of them, which is a year of one ledger.
+    /**
+     * @param  int  $attempts  Passes already started for this cursor; > 0 means one never returned.
+     * @return string|null The stamp to persist, or null while the history is still unprojected.
+     *
+     * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md#four-measured-costs-on-the-sync-path
+     */
+    private function reproject(int $userId, Session $session, string $peerDeviceId, int $attempts): ?string
+    {
+        if ($attempts > 0) {
+            // Nothing else says so. A pass killed by memory exhaustion writes
+            // no stamp and throws nothing catchable, so every later tick redid
+            // the same doomed work behind a screen that looked merely slow.
+            $this->logger->error('InitialSyncPuller: a previous history re-projection never returned; starting another.', [
+                'user_id' => $userId,
+                'peer_device_id' => $peerDeviceId,
+                'attempts' => $attempts,
+            ]);
+        }
+
+        $this->countReprojectAttempt($userId, $peerDeviceId, $attempts + 1);
+
+        try {
+            $rows = $this->reprojector->replayQuarantined($userId, $session, null, null);
+        } catch (\Throwable $e) {
+            // Leaving reprojected_at null keeps completion gated below,
+            // so the next pull() retries instead of crashing the poll.
+            $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
+                'user_id' => $userId,
+                'exception' => $e,
+            ]);
+
+            return null;
+        }
+
+        $this->logger->info('InitialSyncPuller: re-projected the history that arrived before the keys.', [
+            'user_id' => $userId,
+            'peer_device_id' => $peerDeviceId,
+            'rows' => $rows,
+        ]);
+
+        return Instant::zulu($this->clock->now());
+    }
+
+    private function countReprojectAttempt(int $userId, string $peerDeviceId, int $attempts): void
+    {
+        $this->db->connection()
+            ->table('mobile_sync_progress')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->update(['reproject_attempts' => $attempts, 'updated_at' => Instant::zulu($this->clock->now())]);
     }
 
     // A raw column read rather than GdkKeyringService, which is off-limits to
@@ -254,7 +323,7 @@ final class InitialSyncPuller
     }
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}
+     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string, reproject_attempts: int}
      */
     private function loadOrCreateCursor(int $userId, string $peerDeviceId): array
     {
@@ -272,10 +341,11 @@ final class InitialSyncPuller
                 'last_hlc_c' => is_numeric($row->last_hlc_c) ? (int) $row->last_hlc_c : 0,
                 'phase' => SyncPhase::fromStorage($row->phase),
                 'reprojected_at' => is_string($row->reprojected_at ?? null) ? $row->reprojected_at : null,
+                'reproject_attempts' => is_numeric($row->reproject_attempts ?? null) ? (int) $row->reproject_attempts : 0,
             ];
         }
 
-        $now = $this->clock->now()->toIso8601String();
+        $now = Instant::zulu($this->clock->now());
         $this->db->connection()->table('mobile_sync_progress')->insert([
             'user_id' => $userId,
             'peer_device_id' => $peerDeviceId,
@@ -285,6 +355,7 @@ final class InitialSyncPuller
             'last_hlc_c' => 0,
             'phase' => SyncPhase::Pending->value,
             'reprojected_at' => null,
+            'reproject_attempts' => 0,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -296,12 +367,13 @@ final class InitialSyncPuller
             'last_hlc_c' => 0,
             'phase' => SyncPhase::Pending,
             'reprojected_at' => null,
+            'reproject_attempts' => 0,
         ];
     }
 
     private function persistCursor(int $userId, string $peerDeviceId, MobileSyncCursor $cursor): void
     {
-        $now = $this->clock->now()->toIso8601String();
+        $now = Instant::zulu($this->clock->now());
 
         // loadOrCreateCursor() guarantees the row exists, so this stays a
         // plain UPDATE rather than a second insert path.
@@ -327,31 +399,13 @@ final class InitialSyncPuller
      */
     private function countAppliedSince(int $userId, int $lastHlcL, int $lastHlcC, string $peerDeviceId): array
     {
-        $frames = $this->catchUp->opsAfterWatermark($userId, $lastHlcL, $lastHlcC);
+        // Narrowed to the peer's own authorship: the watermark covers this
+        // device's writes too, so a phone counted its own seeded rows as
+        // records received from a desktop it had never reached. Asked as an
+        // aggregate, because a poll tick cannot afford to hold the delta.
+        $tally = $this->catchUp->tallyFromAuthorAfter($userId, $peerDeviceId, $lastHlcL, $lastHlcC);
 
-        $count = 0;
-        $maxHlcL = $lastHlcL;
-        $maxHlcC = $lastHlcC;
-
-        foreach ($frames as $frame) {
-            foreach ($this->framer->decode($frame) as $entry) {
-                // The watermark covers this device's own writes too, so a
-                // phone counted its own seeded rows as records received from
-                // a desktop it had never actually reached.
-                if ($entry->deviceId !== $peerDeviceId) {
-                    continue;
-                }
-
-                $count++;
-
-                if ($entry->hlcL > $maxHlcL || ($entry->hlcL === $maxHlcL && $entry->hlcC > $maxHlcC)) {
-                    $maxHlcL = $entry->hlcL;
-                    $maxHlcC = $entry->hlcC;
-                }
-            }
-        }
-
-        return [$count, $maxHlcL, $maxHlcC];
+        return [$tally['count'], $tally['hlc_l'], $tally['hlc_c']];
     }
 
     /**

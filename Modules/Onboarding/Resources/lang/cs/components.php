@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Průběh nastavení',
     'step_progress' => 'Krok :current z :total',
-    'step_dot_aria' => 'Krok :number z :total',
 
     'eyebrow_step' => 'Krok :number — ',
 ];

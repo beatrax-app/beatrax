@@ -8,12 +8,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Internal\Support\SeriesIds;
 use Modules\Recurring\Internal\Support\SeriesTables;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // Which series a transaction belongs to is a different question from what a
@@ -27,7 +29,12 @@ final readonly class TransactionSeriesMembershipQuery
 {
     use CoercesScalars;
 
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private CounterpartyKey $counterpartyKey,
+    ) {}
 
     /**
      * @param  array<int|string, mixed>  $transactionIds
@@ -116,9 +123,10 @@ final readonly class TransactionSeriesMembershipQuery
      */
     private function clusteredSeriesIds(array $transactionIds, User $user): array
     {
-        // UNIQUE(user_id, direction, cluster_counterparty_key, latest_currency)
-        // makes the joined triple plus a direction at most one series, so no
-        // tie-break is needed once the direction filter below has run.
+        // (user_id, direction, cluster_counterparty_key, latest_currency) carries
+        // a plain INDEX, not a UNIQUE, so the triple can match more than one
+        // series. Lowest id wins, which is the row the detectors' own
+        // ascending-id index hands back when they resolve the same cluster.
         $rows = $this->db->connection()->table(SeriesTables::TRANSACTIONS)
             ->join(SeriesTables::SERIES, function (JoinClause $join): void {
                 $join->on('s.user_id', '=', 't.user_id')
@@ -129,6 +137,7 @@ final readonly class TransactionSeriesMembershipQuery
             ->whereIn('t.id', $transactionIds)
             ->where('t.counterparty_normalized', '!=', CounterpartyKey::NONE)
             ->whereIn('s.state', RecurringSeriesState::projectableValues())
+            ->orderBy('s.id')
             ->get(['t.id as transaction_id', 't.type as type', 's.id as series_id', 's.direction as direction']);
 
         $map = [];
@@ -137,9 +146,123 @@ final readonly class TransactionSeriesMembershipQuery
             if (TransactionType::directionOf($row->type) !== Direction::tryFrom(self::toString($row->direction))) {
                 continue;
             }
-            $map[self::toInt($row->transaction_id)] = self::toInt($row->series_id);
+            $transactionId = self::toInt($row->transaction_id);
+            if (! isset($map[$transactionId])) {
+                $map[$transactionId] = self::toInt($row->series_id);
+            }
+        }
+
+        $unresolved = array_values(array_filter($transactionIds, static fn (int $id): bool => ! isset($map[$id])));
+
+        return $unresolved === [] ? $map : $map + $this->ibanClusteredSeriesIds($unresolved, $user);
+    }
+
+    // The income detector clusters on the payer's IBAN when there is one, and
+    // writes THAT key into cluster_counterparty_key — a different blind-index
+    // domain from counterparty_normalized, so the join above can never match an
+    // income series and a future-dated salary was counted twice.
+    /**
+     * @param  list<int>  $transactionIds
+     * @return array<int, int>
+     */
+    private function ibanClusteredSeriesIds(array $transactionIds, User $user): array
+    {
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $transactionIds)
+            ->where('type', TransactionType::Income->value)
+            ->whereNotNull('counterparty_iban')
+            ->get(['id', 'currency', 'counterparty_iban']);
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $session = ($this->session)();
+        $idsByKey = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $iban = $this->codec->decryptValue(
+                'transactions',
+                'counterparty_iban',
+                self::toString($row->counterparty_iban),
+                $user->id,
+                $session,
+            )['value'];
+            if ($iban === '') {
+                continue;
+            }
+            $key = $this->counterpartyKey->forIban($iban, $user->id);
+            if ($key === CounterpartyKey::NONE) {
+                continue;
+            }
+            $idsByKey[$key."\0".self::toString($row->currency)][] = self::toInt($row->id);
+        }
+
+        if ($idsByKey === []) {
+            return [];
+        }
+
+        return self::fanOut($idsByKey, $this->incomeSeriesByKey($user, array_keys($idsByKey)));
+    }
+
+    /**
+     * @param  list<string>  $keyedCurrencies  cluster key and currency joined by NUL
+     * @return array<string, int>
+     */
+    private function incomeSeriesByKey(User $user, array $keyedCurrencies): array
+    {
+        $keys = [];
+        foreach ($keyedCurrencies as $keyed) {
+            $keys[] = self::splitKey($keyed)[0];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->where('direction', Direction::Income->value)
+            ->whereIn('cluster_counterparty_key', array_values(array_unique($keys)))
+            ->whereIn('state', RecurringSeriesState::projectableValues())
+            ->orderBy('id')
+            ->get(['id', 'cluster_counterparty_key', 'latest_currency']);
+
+        $byKey = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $keyed = self::toString($row->cluster_counterparty_key)."\0".self::toString($row->latest_currency);
+            if (! isset($byKey[$keyed])) {
+                $byKey[$keyed] = self::toInt($row->id);
+            }
+        }
+
+        return $byKey;
+    }
+
+    /**
+     * @param  array<string, list<int>>  $idsByKey
+     * @param  array<string, int>  $seriesByKey
+     * @return array<int, int>
+     */
+    private static function fanOut(array $idsByKey, array $seriesByKey): array
+    {
+        $map = [];
+        foreach ($idsByKey as $keyed => $transactionIds) {
+            if (! isset($seriesByKey[$keyed])) {
+                continue;
+            }
+            foreach ($transactionIds as $transactionId) {
+                $map[$transactionId] = $seriesByKey[$keyed];
+            }
         }
 
         return $map;
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private static function splitKey(string $keyed): array
+    {
+        $parts = explode("\0", $keyed, 2);
+
+        return [$parts[0], $parts[1] ?? ''];
     }
 }

@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Gib den Code ein',
     'camera_off' => 'Der Kamerazugriff ist aus. Gib stattdessen den Code vom anderen Gerät ein.',
+    'camera_off_no_search' => 'Der Kamerazugriff ist aus, und die Suche nach dem anderen Gerät im Netzwerk funktioniert auf dem iPhone noch nicht — ein eingegebener Code hat also nichts, womit er es findet. Schalte den Kamerazugriff für Beatrax in deinen Geräteeinstellungen wieder ein und scanne den Code auf dem anderen Gerät.',
+    'no_search' => 'Die Suche nach dem anderen Gerät im Netzwerk funktioniert auf dem iPhone noch nicht, ein eingegebener Code hat also nichts zu finden. Scanne den Code stattdessen mit der Kamera — die Kamera sucht nicht im Netzwerk.',
     'word_code_aria' => 'Gib den Wortcode vom anderen Gerät ein',
     'submit_code' => 'Code senden',
     'cancel' => 'Abbrechen',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Das andere Gerät ist nicht erreichbar. Stelle sicher, dass beide im selben Netzwerk sind und die Synchronisierung auf dem Desktop aktiviert ist.',
+        'no_road_home' => 'Dieses Gerät kann das Netzwerk nicht durchsuchen, und der gescannte Code enthält keine Adresse für das andere Gerät. Lass dort einen neuen Code anzeigen und scanne diesen.',
         'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
+        'code_incomplete' => 'Das ist kein vollständiger Code. Vergleiche ihn mit dem anderen Gerät und gib ihn ganz ein.',
         'code_not_accepted' => 'Kein Gerät in diesem Netzwerk hat den Code akzeptiert. Prüfe den Code und ob das andere Gerät ihn noch anzeigt.',
         'no_peer_answered' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Prüfe, ob die Synchronisierung auf dem anderen Gerät läuft, oder scanne dessen Code mit der Kamera — die Kamera sucht nicht im Netzwerk.',
         'no_peer_answered_ios' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Die Suche nach dem anderen Gerät im Netzwerk funktioniert auf dem iPhone noch nicht — scanne dessen Code deshalb mit der Kamera.',
+        'no_peer_answered_camera_off' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Die Suche nach dem anderen Gerät im Netzwerk funktioniert auf dem iPhone noch nicht, und der Kamerazugriff ist aus — schalte den Kamerazugriff deshalb für Beatrax in deinen Geräteeinstellungen wieder ein und scanne den Code auf dem anderen Gerät.',
         'rate_limited' => 'Zu viele Versuche. Warte eine Minute und versuche es erneut.',
         'identity_locked' => 'Die Identität deines Geräts ist gesperrt. Entsperre die App und versuche es erneut.',
         'identity_needs_lock' => 'Richte zuerst die App-Sperre ein — sie schützt die Identität deines Geräts.',

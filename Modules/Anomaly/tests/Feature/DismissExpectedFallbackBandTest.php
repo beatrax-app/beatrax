@@ -12,8 +12,10 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-// A duplicate-only alert carries no latest_amount_minor, so the band has to
-// fall back to the transaction's own settled amount.
+// A duplicate-only alert has no per-merchant baseline. It still carries the
+// charge, so the band is read off the alert; a row written before that was
+// true — or replayed from a peer on an older build — still resolves through
+// the transaction, which is why that fallback is not dead code.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -23,7 +25,7 @@ beforeEach(function (): void {
 
 afterEach(fn () => CarbonImmutable::setTestNow());
 
-it('writes a fallback band for a duplicate-only alert and returns true', function (): void {
+it('writes a band for a duplicate-only alert off the charge it carries', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
@@ -34,7 +36,8 @@ it('writes a fallback band for a duplicate-only alert and returns true', functio
 
     $alert = AnomalyAlert::query()->where('transaction_id', $txnId)->firstOrFail();
     expect($alert->reasons)->toBe(['duplicate'])
-        ->and($alert->latest_amount_minor)->toBeNull();
+        ->and($alert->baseline_amount_minor)->toBeNull()
+        ->and($alert->latest_amount_minor)->toBe(-4999);
 
     /** @var DismissAnomalyAlertAsExpected $dismiss */
     $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
@@ -52,6 +55,37 @@ it('writes a fallback band for a duplicate-only alert and returns true', functio
         ->and((int) $rule->amount_band_high_minor)->toBe((int) round(0.85 * -4999))
         ->and($rule->currency)->toBe('EUR')
         ->and((int) $rule->source_anomaly_alert_id)->toBe((int) $alert->id);
+});
+
+// The shape a build before the charge was stamped left behind, and the shape a
+// peer on that build still replays. The fallback is the only thing that can
+// mute it, so it has to keep resolving the same band.
+it('still resolves the band from the transaction when the alert carries no amount', function (): void {
+    $user = AnomalyCorpusSeeder::makeUser();
+    $txnId = AnomalyCorpusSeeder::seed($this->db, $user, AnomalyCorpusSeeder::load('duplicate-in-window'));
+
+    /** @var AnomalyEvaluator $evaluator */
+    $evaluator = $this->app->make(AnomalyEvaluator::class);
+    $evaluator->evaluate($txnId, $user);
+    $alert = AnomalyAlert::query()->where('transaction_id', $txnId)->firstOrFail();
+
+    $this->db->connection()->table('anomaly_alerts')
+        ->where('id', $alert->id)
+        ->update(['latest_amount_minor' => null, 'currency' => null]);
+
+    /** @var DismissAnomalyAlertAsExpected $dismiss */
+    $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
+    expect(($dismiss)($alert->id, $user))->toBeTrue();
+
+    $rule = $this->db->connection()->table('anomaly_suppression_rules')
+        ->where('user_id', $user->id)
+        ->where('detector', 'duplicate')
+        ->first();
+
+    expect($rule)->not->toBeNull()
+        ->and((int) $rule->amount_band_low_minor)->toBe((int) round(1.15 * -4999))
+        ->and((int) $rule->amount_band_high_minor)->toBe((int) round(0.85 * -4999))
+        ->and($rule->currency)->toBe('EUR');
 });
 
 it('suppresses the next identical duplicate after a duplicate-only dismissal', function (): void {
@@ -100,9 +134,13 @@ it('falls back to the base currency when the charge row carries no settled curre
     $evaluator->evaluate($txnId, $user);
     $alert = AnomalyAlert::query()->where('transaction_id', $txnId)->firstOrFail();
 
-    // Blank the settled currency AFTER detection so the dismiss action's own
-    // charge lookup takes the base-currency fallback rather than the row value.
+    // Blank the settled currency AFTER detection, and the alert's own, so the
+    // dismiss action's charge lookup is the only source left and takes the
+    // base-currency fallback rather than a row value.
     $this->db->connection()->table('transactions')->where('id', $txnId)->update(['settled_currency' => '']);
+    $this->db->connection()->table('anomaly_alerts')
+        ->where('id', $alert->id)
+        ->update(['latest_amount_minor' => null, 'currency' => null]);
 
     /** @var DismissAnomalyAlertAsExpected $dismiss */
     $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);

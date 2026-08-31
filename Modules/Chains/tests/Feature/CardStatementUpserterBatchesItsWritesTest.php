@@ -99,7 +99,7 @@ function csuFixture(DatabaseManager $db): array
 
     $specs = [];
     for ($i = 1; $i <= CSU_SUMMARIES; $i++) {
-        $start = CarbonImmutable::parse('2020-01-01')->addMonths($i);
+        $start = CarbonImmutable::parse('2020-01-01')->addMonthsNoOverflow($i);
         $specs[] = [
             'account' => $card,
             'period' => $i,

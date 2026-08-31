@@ -9,19 +9,19 @@ use Illuminate\Support\Collection;
 use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
-final class BiometricDeviceStore
+final readonly class BiometricDeviceStore
 {
-    public const BIOMETRIC_DISABLE_THRESHOLD = 5;
+    public const int BIOMETRIC_DISABLE_THRESHOLD = 5;
 
     // The only value the enrolment route writes. The column's other documented
     // value, 'nativephp_macos', was never reachable: its detector took a flag
     // no caller passed, and the OS-gated path enrols through ColdStartVault
     // without touching this table at all.
-    public const PLATFORM_WEBAUTHN = 'webauthn';
+    public const string PLATFORM_WEBAUTHN = 'webauthn';
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     /**
@@ -67,17 +67,11 @@ final class BiometricDeviceStore
 
     public function findByCredentialId(int $userId, string $credentialId): ?stdClass
     {
-        $row = $this->db->connection()
+        return $this->db->connection()
             ->table('user_biometric_credentials')
             ->where('user_id', $userId)
             ->where('credential_id', $credentialId)
             ->first();
-
-        if ($row === null) {
-            return null;
-        }
-
-        return $row;
     }
 
     public function incrementFailureCount(int $id): void

@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Kategooriad',
     'section_goals_recurring' => 'Eesmärgid ja korduvmaksed',
     'no_name' => '(nimeta)',
-    'see_all_prefix' => 'Vaata kõiki ',
-    'see_all_suffix' => ' tulemust →',
-    'no_transactions_prefix' => 'Ükski tehing ei vasta päringule „',
-    'no_transactions_suffix' => '“',
+    'see_all' => 'Vaata :count tulemust →|Vaata kõiki :count tulemust →',
+    'no_transactions' => 'Ükski tehing ei vasta päringule „:query“',
     'source_txn' => 'tehing',
     'source_counterparty' => 'vastaspool',
     'source_category' => 'kategooria',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'vali',
     'foot_close' => 'sulge',
     'close_aria' => 'Sulge otsing',
+    'close_caption' => 'Sulge',
     'foot_try' => 'Proovi',
-    'results_suffix' => ' tulemust',
+    'results' => ':count tulemus|:count tulemust',
+
+    'action' => [
+        'run_import' => ['label' => 'Käivita import', 'hint' => 'Ava impordiviisard'],
+        'scan_email' => ['label' => 'Skanni e-posti kohe', 'hint' => 'Käivita postkasti sünkroonimine kohe'],
+        'open_profile' => ['label' => 'Ava profiil', 'hint' => 'Seaded — konto ja eelistused'],
+        'toggle_theme' => ['label' => 'Vaheta teemat', 'hint' => 'Lülita heleda ja tumeda teema vahel'],
+    ],
+
+    'run_command' => 'Käivita :command',
+
+    'nav' => [
+        'overview' => ['label' => 'Arenduse ülevaade', 'hint' => 'Süsteemiplaadid + hiljutised käivitused'],
+        'artisan' => ['label' => 'Artisani käivitaja', 'hint' => 'Käivita lubatud käsud'],
+        'audit' => ['label' => 'Arendusrežiimi auditilogi', 'hint' => 'Iga arendusrežiimi toiming'],
+        'logs' => ['label' => 'Logide jälgija', 'hint' => 'laravel-*.log otsevoog'],
+        'queue' => ['label' => 'Järjekorra inspektor', 'hint' => 'Ootel / ebaõnnestunud / partiid'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Süsteemikontrollid'],
+        'sql' => ['label' => 'SQL-paneel', 'hint' => 'Ainult SELECT-sirvija'],
+        'system' => ['label' => 'Süsteemi hetktõmmis', 'hint' => 'Keskkond + asukohad + konfiguratsioon'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Sisseehitatud järjekorra töölaud'],
+        'sync_health' => ['label' => 'Sünkroonimise seisund', 'hint' => 'Karantiini pandud või vahele jäetud ühendamised'],
+    ],
 ];

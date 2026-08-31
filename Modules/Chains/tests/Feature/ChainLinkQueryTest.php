@@ -341,7 +341,7 @@ it('hintsForReview returns only NULL-endpoint candidates with parsed evidence li
     expect($hints)->toHaveCount(1);
     expect($hints[0]->kind)->toBe('ics_bulk_settle');
     expect($hints[0]->fromTransactionId)->toBe($txHint->id);
-    expect($hints[0]->evidenceLines)->toContain('Tolerance: exceeded');
+    expect($hints[0]->evidenceLines)->toContain('Tolerance: outside the allowance');
     expect($hints[0]->evidenceLines)->toContain('Covered transactions: 54');
     expect($hints[0]->evidenceLines)->toContain('Card statement #1');
 });

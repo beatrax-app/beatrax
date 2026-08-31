@@ -41,9 +41,8 @@ into the signature. Anything that counts or iterates wraps and reasons about *ep
 filter on the role first — two tests asserting "exactly one epoch was fanned out" started
 counting two the day the blind-index key began riding this channel.
 
-Production reads it correctly today, and the distinction is worth stating because it is not
-obvious: the `count` in the `GDK_EPOCH_PUSH` header is a **frame** count, not an epoch count.
-Including the blind-index wrap in it is right — the receiver has to read that many frames.
+The distinction is easy to miss one level up: the `count` in the `GDK_EPOCH_PUSH` header is a
+**frame** count, not an epoch count. Including the blind-index wrap in it is right — the receiver has to read that many frames.
 `isEpochWrap()` likewise filters on the envelope `type`, which both roles share, so both are
 forwarded and drained, which is also right.
 
@@ -152,8 +151,7 @@ the listener could not open was confirmed away. `RelayMailbox` has no re-send an
 
 `Deferred` covers "no app-lock key in this process", which is the **permanent** state of the
 `sync:serve` daemon — it resolves a `Session` no middleware ever started, so
-`AppLockKeyService::release()` returns `null` unconditionally, verified by resolving that
-binding in a console process rather than inferred from the wiring. It also covers two conditions
+`AppLockKeyService::release()` returns `null` unconditionally. It also covers two conditions
 that are not permanent at all and used to be terminal:
 
 - **A sender this device has not confirmed yet.** During pairing, whether the registry row is

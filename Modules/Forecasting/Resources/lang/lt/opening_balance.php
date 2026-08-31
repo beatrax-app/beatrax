@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'PayPal eksportuose likučio eilučių nėra, todėl nurodyk jį ranka.',
-    'help_asn' => 'Automatiškai nustatyta pagal naujausią tavo sąskaitos išrašą. Keisk tik tada, jei žinai, kad tikrasis likutis skiriasi.',
     'help_default' => 'Keisk tik tada, jei žinai, kad dabartinis tikrasis likutis skiriasi nuo to, kurį apskaičiuoja Beatrax.',
 
     'legend' => 'Prognozės pradinis :name likutis',
     'opening_label' => 'Pradinis likutis',
-    'opening_placeholder' => 'pvz. 1.250,00',
+    'opening_placeholder' => 'pvz. :amount',
     'as_of_label' => 'Pradinis likutis datai',
     'as_of_help' => 'Data, kuriai pirmiau nurodytas skaičius yra teisingas.',
 
     'divergence' => 'Tai daugiau nei :threshold skiriasi nuo likučio, kurį Beatrax apskaičiuoja iš tavo importuotų operacijų. Ar tikrai?',
+    'computed_is' => 'Beatrax apskaičiuoja :amount.',
     'use_beatrax' => 'Naudoti Beatrax skaičių',
     'use_mine' => 'Naudoti mano skaičių',
 

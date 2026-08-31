@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Inget mystiskt ännu. Importera några kontoutdrag så visar Beatrax de rader den inte kunde identifiera här.',
 
+    'showing_capped' => 'Visar de översta :shown av :total.',
+
     'footer' => 'Den delade listan är en medföljande YAML-fil som levereras med Beatrax. När du skickar in ett förslag öppnas GitHub i din webbläsare; inget annat lämnar den här enheten.',
 
     'card' => [

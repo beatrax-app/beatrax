@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Hele historikken.',
     'subtitle_recent' => 'Seneste transaktioner (sidste 90 dage).',
 
-    'currency_aria' => 'Valutavisning',
-    'currency_eur' => 'Kun :code',
-    'currency_original' => 'Oprindelig valuta',
+    'currency_aria' => 'Vist beløb',
+    'currency_eur' => 'Afregnet beløb',
+    'currency_original' => 'Oprindeligt beløb',
 
     'show_recent' => 'Vis kun de seneste',
     'show_full' => 'Vis hele historikken',
 
     'empty_period' => 'Intet her i denne periode.',
 
+    'empty_recent_has_older' => 'Intet i de seneste 90 dage. Dine ældre posteringer er her stadig.',
+
+    'empty_history' => 'Ingen posteringer endnu.',
     'loading_more' => 'Indlæser flere transaktioner',
     'load_more' => 'Indlæs flere',
 

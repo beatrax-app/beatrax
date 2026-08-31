@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Indlæs og forhåndsvis',
     'cancel_import' => 'Annullér importen',
 
-    'diff_new' => 'nye,',
-    'diff_unchanged' => 'uændrede,',
-    'diff_conflicts' => 'konflikter.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: da · diff_new, diff_unchanged — the elided noun is alias, taken
+    // here as neuter (et alias), which is what gives nyt and uændret. If Danish
+    // readers say en alias, both singular arms want ny and uændret instead.
+    'diff_new' => ':count nyt|:count nye',
+    'diff_unchanged' => ':count uændret|:count uændrede',
+    'diff_conflicts' => ':count konflikt|:count konflikter',
 
     'conflicts_heading' => 'Konflikter',
     'conflict_name' => 'navn — eksisterende: :existing → fil: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Test mod mine transaktioner',
     'test_help' => 'Redigér en rækkes generaliserede mønster for at se, hvilke transaktioner det ville ramme.',
     'typing' => 'Skriver…',
-    'matches_prefix' => 'Rammer',
-    'matches_suffix' => 'transaktioner i din seneste historik.',
+    'matches' => 'Rammer :count transaktion i din seneste historik.|Rammer :count transaktioner i din seneste historik.',
 
     'merge_modal_title' => 'Flet :count alias|Flet :count aliasser',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Der er ikke uploadet nogen fil.',
         'unreadable' => 'Den uploadede fil kunne ikke læses.',
         'too_short' => 'Mønsteret er for kort til at teste.',
+        'file_not_yaml' => 'Denne fil er ikke gyldig YAML, så intet i den kunne læses. Eksportér dine aliasser igen, og upload filen du får.',
+        'file_unreadable_as_yaml' => 'Denne fil kunne ikke læses som en aliasliste. Eksportér dine aliasser igen, og upload filen du får.',
+        'file_has_no_entries_list' => 'Denne fil begynder ikke med en entries:-liste på øverste niveau, så den indeholder ingen aliasser at importere. Tjek at du valgte den rigtige fil.',
+        'entry_is_not_a_mapping' => 'Post :entry er en enkelt værdi, hvor et mønster og et navn var forventet. Giv den begge felter, eller fjern den, og upload filen igen.',
+        'entry_is_missing_a_field' => 'Post :entry mangler sit mønster eller sit navn, og et alias skal have begge. Udfyld det der mangler, eller fjern posten, og upload filen igen.',
     ],
 ];

@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmResult;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
@@ -100,7 +101,7 @@ function dpcHandshakeUpToBothScreens(Closure $asDevice, array $desktop, array $p
 
     $asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(DPC_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(DPC_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, DPC_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 

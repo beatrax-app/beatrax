@@ -4,7 +4,7 @@
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('core::backup.download.unavailable') }}
         </p>
-    @elseif (! $savesDownloads)
+    @elseif (! $canDeliver)
         <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('core::backup.download.no_download_route') }}
         </p>
@@ -37,6 +37,10 @@
 
             @if ($error !== '')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $error }}</p>
+            @endif
+
+            @if ($notice !== '')
+                <p aria-live="polite" class="text-sm text-emerald-700 dark:text-emerald-400">{{ $notice }}</p>
             @endif
 
             <x-core::secondary-button

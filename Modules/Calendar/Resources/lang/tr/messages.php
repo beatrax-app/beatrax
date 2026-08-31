@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Kaydedilmiş ödeme',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list sayılmıyor — oradaki ödemeler bakiyeyi değiştirmez',
+    ],
+
     'panel' => [
         'aria' => 'Gün ayrıntı paneli',
         'close' => 'Gün panelini kapat',
+        'close_caption' => 'Kapat',
         'start_of_day' => 'Gün başı',
         'no_payments' => 'Bu gün için ödeme yok.',
         'date_approximate' => '~ tarih yaklaşık',

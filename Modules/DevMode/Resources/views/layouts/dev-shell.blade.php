@@ -40,7 +40,7 @@
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
-        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        style="font-family: system-ui, -apple-system, sans-serif;"
         x-data="{
             onKey(e) {
                 /*
@@ -102,7 +102,7 @@
                             @if (! $routeExists) aria-disabled="true" tabindex="-1" @endif
                         >
                             <span class="ic" aria-hidden="true">{!! $item['icon'] !!}</span>
-                            {{ $item['label'] }}
+                            {{ Lang::get($item['labelKey']) }}
                         </a>
                     @endif
                 @endforeach

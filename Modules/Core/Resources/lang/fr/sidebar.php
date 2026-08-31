@@ -94,6 +94,7 @@ return [
         'heading' => 'Développeur',
         'open_console' => 'Ouvrir la Dev Console',
         'pulse' => 'File :queue · Worker :worker',
+        'worker_ago' => 'il y a :count s|il y a :count s',
     ],
 
     'account' => [

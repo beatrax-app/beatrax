@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Community\Internal\Shell;
 
+use Modules\Community\Internal\Support\LoggableUrl;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
-final class NoOpShell implements Shell
+final readonly class NoOpShell implements Shell
 {
-    public function __construct(private readonly LoggerInterface $logger) {}
+    public function __construct(private LoggerInterface $logger) {}
 
     public function showInFolder(string $path): void
     {
@@ -30,6 +31,6 @@ final class NoOpShell implements Shell
 
     public function openExternal(string $url): void
     {
-        $this->logger->info('NoOpShell: would launch URL', ['url' => $url]);
+        $this->logger->info('NoOpShell: would launch URL', ['url' => LoggableUrl::withoutQuery($url)]);
     }
 }

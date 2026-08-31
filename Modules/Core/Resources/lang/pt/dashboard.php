@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Principais gastos',
     'no_expenses' => 'Ainda não há despesas categorizadas.',
+    'top_spending_refunded' => 'Fora do ranking — :amount voltou',
 
     'recent_transactions' => 'Transações recentes',
     'view_all' => 'Ver tudo',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Categoria',
     'th_amount' => 'Montante',
     'uncategorized' => 'Sem categoria',
+
+    'jump_to_records' => [
+        'body' => 'Não há nada neste período. Os seus movimentos mais recentes continuam aqui.',
+        'action' => 'Mostrar :period',
+    ],
 
     'reauth' => [
         'title' => 'Uma caixa de entrada precisa de ser religada.',

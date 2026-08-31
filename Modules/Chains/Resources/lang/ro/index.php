@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importă câteva extrase (bancă, PayPal, card) și rezolvatorul va afișa aici automat lanțurile dintre conturi.',
 
     'no_counterparty' => '(fără contraparte)',
-    'open_from_row' => 'Deschide rândul sursă',
-    'open_to_row' => 'Deschide rândul destinație',
     'leg_count' => 'o plată|:count plăți|:count de plăți',
+    'legs_more' => '+ încă :count',
     'state_aria' => 'Stare: :state',
+
+    'state' => [
+        'candidate' => 'Candidat',
+        'confirmed' => 'Confirmată',
+        'rejected' => 'Respinsă',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Finanțare PayPal',

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Ismeretlen',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Banki díj',
+    ],
+
     'cp_card' => [
         'aria' => 'Partner: :name',
         'recent_aria' => 'Legutóbbi tevékenység',

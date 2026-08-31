@@ -20,6 +20,7 @@ return [
         'manage' => 'Open banking yönetimi',
         'not_connected' => 'Bağlı banka yok. İşlemleri otomatik olarak içe aktarmak için bir banka bağla.',
         'expired' => 'Onay süresi doldu — yeniden bağlanman gerekiyor.',
+        'revoked' => 'Bankan bağlantıyı sonlandırdı — yeniden bağlan.',
         'connected' => 'Enable Banking üzerinden :bank bankasına bağlı. Son senkronizasyon :when.',
         'never' => 'hiç',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Süresi doldu — yeniden bağlan',
         'pill_expiring' => 'Yakında sona eriyor',
         'pill_connected' => 'Bağlı',
+        'pill_revoked' => 'Bankan sonlandırdı — yeniden bağlan',
         'whats_fetched_label' => 'Neler çekiliyor',
         'whats_fetched' => 'Kaydedilmiş işlemler + bakiyeler, son 90 gün',
         'last_successful_sync_label' => 'Son başarılı senkronizasyon',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — başarısız (:reason)',
         'reason_consent_expired' => 'onay süresi doldu',
         'reason_error' => 'hata',
+        'reason_truncated' => 'erken durdu',
+        'reason_nothing_imported' => 'hiçbir şey kaydedilemedi',
+        'reason_consent_revoked' => 'bankan sonlandırdı',
         'disconnect_button' => 'Bağlantıyı kes',
     ],
 
     'consent_banner' => [
         'heading' => 'Onay süresi doldu — yeniden bağlan',
+        'heading_revoked' => 'Bankan bağlantıyı sonlandırdı',
         'body' => 'Son başarılı senkronizasyonun :when. Otomatik senkronizasyonu sürdürmek için yeniden bağlan.',
+        'body_revoked' => 'Bankan veya Enable Banking erişimi geri çekti, bu yüzden eşitleme durdu. Son başarılı eşitleme :when. Sürdürmek için yeniden bağlan.',
         'never' => 'hiç',
         'reconnect' => 'Yeniden bağlan',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking geçici olarak kullanılamıyor. Kısa süre sonra yeniden dene.',
         'new_found' => ':count yeni işlem bulundu.',
         'none' => 'Yeni işlem yok.',
+        'none_importable' => 'Bankan işlemler gönderdi ama hiçbiri kaydedilemedi. Nedenini görmek için içe aktarma incelemesini aç.',
+        'in_progress' => 'Bir senkronizasyon zaten sürüyor. Birazdan tekrar deneyin.',
+        'truncated' => 'Bankanda tek bir eşitlemenin çekebileceğinden fazla işlem vardı, bu yüzden bu çalışma erken durdu. Hiçbir şey eşitlendi olarak kaydedilmedi — sonraki eşitleme aynı noktadan başlayacak.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Bankanı yeniden bağla',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Önce Open Banking kurulum sihirbazını tamamla.',
         'no_bank_chosen' => 'Bağlanmadan önce bir banka seç.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => "Enable Banking güvenli olmayan bir onay URL'si döndürdü.",
         'no_authorization_code' => 'Enable Banking geri çağrısı hiçbir yetkilendirme kodu döndürmedi.',
         'no_session_id' => 'Enable Banking bir oturum kimliği döndürmedi.',
+        'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bankanızı bağlama işlemini yeniden başlatın.',
     ],
 ];

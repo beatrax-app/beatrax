@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Uzorak je obavezan.',
         'name_required' => 'Naziv je obavezan.',
+        'browser_refused' => 'Preglednik se nije mogao otvoriti, pa ništa nije poslano i ništa nije napustilo ovaj uređaj. Pokušaj ponovno ili sam zalijepi gornji YAML pregled u pull request.',
     ],
 ];

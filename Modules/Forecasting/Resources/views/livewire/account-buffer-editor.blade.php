@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 {{--
     Per-account buffer editor popover.
 
@@ -42,7 +43,7 @@
         <input
             id="buffer-input-{{ $accountId }}"
             type="text"
-            inputmode="decimal"
+            inputmode="{{ MoneyInput::decimalPlaces($currency) === 0 ? 'numeric' : 'decimal' }}"
             pattern="[0-9.,]+"
             wire:model="bufferInput"
             aria-describedby="buffer-help-{{ $accountId }}"

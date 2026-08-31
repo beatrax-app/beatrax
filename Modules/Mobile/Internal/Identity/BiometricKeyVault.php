@@ -6,7 +6,6 @@ namespace Modules\Mobile\Internal\Identity;
 
 use Beatrax\BiometricVault\Facades\BiometricVault;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 use Psr\Log\LoggerInterface;
 
@@ -15,13 +14,14 @@ use Psr\Log\LoggerInterface;
  */
 class BiometricKeyVault
 {
-    // Enclave entry-name prefix; the current user id is appended
-    // (per-user, like the custodian).
-    private const SLOT_PREFIX = 'beatrax.coldstart.datakey.';
+    // Enclave entry-name prefix; the owning user id is appended. The id comes
+    // from the caller and never from the session: a console or job caller has
+    // no authenticated user, and reading one there both threw and, when it did
+    // not, would have written one account's key into another's slot.
+    private const string SLOT_PREFIX = 'beatrax.coldstart.datakey.';
 
     public function __construct(
         private readonly BiometricKeyBlobCodec $codec,
-        private readonly CurrentUser $currentUser,
         private readonly LoggerInterface $log,
     ) {}
 
@@ -33,7 +33,7 @@ class BiometricKeyVault
     // Wraps the (currently-held) data key into a biometric blob and
     // stores it in the enclave-gated entry. Must be called while unlocked.
     // Returns false off-device or on a native failure.
-    public function enroll(string $dataKey): bool
+    public function enroll(int $userId, string $dataKey): bool
     {
         if (! $this->isAvailable()) {
             return false;
@@ -41,7 +41,7 @@ class BiometricKeyVault
 
         $blob = $this->codec->wrap($dataKey);
 
-        if ($this->vaultSet($this->slot(), base64_encode($blob))) {
+        if ($this->vaultSet($this->slot($userId), base64_encode($blob))) {
             return true;
         }
 
@@ -55,13 +55,13 @@ class BiometricKeyVault
 
     // Presents the biometric prompt (iOS) or dispatches it (Android).
     // Never prompts when nothing is enrolled.
-    public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult
+    public function recover(int $userId, string $reason = 'Unlock Beatrax'): BiometricRecoverResult
     {
         if (! $this->runtimeAvailable()) {
             return BiometricRecoverResult::unavailable();
         }
 
-        $outcome = $this->vaultGet($this->slot(), $reason);
+        $outcome = $this->vaultGet($this->slot($userId), $reason);
 
         // Empty means the native bridge never answered — the facade vanished
         // after the availability check — which is a failure, not "missing".
@@ -111,18 +111,18 @@ class BiometricKeyVault
 
     // Removes the enrolled entry (on disable, PIN reset re-enroll, or a
     // rekey/revocation - see the design doc lifecycle table).
-    public function clear(): void
+    public function clear(int $userId): void
     {
         if (! $this->runtimeAvailable()) {
             return;
         }
 
-        $this->vaultDelete($this->slot());
+        $this->vaultDelete($this->slot($userId));
     }
 
-    private function slot(): string
+    private function slot(int $userId): string
     {
-        return self::SLOT_PREFIX.$this->currentUser->id();
+        return self::SLOT_PREFIX.$userId;
     }
 
     // -------------------------------------------------------------------------
@@ -134,7 +134,7 @@ class BiometricKeyVault
     // async BiometricPrompt, so Set answers `async_required` and writes nothing.
     // Offering enrolment there said the device declined to store the key.
     /**
-     * @link ../../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
+     * @link ../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
      */
     protected function platformCanStore(): bool
     {

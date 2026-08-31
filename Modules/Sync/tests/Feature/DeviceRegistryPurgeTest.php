@@ -74,18 +74,41 @@ function purgeFixture(DatabaseManager $db): array
     return ['userId' => $userId, 'peerRowId' => $peerRowId, 'peerDeviceId' => $peerDeviceId, 'selfDeviceId' => $selfDeviceId];
 }
 
-it('removes every trace of a purged device', function (): void {
+it('removes every reachable trace of a purged device', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     ['userId' => $userId, 'peerRowId' => $peerRowId, 'peerDeviceId' => $peerDeviceId] = purgeFixture($db);
+
+    // The order DevicesAndSyncSettingsSection uses: revoke, then purge.
+    $db->connection()->table('device_registry')->where('id', $peerRowId)->update(['confirmed_at' => null]);
 
     /** @var DeviceRegistryService $registry */
     $registry = app(DeviceRegistryService::class);
     $registry->purge($userId, $peerRowId);
 
-    expect($db->connection()->table('device_registry')->where('id', $peerRowId)->exists())->toBeFalse()
-        ->and($db->connection()->table('sync_sessions')->where('peer_device_id', $peerDeviceId)->exists())->toBeFalse()
-        ->and($db->connection()->table('relay_mailbox')->where('recipient_did', $peerDeviceId)->exists())->toBeFalse();
+    expect($db->connection()->table('sync_sessions')->where('peer_device_id', $peerDeviceId)->exists())->toBeFalse()
+        ->and($db->connection()->table('relay_mailbox')->where('recipient_did', $peerDeviceId)->exists())->toBeFalse()
+        ->and($registry->deviceKeys($userId))->not->toHaveKey($peerDeviceId)
+        ->and($registry->confirmedDevices($userId))->toHaveCount(1)
+        ->and($registry->otherDeviceNames($userId))->toBe([]);
+});
+
+// The one thing purge must NOT take: deleting the row destroyed the only copy
+// of the key that verifies what the device wrote, so the next rebuild refused
+// its whole history and deleted the rows it had created.
+it('keeps the purged device\'s public key so its history can still be verified', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    ['userId' => $userId, 'peerRowId' => $peerRowId, 'peerDeviceId' => $peerDeviceId] = purgeFixture($db);
+
+    $db->connection()->table('device_registry')->where('id', $peerRowId)->update(['confirmed_at' => null]);
+
+    /** @var DeviceRegistryService $registry */
+    $registry = app(DeviceRegistryService::class);
+    $registry->purge($userId, $peerRowId);
+
+    expect($registry->retainedDeviceKeys($userId))->toHaveKey($peerDeviceId)
+        ->and($registry->retainedDeviceKeys($userId)[$peerDeviceId])->toBe(str_repeat('c', 64));
 });
 
 it('never purges this device itself', function (): void {

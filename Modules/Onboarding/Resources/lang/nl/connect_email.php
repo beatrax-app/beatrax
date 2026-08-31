@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Bonnen uit e-mail (optioneel)',
     'h1' => 'Laat Beatrax uitkijken naar aankoop-e-mails',
     'lede' => 'Koppel Gmail of Outlook zodat orderbevestigingen en abonnementsbonnen automatisch aan je transacties worden gekoppeld. Je kunt dit overslaan en later toevoegen.',
+    'h1_phone' => 'Aankoop-e-mails worden op de desktop in de gaten gehouden',
+    'lede_phone' => 'Orderbevestigingen en abonnementsbonnen worden in de desktop-app automatisch aan je transacties gekoppeld en komen via synchronisatie op deze telefoon. Op deze telefoon leest niets je mail, dus sla deze stap hier over en koppel op de desktop.',
 
     'mini' => [
         'signin_label' => 'Aanmelden',

@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Pasul :current din :total',
 
-    'step_dot_aria' => 'Pasul :number din :total',
-
     'back' => 'Înapoi',
     'back_aria' => 'Înapoi — revine la pasul anterior de configurare',
 

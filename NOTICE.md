@@ -62,10 +62,9 @@ without changing the declared license string. The intent is to use the
 identifier the wider ecosystem will recognize once the SPDX registration
 lands; this NOTICE is the canonical attribution until then.
 
-This is "Path A" of the two paths the planning notes document. If the
-SPDX validator change ever forces a switch to "Path B" (declaring the
-license as `"proprietary"` and pointing at this file for the real
-attribution), this notice will be updated to reflect the change.
+If a future SPDX validator change ever forces the fallback — declaring
+the license as `"proprietary"` and pointing at this file for the real
+attribution — this notice will be updated to reflect it.
 
 ## Attribution
 

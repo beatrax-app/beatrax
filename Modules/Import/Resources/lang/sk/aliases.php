@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Spracovať a zobraziť ukážku',
     'cancel_import' => 'Zrušiť import',
 
-    'diff_new' => 'nových,',
-    'diff_unchanged' => 'bez zmeny,',
-    'diff_conflicts' => 'konfliktov.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count nový|:count nové|:count nových',
+    'diff_unchanged' => ':count bez zmeny|:count bez zmeny|:count bez zmeny',
+    'diff_conflicts' => ':count konflikt|:count konflikty|:count konfliktov',
 
     'conflicts_heading' => 'Konflikty',
     'conflict_name' => 'názov — existujúci: :existing → súbor: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Otestovať na mojich transakciách',
     'test_help' => 'Uprav v riadku zovšeobecnený vzor a uvidíš, ktorým transakciám by zodpovedal.',
     'typing' => 'Píše sa…',
-    'matches_prefix' => 'Zodpovedá',
-    'matches_suffix' => 'transakciám z tvojej nedávnej histórie.',
+    'matches' => 'Zodpovedá :count transakcii z tvojej nedávnej histórie.|Zodpovedá :count transakciám z tvojej nedávnej histórie.|Zodpovedá :count transakciám z tvojej nedávnej histórie.',
 
     'merge_modal_title' => 'Zlúčiť :count alias|Zlúčiť :count aliasy|Zlúčiť :count aliasov',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Nenahral sa žiadny súbor.',
         'unreadable' => 'Nahraný súbor sa nepodarilo prečítať.',
         'too_short' => 'Vzor je príliš krátky na otestovanie.',
+        'file_not_yaml' => 'Tento súbor nie je platný YAML, takže sa z neho nedalo nič prečítať. Vyexportuj svoje aliasy znova a nahraj získaný súbor.',
+        'file_unreadable_as_yaml' => 'Tento súbor sa nepodarilo prečítať ako zoznam aliasov. Vyexportuj svoje aliasy znova a nahraj získaný súbor.',
+        'file_has_no_entries_list' => 'Tento súbor nezačína zoznamom entries: na najvyššej úrovni, takže v ňom nie sú žiadne aliasy na import. Skontroluj, či ide o správny súbor.',
+        'entry_is_not_a_mapping' => 'Položka :entry je obyčajná hodnota tam, kde sa čakal vzor a názov. Doplň obe polia, alebo ju odstráň, a nahraj súbor znova.',
+        'entry_is_missing_a_field' => 'Položke :entry chýba vzor alebo názov a alias potrebuje oboje. Doplň, čo chýba, alebo túto položku odstráň, a nahraj súbor znova.',
     ],
 ];

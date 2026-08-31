@@ -17,6 +17,7 @@ use Amp\Websocket\WebsocketTimestamp;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -34,6 +35,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
 uses(RefreshDatabase::class);
 
@@ -41,18 +43,21 @@ uses(RefreshDatabase::class);
 // drive the same in-memory Noise handshake, SyncSession::authenticate() and
 // receive step through a fake connection instead.
 
-// Only receive() is exercised; every other method throws if called. Messages
-// are served in order, then receive() returns null — a clean disconnect.
-function lanReceiveFakeConnection(array $messages): WebsocketConnection
+// Only receive() and sendBinary() are exercised; every other method throws if
+// called. Messages are served in order, then receive() returns null — a clean
+// disconnect. What was sent is recorded only when a caller asks for it, so the
+// anonymous class stays typed as the interface it stands in for.
+/**
+ * @param  list<WebsocketMessage>  $messages
+ * @param  ArrayObject<int, string>|null  $sentBinary
+ */
+function lanReceiveFakeConnection(array $messages, ?ArrayObject $sentBinary = null): WebsocketConnection
 {
-    return new class($messages) implements IteratorAggregate, WebsocketConnection
+    return new class($messages, $sentBinary) implements IteratorAggregate, WebsocketConnection
     {
-        /** @var list<string> */
-        public array $sentBinary = [];
-
         private int $cursor = 0;
 
-        public function __construct(private array $messages) {}
+        public function __construct(private array $messages, private ?ArrayObject $sentBinary) {}
 
         public function receive(?Cancellation $cancellation = null): ?WebsocketMessage
         {
@@ -108,7 +113,7 @@ function lanReceiveFakeConnection(array $messages): WebsocketConnection
         // to exercise. Recorded rather than discarded.
         public function sendBinary(string $data): void
         {
-            $this->sentBinary[] = $data;
+            $this->sentBinary?->append($data);
         }
 
         public function streamText(ReadableStream $stream): void
@@ -578,4 +583,223 @@ it('LanSyncException::peerFailedConfirmedDeviceGate carries the confirmed-device
 
     expect($exception)->toBeInstanceOf(LanSyncException::class)
         ->and($exception->getMessage())->toContain('confirmed-device auth gate');
+});
+
+// The catch-up watermark is per peer: PeerCatchUpExchanger::buildRequest() takes
+// the peer id and reads sync_peer_catch_up_state for it. Called without one it
+// defaults to '', which reads back as (0, 0) — so the phone asked this desktop
+// for its entire history on every single connect.
+
+it('asks a peer only for what it has not already consumed from that peer', function (): void {
+    $user = lanReceiveUser('lan-catchup-watermark');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+    $desktopSigKp = sodium_crypto_sign_keypair();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'desktop-peer',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($desktopSigKp)),
+        'x25519_public_key_hex' => sodium_bin2hex($desktopPublic),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-08-27T10:00:00Z',
+        'confirmed_at' => '2026-08-27T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-08-27T10:00:00Z',
+        'updated_at' => '2026-08-27T10:00:00Z',
+    ]);
+
+    // What an earlier exchange with THIS peer left behind, for that peer's own
+    // authorship — the cursor is per (peer, author), not per peer.
+    $db->connection()->table('sync_peer_catch_up_state')->insert([
+        'user_id' => $userId,
+        'peer_device_id' => 'desktop-peer',
+        'author_device_id' => 'desktop-peer',
+        'last_l' => 4211,
+        'last_c' => 7,
+        'updated_at' => '2026-08-27T10:05:00Z',
+    ]);
+
+    [$phoneNoiseSession, $desktopNoiseSession] = lanReceiveNoisePair(
+        sodium_hex2bin($phone->x25519SecretKeyHex),
+        sodium_hex2bin($phone->x25519PublicKeyHex),
+        $desktopSecret,
+        $desktopPublic,
+    );
+
+    $phoneSyncSession = lanReceiveBareSyncSession();
+    expect($phoneSyncSession->authenticate($phoneNoiseSession, $userId, $phone->deviceId))->toBeTrue();
+
+    /** @var ArrayObject<int, string> $sent */
+    $sent = new ArrayObject;
+
+    // receive() answers null at once, so the exchange ends immediately after
+    // the one request this is about has gone out.
+    $connection = lanReceiveFakeConnection([], $sent);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+    (new ReflectionMethod($client, 'runCatchUp'))
+        ->invoke($client, $connection, $phoneSyncSession, $userId, $phone->deviceId, []);
+
+    expect($sent)->toHaveCount(1);
+
+    /** @var array{cursors: list<array{device_id: string, hlc_l: int, hlc_c: int}>, device_id: string} $request */
+    $request = json_decode($desktopNoiseSession->decrypt($sent[0]), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($request['cursors'])->toBe(
+        [['device_id' => 'desktop-peer', 'hlc_l' => 4211, 'hlc_c' => 7]],
+        'a request with no cursor asks the peer for everything it has ever written',
+    )->and($request['device_id'])->toBe($phone->deviceId);
+});
+
+// A wrap this phone could not open is kept in its OWN inbox by the gateway,
+// and only a pass holding the app-lock key comes back for it. The responder
+// half ends its epoch phase with that pass; the initiator half did not, so a
+// phone that was locked when a key arrived never saw the key again.
+it('drains the inbox it kept a wrap in, on the same exchange that talked to the peer', function (): void {
+    $user = lanReceiveUser('lan-drains-own-inbox');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+    $desktopSigKp = sodium_crypto_sign_keypair();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'desktop-peer',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($desktopSigKp)),
+        'x25519_public_key_hex' => sodium_bin2hex($desktopPublic),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-08-27T10:00:00Z',
+        'confirmed_at' => '2026-08-27T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-08-27T10:00:00Z',
+        'updated_at' => '2026-08-27T10:00:00Z',
+    ]);
+
+    $rawEpochKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+    $wrap = $rotation->buildGdkEpochWrap(
+        77,
+        $rawEpochKey,
+        new GdkWrapRecipient($phone->deviceId, sodium_hex2bin($phone->x25519PublicKeyHex)),
+        'desktop-peer',
+        sodium_bin2hex(sodium_crypto_sign_secretkey($desktopSigKp)),
+    );
+
+    /** @var GdkEpochDeliveryGateway $gateway */
+    $gateway = app(GdkEpochDeliveryGateway::class);
+
+    // Arrived while the app-lock was locked, so the gateway retained it here
+    // rather than letting the desktop retire the only other copy for nothing.
+    app(AppLockKeyService::class)->withhold($session);
+    expect($gateway->receiveEpochWrap(
+        json_encode($wrap, JSON_THROW_ON_ERROR),
+        $userId,
+        'desktop-peer',
+        $phone->deviceId,
+        $session,
+    ))->toBeTrue();
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+    expect($keyring->loadKeyring($userId, $session)->keyFor(77))->toBeNull();
+
+    [$phoneNoiseSession, $desktopNoiseSession] = lanReceiveNoisePair(
+        sodium_hex2bin($phone->x25519SecretKeyHex),
+        sodium_hex2bin($phone->x25519PublicKeyHex),
+        $desktopSecret,
+        $desktopPublic,
+    );
+
+    $phoneSyncSession = lanReceiveBareSyncSession();
+    expect($phoneSyncSession->authenticate($phoneNoiseSession, $userId, $phone->deviceId))->toBeTrue();
+
+    // The peer announces nothing and acknowledges nothing: this exchange is
+    // here only to reach whatever runs at the end of it.
+    $connection = lanReceiveFakeConnection([lanReceivePushHeader($desktopNoiseSession, 0)]);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+    $client->exchangeGdkEpochWraps($connection, $phoneSyncSession, $phone, $session);
+
+    expect($keyring->loadKeyring($userId, $session)->keyFor(77))
+        ->toBe(sodium_bin2hex($rawEpochKey), 'the retained wrap must be applied by the exchange that follows it');
+});
+
+// The mirror of the responder's own notice. The live-dial gate that calls this
+// cannot be reached without a real socket, so the frame it puts on the wire is
+// pinned here directly, the same way the gate's exception message is above.
+it('puts a PEER_REVOKED frame on the wire that the peer can actually open', function (): void {
+    $user = lanReceiveUser('lan-tells-peer-revoked');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+
+    [$phoneNoiseSession, $desktopNoiseSession] = lanReceiveNoisePair(
+        sodium_hex2bin($phone->x25519SecretKeyHex),
+        sodium_hex2bin($phone->x25519PublicKeyHex),
+        sodium_crypto_kx_secretkey($desktopKp),
+        sodium_crypto_kx_publickey($desktopKp),
+    );
+
+    /** @var ArrayObject<int, string> $sent */
+    $sent = new ArrayObject;
+    $connection = lanReceiveFakeConnection([], $sent);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+    $client->tellPeerItIsRevoked($connection, $phoneNoiseSession);
+
+    expect($sent)->toHaveCount(1);
+
+    /** @var array{type: string} $told */
+    $told = json_decode($desktopNoiseSession->decrypt($sent[0]), true, 8, JSON_THROW_ON_ERROR);
+
+    expect($told['type'])->toBe(GdkEpochDeliveryGateway::MSG_PEER_REVOKED);
 });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Odstránené zariadenie',
     'dismiss_peer' => 'Zamietnuť toto zariadenie',
+    'dismiss_peer_caption' => 'Zamietnuť',
     'dismiss_stale' => 'Vymazať zariadenia, ktoré už nie sú spárované',
     'not_synced_yet' => 'Zatiaľ nesynchronizované',
     'error' => 'Chyba synchronizácie na jednom alebo viacerých zariadeniach',

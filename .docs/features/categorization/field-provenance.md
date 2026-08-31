@@ -20,7 +20,17 @@ The two sources in use are:
 
 - `manual` — a person set this field directly. `AssignCategory`,
   `TransactionDetail` and the default argument of `TagTransaction::execute()`
-  all stamp this.
+  all stamp this. **Agreeing with a rule counts.** `AssignCategory` used to
+  gate the stamp on rows affected, and `UpdateTransactionCategory` returns
+  zero when the value it would write is already in the column — so a reader
+  who opened the picker, saw the rule had chosen Groceries, and chose
+  Groceries got no protection at all, while one who disagreed did. The
+  action now separates a zero that means "the column already says this"
+  from one that means "the write was refused": a missing or foreign row and
+  a row locked against edits are refusals and stamp nothing, and a
+  confirmation stamps `manual` and teaches merchant memory exactly as an
+  override does. It raises no `TransactionMutated`, because no column moved
+  and there is no value for a peer to converge on.
 - `rule` — a categorisation rule set it. `RuleApplier` stamps it for the
   `category_id`, `counterparty_id` and `note` actions, and passes it
   explicitly to `TagTransaction::execute()` for the `tax_tag` action.

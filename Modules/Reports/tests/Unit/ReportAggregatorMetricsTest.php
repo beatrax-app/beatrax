@@ -105,7 +105,7 @@ function ramtTransaction(DatabaseManager $db, User $user, Account $account, arra
     return $db->connection()->table('transactions')->insertGetId(array_merge($defaults, $overrides));
 }
 
-function ramtDefinition(string $metric, string $dimension): ReportDefinition
+function ramtDefinition(string $metric, string $dimension, ?string $amountMin = null, ?string $amountMax = null): ReportDefinition
 {
     return new ReportDefinition(
         metric: $metric,
@@ -116,7 +116,23 @@ function ramtDefinition(string $metric, string $dimension): ReportDefinition
         viz: 'table',
         customFrom: '2026-03-01',
         customTo: '2026-03-31',
+        amountMin: $amountMin,
+        amountMax: $amountMax,
     );
+}
+
+function ramtSplit(DatabaseManager $db, User $user, int $transactionId, Category $category, int $minor): void
+{
+    $db->connection()->table('transaction_splits')->insert([
+        'user_id' => $user->id,
+        'transaction_id' => $transactionId,
+        'category_id' => $category->id,
+        'settled_amount_minor' => $minor,
+        'settled_currency' => 'EUR',
+        'sort_order' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 }
 
 it('sums spend/income/net using the canonical type-based definition, excluding transfers', function (): void {
@@ -183,4 +199,44 @@ it('cross_dimension_total_consistency: same spend total across category/counterp
     expect($byCounterparty->totalMinor)->toBe($byCategory->totalMinor);
     expect($byAccount->totalMinor)->toBe($byCategory->totalMinor);
     expect($byTimeBucket->totalMinor)->toBe($byCategory->totalMinor);
+});
+
+// The same invariant through the whole aggregator. Every case above ran the
+// DEFAULT empty filter set, so the amount bound -- written against the leg by
+// the split-aware category pass and against the transaction by the other three
+// dimensions -- never met a split at all.
+it('cross_dimension_total_consistency: holds through the aggregator when an amount filter is on', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = ramtUser();
+    $account = ramtAccount($user);
+    $electronics = ramtCategory('Electronics');
+    $accessories = ramtCategory('Accessories');
+
+    $splitParent = ramtTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => -12_450, 'category_id' => null,
+        'posted_at' => '2026-03-11', 'booked_at' => '2026-03-11 09:00:00', 'value_date' => '2026-03-11',
+    ]);
+    ramtSplit($db, $user, $splitParent, $electronics, -10_000);
+    ramtSplit($db, $user, $splitParent, $accessories, -2_450);
+
+    ramtTransaction($db, $user, $account, [
+        'type' => 'expense', 'settled_amount_minor' => -6_000, 'category_id' => $electronics->id,
+        'posted_at' => '2026-03-14', 'booked_at' => '2026-03-14 09:00:00', 'value_date' => '2026-03-14',
+    ]);
+
+    $aggregator = app(ReportAggregator::class);
+
+    foreach ([['50.00', null], [null, '50.00']] as [$min, $max]) {
+        $byCategory = $aggregator->run($user, ramtDefinition('spend', 'category', $min, $max));
+
+        foreach (['counterparty', 'account', 'time_bucket'] as $dimension) {
+            $other = $aggregator->run($user, ramtDefinition('spend', $dimension, $min, $max));
+
+            expect($other->totalMinor)->toBe(
+                $byCategory->totalMinor,
+                "category vs {$dimension} diverged for amount_min={$min} amount_max={$max}",
+            );
+        }
+    }
 });

@@ -9,6 +9,7 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });

@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Die Passwörter stimmen nicht überein.',
         'password_length' => 'Verwende mindestens 12 Zeichen.',
         'pin_length' => 'Die PIN muss mindestens 6 Ziffern haben.',
+        'pin_digits' => 'Die PIN muss 6 bis 10 Ziffern haben — nur Zahlen.',
         'pins_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
         'session_expired' => 'Deine Sitzung ist abgelaufen, bevor die Einrichtung fertig war. Gib deine PIN und dein Passwort erneut ein.',
         'retry_failed' => 'Die Einrichtung dieses Geräts konnte immer noch nicht abgeschlossen werden. Versuch es noch mal.',

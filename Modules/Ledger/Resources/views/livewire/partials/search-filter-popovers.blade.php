@@ -56,18 +56,13 @@
     >
         <div class="srch-popover-inner">
             {{-- Preset buttons --}}
-            @foreach ([
-                'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
-                'last_month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
-                'this_year'  => [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString()],
-                'last_year'  => [now()->subYear()->startOfYear()->toDateString(), now()->subYear()->endOfYear()->toDateString()],
-            ] as $presetKey => [$start, $end])
+            @foreach ($dateRangePresets as $labelKey => [$start, $end])
                 <button
                     type="button"
                     wire:click="$set('filterAfter', '{{ $start }}')"
                     x-on:click="$wire.$set('filterBefore', '{{ $end }}'); open = false"
                     class="srch-date-preset"
-                >{{ Lang::get('ledger::list.date_preset.'.$presetKey) }}</button>
+                >{{ Lang::get($labelKey) }}</button>
             @endforeach
 
             <div class="srch-date-range mt-2">
@@ -140,6 +135,12 @@
 {{-- ─── Amount chip ────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
+        // The reader's currency decides the SCALE as well as the symbol, on
+        // the same footing SearchQuery::applyAmountFilters() reads the bound
+        // at: parsed at a hundredth, a yen reader's "5000" was labelled
+        // Y500,000 over a list filtered at Y5,000.
+        $amountChipCurrency = BaseCurrency::value();
+
         $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value;
         $amountLabel = Lang::get('ledger::list.filter.amount').' &#9662;';
         if ($amountActive) {
@@ -150,14 +151,14 @@
             }
             if (($filterAmountMin ?? '') !== '') {
                 $amountLabel .= ' &gt; '.Money::ofMinor(
-                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? '')) ?? 0,
-                    BaseCurrency::value(),
+                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? ''), $amountChipCurrency) ?? 0,
+                    $amountChipCurrency,
                 )->format();
             }
             if (($filterAmountMax ?? '') !== '') {
                 $amountLabel .= ' &lt; '.Money::ofMinor(
-                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? '')) ?? 0,
-                    BaseCurrency::value(),
+                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? ''), $amountChipCurrency) ?? 0,
+                    $amountChipCurrency,
                 )->format();
             }
         }
@@ -203,7 +204,7 @@
                     type="number"
                     wire:model.live="filterAmountMin"
                     min="0"
-                    step="0.01"
+                    step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}"
                     placeholder="{{ Lang::get('ledger::list.filter.min') }}"
                     class="srch-amount-input"
                     aria-label="{{ Lang::get('ledger::list.filter.min_aria') }}"
@@ -213,7 +214,7 @@
                     type="number"
                     wire:model.live="filterAmountMax"
                     min="0"
-                    step="0.01"
+                    step="{{ MoneyInput::decimalPlaces($amountChipCurrency) === 0 ? '1' : '0.01' }}"
                     placeholder="{{ Lang::get('ledger::list.filter.max') }}"
                     class="srch-amount-input"
                     aria-label="{{ Lang::get('ledger::list.filter.max_aria') }}"
@@ -226,25 +227,31 @@
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
 @if (! empty($availableCategories ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
+        @php
+            // "No category" is one of the buckets this chip can hold, so it
+            // counts towards the chip like any other: a report row opened on it
+            // otherwise narrowed the list with nothing on screen saying so.
+            $catNoneOn = (bool) ($filterUncategorized ?? false);
+            $catCount = count($filterCategories ?? []) + ($catNoneOn ? 1 : 0);
+            $catCounted = Lang::choice('ledger::list.filter.cat', $catCount, ['count' => $catCount]);
+            $catLabel = match (true) {
+                $catCount !== 1 => $catCounted,
+                $catNoneOn => Lang::get('ledger::common.uncategorized'),
+                default => collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? $catCounted,
+            };
+        @endphp
+        <span class="srch-chip {{ $catCount > 0 ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
-                @if (! empty($filterCategories ?? []))
-                    @php
-                        $catCount = count($filterCategories);
-                        $catCounted = Lang::choice('ledger::list.filter.cat', $catCount, ['count' => $catCount]);
-                        $catLabel = $catCount === 1
-                            ? collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? $catCounted
-                            : $catCounted;
-                    @endphp
+                @if ($catCount > 0)
                     {{ $catLabel }}
                 @else
                     {{ Lang::get('ledger::list.filter.category') }} &#9662;
                 @endif
             </button>
-            @if (! empty($filterCategories ?? []))
+            @if ($catCount > 0)
                 <button
                     type="button"
-                    wire:click.stop="$set('filterCategories', [])"
+                    wire:click.stop="clearCategoryFilter"
                     class="srch-chip-close"
                     aria-label="{{ Lang::get('ledger::list.filter.remove_category_aria') }}"
                 >&times;</button>
@@ -259,6 +266,10 @@
             aria-label="{{ Lang::get('ledger::list.filter.category_dialog') }}"
         >
             <div class="srch-popover-inner">
+                <label class="srch-check-row">
+                    <input type="checkbox" wire:model.live="filterUncategorized" class="srch-checkbox" />
+                    <span>{{ Lang::get('ledger::common.uncategorized') }}</span>
+                </label>
                 @foreach ($availableCategories ?? [] as $category)
                     <label class="srch-check-row">
                         <input

@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Bu ayağın ötesinde finansman zinciri bulunamadı.',
 
     'covers_charges' => ':count ICS harcamasını kapsar',
-    'no_ics_charges' => 'Bu tahsilatta ICS harcaması yok',
     'show_more_fanout' => ':count tane daha göster · :total içinden :shown',
 
     'confirm' => 'Onayla',
     'reject' => 'Reddet',
     'confirm_aria' => ':id numaralı zincir halkasını onayla',
     'reject_aria' => ':id numaralı zincir halkasını reddet',
+
+    'confidence_tier' => [
+        'deterministic' => 'Kesin',
+        'confirmed' => 'Onaylandı',
+        'candidate' => 'Aday',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Güven: kesin eşleşme',

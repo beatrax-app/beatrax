@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Lisää talletuksia, niin näet ennusteen',
         'not_enough_history' => 'Historiaa ei ole vielä tarpeeksi päivän ennustamiseen',
         'no_recent_contributions' => 'Ei viimeaikaisia lisäyksiä, joiden pohjalta ennustaa',
+        'too_far_to_date' => 'Tällä tahdilla liian kaukana päivämäärää varten',
         'est' => 'Arvio :date ·',
         'projection_note' => '(ennuste)',
         'projected' => 'Ennuste: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Lisää toimintoja kohteelle :name',
         'mark_complete' => 'Merkitse valmiiksi',
+        'mark_complete_caption' => 'Merkitse',
         'archive' => 'Arkistoi',
         'restore' => 'Palauta',
     ],
 
-    'archived_disclosure' => 'Arkistoidut tavoitteet (:count)',
+    'archived_disclosure' => 'Arkistoitu tavoite (:count)|Arkistoidut tavoitteet (:count)',
 
     'form' => [
         'title_edit' => 'Muokkaa tavoitetta',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Anna tavoitteelle nimi.',
         'date' => 'Valitse tavoitepäivä.',
+        'date_invalid' => 'Valitse todellinen päivämäärä.',
+        'date_before_start' => 'Valitse päivä tavoitteen alkamispäivänä tai sen jälkeen.',
+        'generic' => 'Tavoitetta ei voitu tallentaa. Tarkista kentät ja yritä uudelleen.',
         'amount' => 'Anna kelvollinen nollaa suurempi summa.',
         'pot_linked_category' => 'Tämä potti on liitetty kategoriaan. Poista liitos ensin Säästöpotit-sivulla.',
+        'pot_already_linked' => 'Tämä potti kerää jo toista tavoitetta varten. Poista liitos ensin sieltä.',
+        'pot_missing' => 'Se potti ei ole enää käytettävissä. Valitse toinen tai jätä tämä tavoite liittämättä.',
     ],
 ];

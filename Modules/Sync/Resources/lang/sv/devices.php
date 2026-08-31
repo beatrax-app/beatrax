@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Dina enheter',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Parkoppling, enhetsnamn och kryptering finns nu tillsammans med din synkroniseringsstatus.',
-    'moved_cta' => 'Öppna Synkronisering och enhet',
     'device_name' => 'Enhetsnamn',
     'save' => 'Spara',
     'peer_default_name' => 'Parkopplad enhet',
     'rename_device' => 'Byt namn på enheten',
+    'rename_device_caption' => 'Byt namn',
     'this_device' => 'Den här enheten',
     'removed' => 'Borttagen',
     'confirmed' => 'Bekräftad',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relay-slutpunkt',
     'relay_endpoint_help' => 'Valfritt. När den är angiven synkroniserar frånkopplade enheter via denna relay. Lämna tomt för endast LAN&#8209;direkt.',
+    'relay_endpoint_help_phone' => 'Valfritt. När den är angiven färdas ändringar via denna relay även när dina enheter inte är på samma nätverk. Den här enheten hämtar dem när du synkroniserar från den här skärmen — aldrig i bakgrunden, för applåset har den enda nyckeln. Lämna tomt för endast LAN&#8209;direkt.',
     'relay_endpoint_aria' => 'URL till relay-slutpunkt',
     'relay_insecure_warning' => 'Den här relay-slutpunkten använder vanlig HTTP. Relayen dekrypterar aldrig dina data, men en osäker anslutning avslöjar krypterade storlekar och tidpunkter för den som avlyssnar nätverket. Använd en <strong>https://</strong>-slutpunkt för bästa integritet.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Tar bort:',
     'remove_rotates_key' => 'När du tar bort den här enheten roteras krypteringsnyckeln så att den inte får några framtida uppdateringar.',
     'remove_cannot_erase' => 'Det kan inte radera data som redan finns på enheten. Om enheten har tappats bort eller blivit stulen bör du betrakta alla data den innehöll som röjda.',
+    'remove_is_local' => 'Dina andra enheter har en egen lista. Tills du tar bort den där också fortsätter de att synka med den.',
     'remove_device' => 'Ta bort enheten',
     'keep_device' => 'Behåll enheten',
     'rotating_key' => 'Roterar krypteringsnyckeln…',

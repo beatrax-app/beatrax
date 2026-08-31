@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Zobrazenie meny',
+        'heading' => 'Zobrazenie sumy',
         'label' => 'Predvolené zobrazenie v zozname transakcií',
-        'eur_only' => 'Len :code',
-        'original' => 'Pôvodná mena',
+        'eur_only' => 'Zúčtovaná suma',
+        'original' => 'Pôvodná suma',
         'help' => 'V zozname transakcií to môžeš kedykoľvek prepnúť pre jednotlivé stránky.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Používajú sa priložené kurzy. Toto zariadenie neopúšťajú žiadne údaje.',
         'fetch_aria' => 'Stiahnuť aktuálne výmenné kurzy online',
         'refreshing' => 'Obnovuje sa…',
-        'next_refresh' => 'Ďalšie automatické obnovenie: denne o 09:00',
+        'next_refresh' => 'Automatické obnovenie: raz denne',
         'refresh_gave_up' => 'Kurzy sa nepodarilo obnoviť. Naďalej sa používajú kurzy uložené v tomto zariadení.',
         'refresh_now' => 'Obnoviť teraz',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Obdobie',
         'label' => 'Obdobie sa začína dňom',
         'help' => 'Číslo od 1 do 28. Väčšina ľudí tu necháva 1 (kalendárny mesiac). Zvoľ 25, ak ti výplata prichádza 25. a „tvoj mesiac“ sa pre teba začína vtedy.',
+
+        'move_confirm' => 'Ak sa obdobie začína v deň :day, všetky sumy v obálkach sa preradia a spočítajú tam, kde sa dva mesiace zlejú do jedného. Vrátenie dňa späť ich už nerozdelí.',
+        'move_cancel' => 'Zrušiť',
+        'move_apply' => 'Použiť',
     ],
 
     'recurring' => [
         'heading' => 'Rozpoznávanie opakovaných platieb',
         'window_label' => 'Okno rozpoznávania (mesiace)',
         'window_help' => 'Koľko mesiacov histórie sa prehľadá pri zhlukovaní transakcií do opakovaných vzorov.',
-        'income_label' => 'Minimálny príjem (centy)',
-        'income_help' => 'Príjmy pod touto hranicou sa automaticky nezhlukujú. Ukladá sa v centoch — 200000 znamená :example. Nastav 0, ak chceš hranicu vypnúť.',
+        'income_label' => 'Minimálny príjem (najmenšie jednotky)',
+        'income_help' => 'Príjmy pod touto hranicou sa automaticky nezhlukujú. Ukladá sa v najmenších jednotkách — :minor znamená :example. Nastav 0, ak chceš hranicu vypnúť.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Predvolený prah upozornenia na odchýlku',
         'help' => 'Upozornenie sa spustí, keď sa najnovšia suma opakovanej platby líši od predchádzajúcej o viac než toto percento. Nastavenie jednotlivej série má prednosť.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (predvolené)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (predvolené)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Odkladací priečinok je aktívny. Beatrax každých 5 minút prehľadáva <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> a hľadá nové súbory.',
         'inactive_html' => 'Keď je zapnutý, Beatrax každých 5 minút prehľadáva <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> a hľadá súbory <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> a <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>, ktoré importuje rovnakou linkou párovania ako sprievodca. Spracované súbory sa presunú do <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, takže sa nikdy neimportujú dvakrát.',
+        'active_phone_html' => 'Odkladací priečinok je aktívny. Beatrax prehľadáva <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> na pozadí a hľadá nové súbory. Kedy sa kontrola na pozadí spustí, rozhoduje tvoj telefón — môžu to byť minúty aj hodiny.',
+        'inactive_phone_html' => 'Keď je zapnutý, Beatrax prehľadáva <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> na pozadí a hľadá súbory <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> a <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>, ktoré importuje rovnakou linkou párovania ako sprievodca. Kedy sa kontrola na pozadí spustí, rozhoduje tvoj telefón — môžu to byť minúty aj hodiny. Spracované súbory sa presunú do <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, takže sa nikdy neimportujú dvakrát.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Dane',
-    'shared_merchant_heading' => 'Zdieľaný zoznam obchodníkov',
     'data_backup_heading' => 'Údaje a záloha',
-    'install_heading' => 'Inštalácia',
 
     'about_updates' => [
         'heading' => 'O aktualizáciách',
         'body' => 'Po nainštalovaní sa Beatrax aktualizuje sám. Po inštalácii úplne prvej verzie prichádzajú ďalšie verzie cez banner priamo v aplikácii — na GitHub sa už vracať netreba. Ak by sa niektorá budúca aktualizácia nepodarila, najnovší inštalátor si vždy môžeš znova stiahnuť ručne zo stránky s vydaniami.',
+        'body_phone' => 'Tu sa Beatrax sám neaktualizuje. Nové verzie mobilnej aplikácie prichádzajú cez App Store alebo Google Play, rovnako ako ostatné tvoje aplikácie. Na stránke s vydaniami je uvedené, čo sa v ktorej zmenilo.',
         'open_releases' => 'Otvoriť stránku s vydaniami →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Rozpočtový mesiac sa nepodarilo posunúť, takže zostal tam, kde bol.',
         'currency_required' => 'Vyber menu.',
         'window_months' => 'Zvoľ hodnotu od 2 do 60 mesiacov.',
-        'threshold' => 'Zvoľ prah 1%, 2%, 5%, 10%, 25% alebo 50%.',
+        'threshold' => 'Zvoľ prah 1 %, 2 %, 5 %, 10 %, 25 % alebo 50 %.',
         'amount' => 'Zadaj sumu od :zero vyššie.',
         'period_day' => 'Zvoľ deň od 1 do 28.',
         'currency_view' => 'Vyber jednu z dostupných možností.',

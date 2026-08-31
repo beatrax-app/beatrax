@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Http\Livewire;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
@@ -28,6 +29,12 @@ final class SyncCompleteScreen extends Component
     // that is not set up would be worse than saying nothing.
     public bool $hasRelay = false;
 
+    // The label the Data & devices button carries, read from the copy that
+    // button renders. This screen once told the reader there was no sync
+    // button while the next screen was built around one.
+    #[Locked]
+    public string $syncAction = '';
+
     public function mount(
         CurrentUser $currentUser,
         InitialSyncPuller $puller,
@@ -46,6 +53,7 @@ final class SyncCompleteScreen extends Component
             : Lang::get('mobile::sync_complete.peer_fallback');
 
         $this->hasRelay = $relayHost->host() !== null;
+        $this->syncAction = Lang::get('mobile::sync.sync_now');
     }
 
     public function continueToApp(UrlGenerator $urls): void

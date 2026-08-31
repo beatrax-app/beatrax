@@ -29,7 +29,7 @@ final class GoalFactory extends Factory
             'target_minor' => 100000,
             'target_currency' => Currency::Eur->value,
             'start_date' => CarbonImmutable::now()->toDateString(),
-            'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+            'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
             'status' => GoalStatus::Active->value,
         ];
     }

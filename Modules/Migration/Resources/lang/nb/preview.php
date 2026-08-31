@@ -16,7 +16,9 @@ return [
         'budget' => 'Budsjettmåneder',
     ],
 
-    'all_clean' => 'Alt ble tilknyttet rent — ingenting krever oppmerksomheten din før du bekrefter.',
+    'all_clean' => 'Alt ble tilknyttet rent — det er ingenting her du må ta stilling til.',
+
+    'nothing_staged' => 'Denne eksporten inneholdt ingenting å importere — det er ingenting å bekrefte her.',
 
     'groups' => [
         'conflict' => 'Krever din avgjørelse',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Dette oppretter eller oppdaterer antallene ovenfor i kategoriene, budsjettene og transaksjonene dine.',
     'discard_button' => 'Forkast importen',
+    'discard_confirm' => 'Vil du forkaste denne importen? Alt som er lest ut av eksportfilen din, blir slettet her, og for å få det tilbake må du laste opp og lese gjennom hele filen på nytt. Ingenting har havnet blant transaksjonene dine ennå.',
     'confirm_button' => 'Bekreft importen',
 ];

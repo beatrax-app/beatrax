@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWalk;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectionException;
@@ -37,6 +38,8 @@ final class OfsStubRemoteSourceAdapter implements RemoteSourceAdapter
         $this->called = true;
 
         yield from [];
+
+        return FetchWalk::exhausted();
     }
 }
 

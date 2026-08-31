@@ -19,9 +19,10 @@ isolation.
 
 - **Location:** `Modules/Forecasting/tests/Feature/`
 - **What they test:**
-  - The eleven Public actions end-to-end, including the launchpad
-    atomic actions' transaction safety.
-  - The cross-user 404 posture on every action + Livewire mount.
+  - The nine Public actions end-to-end, including the launchpad
+    atomic action's transaction safety.
+  - The cross-user 404 posture on every action + Livewire mount, and the
+    soft reset the PAGE takes instead.
   - The scenario CRUD lifecycle + the matching events.
   - The chain-aware routing against multi-account fixtures.
   - The shortfall detector's window detection + `ForecastShortfallDetected`
@@ -32,6 +33,10 @@ isolation.
     `ForecastHighlightsTile`, `ScenarioEditorSidebar`,
     `ModelWhatIfDropdown`, `OpeningBalanceEditor`).
   - The sidebar badge composer's count query + memoisation.
+  - That the roll-ups count one movement once
+    (`AReceiptIsNotASecondChargeTest`): both legs of a Google Play
+    purchase land in the ledger, and the net-worth card and the
+    all-accounts curve each subtract it a single time.
 - **Setup:** every test uses `RefreshDatabase`. Tests that drive
   the queued projection use `Queue::fake()` or the in-memory
   worker for the listener-fan-out contracts.
@@ -44,7 +49,7 @@ isolation.
   `recurring_series`, or `chain_links`. The scenario substrate is
   walled off from the ledger.
 - `noForecastRunStateWritesOutsideMachine` — only
-  `ForecastRunStateMachine` may write `forecast_runs.state`.
+  `ForecastRunStateMachine` may write `forecast_runs.status`.
 
 ## How to run the suite for just this module
 
@@ -76,15 +81,17 @@ composer test
   raised the matching event. Tail `/dev/logs` for the listener's
   job-dispatch log line.
 - **The shortfall band is missing on a chart the user expects** —
-  read the underlying `forecast_runs.result_json`; the
-  `shortfall_windows` array is empty when the curve stayed above
-  the buffer. Check `accounts.forecast_buffer_minor` for the
-  account; the default is zero.
-- **The percentile bands look identical to the median** — the
-  cadence jitter for every series in the contribution set was
-  zero. `CadenceJitter` produces zero jitter only for a series
-  with perfectly stable historical cadence; this is usually
-  correct.
+  the windows live in `forecast_shortfall_windows`, not in
+  `forecast_runs.result_json`, and the chart reads only the rows whose
+  `horizon_days` matches the horizon on screen. No row means the curve
+  stayed above the buffer at that horizon. Check
+  `accounts.forecast_min_buffer_minor` for the account; the default is
+  zero.
+- **The percentile bands look identical to the median** — the series
+  took the envelope tier rather than the percentile one, so nothing was
+  jittered. `CadenceJitter` smears only a contribution `RangeProjector`
+  marked `dateIsUncertain`, which is the percentile tier alone; failing
+  either bar of the two-part gate is usually correct.
 - **`OpeningBalanceDivergenceWarning` raised but the user wants
   the override anyway** — the warning is informational, not
   blocking; the write completes. The Livewire SFC re-renders the
@@ -102,7 +109,8 @@ composer test
   requests, the COUNT query in
   `ForecastHighlightsQuery::activeShortfallCountForUser` returned
   zero — confirm `forecast_shortfall_windows` has the expected
-  rows and that the window's `window_end` is still in the future.
+  rows, that their `horizon_days` is the badge's own 30, and that
+  `ends_at` is still in the future.
 
 ## Behavioural contracts, and the tests that hold them
 
@@ -111,28 +119,25 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Forecasting` module.
-
-## Behavioral contracts
-
 - **Scenarios never touch the transaction substrate.** The
   `noScenarioMutationsJoinedToTransactionQueries` arch invariant
   blocks any JOIN that couples `forecast_scenario_mutations` to
   `transactions`, `recurring_series`, or `chain_links`. Scenarios
   are an in-memory transform applied by `ScenarioApplier`.
 - **`ForecastRunStateMachine` is the SOLE sanctioned mutator of
-  `forecast_runs.state`.** Allowed transitions: `pending →
+  `forecast_runs.status`.** Allowed transitions: `pending →
   running → complete | failed`.
 - **Every scenario CRUD action raises exactly one event.**
   `ScenarioCreated`, `ScenarioMutated`, or `ScenarioDeleted`
   fires once per successful action; the `ProjectForecastOnScenarioChange`
   listener fans out the projection.
-- **Launchpad actions are atomic.**
-  `CreateCancellationScenarioForAlert`,
-  `CreateCancellationScenarioForSeries`, and
-  `CreateAmountChangeScenarioForSeries` each wrap a
-  `CreateScenario` + `AddScenarioMutation` pair in a DB
+- **The launchpad action is atomic.** `CreateScenarioFromTemplate`
+  wraps a `CreateScenario` + `AddScenarioMutation` pair in a DB
   transaction; a half-applied launchpad scenario can never land.
+- **A second click returns the first scenario, in any language.**
+  The lookup is `existingScenarioIdForTemplate()` — mutation kind plus
+  target series — never the translated name, which the reader may also
+  have renamed.
 - **Scenario names are unique per user.** UNIQUE
   `(user_id, name)`; the rename action has a deterministic conflict
   surface.
@@ -154,14 +159,19 @@ The behavioural contract for the `Forecasting` module.
   Rejected / MetricsRefreshed; `DriftAlerts`'
   DismissedCancelled; the three scenario lifecycle events.
 - **Cross-user reads / writes return 404.** Every action +
-  Livewire mount filters by `(id, user_id)`.
+  Livewire mount filters by `(id, user_id)`. `/forecast`'s own `?account=`
+  and `?scenarioId=` are the exception, and deliberately so: a page
+  answering "not yours" with a 404 and "nobody's" with a rendered page is an
+  existence oracle over the id space, so both soft-reset to the reader's own
+  view. See [url-parameters.md](url-parameters.md#one-answer-for-both-cases).
 - **`forecast_scenarios.user_id` is non-nullable + cascade-on-
   delete.** A NULL `user_id` cannot land; deleting the user wipes
   the scenarios cleanly.
 - **The projection is deterministic against the input set.**
   Same inputs (scenario, recurring set, anchor, horizon) produce
-  the same `result_json`. `CadenceJitter` uses a deterministic
-  per-series seed so the "noise" is reproducible.
+  the same `result_json`. There is no randomness anywhere in the
+  pipeline: `CadenceJitter` spreads a fixed `100 / window` share over a
+  fixed ±3-day window, with no seed and nothing to seed.
 - **The percentile bands are computed from the modelled cadence
   jitter, not from random sampling.** Each series's confidence
   surfaces as P10/P50/P90; the bands reflect modelling
@@ -210,7 +220,7 @@ The behavioural contract for the `Forecasting` module.
   - [`Chains`](../chains/how-to-test.md) —
     `CardStatementQuery::nextSettlementForUser` (the synthetic
     settlement contribution and the highlights tile) and
-    `ChainLinkQuery::confirmedAndDeterministicForSeries` (the
+    `ChainLinkQuery::confirmedFundersForSeries` (the
     funder account chain routing sends a series to).
 - **Depended on by**
   - [`Desktop`](../desktop/how-to-test.md) — subscribes to
@@ -223,13 +233,14 @@ The behavioural contract for the `Forecasting` module.
 
 ## Configuration + feature flags
 
-- `accounts.forecast_buffer_minor` — per-account buffer threshold
+- `accounts.forecast_min_buffer_minor` — per-account buffer threshold
   the shortfall detector compares against.
 - `accounts.opening_balance_minor` — per-account user-set opening
   balance override.
-- The 30 / 60 / 90 horizon options are fixed in the
-  `ForecastPage` SFC; no config knob today.
-- `CadenceJitter`'s seed scheme is deterministic per series; no
-  user-visible knob.
+- The horizon options are the cases of `ForecastHorizon`
+  (30 / 60 / 90 / 180 / 365) and the rail offers exactly those; no
+  config knob today.
+- `CadenceJitter`'s window is `WINDOW_DAYS = 3` and its share is
+  `100 / window`; no seed, no user-visible knob.
 - No per-user opt-out for the shortfall detector; the buffer is
   the chokepoint.

@@ -11,10 +11,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
-use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\Support\LedgerDay;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -22,15 +22,15 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#transactionlistquery--paginated-list-read
  */
-final class TransactionListQuery
+final readonly class TransactionListQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly Clock $clock,
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private Clock $clock,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function recent(
@@ -66,6 +66,18 @@ final class TransactionListQuery
         return $this->buildPage($query, $limit, $user->id);
     }
 
+    // Whether the reader has any transaction at all. Asked only when a bounded
+    // window came back empty, so an empty recent window can be told apart from
+    // an empty ledger -- on screen those two look identical, and the way out of
+    // the first is a header button nothing connects to the empty state.
+    public function hasAnyTransaction(User $user): bool
+    {
+        return $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->exists();
+    }
+
     private function baseQuery(User $user, ?string $currency = null): Builder
     {
         // See the linked architecture page for the currency-projection
@@ -80,12 +92,11 @@ final class TransactionListQuery
         $select = [
             'transactions.id',
             'transactions.posted_at',
-            'transactions.booked_at',
             'transactions.counterparty_name',
             'transactions.category_id',
             $amountMinorColumn,
             $currencyColumn,
-            ...CategoryDisplayName::columns('categories'),
+            ...CategoryPathName::columns('categories', 'parent_categories'),
             'counterparties.slug as counterparty_slug',
         ];
 
@@ -97,10 +108,12 @@ final class TransactionListQuery
         // Left-join counterparties so each row carries its resolved
         // slug in a single query (no N+1). Rows without a resolved
         // counterparty yield NULL, and the Blade falls back to plain text.
-        $query = $this->db->connection()
+        $joined = $this->db->connection()
             ->table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
-            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id');
+
+        $query = CategoryPathName::joinParent($joined, $user->id, 'categories', 'parent_categories')
             ->where('transactions.user_id', $user->id)
             ->select($select);
 
@@ -135,9 +148,9 @@ final class TransactionListQuery
 
     private function mapRow(stdClass $row, int $userId): TransactionRowDto
     {
-        $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
+        $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
         $categoryId = $row->category_id === null ? null : self::toInt($row->category_id);
-        $categoryName = CategoryDisplayName::fromRow($row, 'category');
+        $categoryName = CategoryPathName::fromRow($row);
         // Read-side decrypt — pass-through no-op when encryption is not
         // enabled for this user.
         $counterpartyName = $row->counterparty_name === null
@@ -165,7 +178,7 @@ final class TransactionListQuery
 
         return new TransactionRowDto(
             id: self::toInt($row->id),
-            bookedAt: Fmt::shortDate($bookedAt),
+            postedAt: LedgerDay::shown($postedAt),
             counterpartyName: $counterpartyName,
             categoryId: $categoryId,
             categoryName: $categoryName,

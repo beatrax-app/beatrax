@@ -6,7 +6,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
@@ -63,7 +65,7 @@ it('admits the initiator (desktop) into the phone-simulated local registry after
 
     // Without this seed, accept() would find no pending row at all on a
     // genuinely separate database.
-    $seeded = $service->seedFromInitiator((int) $user->id, 'desktop-initiator', $initiatorEd, $initiatorKx, $token);
+    $seeded = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-initiator', $initiatorEd, $initiatorKx), $token);
     expect($seeded)->not->toBeFalse();
 
     $accepted = $service->accept($token, (int) $user->id, 'phone-self', str_repeat('9', 64), str_repeat('8', 64));
@@ -125,7 +127,7 @@ it('refuses to admit an initiator whose device_id collides with the local self-r
 
     // The scanned QR happens to carry the SAME device_id as this device's
     // own self-row (a crafted/pathological QR).
-    $service->seedFromInitiator((int) $user->id, 'colliding-device', str_repeat('a', 64), str_repeat('b', 64), $token);
+    $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('colliding-device', str_repeat('a', 64), str_repeat('b', 64)), $token);
     $service->accept($token, (int) $user->id, 'phone-self-2', str_repeat('c', 64), str_repeat('d', 64));
 
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
@@ -160,14 +162,48 @@ it('seedFromInitiator is idempotent for a repeated scan of the same physical cod
 
     $token = bin2hex(random_bytes(16));
 
-    $first = $service->seedFromInitiator((int) $user->id, 'desktop-x', str_repeat('a', 64), str_repeat('b', 64), $token);
-    $second = $service->seedFromInitiator((int) $user->id, 'desktop-x', str_repeat('a', 64), str_repeat('b', 64), $token);
+    $first = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-x', str_repeat('a', 64), str_repeat('b', 64)), $token);
+    $second = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-x', str_repeat('a', 64), str_repeat('b', 64)), $token);
 
     expect($first)->not->toBeFalse();
     expect($second)->not->toBeFalse();
     expect($first->id)->toBe($second->id);
 
     expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('seedFromInitiator is idempotent for a re-scan AFTER the accept the first scan performed', function (): void {
+    // The repeat that actually happens in the field: the phone is on the
+    // Confirm step, the desktop never advances, the reader backs out with the
+    // OS gesture rather than cancelling, and re-enters the code the desktop is
+    // still showing. The pending-only lookup fell through to insert() here and
+    // hit pairing_tokens.token_hash UNIQUE — a 500 on the Livewire update.
+    $user = crossDeviceUser('cross-device-idempotent-after-accept');
+
+    /** @var PairingTokenService $service */
+    $service = app(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $token = bin2hex(random_bytes(16));
+
+    $first = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-x', str_repeat('a', 64), str_repeat('b', 64)), $token);
+    $service->accept($token, (int) $user->id, 'phone-y', str_repeat('c', 64), str_repeat('d', 64));
+
+    expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->value('state'))
+        ->toBe(PairingState::AwaitingConfirm->value);
+
+    $second = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-x', str_repeat('a', 64), str_repeat('b', 64)), $token);
+
+    expect($first)->not->toBeFalse()
+        ->and($second)->not->toBeFalse()
+        ->and($second->id)->toBe($first->id)
+        // Returned as-is: the responder binding the first scan produced is
+        // still on the row, so the ceremony the reader is looking at survives.
+        ->and($second->state)->toBe(PairingState::AwaitingConfirm->value)
+        ->and($second->responder_device_id)->toBe('phone-y')
+        ->and($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
 });
 
 it('rejects malformed initiator key material without seeding a row', function (): void {
@@ -179,7 +215,7 @@ it('rejects malformed initiator key material without seeding a row', function ()
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    $result = $service->seedFromInitiator((int) $user->id, 'desktop-bad', 'not-hex', 'also-not-hex', bin2hex(random_bytes(16)));
+    $result = $service->seedFromInitiator((int) $user->id, new PairingPeerIdentity('desktop-bad', 'not-hex', 'also-not-hex'), bin2hex(random_bytes(16)));
 
     expect($result)->toBeFalse();
     expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(0);

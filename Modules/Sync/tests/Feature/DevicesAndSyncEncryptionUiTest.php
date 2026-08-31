@@ -161,10 +161,6 @@ it('(d) startRemove opens the revocation modal for a non-self device with copy t
 
     $component = Livewire::test(DevicesAndSyncSettingsSection::class)
         ->set('syncEnabled', true)
-        ->set('devices', [
-            deviceViewRow($selfId, 'This Mac', isSelf: true),
-            deviceViewRow($peerId, "Wessel's iPhone", isSelf: false),
-        ])
         ->assertSee('remove-device-'.$peerId, escape: false)
         ->assertDontSee('remove-device-'.$selfId, escape: false);
 
@@ -178,6 +174,46 @@ it('(d) startRemove opens the revocation modal for a non-self device with copy t
         ->assertDontSee('remote wipe')
         ->assertDontSee("the other device's data is deleted")
         ->assertDontSee('your data is now safe from that device');
+});
+
+it('(d2) says the removal is local when another device is still here to keep the removed one', function (): void {
+    // Only the ROTATION half of a removal reaches the household. Clearing the
+    // peer's confirmed_at happens here alone, so a third device goes on
+    // admitting and feeding the removed one until it is removed there too.
+    $user = encryptionUiUser('encryption-ui-remove-local');
+    $this->actingAs($user);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $selfId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'self-device-3', 'This Mac', isSelf: true));
+    $peerId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'peer-device-3', "Wessel's iPhone", isSelf: false));
+    $otherId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'peer-device-4', 'Study laptop', isSelf: false));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('syncEnabled', true)
+        ->call('startRemove', $peerId)
+        ->assertSee('Your other devices keep their own list.')
+        ->assertSee('they will go on syncing with it');
+});
+
+it('(d3) stays silent about other devices when this removal leaves none', function (): void {
+    // A warning about devices that are not there reads as a warning about the
+    // one being removed, which is the opposite of what it says.
+    $user = encryptionUiUser('encryption-ui-remove-last');
+    $this->actingAs($user);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $selfId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'self-device-4', 'This Mac', isSelf: true));
+    $peerId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'peer-device-5', "Wessel's iPhone", isSelf: false));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('syncEnabled', true)
+        ->call('startRemove', $peerId)
+        ->assertSee('revoke-device-modal', escape: false)
+        ->assertDontSee('Your other devices keep their own list.');
 });
 
 it('(e) removeDevice revokes device_registry trust (rotateAndRevoke) and the row shows the Removed badge', function (): void {
@@ -200,10 +236,6 @@ it('(e) removeDevice revokes device_registry trust (rotateAndRevoke) and the row
 
     Livewire::test(DevicesAndSyncSettingsSection::class)
         ->set('syncEnabled', true)
-        ->set('devices', [
-            deviceViewRow($selfId, 'This Mac', isSelf: true),
-            deviceViewRow($peerId, 'Old Laptop', isSelf: false),
-        ])
         ->call('startRemove', $peerId)
         ->call('removeDevice')
         ->assertSet('removingDeviceId', null)
@@ -235,22 +267,6 @@ function deviceRegistryRow(int $userId, string $deviceId, string $name, bool $is
         'last_seen_at' => null,
         'created_at' => '2026-07-09T10:00:00Z',
         'updated_at' => '2026-07-09T10:00:00Z',
-    ];
-}
-
-/**
- * @return array<string, mixed>
- */
-function deviceViewRow(int $id, string $name, bool $isSelf): array
-{
-    return [
-        'id' => $id,
-        'name' => $name,
-        'safety_number_words' => 'abandon ability able about above absent',
-        'paired_at' => '2026-07-09T10:00:00Z',
-        'is_self' => $isSelf,
-        'confirmed' => true,
-        'removed' => false,
     ];
 }
 

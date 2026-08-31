@@ -4,26 +4,25 @@ declare(strict_types=1);
 
 namespace Modules\Community\Internal\Corpus;
 
+use Modules\Community\Internal\Support\RecipientAddress;
 use Modules\Community\Public\Dto\MerchantContactDto;
 use Psr\Log\LoggerInterface;
 
-final class MerchantContactReader
+final readonly class MerchantContactReader
 {
-    public const URL_MAX = 512;
+    public const int URL_MAX = 512;
 
-    private const PHONE_MAX = 32;
+    private const int PHONE_MAX = 32;
 
-    private const PHONE_MIN_DIGITS = 3;
+    private const int PHONE_MIN_DIGITS = 3;
 
     // Separators, not structure: `/` splits area code from subscriber number
     // across the German-speaking web (0732/3400-4000), and typographers reach
     // for an en or em dash where a hyphen was meant (089/12 606 – 0).
-    private const PHONE_SHAPE = '/^[+(]?[0-9][0-9 ()\.\-\/\x{2013}\x{2014}]*$/u';
-
-    private const EMAIL_MAX = 255;
+    private const string PHONE_SHAPE = '/^[+(]?[0-9][0-9 ()\.\-\/\x{2013}\x{2014}]*$/u';
 
     public function __construct(
-        private readonly LoggerInterface $logger,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -99,17 +98,15 @@ final class MerchantContactReader
      */
     private function email(array $raw, string $pattern): ?string
     {
-        // `?` and `&` are valid RFC 5322 atext, so FILTER_VALIDATE_EMAIL
-        // passes them — but in a `mailto:` href they open a header-injection
-        // seam. SupportResource::mailtoHref guards the same thing later.
+        // `?`, `&` and `,` are all valid RFC 5322 atext, so FILTER_VALIDATE_EMAIL
+        // passes them — but in a `mailto:` href they forge headers and extra
+        // recipients. RecipientAddress is the same gate mailtoHref applies.
         $value = self::trimmed($raw, 'support_email');
         if ($value === null) {
             return null;
         }
 
-        if (mb_strlen($value) > self::EMAIL_MAX
-            || filter_var($value, FILTER_VALIDATE_EMAIL) === false
-            || preg_match('/[\s?&]/', $value) === 1) {
+        if (! RecipientAddress::isSingle($value)) {
             $this->reject('support_email', $pattern);
 
             return null;

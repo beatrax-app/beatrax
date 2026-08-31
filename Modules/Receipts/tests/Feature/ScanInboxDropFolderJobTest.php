@@ -8,7 +8,10 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
+use Modules\Receipts\Public\Actions\RecordReceipt;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 5, 17, 12, 0, 0));
@@ -199,6 +202,58 @@ it('skips top-level files with non-eml/mbox extensions', function (): void {
     expect(file_exists($readmePath))->toBeTrue();
 });
 
+// The scan discarded RecordReceipt's outcome, and RecordReceipt says itself it
+// never writes to transactions. The file moved to processed/, the audit row
+// read `parsed`, and the ledger stayed empty with no screen to notice on.
+it('lands the canonical transaction for a dropped .eml, not just the audit row', function (): void {
+    seedDroppedEml($this->baseDir, 'paypal-1.eml', 'paypal/current-receipt.eml');
+
+    runScanJob($this->user->id);
+
+    expect(DB::table('file_imports')->where('user_id', $this->user->id)->value('status'))->toBe('parsed');
+
+    $transactions = Transaction::query()->where('user_id', $this->user->id)->get();
+    expect($transactions)->toHaveCount(1);
+    expect($transactions->first()->counterparty_name)->toBe('Netflix BV');
+    expect($transactions->first()->amount_minor)->toBe(-1299);
+    expect($transactions->first()->source_ref)->toBe('PAYPALTXN17052026');
+});
+
+it('lands the receipt-bearing message of a dropped .mbox and leaves the rest alone', function (): void {
+    seedDroppedEml($this->baseDir, 'mixed.mbox', 'mbox/paypal-mixed.mbox');
+
+    runScanJob($this->user->id);
+
+    // paypal-mixed.mbox carries one receipt, one non-PayPal bill and one
+    // sign-in notice, so exactly one of the three reaches the ledger.
+    $transactions = Transaction::query()->where('user_id', $this->user->id)->get();
+    expect($transactions)->toHaveCount(1);
+    expect($transactions->first()->source_ref)->toBe('PAYPALTXN17052026');
+});
+
+// The drop-folder scan flips the file_imports row to `parsed`, and RecordReceipt
+// used to answer a second pass over the same bytes with unmatched(): the wizard
+// then built a run with no rows and refused to confirm it, so the same receipt
+// was importable through neither path.
+it('leaves the same file importable through the wizard after the drop folder took it', function (): void {
+    seedDroppedEml($this->baseDir, 'paypal-1.eml', 'paypal/current-receipt.eml');
+    runScanJob($this->user->id);
+
+    expect(Transaction::query()->where('user_id', $this->user->id)->count())->toBe(1);
+
+    $bytes = (string) file_get_contents(base_path('Modules/Receipts/tests/fixtures/paypal/current-receipt.eml'));
+    /** @var RecordReceipt $record */
+    $record = app(RecordReceipt::class);
+    $second = $record($bytes, $this->user, 'paypal-1.eml');
+
+    expect($second->kind)->toBe(MatchOutcomeKind::Parsed);
+    expect($second->parsed?->referenceId)->toBe('PAYPALTXN17052026');
+
+    // And the second pass is a dedup, not a second charge.
+    expect(DB::table('file_imports')->where('user_id', $this->user->id)->count())->toBe(1);
+    expect(Transaction::query()->where('user_id', $this->user->id)->count())->toBe(1);
+});
+
 it('streams a dropped .mbox archive through the matcher and moves it to processed/{YYYY-MM}/', function (): void {
     // small.mbox holds 5 synthetic messages — none are receipts, so the
     // matcher returns unmatched for each, but recordMboxFile still walks
@@ -213,12 +268,20 @@ it('streams a dropped .mbox archive through the matcher and moves it to processe
     expect(file_exists($processedPath))->toBeTrue();
 });
 
+// The opt-in read and the dispatch moved out of routes/console.php into an
+// artisan command: a Schedule::call() closure has no name for a device's
+// background runner to invoke, so the scan the settings copy promised a phone
+// never entered its manifest.
 it('registers the routes/console.php Schedule entry under the receipts.scan-drop-folder name', function (): void {
     $contents = (string) file_get_contents(base_path('routes/console.php'));
     expect($contents)->toContain('receipts.scan-drop-folder');
     expect($contents)->toContain('everyFiveMinutes');
-    expect($contents)->toContain('auto_import_drop_folder');
-    expect($contents)->toContain(ScanInboxDropFolderJob::class);
+
+    $command = (string) file_get_contents(
+        base_path('Modules/Receipts/Internal/Console/ScanInboxDropFolderCommand.php'),
+    );
+    expect($command)->toContain('auto_import_drop_folder');
+    expect($command)->toContain(ScanInboxDropFolderJob::class);
 });
 
 it('routes ScanInboxDropFolderJob unique lock through the LockStore carve-out helper', function (): void {

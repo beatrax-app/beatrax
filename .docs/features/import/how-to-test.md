@@ -33,7 +33,17 @@ Practical recipes for exercising the `Import` module in isolation.
     a row's `source_ref` and appends to `enriched_from`).
   - The starting-balance aggregator picking the first non-empty
     detector.
+  - The denomination a newly named account is opened in, per format
+    and against a reader reporting in a third currency
+    (`AnImportedAccountIsDenominatedByItsStatementTest`) —
+    [an account is denominated by its statement](an-account-is-denominated-by-its-statement.md).
   - The cross-user 404 posture on every action.
+  - `OwnAccountPrompt` answering as if a run it was not handed by its
+    owner does not exist — no prompt, no statement currency, and a
+    write guard that stays closed
+    (`AnOwnAccountPromptAnswersNothingForAForeignRunTest`). Called
+    directly rather than through `PreviewWizard`, because the wizard's
+    own mount assertion is exactly what the class must not depend on.
 
 ## Integration tests
 
@@ -64,7 +74,7 @@ Practical recipes for exercising the `Import` module in isolation.
 vendor/bin/pest Modules/Import/tests
 
 # Just one source's parser
-vendor/bin/pest Modules/Import/tests/Unit/Parsers/Asn
+vendor/bin/pest Modules/Import/tests/Unit/PositionalCsvPaymentTypeHinterTest.php
 
 # Just the preview/confirm cycle
 vendor/bin/pest Modules/Import/tests/Feature --filter "PreviewConfirm"
@@ -123,10 +133,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Import` module.
-
-## Behavioral contracts
 
 - **The preview phase writes no transactions.** Every stage
   produces an in-memory canonical row and the rows themselves go

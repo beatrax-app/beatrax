@@ -7,39 +7,42 @@ namespace Modules\Budgets\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
+use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\ValueObjects\Money;
 
-// There is no stored balance column anywhere: a category's net_moved is
-// always SUM(amount_minor) over its own rows, derived fresh on every read.
-final class EnvelopeBalanceQuery
+// The move history an envelope shows under its own row. There is no stored
+// balance column anywhere: the grid's net_moved term is folded out of these
+// same rows by CarryoverQuery, fresh on every read.
+final readonly class EnvelopeBalanceQuery
 {
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
-
-    public function netMoved(int $userId, int $categoryId, Period $period): int
-    {
-        $value = $this->db->connection()
-            ->table('envelope_moves')
-            ->where('user_id', $userId)
-            ->where('category_id', $categoryId)
-            ->where('period_start', $period->start->toDateString())
-            ->sum('amount_minor');
-
-        return self::toInt($value);
-    }
+    // A row records the currency it was written in, and the fold nets those
+    // rows into the reader's own before it prints them. A history line left in
+    // the stored units said the envelope had received EUR 500.00 beside a
+    // moved column reading EUR 440.18, off one rate the fold had applied.
+    public function __construct(
+        private DatabaseManager $db,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
+    ) {}
 
     /**
      * @return list<EnvelopeMoveRow>
      */
     public function recentMovesFor(int $userId, int $categoryId, Period $period, int $limit = 10): array
     {
-        $rows = $this->db->connection()
+        $moves = $this->db->connection()
             ->table('envelope_moves as m')
-            ->join('categories as c', 'c.id', '=', 'm.counterpart_category_id')
+            ->join('categories as c', 'c.id', '=', 'm.counterpart_category_id');
+
+        $rows = CategoryPathName::joinParent($moves, $userId, 'c', 'cp')
             ->where('m.user_id', $userId)
             ->where('m.category_id', $categoryId)
             ->where('m.period_start', $period->start->toDateString())
@@ -53,15 +56,19 @@ final class EnvelopeBalanceQuery
                 'm.id',
                 'm.kind',
                 'm.amount_minor',
+                'm.currency',
                 'm.counterpart_category_id',
-                ...CategoryDisplayName::columns('c', 'counterpart_category'),
+                ...CategoryPathName::columns('c', 'cp', 'counterpart_category'),
                 'm.memo',
                 'm.created_at',
             ]);
 
+        $target = $this->baseCurrency->code();
+        $rates = $this->ratesFor($rows->all(), $target);
+
         $result = [];
         foreach ($rows as $row) {
-            $result[] = $this->mapMoveRow($row);
+            $result[] = $this->mapMoveRow($row, $target, $rates);
         }
 
         return $result;
@@ -84,9 +91,11 @@ final class EnvelopeBalanceQuery
             return $buckets;
         }
 
-        $rows = $this->db->connection()
+        $moves = $this->db->connection()
             ->table('envelope_moves as m')
-            ->join('categories as c', 'c.id', '=', 'm.counterpart_category_id')
+            ->join('categories as c', 'c.id', '=', 'm.counterpart_category_id');
+
+        $rows = CategoryPathName::joinParent($moves, $userId, 'c', 'cp')
             ->where('m.user_id', $userId)
             ->whereIn('m.category_id', $categoryIds)
             ->where('m.period_start', $period->start->toDateString())
@@ -100,11 +109,15 @@ final class EnvelopeBalanceQuery
                 'm.category_id',
                 'm.kind',
                 'm.amount_minor',
+                'm.currency',
                 'm.counterpart_category_id',
-                ...CategoryDisplayName::columns('c', 'counterpart_category'),
+                ...CategoryPathName::columns('c', 'cp', 'counterpart_category'),
                 'm.memo',
                 'm.created_at',
             ]);
+
+        $target = $this->baseCurrency->code();
+        $rates = $this->ratesFor($rows->all(), $target);
 
         foreach ($rows as $row) {
             $categoryId = self::toInt($row->category_id);
@@ -112,20 +125,47 @@ final class EnvelopeBalanceQuery
                 continue;
             }
 
-            $buckets[$categoryId][] = $this->mapMoveRow($row);
+            $buckets[$categoryId][] = $this->mapMoveRow($row, $target, $rates);
         }
 
         return $buckets;
     }
 
-    private function mapMoveRow(\stdClass $row): EnvelopeMoveRow
+    /**
+     * @param  array<int, \stdClass>  $rows
+     * @return array<string, string>
+     */
+    private function ratesFor(array $rows, string $target): array
     {
+        return $this->fx->ratesTo(
+            array_values(array_map(static fn (\stdClass $row): string => self::toString($row->currency), $rows)),
+            $target,
+        );
+    }
+
+    // A row the rate table cannot price travels in the currency it was written
+    // in, the same rule copyFromPeriod() applies: relabelling it as the
+    // reader's would print a number that was never that many euros. A kind
+    // this build cannot name travels too, as a null the screen has copy for.
+    /**
+     * @param  array<string, string>  $rates
+     *
+     * @link ../../../../.docs/features/sync/a-peer-may-be-on-a-newer-version.md
+     */
+    private function mapMoveRow(\stdClass $row, string $target, array $rates): EnvelopeMoveRow
+    {
+        $stored = self::toInt($row->amount_minor);
+        $storedCurrency = self::toString($row->currency);
+        $money = Money::tryOfMinor($stored, $storedCurrency);
+        $converted = $money === null ? null : $this->fx->convert($money, $target, $rates);
+
         return new EnvelopeMoveRow(
             id: self::toInt($row->id),
-            direction: self::toString($row->kind) === 'move_in' ? 'in' : 'out',
-            amountMinor: self::toInt($row->amount_minor),
+            kind: EnvelopeMoveKind::tryFrom(self::toString($row->kind)),
+            amountMinor: $converted === null ? $stored : $converted->toMinor(),
+            currency: $converted === null ? $storedCurrency : $target,
             counterpartCategoryId: self::toInt($row->counterpart_category_id),
-            counterpartCategoryName: CategoryDisplayName::fromRow($row, 'counterpart_category') ?? '',
+            counterpartCategoryName: CategoryPathName::fromRow($row, 'counterpart_category') ?? '',
             memo: is_string($row->memo) ? $row->memo : null,
             createdAt: $this->formatCreatedAt($row->created_at ?? null),
         );

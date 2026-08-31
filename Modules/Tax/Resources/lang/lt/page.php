@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Eksportuoti PDF',
     'export_pdf_aria' => 'Eksportuoti PDF',
     'export_pdf_title' => 'Atsisiųsti beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Slėpti',
 
     'country_prompt_heading' => 'Kurioje šalyje deklaruoji mokesčius?',
     'country_prompt_body' => 'Tai gali bet kada pakeisti: Nustatymai → :section.',

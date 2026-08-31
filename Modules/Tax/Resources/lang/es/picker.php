@@ -27,6 +27,7 @@ return [
 
     'batch_before' => '¿Etiquetar también otros :count de',
     'batch_after' => '?',
+    'batch_confirm' => '¿Etiquetar como deducibles todas las transacciones restantes de :name? Cada una recibe esta categoría y esta nota. Quitar la etiqueta después hay que hacerlo transacción a transacción.',
     'batch_tag_all' => 'Etiquetar todos',
     'batch_dismiss' => 'Descartar',
 ];

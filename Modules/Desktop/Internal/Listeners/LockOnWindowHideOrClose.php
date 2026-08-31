@@ -9,11 +9,11 @@ use Modules\Core\Public\Services\SessionFactory;
 
 // Locks immediately, with no grace period: the OS app-switcher snapshot must
 // never show financial data.
-final class LockOnWindowHideOrClose
+final readonly class LockOnWindowHideOrClose
 {
     public function __construct(
-        private readonly AppLockKeyService $keyService,
-        private readonly SessionFactory $session,
+        private AppLockKeyService $keyService,
+        private SessionFactory $session,
     ) {}
 
     // Wired to both WindowHidden and WindowClosed; neither payload is inspected,

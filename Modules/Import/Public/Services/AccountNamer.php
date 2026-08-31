@@ -13,30 +13,29 @@ use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
  */
-final class AccountNamer implements NamesAccounts
+final readonly class AccountNamer implements NamesAccounts
 {
-    public const NAME_MIN_LENGTH = 1;
+    public const int NAME_MIN_LENGTH = 1;
 
-    public const NAME_MAX_LENGTH = 80;
+    public const int NAME_MAX_LENGTH = 80;
 
     // ISO 13616: 15 is Norway, the shortest national format; 34 is the
     // published global maximum.
-    private const IBAN_MIN_LENGTH = 15;
+    private const int IBAN_MIN_LENGTH = 15;
 
-    private const IBAN_MAX_LENGTH = 34;
+    private const int IBAN_MAX_LENGTH = 34;
 
     public function __construct(
-        private readonly AccountSlugResolver $slugs,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CsvPresetRegistry $presets,
+        private AccountSlugResolver $slugs,
+        private AccountDenomination $denomination,
+        private CsvPresetRegistry $presets,
     ) {}
 
-    public function __invoke(string $iban, string $userSuppliedName, User $user): int
+    public function __invoke(string $iban, string $userSuppliedName, User $user, ?string $statementCurrency = null): int
     {
         $trimmed = self::validateName($userSuppliedName);
 
@@ -74,7 +73,7 @@ final class AccountNamer implements NamesAccounts
             'slug' => $this->slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::Bank->value,
             'iban' => $iban,
-            'default_currency' => $this->baseCurrency->code(),
+            'default_currency' => $this->denomination->forStatement($statementCurrency),
         ]);
 
         return $account->id;

@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Samm 3 / 3',
 
     'show_my_code' => 'Näita minu koodi',
-    'show_my_code_help' => 'Kuva selle seadme QR- ja sõnakood teise seadme jaoks.',
+    'show_my_code_help' => 'Kuvab selle seadme koodi, et teine seade saaks selle lugeda.',
     'enter_a_code' => 'Sisesta kood',
     'safety_number_changed' => 'Teine seade muutus võrdlemise ajal. Kontrolli allolevaid sõnu uuesti, enne kui kinnitad.',
     'enter_a_code_help' => 'Sisesta teises seadmes kuvatav kood.',
 
     'show_this_code' => 'Näita seda koodi',
     'enter_on_other' => 'Sisesta see kood teises seadmes või lase sellel QR-kood skannida.',
+    'scan_on_other' => 'Skanni see kood teise seadme kaameraga. Arvutil kaamerat pole — näita selle koodi ja sisesta see siia.',
     'expires_in' => 'Aegub',
     'code_expired' => 'Kood on aegunud.',
     'generate_new_code' => 'Loo uus kood',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
     'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
+    'code_incomplete' => 'See kood ei ole täielik. Võrdle seda teise seadmega ja sisesta see tervikuna.',
+    'code_not_accepted' => 'Ükski selle võrgu seade ei võtnud koodi vastu. Kontrolli koodi ja seda, kas teine seade näitab seda veel.',
+    'no_peer_answered' => 'Selles võrgus ei vastanud sellele koodile miski. Kontrolli, kas teises seadmes töötab sünkroonimine.',
+    'no_peer_search' => 'See seade ei saanud võrgust otsida ega koodi seetõttu kontrollida. Näita selle asemel selle seadme koodi ja sisesta see teises seadmes.',
+    'rate_limited' => 'Liiga palju katseid. Oota minut ja proovi uuesti.',
 ];

@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Největší výdaje',
     'no_expenses' => 'Zatím žádné zařazené výdaje.',
+    'top_spending_refunded' => 'Mimo žebříček — :amount se vrátilo',
 
     'recent_transactions' => 'Nedávné transakce',
     'view_all' => 'Zobrazit vše',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategorie',
     'th_amount' => 'Částka',
     'uncategorized' => 'Bez kategorie',
+
+    'jump_to_records' => [
+        'body' => 'Za toto období tu nic není. Vaše nejnovější transakce tu stále jsou.',
+        'action' => 'Zobrazit období :period',
+    ],
 
     'reauth' => [
         'title' => 'Schránku je potřeba znovu připojit.',

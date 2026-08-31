@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Операційна поверхня вбудованої консолі розробника.',
     'worker_heartbeat' => 'Пульс обробника черги',
     'not_running' => 'НЕ ПРАЦЮЄ',
+    'heartbeat_age' => ':count с тому · ttl :ttl с|:count с тому · ttl :ttl с|:count с тому · ttl :ttl с',
     'queue' => 'Черга',
     'pending' => 'в очікуванні',
     'failed' => 'невдалих',

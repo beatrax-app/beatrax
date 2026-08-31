@@ -12,8 +12,10 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Services\PopulatedPeriodQuery;
 use Modules\Position\Public\Services\PositionQuery;
 
 final class Dashboard extends Component
@@ -43,6 +45,23 @@ final class Dashboard extends Component
         $this->periodStartStr = null;
     }
 
+    // Re-derived rather than taken from the payload: the anchor is
+    // client-controlled, and the offer is only ever the period the reader's own
+    // latest record falls in. A click that arrives once that period has filled
+    // up moves nobody.
+    public function goToLatestPeriod(
+        CurrentUser $currentUser,
+        PeriodQuery $periods,
+        PopulatedPeriodQuery $populated,
+    ): void {
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $target = $populated->latestWithRecords($currentUser->user(), $resolved->period);
+
+        if ($target !== null) {
+            $this->periodStartStr = $target->start->toDateString();
+        }
+    }
+
     // Session-scoped, so a refresh keeps the toast hidden but a fresh login
     // resets it and the toast re-surfaces while any inbox is needs_reauth.
     public function dismissReauthToast(
@@ -57,9 +76,11 @@ final class Dashboard extends Component
         CurrentUser $currentUser,
         PeriodQuery $periods,
         PositionQuery $position,
+        PopulatedPeriodQuery $populated,
         DatabaseManager $db,
         ViewFactory $views,
         Session $session,
+        DevConsoleBuildGate $console,
     ): View {
         $user = $currentUser->user();
         $resolved = $periods->resolveAnchor($this->periodStartStr);
@@ -91,10 +112,11 @@ final class Dashboard extends Component
         return $views->make('shell::livewire.dashboard', [
             'summary' => $summary,
             'tiles' => $tiles,
+            'latestWithRecords' => $populated->latestWithRecords($user, $period),
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
-            'isDeveloper' => $user->is_developer === true,
+            'isDeveloper' => $console->permits() && $user->is_developer === true,
         ]);
     }
 }

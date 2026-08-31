@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Carbon\CarbonImmutable')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Core\Public\Support\WeekStart')
 {{-- `fieldId` lands on the BUTTON: a <label for="…"> must point at the thing a
      user actually clicks. Callers that had `id` on their old
      `<input type="date">` pass it here so their existing label keeps
@@ -13,8 +14,11 @@
     // English-only data, so anything routed through ICU would come back
     // English — or throw, as Fmt::number() does for all 25 non-English
     // languages on that build.
-    $anchor = CarbonImmutable::create(2026, 1, 5); // A Monday, so startOfWeek is a no-op shift.
-    $weekStart = $anchor->startOfWeek();
+
+    // Where the week opens is the one thing NOT taken from the locale: the
+    // calendar grid reads WeekStart too, and a picker offset by one day from
+    // the page behind it is the disagreement that rule exists to stop.
+    $weekStart = WeekStart::of(CarbonImmutable::create(2026, 1, 5));
 
     $monthNames = [];
     for ($m = 1; $m <= 12; $m++) {
@@ -22,7 +26,7 @@
     }
 
     $weekdayNames = [];
-    for ($d = 0; $d < 7; $d++) {
+    for ($d = 0; $d < WeekStart::DAYS_IN_WEEK; $d++) {
         $weekdayNames[] = $weekStart->addDays($d)->isoFormat('dd');
     }
 

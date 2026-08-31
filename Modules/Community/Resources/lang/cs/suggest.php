@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Vzor je povinný.',
         'name_required' => 'Název je povinný.',
+        'browser_refused' => 'Prohlížeč se nepodařilo otevřít, takže se nic neodeslalo a nic toto zařízení neopustilo. Zkus to znovu, nebo náhled YAML výše vlož do pull requestu sám.',
     ],
 ];

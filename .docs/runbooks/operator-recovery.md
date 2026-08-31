@@ -13,15 +13,18 @@ The supported backup path is `php artisan db:backup`. It runs SQLite
 `VACUUM INTO` against the live database, writes the result to
 `storage/app/backups/beatrax-YYYY-MM-DD-HHMMSS.sqlite` at mode `0600`,
 verifies the output with a fresh-PDO `PRAGMA integrity_check`, drops a
-matching `.meta.json` sidecar capturing the source `PRAGMA data_version`,
-and prunes the directory to the retention window described below. The
+matching `.meta.json` sidecar carrying the finished copy's SHA-256
+(`content_sha256`), its start and completion timestamps and its integrity
+verdict, and prunes the directory to the retention window described below. The
 `VACUUM INTO` mechanic is safe against a running app — WAL writes from
 the web request continue while the backup is taken.
 
 ### Daily schedule
 
-`db:backup` runs every day at `03:00` under the schedule entry
-`db.backup-daily`. The entry is wrapped with `withoutOverlapping(60)`,
+`db:backup` runs once a day under the schedule entry `db.backup-daily`.
+It used to name `03:00`; the phone's background runner takes a repeat
+interval and no wall clock, so that hour meant the one device which may
+hold the only copy of the data never backed it up at all. The entry is wrapped with `withoutOverlapping(60)`,
 so a crashed run leaves a lock row in the `cache` table that releases
 itself 60 minutes later — the lock TTL is short on purpose, much
 shorter than the 24h default, because a backup that has been running
@@ -33,14 +36,17 @@ see "Stuck withoutOverlapping lock" below for the manual release.
 Two modes:
 
 ```sh
-# Smart-skip mode (default). Compares the live PRAGMA data_version
-# against the most recent sidecar; exits 0 with "Skipped — no commits
-# since last backup" when nothing has been written since.
+# Smart-skip mode (default). Hashes the copy it just produced and
+# compares it against the newest sidecar's content_sha256; exits 0 with
+# "Skipped — the database is unchanged since the last backup" when they
+# match. Decided on the finished copy, not the live file: VACUUM rebuilds
+# pages in a canonical order, so equal data gives an equal digest, while
+# the live file and its write-ahead log churn on every checkpoint.
 php artisan db:backup
 
-# Always-run mode. Bypasses the data_version gate. Useful before a
-# risky manual operation or when validating that the backup pipeline
-# itself still produces a clean file.
+# Always-run mode. Bypasses the content-digest gate, so a quiet day still
+# writes a fresh sidecar and no false backup_overdue banner appears. This
+# is the mode the daily schedule runs in.
 php artisan db:backup --force
 ```
 
@@ -134,8 +140,8 @@ injected `Cache::driver('redis')` repository may wrap this; for now the
 
 ### Restoring from a backup
 
-The `db:restore` command is destructive — it overwrites the live DB
-file. Three safety rails are mandatory:
+The `db:restore` command is destructive — it replaces the contents of the
+live DB. Three safety rails are mandatory:
 
 1. The app must be in maintenance mode (`php artisan down`) so no web
    request can write to the live DB during the swap.
@@ -177,13 +183,44 @@ maintenance mode and prints the path to the `pre-restore-*.sqlite`
 snapshot. To undo: run `db:restore --confirm` against that snapshot,
 then `php artisan up`.
 
+#### Why the swap is not a file copy
+
+`db:restore` writes the source's pages **into** the live database through
+SQLite's own backup API, after dropping every open connection that names
+that file — it does not copy the source over it. `php artisan down`
+refuses HTTP requests; it does not close the desktop server's own handle,
+and it does not stop the sync daemon or the queue worker at all. With any
+one of those still holding the file, its `-wal` sidecar survives the swap,
+and the next reader recovers that write-ahead log straight back over the
+restored pages. Measured: 501 rows of the OLD database, exit code 0,
+"Restore complete", and a post-swap `PRAGMA integrity_check` of `ok` on
+the pages it had just replayed. Not one byte of the backup survived.
+
 ### Corrupt-backup alert
 
 A row of `kind=backup_corrupt` and `severity=critical` lands in the
-`system_alerts` table whenever a backup run fails its post-write
-integrity check (or whenever `VACUUM INTO` itself refuses a malformed
-source). The persistent banner on every authenticated page surfaces
-the row in rose until the operator acknowledges it.
+`system_alerts` table whenever a backup or restore run fails. The
+persistent banner on every authenticated page surfaces the row in rose
+until the operator acknowledges it.
+
+One kind covers four different failures, so `metadata.cause` says which —
+`Modules\Core\Internal\Enums\BackupFailureCause`, and the banner picks
+its sentence from it:
+
+| `cause` | what happened |
+|---|---|
+| `source_unreadable` | The live database could not be opened, or `VACUUM INTO` refused it. Nothing usable was produced. |
+| `copy_suspect` | A copy was produced and kept as `.suspect` because it did not verify. |
+| `write_failed` | The database is sound. Writing the copy, narrowing its mode, promoting it, or writing its sidecar failed — check free space and permissions. |
+| `restore_failed` | A restore did not complete. `metadata.pre_restore_snapshot` is the undo. |
+
+Before the cause was recorded, the banner chose between two sentences on
+whether a `.suspect` file existed, and three of those four producers
+landed on *"aborted before any file was produced — source DB failed
+integrity check."* One of them was the sidecar-write failure, which
+reaches that branch with a **verified backup sitting on disk**. A row
+written by an older build carries no `cause` and still reads the way it
+always did.
 
 What it means:
 

@@ -18,7 +18,7 @@ use SodiumException;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
  */
-final class BlindIndexCodec
+final readonly class BlindIndexCodec
 {
     // Prefixed onto every digest so a value derived for one logical key can
     // never be replayed as a valid value for another, and so a future second
@@ -42,9 +42,9 @@ final class BlindIndexCodec
     public const string DOMAIN_COUNTERPARTY_IBAN = SensitiveFieldRegistry::DOMAIN_COUNTERPARTY_IBAN;
 
     public function __construct(
-        private readonly GdkKeyringService $keyringService,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private GdkKeyringService $keyringService,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     // Plaintext in, keyed digest out. Returns $plaintext UNCHANGED for a user

@@ -20,6 +20,7 @@ return [
         'manage' => 'Gestionar el open banking',
         'not_connected' => 'Ningún banco conectado. Conecta uno para importar transacciones automáticamente.',
         'expired' => 'Consentimiento caducado — hay que volver a conectar.',
+        'revoked' => 'Tu banco ha finalizado la conexión: vuelve a conectar.',
         'connected' => 'Conectado a :bank a través de Enable Banking. Última sincronización :when.',
         'never' => 'nunca',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Caducado — vuelve a conectar',
         'pill_expiring' => 'Caduca pronto',
         'pill_connected' => 'Conectado',
+        'pill_revoked' => 'Finalizada por tu banco: vuelve a conectar',
         'whats_fetched_label' => 'Qué se descarga',
         'whats_fetched' => 'Transacciones contabilizadas y saldos, últimos 90 días',
         'last_successful_sync_label' => 'Última sincronización correcta',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — fallido (:reason)',
         'reason_consent_expired' => 'consentimiento caducado',
         'reason_error' => 'error',
+        'reason_truncated' => 'detenida antes de tiempo',
+        'reason_nothing_imported' => 'no se pudo registrar nada',
+        'reason_consent_revoked' => 'finalizada por tu banco',
         'disconnect_button' => 'Desconectar',
     ],
 
     'consent_banner' => [
         'heading' => 'Consentimiento caducado — vuelve a conectar',
+        'heading_revoked' => 'Tu banco ha finalizado la conexión',
         'body' => 'Tu última sincronización correcta fue :when. Vuelve a conectar para reanudar la sincronización automática.',
+        'body_revoked' => 'Tu banco o Enable Banking ha retirado el acceso, así que la sincronización se ha detenido. Tu última sincronización correcta fue :when. Vuelve a conectar para reanudarla.',
         'never' => 'nunca',
         'reconnect' => 'Volver a conectar',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking no está disponible temporalmente. Inténtalo de nuevo en un momento.',
         'new_found' => 'Se ha encontrado :count transacción nueva.|Se han encontrado :count transacciones nuevas.',
         'none' => 'No hay transacciones nuevas.',
+        'none_importable' => 'Tu banco ha enviado transacciones, pero no se ha podido registrar ninguna. Abre la revisión de la importación para ver por qué.',
+        'in_progress' => 'Ya hay una sincronización en curso. Inténtalo de nuevo en un momento.',
+        'truncated' => 'Tu banco tenía más transacciones de las que una sincronización puede recuperar, así que esta ejecución se detuvo antes de tiempo. No se ha registrado nada como sincronizado: la próxima sincronización empezará en el mismo punto.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Vuelve a conectar tu banco',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Termina primero el asistente de configuración de Open Banking.',
         'no_bank_chosen' => 'Elige un banco antes de conectar.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking ha devuelto una URL de consentimiento no segura.',
         'no_authorization_code' => 'La respuesta de Enable Banking no ha devuelto ningún código de autorización.',
         'no_session_id' => 'Enable Banking no ha devuelto ningún ID de sesión.',
+        'oauth_state_mismatch' => 'Ese enlace de conexión ha caducado o ya se ha utilizado. Vuelve a iniciar la conexión con tu banco.',
     ],
 ];

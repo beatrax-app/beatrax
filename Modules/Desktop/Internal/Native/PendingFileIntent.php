@@ -11,15 +11,15 @@ use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 
 // Session-scoped so a logged-out file-open survives until that same session
 // authenticates, and is never inherited by a different user's session.
-final class PendingFileIntent implements RemembersPendingFileIntent
+final readonly class PendingFileIntent implements RemembersPendingFileIntent
 {
-    public const SESSION_KEY = 'desktop.pending_file_intent';
+    public const string SESSION_KEY = 'desktop.pending_file_intent';
 
-    private const ALLOWED_EXTENSIONS = ['csv', 'eml'];
+    private const array ALLOWED_EXTENSIONS = ['csv', 'eml'];
 
     public function __construct(
-        private readonly SessionFactory $session,
-        private readonly Clock $clock,
+        private SessionFactory $session,
+        private Clock $clock,
     ) {}
 
     public function remember(string $path, string $extension): void

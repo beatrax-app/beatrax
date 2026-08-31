@@ -123,3 +123,49 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
     expect($scanState->status)->toBe('idle');
     expect($scanState->last_history_id)->toBe('12345');
 });
+
+// A revoked grant is not something a later attempt can clear, and the entry
+// transition sat outside the try — so the throw never reached
+// transitionOnScanError and failed() could not record it either.
+it('skips a needs_reauth inbox instead of throwing an unrecordable transition error', function (): void {
+    $user = User::query()->create([
+        'username' => 'backfill-reauth',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $now = CarbonImmutable::now()->toDateTimeString();
+
+    $inboxId = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $user->id,
+        'provider' => 'gmail',
+        'email' => 'backfill-reauth@example.com',
+        'backfill_window_months' => 3,
+        'backfill_progress' => null,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $user->id,
+        'inbox_id' => $inboxId,
+        'folder' => 'INBOX',
+        'status' => 'needs_reauth',
+        'retry_attempts' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
+    $this->app->instance(GmailApiClientContract::class, $fake);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
+    $this->app->call([$job, 'handle']);
+
+    $state = $db->connection()->table('inbox_scan_state')->where('inbox_id', $inboxId)->first(['status']);
+
+    expect($state->status)->toBe('needs_reauth')
+        ->and($fake->getRequestedCalls())->toBe([]);
+});

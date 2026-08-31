@@ -11,13 +11,13 @@ final class Mt940Lexer
 {
     // UploadLimits bounds bytes, not lines, so a small but degenerate file —
     // every byte a newline — still needs its own cap.
-    private const MAX_LINE_COUNT = 100_000;
+    private const int MAX_LINE_COUNT = 100_000;
 
     // Real :86: narratives never exceed a few hundred bytes. Doubles as the
     // stream_get_line cap so one huge line cannot allocate before the check.
-    private const MAX_BUFFER_BYTES = 16_384;
+    private const int MAX_BUFFER_BYTES = 16_384;
 
-    private const TAG_LINE_REGEX = '/^:(\d{2}[A-Z]?):(.*)$/';
+    private const string TAG_LINE_REGEX = '/^:(\d{2}[A-Z]?):(.*)$/';
 
     /**
      * @return Generator<int, array{0: string, 1: string}>

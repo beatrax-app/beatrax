@@ -94,6 +94,7 @@ return [
         'heading' => 'Deweloper',
         'open_console' => 'Otwórz konsolę deweloperską',
         'pulse' => 'Queue :queue · Worker :worker',
+        'worker_ago' => ':count s temu|:count s temu|:count s temu',
     ],
 
     'account' => [

@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Görünümden gizler (log dosyasını değiştirmez)',
     'dismiss_aria' => 'Log kaydını görünümden gizle',
     'totals' => [
-        'showing' => 'Gösterilen',
-        'of' => '/',
-        'received' => 'alınan (tampon sınırı 10k)',
-        'lines_today' => 'satır bugün',
+        'showing' => 'Alınan :count satırdan :shown tanesi gösteriliyor (tampon sınırı :cap)',
+        'lines_today' => 'bugün :count satır',
+        'lines_today_capped' => 'bugün :count satırdan fazla',
         'today' => 'bugün',
-        'across' => 'toplam',
-        'daily_files' => 'günlük dosyada',
+        'all_files' => ':count günlük dosyada :size',
     ],
 
     'status' => [

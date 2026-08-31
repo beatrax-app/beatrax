@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Operativna površina ugrađene razvojne konzole.',
     'worker_heartbeat' => 'Puls workera',
     'not_running' => 'NE RADI',
+    'heartbeat_age' => 'prije :count s · ttl :ttl s|prije :count s · ttl :ttl s|prije :count s · ttl :ttl s',
     'queue' => 'Red čekanja',
     'pending' => 'na čekanju',
     'failed' => 'neuspjelih',

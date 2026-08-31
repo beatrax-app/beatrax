@@ -14,7 +14,25 @@
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format();
 
-    $signed = static fn (int $minor, string $currency): string => ($minor >= 0 ? '+' : '−').$fmt(abs($minor), $currency);
+    // A sign is a claim of movement, so zero carries none. "+EUR 0.00" said a
+    // flat subscription had crept up, and a percentage that rounds away to
+    // nothing printed "−0.0%" — a signed zero.
+    $signed = static fn (int $minor, string $currency): string => match (true) {
+        $minor > 0 => '+'.$fmt($minor, $currency),
+        $minor < 0 => '−'.$fmt(abs($minor), $currency),
+        default => $fmt(0, $currency),
+    };
+
+    $signedPercent = static function (float $percent): string {
+        $rounded = round($percent, 1);
+        $sign = match (true) {
+            $rounded > 0.0 => '+',
+            $rounded < 0.0 => '−',
+            default => '',
+        };
+
+        return $sign.Fmt::number(abs($rounded), 1).'%';
+    };
 
     $deltaClass = [
         'up' => 'text-rose-600 dark:text-rose-400',
@@ -48,7 +66,7 @@
     };
 @endphp
 
-<div class="mx-auto max-w-3xl px-4 py-12">
+<div class="mx-auto max-w-3xl px-4 py-6">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
             <x-core::page-heading>{{ Lang::get('drift-alerts::watch.heading') }}</x-core::page-heading>
@@ -142,7 +160,7 @@
                                 {{ $signed($row->deltaMinor, $row->currency) }}
                             </p>
                             <p class="text-xs {{ $deltaClass[$dir] }}" style="font-variant-numeric: tabular-nums;">
-                                {{ ($row->deltaPercent >= 0 ? '+' : '−').Fmt::number(round(abs($row->deltaPercent), 1), 1) }}%
+                                {{ $signedPercent($row->deltaPercent) }}
                             </p>
                         </div>
                     </div>

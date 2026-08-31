@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 // Dispatch runs inside suppressDelivery() so no case here attempts a real OS
@@ -89,7 +89,7 @@ function sptPromptCount(int $userId): int
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT)
+        ->where('trigger_type', NotificationTrigger::SavingsPrompt)
         ->count();
 }
 
@@ -144,7 +144,7 @@ it('still lands the inbox row with the shipped OFF default, but suppresses deliv
 
     /** @var SuppressionEvaluator $evaluator */
     $evaluator = app(SuppressionEvaluator::class);
-    $decision = $evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, CarbonImmutable::now());
+    $decision = $evaluator->shouldDeliver($user->id, NotificationTrigger::SavingsPrompt, CarbonImmutable::now());
 
     expect($decision->deliver)->toBeFalse();
     expect($decision->reason)->toBe('trigger_disabled');

@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Käytä vähintään 12 merkkiä.',
     'error_wrong_code' => 'Käyttäjätunnus ja palautuskoodi eivät täsmää. Tarkista koodi huolellisesti — isot kirjaimet, ei nollaa, ei O-kirjainta, ei ykköstä, ei L-kirjainta.',
+    'error_throttled' => 'Liikaa yrityksiä — yritä uudelleen :wait kuluttua.',
 ];

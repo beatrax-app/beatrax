@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
@@ -90,7 +91,7 @@ function unresolvableContainer(): Container
 
 it('does not fail the user\'s save when the device cannot capture yet', function (): void {
     $calls = [];
-    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls));
+    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls), new MergeRulesRegistry);
 
     $listener->handle(new TransactionMutated(
         transactionId: 42,
@@ -106,7 +107,7 @@ it('does not fail the user\'s save when the device cannot capture yet', function
 
 it('does not fail a split save either', function (): void {
     $calls = [];
-    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls));
+    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls), new MergeRulesRegistry);
 
     $listener->handleSplit(new TransactionSplitMutated(
         splitId: 7,
@@ -130,7 +131,7 @@ it('still reports a genuine capture failure at error level', function (): void {
         throw new RuntimeException('the op-log write itself failed');
     });
 
-    $listener = new SyncCaptureListener($container, capturingLogger($calls));
+    $listener = new SyncCaptureListener($container, capturingLogger($calls), new MergeRulesRegistry);
 
     $listener->handle(new TransactionMutated(
         transactionId: 42,
@@ -162,7 +163,7 @@ function placeholderWriterContainer(): Container
 // warn, and let the user's save stand.
 it('warns rather than throws on a mutation type it does not recognise', function (Closure $dispatch): void {
     $calls = [];
-    $listener = new SyncCaptureListener(placeholderWriterContainer(), capturingLogger($calls));
+    $listener = new SyncCaptureListener(placeholderWriterContainer(), capturingLogger($calls), new MergeRulesRegistry);
 
     $dispatch($listener);
 

@@ -132,7 +132,8 @@
                 <button
                     type="button"
                     wire:click="applyBatchTag"
-                    style="background: var(--color-blue, #3b82f6); color: #fff; border: 0; border-radius: 9999px; padding: 4px 12px; font-size: var(--text-xs, 12px); font-weight: 600; cursor: pointer; min-height: 32px;"
+                    wire:confirm="{{ Lang::get('tax::picker.batch_confirm', ['name' => $batchSuggestion['counterpartyName']]) }}"
+                    style="background: var(--color-blue, #3b82f6); color: var(--color-text-inverse, #fff); border: 0; border-radius: 9999px; padding: 4px 12px; font-size: var(--text-xs, 12px); font-weight: 600; cursor: pointer; min-height: 32px;"
                     data-testid="batch-tag-apply"
                 >{{ Lang::get('tax::picker.batch_tag_all') }}</button>
                 <button

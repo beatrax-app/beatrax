@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transakcija',
     'heading' => 'Transakcija',
+    'booked_on' => 'Knjiženo :date',
 
     'counterparty' => 'Nasprotna stranka',
     'description' => 'Opis',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Opomba (neobvezno)',
         'tax_deductible' => 'Davčno priznano',
         'remove_leg_aria' => 'Odstrani to kategorijo',
+        'remove_leg_caption' => 'Odstrani',
         'add_category' => '+ Dodaj kategorijo',
         'soft_cap' => ':count od ~20 kategorij — razmisli o združevanju majhnih zneskov.',
         'remaining_zero' => 'Preostalo :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Izbriši transakcijo',
         'help' => 'Trajno odstrani to transakcijo. Tega dejanja ni mogoče razveljaviti.',
         'button' => 'Izbriši',
-        'confirm_prompt' => 'Si prepričan?',
+        'confirm_prompt' => 'Izbrišem to transakcijo? Z njo gredo opomba, razdelitev in davčne oznake.',
         'confirm' => 'Da, izbriši',
         'cancel' => 'Prekliči',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Prikaži verigo',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Usklajeno in zaklenjeno',
+        'help' => 'Dokončana uskladitev je zaklenila to transakcijo. Njena kategorija, opomba, razdelitev in davčne oznake ostanejo take, kot so, dokler je ne odkleneš.',
+        'button' => 'Odkleni za urejanje',
+        'confirm_question' => 'Odkleniti to transakcijo za urejanje? Na njej se nič ne spremeni, naslednja dokončana uskladitev pa jo znova zaklene.',
+        'cancel' => 'Pusti jo zaklenjeno',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Ta transakcija je usklajena. Razveljavi uskladitev, da narediš spremembe.',
         'reclassified_pair_removed' => 'Prerazvrščeno v :type — seznanitev odstranjena',
         'reclassified' => 'Prerazvrščeno v :type',
         'note_saved' => 'Opomba shranjena',
         'unreconciled' => 'Uskladitev razveljavljena — to transakcijo lahko znova urejaš.',
+        'note_too_long' => 'Opomba ima največ :max znak.|Opomba ima največ :max znaka.|Opomba ima največ :max znake.|Opomba ima največ :max znakov.',
         'counterparty_updated' => 'Nasprotna stranka posodobljena',
         'goal_attributed' => 'Šteje se v ta cilj',
         'goal_attribution_removed' => 'Ne šteje se več v ta cilj',

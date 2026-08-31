@@ -24,6 +24,10 @@ return [
         'unknown' => 'Nepoznati',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankarska naknada',
+    ],
+
     'cp_card' => [
         'aria' => 'Druga strana: :name',
         'recent_aria' => 'Nedavna aktivnost',

@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Det här ser inte ut som en export från YNAB4, nYNAB eller Actual som vi kan läsa. Kontrollera filen och försök igen.',
         'file_too_large' => 'Filen är för stor för en migreringsexport.',
+        'archive_reader_unavailable' => 'Den här versionen av appen har ingen ZIP-läsare som kan öppna den här exporten, så den går inte att läsa här. Importera den i skrivbordsappen, eller packa om exporten med vanlig komprimering.',
+        'internal_detail' => 'Appen kunde inte läsa den här exporten (:code). De fullständiga uppgifterna finns i apploggen; ange den här koden om du rapporterar ett problem.',
     ],
 ];

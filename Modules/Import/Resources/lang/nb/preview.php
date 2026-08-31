@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Gi denne kontoen et navn.',
 
     'ics' => [
+        'name' => 'ICS-kort',
         'heading' => 'Gi ICS-kortkontoen din et navn.',
         'help' => 'Dette er første gang du importerer ICS-data. Gi dette kortet et navn, så det vises likt i hele appen.',
         'placeholder' => 'f.eks. ICS-kort',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Gi PayPal-kontoen din et navn.',
         'help' => 'Dette er første gang du importerer PayPal-data. Gi denne lommeboken et navn, så den vises likt i hele appen.',
         'placeholder' => 'f.eks. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Gi Google Play-kontoen din et navn.',
+        'help' => 'Dette er første gang du importerer en Google Play-kvittering. Gi denne kontoen et navn, så den vises likt i hele appen.',
+        'placeholder' => 'f.eks. Google Play',
     ],
 
     'col_date' => 'Dato',
@@ -53,28 +62,41 @@ return [
         'error' => 'Feil',
     ],
 
-    'chain' => [
-        'heading' => 'Løser opp kjeder…',
-        'pending' => 'I kø. Kjedeløseren starter snart.',
-        'running' => 'Kobler sammen finansieringskjeder og deler opp oppgjør fra kontoutskriften.',
-        'failed_prefix' => 'Oppløsningen av kjeder mislyktes:',
-        'failed_detail' => 'detaljene står i jobbloggen',
-        'open_horizon' => 'Åpne Horizon',
-        'failed_suffix' => 'for å prøve igjen eller undersøke nærmere.',
-    ],
-
     'rows_shown' => 'Viste rader: :shown av :total',
 
     'show_more' => 'Vis flere rader',
 
     'errors' => [
         'app_locked' => 'Lås opp appen for å importere: krypteringsnøklene kan ikke brukes mens den er låst.',
+        'archive_holds_one_message' => 'Denne filen er én e-postmelding, ikke et postkassearkiv, så lest som arkiv er det ingenting i den. Last den opp igjen med formatet E-postmelding.',
+        'email_file_is_an_archive' => 'Denne filen er et postkassearkiv: den inneholder mer enn én melding, og lest som én melding ville bare den første blitt tatt. Last den opp igjen med formatet Postkassearkiv.',
         'file_stopped_short' => 'Overskriftsraden stemte, så formatet er riktig. Lesingen stoppet før slutten av filen. Én uleselig rad gjør det, og det samme gjør en fil som er for stor for denne enheten. Prøv en kortere periode.',
         'file_unreadable' => 'Denne filen kunne ikke leses.',
+        'file_unreadable_detail' => 'Appen kunne ikke lese denne filen (:code). De fullstendige detaljene ligger i apploggen; oppgi denne koden hvis du melder fra om et problem.',
         'iban_not_in_preview' => 'Dette IBAN-nummeret er ikke en del av den gjeldende forhåndsvisningen.',
-        'pdf_reader_unavailable' => 'PDF-kontoutskrifter krever programmet pdftotext, som ikke er installert her. Importer filen på en datamaskin som har det, eller bruk en CSV-eksport fra banken din i stedet.',
+        'not_an_email_file' => 'Denne filen er verken en e-postmelding eller et postkassearkiv, så det er ingenting i den å lese som kvittering. Velg importtypen og formatet som passer filen din.',
+        'pdf_has_no_text_layer' => 'Denne PDF-en inneholder ingen tekst — det er en skanning eller et bilde av en kontoutskrift, så det er ingenting å lese i den. Last ned selve kontoutskriften fra banken din, eller bruk en CSV-eksport i stedet.',
+        'pdf_password_protected' => 'Denne PDF-en er passordbeskyttet, så ingen leser får åpnet den. Lagre en ubeskyttet kopi fra PDF-viseren din, og importer den.',
+        'pdf_reader_unavailable' => 'Denne versjonen av appen har ingen PDF-leser i det hele tatt, så en PDF-kontoutskrift kan ikke åpnes her. Importer filen på en annen enhet, eller bruk en CSV-eksport fra banken din i stedet.',
+        'row_belongs_to_another_statement' => 'Denne raden hører til en transaksjon i en annen kontoutskriftsfil. Importer den kontoutskriften også — de to leses sammen.',
         'row_unreadable' => 'Denne raden kunne ikke leses.',
+        'row_unreadable_detail' => 'Appen kunne ikke lese denne raden (:code). De fullstendige detaljene ligger i apploggen; oppgi denne koden hvis du melder fra om et problem.',
         'unknown_account' => 'Denne raden hører til en konto du ikke har gitt navn ennå.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Denne filen ble lest som e-post',
+        'saved' => 'Det den inneholdt, står nedenfor, og hver melding er lagret.',
+        'none_imported' => 'Ingenting av dette ble en transaksjon, så ingenting ble lagt til blant transaksjonene dine.',
+        'shown' => 'Viste meldinger: :shown av :total',
+        'no_subject' => 'Uten emne',
+
+        'state' => [
+            'read' => 'Lest som en betaling — bekreft denne importen for å legge den til blant transaksjonene dine.',
+            'not_a_payment' => 'Ikke en betaling. Denne meldingen varsler om noe i stedet for å bekrefte en betaling.',
+            'unreadable' => 'Lagret. Appen leser kvitteringer fra denne avsenderen, men fant verken beløp, brukersted eller referanse i meldingen.',
+            'unknown_sender' => 'Lagret. Appen leser ikke kvitteringer fra denne avsenderen, så den tok ingenting fra meldingen.',
+        ],
     ],
 
     'failed' => [

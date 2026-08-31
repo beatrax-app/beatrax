@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Kol kas nieko paslaptingo. Importuok sąskaitų išrašų ir Beatrax čia parodys eilutes, kurių nepavyko atpažinti.',
 
+    'showing_capped' => 'Rodoma pirmieji :shown iš :total.',
+
     'footer' => 'Bendras sąrašas — tai kartu su Beatrax pateikiamas YAML failas. Pateikus pasiūlymą naršyklėje atsidaro GitHub; daugiau niekas iš šio įrenginio neišeina.',
 
     'card' => [

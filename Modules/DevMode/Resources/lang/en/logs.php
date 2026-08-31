@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Dismiss from view (does not modify the log file)',
     'dismiss_aria' => 'Dismiss log entry from view',
     'totals' => [
-        'showing' => 'Showing',
-        'of' => 'of',
-        'received' => 'received (buffer cap 10k)',
-        'lines_today' => 'lines today',
+        'showing' => 'Showing :shown of :count line received (buffer cap :cap)|Showing :shown of :count lines received (buffer cap :cap)',
+        'lines_today' => ':count line today|:count lines today',
+        'lines_today_capped' => 'over :count line today|over :count lines today',
         'today' => 'today',
-        'across' => 'across',
-        'daily_files' => 'daily files',
+        'all_files' => ':size across :count daily file|:size across :count daily files',
     ],
 
     'status' => [

@@ -48,7 +48,7 @@ it('known_senders has the expected columns', function (): void {
 
 it('discovered_senders has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
-    foreach (['id', 'user_id', 'inbox_id', 'sender_email', 'sender_name', 'occurrence_count', 'last_seen_at', 'sample_message_id', 'state'] as $col) {
+    foreach (['id', 'user_id', 'inbox_id', 'sender_email', 'sender_name', 'occurrence_count', 'last_seen_at', 'state'] as $col) {
         expect($schema->hasColumn('discovered_senders', $col))->toBeTrue("discovered_senders.{$col} missing");
     }
 });

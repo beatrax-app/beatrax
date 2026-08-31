@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\NotificationQuery;
 
 uses(RefreshDatabase::class);
@@ -34,7 +34,7 @@ function insertNotification(DatabaseManager $db, int $userId, string $id, array 
         'title' => 'Import finished',
         'body' => '3 transactions imported.',
         'params' => null,
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        'trigger_type' => NotificationTrigger::ImportFinished,
         'created_at' => '2026-07-18 09:00:00',
         'updated_at' => '2026-07-18 09:00:00',
     ], $overrides));
@@ -56,7 +56,7 @@ it('returns seeded rows newest-first', function (): void {
     insertNotification($this->db, $user->id, str_repeat('b', 64), ['created_at' => '2026-07-18 10:00:00', 'updated_at' => '2026-07-18 10:00:00']);
     insertNotification($this->db, $user->id, str_repeat('c', 64), ['created_at' => '2026-07-18 08:00:00', 'updated_at' => '2026-07-18 08:00:00']);
 
-    $rows = $this->query->allForUser($user);
+    $rows = $this->query->allForUser($user)['rows'];
 
     expect($rows)->toHaveCount(3);
     expect($rows[0]->id)->toBe(str_repeat('b', 64));
@@ -70,7 +70,7 @@ it('excludes read and dismissed rows from unreadForUser', function (): void {
     insertNotification($this->db, $user->id, str_repeat('2', 64), ['read_at' => '2026-07-18 09:05:00']); // read
     insertNotification($this->db, $user->id, str_repeat('3', 64), ['dismissed_at' => '2026-07-18 09:05:00']); // dismissed
 
-    $rows = $this->query->unreadForUser($user);
+    $rows = $this->query->unreadForUser($user)['rows'];
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->id)->toBe(str_repeat('1', 64));
@@ -81,7 +81,7 @@ it('returns only dismissed rows from dismissedForUser', function (): void {
     insertNotification($this->db, $user->id, str_repeat('4', 64));
     insertNotification($this->db, $user->id, str_repeat('5', 64), ['dismissed_at' => '2026-07-18 09:05:00']);
 
-    $rows = $this->query->dismissedForUser($user);
+    $rows = $this->query->dismissedForUser($user)['rows'];
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->id)->toBe(str_repeat('5', 64));
@@ -108,17 +108,12 @@ it('pages correctly across 60 rows created within the same second with no droppe
         $pages++;
         expect($pages)->toBeLessThan(10); // guard against an infinite loop on a broken cursor
 
-        foreach ($page as $dto) {
+        foreach ($page['rows'] as $dto) {
             $seen[] = $dto->id;
         }
 
-        if ($page === []) {
-            break;
-        }
-
-        $last = $page[count($page) - 1];
-        $cursor = NotificationQuery::encodeCursor($last->createdAt->toDateTimeString(), $last->id);
-    } while (count($page) === 26);
+        $cursor = $page['nextCursor'];
+    } while ($cursor !== null);
 
     expect($seen)->toHaveCount(60);
     expect(array_unique($seen))->toHaveCount(60);
@@ -129,7 +124,7 @@ it('returns the first page rather than throwing on a malformed cursor', function
     $user = queryUser('query-malformed-cursor');
     insertNotification($this->db, $user->id, str_repeat('6', 64));
 
-    $rows = $this->query->allForUser($user, 'not-a-valid-cursor!!!');
+    $rows = $this->query->allForUser($user, 'not-a-valid-cursor!!!')['rows'];
 
     expect($rows)->toHaveCount(1);
 });
@@ -138,7 +133,7 @@ it('returns the first page when the cursor is valid base64 but not valid JSON', 
     $user = queryUser('query-cursor-bad-json');
     insertNotification($this->db, $user->id, str_repeat('7', 64));
 
-    $rows = $this->query->allForUser($user, base64_encode('not json at all'));
+    $rows = $this->query->allForUser($user, base64_encode('not json at all'))['rows'];
 
     expect($rows)->toHaveCount(1);
 });
@@ -149,7 +144,7 @@ it('does not let user A see user B rows', function (): void {
     insertNotification($this->db, $userA->id, str_repeat('7', 64));
     insertNotification($this->db, $userB->id, str_repeat('8', 64));
 
-    $rowsA = $this->query->allForUser($userA);
+    $rowsA = $this->query->allForUser($userA)['rows'];
 
     expect($rowsA)->toHaveCount(1);
     expect($rowsA[0]->id)->toBe(str_repeat('7', 64));

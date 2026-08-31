@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— fără lanțuri de finanțare pentru contactele personale',
     'tab_note_bank' => '— o contraparte de comisioane bancare nu generează lanțuri de finanțare',
+    'tab_note_bank_institution' => '— fără lanțuri de finanțare pentru contrapărțile instituționale',
     'tab_note_government' => '— fără lanțuri de finanțare pentru instituțiile publice',
 
     'recent_activity' => 'Activitate recentă',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Comisioane bancare pe categorii',
+        'activity_heading' => 'Activitate pe categorii',
         'no_fees' => 'Niciun comision înregistrat pentru această contraparte deocamdată.',
     ],
 

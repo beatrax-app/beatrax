@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Prevádzkový pohľad na vývojársku konzolu v aplikácii.',
     'worker_heartbeat' => 'Pulz workera',
     'not_running' => 'NEBEŽÍ',
+    'heartbeat_age' => 'pred :count s · ttl :ttl s|pred :count s · ttl :ttl s|pred :count s · ttl :ttl s',
     'queue' => 'Front',
     'pending' => 'čakajúce',
     'failed' => 'neúspešné',

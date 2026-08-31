@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Exceptions\UnreadableColumnException;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -22,21 +23,26 @@ final readonly class OpLogBackfiller
 {
     // Rows per SELECT. The log is written entry-by-entry regardless; this
     // only bounds how much of a table is held in memory at once.
-    private const CHUNK = 200;
+    private const int CHUNK = 200;
 
     // Rules stay on the device that authored them, so they are never put on
     // the wire — not in the pairing snapshot and not incrementally. They keep
     // merge rules so a peer can still apply an op from an older build, but
     // nothing here produces one. The rules screen says so.
-    private const DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
+    private const array DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
 
     // Never emitted as a field: the row's identity travels as the op's pk,
     // and re-stating it invites a create whose pk and user_id disagree.
-    private const SKIPPED_COLUMNS = ['id'];
+    private const array SKIPPED_COLUMNS = ['id'];
+
+    // The reader's own row. It cannot travel as a create — a peer already has
+    // one and would refuse a second — so its settings travel as Sets, which
+    // the merge applies to the peer's own row.
+    private const string SELF_SCOPED_TABLE = 'users';
 
     // Covered tables that carry no user_id of their own. Each is scoped
     // through the parent column named here, whose table does carry one.
-    private const PARENT_SCOPE = [
+    private const array PARENT_SCOPE = [
         'rule_conditions' => ['rule_id', 'categorization_rules'],
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
@@ -44,32 +50,77 @@ final readonly class OpLogBackfiller
     public function __construct(
         private DatabaseManager $db,
         private CoveredTableOrder $order,
+        private MergeRulesRegistry $rules,
         private SensitiveFieldRegistry $sensitiveFields,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private BackfillProgress $progress,
     ) {}
 
     // Returns the number of rows captured. Idempotent row-wise: a row already
     // carrying a create op is skipped. Skipping the whole backfill when the
     // user had ANY entry meant one import between enabling sync and pairing
     // kept every older account, budget, goal and pot off the new peer.
-    public function backfill(int $userId, OpLogWriter $writer): int
+    /**
+     * @param  BackfillBudget|null  $budget  Null runs the whole walk in one call and
+     *                                       keeps no cursor — the import and test path.
+     */
+    public function backfill(int $userId, OpLogWriter $writer, ?BackfillBudget $budget = null): int
     {
         $connection = $this->db->connection();
-
-        $captured = 0;
+        $resumeFrom = $budget === null ? null : $this->progress->cursor($userId);
 
         // Parents first, so the entries a peer replays arrive in an order its
         // foreign keys accept.
-        foreach ($this->order->insertionOrder() as $table) {
-            if (in_array($table, self::DEVICE_LOCAL_TABLES, true)) {
+        $order = $this->order->insertionOrder();
+        $resumeIndex = $this->indexOfResumeTable($order, $resumeFrom);
+
+        $captured = 0;
+
+        foreach ($order as $index => $table) {
+            if (in_array($table, self::DEVICE_LOCAL_TABLES, true) || $index < $resumeIndex) {
                 continue;
             }
 
-            $captured += $this->captureTable($connection, $table, $userId, $writer);
+            // Only the table the last run stopped inside resumes from a key;
+            // every table after it starts at its own beginning.
+            $resumePk = $index === $resumeIndex && $resumeFrom !== null ? $resumeFrom['pk'] : null;
+
+            $captured += $table === self::SELF_SCOPED_TABLE
+                ? $this->captureUserSettings($connection, $userId, $writer)
+                : $this->captureTable($connection, $table, $userId, $writer, $budget, $resumePk);
+
+            if ($budget !== null && $budget->isSpent()) {
+                return $captured;
+            }
+        }
+
+        // Only a walk that reached the end of the order is finished. Closing on
+        // a spent budget would retire a capture with rows still owed, which is
+        // the "0 of 0 records" this class exists to prevent.
+        if ($budget !== null) {
+            $this->progress->close($userId);
         }
 
         return $captured;
+    }
+
+    // Where in the current order the stored cursor sits. A table the order no
+    // longer names restarts the walk rather than skipping past it: row-wise
+    // idempotence makes a repeat cheap, and a silent skip is a lost table.
+    /**
+     * @param  list<string>  $order
+     * @param  array{table: string, pk: string}|null  $resumeFrom
+     */
+    private function indexOfResumeTable(array $order, ?array $resumeFrom): int
+    {
+        if ($resumeFrom === null) {
+            return 0;
+        }
+
+        $found = array_search($resumeFrom['table'], $order, true);
+
+        return is_int($found) ? $found : 0;
     }
 
     // Capture specific rows as create ops, for writes that happen AFTER the
@@ -143,15 +194,14 @@ final readonly class OpLogBackfiller
             ->where('table_name', $table)
             ->where('op_type', OpType::CreateRow->value)
             ->whereIn('pk', $pks)
-            // Only an author still confirmed can be verified, mirroring the
-            // key map deviceKeys() hands the wire. Counting an op signed by a
-            // retired identity as coverage retires the row from the backfill
-            // while leaving it unable to replicate.
+            // Only an author the registry still holds a key for can be
+            // verified, mirroring the map the wire is handed: counting an op
+            // signed by an unnameable identity as coverage retires the row
+            // while leaving it unreplicable. A removed device keeps its key.
             ->whereIn('device_id', static function (Builder $query) use ($userId): void {
                 $query->select('device_id')
                     ->from('device_registry')
-                    ->where('user_id', $userId)
-                    ->whereNotNull('confirmed_at');
+                    ->where('user_id', $userId);
             })
             ->distinct()
             ->pluck('pk');
@@ -166,11 +216,45 @@ final readonly class OpLogBackfiller
         return $lookup;
     }
 
+    private function captureUserSettings(Connection $connection, int $userId, OpLogWriter $writer): int
+    {
+        $columns = $this->rules->syncedColumns(self::SELF_SCOPED_TABLE);
+        $row = $columns === []
+            ? null
+            : $connection->table(self::SELF_SCOPED_TABLE)->where('id', $userId)->first($columns);
+
+        if ($row === null || $this->alreadyCapturedSelfScoped($connection, $userId)) {
+            return 0;
+        }
+
+        return $connection->transaction(static function () use ($row, $writer, $userId): int {
+            foreach ((array) $row as $column => $value) {
+                $writer->writeSet(self::SELF_SCOPED_TABLE, $userId, (string) $column, $value);
+            }
+
+            return 1;
+        });
+    }
+
+    private function alreadyCapturedSelfScoped(Connection $connection, int $userId): bool
+    {
+        return $connection->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', self::SELF_SCOPED_TABLE)
+            ->exists();
+    }
+
+    // One transaction per chunk, never one around the whole walk: the walk runs
+    // in a web request under a 120s ceiling, and a max-execution-time fatal is
+    // not throwable, so an outer transaction rolled back every entry it had
+    // written and left the log with nothing — 16,184 entries, zero persisted.
     private function captureTable(
         Connection $connection,
         string $table,
         int $userId,
         OpLogWriter $writer,
+        ?BackfillBudget $budget,
+        ?string $afterPk,
     ): int {
         $columns = $this->columnsOf($connection, $table);
 
@@ -178,31 +262,71 @@ final readonly class OpLogBackfiller
             return 0;
         }
 
+        $query = $this->scopedQuery($connection, $table, $userId, $columns);
+
+        if ($afterPk !== null) {
+            $query->where($table.'.id', '>', is_numeric($afterPk) ? (int) $afterPk : $afterPk);
+        }
+
         $captured = 0;
 
-        $this->scopedQuery($connection, $table, $userId, $columns)
-            ->orderBy($table.'.id')
-            ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, &$captured): void {
-                $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
+        $query->orderBy($table.'.id')
+            ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, $budget, &$captured): bool {
+                $captured += $connection->transaction(
+                    fn (): int => $this->captureChunk($connection, $table, $userId, $writer, $budget, $rows),
+                );
 
-                foreach ($rows as $row) {
-                    /** @var array<string, mixed> $fields */
-                    $fields = (array) $row;
-                    $pk = $fields['id'] ?? null;
-                    unset($fields['id']);
-
-                    if (! is_int($pk) && ! is_string($pk)) {
-                        continue;
-                    }
-
-                    if (isset($already[(string) $pk])) {
-                        continue;
-                    }
-
-                    $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
-                    $captured++;
-                }
+                return $budget === null || ! $budget->isSpent();
             });
+
+        return $captured;
+    }
+
+    // The cursor advance shares this transaction with the entries the chunk
+    // wrote, so the two can never name different amounts of captured history.
+    /**
+     * @param  Collection<int, \stdClass>  $rows
+     */
+    private function captureChunk(
+        Connection $connection,
+        string $table,
+        int $userId,
+        OpLogWriter $writer,
+        ?BackfillBudget $budget,
+        $rows,
+    ): int {
+        $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
+
+        $captured = 0;
+        $lastPk = null;
+
+        foreach ($rows as $row) {
+            /** @var array<string, mixed> $fields */
+            $fields = (array) $row;
+            $pk = $fields['id'] ?? null;
+            unset($fields['id']);
+
+            if (! is_int($pk) && ! is_string($pk)) {
+                continue;
+            }
+
+            $lastPk = $pk;
+
+            if (isset($already[(string) $pk])) {
+                continue;
+            }
+
+            $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
+            $captured++;
+        }
+
+        if ($budget !== null && $lastPk !== null) {
+            // Spent on rows WRITTEN, not rows walked: skipping a row a previous
+            // slice already captured costs two indexed reads and no signature,
+            // and the budget's deadline is what bounds that half.
+            $budget->spend($captured);
+            $this->progress->advance($userId, $table, $lastPk, $captured);
+        }
 
         return $captured;
     }

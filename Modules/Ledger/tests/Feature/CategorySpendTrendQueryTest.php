@@ -125,3 +125,95 @@ it('counts a split transaction\'s legs individually, never the parent', function
     expect($byName['Groceries']->currentMinor)->toBe(6000);
     expect($byName['Household']->currentMinor)->toBe(2000);
 });
+
+// The card is entirely differences: a total against last period's, and one
+// signed delta per category. Drawn for a reader whose ledger opened four days
+// ago, every one of them was measured against a month the ledger never covered
+// — EUR 250,00 spent showed as +EUR 250,00, a full-amount rise, in the rose
+// colour that means "worth noticing".
+it('offers no comparison when the ledger opens inside the current period', function (): void {
+    $periods = app(PeriodQuery::class);
+    $current = $periods->current();
+
+    $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
+    trendTx($this->db, $this->user->id, $groceries, -25000, $current->start->addDays(3)->toDateString());
+
+    $trend = app(CategorySpendTrendQuery::class)->forUser($this->user);
+
+    expect($trend->currentTotalMinor)->toBe(25000)
+        ->and($trend->previousPeriodIsReachable)->toBeFalse()
+        ->and($trend->hasComparison())->toBeFalse();
+});
+
+// A month a reader genuinely spent nothing in is a real comparison and one of
+// the more useful ones. The rule is about the ledger's reach, not about the
+// previous period's total, and reading it off the total would silence exactly
+// this reader.
+it('still compares against a previous period the reader genuinely spent nothing in', function (): void {
+    $periods = app(PeriodQuery::class);
+    $current = $periods->current();
+    $previous = $periods->previous($current);
+
+    $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
+    // A charge and its refund inside the previous period: rows the ledger
+    // demonstrably holds, netting to nothing spent.
+    trendTx($this->db, $this->user->id, $groceries, -12000, $previous->start->addDays(1)->toDateString());
+    trendTx($this->db, $this->user->id, $groceries, 12000, $previous->start->addDays(4)->toDateString());
+    trendTx($this->db, $this->user->id, $groceries, -25000, $current->start->addDays(3)->toDateString());
+
+    $trend = app(CategorySpendTrendQuery::class)->forUser($this->user);
+
+    expect($trend->previousTotalMinor)->toBe(0)
+        ->and($trend->previousPeriodIsReachable)->toBeTrue()
+        ->and($trend->hasComparison())->toBeTrue();
+});
+
+// A gap between two months of records is a fact about the reader, not about
+// the ledger's reach: the previous period holds no row at all and the
+// comparison is still real, because the ledger covers it.
+it('still compares across a gap month with no rows in it', function (): void {
+    $periods = app(PeriodQuery::class);
+    $current = $periods->current();
+    $previous = $periods->previous($current);
+    $beforeThat = $periods->previous($previous);
+
+    $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
+    trendTx($this->db, $this->user->id, $groceries, -40000, $beforeThat->start->addDays(2)->toDateString());
+    trendTx($this->db, $this->user->id, $groceries, -25000, $current->start->addDays(3)->toDateString());
+
+    $rowsInPrevious = $this->db->connection()->table('transactions')
+        ->where('user_id', $this->user->id)
+        ->where('posted_at', '>=', $previous->start->toDateString())
+        ->where('posted_at', '<', $previous->endExclusive->toDateString())
+        ->count();
+
+    expect($rowsInPrevious)->toBe(0, 'the gap month must actually be empty');
+
+    $trend = app(CategorySpendTrendQuery::class)->forUser($this->user);
+
+    expect($trend->previousPeriodIsReachable)->toBeTrue()
+        ->and($trend->hasComparison())->toBeTrue()
+        ->and($trend->totalDeltaMinor)->toBe(25000);
+});
+
+// The boundary itself: one row on the previous period's last day is inside the
+// ledger's reach, and the same row a day later is not. posted_at is a DATE
+// column, so a bound carrying a time would drop that day in SQLite.
+it('counts the previous period\'s own last day as reach, and the day after as none', function (): void {
+    $periods = app(PeriodQuery::class);
+    $previous = $periods->previous($periods->current());
+    $lastDayOfPrevious = $previous->endExclusive->subDay()->toDateString();
+
+    $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
+    trendTx($this->db, $this->user->id, $groceries, -25000, $lastDayOfPrevious);
+
+    expect(app(CategorySpendTrendQuery::class)->forUser($this->user)->previousPeriodIsReachable)
+        ->toBeTrue('a row on '.$lastDayOfPrevious.' is inside the reach');
+
+    $other = User::create(['username' => 'trend-boundary', 'password' => 'fixture-password-12chars', 'period_start_day' => 1]);
+    trendTx($this->db, $other->id, trendCategory($this->db, $other->id, 'Groceries'), -25000, $previous->endExclusive->toDateString());
+    $this->actingAs($other);
+
+    expect(app(CategorySpendTrendQuery::class)->forUser($other)->previousPeriodIsReachable)
+        ->toBeFalse('a row on '.$previous->endExclusive->toDateString().' is the first day of the current period');
+});

@@ -29,8 +29,19 @@ final readonly class AccountStartingBalanceQuery
 
     // The one spelling of the lower bound for a grouped, multi-account sum
     // that cannot reach a per-account date in PHP. Both sides must be joined
-    // in under these exact table names; a NULL date bounds nothing.
-    public const string AT_OR_AFTER_BASELINE_SQL = '('.self::EFFECTIVE_DATE_SQL.' is null or transactions.posted_at >= '.self::EFFECTIVE_DATE_SQL.')';
+    // in under these exact table names; a NULL date bounds nothing. date()
+    // on both, because the two columns are stored in two different shapes.
+
+    // The currency branch mirrors AccountBalanceQuery::sumFromBaseline(): a row
+    // settled outside the account's own denomination has no baseline covering
+    // it, and bounding it dropped a -USD221.00 holding off the calendar's
+    // past-day line. coalesce, or a NULL currency would bound every row.
+    /**
+     * @link ../../../../.docs/features/ledger/reconcile-needs-an-anchor.md#two-columns-two-shapes
+     */
+    public const string AT_OR_AFTER_BASELINE_SQL = '('.self::EFFECTIVE_DATE_SQL.' is null'
+        ." or transactions.settled_currency <> coalesce(accounts.default_currency, '')"
+        .' or date(transactions.posted_at) >= date('.self::EFFECTIVE_DATE_SQL.'))';
 
     public function __construct(
         private DatabaseManager $db,
@@ -71,7 +82,7 @@ final readonly class AccountStartingBalanceQuery
         return [
             'minorUnits' => self::toInt($minor),
             'currency' => self::toString($row->default_currency),
-            'date' => $rawDate === null ? null : SafeDate::parseDayOrNull($rawDate),
+            'date' => $rawDate === null ? null : SafeDate::normalisedDayOrNull($rawDate),
         ];
     }
 
