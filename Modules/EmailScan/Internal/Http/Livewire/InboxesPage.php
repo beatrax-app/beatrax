@@ -20,6 +20,7 @@ use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DisconnectInbox;
@@ -56,6 +57,13 @@ final class InboxesPage extends Component
     #[Locked]
     public bool $onPhone = false;
 
+    // A second question with a different answer: the OAuth dance ends at a
+    // loopback callback, and the mobile runtime serves the app over its own
+    // scheme with nothing listening on that port. Scanning and connecting are
+    // both absent here, for unrelated reasons.
+    #[Locked]
+    public bool $connectsHere = true;
+
     public function mount(
         Request $request,
         CurrentUser $currentUser,
@@ -67,6 +75,7 @@ final class InboxesPage extends Component
         // mean "no scan runs on this device", which is this and not "is a
         // phone". A phone that gains the scan retires both by one line.
         $this->onPhone = ! InboxScanSchedule::runsOnThisDevice();
+        $this->connectsHere = ! UserDataPathService::isMobileRuntime();
 
         // hasSession() guards a direct Livewire test harness that boots
         // without a bound session.
@@ -350,6 +359,15 @@ final class InboxesPage extends Component
             return null;
         }
 
+        // Both branches below end at the loopback callback, so neither can
+        // finish here — the wizard would print a URL this device does not
+        // serve, and the redirect would arrive nowhere.
+        if (! $this->connectsHere) {
+            $this->toast(Lang::get('email-scan::inboxes.phone_body'));
+
+            return null;
+        }
+
         if ($secrets->hasProviderClient($provider)) {
             return $this->redirectRoute('oauth.connect', ['provider' => $provider]);
         }
@@ -383,6 +401,7 @@ final class InboxesPage extends Component
             'oauthCanceledMessage' => $this->oauthCanceledMessage,
             'oauthFailedMessage' => $this->oauthFailedMessage,
             'onPhone' => $this->onPhone,
+            'connectsHere' => $this->connectsHere,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
