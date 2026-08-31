@@ -156,7 +156,11 @@ final readonly class OpLogEntryApplier
 
     // buildCreatePayload() writes these from the op itself, so a rule naming
     // one of them is satisfied before a single field is read.
-    private const array SEEDED_FROM_PK = ['id'];
+    // What buildCreatePayload() supplies itself rather than reading off a
+    // field: the pk, and the owner it re-seeds authoritatively even when the op
+    // does carry one. Requiring either asks for something the emitter has no
+    // reason to send, and seven covered tables named user_id.
+    private const array SEEDED_BY_APPLIER = ['id', 'user_id'];
 
     // The row to write, or null when a gate refused it: a tombstone that
     // outranks the create, a create with fields still missing, a payload that
@@ -296,7 +300,7 @@ final readonly class OpLogEntryApplier
      */
     private function createRowComplete(string $table, array $fields, string $now): bool
     {
-        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_FROM_PK);
+        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
         $missing = array_diff($required, array_keys($fields));
 
         if ($missing === []) {

@@ -52,6 +52,18 @@ final class SafeDate
             : null;
     }
 
+    // The same exact reading, for a value that reached a DATE column through
+    // a cast that stamped a time on it. Only a recognisable time suffix is set
+    // aside; the day itself still has to survive dayOrNull, which is what
+    // keeps '2027-02-29 00:00:00' refused rather than rolled forward.
+    public static function dayIgnoringTimeOrNull(string $raw): ?CarbonImmutable
+    {
+        $trimmed = trim($raw);
+        $pattern = '/^(\\d{4}-\\d{2}-\\d{2})[ T]\\d{2}:\\d{2}(?::\\d{2})?(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})?$/';
+
+        return self::dayOrNull(preg_match($pattern, $trimmed, $match) === 1 ? $match[1] : $trimmed);
+    }
+
     // Named for what it does, because it is the wrong answer for anything a
     // reader or a peer supplies: a machine-emitted free-form string — a MIME
     // `Date:` header, a stored timestamp whose time half is an artefact — has
