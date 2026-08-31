@@ -56,7 +56,7 @@ CSV/CAMT/MT940/PDF arms ignore it.
 
 Before either arm reads a byte, `ReceiptFileShape::of()` (Receipts) answers
 which of the two transports the file actually is, off its own head: mboxrd puts
-a literal `From ` at the start of the file and a single message never opens with
+a literal "From " at the start of the file and a single message never opens with
 one. A file that disagrees with the declared format raises
 `ReceiptFormatMismatchException`, which implements `NamesAFormatMismatch` and
 `MessageNamesNoUserData`, so the preview renders it as a refusal naming what the

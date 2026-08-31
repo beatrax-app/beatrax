@@ -2462,7 +2462,6 @@ keyboard sends, and asserts a name belonging to another reader never reaches the
 screen. `.docs/features/forecasting/url-parameters.md` holds the per-parameter
 rules.
 
-
 ## A gate registered against a route, asked on a Livewire update
 
 Livewire's update endpoint runs outside the route middleware stack. Two gates in
@@ -3308,7 +3307,7 @@ across. A Google Play receipt imported on an iPhone drew, in this order:
 > This file was read as email
 > What it carried is listed below, and every message has been saved.
 > **Nothing here became a transaction, so nothing was added to your ledger.**
-> Your Google Play Order Receipt · googleplay-noreply@google.com · 17/05/2026
+> Your Google Play Order Receipt · `googleplay-noreply@google.com` · 17/05/2026
 > **Read as a payment — confirm this import to add it to your ledger.**
 > Name your Google Play account. This is the first time you've imported a
 > Google Play receipt.
@@ -3811,7 +3810,6 @@ routing account and asserts the balance line equals net worth for the same
 instant; the other seeds both legs of one Play purchase and asserts the position
 is short by the charge once.
 
-
 ## A whole archive read as its first message, under a claim of completeness
 
 `Modules/Import/Internal/Http/Livewire/UploadWizard.php` ·
@@ -3845,7 +3843,7 @@ format on the upload path; only the content checks do any work.
 The eml content check would not have saved it on its own. Its signature is a
 canonical header token at the start of a line, and every message inside an
 archive carries those, so an mbox matches the eml signature. Only the mboxrd
-`From ` line at the very start of the file separates the two, and reading it in
+"From " line at the very start of the file separates the two, and reading it in
 that order — archive first, message second — is the whole discrimination.
 
 Two fixes, at two altitudes:
@@ -3872,7 +3870,7 @@ the wrong column count, a CAMT.053 without its namespace, an MT940 without
 `:20:`, a PDF without `%PDF-`, a PayPal export whose header matches no language
 profile. All eighteen mismatches *inside* the receipt arm were accepted.
 Declared `eml`, the arm filed one `file_imports` row for a bank CSV, a CAMT.053
-XML, an MT940 and a PDF alike. Declared `mbox`, `MboxIterator` found no `From `
+XML, an MT940 and a PDF alike. Declared `mbox`, `MboxIterator` found no "From "
 line, yielded nothing, and the screen called a perfectly good file empty. The
 loud half of the matrix was loud because a sniffer runs there; the silent half
 was silent because none does.

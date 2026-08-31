@@ -51,9 +51,9 @@ final class MobileBackgroundSchedule
             'anomaly.revive-snoozes' => 'anomaly:revive-snoozes',
             'anomaly.safety-net-sweep' => 'anomaly:safety-net-sweep',
             'open-banking.daily-sync' => 'open-banking:sync-due',
-            // Not "no other device to fall back on" but "the phone offers the
-            // switch". Auto-import is togglable on a device, and a promise a
-            // screen makes there has to be one that device keeps.
+            // Not "no other device to fall back on" but "the phone offers
+            // the switch". Auto-import can be turned off on a device, and a
+            // promise a screen makes there has to be one that device keeps.
             'receipts.scan-drop-folder' => 'receipts:scan-drop-folder',
         ];
     }

@@ -86,6 +86,29 @@ const DOCS_SYMBOLS_NAMING_NO_CLASS_BY_DESIGN = [
  *
  * @return array<string, true>
  */
+// Both roots' classmaps. The shard jobs install only this one, so the mobile
+// root's vocabulary is missing there and every NativePHP mobile class a page
+// names would read as invented.
+/** @var list<string> */
+const DOCS_SYMBOLS_CLASSMAPS = [
+    'vendor/composer/autoload_classmap.php',
+    'mobile-app/vendor/composer/autoload_classmap.php',
+];
+
+/** @return list<string> */
+function docsSymbolsUnreadableRoots(): array
+{
+    $missing = [];
+
+    foreach (DOCS_SYMBOLS_CLASSMAPS as $classmap) {
+        if (! is_file(base_path($classmap))) {
+            $missing[] = $classmap;
+        }
+    }
+
+    return $missing;
+}
+
 function docsSymbolsResolvableNames(): array
 {
     $names = [];
@@ -94,7 +117,7 @@ function docsSymbolsResolvableNames(): array
         $names[$short] = true;
     }
 
-    foreach (['vendor/composer/autoload_classmap.php', 'mobile-app/vendor/composer/autoload_classmap.php'] as $classmap) {
+    foreach (DOCS_SYMBOLS_CLASSMAPS as $classmap) {
         $path = base_path($classmap);
         if (! is_file($path)) {
             continue;
@@ -127,6 +150,16 @@ function docsSymbolsResolvableNames(): array
 // never loads is still a class that exists, and calling it absent would report
 // every framework mention on every page.
 it('names no class that exists in neither Composer root', function (): void {
+    // A vocabulary short of one root cannot tell an invented class from one it
+    // was never shown, and answering anyway reports the wrong thing rather
+    // than nothing. Skipping says which root is missing; installing it runs
+    // the rule. Never soften this into a `continue` — that is the false green.
+    $unreadable = docsSymbolsUnreadableRoots();
+
+    if ($unreadable !== []) {
+        test()->markTestSkipped('classmap absent, so this root cannot see every class a page may name: '.implode(', ', $unreadable));
+    }
+
     $resolvable = docsSymbolsResolvableNames();
     $pages = docsSymbolsPages();
 

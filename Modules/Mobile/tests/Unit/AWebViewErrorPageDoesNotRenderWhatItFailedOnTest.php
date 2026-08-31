@@ -40,7 +40,13 @@ function patchedWebViewErrorClient(): string
 {
     $root = webViewErrorScaffold();
 
-    expect($root)->not->toBeNull('The upstream WebView client is not installed under either Composer root.');
+    // The upstream Kotlin lives in the MOBILE root's vendor tree, and the
+    // sharded repo-root job installs only its own. Absent means this runner
+    // cannot ask the question, which is not the same as the patch being wrong
+    // — the mobile-app job installs that root and runs this for real.
+    if ($root === null) {
+        test()->markTestSkipped('nativephp/mobile is not installed under either Composer root, so there is no upstream client to patch.');
+    }
 
     $process = proc_open(
         ['php', dirname(__DIR__, 4).'/scripts/nativephp_android_single_content_type.php'],

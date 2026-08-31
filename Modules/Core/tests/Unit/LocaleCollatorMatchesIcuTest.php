@@ -58,7 +58,12 @@ function collectWords(array $lines, array &$words): void
         }
 
         foreach (preg_split('/[^\p{L}\p{M}\p{N}\'\-]+/u', $line, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
-            if (preg_match('/^\p{L}/u', $word) === 1) {
+            // A token carrying a digit is not a word in anybody's alphabet: the
+            // copy embeds a styled <code> element, so the split scrapes out
+            // `bg-amber-100` and `px-1` alongside names like `Argon2id`. Their
+            // order under NUMERIC_COLLATION is an ICU build's business, and it
+            // differs between the macOS and Linux ICUs this suite runs on.
+            if (preg_match('/^\p{L}/u', $word) === 1 && preg_match('/\p{N}/u', $word) !== 1) {
                 $words[$word] = true;
             }
         }

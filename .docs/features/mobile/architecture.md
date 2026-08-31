@@ -1130,7 +1130,6 @@ generated, not committed: `mobile-app/nativephp/` is gitignored, and
 shipped in a bundle are exactly what that build process's own schedule held,
 which is where the duplicates came from.
 
-
 ## Wiring
 
 `MobileServiceProvider` is the single-owner wiring surface for the whole

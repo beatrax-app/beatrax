@@ -1,8 +1,8 @@
 # `Search` — architecture
 
 The `Search` module gives the app full-text search over every retained
-transaction: an FTS5 trigram index over counterparty name + description
-+ tax note, kept in lockstep with every write, powering both the
+transaction: an FTS5 trigram index over counterparty name, description
+and tax note, kept in lockstep with every write, powering both the
 `/transactions` search-and-filter surface and the ⌘K command-palette
 server endpoint.
 

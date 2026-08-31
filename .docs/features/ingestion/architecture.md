@@ -577,7 +577,7 @@ column absent from the check is still refused, just later and worse:
 got a detail-free "read part-way" instead of the column's name. A column
 read through `optionalCell()` (Revolut's `Fee`) stays out of the list. It also holds the two receipt arms — `eml` against an
 `EmlHeaderProfile` RFC 822 header signature, `mbox` against the
-`From ` line the archive opens with — even though neither format
+"From " line the archive opens with — even though neither format
 reaches an adapter in this module. The sniff is the wizard's one
 validation seam, and moving those two out would give the receipt
 transports a different failure message for the same kind of mistake.

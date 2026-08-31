@@ -43,10 +43,12 @@ one install it took ASN Bank from **€6,604.64 to €3,612.14**.
 `AccountBalanceQuery::currentBalanceAsOf` does, in the account's own
 denomination:
 
-    starting_balance_minor
-      + Σ settled_amount_minor
-        where settled_currency = accounts.default_currency
-          and posted_at between starting_balance_date and the as-of date
+```
+starting_balance_minor
+  + Σ settled_amount_minor
+    where settled_currency = accounts.default_currency
+      and posted_at between starting_balance_date and the as-of date
+```
 
 `TheSuggestedOpeningBalanceIsThePositionTest` pins it against
 `AccountBalanceQuery` directly, so the suggestion and the four surfaces it
