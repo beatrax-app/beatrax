@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -51,6 +52,13 @@ final readonly class GraphErrorMapper
                 message: 'Microsoft Graph rate limit exceeded: '.$safeBodyMessage,
             ),
             $expectsDelta && $status === Response::HTTP_GONE => CursorExpiredException::graph($safeBodyMessage),
+            // Every call goes out behind ensureFreshAccessToken(), so a 401 is
+            // the provider refusing a token just refreshed. The default arm is
+            // re-thrown and tried again, and no later attempt clears this —
+            // 155 jobs failed in a day against a credential that never would.
+            $status === Response::HTTP_UNAUTHORIZED => new InvalidGrantException(
+                'Microsoft Graph rejected the access token: '.$safeBodyMessage,
+            ),
             default => new RuntimeException(
                 'GraphApiClient: '.$context.' returned HTTP '.$status.' — '.$safeBodyMessage,
             ),

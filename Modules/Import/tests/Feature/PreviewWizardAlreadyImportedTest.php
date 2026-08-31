@@ -74,7 +74,29 @@ it('tells the reader a confirmed file is already imported rather than expired', 
     Livewire::actingAs($user)
         ->test(PreviewWizard::class, ['id' => $runId])
         ->assertSee('This file has already been imported.')
-        ->assertDontSee('The preview has expired', escape: false);
+        ->assertDontSee('The preview has expired', escape: false)
+        ->assertDontSee('Nothing is saved to your ledger until you confirm.');
+});
+
+// The control for the line above: the promise is right on a run still waiting
+// for a decision, and removing it there would be its own defect.
+it('still promises nothing is saved on a preview waiting to be confirmed', function (): void {
+    $user = alreadyImportedUser();
+
+    /** @var RunsImports $importer */
+    $importer = app(RunsImports::class);
+    $preview = $importer->runFromUpload(
+        __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv',
+        'asn-csv',
+        $user,
+        'asn-sample-1.csv',
+        BankCsvFormatHint::Asn,
+    );
+
+    Livewire::actingAs($user)
+        ->test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->assertSee('Nothing is saved to your ledger until you confirm.')
+        ->assertDontSee('This file has already been imported.');
 });
 
 // The whole point of the message is the way out of the loop.

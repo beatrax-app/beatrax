@@ -71,6 +71,20 @@ final readonly class InboxScanStateMachine
                 ->where('inbox_id', $inboxId)
                 ->where('folder', 'INBOX')
                 ->update($update);
+
+            // Only these two statuses mean a backfill is still in flight. Every
+            // other exit left backfill_progress set, so a dead one kept feeding
+            // the inboxes strip a count that would never move again — including
+            // needs_reauth, where the same row also says it cannot scan at all.
+            if (! in_array($newStatus, [
+                InboxScanStatus::Backfilling->value,
+                InboxScanStatus::RateLimited->value,
+            ], strict: true)) {
+                $connection->table('inboxes')
+                    ->where('id', $inboxId)
+                    ->whereNotNull('backfill_progress')
+                    ->update(['backfill_progress' => null, 'updated_at' => $now]);
+            }
         });
     }
 
