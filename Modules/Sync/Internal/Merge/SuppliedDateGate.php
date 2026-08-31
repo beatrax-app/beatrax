@@ -30,10 +30,11 @@ final class SuppliedDateGate
             return false;
         }
 
-        // dayOrNull, never normalisedDayOrNull: this is the supplying side, so
-        // a value that is not exactly the day somebody meant is refused rather
-        // than rolled forward into one they did not.
-        return SafeDate::dayOrNull($value) === null;
+        // Never normalisedDayOrNull: this is the supplying side, so a value
+        // that is not exactly the day somebody meant is refused rather than
+        // rolled forward into one they did not. The time half is the writer's
+        // own cast talking, and refusing it cost six of seven goals a sync.
+        return SafeDate::dayIgnoringTimeOrNull($value) === null;
     }
 
     /**

@@ -23,18 +23,21 @@ beforeEach(function (): void {
     $this->actingAs($this->demoUser);
 });
 
-function seededAvailableAlert(int $userId): SystemAlert
+// System-wide, because RecordUpdateAvailableAlert writes user_id null so one
+// notification serves every account. Looking it up by owner found it only
+// while the demo seeder disagreed with that.
+function seededAvailableAlert(): SystemAlert
 {
-    return SystemAlert::query()
-        ->where('user_id', $userId)
+    return SystemAlert::withoutGlobalScopes()
+        ->whereNull('user_id')
         ->where('kind', UpdateAlertKind::Available->value)
         ->whereNull('acknowledged_at')
         ->firstOrFail();
 }
 
 it('gives every seeded update alert the version its buttons act on', function (): void {
-    $alerts = SystemAlert::query()
-        ->where('user_id', $this->demoUser->id)
+    $alerts = SystemAlert::withoutGlobalScopes()
+        ->whereNull('user_id')
         ->where('kind', UpdateAlertKind::Available->value)
         ->get();
 
@@ -48,7 +51,7 @@ it('gives every seeded update alert the version its buttons act on', function ()
 
 it('asks for the install the button offers', function (): void {
     Event::fake([UpdateInstallRequested::class]);
-    $alert = seededAvailableAlert($this->demoUser->id);
+    $alert = seededAvailableAlert();
 
     Livewire::test(SystemAlertsBanner::class)->call('install', $alert->id);
 
@@ -56,7 +59,7 @@ it('asks for the install the button offers', function (): void {
 });
 
 it('remembers the version the skip button skipped', function (): void {
-    $alert = seededAvailableAlert($this->demoUser->id);
+    $alert = seededAvailableAlert();
     $metadata = is_array($alert->metadata) ? $alert->metadata : [];
 
     Livewire::test(SystemAlertsBanner::class)->call('skipVersion', $alert->id);

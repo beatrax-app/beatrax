@@ -28,7 +28,7 @@ function createRowOpsFor(
     string $secretKey,
     int $userId,
     string $table,
-    int $pk,
+    int|string $pk,
     array $fields,
 ): array {
     $entries = [];
@@ -101,6 +101,43 @@ it('quarantines a create whose ops arrived split across frames instead of writin
 
     expect($reasons)->not->toBeEmpty()
         ->and($reasons)->toContain(QuarantineReason::IncompleteCreateRow->value);
+});
+
+it('writes a create that names no owner, because the applier seeds the owner itself', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = seedSplitFrameUser($db);
+
+    /** @var DeviceKeySigner $signer */
+    $signer = app(DeviceKeySigner::class);
+    $keypair = sodium_crypto_sign_keypair();
+
+    $replayer = new OpLogReplayer(
+        db: $db,
+        deviceKeys: ['device-split-frame' => bin2hex(sodium_crypto_sign_publickey($keypair))],
+        rules: new MergeRulesRegistry,
+    );
+
+    // buildCreatePayload() seeds user_id from the session and overrides any the
+    // op carries, so an op that omits it is complete. Requiring it discarded
+    // three notifications on a real initial sync — silently, because the row
+    // count the screen reports counts ops rather than rows.
+    $pk = str_repeat('a', 64);
+
+    $replayer->replay(
+        createRowOpsFor($signer, sodium_crypto_sign_secretkey($keypair), $userId, 'notifications', $pk, [
+            'title' => json_encode('Budget nearly spent', JSON_THROW_ON_ERROR),
+            'body' => json_encode('You have used most of Groceries.', JSON_THROW_ON_ERROR),
+            'params' => json_encode('{}', JSON_THROW_ON_ERROR),
+            'trigger_type' => json_encode('budget_threshold', JSON_THROW_ON_ERROR),
+        ]),
+        $userId,
+    );
+
+    expect($db->connection()->table('notifications')->where('id', $pk)->count())
+        ->toBe(1, 'the row must be written rather than quarantined')
+        ->and($db->connection()->table('notifications')->where('id', $pk)->value('user_id'))
+        ->toBe($userId, 'and it must be owned by the replaying session');
 });
 
 it('quarantines a create the database refuses instead of reporting success and writing nothing', function (): void {

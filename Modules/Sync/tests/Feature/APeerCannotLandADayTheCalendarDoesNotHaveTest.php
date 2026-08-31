@@ -136,6 +136,36 @@ it('still applies a real day, so the gate is not simply refusing everything', fu
         ->and(impDateReason($db, 'goals'))->toBeNull();
 });
 
+it('applies a day that arrives carrying the midnight its own writer emits', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // A DATE column is serialised through the model cast on the way out, so
+    // the day leaves the writer as a timestamp and arrives as one. Refusing
+    // that shape quarantined six of seven goals on a real initial sync, and
+    // the screen still reported them copied.
+    $entry = impDateEntry('goals', $this->goal, 'target_date', '2027-06-15 00:00:00', (int) $this->user->id, OpType::Set);
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay([$entry], (int) $this->user->id);
+
+    expect($db->connection()->table('goals')->where('id', $this->goal)->value('target_date'))
+        ->not->toBe('2027-06-01', 'the peer\'s day must have been applied')
+        ->and(impDateReason($db, 'goals'))->toBeNull();
+});
+
+it('still refuses an impossible day when a time follows it', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // Accepting the timestamp shape must not smuggle the day past the gate.
+    $entry = impDateEntry('goals', $this->goal, 'target_date', '2027-02-29 00:00:00', (int) $this->user->id, OpType::Set);
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay([$entry], (int) $this->user->id);
+
+    expect($db->connection()->table('goals')->where('id', $this->goal)->value('target_date'))->toBe('2027-06-01')
+        ->and(impDateReason($db, 'goals'))->toBe('impossible_date');
+});
+
 it('leaves a column that is not a DATE alone', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
