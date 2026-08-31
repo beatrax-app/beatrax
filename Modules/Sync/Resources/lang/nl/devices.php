@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Nieuwe identiteit voor dit apparaat starten',
 
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
-    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties en van je belastingnotities, en sommige namen van winkels staan leesbaar elders in het databasebestand.',
+    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties en van je belastingnotities, en sommige namen van winkeliers staan leesbaar elders in het databasebestand.',
     'on' => 'Aan',
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',

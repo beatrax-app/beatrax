@@ -75,3 +75,63 @@ it('does not fall back to the English word for a term the locale already transla
         .implode("\n  ", $leaks)
     );
 });
+
+// The rule above reads the translation and looks for English. It cannot see a
+// locale answering with a SECOND word of its own: the sidebar described the
+// shared list as "kennis over verkopers" and the at-rest disclosure named
+// "namen van winkels", while 23 other strings translating the same English
+// word said winkelier. Three Dutch words, one English term, and every one of
+// them real Dutch — so neither parity nor the English-leak rule could object.
+//
+// This reads the SOURCE file and requires the settled word in the answer.
+
+it('answers an English term with the one word the locale settled on, not a second', function (): void {
+    $offenders = [];
+    $compared = 0;
+
+    foreach (settledTerms() as $locale => $terms) {
+        foreach (glob(base_path('Modules/*/Resources/lang/en/*.php')) ?: [] as $source) {
+            $translated = str_replace('/lang/en/', "/lang/{$locale}/", $source);
+
+            if (! is_file($translated)) {
+                continue;
+            }
+
+            $localised = flattenedStrings($translated);
+
+            foreach (flattenedStrings($source) as $key => $english) {
+                foreach ($terms as $term => $native) {
+                    if (preg_match('/\\b'.$term.'s?\\b/iu', $english) !== 1) {
+                        continue;
+                    }
+
+                    $value = $localised[$key] ?? null;
+
+                    if ($value === null) {
+                        continue;
+                    }
+
+                    $compared++;
+
+                    if (preg_match('/'.$native.'/iu', $value) === 1) {
+                        continue;
+                    }
+
+                    $offenders[] = str_replace(base_path().'/', '', $translated)." [{$key}] "
+                        ."answers \"{$term}\" without saying \"{$native}\": {$value}";
+                }
+            }
+        }
+    }
+
+    // A walk that compared nothing would pass while proving nothing.
+    expect($compared)->toBeGreaterThan(15);
+
+    sort($offenders);
+
+    expect($offenders)->toBe(
+        [],
+        "One English term, more than one word for it in this locale:\n  "
+        .implode("\n  ", $offenders)
+    );
+});
