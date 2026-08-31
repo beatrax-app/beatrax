@@ -23,21 +23,11 @@ use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Internal\Pipeline\CadenceWalk;
-use Modules\Forecasting\Internal\Pipeline\ChainAwareForecastRouter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
-use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
 use Modules\Forecasting\Internal\Pipeline\ScenarioApplier;
-use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
-use Modules\Forecasting\Public\Actions\AddScenarioMutation;
-use Modules\Forecasting\Public\Actions\CreateScenario;
-use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
-use Modules\Forecasting\Public\Actions\DeleteScenario;
-use Modules\Forecasting\Public\Actions\EditScenarioMutation;
-use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
-use Modules\Forecasting\Public\Actions\RenameScenario;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
@@ -74,11 +64,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(CadenceWalk::class);
         $this->app->singleton(RangeProjector::class);
         $this->app->singleton(DailyFold::class);
-        $this->app->singleton(ProjectionPipeline::class);
         $this->app->singleton(ForecastRunStateMachine::class);
-
-        $this->app->singleton(ChainAwareForecastRouter::class);
-        $this->app->singleton(ShortfallDetector::class);
 
         $this->app->singleton(ScenarioApplier::class);
 
@@ -86,14 +72,6 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ForecastHighlightsQuery::class);
 
         $this->app->singleton(SetAccountOpeningBalance::class);
-
-        $this->app->singleton(CreateScenario::class);
-        $this->app->singleton(CreateScenarioFromTemplate::class);
-        $this->app->singleton(RenameScenario::class);
-        $this->app->singleton(DeleteScenario::class);
-        $this->app->singleton(AddScenarioMutation::class);
-        $this->app->singleton(RemoveScenarioMutation::class);
-        $this->app->singleton(EditScenarioMutation::class);
 
         // No Livewire component is bound here on purpose: a singleton would
         // leak stale public-property state between requests under Octane.

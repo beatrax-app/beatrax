@@ -14,7 +14,6 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
-use Modules\EmailScan\Internal\Clients\GmailInboxResources;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
@@ -32,7 +31,6 @@ use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
-use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
@@ -61,25 +59,19 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(InboxesBadgeCount::class);
         $this->app->singleton(KnownSenderQuery::class);
         $this->app->singleton(DiscoveredSenderQuery::class);
-        $this->app->singleton(PromoteDiscoveredSender::class);
         $this->app->singleton(DismissDiscoveredSender::class);
 
         $this->app->singleton(EmlBlobStore::class);
         $this->app->singleton(MimeHeaderParser::class);
         $this->app->singleton(GraphErrorMapper::class);
         $this->app->singleton(ScanMessageMapper::class);
-        $this->app->singleton(GmailInboxResources::class);
-        $this->app->singleton(GmailApiClient::class);
         // The contracts exist so tests can rebind them to the Fake clients
         // via $this->app->instance(...).
         $this->app->singleton(GmailApiClientContract::class, GmailApiClient::class);
-        $this->app->singleton(GraphApiClient::class);
         $this->app->singleton(GraphApiClientContract::class, GraphApiClient::class);
         $this->app->singleton(InboxScanStateMachine::class);
         $this->app->singleton(IncrementalScanJob::class);
         $this->app->singleton(DiscoveryScanJob::class);
-        $this->app->singleton(EmitOAuthReauthRequiredAlert::class);
-        $this->app->singleton(RaiseReconsentAlertOnTokenFailure::class);
 
         $this->app->singleton(DetectIcsStatementReadyJob::class);
         $this->app->singleton(IcsStatementSenderSeeder::class);

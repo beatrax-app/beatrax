@@ -29,25 +29,17 @@ use Modules\Auth\Internal\Http\Middleware\RequireDeveloperMiddleware;
 use Modules\Auth\Internal\Listeners\StartLockedOnLogin;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
-use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\NullColdStartVault;
 use Modules\Auth\Internal\Lock\NullKeyCustodian;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
-use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
-use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
-use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Auth\Public\Actions\LoginAction;
-use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
-use Modules\Auth\Public\Actions\ResetPasswordAction;
-use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Http\Livewire\AppLockKeyProbe;
@@ -56,7 +48,6 @@ use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Public\Http\Livewire\RecoveryCodesSection;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\AppLockClientConfig;
-use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
@@ -72,17 +63,11 @@ final class AuthServiceProvider extends ServiceProvider
 
         $this->app->register(FortifyServiceProvider::class);
 
-        $this->app->singleton(LoginAction::class);
-        $this->app->singleton(LogoutAction::class);
-        $this->app->singleton(SignupAction::class);
-        $this->app->singleton(AddUserAction::class);
-        $this->app->singleton(ResetPasswordAction::class);
         $this->app->singleton(RegenerateRecoveryCodesAction::class);
         $this->app->singleton(RecoveryCodeGenerator::class);
         $this->app->singleton(RecoveryCodeMinter::class);
         $this->app->singleton(RecoveryCodeFormatter::class);
         $this->app->singleton(RecoveryCodeNormalizer::class);
-        $this->app->singleton(RecoveryCodeAuthenticator::class);
 
         // Key custody while unlocked. The pass-through default keeps the key
         // in the session; the bundles override it onto the OS keychain.
@@ -92,15 +77,11 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(AppLockKdf::class);
         $this->app->singleton(AppLockKeyWrap::class);
         $this->app->singleton(BiometricKeyBlobCodec::class);
-        $this->app->singleton(LockStateManager::class);
-        $this->app->singleton(AppLockKeyService::class);
         $this->app->singleton(AppLockClientConfig::class);
         $this->app->singleton(PinVerificationService::class);
-        $this->app->singleton(AppLockProvisioner::class);
 
         $this->app->singleton(BiometricDeviceStore::class);
         $this->app->singleton(PlatformDetector::class);
-        $this->app->singleton(WebAuthnBiometricService::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void

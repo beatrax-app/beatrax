@@ -15,17 +15,10 @@ use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 use Modules\Tax\Internal\Listeners\InvalidateNavCounts;
 use Modules\Tax\Internal\Listeners\SeedDeductionCategoriesForCountry;
-use Modules\Tax\Internal\Services\TaxCsvExporter;
-use Modules\Tax\Internal\Services\TaxPdfRenderer;
-use Modules\Tax\Internal\Services\TaxYearQuery;
-use Modules\Tax\Public\Actions\TagTransaction;
-use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Modules\Tax\Public\Events\TransactionUntagged;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Public\Http\Livewire\TaxSummaryCard;
-use Modules\Tax\Public\Services\TaxCategoryWriter;
-use Modules\Tax\Public\Services\TaxTagQuery;
 
 final class TaxServiceProvider extends ServiceProvider
 {
@@ -33,22 +26,12 @@ final class TaxServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->singleton(TagTransaction::class);
-        $this->app->singleton(UntagTransaction::class);
-
-        $this->app->singleton(TaxYearQuery::class);
-        $this->app->singleton(TaxTagQuery::class);
-
-        $this->app->singleton(TaxCsvExporter::class);
-        $this->app->singleton(TaxPdfRenderer::class);
-
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryStore::class);
 
         // The capturing writer, not the row store above: every category write
         // the reader can reach goes through here, or a tag reaches the peer
         // pointing at a category row that peer never received.
-        $this->app->singleton(TaxCategoryWriter::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

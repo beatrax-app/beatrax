@@ -195,10 +195,12 @@ it('records actor, reason, notes, and the Clock-stamped transitioned_at on the a
     expect($row->user_id)->toBe($this->user->id);
 });
 
-it('binds DriftAlertStateMachine as a singleton via DriftAlertsServiceProvider', function (): void {
-    $first = $this->app->make(DriftAlertStateMachine::class);
-    $second = $this->app->make(DriftAlertStateMachine::class);
-    expect($first)->toBe($second);
+it('resolves DriftAlertStateMachine from the container', function (): void {
+    // Resolvable, not identical: a stateless service that dispatches events is
+    // deliberately no longer a singleton, because Event::fake() cannot reach a
+    // dispatcher one has already captured. ASingletonNeverCapturesTheDispatcher
+    // holds that line; this holds the wiring.
+    expect($this->app->make(DriftAlertStateMachine::class))->toBeInstanceOf(DriftAlertStateMachine::class);
 });
 
 it('writes user_id=NULL on the audit row when the source drift_alerts.user_id is NULL', function (): void {

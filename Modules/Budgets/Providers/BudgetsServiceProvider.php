@@ -17,17 +17,11 @@ final class BudgetsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    private const string CARRYOVER_QUERY_CLASS = 'Modules\Budgets\Public\Services\CarryoverQuery';
-
     private const string ENVELOPE_GLANCE_CARD_CLASS = 'Modules\Budgets\Public\Http\Livewire\EnvelopeGlanceCard';
 
     public function register(): void
     {
         $this->app->singleton(BudgetProgressQuery::class);
-
-        if (class_exists(self::CARRYOVER_QUERY_CLASS)) {
-            $this->app->singleton(self::CARRYOVER_QUERY_CLASS);
-        }
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

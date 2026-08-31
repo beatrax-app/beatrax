@@ -6,7 +6,6 @@ namespace Modules\CashBook\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
-use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\CashBook\Internal\Services\ManualEntryAnchors;
 use Modules\Core\Public\Support\LoadsModuleResources;
@@ -18,7 +17,6 @@ final class CashBookServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ManualEntryAnchors::class);
-        $this->app->singleton(RecordManualTransaction::class);
     }
 
     public function boot(LivewireManager $livewire): void

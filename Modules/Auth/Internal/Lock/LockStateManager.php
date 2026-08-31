@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\KeyCustodian;
@@ -24,13 +25,23 @@ final readonly class LockStateManager
      *                                   NullKeyCustodian so `new LockStateManager` (used widely in tests)
      *                                   keeps its pre-custody behaviour; the container binds the
      *                                   platform-appropriate custodian for production resolution.
-     * @param  Dispatcher|null  $events  Nullable for the same reason, and only for it: a
-     *                                   container-resolved instance always receives one.
+     * @param  Container|null  $container  Nullable for the same reason, and only for it: a
+     *                                     container-resolved instance always receives one. The
+     *                                     dispatcher is read from it per dispatch rather than
+     *                                     held, so Event::fake() can still reach this.
      */
     public function __construct(
         private KeyCustodian $custodian = new NullKeyCustodian,
-        private ?Dispatcher $events = null,
+        private ?Container $container = null,
     ) {}
+
+    // Read per dispatch, never held: a singleton reaches this class through its
+    // constructor, and Event::fake() replaces the binding rather than an
+    // instance already holding one. Null stays null, for `new LockStateManager`.
+    private function events(): ?Dispatcher
+    {
+        return $this->container?->make(Dispatcher::class);
+    }
 
     public function isLocked(Session $session): bool
     {
@@ -85,7 +96,7 @@ final readonly class LockStateManager
         // biometric unlock, a sign-in, an enable and an enclave recovery all
         // arrive here, and an event that fired from only one of them would be
         // trusted for all five.
-        $this->events?->dispatch(new AppLockUnlocked($session));
+        $this->events()?->dispatch(new AppLockUnlocked($session));
     }
 
     // The only sanctioned reader: it applies the custodian's read(), where

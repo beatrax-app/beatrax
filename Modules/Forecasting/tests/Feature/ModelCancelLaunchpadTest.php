@@ -214,10 +214,10 @@ it('the launchpad uses display_name_override when present', function (): void {
     expect($this->db->connection()->table('forecast_scenarios')->where('id', $newId)->value('name'))->toBe('Cancel My Netflix sub');
 });
 
-it('AddScenarioMutation injection inside the launchpad is the same singleton bound by the ServiceProvider', function (): void {
+it('reaches AddScenarioMutation through the container rather than building its own', function (): void {
     // The launchpad has to reach the Actions through the container, or a later
-    // tightening of their validation would not reach it.
-    $a = $this->app->make(AddScenarioMutation::class);
-    $b = $this->app->make(AddScenarioMutation::class);
-    expect($a)->toBe($b);
+    // tightening of their validation would not reach it. That is resolvability,
+    // never identity — the action dispatches, so it is deliberately not a
+    // singleton whose captured dispatcher Event::fake() could never replace.
+    expect($this->app->make(AddScenarioMutation::class))->toBeInstanceOf(AddScenarioMutation::class);
 });

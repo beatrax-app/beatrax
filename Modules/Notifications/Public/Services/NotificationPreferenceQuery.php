@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Public\Services;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
@@ -28,10 +29,19 @@ final readonly class NotificationPreferenceQuery
 
     public function __construct(
         private DatabaseManager $db,
-        private Dispatcher $events,
+        private Container $container,
         private DeviceRegistryService $devices,
         private Clock $clock,
     ) {}
+
+    // Resolved per dispatch, never held: a singleton reaches this class through
+    // its constructor, so a dispatcher captured here is captured for that
+    // singleton's whole life — and Event::fake() replaces the binding, not an
+    // instance already holding one.
+    private function events(): Dispatcher
+    {
+        return $this->container->make(Dispatcher::class);
+    }
 
     // Falls back to the locked defaults when this device has no row yet;
     // never throws, never returns null.
@@ -136,7 +146,7 @@ final readonly class NotificationPreferenceQuery
             ->where('device_id', $deviceId)
             ->value('id'));
 
-        $this->events->dispatch(new NotificationPreferenceMutated(
+        $this->events()->dispatch(new NotificationPreferenceMutated(
             preferenceId: $preferenceId,
             userId: $user->id,
             mutationType: $existing === null ? 'create' : 'edit',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Actions;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
@@ -17,8 +18,17 @@ final readonly class WriteUserPreference
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
-        private Dispatcher $events,
+        private Container $container,
     ) {}
+
+    // Resolved per dispatch, never held: a singleton reaches this class through
+    // its constructor, so a dispatcher captured here is captured for that
+    // singleton's whole life — and Event::fake() replaces the binding, not an
+    // instance already holding one.
+    private function events(): Dispatcher
+    {
+        return $this->container->make(Dispatcher::class);
+    }
 
     /**
      * @param  array<string, mixed>  $columns
@@ -52,7 +62,7 @@ final readonly class WriteUserPreference
             return;
         }
 
-        $this->events->dispatch(new EntityMutated(
+        $this->events()->dispatch(new EntityMutated(
             table: 'users',
             pk: $userId,
             userId: $userId,

@@ -20,7 +20,6 @@ final class TransfersServiceProvider extends ServiceProvider
     {
         $this->app->singleton(PairLookup::class);
 
-        $this->app->singleton(TransferPairer::class);
         $this->app->bind(PairsTransferLegs::class, TransferPairer::class);
         $this->app->bind(UnpairsTransferLegs::class, PairUnlinker::class);
     }

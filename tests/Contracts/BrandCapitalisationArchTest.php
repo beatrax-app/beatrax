@@ -32,8 +32,8 @@ function brandProsePattern(): string
 function brandSkippedDirectories(): array
 {
     return [
-        '.git', '.claude', '.phpstan-cache', '.phpunit.cache', 'vendor', 'node_modules',
-        'build', 'cache', 'storage', 'snapshots', 'nativephp',
+        '.git', '.claude', '.phpstan-cache', '.phpunit.cache', '.playwright-mcp', 'vendor',
+        'node_modules', 'build', 'cache', 'storage', 'snapshots', 'nativephp',
     ];
 }
 

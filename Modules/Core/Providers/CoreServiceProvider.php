@@ -28,8 +28,6 @@ use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Models\User as CoreUser;
-use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
-use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -41,7 +39,6 @@ use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
-use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\PassthroughSecretShield;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
@@ -82,8 +79,6 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(SecretShield::class, PassthroughSecretShield::class);
         $this->app->bind(PublisherManifestFetcher::class, HttpPublisherManifestFetcher::class);
         $this->app->singleton(SystemAlertQuery::class);
-        $this->app->singleton(AcknowledgeSystemAlert::class);
-        $this->app->singleton(WriteUserPreference::class);
         $this->app->singleton(UserCountry::class);
         $this->app->singleton(AppChromeResolver::class);
 
@@ -101,7 +96,6 @@ final class CoreServiceProvider extends ServiceProvider
         // OpLogFieldCrypto) already registered by SyncServiceProvider::
         // register() — binding order across module providers doesn't matter.
         $this->app->singleton(PreMigrationSnapshot::class);
-        $this->app->singleton(EncryptionMigrationService::class);
 
         if (! class_exists(User::class, false)) {
             class_alias(CoreUser::class, User::class);

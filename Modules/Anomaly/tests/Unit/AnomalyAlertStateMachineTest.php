@@ -197,10 +197,12 @@ it('records actor, reason, notes, and the Clock-stamped transitioned_at on the a
     expect($row->user_id)->toBe($this->user->id);
 });
 
-it('binds AnomalyAlertStateMachine as a singleton via AnomalyServiceProvider', function (): void {
-    $first = $this->app->make(AnomalyAlertStateMachine::class);
-    $second = $this->app->make(AnomalyAlertStateMachine::class);
-    expect($first)->toBe($second);
+it('resolves AnomalyAlertStateMachine from the container', function (): void {
+    // Resolvable, not identical: a stateless service that dispatches events is
+    // deliberately no longer a singleton, because Event::fake() cannot reach a
+    // dispatcher one has already captured. ASingletonNeverCapturesTheDispatcher
+    // holds that line; this holds the wiring.
+    expect($this->app->make(AnomalyAlertStateMachine::class))->toBeInstanceOf(AnomalyAlertStateMachine::class);
 });
 
 it('casts the reasons column to an array', function (): void {

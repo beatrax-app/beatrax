@@ -35,13 +35,10 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Http\Livewire\AccountCurrencyEditor;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
-use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
-use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
-use Modules\Ledger\Public\Services\TransactionListQuery;
 use Modules\Sync\Public\Contracts\BlindIndexProvenance;
 
 final class LedgerServiceProvider extends ServiceProvider
@@ -63,7 +60,6 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->bind(DeletesTransaction::class, DeleteTransaction::class);
         $this->app->singleton(FingerprintComposer::class);
-        $this->app->singleton(CounterpartyKey::class);
         // Bound outright, with no null fallback: a probe that answered "no
         // keyed rows" because nothing was wired would hand a peer's key to
         // the device whose whole ledger is written under its own.
@@ -76,9 +72,7 @@ final class LedgerServiceProvider extends ServiceProvider
         // instances between jobs so the next job's reader is resolved afresh.
         $this->app->scoped(BaseCurrency::class);
         $this->app->bind(CategorySpendTrendQuery::class);
-        $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
-        $this->app->singleton(TransactionListQuery::class);
         $this->app->bind(FingerprintRederiveService::class);
     }
 

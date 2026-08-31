@@ -10,20 +10,14 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Core\Public\Support\RegistersScheduledCommands;
 use Modules\DriftAlerts\Internal\Console\ReviveDriftSnoozesCommand;
-use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Internal\Http\Livewire\SubscriptionDriftWatchPage;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
-use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
-use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
-use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
-use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
 use Modules\DriftAlerts\Public\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Public\Http\Livewire\DriftThresholdEditor;
 use Modules\DriftAlerts\Public\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
-use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
@@ -34,15 +28,9 @@ final class DriftAlertsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->singleton(DriftAlertStateMachine::class);
-        $this->app->singleton(DriftEvaluator::class);
         $this->app->singleton(DriftAlertQuery::class);
         $this->app->singleton(CancellationImpactQuery::class);
         $this->app->singleton(SubscriptionDriftWatchQuery::class);
-        $this->app->singleton(SavingsInsightsQuery::class);
-        $this->app->singleton(AcknowledgeDriftAlert::class);
-        $this->app->singleton(SnoozeDriftAlert::class);
-        $this->app->singleton(DismissDriftAlertAsCancelled::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

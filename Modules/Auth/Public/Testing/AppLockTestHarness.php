@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Auth\Public\Testing;
 
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
@@ -35,13 +34,11 @@ final class AppLockTestHarness
     }
 
     // Built, not resolved: the container binds a platform custodian only in a
-    // native bundle, and this must behave the same in every root. The
-    // dispatcher is the exception — a harness unlock that announced nothing
-    // would be the one unlock listeners never hear.
+    // native bundle, and this must behave the same in every root. The container
+    // is handed over so the unlock still announces itself — a harness unlock
+    // that announced nothing would be the one unlock listeners never hear.
     private static function keyService(): AppLockKeyService
     {
-        $events = Container::getInstance()->make(Dispatcher::class);
-
-        return new AppLockKeyService(new LockStateManager(events: $events));
+        return new AppLockKeyService(new LockStateManager(container: Container::getInstance()));
     }
 }

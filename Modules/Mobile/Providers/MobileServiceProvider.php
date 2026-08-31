@@ -39,15 +39,10 @@ use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 use Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation;
-use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
-use Modules\Mobile\Internal\Pairing\QrScanBridge;
-use Modules\Mobile\Internal\Sync\InitialSyncPuller;
-use Modules\Mobile\Internal\Sync\LanSyncClient;
-use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 
@@ -80,15 +75,10 @@ final class MobileServiceProvider extends ServiceProvider
         // singleton.
         $this->app->singleton(MobileFirstLaunchBootstrap::class);
 
-        $this->app->singleton(LanSyncClient::class);
         $this->app->singleton(NetworkPolicyResolver::class);
-        $this->app->singleton(MobileSyncTriggerService::class);
-        $this->app->singleton(InitialSyncPuller::class);
 
         $this->app->singleton(BiometricUnlockBridge::class);
         $this->app->singleton(BiometricKeyVault::class);
-        $this->app->singleton(ColdStartEnrollmentService::class);
-        $this->app->singleton(QrScanBridge::class);
 
         // Also registered in boot() via $this->commands([...]). Built
         // explicitly rather than autowired so the session is passed as a

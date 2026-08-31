@@ -24,11 +24,9 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
-use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRewrapContract;
 use Modules\Sync\Internal\Crypto\GdkRewrapService;
-use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
 use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
@@ -37,7 +35,6 @@ use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
-use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Listeners\BackfillOpLogOnSyncEnabled;
 use Modules\Sync\Internal\Listeners\HoldPairingCeremonyOpenOnUnlock;
@@ -58,10 +55,8 @@ use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
-use Modules\Sync\Internal\Pairing\PairingPeerErrands;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
-use Modules\Sync\Internal\Pairing\PairingRefusalCopy;
 use Modules\Sync\Internal\Pairing\PairingStateMachine;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
@@ -100,7 +95,6 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 use Modules\Sync\Public\Http\Livewire\SyncStatusSection;
-use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Modules\Sync\Public\Services\ImportSyncCapture;
@@ -151,7 +145,6 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->singleton(OpLogFieldCrypto::class);
         $this->app->singleton(GdkKeyringService::class);
         $this->app->singleton(SensitiveColumnCodec::class);
-        $this->app->singleton(BlindIndexCodec::class);
 
         // The minimal Public wrapper EncryptionMigrationService consumes
         // instead of reaching into Modules\Sync\Internal\Crypto directly. NOT a
@@ -162,14 +155,12 @@ final class SyncServiceProvider extends ServiceProvider
         // Device-removal rotation orchestration. The ctor takes no Session —
         // every method that needs one takes it as a per-call parameter, so this
         // singleton can never capture a stale session.
-        $this->app->singleton(GdkRotationService::class);
 
         // Behind its own contract, because the passphrase-change listener wired
         // in boot() is the only caller and it names the contract.
         $this->app->bind(GdkRewrapContract::class, GdkRewrapService::class);
 
         $this->app->singleton(LocallyKeyedRowsProbe::class);
-        $this->app->singleton(GdkEpochControlHandler::class);
     }
 
     private function registerReplayer(): void
@@ -194,8 +185,6 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerIdentityServices(): void
     {
-        $this->app->singleton(DeviceIdentityService::class);
-
         // Not a singleton: it holds no state, and caching one instance froze
         // whichever AppLockKeyService was bound at first resolve. A daemon
         // handoff now reads the identity during DeviceSyncEnabled, which is
@@ -244,8 +233,6 @@ final class SyncServiceProvider extends ServiceProvider
 
         // What a pairing screen hands off rather than doing itself: the frames
         // and epochs the peer is owed, and the line each refusal renders as.
-        $this->app->singleton(PairingPeerErrands::class);
-        $this->app->singleton(PairingRefusalCopy::class);
 
         // Redelivery with no pairing screen open anywhere. Bound, not a
         // singleton: it is resolved from a request tail and from a daemon
