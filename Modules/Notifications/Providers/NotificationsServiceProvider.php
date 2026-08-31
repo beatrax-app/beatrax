@@ -18,17 +18,11 @@ use Modules\Notifications\Internal\Console\PruneNotificationsCommand;
 use Modules\Notifications\Internal\Delivery\NoSystemNotificationConsent;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
-use Modules\Notifications\Internal\Support\DeepLinkResolver;
-use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\Actions\DismissNotification;
-use Modules\Notifications\Public\Actions\MarkNotificationRead;
-use Modules\Notifications\Public\Actions\UndoDismissNotification;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
-use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -80,17 +74,9 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(SystemNotificationConsent::class, NoSystemNotificationConsent::class);
         $this->app->singleton(NotificationStateMachine::class);
         $this->app->singleton(DeterministicKeyDeriver::class);
-        $this->app->singleton(NotificationPreferenceQuery::class);
         $this->app->singleton(SuppressionEvaluator::class);
         $this->app->singleton(NotificationWriter::class);
-        $this->app->singleton(DeferredNotificationPasses::class);
         $this->app->singleton(NotificationCopyRenderer::class);
-        $this->app->singleton(NotificationQuery::class);
-        $this->app->singleton(MarkNotificationRead::class);
-        $this->app->singleton(DismissNotification::class);
-        $this->app->singleton(UndoDismissNotification::class);
-
-        $this->app->singleton(DeepLinkResolver::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void

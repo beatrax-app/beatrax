@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
@@ -17,8 +18,17 @@ final readonly class SystemAlertWriter
 {
     public function __construct(
         private DatabaseManager $db,
-        private Dispatcher $events,
+        private Container $container,
     ) {}
+
+    // Resolved per dispatch, never held: a singleton reaches this class through
+    // its constructor, so a dispatcher captured here is captured for that
+    // singleton's whole life — and Event::fake() replaces the binding, not an
+    // instance already holding one.
+    private function events(): Dispatcher
+    {
+        return $this->container->make(Dispatcher::class);
+    }
 
     // Takes the owner as a plain int rather than a nullable one, so the
     // "system-wide rows never travel" rule is a thing the signature enforces
@@ -42,7 +52,7 @@ final readonly class SystemAlertWriter
             'metadata' => $metadata,
         ]);
 
-        $this->events->dispatch(new EntityMutated(
+        $this->events()->dispatch(new EntityMutated(
             table: 'system_alerts',
             pk: $alert->id,
             userId: $userId,
@@ -91,7 +101,7 @@ final readonly class SystemAlertWriter
             return;
         }
 
-        $this->events->dispatch(new EntityMutated(
+        $this->events()->dispatch(new EntityMutated(
             table: 'system_alerts',
             pk: $alertId,
             userId: $userId,

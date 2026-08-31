@@ -29,19 +29,15 @@ use Modules\Import\Internal\Parsers\Csv\PositionalCsvPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
 use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
-use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Internal\Services\AliasYamlExporter;
-use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\KnownCounterpartyIbanResolver;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
 use Modules\Import\Internal\Services\OwnAccountPrompt;
 use Modules\Import\Internal\Sync\NullImportSyncCapture;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
-use Modules\Import\Public\Actions\CreateMerchantAlias;
-use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
@@ -52,7 +48,6 @@ use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Services\AccountNamer;
-use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -96,7 +91,6 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->bind(AppliesEnrichments::class, ApplyEnrichments::class);
         $this->app->bind(ResolvesKnownCounterpartyIban::class, KnownCounterpartyIbanResolver::class);
 
-        $this->app->singleton(ImportPipeline::class);
         $this->app->singleton(PreviewCache::class);
         $this->app->singleton(OwnAccountPrompt::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
@@ -105,15 +99,11 @@ final class ImportServiceProvider extends ServiceProvider
 
         $this->app->singleton(PatternGeneralizer::class);
         $this->app->singleton(MerchantNameResolver::class);
-        $this->app->singleton(AliasMatchPreviewQuery::class);
-        $this->app->singleton(CreateMerchantAlias::class);
 
         $this->app->singleton(BuildConsolidatedPreviewQuery::class);
 
         $this->app->singleton(LongestCommonPrefix::class);
         $this->app->singleton(AliasYamlExporter::class);
-        $this->app->singleton(AliasYamlImporter::class);
-        $this->app->singleton(MergeMerchantAliases::class);
 
         foreach (self::PAYMENT_TYPE_HINTER_FQNS as $fqn) {
             $this->app->singleton($fqn);

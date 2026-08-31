@@ -46,7 +46,6 @@ use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
-use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
@@ -72,19 +71,15 @@ final class DesktopServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AppMenuBuilder::class);
         $this->app->singleton(WindowFocusState::class);
-        $this->app->singleton(DispatchOsNotification::class);
 
         // Singleton: the rolling crash-counter state lives on the listener and must
         // survive across every ProcessExited event.
         $this->app->singleton(SurfaceWorkerCrashAlert::class);
 
-        $this->app->singleton(WindowCloseBehavior::class);
-
         $this->app->singleton(PendingFileIntent::class);
         $this->app->bind(RemembersPendingFileIntent::class, PendingFileIntent::class);
 
         $this->app->singleton(ContinuePendingFileIntentAfterLogin::class);
-        $this->app->singleton(HandleNativeOpenFile::class);
         $this->app->singleton(NavigateOnNotificationDeepLink::class);
         $this->app->singleton(ApplyCloseWindowChoice::class);
 

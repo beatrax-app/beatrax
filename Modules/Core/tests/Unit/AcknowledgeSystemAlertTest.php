@@ -141,9 +141,11 @@ it('404s when the alertId does not exist at all', function (): void {
         ->toThrow(NotFoundHttpException::class, 'System alert not found.');
 });
 
-it('resolves SystemAlertQuery + AcknowledgeSystemAlert as singletons from the container', function (): void {
-    expect($this->app->make(SystemAlertQuery::class))
-        ->toBe($this->app->make(SystemAlertQuery::class));
-    expect($this->app->make(AcknowledgeSystemAlert::class))
-        ->toBe($this->app->make(AcknowledgeSystemAlert::class));
+it('resolves SystemAlertQuery + AcknowledgeSystemAlert from the container', function (): void {
+    // Resolvable, not identical: a stateless service that dispatches events is
+    // deliberately no longer a singleton, because Event::fake() cannot reach a
+    // dispatcher one has already captured. ASingletonNeverCapturesTheDispatcher
+    // holds that line; this holds the wiring.
+    expect($this->app->make(SystemAlertQuery::class))->toBeInstanceOf(SystemAlertQuery::class)
+        ->and($this->app->make(AcknowledgeSystemAlert::class))->toBeInstanceOf(AcknowledgeSystemAlert::class);
 });

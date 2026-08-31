@@ -9,24 +9,15 @@ use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
-use Modules\Anomaly\Internal\AnomalyEvaluator;
 use Modules\Anomaly\Internal\Console\ReviveAnomalySnoozesCommand;
 use Modules\Anomaly\Internal\Console\SweepAnomalySafetyNetCommand;
-use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\Services\BusAnomalyDetectionDispatcher;
-use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
-use Modules\Anomaly\Public\Actions\AcknowledgeAnomalyAlert;
-use Modules\Anomaly\Public\Actions\DismissAnomalyAlert;
-use Modules\Anomaly\Public\Actions\DismissAnomalyAlertAsExpected;
-use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
-use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 use Modules\Anomaly\Public\Http\Livewire\AnomalySettingsSection;
 use Modules\Anomaly\Public\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
-use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Core\Public\Support\RegistersScheduledCommands;
@@ -40,22 +31,8 @@ final class AnomalyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DispatchesAnomalyDetection::class, BusAnomalyDetectionDispatcher::class);
 
-        $this->app->singleton(AnomalyAlertStateMachine::class);
-
         $this->app->singleton(LargeVsTypicalDetector::class);
         $this->app->singleton(FirstTimeMerchantDetector::class);
-        $this->app->singleton(DuplicateChargeDetector::class);
-        $this->app->singleton(AnomalyEvaluator::class);
-
-        $this->app->singleton(AnomalyAlertQuery::class);
-        $this->app->singleton(AnomalySuppressionRuleQuery::class);
-
-        $this->app->singleton(AcknowledgeAnomalyAlert::class);
-        $this->app->singleton(SnoozeAnomalyAlert::class);
-        $this->app->singleton(DismissAnomalyAlert::class);
-
-        $this->app->singleton(DismissAnomalyAlertAsExpected::class);
-        $this->app->singleton(RemoveAnomalySuppressionRule::class);
     }
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
@@ -71,7 +48,6 @@ final class AnomalyServiceProvider extends ServiceProvider
         $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);
 
         $this->registerNavBadgeComposer();
-
     }
 
     // The per-boot `$cache` collapses repeated sidebar renders in one boot

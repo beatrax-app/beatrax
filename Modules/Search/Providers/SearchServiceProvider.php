@@ -11,19 +11,14 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Search\Internal\Console\ReindexSearchCommand;
 use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
-use Modules\Search\Internal\Services\DidYouMeanSuggester;
-use Modules\Search\Internal\Services\EntityNameSearch;
-use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\PaletteSectionComposer;
 use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Internal\Services\SearchIndexWriter;
-use Modules\Search\Internal\Services\SearchRowMapper;
 use Modules\Search\Internal\Services\SearchTokenFilters;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\FtsHealthCheck;
-use Modules\Search\Public\Services\SearchQuery;
 
 final class SearchServiceProvider extends ServiceProvider
 {
@@ -43,19 +38,9 @@ final class SearchServiceProvider extends ServiceProvider
             PaletteSectionComposer::class,
         );
 
-        $this->app->singleton(FtsCandidateResolver::class);
-
-        $this->app->singleton(SearchRowMapper::class);
-
         $this->app->singleton(SearchTokenFilters::class);
 
-        $this->app->singleton(SearchQuery::class);
-
         $this->app->singleton(QueryParser::class);
-
-        $this->app->singleton(EntityNameSearch::class);
-
-        $this->app->singleton(DidYouMeanSuggester::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

@@ -21,8 +21,6 @@ use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
-use Modules\Receipts\Internal\ReceiptLedgerBridge;
-use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
@@ -54,7 +52,6 @@ final class ReceiptsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ReceiptBodyText::class);
-        $this->app->singleton(ReceiptLedgerBridge::class);
 
         foreach (self::PIPELINE_FQNS as $fqn) {
             $this->app->singleton($fqn);
@@ -66,9 +63,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(RecordReceipt::class);
-        $this->app->singleton(DispatchChainHintsFromReceipt::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
-        $this->app->singleton(ApplyReceiptConflictResolution::class);
         $this->app->singleton(ReceiptConflictQuery::class);
 
         $this->app->singleton(

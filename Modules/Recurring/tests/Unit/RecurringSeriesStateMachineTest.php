@@ -159,8 +159,10 @@ it('refuses a direct Eloquent update that bypasses the state machine — schema 
     expect($fresh->state)->toBe('pending');
 });
 
-it('binds RecurringSeriesStateMachine as a singleton via RecurringServiceProvider', function (): void {
-    $first = $this->app->make(RecurringSeriesStateMachine::class);
-    $second = $this->app->make(RecurringSeriesStateMachine::class);
-    expect($first)->toBe($second);
+it('resolves RecurringSeriesStateMachine from the container', function (): void {
+    // Resolvable, not identical: a stateless service that dispatches events is
+    // deliberately no longer a singleton, because Event::fake() cannot reach a
+    // dispatcher one has already captured. ASingletonNeverCapturesTheDispatcher
+    // holds that line; this holds the wiring.
+    expect($this->app->make(RecurringSeriesStateMachine::class))->toBeInstanceOf(RecurringSeriesStateMachine::class);
 });

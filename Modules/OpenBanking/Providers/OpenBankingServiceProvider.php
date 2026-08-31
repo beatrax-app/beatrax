@@ -26,7 +26,6 @@ use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Internal\Services\OpenBankingSyncRunner;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
 
@@ -41,12 +40,9 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $this->app->singleton(EnableBankingJwtSigner::class);
         $this->app->singleton(EnableBankingHttpClient::class);
         $this->app->singleton(OpenBankingStateRepository::class);
-        $this->app->singleton(RaiseOpenBankingReconsentAlert::class);
-        $this->app->singleton(RaiseOpenBankingNothingImportedAlert::class);
         $this->app->singleton(RemoteSourceAdapter::class, EnableBankingSourceAdapter::class);
         $this->app->singleton(OpenBankingFetchService::class);
         $this->app->singleton(OpenBankingConnectionQuery::class);
-        $this->app->singleton(OpenBankingSyncRunner::class);
         $this->app->singleton(
             LoopbackTlsCertificate::class,
             static fn (): LoopbackTlsCertificate => new LoopbackTlsCertificate(UserDataPathService::appPath('open-banking-tls')),

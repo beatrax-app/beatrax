@@ -18,11 +18,15 @@ use Modules\Reports\Public\Http\Livewire\PinnedReportsRow;
 
 // A binding written as a runtime-built FQCN string is invisible to static
 // analysis, and a typo in one used to be swallowed by a class_exists() guard.
-// These pin that what the provider promises is what the container holds.
+// These pin that the container can still build what the provider names.
+//
+// Buildable, not identical: a stateless service that dispatches events is
+// deliberately not a singleton any more, because Event::fake() cannot reach a
+// dispatcher one already holds. ASingletonNeverCapturesTheDispatcher keeps
+// that invariant; this keeps the wiring honest.
 
-it('registers every Reports service as a shared singleton', function (string $class): void {
-    expect(app()->bound($class))->toBeTrue()
-        ->and(app($class))->toBe(app($class));
+it('builds every Reports service the provider names', function (string $class): void {
+    expect(app($class))->toBeInstanceOf($class);
 })->with([
     ReportAggregator::class,
     TimeBucketGenerator::class,

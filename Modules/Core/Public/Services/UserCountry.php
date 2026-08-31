@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Actions\WriteUserPreference;
@@ -27,8 +28,17 @@ final class UserCountry
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WriteUserPreference $writeUserPreference,
-        private readonly Dispatcher $events,
+        private readonly Container $container,
     ) {}
+
+    // Resolved per dispatch, never held: this service is a singleton for the
+    // cache above, and a dispatcher captured at construction is one
+    // Event::fake() can never reach — the fake replaces the container binding,
+    // not the instance a singleton is already holding.
+    private function events(): Dispatcher
+    {
+        return $this->container->make(Dispatcher::class);
+    }
 
     // An empty string, not null: "no country chosen" is a real state that widens
     // classification to every region, and every caller compares against ''.
@@ -56,7 +66,7 @@ final class UserCountry
         }
 
         $this->db->connection()->transaction(function () use ($userId, $countryCode, $seedsCountryData): void {
-            $this->events->dispatch(new UserCountryChanged($userId, $countryCode, $seedsCountryData));
+            $this->events()->dispatch(new UserCountryChanged($userId, $countryCode, $seedsCountryData));
 
             ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
         });
