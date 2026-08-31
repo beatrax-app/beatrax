@@ -6,16 +6,14 @@ namespace Modules\Position\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Public\Support\LoadsModuleResources;
-use Modules\Position\Public\Services\PositionQuery;
 
 final class PositionServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    public function register(): void
-    {
-        $this->app->singleton(PositionQuery::class);
-    }
+    // Nothing to bind: this module owns no services the container has to be
+    // told about, and its views and translations load in boot() like the rest.
+    public function register(): void {}
 
     public function boot(): void
     {

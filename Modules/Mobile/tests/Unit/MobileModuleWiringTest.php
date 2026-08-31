@@ -90,13 +90,13 @@ it('forward-registers every future Internal/Livewire/command FQCN in MobileServi
     expect($provider)->not->toContain('singletonIfExists');
     expect($provider)->toContain("class_exists('Native\\Mobile\\Facades\\SecureStorage')");
 
+    // LanSyncClient, MobileSyncTriggerService, InitialSyncPuller and
+    // QrScanBridge left this roster when they stopped being singletons: they
+    // dispatch, so a captured dispatcher would put them beyond Event::fake().
+    // Autowiring builds them, and a name the provider need not say cannot rot.
     foreach ([
-        'LanSyncClient',
         'NetworkPolicyResolver',
-        'MobileSyncTriggerService',
-        'InitialSyncPuller',
         'BiometricUnlockBridge',
-        'QrScanBridge',
         'MobileFirstLaunchBootstrap',
         'MobilePullCommand',
         'MobileLockScreen',

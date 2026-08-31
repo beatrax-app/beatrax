@@ -26,10 +26,8 @@ use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Categorization\Public\Http\Livewire\CategorizationProvenancePanel;
 use Modules\Categorization\Public\Http\Livewire\InlineCategoryPicker;
-use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
-use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -42,16 +40,12 @@ final class CategorizationServiceProvider extends ServiceProvider
     {
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
         $this->app->bind(AppliesAutoCategory::class, ApplyAutoCategoryStage::class);
-        $this->app->singleton(UncategorizedTriageQuery::class);
         $this->app->scoped(CategoryOptionsQuery::class);
         $this->app->singleton(RuleEvaluator::class);
-        $this->app->singleton(ApplyAutoCategoryStage::class);
-        $this->app->singleton(CategorizationRuleQuery::class);
         $this->app->singleton(MerchantMemoryQuery::class);
         $this->app->singleton(CreateCategorizationRule::class);
         $this->app->singleton(UpdateCategorizationRule::class);
         $this->app->singleton(DeleteCategorizationRule::class);
-        $this->app->singleton(MerchantMemoryWriter::class);
         $this->app->singleton(DefaultCategorizationRuleSeeder::class);
         $this->app->singleton(DeactivateRulesOnReferentDelete::class);
     }

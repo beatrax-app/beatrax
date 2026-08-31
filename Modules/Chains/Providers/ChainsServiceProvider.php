@@ -12,21 +12,14 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Chains\Internal\CardStatementStateMachine;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
-use Modules\Chains\Internal\ChainTreeWalker;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainsIndex;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
 use Modules\Chains\Internal\PaypalFundingSignatureKey;
-use Modules\Chains\Internal\Presentation\ChainLinkRowFactory;
-use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
-use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Services\BusChainResolutionDispatcher;
 use Modules\Chains\Internal\Services\CardStatementUpserter;
-use Modules\Chains\Public\Actions\ConfirmChainLink;
-use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Chains\Public\Http\Livewire\ChainDrawer;
@@ -45,23 +38,13 @@ final class ChainsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(CardStatementStateMachine::class);
-        $this->app->singleton(ChainLinkInsertHelper::class);
         $this->app->singleton(PaypalFundingSignatureKey::class);
-        $this->app->singleton(IcsSettlementResolver::class);
-        $this->app->singleton(PaypalFundingResolver::class);
         $this->app->singleton(ResolveChainLinksJob::class);
         $this->app->singleton(DispatchesChainResolution::class, BusChainResolutionDispatcher::class);
         $this->app->bind(UpsertsCardStatements::class, CardStatementUpserter::class);
         $this->app->singleton(CardStatementUpserter::class);
 
-        $this->app->singleton(CreateChainLinkFromHint::class);
-
-        $this->app->singleton(ChainTreeWalker::class);
-        $this->app->singleton(ChainLinkRowFactory::class);
-        $this->app->singleton(ChainLinkQuery::class);
         $this->app->singleton(CardStatementQuery::class);
-        $this->app->singleton(ConfirmChainLink::class);
-        $this->app->singleton(RejectChainLink::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void

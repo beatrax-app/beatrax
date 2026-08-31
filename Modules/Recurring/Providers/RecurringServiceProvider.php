@@ -26,20 +26,12 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Services\BusRecurringDetectionDispatcher;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
-use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
-use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
-use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
-use Modules\Recurring\Public\Actions\RejectRecurringSeries;
-use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
-use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
-use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
-use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Psr\Log\LoggerInterface;
 
 final class RecurringServiceProvider extends ServiceProvider
@@ -49,11 +41,8 @@ final class RecurringServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->singleton(RecurringSeriesStateMachine::class);
         $this->app->singleton(CadenceInferrer::class);
         $this->app->singleton(ClusterKeyComposer::class);
-        $this->app->singleton(ExpenseSeriesDetector::class);
-        $this->app->singleton(IncomeSeriesDetector::class);
         $this->app->singleton(DetectRecurringSeriesJob::class);
 
         $this->app->tag([
@@ -84,15 +73,7 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->app->singleton(RecurringSeriesProjector::class);
         $this->app->singleton(RecurringOccurrenceQuery::class);
         $this->app->singleton(RecurringSeriesQuery::class);
-        $this->app->singleton(TransactionSeriesMembershipQuery::class);
         $this->app->singleton(FixedPaymentsViewQuery::class);
-        $this->app->singleton(ApproveRecurringSeries::class);
-        $this->app->singleton(RejectRecurringSeries::class);
-        $this->app->singleton(SnoozeRecurringSeries::class);
-        $this->app->singleton(EditRecurringSeriesName::class);
-        $this->app->singleton(EditRecurringSeriesVarianceTolerance::class);
-        $this->app->singleton(SetDriftThresholdForSeries::class);
-        $this->app->singleton(UnRejectRecurringSeries::class);
         $this->app->singleton(FixedPaymentsCard::class);
 
         $this->app->singleton(DispatchesRecurringDetection::class, BusRecurringDetectionDispatcher::class);
