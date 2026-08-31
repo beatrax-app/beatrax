@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
+use Modules\Import\Internal\Enums\ImportType;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
+use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\ImportRun;
 use Tests\Helpers\UploadIsolation;
 
@@ -80,68 +83,66 @@ it('redirects to the preview page after a successful upload', function (): void 
     expect(ImportRun::query()->first()?->status)->toBe('previewed');
 });
 
-it('opens the wizard with ASN as the default issuer and asn-csv as the default format', function (): void {
+it('opens the wizard on the CSV import type with asn-csv as the default format', function (): void {
     Livewire::test(UploadWizard::class)
-        ->assertSet('issuer', 'asn')
-        ->assertSet('sourceFormat', 'asn-csv');
+        ->assertSet('importType', ImportType::Csv->value)
+        ->assertSet('sourceFormat', CsvPresetRegistry::ASN);
 })->group('phase-3');
 
-it('returns only the PDF format when the issuer is ICS', function (): void {
-    $component = Livewire::test(UploadWizard::class)->set('issuer', 'ics');
+it('returns only the PDF format under the card-statement import type', function (): void {
+    $component = Livewire::test(UploadWizard::class)->set('importType', ImportType::Pdf->value);
 
     /** @var UploadWizard $instance */
     $instance = $component->instance();
     $available = $instance->availableFormats();
 
     expect($available)->toBe([
-        ['value' => 'ics-pdf', 'label' => 'PDF'],
+        ['value' => SourceFormat::IcsPdf->value, 'label' => 'PDF'],
     ]);
 })->group('phase-3');
 
-it('returns the three ASN formats when the issuer is ASN', function (): void {
-    $component = Livewire::test(UploadWizard::class)->set('issuer', 'asn');
+it('returns only the CAMT.053 format under the CAMT.053 import type', function (): void {
+    $component = Livewire::test(UploadWizard::class)->set('importType', ImportType::Camt053->value);
 
     /** @var UploadWizard $instance */
     $instance = $component->instance();
     $available = $instance->availableFormats();
 
     expect($available)->toBe([
-        ['value' => 'asn-csv', 'label' => 'CSV'],
-        ['value' => 'camt053', 'label' => 'CAMT.053 (XML)'],
-        ['value' => 'mt940', 'label' => 'MT940'],
+        ['value' => SourceFormat::Camt053->value, 'label' => 'CAMT.053 (XML)'],
     ]);
 })->group('phase-3');
 
-it('resets sourceFormat to the first leaf when the issuer changes', function (): void {
+it('resets sourceFormat to the first leaf when the import type changes', function (): void {
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'ics')
-        ->assertSet('sourceFormat', 'ics-pdf')
-        ->set('issuer', 'asn')
-        ->assertSet('sourceFormat', 'asn-csv');
+        ->set('importType', ImportType::Pdf->value)
+        ->assertSet('sourceFormat', SourceFormat::IcsPdf->value)
+        ->set('importType', ImportType::Csv->value)
+        ->assertSet('sourceFormat', CsvPresetRegistry::ASN);
 })->group('phase-3');
 
-it('lets the user pick ICS issuer and ics-pdf format and submit', function (): void {
+it('lets the user pick the PDF import type and ics-pdf format and submit', function (): void {
     $pdfPath = base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf');
     $contents = file_get_contents($pdfPath);
     $file = UploadedFile::fake()->createWithContent('ics-statement.pdf', $contents !== false ? $contents : '');
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'ics')
-        ->set('sourceFormat', 'ics-pdf')
+        ->set('importType', ImportType::Pdf->value)
+        ->set('sourceFormat', SourceFormat::IcsPdf->value)
         ->set('file', $file)
         ->call('submit')
         ->assertHasNoErrors()
         ->assertRedirect();
 
-    expect(ImportRun::query()->where('source_format', 'ics-pdf')->count())->toBe(1);
+    expect(ImportRun::query()->where('source_format', SourceFormat::IcsPdf->value)->count())->toBe(1);
 })->group('phase-3');
 
 it('renders the two-step picker on the upload page', function (): void {
     $response = $this->get('/imports/new');
 
     $response->assertOk();
-    $response->assertSee('Source', false);
+    $response->assertSee('Import type', false);
     $response->assertSee('Format', false);
-    $response->assertSee('Drop in a bank, card, or PayPal export, or an email receipt file.', false);
-    $response->assertSee('wire:model.live="issuer"', false);
+    $response->assertSee('Drop in a CSV, CAMT.053, MT940 or PDF statement, or an email receipt file.', false);
+    $response->assertSee('wire:model.live="importType"', false);
 })->group('phase-3');

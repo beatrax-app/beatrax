@@ -23,5 +23,6 @@ return [
         'body' => 'Atkopšanas kodi ir vienīgais veids, kā atgriezties savā kontā, ja aizmirstat paroli.',
         'warning' => 'Tie tiek glabāti jaucējkoda veidā, tāpēc tos nevar parādīt atkārtoti. Jauns komplekts nekavējoties atceļ iepriekšējo.',
         'regenerate' => 'Izveidot jaunus kodus',
+        'regenerate_confirm' => 'Vai izveidot jaunu atkopšanas kodu komplektu? Pašreizējais komplekts pārstāj darboties brīdī, kad tiek izveidots jaunais, un to vairs nevar parādīt — izdrukāta vai pierakstīta kopija kļūst nederīga. Saglabājiet jaunos kodus, pirms pametat šo lapu.',
     ],
 ];

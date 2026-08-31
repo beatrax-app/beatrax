@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 
 function devOverviewUser(bool $isDeveloper, string $username = 'devov-fixture'): User
@@ -118,13 +120,13 @@ it('reads worker heartbeat from cache and renders the relative timestamp (or NOT
     $cache->put(
         WriteWorkerHeartbeat::CACHE_KEY,
         Carbon::now()->subSeconds(7)->getTimestamp(),
-        WriteWorkerHeartbeat::TTL_SECONDS,
+        WriteWorkerHeartbeat::ttlSeconds(),
     );
     $response = $this->actingAs($user)->get('/dev');
     $response->assertOk();
     $html = (string) $response->getContent();
-    expect($html)->toContain('ttl 60s');
-    expect(preg_match('/\d+s\s+ago/', $html))->toBe(1, 'Expected "Ns ago" relative-time label for a fresh heartbeat.');
+    expect($html)->toContain('ttl 60 s');
+    expect(preg_match('/\d+\s*s\s+ago/', $html))->toBe(1, 'Expected "N s ago" relative-time label for a fresh heartbeat.');
 });
 
 it('renders queue count tiles (pending / failed / batches) sourced from the framework queue tables', function (): void {
@@ -254,6 +256,27 @@ it('renders Open alerts card from the unacknowledged system_alerts feed', functi
 
     expect($html)->toContain('Open alerts');
     expect($html)->toContain('Backup is overdue by 50h');
+});
+
+// The card is the second reader of the column the banner reads, and it was the
+// only one still printing whatever language the writer ran in.
+it('resolves a stored line on the alerts card instead of printing its envelope', function (): void {
+    $user = devOverviewUser(true, 'devov-stored-copy');
+    $walLine = CopyLine::of('core::alerts.messages.wal_mode_missing', ['mode' => 'delete']);
+
+    SystemAlert::query()->create([
+        'user_id' => null,
+        'kind' => 'wal_mode_missing',
+        'severity' => 'warning',
+        'message' => $walLine->sentence(),
+        'metadata' => StoredCopy::inParams($walLine) + ['current_mode' => 'delete'],
+    ]);
+
+    $html = (string) $this->actingAs($user)->get('/dev')->getContent();
+
+    expect($html)->toContain('SQLite is not in WAL mode')
+        ->and($html)->not->toContain('@copy')
+        ->and($html)->not->toContain('&lt;code');
 });
 
 it('renders the empty-state copy when no recent runs exist for the current developer', function (): void {

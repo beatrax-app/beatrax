@@ -15,12 +15,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final readonly class OpLogValueProjector
 {
-    private const string DEFAULT_STRATEGY = 'lww';
-
-    private const string STRATEGY_G_COUNTER = 'g_counter';
-
-    private const string STRATEGY_OR_SET = 'or_set';
-
     /** @var array<string, MergeStrategyInterface> */
     private array $strategies;
 
@@ -31,9 +25,9 @@ final readonly class OpLogValueProjector
         private ?Session $session = null,
     ) {
         $this->strategies = [
-            self::DEFAULT_STRATEGY => new LwwPerFieldStrategy,
-            self::STRATEGY_G_COUNTER => new GCounterStrategy,
-            self::STRATEGY_OR_SET => new OrSetStrategy,
+            MergeStrategy::Lww->value => new LwwPerFieldStrategy,
+            MergeStrategy::GCounter->value => new GCounterStrategy,
+            MergeStrategy::OrSet->value => new OrSetStrategy,
         ];
     }
 
@@ -59,8 +53,7 @@ final readonly class OpLogValueProjector
     // itself only ever saw plaintext.
     public function resolveStrategy(string $table, string $field): MergeStrategyInterface
     {
-        return $this->strategies[$this->rules->strategyFor($table, $field)]
-            ?? $this->strategies[self::DEFAULT_STRATEGY];
+        return $this->strategies[$this->rules->strategyFor($table, $field)->value];
     }
 
     // Re-encrypts a plaintext sensitive-field value for the PROJECTION

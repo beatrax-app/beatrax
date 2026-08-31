@@ -16,15 +16,15 @@ use Modules\Ledger\Public\Enums\TransactionType;
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#4-transaction-type-classification-classifytransactiontype
  */
-final class ClassifyTransactionType
+final readonly class ClassifyTransactionType
 {
-    private const PAYPAL_FORMAT = 'paypal-csv';
+    private const string PAYPAL_FORMAT = 'paypal-csv';
 
     // Types NormalizeStage already settled, plus the transfer legs that are
     // excluded from the amount-sign income default.
-    private const TERMINAL_TYPES = [TransactionType::Refund, TransactionType::Fee, TransactionType::Adjustment];
+    private const array TERMINAL_TYPES = [TransactionType::Refund, TransactionType::Fee, TransactionType::Adjustment];
 
-    private const NON_INCOME_TYPES = [
+    private const array NON_INCOME_TYPES = [
         TransactionType::TransferIn,
         TransactionType::TransferOut,
         TransactionType::Refund,
@@ -32,9 +32,9 @@ final class ClassifyTransactionType
     ];
 
     public function __construct(
-        private readonly PaypalCsvEventTypeMap $eventTypes,
-        private readonly DatabaseManager $db,
-        private readonly ResolvesKnownCounterpartyIban $aliasResolver,
+        private PaypalCsvEventTypeMap $eventTypes,
+        private DatabaseManager $db,
+        private ResolvesKnownCounterpartyIban $aliasResolver,
     ) {}
 
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction
@@ -92,13 +92,13 @@ final class ClassifyTransactionType
             return null;
         }
 
-        return $this->mapPaypalEvent($parentEventType, $language);
+        return $this->mapPaypalEvent($parentEventType, $language)?->value;
     }
 
     // An unmapped event type is user data, not a bug — the adapter already
     // raised at parse time for the genuinely unmappable — so it falls
     // through to null. A missing map entry is ours, and re-throws.
-    private function mapPaypalEvent(string $parentEventType, string $language): ?string
+    private function mapPaypalEvent(string $parentEventType, string $language): ?TransactionType
     {
         try {
             return $this->eventTypes->transactionType($parentEventType, $language);
@@ -128,7 +128,7 @@ final class ClassifyTransactionType
             return null;
         }
 
-        $firstEvent = $events[array_key_first($events)] ?? null;
+        $firstEvent = array_first($events) ?? null;
         if (! is_array($firstEvent) || ! isset($firstEvent['type']) || ! is_string($firstEvent['type']) || $firstEvent['type'] === '') {
             return null;
         }

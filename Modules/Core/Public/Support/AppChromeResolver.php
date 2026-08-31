@@ -16,16 +16,16 @@ use Throwable;
 // tag and head. Guests and unset columns fall to Theme::DEFAULT; "system"
 // consults the desktop OsThemeSignal when bound and otherwise defers to the
 // pre-paint script. Replaces the @php block the four layouts hand-rolled.
-final class AppChromeResolver
+final readonly class AppChromeResolver
 {
     // Written by the client from matchMedia and read here on the next
     // request, so both sides decide from the same value.
-    public const SCHEME_COOKIE = 'beatrax_scheme';
+    public const string SCHEME_COOKIE = 'beatrax_scheme';
 
     public function __construct(
-        private readonly CurrentUser $currentUser,
-        private readonly Translator $translator,
-        private readonly Container $container,
+        private CurrentUser $currentUser,
+        private Translator $translator,
+        private Container $container,
     ) {}
 
     // Null until the client has reported once; the pre-paint script covers

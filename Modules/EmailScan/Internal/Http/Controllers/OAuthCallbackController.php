@@ -14,6 +14,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
@@ -27,24 +31,26 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class OAuthCallbackController
+final readonly class OAuthCallbackController
 {
     public function __construct(
-        private readonly GoogleOAuthProvider $googleOAuth,
-        private readonly MicrosoftOAuthProvider $microsoftOAuth,
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly OAuthStateRepository $oauthState,
-        private readonly CurrentUser $currentUser,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Redirector $redirector,
-        private readonly LoopbackRedirectUri $loopback,
-        private readonly SystemAlertWriter $alerts,
+        private GoogleOAuthProvider $googleOAuth,
+        private MicrosoftOAuthProvider $microsoftOAuth,
+        private OAuthSecretsRepository $secrets,
+        private OAuthStateRepository $oauthState,
+        private CurrentUser $currentUser,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Redirector $redirector,
+        private LoopbackRedirectUri $loopback,
+        private SystemAlertWriter $alerts,
+        private InboxScanStateMachine $scanState,
     ) {}
 
-    public function __invoke(Request $request, string $provider): RedirectResponse
+    public function __invoke(Request $request, string $provider, LoggerInterface $logger): RedirectResponse
     {
         $oauth = $this->resolveProvider($provider);
 
@@ -59,12 +65,12 @@ final class OAuthCallbackController
         $userId = $this->currentUser->user()->id;
         $existingInboxId = $this->consumeStateOrFail($request, $provider, $userId);
 
-        $token = $this->exchangeToken($request, $oauth, $provider);
+        $token = $this->exchangeToken($request, $oauth, $provider, $logger);
         if (is_string($token)) {
             return $this->failRedirect($token);
         }
 
-        return $this->completeConnection($provider, $userId, $existingInboxId, $token);
+        return $this->completeConnection($provider, $userId, $existingInboxId, $token, $logger);
     }
 
     private function resolveProvider(string $provider): GoogleOAuthProvider|MicrosoftOAuthProvider
@@ -105,15 +111,23 @@ final class OAuthCallbackController
         return $existingInboxId;
     }
 
+    // The refusals below arrive as a developer's sentence naming a provider
+    // class and, for the secrets write, the statement it failed on. The reader
+    // is standing on a settings screen in their own language, so what they are
+    // told is chosen here and the sentence goes to the log.
+    /**
+     * @return AccessTokenWithEmail|string the token, or the line the reader is shown
+     */
     private function exchangeToken(
         Request $request,
         GoogleOAuthProvider|MicrosoftOAuthProvider $oauth,
         string $provider,
+        LoggerInterface $logger,
     ): AccessTokenWithEmail|string {
         $codeRaw = $request->query('code');
         $code = is_string($codeRaw) ? $codeRaw : '';
         if ($code === '') {
-            return 'OAuth callback returned no authorization code.';
+            return Lang::get('email-scan::inboxes.oauth_no_code');
         }
 
         $pkceVerifier = $this->oauthState->consumePkceVerifier($provider) ?? '';
@@ -121,7 +135,18 @@ final class OAuthCallbackController
         try {
             return $oauth->exchangeAuthorizationCode($code, $this->loopback->forProvider($provider), $pkceVerifier);
         } catch (InvalidGrantException|OAuthExchangeFailed $e) {
-            return $e->getMessage();
+            // The provider refusing the grant and the exchange itself failing
+            // are different causes with the same shape: a line for the log and
+            // a line for the reader, neither of them the exception's own.
+            $refused = $e instanceof InvalidGrantException;
+
+            $logger->warning($refused
+                ? 'OAuthCallbackController: the authorization grant was refused.'
+                : 'OAuthCallbackController: the token exchange failed.', SafeExceptionContext::describe($e));
+
+            return Lang::get($refused
+                ? 'email-scan::inboxes.oauth_grant_refused'
+                : 'email-scan::inboxes.oauth_exchange_failed');
         }
     }
 
@@ -130,13 +155,15 @@ final class OAuthCallbackController
         int $userId,
         int $existingInboxId,
         AccessTokenWithEmail $token,
+        LoggerInterface $logger,
     ): RedirectResponse {
         $refreshToken = $token->refreshToken;
 
-        // A brand-new inbox with no refresh token would be marked
-        // needs_reauth by the first IncrementalScanJob. For Google this
-        // usually means the consent screen is still in "Testing".
-        if ($existingInboxId === 0 && ($refreshToken === null || $refreshToken === '')) {
+        // An inbox with no refresh token cannot scan: the first tick marks it
+        // needs_reauth. A reconnect is refused for the same reason — writing
+        // only the access token would report success and change nothing once
+        // that token expires an hour later.
+        if ($refreshToken === null || $refreshToken === '') {
             return $this->failRedirect($this->missingRefreshTokenMessage($provider));
         }
 
@@ -152,21 +179,36 @@ final class OAuthCallbackController
                 $this->rollbackInbox($inboxId, $userId);
             }
 
-            return $this->failRedirect($e->getMessage());
+            $logger->error('OAuthCallbackController: the credential row was not written.', SafeExceptionContext::describe($e));
+
+            return $this->failRedirect(Lang::get('email-scan::inboxes.oauth_not_saved'));
         }
 
         // Stops SystemAlertsBanner surfacing a Reconnect prompt the moment
         // the dance completes.
         $this->acknowledgeReconsentAlerts($userId, $inboxId);
+        $this->clearNeedsReauth($inboxId);
 
         return $this->connectedRedirect($existingInboxId, $inboxId);
     }
 
+    // The desktop line explains the refusal by an access token that expires
+    // within the hour, which reads as a promise of hourly scanning. Nothing on
+    // a phone scans on any cadence, so that half of the sentence is dropped
+    // there and the step that fixes the refusal is kept.
     private function missingRefreshTokenMessage(string $provider): string
     {
-        return $provider === MailProvider::Gmail->value
-            ? 'Google did not return a refresh token. Publish your OAuth consent screen to "In production" and try again.'
-            : 'The provider did not return a refresh token. Reconnect and grant offline access when prompted.';
+        $isGoogle = $provider === MailProvider::Gmail->value;
+
+        if (UserDataPathService::platform() !== null) {
+            return Lang::get($isGoogle
+                ? 'email-scan::inboxes.oauth_no_offline_access_google_phone'
+                : 'email-scan::inboxes.oauth_no_offline_access_phone');
+        }
+
+        return Lang::get($isGoogle
+            ? 'email-scan::inboxes.oauth_no_offline_access_google'
+            : 'email-scan::inboxes.oauth_no_offline_access');
     }
 
     private function persistInbox(int $existingInboxId, int $userId, string $provider, string $email, string $now): int
@@ -175,7 +217,6 @@ final class OAuthCallbackController
             $existingInboxId, $userId, $provider, $email, $now,
         ): int {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
 
             if ($existingInboxId > 0) {
                 $affected = $connection->table('inboxes')
@@ -217,23 +258,21 @@ final class OAuthCallbackController
         });
     }
 
+    // Guarded in completeConnection: refreshToken is non-null and non-empty on
+    // both paths by the time this runs.
     private function writeSecrets(int $existingInboxId, int $inboxId, string $provider, AccessTokenWithEmail $token): void
     {
         if ($existingInboxId > 0) {
-            if ($token->refreshToken !== null) {
-                $this->secrets->rotateRefreshToken(
-                    inboxId: $inboxId,
-                    newRefreshToken: $token->refreshToken,
-                    newAccessToken: $token->accessToken,
-                    expiresAt: $token->expiresAt,
-                );
-            }
+            $this->secrets->rotateRefreshToken(
+                inboxId: $inboxId,
+                newRefreshToken: (string) $token->refreshToken,
+                newAccessToken: $token->accessToken,
+                expiresAt: $token->expiresAt,
+            );
 
             return;
         }
 
-        // Guarded in completeConnection: refreshToken is non-null and
-        // non-empty on the new-inbox path.
         $this->secrets->saveInboxRefreshToken(
             inboxId: $inboxId,
             provider: $provider,
@@ -244,13 +283,29 @@ final class OAuthCallbackController
         );
     }
 
+    // The whole point of the Reconnect button: needs_reauth is terminal for
+    // both scan jobs, so a rotated secret on a row still marked needs_reauth
+    // is a working grant on a dead inbox. Only that status is lifted — a row
+    // mid-backfill keeps its own lifecycle.
+    private function clearNeedsReauth(int $inboxId): void
+    {
+        $current = $this->db->connection()
+            ->table('inbox_scan_state')
+            ->where('inbox_id', $inboxId)
+            ->where('folder', 'INBOX')
+            ->value('status');
+
+        if ($current === InboxScanStatus::NeedsReauth->value) {
+            $this->scanState->applyStatus($inboxId, InboxScanStatus::Idle->value);
+        }
+    }
+
     // So a failed secret write does not leave a ghost inbox visible on
     // /inboxes with no credentials behind it.
     private function rollbackInbox(int $inboxId, int $userId): void
     {
         $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
             $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
                 ->where('user_id', $userId)
@@ -271,7 +326,7 @@ final class OAuthCallbackController
         if ($existingInboxId > 0) {
             // Defence in depth: a future refactor that moves alert resolution
             // off this callback still sees the signal land at /inboxes.
-            $redirect = $redirect->with('oauth_reconnect_acknowledged', $inboxId);
+            return $redirect->with('oauth_reconnect_acknowledged', $inboxId);
         }
 
         return $redirect;

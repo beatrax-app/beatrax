@@ -10,6 +10,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Anomaly\Internal\AnomalyEvaluator;
+use Modules\Anomaly\Internal\Console\ReviveAnomalySnoozesCommand;
+use Modules\Anomaly\Internal\Console\SweepAnomalySafetyNetCommand;
 use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
@@ -27,10 +29,12 @@ use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 
 final class AnomalyServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -57,6 +61,11 @@ final class AnomalyServiceProvider extends ServiceProvider
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
         $this->loadModuleResources('anomaly');
+
+        $this->registerScheduledCommands([
+            ReviveAnomalySnoozesCommand::class,
+            SweepAnomalySafetyNetCommand::class,
+        ]);
 
         $livewire->component('anomaly.dashboard-anomaly-badge', DashboardAnomalyBadge::class);
         $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);

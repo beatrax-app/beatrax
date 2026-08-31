@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Public\Services;
 
 use Modules\Core\Models\User;
+use Modules\DriftAlerts\Internal\CadenceYearRate;
 use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -50,7 +51,15 @@ final readonly class CancellationImpactQuery
     {
         $currency = $series->monthlyEquivalent->currency();
         $monthlyMinor = abs($series->monthlyEquivalent->toMinor());
-        $annualMinor = $monthlyMinor * 12;
+
+        // The charge at the rate it is billed at. Multiplying the rounded
+        // monthly equivalent back up advertised "save EUR 109.92/yr" for a
+        // EUR 109.90 annual plan. An irregular series has no billing rate, so
+        // there the monthly equivalent is all there is.
+        $perYear = CadenceYearRate::forCadence($series->cadence);
+        $annualMinor = $perYear > 0
+            ? abs($series->latestAmount->toMinor()) * $perYear
+            : $monthlyMinor * 12;
 
         return new CancellationImpactDto(
             recurringSeriesId: $seriesId,

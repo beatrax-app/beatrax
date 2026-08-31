@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Category name cannot be empty.',
         'name_duplicate' => 'A category with this name already exists.',
+        'category_not_saved' => 'That category could not be saved. Try again.',
+        'tag_refused' => 'That tag could not be saved. Close the picker and try again.',
     ],
 ];

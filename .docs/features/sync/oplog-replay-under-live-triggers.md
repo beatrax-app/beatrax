@@ -51,8 +51,10 @@ Two columns are special:
 - `user_id` is never in the field set. The replayer injects it from the scope it was called
   with, which is also what prevents a replayed op from writing into another user's rows.
 - The primary key is carried as an explicit `id` field op, and it is what makes replay
-  idempotent. The insert goes through `insertOrIgnore`, so replaying the same creation ops
-  twice leaves one row.
+  idempotent. The insert is a plain `insert()` whose duplicate-key failure is classified and
+  swallowed by `CreateRowInsertFailure::AlreadyPresent`, so replaying the same creation ops
+  twice leaves one row. It used to be `insertOrIgnore`, which also swallowed the NOT NULL
+  violation a partial field set produces — no row, no quarantine, no log line.
 
 That last point used to work differently. Before the 2026-07-06 redesign,
 `categorization_rules` had flat `field` / `match` / `value` / `category_id` columns and a

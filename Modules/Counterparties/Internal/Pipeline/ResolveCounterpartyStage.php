@@ -11,10 +11,10 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 // Runs between ApplyAutoCategoryStage::apply() and the post-commit
 // FingerprintStage::classify() boundary inside ImportPipeline::preview().
-final class ResolveCounterpartyStage implements ResolvesCounterparties
+final readonly class ResolveCounterpartyStage implements ResolvesCounterparties
 {
     public function __construct(
-        private readonly CounterpartyResolver $resolver,
+        private CounterpartyResolver $resolver,
     ) {}
 
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction

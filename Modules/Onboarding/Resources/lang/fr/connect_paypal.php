@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Ton compte PayPal',
     'h1' => 'Connecte ton compte PayPal',
 
-    'lede_html' => 'Dépose ton export PayPal du détail des transactions — appelé <em lang="nl">Rapport Transactiegegevens</em> dans un compte PayPal néerlandais. Le rapport de solde (<span lang="nl">Saldorapport</span>) ne convient pas — il nous faut les données événement par événement.',
+    'lede_html' => 'Dépose ton export d’activité PayPal — une ligne par transaction, pas le récapitulatif de solde. PayPal nomme ses rapports dans la langue de ton compte, et pour l’instant nous lisons la paire néerlandaise : <em lang="nl">Rapport Transactiegegevens</em>, pas <span lang="nl">Saldorapport</span>. Si le tien sort dans une autre langue, bascule PayPal en néerlandais avant de le télécharger.',
 
     'format_group_aria' => 'PayPal n\'exporte qu\'en CSV',
     'got_it_as' => 'Reçu au format :',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Télécharger en CSV',
     ],
 
-    'drop_lead' => 'Dépose ici ton CSV du détail des transactions',
+    'drop_lead' => 'Dépose ici ton export d’activité',
     'browse_file' => 'ou parcours tes fichiers',
 
     'file_ready' => '· ✓ prêt',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Continuer →',
 
     'errors' => [
-        'required' => 'Dépose d\'abord ton CSV PayPal Rapport Transactiegegevens dans la zone.',
-        'max' => 'Ce fichier est trop volumineux. Les exports PayPal Rapport Transactiegegevens font normalement bien moins de 10 Mo.',
-        'extensions' => 'Ce fichier ne ressemble pas à un CSV PayPal. Télécharge Rapport Transactiegegevens (et non le rapport de solde Saldorapport) en CSV depuis PayPal.',
+        'required' => 'Dépose d’abord ton export d’activité PayPal dans la zone.',
+        'max' => 'Ce fichier est trop volumineux. Un export d’activité PayPal fait normalement bien moins de 10 Mo.',
+        'extensions' => 'Ce fichier ne ressemble pas à un CSV PayPal. Télécharge l’export d’activité — une ligne par transaction, pas le récapitulatif de solde — en CSV.',
         'unreadable' => 'Impossible de lire ce fichier. L\'erreur complète est dans /dev/logs.',
     ],
 ];

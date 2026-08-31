@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Lo schema è obbligatorio.',
         'name_required' => 'Il nome è obbligatorio.',
+        'browser_refused' => "Non è stato possibile aprire il tuo browser, quindi non è stato inviato nulla e nulla ha lasciato questo dispositivo. Riprova, oppure copia tu stesso l'anteprima YAML qui sopra in una pull request.",
     ],
 ];

@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Izvezi PDF',
     'export_pdf_aria' => 'Izvezi PDF',
     'export_pdf_title' => 'Preuzmi beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Odbaci',
 
     'country_prompt_heading' => 'U kojoj državi podnosiš poresku prijavu?',
     'country_prompt_body' => 'Ovo možeš da promeniš bilo kada u Podešavanja → :section.',

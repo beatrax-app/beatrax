@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'seria',
 
+    'template' => [
+        'cancel' => 'Anulowanie: :name',
+        'change_amount' => 'Zmiana kwoty: :name',
+    ],
+
     'summary' => [
         'cancel' => 'Anulowanie: :name',
         'series_fallback' => 'seria #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Nazwa scenariusza zmieniona.',
         'mutation_added' => 'Zmiana dodana.',
         'mutation_updated' => 'Zmiana zaktualizowana.',
-        'mutation_removed' => 'Zmiana usunięta. Cofnij',
+        'mutation_removed' => 'Zmiana usunięta.',
     ],
 
     'errors' => [
         'name_empty' => 'Nazwa scenariusza nie może być pusta.',
         'name_too_long' => 'Nazwa scenariusza może mieć najwyżej :max znak.|Nazwa scenariusza może mieć najwyżej :max znaki.|Nazwa scenariusza może mieć najwyżej :max znaków.',
         'name_taken' => 'Scenariusz o tej nazwie już istnieje.',
+        'date_out_of_range' => 'Ta data wykracza poza każdy horyzont prognozy — od dziś do :days dnia naprzód — więc scenariusz niczego by nie zmienił.|Ta data wykracza poza każdy horyzont prognozy — od dziś do :days dni naprzód — więc scenariusz niczego by nie zmienił.|Ta data wykracza poza każdy horyzont prognozy — od dziś do :days dni naprzód — więc scenariusz niczego by nie zmienił.',
         'pick_kind_first' => 'Najpierw wybierz rodzaj zmiany.',
         'amount_positive' => 'Kwota musi być liczbą dodatnią.',
+        'scenario_gone' => 'Tego scenariusza już nie ma — został usunięty gdzie indziej. Wybierz inny scenariusz albo utwórz nowy.',
+        'mutation_gone' => 'Tej zmiany już nie ma — została usunięta gdzie indziej. Zamknij edytor i dodaj ją ponownie, jeśli nadal jej chcesz.',
     ],
 ];

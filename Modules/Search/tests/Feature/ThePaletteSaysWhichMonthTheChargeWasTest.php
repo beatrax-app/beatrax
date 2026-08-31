@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\SearchQuery;
 
@@ -44,7 +45,7 @@ it('carries the date that tells one month\'s charge from the next', function ():
     /** @var SearchQuery $search */
     $search = $this->app->make(SearchQuery::class);
 
-    $hits = $search->palette($this->user, 'Vattenfall');
+    $hits = $search->palette($this->user, 'Vattenfall')['hits'];
 
     expect($hits)->toHaveCount(3);
 
@@ -68,14 +69,14 @@ it('writes that date the way the rest of the app writes dates', function (): voi
     /** @var SearchQuery $search */
     $search = $this->app->make(SearchQuery::class);
 
-    $hits = $search->palette($this->user, 'Vattenfall');
+    $hits = $search->palette($this->user, 'Vattenfall')['hits'];
 
     expect($hits[0]['date'] ?? null)->toBe(Fmt::shortDate('2026-04-01'));
 });
 
-// The modal does not read SearchQuery. PaletteSearchEndpoint re-shapes every
-// hit into its own array first, and a key the query adds but the endpoint does
-// not copy reaches nothing — which is exactly what shipped the first time.
+// The modal does not read SearchQuery: it reads the Livewire component's own
+// state, and a key the query adds that never lands on the component reaches
+// nothing — which is exactly what shipped the first time.
 it('carries the date all the way to the component the modal renders', function (): void {
     $this->searchTestTransaction($this->user->id, [
         'posted_at' => '2026-04-01',
@@ -92,4 +93,50 @@ it('carries the date all the way to the component the modal renders', function (
 
     expect($hits)->not->toBeEmpty()
         ->and($hits[0]['date'] ?? null)->toBe(Fmt::shortDate('2026-04-01'));
+});
+
+// The palette sorts on posted_at through TransactionCursor, so the day it
+// prints has to be that one. A card statement books a row the day after it
+// posts, and printing booked_at there put an April date on a March charge.
+it('prints the day it sorted the hit by, not the day the card booked it', function (): void {
+    $this->searchTestTransaction($this->user->id, [
+        'posted_at' => '2026-03-31',
+        'booked_at' => '2026-04-01 00:00:00',
+        'value_date' => '2026-03-31',
+        'counterparty_name' => 'Vattenfall Energie',
+        'counterparty_normalized' => 'vattenfall energie',
+        'amount_minor' => -5817,
+        'settled_amount_minor' => -5817,
+        'description' => 'KENMERK 582759 Pakketpremie Hybride particulier',
+    ]);
+
+    /** @var SearchQuery $search */
+    $search = $this->app->make(SearchQuery::class);
+
+    $hits = $search->palette($this->user, 'Vattenfall')['hits'];
+
+    expect($hits[0]['date'] ?? null)->toBe(Fmt::shortDate('2026-03-31'));
+});
+
+it('lists a result row under the day the search filtered it by', function (): void {
+    $this->searchTestTransaction($this->user->id, [
+        'posted_at' => '2026-03-31',
+        'booked_at' => '2026-04-01 00:00:00',
+        'value_date' => '2026-03-31',
+        'counterparty_name' => 'Vattenfall Energie',
+        'counterparty_normalized' => 'vattenfall energie',
+        'amount_minor' => -5817,
+        'settled_amount_minor' => -5817,
+        'description' => 'KENMERK 582759 Pakketpremie Hybride particulier',
+    ]);
+
+    /** @var SearchQuery $search */
+    $search = $this->app->make(SearchQuery::class);
+
+    // before: bounds posted_at, so a row it returns must not print a day past
+    // the bound -- which is exactly what booked_at did here.
+    $page = $search->search($this->user, 'Vattenfall before:2026-03-31', SearchFilters::empty());
+
+    expect($page->rows)->toHaveCount(1)
+        ->and($page->rows[0]->postedAt)->toBe(Fmt::shortDate('2026-03-31'));
 });

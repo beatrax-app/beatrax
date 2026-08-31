@@ -8,6 +8,8 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
+use Modules\FX\Internal\Console\RefreshFxRatesCommand;
 use Modules\FX\Internal\Providers\BundledSnapshotProvider;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\Providers\FrankfurterRateProvider;
@@ -18,6 +20,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 final class FXServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     /** @var list<class-string<RateProvider>> */
     private const array PROVIDER_FQNS = [
@@ -67,5 +70,7 @@ final class FXServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadModuleResources('fx');
+
+        $this->registerScheduledCommands([RefreshFxRatesCommand::class]);
     }
 }

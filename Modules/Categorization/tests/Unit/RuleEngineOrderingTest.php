@@ -59,6 +59,7 @@ function orderingMatchInput(): RuleMatchInput
         counterpartyName: 'Spotify AB',
         description: 'Music subscription',
         settledAmountMinor: 1000,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-02-01'),
     );
 }

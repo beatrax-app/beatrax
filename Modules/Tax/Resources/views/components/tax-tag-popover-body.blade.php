@@ -141,7 +141,7 @@
                     wire:click="addInlineCategory"
                     style="
                         background: var(--color-text, #0f172a);
-                        color: #fff;
+                        color: var(--color-text-inverse, #fff);
                         border: 0;
                         border-radius: var(--radius-sm, 0.25rem);
                         padding: 6px 12px;
@@ -182,7 +182,7 @@
     </div>
 
     {{-- Year-override row (shown when booked year ≠ tax year) --}}
-    @if (isset($pickerBookedYear) && isset($pickerTaxYear) && $pickerBookedYear !== null && $pickerTaxYear !== null && $pickerBookedYear !== $pickerTaxYear)
+    @if (isset($pickerPostedYear) && isset($pickerTaxYear) && $pickerPostedYear !== null && $pickerTaxYear !== null && $pickerPostedYear !== $pickerTaxYear)
         <div>
             <p style="font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin: 0 0 4px;">
                 {{ Lang::get('tax::picker.assign_year') }}
@@ -193,7 +193,7 @@
                     type="button"
                     wire:click="$set('pickerYearOverride', null)"
                     style="border: 1px solid var(--color-border, #e2e8f0); border-radius: 9999px; padding: 2px 10px; font-size: var(--text-xs, 12px); cursor: pointer; background: {{ $pickerYearOverride === null ? 'var(--color-emerald-bg, #d1fae5)' : 'transparent' }}; color: {{ $pickerYearOverride === null ? 'var(--color-emerald, #10b981)' : 'var(--color-text-muted, #64748b)' }};"
-                >{{ $pickerBookedYear }}</button>
+                >{{ $pickerPostedYear }}</button>
                 <button
                     type="button"
                     wire:click="$set('pickerYearOverride', {{ $pickerTaxYear }})"
@@ -211,7 +211,7 @@
             wire:click="saveTaxCategory"
             style="
                 background: var(--color-text, #0f172a);
-                color: #fff;
+                color: var(--color-text-inverse, #fff);
                 border: 0;
                 border-radius: var(--radius-sm, 0.25rem);
                 padding: 8px 16px;

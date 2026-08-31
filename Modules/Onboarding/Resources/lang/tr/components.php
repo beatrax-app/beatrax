@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Kurulum ilerlemesi',
     'step_progress' => 'Adım :current / :total',
-    'step_dot_aria' => 'Adım :number / :total',
 
     'eyebrow_step' => 'Adım :number — ',
 ];

@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'Tamam — PIN kodunu onayla',
     'ok' => 'Tamam',
 
-    'error_too_short' => 'PIN en az 6 haneli olmalı.',
+    'error_pin_shape' => 'PIN :min ila :max haneli olmalı — yalnızca rakam.',
 
     'error_backoff' => 'Çok fazla deneme — :wait sonra yeniden dene.',
 

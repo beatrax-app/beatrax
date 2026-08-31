@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GmailInboxResources;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
@@ -67,6 +68,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(MimeHeaderParser::class);
         $this->app->singleton(GraphErrorMapper::class);
         $this->app->singleton(ScanMessageMapper::class);
+        $this->app->singleton(GmailInboxResources::class);
         $this->app->singleton(GmailApiClient::class);
         // The contracts exist so tests can rebind them to the Fake clients
         // via $this->app->instance(...).

@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valuutan näyttö',
+        'heading' => 'Summan näyttö',
         'label' => 'Oletusnäkymä tapahtumalistalla',
-        'eur_only' => 'Vain :code',
-        'original' => 'Alkuperäinen valuutta',
+        'eur_only' => 'Tilitetty summa',
+        'original' => 'Alkuperäinen summa',
         'help' => 'Voit silti vaihtaa näkymää sivukohtaisesti tapahtumalistalla.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Käytössä ovat mukana toimitetut kurssit. Mitään tietoja ei poistu tältä laitteelta.',
         'fetch_aria' => 'Hae ajantasaiset valuuttakurssit verkosta',
         'refreshing' => 'Päivitetään…',
-        'next_refresh' => 'Seuraava automaattinen päivitys: päivittäin klo 09:00',
+        'next_refresh' => 'Automaattinen päivitys: kerran päivässä',
         'refresh_gave_up' => 'Kursseja ei voitu päivittää. Laitteella jo olevat kurssit ovat yhä käytössä.',
         'refresh_now' => 'Päivitä nyt',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Jakso',
         'label' => 'Jakso alkaa päivänä',
         'help' => 'Numeroitu 1–28. Useimmat pitävät tämän arvossa 1 (kalenterikuukausi). Käytä arvoa 25, jos palkkasi maksetaan 25. päivä ja ajattelet oman kuukautesi alkavan silloin.',
+
+        'move_confirm' => 'Jos jakso alkaa päivänä :day, kaikki kuorien summat järjestetään uudelleen ja lasketaan yhteen siellä, missä kaksi kuukautta sulautuu yhdeksi. Päivän palauttaminen ei erottele niitä uudelleen.',
+        'move_cancel' => 'Peruuta',
+        'move_apply' => 'Ota käyttöön',
     ],
 
     'recurring' => [
         'heading' => 'Toistuvien tunnistus',
         'window_label' => 'Tunnistusikkuna (kuukautta)',
         'window_help' => 'Kuinka monen kuukauden historia käydään läpi, kun tapahtumia ryhmitellään toistuviksi kaavoiksi.',
-        'income_label' => 'Tulojen vähimmäismäärä (senttiä)',
-        'income_help' => 'Tätä rajaa pienempiä tuloja ei ryhmitellä automaattisesti. Tallennetaan sentteinä — 200000 tarkoittaa :example. Poista raja käytöstä asettamalla arvoksi 0.',
+        'income_label' => 'Tulojen vähimmäismäärä (pienimmät yksiköt)',
+        'income_help' => 'Tätä rajaa pienempiä tuloja ei ryhmitellä automaattisesti. Tallennetaan pienimpinä yksikköinä — :minor tarkoittaa :example. Poista raja käytöstä asettamalla arvoksi 0.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Hinnanmuutoshälytyksen oletusraja',
         'help' => 'Hälytys laukeaa, kun toistuvan veloituksen viimeisin summa poikkeaa edellisestä enemmän kuin tämän prosenttiosuuden verran. Sarjakohtaiset asetukset menevät tämän edelle.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (oletus)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (oletus)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Pudotuskansio on käytössä. Beatrax etsii uusia tiedostoja kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> viiden minuutin välein.',
         'inactive_html' => 'Kun tämä on päällä, Beatrax etsii kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> viiden minuutin välein <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- ja <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-tiedostoja ja tuo ne saman tunnistinputken kautta kuin ohjattu tuonti. Käsitellyt tiedostot siirtyvät kansioon <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, jottei niitä koskaan tuoda kahdesti.',
+        'active_phone_html' => 'Pudotuskansio on käytössä. Beatrax etsii uusia tiedostoja kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> taustalla. Puhelimesi päättää, milloin taustahaku suoritetaan, joten siihen voi kulua minuutteja tai tunteja.',
+        'inactive_phone_html' => 'Kun tämä on päällä, Beatrax etsii kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> taustalla <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- ja <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-tiedostoja ja tuo ne saman tunnistinputken kautta kuin ohjattu tuonti. Puhelimesi päättää, milloin taustahaku suoritetaan, joten siihen voi kulua minuutteja tai tunteja. Käsitellyt tiedostot siirtyvät kansioon <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, jottei niitä koskaan tuoda kahdesti.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Verot',
-    'shared_merchant_heading' => 'Jaettu kauppiaslista',
     'data_backup_heading' => 'Tiedot ja varmuuskopiot',
-    'install_heading' => 'Asennus',
 
     'about_updates' => [
         'heading' => 'Tietoa päivityksistä',
         'body' => 'Beatrax päivittää itsensä automaattisesti asennuksen jälkeen. Kun olet asentanut aivan ensimmäisen version, tulevat versiot saapuvat sovelluksen sisäisellä ilmoituspalkilla — GitHubiin ei tarvitse palata. Jos jokin tuleva päivitys ei asennu, voit aina ladata uusimman asennusohjelman käsin julkaisusivulta.',
+        'body_phone' => 'Täällä Beatrax ei päivitä itseään. Puhelinsovelluksen uudet versiot tulevat App Storen tai Google Playn kautta, kuten muutkin sovelluksesi. Julkaisusivulla näkyy, mitä kussakin versiossa muuttui.',
         'open_releases' => 'Avaa julkaisusivu →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Budjettikuukautta ei voitu siirtää, joten se jäi ennalleen.',
         'currency_required' => 'Valitse valuutta.',
         'window_months' => 'Valitse 2–60 kuukautta.',
-        'threshold' => 'Valitse raja vaihtoehdoista 1%, 2%, 5%, 10%, 25% tai 50%.',
+        'threshold' => 'Valitse raja vaihtoehdoista 1 %, 2 %, 5 %, 10 %, 25 % tai 50 %.',
         'amount' => 'Anna summa, joka on vähintään :zero.',
         'period_day' => 'Valitse päivä väliltä 1–28.',
         'currency_view' => 'Valitse jokin käytettävissä olevista vaihtoehdoista.',

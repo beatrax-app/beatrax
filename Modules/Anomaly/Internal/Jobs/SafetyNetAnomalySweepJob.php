@@ -29,7 +29,7 @@ final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, S
     use SerializesModels;
     use TunedQueueJob;
 
-    private const RECENT_WINDOW_DAYS = 30;
+    private const int RECENT_WINDOW_DAYS = 30;
 
     private const int CHUNK = RowChunk::DEFAULT_SIZE;
 

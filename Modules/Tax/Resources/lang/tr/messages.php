@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategori adı boş olamaz.',
         'name_duplicate' => 'Bu ada sahip bir kategori zaten var.',
+        'category_not_saved' => 'Bu kategori kaydedilemedi. Yeniden deneyin.',
+        'tag_refused' => 'Bu etiket kaydedilemedi. Seçiciyi kapatıp yeniden deneyin.',
     ],
 ];

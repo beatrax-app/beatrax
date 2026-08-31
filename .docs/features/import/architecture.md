@@ -12,7 +12,10 @@ post-commit dispatch boundary that wakes up `Chains`.
 
 The detailed cross-cutting design lives in the
 [ingestion-pipeline architecture topic](../../architecture/ingestion-pipeline.md);
-this page describes the module's surface. The user uploads / drops a
+this page describes the module's surface. One source format's parent/child
+rollup has its own page, because a row that funds a purchase is a movement and
+folding it away counted the same euros twice —
+[PayPal funding legs](paypal-funding-legs.md). The user uploads / drops a
 file; the module previews it (no DB writes); the user confirms; the
 pipeline persists through `Ledger`'s sole sanctioned writer; the chain
 job dispatches.
@@ -54,7 +57,7 @@ What the module explicitly does NOT do:
     entry point (persists through Ledger; dispatches Chains). It is
     keyed on the **import run id**, not on a preview id.
   - `NamesAccounts` is invokable — `NamesAccounts::__invoke($iban,
-    $userSuppliedName, $user)` returns the id of the Account row it
+    $userSuppliedName, $user, $statementCurrency)` returns the id of the Account row it
     created; the "name this unknown IBAN" hook used inline in the
     wizard.
   - `AppliesEnrichments` is invokable —
@@ -90,7 +93,12 @@ What the module explicitly does NOT do:
     `Receipts` normalizes a fetched-inbox row without going through
     `ImportPipeline`. `ResolvesCounterparties` lives in
     [`Counterparties`](../counterparties/architecture.md); the
-    pipeline injects the contract.
+    pipeline injects the contract. It derives no money of its own: the
+    settled pair and the rate between them come from
+    `Ledger::TransactionAmount`, so an adapter's own idea of either
+    reaches no column. Both call sites of this stage are therefore the
+    seam where a settled leg that disagrees in sign with its native one,
+    or a negative `fx_rate_used`, stops being reachable.
 - **Dto/** — `ImportPreviewResult`, `ImportConfirmResult`,
   `PreviewRowDto`, `PaymentTypeHint`, `StartingBalanceCandidate`,
   `PendingEnrichment`, `UnknownIban`, the three dispositions
@@ -111,9 +119,10 @@ What the module explicitly does NOT do:
     `Search`.
 - **Services/**
   - `AccountNamer` (impl. `NamesAccounts`).
-  - `MerchantNameResolver` — five-step matcher (per-user exact →
-    per-user generalised → community exact → community generalised
-    → null) consumed by `Counterparties`.
+  - `MerchantNameResolver` — six-step matcher (per-user exact →
+    per-user generalised → community exact → community generalised →
+    community regex → null) consumed by `Counterparties`. The three
+    community tiers are gated on `Community`'s `useSharedList` opt-out.
   - `PatternGeneralizer` — produces the generalised pattern for
     a raw description string.
   - `AliasMatchPreviewQuery`,
@@ -136,12 +145,14 @@ What the module explicitly does NOT do:
   (`Categorization`), `ResolvesCounterparties` (`Counterparties`)
   and `RecordsStatementSummary` (`Ledger`).
 - **Internal/Parsers/** — per-source `PaymentTypeHinter`
-  implementations only (`Asn/AsnCsvPaymentTypeHinter`,
+  implementations only (`Csv/PositionalCsvPaymentTypeHinter`,
   `Banking/Camt053PaymentTypeHinter`,
   `Banking/Mt940PaymentTypeHinter`,
   `Ics/IcsPdfPaymentTypeHinter`,
-  `Paypal/PaypalCsvPaymentTypeHinter`, plus the two
-  description-keyword hinters). The file readers themselves are
+  `Paypal/PaypalCsvPaymentTypeHinter`, plus the shared
+  description-keyword base, the `DutchNarrativeHinter` subclass the
+  three bank formats share, its one keyword table, and the fallback
+  hinter). The file readers themselves are
   **not** here: they are `Ingestion`'s `SourceAdapter`
   implementations, reached through `SourceAdapterRegistry`. The
   directory kept its name from when this module owned both.
@@ -212,7 +223,7 @@ What the module explicitly does NOT do:
   non-empty list. CAMT.053 first (canonical), MT940 second
   (legacy), ICS PDF third, PayPal CSV last (always declines).
 - `MerchantNameResolver::resolve($rawDescription, $userId)` —
-  five-step matcher consumed by
+  six-step matcher consumed by
   `Counterparties`' `CounterpartyResolverService` and its
   `CounterpartyTriageQueue`. It takes a user **id**, not a User.
 - `HandleFileOpenedFromOs` — extension filter; persists into the
@@ -373,6 +384,27 @@ declared safe explained itself with itself: "The file could not be read
 in full: This file could not be read." The row index is what makes the
 line specific when there is no detail to carry.
 
+A failure that declares no safe message of its own falls back to a
+sentence naming the exception's short class name — and there are two of
+those sentences, `errors.row_unreadable_detail` and
+`errors.file_unreadable_detail`. They were one for a while, and a PDF
+refused before a single row was read told the reader "the app could not
+read this row", under a heading saying the whole file could not be read.
+`ImportPipeline::fileDetail()` and `::safeDetail()` are the two call
+sites; nothing else picks between them.
+
+### The three PDF refusals
+
+`ImportFailureReason` keeps `PdfReaderUnavailable`, `PdfHasNoTextLayer`
+and `PdfPasswordProtected` apart because they are three different pieces
+of news, and the reader can act on each in a different way — save an
+unprotected copy, fetch the real statement instead of a scan, or (for the
+third, which is a packaging fault) nothing at all. Collapsed onto one,
+the phone's answer to every PDF was "install pdftotext", which was not
+installable there and, once `PdfTextLayoutReader` existed, not true
+either. See
+[../ingestion/ics-pdf-text-extraction.md](../ingestion/ics-pdf-text-extraction.md#what-each-refusal-means).
+
 What is deliberately **not** in the column: counterparty names,
 descriptions, and any caught exception message that has not declared
 itself free of user data. The list is diagnostic, not a second copy of
@@ -392,9 +424,44 @@ the word "error" — a count in the control promising a list, and a
 glossary entry inside it. The help sentence is still there as a
 preamble; the list is the content.
 
+## Chain resolution progress on the results page
+
+`ConfirmImport` reserves a `pending` `chain_resolution_runs` row inside
+its post-commit block and then the wizard redirects to
+`/imports/{id}/results`, so the results screen is the one the reader is
+actually on while the resolver works. `ImportResults::render()` reads
+the newest `chain_resolution_runs` row for the signed-in user and
+passes its `JobRunStatus` to the view; the view draws a polled progress
+section for `pending` and `running`, and nothing at all otherwise. The
+poll target is the component itself — a refresh, not an action method —
+so nothing about the surface is reachable from the wire.
+
+The status is derived in `render()` rather than held on a public
+property, and that is the whole point of where this now lives. The
+previous version sat on `PreviewWizard`, behind an `@if` on a property
+only its own polling action ever set: nothing set it before the first
+render, so the section never drew, so the poll it carried never
+started. Every state it could describe was unreachable, on a screen the
+confirm had already navigated away from.
+
+The row is looked up by exact `user_id`. Never a
+`failed_jobs.payload LIKE '%userId:N%'` match — an id-prefix substring
+matches every user whose id begins with this one's digits, so user 1
+would read user 12's run. `TheProgressPollLivedOnAScreenTheReaderHadLeftTest`
+greps the component to keep the pattern out and pins the cross-user
+case behind it.
+
+A **failed** resolution draws nothing here. The dashboard already
+banners one across the whole app
+(`Shell\Internal\Http\Livewire\Dashboard`), and the stored
+`last_error` is written as `"<JobClass>: <first line of the message>"`
+— a developer's sentence, which for the crypto layer names an internal
+class and the reader's own user id. One banner, on the surface that
+already had it, and no job error on this page at all.
+
 ## Merchant aliases
 
-`MerchantNameResolver::resolve()` walks a five-step precedence stack
+`MerchantNameResolver::resolve()` walks a six-step precedence stack
 (first hit wins), consulted at preview/render time only — it never
 mutates `transactions.description`:
 
@@ -406,11 +473,21 @@ mutates `transactions.description`:
    it only stops widening to other rows.
 3. The community corpus's exact `pattern` match (`user_id IS NULL` rows).
 4. The community corpus's generalized-pattern whole-token match.
-5. `null` — the caller renders the raw, italic-muted description.
+5. The community corpus's `regex:` rows.
+6. `null` — the caller renders the raw, italic-muted description.
 
 Exact-then-generalized ordering is deliberate: if both an exact alias and
 a broader generalized alias match the same row, the exact one wins, so a
 broad rename can never silently override a more specific one.
+
+Tiers 3 to 5 are the whole of what "Use the shared merchant list" opts out
+of, and this resolver is that switch's only consumer: with it off they are
+skipped and `resolve()` answers from the reader's own aliases or not at
+all. Tiers 1 and 2 are never gated — a reader's own aliases are their own
+data, not community data. The gate is read per call rather than memoised
+beside the country: an opt-out answered from a cache that no sync write
+and no second process can drop is an opt-out that keeps sharing after the
+reader switched it off.
 
 Both alias tiers read **one memoised list per reader**, loaded and sorted
 once and held for the life of the container — the same shape
@@ -451,7 +528,12 @@ table through a YAML document shaped like the bundled community-corpus
 file. Parsing runs with `Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE` — the
 single mitigation against the YAML-deserialisation-to-RCE class of
 attack (ASVS V10) — and validates the top-level `entries` list shape
-before touching the database. `diff()` classifies each parsed entry as
+before touching the database. A file it refuses raises
+`AliasFileRejectedException`, which carries an `AliasFileRejection` case rather
+than a sentence: the message on the exception is English machine text bound for
+the log, and the settings page renders the translated
+`import::aliases.errors.*` line the case names — see
+[an exception message rendered as if it were copy](../../conventions/invariants-from-shipped-failures.md#an-exception-message-rendered-as-if-it-were-copy). `diff()` classifies each parsed entry as
 `new` / `unchanged` / `conflicts` (same pattern, different
 `friendly_name` or `generalized_pattern`); `apply()` commits inside one
 transaction, defaulting any unrecognised conflict-resolution action to
@@ -492,7 +574,10 @@ total match count plus the first five rows. Matching runs in PHP via
 `mb_strpos`/`mb_strtolower`, never SQL `LIKE`, mirroring the
 Categorization `RuleEvaluator` defence so a user-authored pattern never
 enters the SQL string. Patterns under three characters are rejected
-with an explanatory empty result.
+with an explanatory empty result, which the query reads out of
+`import::aliases.errors.too_short` — the same key the settings page substitutes
+when it short-circuits on the same floor, so a second caller cannot surface a
+different sentence.
 
 `AccountNamer`'s slug derivation is `slug($name) + '-' + last8(iban)` —
 the last 8 characters (not 4) dramatically lower the chance of two
@@ -506,19 +591,22 @@ Each per-source `PaymentTypeHinter` (`Modules/Import/Internal/Parsers/`)
 declines with `null` for rows outside its own `source_format`, then
 inspects the row for a recognisable signal:
 
-- **AsnCsvPaymentTypeHinter** / **Mt940PaymentTypeHinter** scan the
-  description for Dutch lexemes ASN embeds in every row (`Betaalautomaat`/
-  `Geldautomaat` → Pin, `Incasso`/`Automatische incasso` → DirectDebit,
-  `iDEAL`/`Online betaling` → Online, `Overboeking`/`SEPA Credit
-  Transfer` → Transfer), matched case-insensitively via `mb_strpos` (no
-  SQL). MT940 mirrors the ASN CSV keyword set verbatim since its `:86:`
-  narrative carries the same lexemes.
-- **Camt053PaymentTypeHinter** keys off the authoritative ISO20022
-  `BkTxCd` (domain|family|subFamily) tuple first —
+- **PositionalCsvPaymentTypeHinter** / **Mt940PaymentTypeHinter** /
+  **Camt053PaymentTypeHinter** all extend `DutchNarrativeHinter`, which
+  scans `description` and `counterpartyName` together for the Dutch
+  lexemes ASN embeds in every row (`Betaalautomaat`/`Geldautomaat` → Pin,
+  `Incasso`/`Automatische incasso` → DirectDebit, `iDEAL`/`Online
+  betaling` → Online, `Overboeking`/`SEPA Credit Transfer` → Transfer).
+  Matching is case-insensitive and bounded by `\p{L}` on both sides, so
+  `Idealo` is not `iDEAL` while `Betaalautomaat12:34` still is. The one
+  table those lexemes come from is `DutchNarrativeKeywords`; the MT940
+  `:86:` narrative and the CAMT entry narrative carry the same lexemes as
+  the CSV description, which is why one table serves all three.
+- **Camt053PaymentTypeHinter** additionally keys off the authoritative
+  ISO20022 `BkTxCd` (domain|family|subFamily) tuple first —
   `PMNT|CCRD|POSD`/`POSC` → Pin, `PMNT|IDDT|ESDD`/`PMDD`/`RCDT|ESDD` →
   DirectDebit, `PMNT|ICDT|ESCT`/`RCDT|ESCT` → Transfer — falling back to
-  the same Dutch-lexeme scan when the tuple is missing or unrecognised
-  (CAMT entries carry the same narrative text merged into `description`).
+  the inherited narrative scan when the tuple is missing or unrecognised.
 - **IcsPdfPaymentTypeHinter** scans for Mijn ICS's small set of
   distinctive Dutch CAPS tokens (`KOSTEN KASOPNAME` → Fee, `GELDMAAT` →
   Pin, `IDEAL BETALING` → Online, `INCASSO` → DirectDebit) — the ICS PDF
@@ -553,7 +641,7 @@ conflict-resolution card instead of guessing.
 ## Preview wizard: inline account naming
 
 `PreviewWizard` (step 2) renders the preview table and, before the user
-can confirm, resolves three naming branches sharing one Blade section —
+can confirm, resolves four naming branches sharing one Blade section —
 all scoped to the authenticated `CurrentUser` so a forged `importRunId`
 from another user 404s via `firstOrFail` rather than exposing that
 user's import run:
@@ -563,19 +651,48 @@ user's import run:
   `$preview->accountsToName`; `nameAccount()` re-validates the supplied
   IBAN against that same list (defence-in-depth against a crafted wire
   request naming an arbitrary IBAN) before delegating to `AccountNamer`.
-- **ICS card naming** — triggered when the run's `source_format` is
-  `'ics-pdf'` AND no `kind='ics_card'` Account exists yet.
-  `saveIcsAccountName()` inserts the synthetic `'ICS-CARD'`-IBAN
-  Account and re-runs the importer so the preview catches up.
-- **PayPal naming** — same shape, keyed on `source_format =
-  'paypal-csv'` and `kind = 'paypal'`, synthetic IBAN `'PAYPAL'`.
+  The matched entry is also what says which currency the new account is
+  denominated in —
+  [an account is denominated by its statement](an-account-is-denominated-by-its-statement.md).
+- **ICS card naming** — raised when the run's `source_format` is
+  `'ics-pdf'` OR the preview names `'ICS-CARD'`, and closed only once an
+  Account carries that exact literal. `saveIcsAccountName()` inserts the
+  synthetic-IBAN Account and re-runs the importer so the preview catches
+  up.
+- **PayPal naming** — same shape, `source_format = 'paypal-csv'` or the
+  preview naming `'PAYPAL'`, minting `kind = 'paypal'`.
+- **Google Play naming** — `saveGooglePlayAccountName()` delegates to
+  `EnsureGooglePlayAccountAction`, which mints the `kind='google_play'`
+  Account on the synthetic IBAN `'GOOGLE-PLAY'`. This one has no format
+  arm at all: Google Play issues receipts and no statement export, so
+  its rows only ever arrive over the `eml`/`mbox` transports — and those
+  same transports carry PayPal and ICS receipts, so the format alone
+  cannot say whose account the run needs. `needsGooglePlayAccountName()`
+  therefore asks only whether `$preview->accountsToName` holds the
+  literal.
 
-Both synthetic-account branches share `AccountNamer::validateName()`
+Without that branch a Google Play receipt could not reach the ledger on
+either path. Nothing in the app minted the account, the generic namer
+answers "IBAN must be 15..34 uppercase alphanumeric characters" for the
+literal, and `Receipts`' inbox job returns early when the synthetic IBAN
+resolves to no Account — while still stamping the audit row `parsed`, so
+the receipt read as processed with an empty ledger behind it.
+
+All four branches take the account's denomination from the file rather
+than from the reader's reporting currency, `OwnAccountPrompt::statementCurrency()`
+answering for the three synthetic ones. Stamping `BaseCurrency::code()` opened a
+229-row euro account labelled in yen —
+[an account is denominated by its statement](an-account-is-denominated-by-its-statement.md#one-file-many-currencies).
+
+The synthetic-account branches share `AccountNamer::validateName()`
 for the 1..80-character bound + slug-body guard, but can't use
 `NamesAccounts` end-to-end because a synthetic IBAN doesn't satisfy the
-structural guard `AccountNamer` enforces for real IBANs.
+structural guard `AccountNamer` enforces for real IBANs. The literals
+themselves are spelled once, in `Ingestion`'s `SyntheticIban` enum, and
+`OwnAccountPrompt`, the two `Ensure…AccountAction`s and the three
+`Receipts` matchers all read them from there.
 
-Both synthetic-IBAN prompts are suppressed when the preview already
+All three synthetic prompts are suppressed when the preview already
 carries a `fileFailureReason` and nothing importable came out of it.
 Anchoring them on `source_format` alone meant they fired for a file the
 parser had already given up on, and they sit ABOVE the file-failure card
@@ -587,7 +704,7 @@ made: nothing in the app deletes a ledger Account, the prompt closes for
 good the moment the synthetic IBAN is claimed, and the copy tells the
 reader the name is "so it shows up consistently across the app". So the
 fix is not to roll it back afterwards — it is not to ask for it. The
-same guard runs on the two `save…AccountName()` write paths, because a
+same guard runs on all three `save…AccountName()` write paths, because a
 submit already in flight when the failure arrived would otherwise still
 land the account.
 
@@ -599,15 +716,54 @@ unknown-IBAN branch needs no guard at all: its allow-list is
 read nothing offers no IBAN to name in the first place — and when it IS
 populated, naming is exactly what unblocks those rows.
 
-`OwnAccountPrompt` owns both questions —
-`needsIcsAccountName()` / `needsPaypalAccountName()` — and anchors the
-naming prompt on the run's `source_format` rather than the unknown-IBAN
-list, so a future synthetic-IBAN drift (e.g. `'ICS-CARD-PRIMARY'`) still
-triggers the prompt. It holds `ICS_OWN_IBAN`, the literal
-`IcsPdfAdapter` emits, and `previewReadNothing()`, the same guard the
-two save actions re-ask on the write side. `CurrentUser` arrives per
+That generic branch is where an account carrying no IBAN of its own lands when
+no bespoke prompt claims it — in practice a preset's `REVOLUT` or `N26`
+placeholder, for which no bespoke prompt exists. So the branch asks
+`Iban::isIban()` which of the two captions the entry gets, and renders
+`StandInAccountName` in place of the identifier — the reader is being asked to
+name an account and a stand-in is not something they can act on. Passing one to
+`Iban::grouped()` drew `REVO LUT` on a real Revolut import:
+[a stand-in for an IBAN, drawn as one](../../conventions/invariants-from-shipped-failures.md#a-stand-in-for-an-iban-drawn-as-one).
+
+A synthetic sentinel reaching that branch is a different matter, because the
+branch's Save cannot answer for one: `AccountNamer` refuses `PAYPAL` and
+`ICS-CARD` on the structural guard, and widening it would mint a wallet as
+`kind = bank`. So the sentinel must not arrive there at all — which is what the
+list arm below is for. The one state that still routes one through is a preview
+cached before something else minted the account on the same literal, where the
+prompt is stale rather than unanswerable.
+
+`OwnAccountPrompt` owns all three questions —
+`needsIcsAccountName()` / `needsPaypalAccountName()` /
+`needsGooglePlayAccountName()` — and asks all three through one private
+predicate taking two witnesses. The `source_format` arm is what a
+statement export declares, and keeps a future synthetic-IBAN drift
+(e.g. `'ICS-CARD-PRIMARY'`) raising the prompt even though the preview
+would then name a literal nobody recognises. The unknown-IBAN arm is
+what a receipt drop declares, whose `source_format` names only the
+transport it shares with the other two providers: without it a PayPal or
+ICS receipt dropped as `.eml` fell through to the generic namer, and the
+reader reached a prompt whose Save button could not mint the account.
+Google Play passes no format, because it has none. Either witness raises
+the prompt; only the literal being claimed closes it. It holds
+`ICS_OWN_IBAN`, the literal `IcsPdfAdapter` emits, and
+`hasNothingToName()`, the same guard the save actions re-ask on the
+write side. `CurrentUser` arrives per
 call rather than through its constructor, so the container may hand the
-prompt out as a singleton without freezing a user into it. Both checks
+prompt out as a singleton without freezing a user into it.
+
+Every one of those questions reads the run's owner first. The preview
+cache key is not user-scoped, so before `ownedRun()` existed the class
+answered from whatever run id it was handed: `statementCurrency()` would
+report the denomination of somebody else's statement, and
+`hasNothingToName()` — then `previewReadNothing()` — would clear the
+write guard on a run its caller had never opened. `PreviewWizard` is the
+only production caller and does assert ownership at mount, but a
+guarantee that lives in the caller is a guarantee the next caller has to
+be told about. `hasNothingToName()` is therefore fail-closed: a run that
+is not the reader's has nothing for them to name, so the three
+`save…AccountName()` paths return rather than mint an account off it.
+Both checks
 use the raw query builder (via injected `DatabaseManager`) rather than
 the Eloquent Builder to keep phpstan-strict-rules'
 `staticMethod.dynamicCall` rule quiet — the same convention the
@@ -624,31 +780,114 @@ in `preview-wizard.blade.php`):
   time you've imported PayPal data. Give this wallet a name so it shows
   up consistently across the app.", input "Account name" / placeholder
   "e.g. PayPal", button "Save name".
+- Google Play: Heading "Name your Google Play account.", helper "This is
+  the first time you've imported a Google Play receipt. Give this
+  account a name so it shows up consistently across the app.", input
+  "Account name" / placeholder "e.g. Google Play", button "Save name".
+
+## An email drop is not an empty statement
+
+An `.eml` or `.mbox` upload does not go through an Ingestion adapter.
+`ParseStage` hands the bytes to `RecordReceipt` (Receipts), which decodes
+the headers, files the message under `file_imports`, stores the raw bytes
+through `FileDropEmlBlobStore`, and asks the matchers what it is. Only a
+message a matcher reads as a payment comes back out as a
+`SourceTransactionDto`; a message that is saved but yields no payment
+yields no source row at all.
+
+That is a legitimate and common outcome — a statement-ready notice, a
+sign-in alert, a receipt from a sender no matcher covers — and read as a
+row count it is indistinguishable from a file that would not parse. The
+preview screen therefore has a second witness beside the rows:
+
+- `RecordReceipt` takes an optional `ReceiptCaptureLog` and records one
+  `CapturedReceipt` per message — sender, subject, the message's own
+  `Date`, the match outcome, and the matcher that answered.
+- `ImportPipeline::preview` creates the log, threads it through
+  `ParseStage::run`, and hands it to `PreviewWriter::finish`, which puts
+  it on the `PreviewHead` beside the sample rows. It is capped at
+  `ReceiptCaptureLog::MAX_KEPT` with the total counted whole, so a
+  mailbox archive cannot grow the cached head without bound.
+- `PreviewWizard`'s Blade reads `ImportPreviewResult::capturedAReceipt()`
+  and draws each capture with `ReceiptCaptureState::of()`.
+
+`ReceiptCaptureState` splits what the stored status collapses.
+`file_imports.status` records `unmatched` both for a sender no matcher
+claims and for a sender one of them claims but whose wording it could not
+read a payment out of; only the answering `matcher_key` tells them apart,
+and only the second is worth reporting as a bug. The four states are
+`Read`, `NotAPayment` (a matcher skipped it deliberately), `Unreadable`
+and `UnknownSender`.
+
+The captures do **not** decide the failure copy on their own.
+`RecordReceipt` writes its audit row for bytes that are not a message at
+all, so `CapturedReceipt::identified()` — a sender address or a subject
+came out of the file — is what suppresses "This file could not be read".
+A `.eml` carrying random bytes still says so.
+
+Those bytes no longer reach `RecordReceipt`. `ParseStage`'s receipt arm asks
+`ReceiptFileShape::of()` what the file is before reading it, and refuses a file
+that is not the declared transport. The panel's opening claim — "every message
+has been saved" — is a completeness claim over whatever the arm iterated, and an
+archive read as a single message iterates exactly one of its messages. Three
+mismatches are now named rather than parsed: an archive declared as a message,
+a message declared as an archive, and a file that is neither.
+
+The panel's second sentence — "Nothing here became a transaction, so
+nothing was added to your ledger" — has a condition of its own. A zero
+importable-row count is also what the screen shows while it is asking for
+a synthetic account's name, because every row the receipt produced is
+held back as `UnknownAccount` until the account exists. That is the
+first-run path of every receipt provider, so the sentence was printed for
+each of them once, above the capture saying confirming would add the
+payment and above the form asking for the name that was holding it. The
+Blade therefore splits the two readings: `$nothingImportableYet` is what
+the header subtitle and the failure copy key on, and `$nothingImported`
+is that count with every open naming question — the three synthetic
+prompts and `accountsToName` — subtracted from it.
+
+Nothing ties a `file_imports` row to an `import_runs` row, which is why
+the log is threaded through the call rather than queried back afterwards.
+It is also why there is no durable surface listing captured receipts: the
+preview is the only place a reader is told about one, and it expires with
+the preview cache.
 
 ## Upload wizard
 
-Step 1 of the wizard. The user picks an issuer (ASN / ICS / PayPal /
-other-bank / email-file) and a format for that issuer, then uploads a
-statement file; on submit the file is staged via Livewire's temporary
-upload directory, the importer runs the preview phase (copying the
-upload to a stable app-owned path on the way through), and the user is
-redirected to `/imports/{id}/preview`.
+Step 1 of the wizard. The user picks an import TYPE — the shape of the
+file they are holding (`ImportType`: csv / camt053 / mt940 / pdf /
+email) — and then a format under that type, and uploads a statement
+file; on submit the file is staged via Livewire's temporary upload
+directory, the importer runs the preview phase (copying the upload to a
+stable app-owned path on the way through), and the user is redirected to
+`/imports/{id}/preview`. The first select names no institution: which
+banks are covered is answered on the website, and a bank's own name
+reaches the second select as `CsvPreset`/`PositionalCsvPreset` data via
+`CsvPresetRegistry`, never as copy written into the component.
 
-Two cascading selects drive the page: changing `$issuer` rebuilds the
-Format select via `availableFormats()` and resets `$sourceFormat` to
-the new issuer's first valid leaf (`updatedIssuer()`) — otherwise a
+Two cascading selects drive the page: changing `$importType` rebuilds
+the Format select via `availableFormats()` and resets `$sourceFormat` to
+the new type's first valid leaf (`updatedImportType()`) — otherwise a
 defensive `in:` validator would still accept a stale composite while
-the picker visually disagreed with the submitted value. The leaf
+the picker visually disagreed with the submitted value. That reset opens the
+email type on `eml`, and an archive read as a single message keeps only its
+first message, so `matchFormatToFile()` runs on every file and import-type
+change: within the email pair it takes the format from the file's own bytes
+(`ReceiptFileShape`) and writes `$formatNotice`, which the Blade prints under
+the select inside its `aria-live` region. The switch is never silent, and it is
+confined to that pair — a leaf belonging to another import type is left alone so
+`importTypeFormatRule()` still refuses it, and no CSV preset is inferable from a
+file that names no bank. The leaf
 `sourceFormat` value is the wire format `HeaderSniffer`,
 `SourceAdapterRegistry`, and the per-source-format adapters dispatch on;
-the issuer field exists only to drive the picker UX. `rules()`'s
-`issuerFormatRule()` closure additionally enforces that the
-issuer/sourceFormat pair is a meaningful cross-product (e.g.
-`issuer='email-file'` + `sourceFormat='asn-csv'` fails here rather than
+the import-type field exists only to drive the picker UX. `rules()`'s
+`importTypeFormatRule()` closure additionally enforces that the
+type/sourceFormat pair is a meaningful cross-product (e.g.
+`importType='email'` + `sourceFormat='asn-csv'` fails here rather than
 downstream at `ParseStage`). The file-size cap varies by format (10 MB
-default — matches the typical maximum ASN statement export and is well
-above a Mijn ICS monthly PDF's ~100 KB — 1 MB for `.mbox`, 20 KB for
-`.eml`).
+default — matches the typical maximum bank CSV statement export and is
+well above a Mijn ICS monthly PDF's ~100 KB — 1 MB for `.mbox`, 20 KB
+for `.eml`).
 
 A parse-time failure from `runFromUpload()` (sniff mismatch, unsupported
 PayPal language, or any other Throwable escaping before the pipeline's
@@ -739,6 +978,23 @@ Caller scoping by `user_id` is enforced inside the UPDATE itself, so a
 forged `PendingEnrichment` referencing another user's transaction id
 resolves zero rows and is silently dropped.
 
+**What counts as a receipt format** is decided in one place,
+`SourceRefRanker::isReceiptFormat()`, and both the `FingerprintStage`
+gate that produces an ENRICHED disposition and the conflict branch below
+read it. It answers by asking `SourceFormat::isReceiptFile()` rather
+than holding a list of its own, and `rank()` returns one shared band for
+whatever that answers — so a new receipt transport is recognised here
+the moment the enum recognises it. The answer has to include the
+**transports** `eml` and `mbox`, because that is the `source_format` a
+receipt row is stored under: the wizard's receipt arm and `Receipts`'
+inbox job both normalise under the transport id. Listing only the
+per-matcher ids (`paypal-receipt`, `ics-receipt`, `google-play-receipt`)
+made the gate unreachable for every receipt an install can actually
+produce — receipt-vs-statement collisions all dropped as DUPLICATE while
+the unit tests, which hand-built a `paypal-receipt` row nothing writes,
+stayed green. That is the drift a second copy of the list invites, and
+it is why there is now only one.
+
 **Receipt-conflict branch** (only when `conflictingFields` is non-empty
 AND the source format is a receipt format): the user's
 `receipt_conflict_resolution` policy decides the outcome —
@@ -754,14 +1010,26 @@ AND the source format is a receipt format): the user's
 Two encryption guarantees hold regardless of policy: `FingerprintStage`
 decrypts the stored value before ever populating `conflictingFields`, so
 `stored_value`/`csvValue` are always plaintext (never ciphertext)
-wherever they are persisted or dispatched; and `extractIncomingValues()`
-runs the fresh incoming values through `SensitiveColumnCodec::encryptAttrs()`
-before they reach the `transactions` UPDATE, so a `prefer_receipt`
-resolution never re-introduces plaintext into an at-rest-encrypted
-column (a documented no-op pass-through for a non-encrypted user).
-`ALLOWED_CONFLICT_FIELDS` whitelists the four column names that may flow
-through as literal SQL column names, so a poisoned preview cache can
-never turn an arbitrary array key into an UPDATE column.
+wherever they are persisted or dispatched; and the fresh incoming values
+travel as plaintext only as far as `writeEnrichment()`, which puts them
+through `SensitiveColumnCodec::encryptAttrs()` before they reach the
+`transactions` UPDATE — so a `prefer_receipt` resolution never
+re-introduces plaintext into an at-rest-encrypted column (a documented
+no-op pass-through for a non-encrypted user). The plaintext leg is not
+an oversight: `rederivedFingerprint()` has to read the counterparty name
+in the clear to re-key it, and AEAD ciphertext differs on every write of
+the same value.
+`EnrichmentConflictField` is the closed vocabulary of column names that
+may flow through as literal SQL column names, so a poisoned preview
+cache can never turn an arbitrary array key into an UPDATE column. It is
+one enum in `Import\Public\Enums`, named by `FingerprintStage` as it
+emits each conflict, by `ApplyEnrichments` as it accepts one, and by
+`Receipts`' `ApplyReceiptConflictResolution` as it resolves one — where
+three hand-copied `['counterparty_name', 'description', 'currency',
+'amount_minor']` lists used to sit, each under a comment saying it
+mirrored one of the others. `isFingerprintInput()` carries the subset
+the fingerprint tuple is composed over, so the recompose and the
+allow-list can no longer disagree.
 
 The user's `receipt_conflict_resolution` policy is read into a
 method-local variable per `__invoke()` call — never cached on the action

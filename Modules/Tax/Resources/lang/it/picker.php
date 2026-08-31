@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Etichetta anche altre :count da',
     'batch_after' => '?',
+    'batch_confirm' => "Etichettare come detraibili tutte le transazioni rimanenti di :name? Ognuna riceve questa categoria e questa nota. Togliere l'etichetta in seguito si fa una transazione alla volta.",
     'batch_tag_all' => 'Etichetta tutte',
     'batch_dismiss' => 'Ignora',
 ];

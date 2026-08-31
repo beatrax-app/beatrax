@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Internal\Services;
 
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Categorization\Public\Enums\ConditionOperator;
@@ -12,13 +13,18 @@ use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeDate;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
-final class RuleEngine
+final readonly class RuleEngine
 {
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private BaseCurrency $baseCurrency,
+    ) {}
 
     /**
      * @return list<MatchedRule>
@@ -28,6 +34,7 @@ final class RuleEngine
     public function match(RuleMatchInput $tx, User $user): array
     {
         $connection = $this->db->connection();
+        $readerCurrency = $this->baseCurrency->forUser($user);
 
         /** @var iterable<stdClass> $rules */
         $rules = $connection
@@ -54,7 +61,7 @@ final class RuleEngine
 
             $results = [];
             foreach ($conditions as $condition) {
-                $results[] = $this->conditionMatches($condition, $tx);
+                $results[] = $this->conditionMatches($condition, $tx, $readerCurrency);
             }
 
             $fires = $combinator === RuleCombinator::All
@@ -95,7 +102,7 @@ final class RuleEngine
         return $actions;
     }
 
-    private function conditionMatches(stdClass $condition, RuleMatchInput $tx): bool
+    private function conditionMatches(stdClass $condition, RuleMatchInput $tx, string $readerCurrency): bool
     {
         $valueType = ConditionValueType::tryFrom(is_string($condition->value_type) ? $condition->value_type : '');
         $op = ConditionOperator::tryFrom(is_string($condition->op) ? $condition->op : '');
@@ -107,9 +114,13 @@ final class RuleEngine
             return false;
         }
 
+        // The bound is bare minor units written at the reader's own scale, so a
+        // row settled elsewhere is a different quantity: 13840 yen against a
+        // 5000 euro-cent bound is not a comparison.
         return match ($valueType) {
             ConditionValueType::Text => self::matchString($op, self::targetFieldValue($tx, $field), $value),
-            ConditionValueType::Amount => self::matchAmount($op, $tx->settledAmountMinor, self::toIntValue($value), $value2 !== null ? self::toIntValue($value2) : null),
+            ConditionValueType::Amount => $tx->settledCurrency === $readerCurrency
+                && self::matchAmount($op, $tx->settledAmountMinor, self::toIntValue($value), $value2 !== null ? self::toIntValue($value2) : null),
             ConditionValueType::Date => self::matchDate($op, $tx->postedAt, $value, $value2),
         };
     }
@@ -155,10 +166,10 @@ final class RuleEngine
         };
     }
 
-    // Both sides collapse to start-of-day, so `between`'s inclusive upper
-    // bound still contains a transaction posted later that same day. The
-    // emptiness guard precedes the parse because parse('') is NOW; a present
-    // but unreadable value still throws, and the job counts that row as errored.
+    // Both sides collapse to start-of-day, so `between`'s inclusive upper bound
+    // still contains a transaction posted later that same day. Blank is checked
+    // before the parse and matches nothing; a present bound that is not a day —
+    // 'tomorrow' MOVED between matches, '2026-02-31' read as 3 March — raises.
     /**
      * @link ../../../../.docs/features/categorization/rule-evaluation-order.md#how-a-condition-is-evaluated
      */
@@ -169,15 +180,25 @@ final class RuleEngine
         }
 
         $t = $target->startOfDay();
-        $v = CarbonImmutable::parse($value)->startOfDay();
+        $v = self::conditionDay($value);
 
         return match ($op) {
             ConditionOperator::After => $t->greaterThan($v),
             ConditionOperator::Before => $t->lessThan($v),
             ConditionOperator::Between => $value2 !== null && $value2 !== ''
-                && self::withinInclusiveRange($t, $v, CarbonImmutable::parse($value2)->startOfDay()),
+                && self::withinInclusiveRange($t, $v, self::conditionDay($value2)),
             default => false,
         };
+    }
+
+    // SafeDate answers null and this call site needs the raise: ReapplyRulesJob
+    // counts a row it cannot judge as errored, which is how a malformed rule
+    // reaches the operator rather than quietly matching nothing for the rest of
+    // its life. Carbon's own type, so every existing catch still names it.
+    private static function conditionDay(string $value): CarbonImmutable
+    {
+        return SafeDate::dayOrNull($value)
+            ?? throw new InvalidFormatException("Rule condition value is not a calendar date: '{$value}'.");
     }
 
     private static function withinInclusiveRange(CarbonImmutable $target, CarbonImmutable $bound1, CarbonImmutable $bound2): bool

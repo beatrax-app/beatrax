@@ -16,6 +16,11 @@
         <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('community::settings.about_body') }}
         </p>
+        <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;" data-testid="shared-list-stats">
+            <span>{{ Lang::choice('community::settings.mappings', $mappingsCount) }}</span>
+            <span aria-hidden="true">·</span>
+            <span>{{ Lang::choice('community::settings.contributors', $contributorCount) }}</span>
+        </p>
     </div>
 
     <div class="body-side space-y-1">
@@ -52,8 +57,9 @@
         <div class="toggle-row flex items-start justify-between gap-4 py-3">
             <div class="flex-1">
                 <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('community::settings.update_on_updates.title') }}</p>
+                {{-- A phone never updates itself: its store does. --}}
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('community::settings.update_on_updates.help') }}
+                    {{ Lang::get($onPhone ? 'community::settings.update_on_updates.help_phone' : 'community::settings.update_on_updates.help') }}
                 </p>
                 <p class="mt-1 text-xs italic text-slate-600 dark:text-slate-400" data-testid="toggle-update-note">
                     {{ Lang::get('community::settings.update_on_updates.note') }}

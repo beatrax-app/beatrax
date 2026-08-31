@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Označit i další položky (:count) —',
     'batch_after' => '?',
+    'batch_confirm' => 'Označit všechny zbývající transakce od :name jako daňově uznatelné? Každá z nich dostane tuto kategorii a tuto poznámku. Odebrat označení jde potom jen po jedné transakci.',
     'batch_tag_all' => 'Označit vše',
     'batch_dismiss' => 'Zamítnout',
 ];

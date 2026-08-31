@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Psr\Log\NullLogger;
 
@@ -25,28 +23,7 @@ final class PlatformStubVault extends BiometricKeyVault
 {
     public function __construct(private readonly string $family, private readonly bool $runtime = true)
     {
-        parent::__construct(app(BiometricKeyBlobCodec::class), new class implements CurrentUser
-        {
-            public function isAuthenticated(): bool
-            {
-                return true;
-            }
-
-            public function id(): int
-            {
-                return 1;
-            }
-
-            public function periodStartDay(): int
-            {
-                return 1;
-            }
-
-            public function user(): User
-            {
-                return new User;
-            }
-        }, new NullLogger);
+        parent::__construct(app(BiometricKeyBlobCodec::class), new NullLogger);
     }
 
     protected function runtimeAvailable(): bool
@@ -69,5 +46,5 @@ it('still offers the vault on iOS, where the keychain answers synchronously', fu
 });
 
 it('refuses an enrolment on Android rather than letting it fail at the bridge', function (): void {
-    expect((new PlatformStubVault('Linux'))->enroll('a-data-key'))->toBeFalse();
+    expect((new PlatformStubVault('Linux'))->enroll(1, 'a-data-key'))->toBeFalse();
 });

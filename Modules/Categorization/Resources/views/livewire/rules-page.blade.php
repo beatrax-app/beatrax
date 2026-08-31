@@ -36,6 +36,7 @@
                 <button
                     type="button"
                     wire:click="triggerReapply"
+                    wire:confirm="{{ Lang::get('categorization::rules.reapply_confirm') }}"
                     @disabled($reapplyInFlight)
                     class="pill-btn-ghost"
                 >
@@ -71,8 +72,8 @@
             class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700"
             aria-live="polite"
         >
-            <p class="text-xs text-slate-700 dark:text-slate-300">
-                {{ Lang::get('categorization::rules.reapply_progress_lead') }} <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) ($reapplyProgress['checked'] ?? 0)) }}</span> {{ Lang::get('categorization::rules.reapply_progress_of') }} <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) ($reapplyProgress['total'] ?? 0)) }}</span> {{ Lang::get('categorization::rules.reapply_progress_trail') }}
+            <p class="text-xs text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">
+                {{ Lang::choice('categorization::rules.reapply_progress', (int) ($reapplyProgress['total'] ?? 0), ['checked' => Fmt::number((int) ($reapplyProgress['checked'] ?? 0))]) }}
             </p>
         </section>
     @endif
@@ -118,7 +119,7 @@
                                 <span class="chip text-amber-700 dark:text-amber-300" title="{{ Lang::get('categorization::rules.inactive_title') }}">{{ Lang::get('categorization::rules.inactive_badge') }}</span>
                             @endif
                             @if (count($rule->conditions) >= 2)
-                                <span class="chip">{{ $rule->combinator === RuleCombinator::Any->value ? 'ANY' : 'ALL' }}</span>
+                                <span class="chip">{{ Lang::get($rule->combinator === RuleCombinator::Any->value ? 'categorization::rules.combinator_any' : 'categorization::rules.combinator_all') }}</span>
                             @endif
                             @if (count($rule->conditions) > 0)
                                 <span>{{ \Modules\Categorization\Internal\Http\Livewire\RulesPage::conditionFragment($rule->conditions[0]) }}</span>

@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Aiz šī posma finansējuma ķēde nav atrasta.',
 
     'covers_charges' => 'Sedz :count ICS maksājumu|Sedz :count ICS maksājumu|Sedz :count ICS maksājumus',
-    'no_ics_charges' => 'Šajā norēķinā nav ICS maksājumu',
     'show_more_fanout' => 'Rādīt vēl :count · :shown no :total',
 
     'confirm' => 'Apstiprināt',
     'reject' => 'Noraidīt',
     'confirm_aria' => 'Apstiprināt ķēdes saiti :id',
     'reject_aria' => 'Noraidīt ķēdes saiti :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministisks',
+        'confirmed' => 'Apstiprināts',
+        'candidate' => 'Kandidāts',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Ticamība: deterministiska sakritība',

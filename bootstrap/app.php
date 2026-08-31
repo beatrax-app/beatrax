@@ -9,16 +9,20 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
+use Modules\Core\Public\Support\LivewireClientRefusal;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Http\Middleware\RecoverSealedLedger;
+use Modules\Notifications\Internal\Http\Middleware\RunDeferredNotificationPasses;
 use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
+use Modules\Sync\Internal\Http\Middleware\ResumesPreSyncCapture;
 use Psr\Log\LoggerInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -57,10 +61,25 @@ return Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             EnsureDatabaseReady::class,
             RecoverSealedLedger::class,
+            // Same seam, one layer up: that one re-seals rows a keyless writer
+            // left readable, this one re-derives the notification content a
+            // keyless writer was refused outright.
+            RunDeferredNotificationPasses::class,
+            // The recovery-codes ceremonies have no exit the server sees: the
+            // mobile one leaves by a plain link and either can be walked away
+            // from. This ends them from the other side instead.
+            ForgetsSpentRecoveryCodes::class,
+            // The recovery-codes ceremonies have no exit the server sees: the
+            // mobile one leaves by a plain link and either can be walked away
+            // from. This ends them from the other side instead.
             // Terminate-time, and last: a pairing ceremony must not depend on
             // one screen staying open, and this root's other driver — the
             // sync:serve timer — is only running while the daemon is up.
             CarriesPendingPairingFrames::class,
+            // Also terminate-time, and for the same reason: signing needs the
+            // app-lock key, so a capture too large for one request can only be
+            // finished by another one.
+            ResumesPreSyncCapture::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -80,6 +99,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 'path' => '/'.ltrim($request->path(), '/'),
             ];
         });
+
+        // Mapped rather than rendered -- the locked-property exception renders
+        // itself, differently in debug than in production -- and through ONE
+        // seam, keyed on Throwable because the family spans a bare \Exception
+        // and a TypeError, and only Throwable is `is_a` to both.
+        $exceptions->map(fn (Throwable $e): Throwable => LivewireClientRefusal::refusal($e) ?? $e);
 
         // A QueryException's message carries its bindings, which here ARE the
         // financial data the context callback above withholds.

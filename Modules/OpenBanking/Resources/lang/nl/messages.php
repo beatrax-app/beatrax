@@ -20,6 +20,7 @@ return [
         'manage' => 'Open banking beheren',
         'not_connected' => 'Geen bank verbonden. Verbind er een om transacties automatisch te importeren.',
         'expired' => 'Toestemming verlopen — opnieuw verbinden nodig.',
+        'revoked' => 'Je bank heeft de verbinding beëindigd — opnieuw verbinden nodig.',
         'connected' => 'Verbonden met :bank via Enable Banking. Laatst gesynchroniseerd :when.',
         'never' => 'nooit',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Verlopen — opnieuw verbinden',
         'pill_expiring' => 'Verloopt binnenkort',
         'pill_connected' => 'Verbonden',
+        'pill_revoked' => 'Beëindigd door je bank — opnieuw verbinden',
         'whats_fetched_label' => 'Wat wordt opgehaald',
         'whats_fetched' => 'Geboekte transacties + saldi, laatste 90 dagen',
         'last_successful_sync_label' => 'Laatste succesvolle synchronisatie',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — mislukt (:reason)',
         'reason_consent_expired' => 'toestemming verlopen',
         'reason_error' => 'fout',
+        'reason_truncated' => 'voortijdig gestopt',
+        'reason_nothing_imported' => 'niets kon worden vastgelegd',
+        'reason_consent_revoked' => 'beëindigd door je bank',
         'disconnect_button' => 'Loskoppelen',
     ],
 
     'consent_banner' => [
         'heading' => 'Toestemming verlopen — opnieuw verbinden',
+        'heading_revoked' => 'Je bank heeft de verbinding beëindigd',
         'body' => 'Je laatste succesvolle synchronisatie was :when. Verbind opnieuw om automatisch synchroniseren te hervatten.',
+        'body_revoked' => 'Je bank of Enable Banking heeft de toegang ingetrokken, dus synchroniseren is gestopt. Je laatste succesvolle synchronisatie was :when. Verbind opnieuw om te hervatten.',
         'never' => 'nooit',
         'reconnect' => 'Opnieuw verbinden',
     ],
@@ -58,6 +65,9 @@ return [
         'unavailable' => 'Enable Banking is tijdelijk niet beschikbaar. Probeer het zo weer.',
         'new_found' => ':count nieuwe transactie gevonden.|:count nieuwe transacties gevonden.',
         'none' => 'Geen nieuwe transacties.',
+        'none_importable' => 'Je bank heeft transacties gestuurd, maar geen daarvan kon worden vastgelegd. Open de importbeoordeling om te zien waarom.',
+        'in_progress' => 'Er loopt al een synchronisatie. Probeer het zo opnieuw.',
+        'truncated' => 'Je bank had meer transacties dan één synchronisatie kan ophalen, dus deze ronde is voortijdig gestopt. Er is niets als gesynchroniseerd vastgelegd — de volgende synchronisatie begint op hetzelfde punt.',
     ],
 
     'disconnect' => [
@@ -140,10 +150,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Verbind je bank opnieuw',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Voltooi eerst de Open Banking-installatiewizard.',
         'no_bank_chosen' => 'Kies een bank voordat je verbindt.',
@@ -153,5 +159,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking heeft een onveilige toestemmings-URL geretourneerd.',
         'no_authorization_code' => 'De Enable Banking-callback heeft geen autorisatiecode geretourneerd.',
         'no_session_id' => 'Enable Banking heeft geen sessie-ID geretourneerd.',
+        'oauth_state_mismatch' => 'Deze koppelingslink is verlopen of al gebruikt. Begin opnieuw met het koppelen van je bank.',
     ],
 ];

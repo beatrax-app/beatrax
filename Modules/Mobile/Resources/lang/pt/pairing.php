@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Introduz o código',
     'camera_off' => 'O acesso à câmara está desativado. Introduz antes o código do outro dispositivo.',
+    'camera_off_no_search' => 'O acesso à câmara está desativado e procurar o outro dispositivo na rede ainda não funciona no iPhone — um código escrito não tem, assim, como encontrá-lo. Volta a autorizar a câmara para o Beatrax nas definições do teu dispositivo e digitaliza o código do outro dispositivo.',
+    'no_search' => 'Procurar o outro dispositivo na rede ainda não funciona no iPhone, por isso um código escrito não tem nada para encontrar. Digitaliza antes o código com a câmara — a câmara não precisa de procurar na rede.',
     'word_code_aria' => 'Introduz o código de palavras do outro dispositivo',
     'submit_code' => 'Enviar código',
     'cancel' => 'Cancelar',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Não é possível alcançar o outro dispositivo. Verifica se ambos estão na mesma rede e se a sincronização está ativada no computador.',
+        'no_road_home' => 'Este dispositivo não consegue procurar na rede e o código que digitalizaste não inclui qualquer endereço do outro dispositivo. Pede-lhe um código novo e digitaliza esse.',
         'invalid_code' => 'Este código é inválido ou expirou. Pede ao outro dispositivo que gere um novo.',
+        'code_incomplete' => 'Este código não está completo. Compara-o com o outro dispositivo e introdu-lo por inteiro.',
         'code_not_accepted' => 'Nenhum dispositivo nesta rede aceitou esse código. Verifica o código e se o outro dispositivo ainda o está a mostrar.',
         'no_peer_answered' => 'Nada nesta rede respondeu a esse código. Verifica se a sincronização está a correr no outro dispositivo, ou digitaliza o código dele com a câmara — a câmara não precisa de procurar na rede.',
         'no_peer_answered_ios' => 'Nada nesta rede respondeu a esse código. Procurar o outro dispositivo na rede ainda não funciona no iPhone, por isso digitaliza o código dele com a câmara.',
+        'no_peer_answered_camera_off' => 'Nada nesta rede respondeu a esse código. Procurar o outro dispositivo na rede ainda não funciona no iPhone e o acesso à câmara está desativado — volta por isso a autorizar a câmara para o Beatrax nas definições do teu dispositivo e digitaliza o código do outro dispositivo.',
         'rate_limited' => 'Demasiadas tentativas. Espera um minuto e tenta novamente.',
         'identity_locked' => 'A identidade do teu dispositivo está bloqueada. Desbloqueia a app e tenta novamente.',
         'identity_needs_lock' => 'Configure primeiro o bloqueio da aplicação — é ele que protege a identidade do seu dispositivo.',

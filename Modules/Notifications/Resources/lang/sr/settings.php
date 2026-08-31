@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'O čemu da te obaveštavam',
+    'background_note' => 'Beatrax ih priprema dok je aplikacija otvorena. Zakazano pokretanje u pozadini to ne može — zaključavanje aplikacije čuva jedini ključ — pa se ono što čeka preuzima dok nastavljaš da koristiš aplikaciju.',
+    'background_note_phone' => 'Beatrax ih priprema dok je aplikacija otvorena. U pozadini to ne može — zaključavanje aplikacije čuva jedini ključ — pa ono što čeka stiže kad sledeći put otvoriš aplikaciju.',
 
     'reminders' => [
         'label' => 'Podsetnici na plaćanja',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Sakrij detalje u obaveštenjima',
-        'help' => 'Prikaži iznose i nazive trgovaca u samom obaveštenju. Isključi ako bi tvoj ekran mogli da vide drugi.',
+        'help' => 'Sakrij iznose i nazive trgovaca u samom obaveštenju. Uključi ako bi tvoj ekran mogli da vide drugi.',
     ],
 
     'save' => 'Sačuvaj podešavanja obaveštenja',

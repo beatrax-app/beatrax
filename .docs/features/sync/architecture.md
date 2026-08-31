@@ -5,10 +5,10 @@ synchronization: a CRDT-based op-log replicated over either a LAN-direct
 WebSocket (Noise protocol handshake) or an opt-in zero-knowledge relay, with
 per-user "Group Data Key" (GDK) at-rest encryption for sensitive columns and
 a QR/word-code pairing ceremony that establishes device trust via a
-human-verified safety number. This page is the relocation target for
-architecture and security-rationale prose that the code-comment policy
-(ADR 0011) moved out of docblocks — see each linked class for the
-`@link` back-reference.
+human-verified safety number. Under the code-comment policy (ADR 0011) the
+architecture and security-rationale prose for these classes lives here rather
+than in their docblocks, and each such class carries an `@link` back-reference
+to its section below.
 
 ## Clock and merge configuration
 
@@ -39,7 +39,13 @@ Strategy keys: `lww` | `g_counter` | `or_set`. Unknown table/field defaults
 to `lww`. Per-table special keys:
 
 - `_delete_wins` (bool) — tombstone wins on equal-HLC tie (default true)
-- `_create_required` (list) — NOT NULL columns required in CreateRow ops
+- `_create_required` (list) — NOT NULL columns required in CreateRow ops.
+  Exactly the NOT-NULL-without-default columns, minus the two
+  `OpLogEntryApplier::buildCreatePayload()` seeds itself (`id` from the op's pk,
+  `user_id` from the session scope). BOTH directions are enforced by
+  `MergeRulesRegistrySchemaGuardTest`: a name that is not such a column
+  quarantines every create of that table, and a column MISSING from the list
+  passes the completeness gate and then dies at the INSERT.
 
 Notable per-table quirks:
 
@@ -51,8 +57,8 @@ Notable per-table quirks:
   string primary key computed by domain code before insert (never DB
   autoincrement), so it IS listed in `_create_required` — `OpLogReplayer`'s
   CREATE_ROW assembly never fills in a pk column on its own, and omitting a
-  non-autoincrement string PK makes `insertOrIgnore` silently drop the row on
-  the `id` NOT NULL constraint. `notifications.state` is the opposite case:
+  non-autoincrement string PK makes the row fail the `id` NOT NULL constraint.
+  `notifications.state` is the opposite case:
   deliberately absent from the registry entirely, since it is locally derived
   by `NotificationStateMachine` and never synced.
 - `envelope_moves`, `goal_contributions`, `pot_movements` and
@@ -75,9 +81,13 @@ rest](sensitive-columns-at-rest.md).
 ### GDK epoch keyring (`Internal\Crypto\GdkEpoch`, `GdkKeyring`)
 
 `GdkEpoch` is an immutable `{epochId, keyHex}` pair — one entry in a user's
-GDK (Group Data Key) epoch keyring. `epochId` is a small monotonically
-increasing integer (not a UUID — epochs are ordered: a device removal always
-mints `epochId+1`). `keyHex` is the raw 32-byte symmetric AEAD key,
+GDK (Group Data Key) epoch keyring. `epochId` is **minted, not counted**:
+`GdkEpochId::mint()` returns `random_int(1, 2^53 - 1)`, retried against the ids
+the keyring already holds. Epoch ids therefore carry no order at all, and
+nothing may reason from one being larger than another — see [Epoch ids are
+minted, not
+counted](device-removal-and-epoch-rotation.md#epoch-ids-are-minted-not-counted)
+for why a counter was silent data loss. `keyHex` is the raw 32-byte symmetric AEAD key,
 hex-encoded, for `sodium_crypto_aead_xchacha20poly1305_ietf_*` calls via
 `OpLogFieldCrypto` / the Sync Public `SensitiveColumnCodec`. It must never be
 persisted outside the keyring's own encrypted JSON file, mirroring
@@ -97,10 +107,10 @@ message to the local device's GDK keyring.
 
 **Placement.** `SyncServiceProvider` forward-registers this class under
 `Modules\Sync\Internal\Crypto\GdkEpochControlHandler` via a single-owner
-forward-registration block; downstream plans only ever create classes and
-never edit that provider. This class therefore lives in the `Crypto`
-namespace so the existing forward-registration actually binds it, rather than
-adding a second, unwired copy under `Transport`.
+forward-registration block, and that block is never edited to follow a class.
+This class therefore lives in the `Crypto` namespace so the existing
+forward-registration actually binds it, rather than adding a second, unwired
+copy under `Transport`.
 
 **Validation before crypto.** `PeerCatchUpExchanger::parseControlMessage()` is
 reused verbatim for the generic "valid JSON object with a string `type`
@@ -113,20 +123,27 @@ to match this device's own identity.
 key travels as an anonymous `sodium_crypto_box_seal` — confidential but
 unauthenticated: anyone who knows this device's X25519 public key can craft a
 `GDK_EPOCH_WRAP` sealing an attacker-chosen key to it, and (with a
-not-yet-present, higher `epoch_id`) drive `GdkKeyringService::appendEpoch()`'s
+not-yet-present `epoch_id`) drive `GdkKeyringService::appendEpoch()`'s
 unconditional `current_epoch` advance so future writes encrypt under the
 attacker's key. The seal opening + `recipient_device_id` match do NOT by
-themselves establish trust. `handle()` MUST only be called with a `$json`
-envelope that arrived over a channel that has already authenticated the
-sender as a CONFIRMED peer — in this codebase, the Noise IK session in
-`SyncWebSocketHandler` (peer static key verified against the confirmed-only
-`DeviceRegistryService::deviceX25519Keys()` before any blob is exchanged). The
-relay-mailbox drain in `SyncWebSocketHandler::deliverGdkEpochWraps()` runs
-only after that handshake succeeds. Do NOT wire a new caller that routes an
-unauthenticated (e.g. raw relay-pushed) blob into this method. A future
-hardening adds an explicit Ed25519 sender signature over the wrap so
-provenance is verifiable independent of the transport; until then the
-authenticated-channel precondition above is a hard requirement.
+themselves establish trust.
+
+That hole is closed in the code: `GdkEpochControlHandler::senderRejection()`
+verifies a detached Ed25519 signature over
+`GdkEpochWrapSignature::signingMessage()` against the sender's STILL-CONFIRMED
+`DeviceRegistryService::deviceKeys()` entry, BEFORE the sealed box is opened or
+anything is appended. A forged wrap is refused whatever channel carried it, and
+a sender this device does not yet confirm is deferred rather than refused,
+because during pairing the wrap can outrun the registry row.
+
+The authenticated channel is still a requirement, not an alternative:
+`handle()` is called only with a `$json` envelope that arrived over the Noise
+IK session in `SyncWebSocketHandler` (peer static key verified against the
+confirmed-only `DeviceRegistryService::deviceX25519Keys()` before any blob is
+exchanged), and the relay-mailbox drain in
+`SyncWebSocketHandler::deliverGdkEpochWraps()` runs only after that handshake
+succeeds. Do NOT wire a new caller that routes an unauthenticated (e.g. raw
+relay-pushed) blob into this method.
 
 **False-not-garbage.** `sodium_crypto_box_seal_open()`'s return is checked
 with a strict `=== false` — never a truthy/`!$x` check — and a failure
@@ -135,11 +152,16 @@ key is appended to the local keyring under the LOCAL device's own KEK
 (`GdkKeyringService::appendEpoch()` — never a wire-supplied key).
 
 **Idempotency.** An `epoch_id` already present in the local keyring is never
-re-appended — this both avoids a duplicate keyring entry and prevents
-`GdkKeyringService::appendEpoch()`'s unconditional `current_epoch` advance
-from ever downgrading an already-higher current epoch via a redelivered (or
-replayed) stale wrap. It also covers a normal (non-import) desktop ADD-device
-fan-out that self-collides: `PairingFlowModal::fanOutToNewlyConfirmedDevice()`
+re-appended — this both avoids a duplicate keyring entry and stops
+`GdkKeyringService::appendEpoch()`'s unconditional `current_epoch` advance from
+moving `current_epoch` back to a superseded epoch when a stale wrap is
+redelivered or replayed. Note what carries that guarantee: NOT an ordering over
+epoch ids, which are random and unordered, but the fact that a wrap for an
+already-held epoch never reaches `appendEpoch()` at all. The only other way a
+not-yet-held epoch can arrive out of order is a multi-epoch fan-out, and
+`GdkRotationService::fanOutAllEpochsToDevice()` delivers the current epoch LAST
+over an insertion-ordered mailbox for exactly that reason. It also covers a normal (non-import) desktop ADD-device
+fan-out that self-collides: `PairingPeerErrands::fanOutEpochsToConfirmedPeers()`
 fires on every confirmed peer, including a self-minting one that already
 holds its own epoch 1 under a different key — this drops that collision with
 a distinct warning (device/epoch ids only, never key material) rather than
@@ -175,8 +197,8 @@ the only surviving copy of the epoch key once `current_epoch` is committed.
 ### GdkRotationService — device removal and add-device fan-out
 
 Device removal is trust revocation + forward-only GDK epoch rotation, in ONE
-operation. A rotate-only or revoke-only implementation is a HIGH-severity
-access-control gap.
+operation. A rotate-only or revoke-only implementation is an access-control
+gap.
 
 Order of operations for `rotateAndRevoke()`:
 
@@ -244,11 +266,11 @@ app-lock PIN wrap are independent, separately-recoverable concerns.
 
 Deliberately excluded: `transactions.amount_minor`, `settled_amount_minor`,
 `fx_rate_used` — at least eleven query classes perform SQL-side SUM()/GROUP BY
-over these columns, and SQLite cannot aggregate ciphertext. Deferred (not this
-phase): `counterparties.metadata`, `saved_reports.definition`.
+over these columns, and SQLite cannot aggregate ciphertext. Deferred:
+`counterparties.metadata`, `saved_reports.definition`.
 
-Knowingly-accepted plaintext exceptions, each a reviewed, tracked decision
-rather than an oversight:
+Knowingly-accepted plaintext exceptions, each a deliberate decision rather
+than an oversight:
 
 - `migration_import_baseline.baseline_value` snapshots a plaintext value for
   `ThreeWayMergeResolver`'s three-way merge compare.
@@ -333,12 +355,16 @@ already authenticated the sender as a CONFIRMED peer — never wire this to an
 unauthenticated source (see `GdkEpochControlHandler` above for the full
 authenticated-channel requirement).
 
-`Public\Services\HistoryReprojector` re-projects every persisted op-log entry
-for a user against the CURRENT (possibly newly-populated) GDK keyring.
-Idempotent — safe to call more than once, though callers should still gate
-repeated calls behind their own cursor to avoid unneeded full-history replay
-cost. Re-throws `OpLogRebuilder::rebuild()`'s failure so a transaction
-failure is never a partial rebuild.
+`Public\Services\HistoryReprojector` re-projects the entries a device could not
+open when they arrived, against the CURRENT (possibly newly-populated) GDK
+keyring. `replayQuarantined()` is the whole of that: the rows the quarantine
+names, widened to every op of each row, through the same replayer the live drain
+uses. Idempotent, and both callers still gate it behind their own cursor.
+
+It used to also carry `reproject()`, a straight `OpLogRebuilder::rebuild()` over
+the whole persisted log. That was the mobile setup gate's re-projection, and it
+was measured fatal on a phone at 200,000 entries — see
+[the initial-sync gate](../mobile/mobile-initial-sync-gate.md#four-measured-costs-on-the-sync-path).
 
 ## Op-log and CRDT replication
 
@@ -353,15 +379,30 @@ guards:
 - **`WHERE user_id = $userId` on every DB write:** even if the filter above
   were bypassed, no cross-user row would be touched.
 - **Ed25519 gate:** entries with no device key or a failing signature are
-  quarantined (`missing_device_key` / `forged_signature`).
+  quarantined (`missing_device_key` / `forged_signature`). "No device key" is
+  asked of the confirmed map FIRST and then of
+  `DeviceRegistryService::retainedDeviceKeys()`, which also holds the key of a
+  device the user has REMOVED. Removal clears `confirmed_at`, which shuts the
+  Noise transport to that device, so retention admits nothing; it only keeps the
+  history that device already wrote verifiable. An entry that is byte-identical
+  to one `op_log_entries` already holds is accepted even when no key at all
+  remains — a rebuild deletes every row a CreateRow op created before replaying
+  them back, so refusing them there destroyed the data outright.
 - **Table allow-list gate:** only tables registered in `MergeRulesRegistry`
   may be written via op-log replay, closing a full trust-store takeover via
   an arbitrary wire-supplied table name.
 
 Rejected ops (`cross_user`, `missing_device_key`, `forged_signature`,
 `unknown_table`, `strategy_error`, `incomplete_create_row`,
-`gdk_decrypt_failed`) write a structured row to `op_log_quarantine` and
-replay continues — deterministic, exceptions never propagate. Verified
+`missing_reference`, `gdk_decrypt_failed`) write a structured row to
+`op_log_quarantine` and replay continues — deterministic, exceptions never
+propagate. A CREATE_ROW is written with a plain `insert()`, never
+`insertOrIgnore`: OR IGNORE silences a NOT NULL violation as well as a
+duplicate, so a create whose ops straddled a frame boundary wrote no row,
+raised no quarantine, logged nothing and returned success.
+`CreateRowInsertFailure` classifies the refusal — a duplicate is the idempotent
+re-apply and stays silent, a NOT NULL violation is `incomplete_create_row`, a
+foreign key is `missing_reference`. Verified
 entries are persisted to `op_log_entries` (upsert-by-identity) so the log is
 durable, ciphertext value unchanged even when GDK-tagged sensitive fields
 are decrypted separately for strategy resolution.
@@ -408,6 +449,18 @@ returns elements whose tag is in the add-set but NOT in the remove-set — an
 element removed on any device is excluded as long as the remove op
 references the element's original add tag.
 
+Its one producer is `Import\Public\Actions\MergeMerchantAliases`, and the
+column and the wire carry DIFFERENT shapes on purpose: the column holds the
+resolved element list `[{v, tag}, …]` (which is what a peer's replay projects
+into it), while the op value is the OR-Set delta envelope
+`{added: [{v, tag}, …], removed: []}`. A plain list on the wire throws
+`Malformed OR-Set value` and quarantines the whole merge. `added` carries the
+WHOLE set rather than only the newly absorbed elements, because the replayer
+resolves a field from the ops in one batch alone — a delta op arriving by itself
+would project a set missing every earlier merge. Tags are derived from the
+element's own content, so the union stays idempotent and two devices merging the
+same aliases mint the same element.
+
 ### Op-log entry, type, rebuilder, writer
 
 `Internal\OpLog\OpLogEntry` is the immutable, signed field-level change DTO;
@@ -422,7 +475,14 @@ pass a free-form `op_type` string to the replayer — add a case here first.
 raw PHP value, signs each entry via `DeviceKeySigner`, ticks the HLC and
 persists the updated clock state in the same DB transaction, and restores
 the HLC high-water mark from `hlc_clock_state` on construction so a restart
-or wall-clock rewind cannot lower the logical clock. Before a sensitive
+or wall-clock rewind cannot lower the logical clock. The RECEIVE half lives in
+`Internal\Clock\RemoteClockAdvance`, which `OpLogReplayer::replay()` calls with
+every verified entry: it runs `HybridLogicalClock::receive()` against the
+highest remote HLC in the batch and persists the result to `hlc_clock_state`.
+`OpLogWriter` is bound transient, so the next write this device makes starts
+from what it has just heard. Without it `receive()` was fed only this device's
+own persisted state and was dead as a causality mechanism — a peer an hour ahead
+won every later merge here, permanently. Before a sensitive
 field's value reaches `op_log_entries` (and therefore the wire — this is the
 "doubles as transport encryption" boundary), it is encrypted under the
 CURRENT GDK epoch and tagged with `gdk_epoch`; when GDK encryption is not
@@ -443,6 +503,11 @@ for single-user/single-writer SQLite.
 `Internal\OpLog\OpLogReplayer` is an earlier, simpler LWW-only replayer
 preceding the production `Internal\Merge\OpLogReplayer` (which adds
 config-driven strategy dispatch, quarantine, and GDK decrypt-before-strategy).
+
+`OpLogBackfiller` and `PreSyncHistoryCapture` write the rows that predate sync
+itself into the log, in slices that commit as they go and resume across
+requests: [Capturing the history that predates
+sync](pre-sync-history-capture.md).
 
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 
@@ -501,7 +566,7 @@ Primary-key stability varies by event and matters for LWW convergence:
   `EnvelopeSettingMutated.settingId` / `SavedReportMutated.reportId` are
   LOCAL autoincrement surrogates, stable across the common
   create-once-then-edit lifecycle on the origin device. Known convergence
-  limitation (shared with `category_budgets`): two devices independently
+  limitation: two devices independently
   creating the FIRST row for the same natural key while offline mint
   DISTINCT local pks, which collide on the natural-key UNIQUE constraint at
   replay — resolved by the replayer's natural-key upsert/quarantine, not by
@@ -539,10 +604,10 @@ round-tripping the on-disk JSON shape (`v`, `device_id`, `user_id`,
 `x25519_public_key_hex`, `created_at`). `DeviceIdentityLoader` decrypts and
 loads it, returning null when sync was never enabled or the app is locked.
 
-`DeviceNameDetector` produces a neutral default device name
-("This device (Mac)") — never `php_uname('n')` — since the default is stored
-in `device_registry.name` and exchanged with paired peers before the user has
-a chance to rename it.
+`DeviceNameDetector` produces a neutral OS-family device name (a bare `Mac`,
+`PC` or `Linux`) — never `php_uname('n')` — since the default is stored in
+`device_registry.name` and exchanged with paired peers before the user has a
+chance to rename it.
 
 `SecureTempFile` is the shared "stage plaintext secret material at 0600"
 helper used at the device identity and GDK keyring encrypt/decrypt
@@ -571,7 +636,7 @@ non-secret projections of the registry.
 byte-wise, not as instants. A stamp written at a local offset reads by its own
 hour digits: `2026-06-15T20:30:00+02:00` sorts *after* the `2026-06-15T19:00:00Z`
 row it actually predates, and the device list silently reorders. Every writer
-therefore goes through `ZuluTimestamp::stamp()`, the same producer
+therefore goes through `Instant::zulu()`, the same producer
 `pairing_tokens.expires_at` and `relay_mailbox` use, and
 `2026_08_22_000002_rewrite_sync_stamps_as_zulu` rewrote the rows an earlier
 version had already stored at an offset. Rewritten, not deleted as the
@@ -639,6 +704,16 @@ sole gate establishing who the peer is, exactly as on the QR path. The
 fetched identity is fed to `PairingGateway::seedResponderToken()` and the
 flow then continues through the unchanged `acceptToken()` ceremony. Neither
 the token nor the offer body is ever logged.
+
+Both typed-code surfaces drive it — `MobilePairingScan` and
+`PairingFlowModal` alike. The lookup belongs to the entry point rather than
+to a platform: a device that RECEIVES a code holds a token and no keys
+whichever kind of device it is, and the desktop arm skipping it made every
+code issued on another machine read as expired
+([the failure](pairing-handshake.md#both-clients-have-to-ask)). It has no
+counterpart on the showing side of a phone, because nothing answers an offer
+request a phone would have to serve
+([why](pairing-handshake.md#a-phone-can-only-be-scanned)).
 
 `PairingFrame` defines the two cross-device pairing handshake frame types
 `PairingFrameCourier` carries between devices:
@@ -931,11 +1006,19 @@ instead of gating it:
 single drain response cannot force the draining device to buffer an unbounded
 backlog in memory.
 
-**Opt-in deployment.** The relay is not started automatically by the
-application. Self-hosters run `php artisan relay:serve` manually or via
-their own supervised process. The default out-of-box path is LAN-direct
-(`sync:serve`); the relay is the offline-buffering fallback when the user
-explicitly opts in by configuring a relay endpoint URL in `RelayConfig`.
+**Deployment.** On the desktop the relay is started BY the application:
+`Modules\Desktop\Internal\Native\RelayListenerProcess::startIfEnabled()`
+provisions a local endpoint and spawns `relay:serve` as a persistent
+`ChildProcess` for any install where some account has enabled sync
+(`DeviceRegistryService::hasLocalDevice()`). That is not an accident of
+configuration: pairing frames travel ONLY over the relay courier, so with no
+relay the handshake has nowhere to deliver — the desktop never receives the
+phone's accept and the phone polls forever.
+
+What IS opt-in is a REMOTE relay: `RelayConfig`'s endpoint URL defaults to
+absent, and self-hosters point it at their own `php artisan relay:serve`. The
+locally-spawned one is the offline-buffering and pairing fallback beside the
+LAN-direct path (`sync:serve`).
 
 **Event-loop lifecycle.** `handle()` calls `\Amp\trapSignal([SIGTERM,
 SIGINT])`, which suspends the current fiber until one of those signals
@@ -958,7 +1041,7 @@ opaque Noise ciphertext blobs addressed by recipient `device_id`. Hard ZK
 invariant — MUST NEVER call `sodium_*`/`json_decode()` on the blob, read/write
 any `user_id` column, or inspect blob content. GC policy: delivered blobs
 expire 7 days after delivery, undelivered blobs 30 days after creation, both
-compared as lexical UTC Zulu ISO8601 strings. `ZuluTimestamp::stamp()` is the
+compared as lexical UTC Zulu ISO8601 strings. `Instant::zulu()` is the
 sole producer for this column and for `pairing_tokens.expires_at`: it converts
 to UTC *and* asserts the shape in one call, so a write that would corrupt the
 GC ordering throws instead of landing. Inlining `->toIso8601String()` is the
@@ -975,8 +1058,14 @@ client can't smuggle an oversized blob past it.
 
 `PeerCatchUpExchanger` implements the HLC-watermark catch-up protocol
 between two syncing peers: initiator and responder exchange
-`CATCH_UP_REQUEST`/`CATCH_UP_RESPONSE` with their local HLC watermark, each
-responding with any `op_log_entries` newer than the peer's watermark, then
+`CATCH_UP_REQUEST`/`CATCH_UP_RESPONSE` with a PER-PEER watermark — how far this
+device has consumed of THAT peer's stream, kept in `sync_peer_catch_up_state`
+and advanced by `SyncSession::receiveOps()` from what the peer actually
+delivered (`PeerCatchUpWatermarks`). It is not this device's own
+`hlc_clock_state`: that is its last LOCAL write and says nothing about the peer,
+so every peer op older than this device's last edit fell below the watermark and
+was never asked for. Each side responds with any `op_log_entries` newer than the
+peer's watermark, then
 both switch to `CATCH_UP_COMPLETE` and live-stream mode. Ops are batched into
 `TransportFramer` frames of <= 64KB / <= 1024 ops each (large syncs, e.g.
 first onboarding, span many frames). All queries are `user_id`-scoped. Op
@@ -987,8 +1076,12 @@ this class only reads from `op_log_entries`.
 Ed25519 op verification. `authenticate()` verifies the peer's revealed
 X25519 static key against `DeviceRegistryService::deviceX25519Keys()`
 (confirmed-only, user-scoped); on success writes `sync_sessions`
-(`status='active'`) and updates `device_registry.last_seen_at`. `sendOps()`
-Noise-encrypts a `TransportFramer` frame; `receiveOps()` Noise-decrypts,
+(`status='active'`) and updates `device_registry.last_seen_at`. Senders pack
+their own frames and call `encrypt()`; a `sendOps()` that framed a whole batch
+in one `TransportFramer::encode()` call was removed, because it carried none of
+the overflow batching or oversized-entry skipping `PeerCatchUpExchanger` does
+and would have reintroduced the wedge that skipping exists to prevent.
+`receiveOps()` Noise-decrypts,
 decodes, verifies each entry's Ed25519 signature (additive — Noise
 authenticates the socket, but entries may be forwarded via relay or replayed
 from disk, so the transport channel is not the signing boundary), then
@@ -1102,6 +1195,22 @@ out of the modal to `route('mobile.pair')`, so `enter_code` is never reached
 there. That screen has a camera and this modal has never had one, which made
 the modal's own offer to scan true only over there. Per-method DI throughout.
 
+`submitCode()` recovers the initiator's identity through
+`PairingGateway::discoverInitiatorOnLan()`, seeds a local row from it, accepts
+onto that row, and sends the `PAIR_RESPONDER_ACCEPT` the issuing device needs
+to leave its own show-code step. Each `PairingOfferLookup` ending gets its own
+line — `code_not_accepted`, `no_peer_answered`, `no_peer_search`,
+`rate_limited` — because a single "invalid or has expired" was false for
+three of the four
+([the failure](pairing-handshake.md#both-clients-have-to-ask)).
+
+The showing arm is the one the modal branches on platform for. A typed code is
+only resolvable against a device advertising the sync service, which no phone
+does, so `showMyCode()` mints no word code on a mobile runtime and the step
+renders `scan_on_other` — the QR alone — in place of the word code and
+`enter_on_other`
+([why](pairing-handshake.md#a-phone-can-only-be-scanned)).
+
 `Public\Enums\PairingWizardStep` is the one spelling of those step names, shared
 with the phone's own pairing screen. The `$step` property itself stays a
 `string`: it is an unlocked public Livewire property, so it is rehydrated
@@ -1139,8 +1248,8 @@ unreachable, handshake failure). Reads peer status exclusively via the public
 
 ## Service provider (`Providers\SyncServiceProvider`)
 
-Single-owner provider for the Sync module: this is the only file downstream
-plans/wiring ever need to touch. Bindings for classes that may not exist yet
+Single-owner provider for the Sync module: this is the only file the module's
+wiring ever needs to touch. Bindings for classes that may not exist yet
 are guarded with `class_exists()`/`interface_exists()` and referenced by
 runtime-built FQCN strings (not `use` imports / `::class`) so PHPStan stays
 clean at every intermediate state — the class is wired automatically the
@@ -1208,7 +1317,7 @@ devices editing different fields of the same row both keep their change.
 by a migration run and never edited by hand; a partial replay of one would
 describe a state neither device was ever in.
 
-### Round 2: nine tables brought under merge rules, then a tenth
+### Ten more tables brought under merge rules
 
 `pot_movements`, `user_preferences`, `recurring_series`,
 `recurring_series_occurrences`, `chain_links`, `anomaly_alerts`,
@@ -1228,7 +1337,7 @@ FK-constrained because the series
 lives in another module — so that check is the only thing standing between a
 replayed mutation and another household member's series.
 
-### Round 2 capture: the write paths that needed no new identity
+### Capture at the write paths that needed no new identity
 
 - `pot_movements` — `PotWriter` dispatches `EntityMutated` for every movement
   it inserts, so a fund, withdrawal or transfer made after pairing reaches the
@@ -1242,7 +1351,56 @@ replayed mutation and another household member's series.
   `Forecasting\Public\Actions`. Deleting a scenario emits one tombstone: the
   mutations cascade away behind it on the peer exactly as they do locally.
 
-### Round 2 capture: `system_alerts` travels only where it is owned
+### The settings row: the table that is not all one thing
+
+`users` was the last covered gap and the one no table-level sweep could see: it
+has no `user_id` column because its own primary key IS the owner, so every
+"can this table be attributed to a user?" check skipped it and every capture
+audit read it as out of scope. Meanwhile `period_start_day` keys
+`envelope_assignments.period_start`, and `EnvelopePeriodRekeyer` re-keys and
+*syncs* those rows — so moving the budget day on the desktop left the phone
+asking `PeriodQuery` for a window no synced row was keyed to, and its whole
+budget read as zero.
+
+Three things had to be true at once:
+
+- **Scope by identity, not by pk.** `RowOwnership::isSelfScoped()` bounds a
+  `users` write to `id = <session user>`, and the applier drops the wire pk for
+  such a table: two devices mint different autoincrements for one reader, so
+  the origin's id names nobody on the peer.
+- **Neither created nor removed from the wire.** A create is refused because
+  the row cannot be attributed to a parent; a tombstone is skipped outright. A
+  peer may edit the reader's settings; it may never mint or remove the reader.
+- **A per-column decision, enforced.** The row mixes the reader's settings with
+  this device's `password`, `theme` and developer gate. The registry carries
+  `DEVICE_LOCAL_COLUMNS` and `ASKED_OF_EVERY_JOINER` (`country_code`) beside
+  the field map, the capture listener drops both before writing an op, and
+  `EveryUserColumnIsPlacedTest` fails when a new column lands in none of the
+  three. A table-level guard is what let `period_start_day` be added silently.
+
+The backfill carries the row as Sets rather than a create, since the peer
+already has a `users` row of its own; the two capture sites are
+`Core\Public\Actions\WriteUserPreference` (which both writes and announces)
+and `SettingsPage::save()`, which saves the model and calls `announce()` with
+the columns that came back dirty.
+
+### A captured table can still have an uncaptured writer
+
+`SyncCaptureCoverageTest` asks whether a table has *a* capture site, which is
+the right question for a table with one write seam and the wrong one for a
+table with two. `counterparties` passed it from the day the resolver announced
+its upserts, while `/counterparties/triage` — accept, hand-label, ignore —
+called `save()` and dispatched nothing. There is no observer on the model, so
+a reader who triaged forty unknowns on the desktop found forty unchanged rows
+on the phone, with no error anywhere to say so.
+
+The fix is the same one `user_preferences` got: one write seam per table, not
+one dispatch per call site.
+`Counterparties\Internal\Actions\LabelCounterparty` owns all three triage
+writes and announces each with `EntityMutated`. When adding capture, count the
+writers of the table, not the dispatches.
+
+### `system_alerts` travels only where it is owned
 
 `system_alerts` captures in part, and the split is the point. Six probe write
 sites across Core and Desktop raise rows with a NULL `user_id`: a corrupt
@@ -1265,7 +1423,7 @@ system-wide row for that reason and captures an owned one, from both paths that
 acknowledge: the banner's button via `AcknowledgeSystemAlert`, and the OAuth
 callback that clears the re-consent banner when the user finishes reconnecting.
 
-### Round 2 capture: `anomaly_alerts` gets an id both devices compute
+### `anomaly_alerts` gets an id both devices compute
 
 A detector-written table cannot be captured while its primary key is an
 autoincrement. Both devices run the same detector, so each mints its own id for
@@ -1283,8 +1441,8 @@ The tuple works because neither half of it moves. An alert is opened against one
 charge and stays against it, and the transaction's own id means the same thing
 on both devices because transactions already sync with their primary key
 preserved. Two devices therefore compute the same number, the second create
-collides harmlessly on `insertOrIgnore`, and a later acknowledge lands on a row
-that exists. `AnomalyAlertConvergenceTest` replays exactly that: two independent
+collides harmlessly on the primary key — `CreateRowInsertFailure::AlreadyPresent`
+— and a later acknowledge lands on a row that exists. `AnomalyAlertConvergenceTest` replays exactly that: two independent
 creates plus one SET, ending as one row in the acknowledged state.
 
 Capture itself is two dispatch sites, because the table has only two writers.
@@ -1297,28 +1455,54 @@ Keeping the id off the autoincrement had one consequence worth writing down: a
 derived id does not ascend with insertion, so `AnomalyAlertQuery` could no
 longer order or page on it. That list has always meant to read newest-first, and
 it has an index for it, so it now orders `detected_at DESC` with the id only
-breaking ties, and the cursor carries both halves. `DriftPage` keeps a separate
-cursor per tab for the same reason — drift ids are still autoincrement.
+breaking ties, and the cursor carries both halves.
 
-### Known gap: incremental capture for four detector-driven tables
+### Capture for the last five detector-driven tables
 
-`chain_links`, `recurring_series`, `recurring_series_occurrences` and
-`drift_alerts` have merge rules and travel in the backfill, but no write path
-emits an op yet, so an edit made after pairing stays on the device that made it.
-They sit in `SyncCaptureCoverageTest`'s `uncapturedBacklog()`.
+`chain_links`, `recurring_series`, `recurring_series_occurrences`,
+`drift_alerts` and `savings_insight_dismissals` were the rest of that hole. They
+had merge rules and travelled in the backfill, and then never moved again: an
+edit made after pairing stayed on the device that made it.
 
-The blocker is no longer the mechanism — `anomaly_alerts` above shows what it
-looks like — but the identity each of these tables would derive from:
+Each now derives its id the same way `anomaly_alerts` does, and
+`uncapturedBacklog()` is empty.
 
-- `chain_links` has no UNIQUE at all, and never has. Its two write paths carry
-  different ideas of what a link is, and the column that separates sibling rows
-  is nullable by design for hint and exceeded-tolerance rows.
-- `recurring_series` has a UNIQUE built from `cluster_key` and
-  `latest_currency`, and `SeriesRefresher` rewrites both in place — `cluster_key`
-  encodes the cadence band, so a subscription that slips from monthly to
-  quarterly moves its own key. A constraint the writer mutates identifies
-  nothing. `cluster_counterparty_key` is not a substitute either: one merchant
-  can legitimately run two series, a monthly subscription beside an annual
-  renewal.
-- `recurring_series_occurrences` and `drift_alerts` are keyed through
-  `recurring_series` and unblock only once it has a converging id of its own.
+- **`chain_links`** — `(user_id, from_transaction_id, to_transaction_id, kind)`.
+  The table has no UNIQUE of its own, so `ChainLinkInsertHelper`'s own dedupe
+  guard was already the only statement of what makes a link the same link; the
+  id is now that same tuple. The NULL endpoint is carried as a NULL rather than
+  folded to zero, because a hint row and a resolved row off one transaction
+  differ by exactly that column. Nothing in the tuple moves: `kind` is never
+  rewritten, and a hint keeps its NULL endpoint until it is deleted whole.
+- **`recurring_series`** — `(user_id, direction, cluster_counterparty_key,
+  latest_currency)`. Not the table's UNIQUE: that names `cluster_key`, which
+  encodes the cadence band and which `SeriesRefresher` rewrites in place the
+  moment a subscription slips from monthly to quarterly. The counterparty key is
+  what the detector itself falls back to when that happens — it is what
+  `rec_series_cluster_cp_key_idx` exists for — and both detectors group their
+  transactions by exactly (counterparty key, currency), so one merchant in one
+  currency is one series on every device. `cluster_key` travels as an ordinary
+  mergeable column instead.
+- **`recurring_series_occurrences`** — `(recurring_series_id, transaction_id)`,
+  its own UNIQUE, once the series id above converges.
+- **`drift_alerts`** — `(recurring_series_id, latest_occurrence_id)`, its own
+  UNIQUE. Both halves are frozen at detection.
+- **`savings_insight_dismissals`** — `(user_id, insight_key)`, its own UNIQUE.
+  The key is `"{kind}:{recurring_series_id}"`, so it converges only because the
+  series id does.
+
+The same consequence as `anomaly_alerts` followed, in two more places. A derived
+id does not ascend with insertion, so `DriftAlertQuery` now orders
+`detected_at DESC` with the id breaking ties, and `RecurringSeriesProjector`'s
+newest-first sort orders `created_at DESC` the same way; both resolve the
+cursor's sort value from the cursor row rather than comparing ids. The
+`chain_links` read models already led on `created_at` or `confidence`, so they
+needed nothing.
+
+Deriving those ids exposed a defect it did not cause: `OpLogReplayer::parentsFirst()`
+asked the container for `CoveredTableOrder`, and `Container::bound()` answers
+false for a concrete class nobody registered — so the lookup returned null and
+both that pass and `childrenFirst()` silently left the ops in the order they
+arrived. Any child create whose parent's clock ran later was refused by its own
+foreign key and quarantined. The replayer builds the collaborator itself now,
+the way `OpLogRebuilder` always has.

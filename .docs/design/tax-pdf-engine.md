@@ -2,9 +2,9 @@
 
 The desktop shell embeds Chromium, and Chromium prints to PDF. That makes
 `dompdf` — 13 MB of vendor tree for one feature — look like an obvious
-deletion. It is not. This note records what a spike against the real
-installed packages found, so the question does not get re-opened from
-first principles every time someone reads the dependency list.
+deletion. It is not. This note records what the real installed packages
+can and cannot do, so the question does not get re-opened from first
+principles every time someone reads the dependency list.
 
 ## The answer is mobile
 
@@ -84,7 +84,7 @@ Chromium, and not at all on the platform where it is the only engine.
 ## What would change this
 
 - `nativephp/mobile` shipping a print or PDF API. This is the
-  load-bearing one; re-spike if it lands.
+  load-bearing one; the question is worth re-opening if it lands.
 - The Tax PDF needing something dompdf cannot render — webfonts, grid or
   flex layout, SVG charts. The template is deliberately CSS 2.1 today.
 - dompdf going unmaintained, or an unfixed advisory against it.

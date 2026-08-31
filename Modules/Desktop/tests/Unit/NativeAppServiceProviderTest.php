@@ -3,9 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
+use Modules\Core\Public\Bootstrap\EnsureAppKey;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Modules\Desktop\Internal\NativeAppServiceProvider;
 use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Facades\Window;
@@ -122,4 +127,32 @@ it('logs and continues when view:cache throws so a single broken view does not s
     // Reaching this line without an exception is the assertion: boot() carried on
     // past the failed view:cache.
     expect(true)->toBeTrue();
+});
+
+// EnsureDatabaseReady redirects a broken schema to desktop.setup, whose poll()
+// re-drives the migration. That screen needs a window to be shown in, and a
+// throw here opened none — so the one recovery path was unreachable.
+
+it('still opens the window when the first-launch migration throws', function (): void {
+    Http::fake();
+    bindConsoleKernelSpy();
+
+    $migrator = Mockery::mock(Migrator::class);
+    $migrator->shouldReceive('repositoryExists')->andReturn(true);
+    $migrator->shouldReceive('paths')->andReturn([]);
+    $migrator->shouldReceive('run')->andThrow(new RuntimeException('a migration that cannot apply'));
+
+    app()->instance(FirstLaunchBootstrap::class, new FirstLaunchBootstrap(
+        $migrator,
+        app(UserDataPathService::class),
+        app(DatabaseManager::class),
+        app(EnsureAppKey::class),
+    ));
+
+    $fake = Window::fake();
+    $fake->alwaysReturnWindows([new NativeWindow('main')]);
+
+    app(NativeAppServiceProvider::class)->boot();
+
+    $fake->assertOpened('main');
 });

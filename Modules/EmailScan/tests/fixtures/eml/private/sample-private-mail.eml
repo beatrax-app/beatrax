@@ -1,0 +1,15 @@
+Return-Path: <hr@employer.example>
+Received: from mail.employer.example (mail.employer.example [203.0.113.44])
+	by inbound.example.test (Postfix) with ESMTPS id 4PaYBM2kCDz3wXyT
+	for <local-user@example.test>; Thu, 20 Aug 2026 08:31:02 +0000 (UTC)
+From: "People Team" <hr@employer.example>
+To: "Synthetic User" <local-user@example.test>
+Subject: Your annual review notes
+Date: Thu, 20 Aug 2026 08:31:01 +0000
+Message-ID: <synthetic-private-20260820083101@employer.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Synthetic private correspondence. Not a receipt, not from an allow-listed
+sender, and never something this product may write to disk.

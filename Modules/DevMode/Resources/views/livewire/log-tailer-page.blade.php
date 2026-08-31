@@ -48,6 +48,7 @@
             initialContains: @js($contains),
             initialChannel: @js($channel),
             initialStats: @js($initialStats),
+            plurals: @js(Lang::arms('dev::logs.totals.showing', 'dev::logs.totals.lines_today', 'dev::logs.totals.lines_today_capped', 'dev::logs.totals.all_files')),
             labels: {
                 pollInterrupted: @js(Lang::get('dev::logs.status.poll_interrupted')),
                 paused: @js(Lang::get('dev::logs.status.paused')),
@@ -61,14 +62,14 @@
     >
         {{-- Filter row --}}
         <section class="flex flex-wrap items-center gap-3" aria-label="{{ Lang::get('dev::logs.filters_aria') }}">
-            <div class="flex items-center gap-1" role="group" aria-label="{{ Lang::get('dev::logs.severity_aria') }}">
+            <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="{{ Lang::get('dev::logs.severity_aria') }}">
                 @foreach ($allSeverities as $sev)
                     <button
                         type="button"
                         x-on:click="toggleSeverity('{{ $sev }}')"
                         x-bind:aria-pressed="severities.has('{{ $sev }}') ? 'true' : 'false'"
                         x-bind:class="severities.has('{{ $sev }}') ? 'border-slate-900 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'"
-                        class="inline-flex items-center gap-1.5 rounded border px-2 py-1 text-[10.5px] font-medium uppercase tracking-wide"
+                        class="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded border px-2 py-1 text-[10.5px] font-medium uppercase tracking-wide"
                         data-severity-chip="{{ $sev }}"
                     >
                         <span>{{ $sev }}</span>
@@ -124,7 +125,7 @@
              cascade reads as one row, not six. --}}
         <div
             class="h-[60vh] overflow-y-auto rounded border border-slate-200 bg-[#0b1220] text-slate-200 dark:border-slate-700"
-            style="font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;"
+            style="font-family: ui-monospace, 'SF Mono', 'Menlo', monospace;"
             data-testid="log-scrollback"
         >
             <template x-if="visibleLines.length === 0 && !paused">
@@ -196,28 +197,29 @@
             </template>
         </div>
 
+        {{-- Every figure in this strip is counted in the browser, so each phrase is
+             a whole line handed to $plural or $line rather than a numeral with a
+             translated fragment beside it. tabular-nums sits on the phrase and
+             still reaches only the digits inside it. --}}
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]" data-testid="log-totals-strip">
-            <span>
-                {{ Lang::get('dev::logs.totals.showing') }} <span class="tabular-nums" x-text="visibleLines.length"></span> {{ Lang::get('dev::logs.totals.of') }}
-                <span class="tabular-nums" x-text="totalReceived"></span> {{ Lang::get('dev::logs.totals.received') }}
-            </span>
+            <span class="tabular-nums" x-text="$plural(plurals, 'dev::logs.totals.showing', totalReceived, { shown: localised(visibleLines.length, 0), cap: localised(MAX_BUFFER, 0) })"></span>
             <span aria-hidden="true">·</span>
-            <span data-testid="log-total-lines">
-                <span class="tabular-nums" x-text="stats.today.totalLines.toLocaleString()"></span>
-                <template x-if="stats.today.capped">
-                    <span class="text-amber-600 dark:text-amber-400">+</span>
-                </template>
-                {{ Lang::get('dev::logs.totals.lines_today') }}
-            </span>
+            <span
+                class="tabular-nums"
+                data-testid="log-total-lines"
+                :class="stats.today.capped ? 'text-amber-600 dark:text-amber-400' : ''"
+                x-text="$plural(plurals, stats.today.capped ? 'dev::logs.totals.lines_today_capped' : 'dev::logs.totals.lines_today', stats.today.totalLines)"
+            ></span>
             <span aria-hidden="true">·</span>
             <span data-testid="log-today-size">
                 <span x-text="humanBytes(stats.today.sizeBytes)"></span> {{ Lang::get('dev::logs.totals.today') }}
             </span>
             <span aria-hidden="true">·</span>
-            <span data-testid="log-all-size">
-                <span x-text="humanBytes(stats.allFiles.totalBytes)"></span> {{ Lang::get('dev::logs.totals.across') }}
-                <span class="tabular-nums" x-text="stats.allFiles.count"></span> {{ Lang::get('dev::logs.totals.daily_files') }}
-            </span>
+            <span
+                class="tabular-nums"
+                data-testid="log-all-size"
+                x-text="$plural(plurals, 'dev::logs.totals.all_files', stats.allFiles.count, { size: humanBytes(stats.allFiles.totalBytes) })"
+            ></span>
         </div>
     </div>
     {{-- Inside the root: Livewire binds wire:id to the first top-level
@@ -244,6 +246,11 @@
                     // Server-rendered status strings so the tailer's client-side
                     // notices honour the request's resolved UI language.
                     labels: opts.labels || {},
+                    // The arms of every counted phrase in the totals strip plus
+                    // the reader locale's selection table. The counts they are
+                    // chosen on are tallied here, after the response has left,
+                    // so the server had no number to run trans_choice against.
+                    plurals: opts.plurals || { span: 1, index: [], forms: {} },
                     buffer: [],
                     paused: false,
                     statusMessage: '',

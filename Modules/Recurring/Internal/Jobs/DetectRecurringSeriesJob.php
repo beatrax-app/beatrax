@@ -18,9 +18,11 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
+use Modules\Recurring\Internal\StateMachines\SeriesRowVanishedException;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -150,9 +152,21 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
 
                 continue;
             }
-            /** @var RecurringSeries $series */
-            $series = RecurringSeries::query()->findOrFail($id);
-            $stateMachine->transition($series, RecurringSeriesState::Pending->value, 'snooze_expired', 'detector');
+            /** @var RecurringSeries|null $series */
+            $series = RecurringSeries::query()->find($id);
+            if ($series === null) {
+                continue;
+            }
+
+            try {
+                $stateMachine->transition($series, RecurringSeriesState::Pending->value, 'snooze_expired', 'detector');
+            } catch (InvalidStateTransitionException|SeriesRowVanishedException) {
+                // A concurrent action moved the row off 'snoozed' or deleted it
+                // between the scan and the row lock. dispatchSync bypasses the
+                // uniqueness lock, so the loser aborted the whole sweep — and
+                // the sibling revival jobs already skip on exactly this.
+                continue;
+            }
         }
     }
 }

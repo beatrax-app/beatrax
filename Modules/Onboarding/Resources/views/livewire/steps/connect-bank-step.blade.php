@@ -4,70 +4,80 @@
     connector shape: three format chips (CAMT.053 recommended, MT940,
     CSV) as a radio group above the drop zone, with helper copy and
     drop-zone copy that re-skin per chip selection. CSV reveals a
-    follow-on chip row {ASN, ING} and gates the drop zone until the
-    bank is picked.
+    follow-on chip row of the CSV layouts the step offers and gates the
+    drop zone until one is picked.
+
+    The layouts arrive as {format, label} pairs from the step, which
+    resolves them from the CSV preset registry. A bank's name is data
+    that reaches the screen through a label; this template names none.
 
     Submission delegates to the existing `RunsImports` pipeline — the
     same path the standalone `/imports` UploadWizard uses. Picking a
-    bank sets the source format the import runs as, so the two chip
+    layout sets the source format the import runs as, so the two chip
     rows resolve to one identifier; the successful-submit path stashes
     the resulting ImportRun id into
     `wizard_progress.data['bank_import_run_id']` for the consolidated
     preview screen to read back.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
-@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
 @php
-    $isCsv = in_array($selectedFormat, [SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL], strict: true);
-    $isGated = $isCsv && ! $csvBankPicked;
+    /** @var list<array{format: string, label: string}> $csvLayouts */
 
-    // Null until the user names a bank, because the CSV chip lands on a CSV
-    // format before that choice is made and nothing may read it as one.
-    $pickedCsvBank = $isCsv && $csvBankPicked ? $selectedFormat : null;
+    $csvFormats = array_column($csvLayouts, 'format');
+    $isCsv = in_array($selectedFormat, $csvFormats, strict: true);
+    $isGated = $isCsv && ! $csvLayoutPicked;
 
-    $miniStepFourSub = match ($selectedFormat) {
-        SourceFormat::Mt940->value => 'MT940 (.sta / .940)',
-        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => 'CSV (.csv)',
+    // The CSV chip has to land somewhere, and landing on a layout is not the
+    // reader picking it, so the chip row below stays unanswered until they do.
+    $csvLandingFormat = $csvFormats[0] ?? '';
+
+    $pickedCsvFormat = $isCsv && $csvLayoutPicked ? $selectedFormat : null;
+    $pickedCsvLabel = null;
+    foreach ($csvLayouts as $layout) {
+        if ($layout['format'] === $pickedCsvFormat) {
+            $pickedCsvLabel = $layout['label'];
+        }
+    }
+
+    $miniStepFourSub = match (true) {
+        $selectedFormat === SourceFormat::Mt940->value => 'MT940 (.sta / .940)',
+        $isCsv => 'CSV (.csv)',
         default => 'CAMT.053 (.xml)',
     };
 
     $dropZoneLead = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => Lang::get('onboarding::connect_bank.drop_lead_camt053'),
         $selectedFormat === SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.drop_lead_mt940'),
-        $pickedCsvBank === SourceFormat::AsnCsv->value => Lang::get('onboarding::connect_bank.drop_lead_asn'),
-        $pickedCsvBank === CsvPresetRegistry::ING_NL => Lang::get('onboarding::connect_bank.drop_lead_ing'),
+        $pickedCsvLabel !== null => Lang::get('onboarding::connect_bank.drop_lead_csv_layout', ['layout' => $pickedCsvLabel]),
         $isCsv => Lang::get('onboarding::connect_bank.drop_lead_pick_bank'),
         default => Lang::get('onboarding::connect_bank.drop_lead_default'),
     };
 
-    // Untranslated on purpose: the same literals the format chips and the
-    // mini-steps already show. Null while the CSV bank is still unpicked,
-    // because there is no one format to name yet.
+    // Untranslated on purpose: the same file-type literals the format chips
+    // and the mini-steps already show.
     $dropZoneFileLabel = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => 'CAMT.053',
         $selectedFormat === SourceFormat::Mt940->value => 'MT940',
-        $pickedCsvBank === SourceFormat::AsnCsv->value => 'ASN CSV',
-        $pickedCsvBank === CsvPresetRegistry::ING_NL => 'ING CSV',
+        $isCsv => 'CSV',
         default => null,
     };
 
-    $dropZoneAccept = match ($selectedFormat) {
-        SourceFormat::Mt940->value => '.sta,.940,.txt',
-        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => '.csv',
+    $dropZoneAccept = match (true) {
+        $selectedFormat === SourceFormat::Mt940->value => '.sta,.940,.txt',
+        $isCsv => '.csv',
         default => '.xml',
     };
 
-    $bankListLine = match ($selectedFormat) {
-        SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.banks_mt940'),
-        SourceFormat::AsnCsv->value, CsvPresetRegistry::ING_NL => Lang::get('onboarding::connect_bank.banks_csv'),
-        default => Lang::get('onboarding::connect_bank.banks_default'),
+    $formatHelpLine = match (true) {
+        $selectedFormat === SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.format_help_mt940'),
+        $isCsv => Lang::get('onboarding::connect_bank.format_help_csv'),
+        default => Lang::get('onboarding::connect_bank.format_help_camt053'),
     };
 
     $eyebrowSuffix = match (true) {
         $selectedFormat === SourceFormat::Camt053->value => '· CAMT.053',
         $selectedFormat === SourceFormat::Mt940->value => '· MT940',
-        $pickedCsvBank === SourceFormat::AsnCsv->value => '· CSV — ASN',
-        $pickedCsvBank === CsvPresetRegistry::ING_NL => '· CSV — ING',
+        $pickedCsvLabel !== null => '· CSV — '.$pickedCsvLabel,
         $isCsv => '· CSV',
         default => '',
     };
@@ -117,16 +127,16 @@
             class="format-chip-button"
             role="radio"
             aria-checked="{{ $isCsv ? 'true' : 'false' }}"
-            wire:click="setFormat('{{ SourceFormat::AsnCsv->value }}')"
+            wire:click="setFormat('{{ $csvLandingFormat }}')"
         >
             <x-onboarding::format-chip label="CSV" :recommended="$isCsv" />
         </button>
     </div>
 
-    <p class="format-bank-list">{{ $bankListLine }}</p>
+    <p class="format-bank-list">{{ $formatHelpLine }}</p>
 
     @if ($isCsv)
-        <x-onboarding::csv-bank-picker-row :selected="$pickedCsvBank" />
+        <x-onboarding::csv-layout-picker-row :layouts="$csvLayouts" :selected="$pickedCsvFormat" />
     @endif
 
     @if ($isGated)
@@ -161,7 +171,7 @@
         <p class="wiz-error" role="alert">{{ $message }}</p>
     @enderror
 
-    @error('csvBankPicked')
+    @error('csvLayoutPicked')
         <p class="wiz-error" role="alert">{{ $message }}</p>
     @enderror
 

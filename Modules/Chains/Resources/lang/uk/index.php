@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Імпортуй кілька виписок (банк, PayPal, картка) — і розв’язувач автоматично покаже тут міжрахункові ланцюги.',
 
     'no_counterparty' => '(без контрагента)',
-    'open_from_row' => 'Відкрити рядок-джерело',
-    'open_to_row' => 'Відкрити рядок-призначення',
     'leg_count' => ':count платіж|:count платежі|:count платежів',
+    'legs_more' => '+ ще :count',
     'state_aria' => 'Стан: :state',
+
+    'state' => [
+        'candidate' => 'Кандидат',
+        'confirmed' => 'Підтверджено',
+        'rejected' => 'Відхилено',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Поповнення PayPal',

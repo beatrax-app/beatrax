@@ -23,5 +23,6 @@ return [
         'body' => 'Kody odzyskiwania to jedyny sposób, by wrócić na swoje konto, gdy zapomnisz hasła.',
         'warning' => 'Są przechowywane w postaci skrótu, więc nie da się ich pokazać ponownie. Nowy zestaw natychmiast unieważnia poprzedni.',
         'regenerate' => 'Wygeneruj nowe kody',
+        'regenerate_confirm' => 'Wygenerować nowy zestaw kodów odzyskiwania? Obecny zestaw przestaje działać w chwili powstania nowego i nie da się go pokazać ponownie — wydrukowana lub przepisana kopia staje się bezużyteczna. Zapisz nowe kody, zanim opuścisz tę stronę.',
     ],
 ];

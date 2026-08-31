@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategooria',
         'assigned' => 'Jagatud',
+        'carried_in' => 'Üle kantud',
+        'moved' => 'Liigutatud',
         'spent' => 'Kulutatud',
         'available' => 'Saadaval',
         'if_overspent' => 'Ülekulu korral',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Peida ajalugu ↑',
         'moved_from' => 'Liigutatud kategooriast :category',
         'moved_to' => 'Liigutatud kategooriasse :category',
+        'moved_unreadable' => 'Liigutatud kategooriaga :category Beatraxi uuema versiooni poolt',
         'undo' => 'Võta tagasi',
     ],
 
     'phone' => [
         'spent' => 'Kulutatud :amount',
+        'carried_in' => 'Üle kantud :amount',
+        'moved' => 'Liigutatud :amount',
         'available' => 'Saadaval :amount',
         'notify_at' => 'Teavita',
     ],

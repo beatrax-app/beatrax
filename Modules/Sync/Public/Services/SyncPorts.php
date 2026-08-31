@@ -11,9 +11,15 @@ use Illuminate\Contracts\Config\Repository;
 // copy of the number the documented env vars moved nothing.
 final readonly class SyncPorts
 {
-    public const DEFAULT_PORT = 51337;
+    public const int DEFAULT_PORT = 51337;
 
-    public const DEFAULT_RELAY_PORT = 51338;
+    public const int DEFAULT_RELAY_PORT = 51338;
+
+    // A port number is sixteen bits on the wire, so anything past this is a
+    // malformed record rather than a service. Here rather than beside the
+    // discovery limits because a scanned QR is bounded by the same rule and
+    // cannot reach across into that module's internals.
+    public const int MAX = 65535;
 
     public function __construct(private Repository $config) {}
 

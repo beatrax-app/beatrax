@@ -43,19 +43,19 @@ final class RelayServeCommand extends Command
     // of deliveries into one recipient could grow the SQLite file unbounded for
     // the 30-day undelivered TTL. 1000 is generous headroom above a realistic
     // personal multi-device backlog.
-    private const MAX_PENDING_PER_RECIPIENT = 1000;
+    private const int MAX_PENDING_PER_RECIPIENT = 1000;
 
     // Resource-exhaustion guard: an unbounded drain would force the server to
     // serialize (and the draining device to buffer) an entire mailbox backlog in
     // one JSON response. Callers loop drain -> confirm -> drain again until
     // fewer than this many rows come back.
-    private const DRAIN_PAGE_SIZE = 100;
+    private const int DRAIN_PAGE_SIZE = 100;
 
     // Device ids are UUID v4 strings, but this pattern is deliberately
     // format-agnostic beyond a safe, bounded character class (letters, digits,
     // -, _, :, .) capped at 128 bytes, rejecting control characters and
     // unbounded-length strings without coupling to one specific id scheme.
-    private const DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
+    private const string DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
 
     public function __construct(
         private readonly LoggerInterface $logger,
@@ -278,7 +278,7 @@ final class RelayServeCommand extends Command
         return match (true) {
             $did === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did'),
             ! $this->isValidDid($did) => $this->jsonError(HttpStatus::BAD_REQUEST, 'malformed_did'),
-            ! $this->isAuthorized($request, $did) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
+            ! $this->isAuthorized($request, $did, mayRegister: true) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
             default => null,
         };
     }
@@ -315,7 +315,7 @@ final class RelayServeCommand extends Command
     // accessed (see class @link): the presented Bearer token is verified
     // against this device's TOFU-registered per-device drain secret. Rejects
     // an empty did, a missing/non-Bearer header, and any non-matching token.
-    private function isAuthorized(Request $request, string $did): bool
+    private function isAuthorized(Request $request, string $did, bool $mayRegister = false): bool
     {
         if ($did === '') {
             return false;
@@ -327,9 +327,14 @@ final class RelayServeCommand extends Command
             return false;
         }
 
-        // The registry runs the timing-safe compare and TOFU-registers a did's
-        // first token; an empty bearer is rejected there before it registers.
-        return $this->drainRegistry->authorizes($did, substr($authHeader, strlen('Bearer ')));
+        // The registry runs the timing-safe compare; an empty bearer is
+        // rejected there before it can register. Only the drain path, where the
+        // caller names its own device id, may register a first token.
+        $token = substr($authHeader, strlen('Bearer '));
+
+        return $mayRegister
+            ? $this->drainRegistry->registerOrAuthorize($did, $token)
+            : $this->drainRegistry->authorizes($did, $token);
     }
 
     private function isValidDid(string $did): bool

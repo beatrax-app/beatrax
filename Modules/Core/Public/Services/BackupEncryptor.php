@@ -13,21 +13,27 @@ use Throwable;
 
 final class BackupEncryptor implements FileEncryptor
 {
-    private const MAGIC = 'BTRXENC1';
+    private const string MAGIC = 'BTRXENC1';
 
-    private const CHUNK_SIZE = 65536;
+    private const int CHUNK_SIZE = 65536;
 
-    // The header is unauthenticated and read BEFORE the key is derived, so an
-    // unbounded opslimit/memlimit is a pre-auth hang or OOM. 10 ops is far above
-    // any sane setting (SENSITIVE = 4); the mem cap is libsodium's own ceiling.
-    private const MAX_OPSLIMIT = 10;
+    // The header is unauthenticated and read BEFORE the key is derived, so the
+    // ceiling is a hang and an OOM budget. Bounded by what this application can
+    // WRITE rather than by what libsodium will accept: nothing here produces
+    // more than MODERATE, so a header asking for more is not one of ours.
+    /**
+     * @link ../../../../.docs/features/core/architecture.md#the-argon2id-parameters-a-backup-header-may-ask-for
+     */
+    private const int MAX_OPSLIMIT = SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE;
+
+    private const int MAX_MEMLIMIT = SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE;
 
     // encryptWithKey's secret is already a uniformly random key, so stretching
     // it adds nothing; Argon2 is retained only for domain separation and format
     // compatibility, and MODERATE cost would be ~500ms on every keyring read.
-    private const KEY_OPSLIMIT = 1;
+    private const int KEY_OPSLIMIT = 1;
 
-    private const KEY_MEMLIMIT = 8192;
+    private const int KEY_MEMLIMIT = 8192;
 
     /**
      * @throws BackupIoException on I/O failure
@@ -211,7 +217,7 @@ final class BackupEncryptor implements FileEncryptor
         // The header these come from is attacker-controllable, so they are
         // range-checked before any derivation runs.
         if ($opslimit <= 0 || $opslimit > self::MAX_OPSLIMIT
-            || $memlimit <= 0 || $memlimit > SODIUM_CRYPTO_PWHASH_MEMLIMIT_SENSITIVE) {
+            || $memlimit <= 0 || $memlimit > self::MAX_MEMLIMIT) {
             throw new BackupFormatException('The backup header requests Argon2id parameters outside the accepted range.');
         }
 

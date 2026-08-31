@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Core\Public\Casts\DateOnlyCast;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Goals\Database\Factories\GoalFactory;
 
@@ -46,8 +47,8 @@ final class Goal extends Model
     {
         return [
             'target_minor' => 'integer',
-            'start_date' => 'immutable_date',
-            'target_date' => 'immutable_date',
+            'start_date' => DateOnlyCast::class,
+            'target_date' => DateOnlyCast::class,
         ];
     }
 

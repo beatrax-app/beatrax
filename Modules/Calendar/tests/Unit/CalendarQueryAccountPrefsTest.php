@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Calendar\Internal\Services\AccountResolver;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Recurring\Models\RecurringSeries;
 
 // null means "never configured" and resolves to the defaults; an explicit
@@ -108,15 +108,12 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is null (
 
     expect($days)->toBeArray()->not->toBeEmpty();
 
-    $spendableKinds = (new ReflectionClass(AccountResolver::class))
-        ->getConstant('SPENDABLE_KINDS');
-    expect($spendableKinds)->toContain('bank');
-    expect($spendableKinds)->toContain('cash');
-    expect($spendableKinds)->toContain('paypal');
-    expect($spendableKinds)->toContain('paypal_funding');
-    expect($spendableKinds)->not->toContain('ics');
-    expect($spendableKinds)->not->toContain('ics_card');
-    expect($spendableKinds)->not->toContain('ics_bulk_settle');
+    // The list this used to reflect over was seeded from a design note that
+    // mixed chain-link kinds ('ics', 'ics_bulk_settle') in among account kinds,
+    // and 'paypal_funding' — a kind of both — rode in with them and stayed.
+    // There is one list now, and no account kind outside AccountKind to name.
+    expect(AccountKind::spendableValues())
+        ->toBe([AccountKind::Bank->value, AccountKind::Paypal->value, AccountKind::Cash->value]);
 
     unset($asnId, $icsId);
 });

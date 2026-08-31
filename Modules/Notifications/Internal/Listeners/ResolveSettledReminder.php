@@ -9,18 +9,19 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Enums\NotificationState;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Recurring\Public\Events\PaymentSettled;
 use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
-final class ResolveSettledReminder
+final readonly class ResolveSettledReminder
 {
     public function __construct(
-        private readonly DeterministicKeyDeriver $keys,
-        private readonly DatabaseManager $db,
-        private readonly NotificationStateMachine $stateMachine,
-        private readonly LoggerInterface $log,
+        private DeterministicKeyDeriver $keys,
+        private DatabaseManager $db,
+        private NotificationStateMachine $stateMachine,
+        private LoggerInterface $log,
     ) {}
 
     public function handle(PaymentSettled $event): void
@@ -28,7 +29,7 @@ final class ResolveSettledReminder
         try {
             $id = $this->keys->derive(
                 $event->userId,
-                DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
+                NotificationTrigger::PaymentReminder,
                 (string) $event->seriesId,
                 $event->dueDate->toDateString(),
             );

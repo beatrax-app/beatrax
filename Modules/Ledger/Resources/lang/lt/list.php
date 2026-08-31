@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Visa istorija.',
     'subtitle_recent' => 'Naujausios operacijos (paskutinės 90 dienų).',
 
-    'currency_aria' => 'Valiutos rodinys',
-    'currency_eur' => 'Tik :code',
-    'currency_original' => 'Originali valiuta',
+    'currency_aria' => 'Rodoma suma',
+    'currency_eur' => 'Atsiskaityta suma',
+    'currency_original' => 'Originali suma',
 
     'show_recent' => 'Rodyti tik naujausias',
     'show_full' => 'Rodyti visą istoriją',
 
     'empty_period' => 'Šiuo laikotarpiu nieko nėra.',
 
+    'empty_recent_has_older' => 'Per pastarąsias 90 dienų nieko. Senesnės operacijos vis dar čia.',
+
+    'empty_history' => 'Operacijų dar nėra.',
     'loading_more' => 'Įkeliama daugiau operacijų',
     'load_more' => 'Įkelti daugiau',
 

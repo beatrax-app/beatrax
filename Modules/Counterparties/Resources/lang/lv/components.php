@@ -24,6 +24,10 @@ return [
         'unknown' => 'Nezināmi',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankas komisija',
+    ],
+
     'cp_card' => [
         'aria' => 'Darījuma partneris: :name',
         'recent_aria' => 'Nesenā aktivitāte',

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Niet gecategoriseerd',
+    'unavailable_category' => 'Categorie niet op dit apparaat',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Verrekend',
         'uncleared' => 'Niet verrekend',

@@ -159,7 +159,7 @@ it('renders an --option=value arg as a single shell-safe argv token (no doubled 
     // `--queue==default` and artisan read as the value `=default`.
     $argSpec = new ArgSpec(
         name: '--queue',
-        label: 'Queue name',
+        labelKey: 'dev::runner.arg.queue.label',
         type: ArgType::Text,
         rules: ['string'],
     );

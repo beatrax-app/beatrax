@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => "Con quanta facilità Beatrax considera insolito un addebito per quell'esercente o categoria, da 1 a 100. Più alto segnala di più.",
 
     'min_amount_label' => 'Importo minimo di addebito',
-    'min_amount_help' => 'Ignora le anomalie sugli addebiti inferiori a questo importo. Memorizzato in centesimi (:symbol) — 1000 corrisponde a :example.',
+    'min_amount_help' => 'Ignora le anomalie sugli addebiti inferiori a questo importo. Memorizzato in unità minori (:symbol) — :minor corrisponde a :example.',
 
     'save' => 'Salva impostazioni anomalie',
     'saved' => 'Salvato.',

@@ -80,7 +80,7 @@ it('only promises off-network sync when a relay is actually configured', functio
 
     Livewire::test(SyncCompleteScreen::class)
         ->assertSet('hasRelay', false)
-        ->assertSee('sync the next time both are on your home network');
+        ->assertSee('until both are on your home network together');
 });
 
 it('leads to the app rather than dead-ending', function (): void {

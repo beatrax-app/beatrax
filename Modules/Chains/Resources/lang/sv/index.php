@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importera några kontoutdrag (bank, PayPal, kort) så visar kedjelösaren kedjor mellan konton här automatiskt.',
 
     'no_counterparty' => '(ingen motpart)',
-    'open_from_row' => 'Öppna från-raden',
-    'open_to_row' => 'Öppna till-raden',
     'leg_count' => ':count betalning|:count betalningar',
+    'legs_more' => '+ :count till',
     'state_aria' => 'Status: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Bekräftad',
+        'rejected' => 'Avvisad',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal-finansiering',

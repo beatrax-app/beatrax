@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Εξαγωγή PDF',
     'export_pdf_aria' => 'Εξαγωγή PDF',
     'export_pdf_title' => 'Λήψη του beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Απόρριψη',
 
     'country_prompt_heading' => 'Σε ποια χώρα υποβάλλεις φορολογική δήλωση;',
     'country_prompt_body' => 'Μπορείς να το αλλάξεις όποτε θέλεις από τις Ρυθμίσεις → :section.',

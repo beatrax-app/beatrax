@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Borttagen enhet',
     'dismiss_peer' => 'Dölj den här enheten',
+    'dismiss_peer_caption' => 'Dölj',
     'dismiss_stale' => 'Rensa bort enheter som inte längre är parkopplade',
     'not_synced_yet' => 'Inte synkroniserat än',
     'error' => 'Synkroniseringsfel på en eller flera enheter',

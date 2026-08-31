@@ -20,12 +20,16 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
+use Modules\EmailScan\Internal\Clients\MessageUnavailableException;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\InvalidStateTransitionException;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -45,11 +49,11 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
     // Defence-in-depth ceiling: the 7-day window is the primary guard,
     // this stops a provider paginating forever from exhausting the heap.
-    private const FALLBACK_WALK_HARD_CAP = 500;
+    private const int FALLBACK_WALK_HARD_CAP = 500;
 
     // Caps the cursor-expiry re-scan at 7 days back from last_scan_at; the
     // rest is recovered on the next Reconnect or manual backfill.
-    private const FALLBACK_WALK_DAYS = 7;
+    private const int FALLBACK_WALK_DAYS = 7;
 
     public function __construct(public readonly int $inboxId) {}
 
@@ -81,6 +85,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         KnownSenderQuery $senderQuery,
         ScanMessageMapper $mapper,
         JobUserContext $jobUser,
+        GraphDeltaWalk $deltaWalk,
     ): void {
         $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
         if ($prepared === null) {
@@ -96,7 +101,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // pair holds; it surfaces bypassed data without retrying forever.
             match ($prepared->provider) {
                 MailProvider::Gmail->value => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow, $mapper),
-                MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow, $mapper),
+                MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow, $mapper, $deltaWalk),
                 default => $sm->applyStatus(
                     $this->inboxId,
                     InboxScanStatus::Error->value,
@@ -179,7 +184,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         $user = User::query()->where('id', $userId)->firstOrFail();
 
         return array_map(
-            static fn ($s) => $s->emailPattern,
+            static fn (KnownSenderDto $s): string => $s->emailPattern,
             $senderQuery->all($user),
         );
     }
@@ -223,14 +228,46 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         [$messageIds, $newHistoryId] = $this->fetchGmailHistory($gmail, $context->clock, $stateRow, $senderPatterns, $startHistoryId, $mapper);
 
         foreach ($messageIds as $messageId) {
-            if (! $context->alreadyIndexed($messageId)) {
-                $context->storeFetchedMessage($messageId, $gmail->getRawMessage($this->inboxId, $messageId), null);
-            }
+            $this->storeGmailMessage($context, $gmail, $messageId, $senderPatterns, $mapper);
         }
 
         if (is_string($newHistoryId) && $newHistoryId !== '') {
             $context->sm->recordCursor($this->inboxId, ScanCursor::gmail($newHistoryId));
         }
+    }
+
+    /**
+     * @param  list<string>  $senderPatterns
+     */
+    private function storeGmailMessage(
+        InboxScanContext $context,
+        GmailApiClientContract $gmail,
+        string $messageId,
+        array $senderPatterns,
+        ScanMessageMapper $mapper,
+    ): void {
+        if ($context->alreadyIndexed($messageId)) {
+            return;
+        }
+
+        try {
+            $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
+        } catch (GmailRawDecodeException|MessageUnavailableException) {
+            // Permanent for this id. Letting it out would leave the cursor
+            // where it was, and every later tick would walk into the same
+            // message again — one unfetchable message stalls the mailbox.
+            return;
+        }
+
+        // users.history.list has no server-side from-filter and its records
+        // carry no address, so the allow-list can only be applied once the
+        // bytes are in hand — before anything reaches disk or the index.
+        $headers = $context->parseHeaders($rawEml, null);
+        if (! $mapper->matchesAnyPattern($headers->senderEmail, $senderPatterns)) {
+            return;
+        }
+
+        $context->storeParsedMessage($messageId, $rawEml, $headers);
     }
 
     /**
@@ -265,13 +302,14 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         \stdClass $stateRow,
         ScanMessageMapper $mapper,
+        GraphDeltaWalk $deltaWalk,
     ): void {
         $storedDeltaLink = is_string($stateRow->last_delta_link ?? null) ? $stateRow->last_delta_link : '';
         if ($storedDeltaLink === '') {
             return;
         }
 
-        [$messages, $newDeltaLink] = $this->fetchGraphDelta($graph, $context->clock, $stateRow, $senderPatterns, $storedDeltaLink, $mapper);
+        [$messages, $newDeltaLink] = $this->fetchGraphDelta($graph, $context->clock, $stateRow, $senderPatterns, $storedDeltaLink, $mapper, $deltaWalk);
 
         foreach ($messages as $msgMeta) {
             $this->persistDeltaMessage($context, $graph, $msgMeta, $senderPatterns, $mapper);
@@ -293,19 +331,20 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         string $storedDeltaLink,
         ScanMessageMapper $mapper,
+        GraphDeltaWalk $deltaWalk,
     ): array {
         try {
-            $page = $graph->deltaPage($this->inboxId, $storedDeltaLink);
+            $walk = $deltaWalk->collect($graph, $this->inboxId, $storedDeltaLink);
 
-            return [$page['messages'], $page['deltaLink']];
+            return [$walk['messages'], $walk['cursor']];
         } catch (CursorExpiredException) {
             // Re-baselining from the pre-walk timestamp closes the gap-window
             // race; BackfillInboxJob anchors the same way.
             $walkStartedAt = $clock->now()->toDateTimeImmutable();
             $messages = $this->graphFallbackWalk($graph, $stateRow, $senderPatterns, $clock, $mapper);
-            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
+            $baseline = $deltaWalk->collect($graph, $this->inboxId, null, $walkStartedAt);
 
-            return [$messages, $baseline['deltaLink']];
+            return [$messages, $baseline['cursor']];
         }
     }
 
@@ -358,14 +397,23 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
+    // Re-throwing is what hands the job back to the queue for another attempt,
+    // so only a condition a later attempt could clear may leave through it.
     private function transitionOnScanError(InboxScanStateMachine $sm, Throwable $e): void
     {
+        $terminal = $e instanceof InvalidGrantException || $e instanceof InboxNotConfiguredException;
+
         match (true) {
             $e instanceof RateLimitedException => $sm->applyRateLimited($this->inboxId, $e->retryAfterSeconds),
             $e instanceof InvalidGrantException => $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',
+            ),
+            $e instanceof InboxNotConfiguredException => $sm->applyStatus(
+                $this->inboxId,
+                InboxScanStatus::NeedsReauth->value,
+                'No OAuth credentials are persisted for this inbox.',
             ),
             default => $sm->applyStatus(
                 $this->inboxId,
@@ -374,7 +422,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             ),
         };
 
-        if (! $e instanceof InvalidGrantException) {
+        if (! $terminal) {
             throw $e;
         }
     }

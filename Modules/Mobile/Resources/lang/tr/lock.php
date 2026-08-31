@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kilidi aç',
 
-    'digits_entered' => 'hane girildi',
+    'digits_entered' => ':count hane girildi',
     'pin_pad' => 'PIN tuş takımı',
     'digit' => 'Rakam :digit',
     'backspace' => 'Geri sil',

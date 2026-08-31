@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Namen bearbeiten',
     'edit_name_aria' => 'Wiederkehrende Reihe :id umbenennen',
     'new_name_label' => 'Neuer Name für diese Reihe',
+    'load_more' => 'Mehr laden',
     'save' => 'Speichern',
 
     'toast' => [

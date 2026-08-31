@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Ge det här kontot ett namn.',
 
     'ics' => [
+        'name' => 'ICS-kort',
         'heading' => 'Ge ditt ICS-kortkonto ett namn.',
         'help' => 'Det här är första gången du importerar ICS-data. Ge kortet ett namn så att det visas konsekvent i hela appen.',
         'placeholder' => 't.ex. ICS-kort',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Ge ditt PayPal-konto ett namn.',
         'help' => 'Det här är första gången du importerar PayPal-data. Ge den här plånboken ett namn så att den visas konsekvent i hela appen.',
         'placeholder' => 't.ex. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Ge ditt Google Play-konto ett namn.',
+        'help' => 'Det här är första gången du importerar ett Google Play-kvitto. Ge det här kontot ett namn så att det visas konsekvent i hela appen.',
+        'placeholder' => 't.ex. Google Play',
     ],
 
     'col_date' => 'Datum',
@@ -53,28 +62,41 @@ return [
         'error' => 'Fel',
     ],
 
-    'chain' => [
-        'heading' => 'Löser upp kedjor…',
-        'pending' => 'I kö. Kedjelösaren startar snart.',
-        'running' => 'Länkar finansieringskedjor och delar upp avräkningar från kontoutdraget.',
-        'failed_prefix' => 'Kedjeupplösningen misslyckades:',
-        'failed_detail' => 'detaljerna finns i jobbloggen',
-        'open_horizon' => 'Öppna Horizon',
-        'failed_suffix' => 'för att försöka igen eller undersöka närmare.',
-    ],
-
     'rows_shown' => 'Visade rader: :shown av :total',
 
     'show_more' => 'Visa fler rader',
 
     'errors' => [
         'app_locked' => 'Lås upp appen för att importera: krypteringsnycklarna kan inte användas medan den är låst.',
+        'archive_holds_one_message' => 'Den här filen är ett enskilt e-postmeddelande, inte ett brevlådearkiv, så läst som arkiv finns det inget i den. Ladda upp den igen med formatet E-postmeddelande.',
+        'email_file_is_an_archive' => 'Den här filen är ett brevlådearkiv: den innehåller fler än ett meddelande, och läst som ett enda meddelande skulle bara det första tas. Ladda upp den igen med formatet Brevlådearkiv.',
         'file_stopped_short' => 'Rubrikraden stämde, så formatet är rätt. Läsningen stannade före filens slut. En enda oläslig rad gör det, och det gör även en fil som är för stor för den här enheten. Prova en kortare period.',
         'file_unreadable' => 'Filen gick inte att läsa.',
+        'file_unreadable_detail' => 'Appen kunde inte läsa den här filen (:code). De fullständiga uppgifterna finns i apploggen; ange den här koden om du rapporterar ett problem.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
-        'pdf_reader_unavailable' => 'PDF-kontoutdrag kräver programmet pdftotext, som inte är installerat här. Importera filen på en dator som har det, eller använd en CSV-export från din bank i stället.',
+        'not_an_email_file' => 'Den här filen är varken ett e-postmeddelande eller ett brevlådearkiv, så det finns inget i den att läsa som kvitto. Välj den importtyp och det format som passar din fil.',
+        'pdf_has_no_text_layer' => 'Den här PDF:en innehåller ingen text — det är en skanning eller ett foto av ett kontoutdrag, så det finns inget att läsa i den. Hämta själva kontoutdraget från din bank, eller använd en CSV-export i stället.',
+        'pdf_password_protected' => 'Den här PDF:en är lösenordsskyddad, så ingen läsare kan öppna den. Spara en oskyddad kopia från din PDF-visare och importera den i stället.',
+        'pdf_reader_unavailable' => 'Den här versionen av appen har ingen PDF-läsare alls, så ett PDF-kontoutdrag går inte att öppna här. Importera filen på en annan enhet, eller använd en CSV-export från din bank i stället.',
+        'row_belongs_to_another_statement' => 'Den här raden hör till en transaktion i en annan kontoutdragsfil. Importera det kontoutdraget också — de två läses tillsammans.',
         'row_unreadable' => 'Raden gick inte att läsa.',
+        'row_unreadable_detail' => 'Appen kunde inte läsa den här raden (:code). De fullständiga uppgifterna finns i apploggen; ange den här koden om du rapporterar ett problem.',
         'unknown_account' => 'Raden hör till ett konto som du ännu inte har namngett.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Den här filen lästes som e-post',
+        'saved' => 'Vad den innehöll står nedan, och varje meddelande har sparats.',
+        'none_imported' => 'Inget av det blev en transaktion, så inget lades till bland dina transaktioner.',
+        'shown' => 'Visade meddelanden: :shown av :total',
+        'no_subject' => 'Utan ämne',
+
+        'state' => [
+            'read' => 'Läst som en betalning — bekräfta den här importen för att lägga till den bland dina transaktioner.',
+            'not_a_payment' => 'Ingen betalning. Det här meddelandet aviserar något i stället för att bekräfta en betalning.',
+            'unreadable' => 'Sparat. Appen läser kvitton från den här avsändaren, men hittade varken belopp, handlare eller referens i meddelandet.',
+            'unknown_sender' => 'Sparat. Appen läser inte kvitton från den här avsändaren, så den tog ingenting ur meddelandet.',
+        ],
     ],
 
     'failed' => [

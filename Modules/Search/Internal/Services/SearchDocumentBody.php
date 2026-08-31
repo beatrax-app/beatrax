@@ -10,9 +10,14 @@ namespace Modules\Search\Internal\Services;
 // the reader must replace it — the raw byte drew a tofu box on the phone.
 final class SearchDocumentBody
 {
-    public const FIELD_SEPARATOR = "\x0C";
+    // The index tokenizer is trigram, so an FTS5 token is a three-character
+    // window: a word shorter than this cannot be a MATCH predicate at all, and
+    // every reader of the index measures against the same width.
+    public const int TRIGRAM_WIDTH = 3;
 
-    public const DISPLAY_SEPARATOR = ' · ';
+    public const string FIELD_SEPARATOR = "\x0C";
+
+    public const string DISPLAY_SEPARATOR = ' · ';
 
     public static function join(string $counterparty, string $description, string $note): string
     {

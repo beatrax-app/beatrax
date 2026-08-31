@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Descartada — Deshacer',
+        'dismissed' => 'Descartada',
         'restored' => 'Restaurada',
     ],
 ];

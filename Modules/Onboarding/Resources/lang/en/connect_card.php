@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Your credit card (ICS)',
+    'eyebrow' => 'Your credit card',
     'h1' => 'Grab your monthly statement PDFs',
-    'lede' => "Drop all your monthly ICS PDF statements — we'll combine them into one preview.",
+    'lede' => 'Drop all your monthly PDF statements — we\'ll combine them into one preview.',
 
     'format_group_aria' => 'ICS exports as PDF only',
+    'issuer_note' => 'ICS is the only card issuer we can read today, and only the Dutch-language statement it hands out. If your card is from another issuer, skip this step.',
     'got_it_as' => 'Got it as:',
     'badge_only_format' => 'only format',
 

@@ -22,7 +22,6 @@ function icsRow(string $description, string $sourceFormat = 'ics-pdf'): Canonica
         currency: 'EUR',
         settledAmountMinor: -6000,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: null,
         counterpartyIban: null,
         counterpartyNormalized: 'unknown',

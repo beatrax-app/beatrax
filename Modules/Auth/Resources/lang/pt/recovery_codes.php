@@ -23,5 +23,6 @@ return [
         'body' => 'Os códigos de recuperação são a única forma de voltares à tua conta se te esqueceres da palavra-passe.',
         'warning' => 'São guardados com hash, por isso não podem voltar a ser mostrados. Gerar um conjunto novo invalida o anterior de imediato.',
         'regenerate' => 'Gerar códigos novos',
+        'regenerate_confirm' => 'Gerar um conjunto novo de códigos de recuperação? O conjunto que tens agora deixa de funcionar no momento em que o novo é criado e não pode voltar a ser mostrado — uma cópia impressa ou escrita à mão fica inútil. Guarda os códigos novos antes de saíres desta página.',
     ],
 ];

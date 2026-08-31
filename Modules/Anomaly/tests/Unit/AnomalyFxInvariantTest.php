@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
+use Modules\Anomaly\Internal\Support\AnomalySensitivity;
 use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
@@ -32,7 +33,7 @@ it('does not flag a routine USD charge whose settled-EUR amount is typical', fun
     $detector = $this->app->make(LargeVsTypicalDetector::class);
     $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
-    $result = $detector->fires($txn, $user, $user->anomaly_sensitivity_percent, $user->anomaly_min_amount_minor);
+    $result = $detector->fires($txn, $user, AnomalySensitivity::fromStored($user->anomaly_sensitivity_percent), $user->anomaly_min_amount_minor);
 
     expect($result)->toBeNull();
 });
@@ -49,6 +50,6 @@ it('builds its baseline from settled minor units (the comparison currency is EUR
     expect($txn['currency'])->toBe('USD');
     expect($txn['settled_currency'])->toBe('EUR');
 
-    $result = $detector->fires($txn, $user, 50, 1000);
+    $result = $detector->fires($txn, $user, AnomalySensitivity::default(), AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR);
     expect($result)->toBeNull();
 });

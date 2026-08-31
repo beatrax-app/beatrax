@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Zobrazeno :shown nejnovějších z :count.',
+
     'drawer_nav' => 'Navigace',
 
     'search_placeholder' => 'Hledat…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Chceš svá data vidět i v telefonu?',
         'body' => 'Nainstaluj si Beatrax do telefonu a měj své finance rychle po ruce.',
         'dismiss_aria' => 'Zamítnout tip na instalaci',
+        'dismiss_caption' => 'Zamítnout',
         'install_app' => 'Nainstalovat aplikaci',
 
         'desktop_html' => 'Otevři Beatrax v prohlížeči svého telefonu a klepni na „Přidat na plochu“ — nebo klepni na ikonu <strong style="color: var(--color-text);">⚡</strong> v nabídce sdílení v Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Vybráno souborů: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Vyber datum',
         'prev_month' => 'Předchozí měsíc',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minuta',
         'empty' => 'není zvolen čas',
     ],
+
+    'toast_undo' => 'Vrátit zpět',
 
     'veil_locked' => 'Aplikace uzamčena',
 

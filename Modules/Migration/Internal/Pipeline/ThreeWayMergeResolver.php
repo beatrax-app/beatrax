@@ -4,24 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\ConflictDto;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-final class ThreeWayMergeResolver
+final readonly class ThreeWayMergeResolver
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private PeriodQuery $periods,
     ) {}
 
     public function resolve(int $newRunId, User $user, string $sourceProduct): MergeDecision
@@ -78,11 +81,13 @@ final class ThreeWayMergeResolver
             }
 
             // Absence == 0, mirroring PromoteStagingToDomain's zero-minor
-            // convention: a deleted assignment is "assigned nothing", not "unknown".
+            // convention: a deleted assignment is "assigned nothing", not
+            // "unknown". Keyed by the reader's own period, which is where
+            // EnvelopeWriter stores the source file's month.
             $currentValue = $connection->table('envelope_assignments')
                 ->where('user_id', $user->id)
                 ->where('category_id', $categoryId)
-                ->where('period_start', $periodStart)
+                ->where('period_start', $this->periods->containingForUser($user, CarbonImmutable::parse($periodStart))->start->toDateString())
                 ->value('assigned_minor');
             $currentMinor = self::toInt($currentValue);
 
@@ -138,11 +143,21 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            $categoryId = self::toInt($map->beatrax_id);
             $sNew = self::toString($row->name);
-            $current = self::toString(
-                $connection->table('categories')->where('id', $categoryId)->where('user_id', $user->id)->value('name')
-            );
+            $own = $connection->table('categories')
+                ->where('id', self::toInt($map->beatrax_id))
+                ->where('user_id', $user->id)
+                ->first(['name']);
+
+            // A category matched into the shared tree is one nothing here may
+            // rename: EntityChangeApplier scopes every write to the reader's own
+            // rows, so offering the rename as a decision would resolve to
+            // nothing either way, with an empty local value beside it.
+            if ($own === null) {
+                continue;
+            }
+
+            $current = self::toString($own->name);
 
             if ($sNew === $baseline) {
                 continue;

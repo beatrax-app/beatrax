@@ -98,6 +98,7 @@ return [
         'heading' => 'Geliştirici',
         'open_console' => "Dev Console'u aç",
         'pulse' => 'Kuyruk :queue · Worker :worker',
+        'worker_ago' => ':count s önce',
     ],
 
     'account' => [

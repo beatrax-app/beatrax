@@ -23,9 +23,12 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Internal\InvalidStateTransitionException;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -44,7 +47,12 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
-    private const READ_QUOTA_THROTTLE_SECONDS = 2;
+    private const int READ_QUOTA_THROTTLE_SECONDS = 2;
+
+    // Defence in depth against a provider that answers every page with another
+    // next link. The 280s job timeout bites long before this at two seconds a
+    // page, so reaching the ceiling means the walk was not making progress.
+    private const int MAX_WALK_PAGES = 200;
 
     public function __construct(
         public readonly int $inboxId,
@@ -78,6 +86,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
         JobUserContext $jobUser,
+        GraphDeltaWalk $deltaWalk,
     ): void {
         $connection = $db->connection();
 
@@ -101,7 +110,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         $user = User::query()->where('id', $userId)->firstOrFail();
 
         $senderPatterns = array_map(
-            static fn ($s) => $s->emailPattern,
+            static fn (KnownSenderDto $s): string => $s->emailPattern,
             $senderQuery->all($user),
         );
 
@@ -125,7 +134,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         // pair holds; it surfaces bypassed data without retrying forever.
         match ($provider) {
             MailProvider::Gmail->value => $this->runGmailBackfill($context, $gmail, $senderPatterns, $window),
-            MailProvider::Microsoft->value => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window),
+            MailProvider::Microsoft->value => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window, $deltaWalk),
             default => $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
@@ -143,11 +152,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         int $windowMonths,
     ): void {
-        $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
+        if (! $this->beginBackfilling($context)) {
+            return;
+        }
 
         // Gmail's after: operator bounds the q= search server-side, so the
         // walk stops at the slider value instead of the whole inbox.
-        $windowStart = $context->clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
+        // NoOverflow, or a run on the 31st asking for one month back lands in
+        // the month after the one the reader asked for and loses its receipts.
+        $windowStart = $context->clock->now()->subMonthsNoOverflow($windowMonths)->toDateTimeImmutable();
 
         $accum = new class
         {
@@ -199,13 +212,19 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         array $senderPatterns,
         int $windowMonths,
+        GraphDeltaWalk $deltaWalk,
     ): void {
-        $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
+        if (! $this->beginBackfilling($context)) {
+            return;
+        }
 
         // Anchored before any provider call so the post-walk
         // deltaPage(null, anchor) baseline cannot skip mid-walk arrivals.
-        $walkStartedAt = $context->clock->now()->toDateTimeImmutable();
-        $windowStart = $walkStartedAt->modify("-{$windowMonths} months");
+        $startedAt = $context->clock->now();
+        $walkStartedAt = $startedAt->toDateTimeImmutable();
+        // NoOverflow, or a run on the 31st asking for one month back lands in
+        // the month after the one the reader asked for and loses its receipts.
+        $windowStart = $startedAt->subMonthsNoOverflow($windowMonths)->toDateTimeImmutable();
 
         $accum = new class
         {
@@ -234,8 +253,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 extractInternalDate: fn (array $msgMeta): ?DateTimeImmutable => $this->graphMessageInternalDate($msgMeta),
             );
 
-            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
-            $deltaLink = $baseline['deltaLink'] ?? null;
+            $deltaLink = $deltaWalk->collect($graph, $this->inboxId, null, $walkStartedAt)['cursor'];
             if ($deltaLink !== null && $deltaLink !== '') {
                 $context->sm->recordCursor(
                     $this->inboxId,
@@ -246,6 +264,20 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $this->clearProgressAndIdle($context);
         } catch (Throwable $e) {
             $this->transitionOnScanError($context, $e);
+        }
+    }
+
+    // A needs_reauth inbox cannot enter backfilling, and this transition sits
+    // ahead of the try that records failures — letting it out would spend the
+    // whole retry budget on a condition only a Reconnect can clear.
+    private function beginBackfilling(InboxScanContext $context): bool
+    {
+        try {
+            $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
+
+            return true;
+        } catch (InvalidStateTransitionException) {
+            return false;
         }
     }
 
@@ -262,36 +294,58 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         Closure $fetchRawEml,
         Closure $extractInternalDate,
     ): void {
-        $fetched = 0;
-        $cursor = null;
+        [$indexed, $cursor] = $this->resumePoint($context);
 
-        while (true) {
+        for ($walked = 0; $walked < self::MAX_WALK_PAGES; $walked++) {
             $page = $fetchNextPage($cursor);
-            $messages = $page['messages'];
 
-            if ($messages === []) {
-                break;
+            foreach ($page['messages'] as $msgMeta) {
+                $indexed += $this->persistPageMessage($context, $msgMeta, $extractMessageId, $fetchRawEml, $extractInternalDate);
             }
 
-            foreach ($messages as $msgMeta) {
-                $fetched += $this->persistPageMessage($context, $msgMeta, $extractMessageId, $fetchRawEml, $extractInternalDate);
-            }
+            // Read before the emptiness test: both providers legitimately
+            // answer an empty page while still handing back a link to the
+            // next one, and stopping there drops everything past it.
+            $cursor = $page['nextCursor'];
 
             // Routed through the state machine: BoundaryArchTest forbids any
             // other writer of inbox_scan_state, backfill_progress included.
             $context->sm->recordBackfillProgress($this->inboxId, [
-                'fetched_count' => $fetched,
+                'fetched_count' => $indexed,
                 'total_estimated' => $page['totalEstimated'],
                 'last_message_date' => $page['lastMessageDate'],
+                'page_cursor' => $cursor,
+                'window_months' => $this->windowMonths,
             ]);
 
-            $cursor = $page['nextCursor'];
             if ($cursor === null || $cursor === '') {
-                break;
+                return;
             }
 
             Sleep::sleep(self::READ_QUOTA_THROTTLE_SECONDS);
         }
+    }
+
+    // A retry that restarts at page one re-walks every page the previous
+    // attempt already paid for. The window is part of the key: a fresh
+    // backfill over a different range must not adopt the old range's cursor.
+    /**
+     * @return array{0: int, 1: ?string}
+     */
+    private function resumePoint(InboxScanContext $context): array
+    {
+        $raw = $context->backfillProgress();
+        if ($raw === null || ($raw['window_months'] ?? null) !== $this->windowMonths) {
+            return [0, null];
+        }
+
+        $cursor = $raw['page_cursor'] ?? null;
+        $indexed = $raw['fetched_count'] ?? null;
+
+        return [
+            is_int($indexed) ? $indexed : 0,
+            is_string($cursor) && $cursor !== '' ? $cursor : null,
+        ];
     }
 
     /**
@@ -299,7 +353,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
      * @param  Closure(array<string, mixed>): string  $extractMessageId
      * @param  Closure(string): string  $fetchRawEml
      * @param  Closure(array<string, mixed>): ?DateTimeImmutable  $extractInternalDate
-     * @return int the row count persisted for this message, 0 when skipped
+     * @return int 1 once the message is indexed, 0 for an unusable id
      */
     private function persistPageMessage(
         InboxScanContext $context,
@@ -309,8 +363,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         Closure $extractInternalDate,
     ): int {
         $messageId = $extractMessageId($msgMeta);
-        if ($messageId === '' || $context->alreadyIndexed($messageId)) {
+        if ($messageId === '') {
             return 0;
+        }
+
+        // A message a prior attempt already landed still counts: the progress
+        // bar answers "how much of this backfill is indexed", and counting
+        // inserts instead made a retry run the number backwards.
+        if ($context->alreadyIndexed($messageId)) {
+            return 1;
         }
 
         $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $extractInternalDate($msgMeta));
@@ -354,8 +415,12 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         $context->sm->applyStatus($this->inboxId, InboxScanStatus::Idle->value);
     }
 
+    // Re-throwing is what hands the job back to the queue for another attempt,
+    // so only a condition a later attempt could clear may leave through it.
     private function transitionOnScanError(InboxScanContext $context, Throwable $e): void
     {
+        $terminal = $e instanceof InvalidGrantException || $e instanceof InboxNotConfiguredException;
+
         match (true) {
             $e instanceof RateLimitedException => $context->sm->applyStatus(
                 $this->inboxId,
@@ -367,6 +432,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',
             ),
+            $e instanceof InboxNotConfiguredException => $context->sm->applyStatus(
+                $this->inboxId,
+                InboxScanStatus::NeedsReauth->value,
+                'No OAuth credentials are persisted for this inbox.',
+            ),
             default => $context->sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
@@ -374,7 +444,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             ),
         };
 
-        if (! $e instanceof InvalidGrantException) {
+        if (! $terminal) {
             throw $e;
         }
     }

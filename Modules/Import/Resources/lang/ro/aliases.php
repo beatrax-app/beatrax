@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Analizează și previzualizează',
     'cancel_import' => 'Anulează importul',
 
-    'diff_new' => 'noi,',
-    'diff_unchanged' => 'neschimbate,',
-    'diff_conflicts' => 'conflicte.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: ro · diff_new, diff_unchanged — the third arm carries the de a
+    // numeral from twenty up requires, landing on a bare adjective with alias
+    // elided. Whether it stands there without the noun wants a native call.
+    'diff_new' => ':count nou|:count noi|:count de noi',
+    'diff_unchanged' => ':count neschimbat|:count neschimbate|:count de neschimbate',
+    'diff_conflicts' => ':count conflict|:count conflicte|:count de conflicte',
 
     'conflicts_heading' => 'Conflicte',
     'conflict_name' => 'nume — existent: :existing → fișier: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Testează pe tranzacțiile mele',
     'test_help' => 'Editează tiparul generalizat al unui rând ca să vezi ce tranzacții ar potrivi.',
     'typing' => 'Se scrie…',
-    'matches_prefix' => 'Se potrivește cu',
-    'matches_suffix' => 'tranzacții din istoricul tău recent.',
+    'matches' => 'Se potrivește cu :count tranzacție din istoricul tău recent.|Se potrivește cu :count tranzacții din istoricul tău recent.|Se potrivește cu :count de tranzacții din istoricul tău recent.',
 
     'merge_modal_title' => 'Îmbină :count alias|Îmbină :count aliasuri|Îmbină :count de aliasuri',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Niciun fișier încărcat.',
         'unreadable' => 'Fișierul încărcat nu a putut fi citit.',
         'too_short' => 'Tiparul este prea scurt pentru testare.',
+        'file_not_yaml' => 'Acest fișier nu este YAML valid, așa că nu s-a putut citi nimic din el. Exportă din nou aliasurile tale și încarcă fișierul obținut.',
+        'file_unreadable_as_yaml' => 'Acest fișier nu a putut fi citit ca listă de aliasuri. Exportă din nou aliasurile tale și încarcă fișierul obținut.',
+        'file_has_no_entries_list' => 'Acest fișier nu începe cu o listă entries: de prim nivel, așa că nu conține aliasuri de importat. Verifică dacă ai ales fișierul potrivit.',
+        'entry_is_not_a_mapping' => 'Intrarea :entry este o valoare simplă acolo unde erau așteptate un tipar și un nume. Dă-i ambele câmpuri sau elimin-o, apoi încarcă fișierul din nou.',
+        'entry_is_missing_a_field' => 'Intrării :entry îi lipsește tiparul sau numele, iar un alias are nevoie de amândouă. Completează ce lipsește sau elimină acea intrare, apoi încarcă fișierul din nou.',
     ],
 ];

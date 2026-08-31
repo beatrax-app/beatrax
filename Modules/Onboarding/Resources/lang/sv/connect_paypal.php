@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Ditt PayPal-konto',
     'h1' => 'Koppla ditt PayPal-konto',
 
-    'lede_html' => 'Släpp din PayPal-export med transaktionsdetaljer — den heter <em lang="nl">Rapport Transactiegegevens</em> i ett nederländskt PayPal-konto. Saldorapporten (<span lang="nl">Saldorapport</span>) fungerar inte — vi behöver data per händelse.',
+    'lede_html' => 'Släpp din PayPal-aktivitetsexport — en rad per transaktion, inte saldosammanställningen. PayPal namnger sina rapporter på ditt kontos språk, och än så länge läser vi det nederländska paret: <em lang="nl">Rapport Transactiegegevens</em>, inte <span lang="nl">Saldorapport</span>. Kommer din på ett annat språk, byt PayPal till nederländska innan du laddar ner.',
 
     'format_group_aria' => 'PayPal exporterar endast som CSV',
     'got_it_as' => 'Du fick det som:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Ladda ner som CSV',
     ],
 
-    'drop_lead' => 'Släpp din CSV med transaktionsdetaljer här',
+    'drop_lead' => 'Släpp din aktivitetsexport här',
     'browse_file' => 'eller bläddra efter en fil',
 
     'file_ready' => '· ✓ klar',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Fortsätt →',
 
     'errors' => [
-        'required' => 'Släpp först din PayPal-CSV Rapport Transactiegegevens i rutan.',
-        'max' => 'Filen är för stor. Exporter av Rapport Transactiegegevens från PayPal ligger normalt en bra bit under 10 MB.',
-        'extensions' => 'Filen ser inte ut som en PayPal-CSV. Ladda ner Rapport Transactiegegevens (inte saldorapporten Saldorapport) som CSV från PayPal.',
+        'required' => 'Släpp först din PayPal-aktivitetsexport i rutan.',
+        'max' => 'Filen är för stor. En PayPal-aktivitetsexport ligger normalt en bra bit under 10 MB.',
+        'extensions' => 'Filen ser inte ut som en PayPal-CSV. Ladda ner aktivitetsexporten — en rad per transaktion, inte saldosammanställningen — som CSV.',
         'unreadable' => 'Kunde inte läsa filen. Hela felet finns i /dev/logs.',
     ],
 ];

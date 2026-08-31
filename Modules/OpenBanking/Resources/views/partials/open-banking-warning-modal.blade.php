@@ -1,10 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Loud third-party-data warning gate (Surface B2).
-     The ONE deliberate visual break from the calm-slate room: 2px rose
-     border, tinted body — this must read as a genuine speed bump, not a
-     dismissible notice. `role="alertdialog"` (stronger than Flux's default
-     `role="dialog"`) since this is an interruptive gate the user must
-     resolve, not a passive dialog. --}}
+{{-- The one deliberate visual break from the calm-slate room: a 2px rose
+     border and a tinted body, because this has to read as a genuine speed
+     bump rather than a dismissible notice. role="alertdialog" over Flux's
+     default role="dialog" for the same reason — the reader must resolve it,
+     not pass it. --}}
 @if ($showWarningModal)
     <flux:modal wire:model="showWarningModal" class="md:max-w-md" data-testid="open-banking-warning-modal">
         <div

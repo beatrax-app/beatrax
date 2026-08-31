@@ -117,6 +117,24 @@ it('shows the last-successful-sync EVEN when the last attempt failed, and never 
         ->toBe($lastSuccessfulSync->toIso8601String());
 });
 
+// "error" is what this row read before the status existed, and it sent a reader
+// to check a connection, a consent and a bank that were all working.
+it('names a run that filed none of its rows rather than calling it an error', function (): void {
+    $user = otpUser('otp-panel-nothing-imported');
+    $this->actingAs($user);
+    otpSeedSecrets();
+    otpSeedConnection($user, [
+        'last_successful_sync_at' => CarbonImmutable::now()->subDays(3)->toDateTimeString(),
+        'last_attempt_at' => CarbonImmutable::now()->subHour()->toDateTimeString(),
+        'last_attempt_status' => 'nothing_imported',
+    ]);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSeeHtml('data-testid="ob-last-attempt"')
+        ->assertSee('failed (nothing could be filed)')
+        ->assertDontSee('failed (error)');
+});
+
 it('hides the last-attempt row when the last attempt succeeded', function (): void {
     $user = otpUser('otp-panel-ok-attempt');
     $this->actingAs($user);

@@ -10,15 +10,15 @@ use Modules\Import\Public\Enums\ImportFailureReason;
 /**
  * @link ../../../../.docs/features/import/architecture.md#what-the-results-screen-can-still-say
  */
-final class ImportRowIssue
+final readonly class ImportRowIssue
 {
-    private const DETAIL_LIMIT = 240;
+    private const int DETAIL_LIMIT = 240;
 
     public function __construct(
-        public readonly ImportIssueKind $kind,
-        public readonly ?int $rowIndex,
-        public readonly ?ImportFailureReason $reason,
-        public readonly ?string $detail,
+        public ImportIssueKind $kind,
+        public ?int $rowIndex,
+        public ?ImportFailureReason $reason,
+        public ?string $detail,
     ) {}
 
     /**

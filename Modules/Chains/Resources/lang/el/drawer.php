@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Δεν βρέθηκε αλυσίδα χρηματοδότησης πέρα από αυτό το σκέλος.',
 
     'covers_charges' => 'Καλύπτει :count χρέωση ICS|Καλύπτει :count χρεώσεις ICS',
-    'no_ics_charges' => 'Καμία χρέωση ICS σε αυτόν τον διακανονισμό',
     'show_more_fanout' => 'Εμφάνιση :count ακόμη · :shown από :total',
 
     'confirm' => 'Επιβεβαίωση',
     'reject' => 'Απόρριψη',
     'confirm_aria' => 'Επιβεβαίωση του συνδέσμου αλυσίδας :id',
     'reject_aria' => 'Απόρριψη του συνδέσμου αλυσίδας :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Ντετερμινιστικό',
+        'confirmed' => 'Επιβεβαιωμένο',
+        'candidate' => 'Υποψήφιο',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Βεβαιότητα: ντετερμινιστική αντιστοίχιση',

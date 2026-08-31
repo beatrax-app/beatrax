@@ -88,10 +88,14 @@ function nsmChainLink(
     Transaction $funderTx,
     string $createdAt,
 ): void {
+    // IcsSettlementResolver writes the settlement on the FROM side and each
+    // charge it covered on the TO side. Spelled the other way round, this
+    // fixture built the only shape under which the read site's reversed join
+    // answered at all.
     $db->connection()->table('chain_links')->insert([
         'user_id' => $user->id,
-        'from_transaction_id' => $fundedTx->id,
-        'to_transaction_id' => $funderTx->id,
+        'from_transaction_id' => $funderTx->id,
+        'to_transaction_id' => $fundedTx->id,
         'kind' => 'ics_bulk_settle',
         'state' => 'confirmed',
         'confidence' => 1.000,
@@ -190,6 +194,62 @@ it('states the amount in the currency the statement was stored in', function ():
     expect($dto?->accountId)->toBe($asn->id);
 });
 
+// The fallback pinned `kind = 'bank'`, so a reader who pays their card from a
+// PayPal balance or a cash account was answered "nothing due" — no tile, no
+// banner, on a statement that was open. IcsSettlementResolver had already had
+// the identical line corrected in candidateTransferIds(): only the card being
+// settled is excluded, because every other kind can be the one that paid.
+it('names a payer that is not a bank account, which the reader may well be paying from', function (): void {
+    $user = nsmUser('nsm-non-bank-payer');
+    $payer = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'PayPal balance',
+        'slug' => 'nsm-paypal-payer',
+        'kind' => 'paypal',
+        'iban' => 'PAYPAL',
+        'default_currency' => 'EUR',
+    ]);
+    $ics = nsmIcsAccount($user, 'nsm-ics-non-bank');
+    $run = nsmImportRun($user);
+
+    CardStatement::query()->create([
+        'user_id' => $user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -10000,
+        'open_balance_minor' => 10000,
+        'state' => 'open',
+    ]);
+
+    $dto = $this->query->nextSettlementForUser($user);
+
+    expect($dto)->toBeInstanceOf(NextSettlementDto::class);
+    expect($dto?->accountId)->toBe($payer->id);
+});
+
+it('never names the card itself as the account that will pay the card', function (): void {
+    $user = nsmUser('nsm-card-only-payer');
+    $ics = nsmIcsAccount($user, 'nsm-ics-card-only');
+    $second = nsmIcsAccount($user, 'nsm-ics-card-second');
+    $run = nsmImportRun($user);
+
+    CardStatement::query()->create([
+        'user_id' => $user->id,
+        'account_id' => $ics->id,
+        'import_run_id' => $run->id,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => '2026-04-30 23:59:59',
+        'total_amount_minor' => -10000,
+        'open_balance_minor' => 10000,
+        'state' => 'open',
+    ]);
+
+    expect($second->kind)->toBe('ics_card');
+    expect($this->query->nextSettlementForUser($user))->toBeNull();
+});
+
 it('falls back to the user\'s first ASN account when no historical settlement exists', function (): void {
     $user = nsmUser('nsm-fallback');
     $asn = nsmAsnAccount($user, 'nsm-asn-fallback', 'NL76ASNB1234567003');
@@ -213,7 +273,7 @@ it('falls back to the user\'s first ASN account when no historical settlement ex
     expect($dto?->accountId)->toBe($asn->id);
 });
 
-it('returns null when the user has zero ASN accounts (graceful degradation)', function (): void {
+it('returns null when the card is the only account the reader has (graceful degradation)', function (): void {
     $user = nsmUser('nsm-no-asn');
     $ics = nsmIcsAccount($user, 'nsm-ics-no-asn');
     $run = nsmImportRun($user);

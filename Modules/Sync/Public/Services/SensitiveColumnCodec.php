@@ -54,6 +54,15 @@ final class SensitiveColumnCodec
         return "{$table}:{$pk}:{$field}:{$epochId}";
     }
 
+    // For a caller that seals one named column itself rather than handing this
+    // codec a whole attribute array: it has to know which of its own fields to
+    // route through encryptValue(), and encryptValue() seals whatever it is
+    // given rather than consulting the registry.
+    public function isEncrypted(string $table, string $field): bool
+    {
+        return $this->registry->isSensitive($table, $field);
+    }
+
     // Non-throwing, for a caller whose job is to decide what to do about a
     // missing key rather than to be stopped by it. The console reindex asked
     // this by encrypting a probe and comparing; encryptValue() now refuses, so

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Bu telefon uygulamanın verdiği bir dosyayı kaydedemez, bu yüzden şifreli yedek masaüstü uygulamasında alınır. İkisini eşitlemek için bu cihazı eşleştirin.',
+        'no_download_route' => 'Bu uygulama cihazına dosya teslim edemiyor, bu yüzden şifreli yedek masaüstü uygulamasında oluşturuluyor. İkisini eşitlemek için bu cihazı eşleştirin.',
         'unavailable' => 'Şifreli yedekler masaüstü (SQLite) sürümünde kullanılabilir. Sunucu veritabanında, veritabanının kendi yedekleme araçlarını kullan.',
         'intro' => 'Veritabanının tamamının parolayla şifrelenmiş bir kopyasını indir — parola olmadan okunamadığı için harici bir diskte veya bulut depolamada güvenle saklayabilirsin (kuantuma dayanıklı XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Parola',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Dosyanın yüklenmesi tamamlanmadı. Bu cihaz için çok büyük olabilir — masaüstü uygulamasında geri yükleme daha büyük bir yedeği kabul eder.',
         'enter_passphrase' => 'Yedeğin şifrelendiği parolayı gir.',
         'unreadable' => 'Yüklenen dosya okunamadı. Yeniden dene.',
+        'restore_wrong_passphrase' => 'Bu parola ifadesi bu yedeği açmadı ve hiçbir şey değişmedi. Yeniden yaz ve tekrar dene. Kesinlikle doğruysa dosya oluşturulduktan sonra değiştirilmiş demektir — o zaman başka bir kopyadan geri yükle.',
+        'restore_not_a_backup' => 'Bu dosya şifreli bir Beatrax yedeği değil, dolayısıyla geri yüklenecek bir şey yok ve hiçbir şey değişmedi. Yedeği alırken uygulamanın yazdığı .enc dosyasını seç.',
+        'restore_contents_unreadable' => 'Yedek açıldı ama içindeki veritabanı bozuk, bu yüzden geri yüklenmedi ve hiçbir şey değişmedi. Daha eski bir yedekten geri yükle.',
+        'restore_could_not_read' => 'Yedek dosyası okunamadı, bu yüzden geri yükleme çalışmadı ve hiçbir şey değişmedi. Bu cihazda boş alan olduğunu kontrol et ve tekrar dene.',
+        'restore_not_supported' => 'Geri yükleme, verisini tek bir dosyada tutan sürümde çalışır; bu o sürüm değil, dolayısıyla hiçbir şey değişmedi. Sunucu veritabanında o veritabanının kendi geri yükleme araçlarını kullan.',
+        'restore_failed' => 'Geri yükleme çalışmadı ve hiçbir şey değişmedi. Tekrar dene — hata sürerse uygulama günlüğü onu neyin durdurduğunu kaydeder.',
     ],
 ];

@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Imenuj ovaj račun.',
 
     'ics' => [
+        'name' => 'ICS kartica',
         'heading' => 'Imenuj svoj ICS kartični račun.',
         'help' => 'Ovo je prvi put da uvoziš ICS podatke. Daj ovoj kartici naziv kako bi se dosljedno prikazivala u cijeloj aplikaciji.',
         'placeholder' => 'npr. ICS kartica',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Imenuj svoj PayPal račun.',
         'help' => 'Ovo je prvi put da uvoziš PayPal podatke. Daj ovom novčaniku naziv kako bi se dosljedno prikazivao u cijeloj aplikaciji.',
         'placeholder' => 'npr. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Imenuj svoj Google Play račun.',
+        'help' => 'Ovo je prvi put da uvoziš Google Play račun. Daj ovom računu naziv kako bi se dosljedno prikazivao u cijeloj aplikaciji.',
+        'placeholder' => 'npr. Google Play',
     ],
 
     'col_date' => 'Datum',
@@ -53,28 +62,41 @@ return [
         'error' => 'Pogreška',
     ],
 
-    'chain' => [
-        'heading' => 'Rješavanje lanaca…',
-        'pending' => 'U redu čekanja. Rješavanje lanaca uskoro počinje.',
-        'running' => 'Povezivanje lanaca financiranja i razlaganje namira s izvoda.',
-        'failed_prefix' => 'Rješavanje lanaca nije uspjelo:',
-        'failed_detail' => 'detalji su u zapisniku poslova',
-        'open_horizon' => 'Otvori Horizon',
-        'failed_suffix' => 'za ponovni pokušaj ili pregled.',
-    ],
-
     'rows_shown' => 'Prikazani redci: :shown od :total',
 
     'show_more' => 'Prikaži više redaka',
 
     'errors' => [
         'app_locked' => 'Otključajte aplikaciju za uvoz: ključevi za šifriranje ne mogu se upotrijebiti dok je zaključana.',
+        'archive_holds_one_message' => 'Ova datoteka je jedna poruka e-pošte, a ne arhiva pretinca e-pošte, pa pročitana kao arhiva ne sadrži ništa. Prenesi je ponovno s formatom Poruka e-pošte.',
+        'email_file_is_an_archive' => 'Ova datoteka je arhiva pretinca e-pošte: sadrži više od jedne poruke, a pročitana kao jedna poruka uzela bi samo prvu. Prenesi je ponovno s formatom Arhiva pretinca e-pošte.',
         'file_stopped_short' => 'Zaglavlje je odgovaralo, pa je format ispravan. Čitanje je stalo prije kraja datoteke. To izaziva jedan nečitljiv redak, kao i datoteka prevelika za ovaj uređaj. Pokušaj s kraćim razdobljem.',
         'file_unreadable' => 'Ovu datoteku nije bilo moguće pročitati.',
+        'file_unreadable_detail' => 'Aplikacija nije mogla pročitati ovu datoteku (:code). Potpuni podaci nalaze se u zapisniku aplikacije; navedite ovaj kôd ako prijavljujete problem.',
         'iban_not_in_preview' => 'Ovaj IBAN nije dio trenutnog pregleda.',
-        'pdf_reader_unavailable' => 'PDF izvodi trebaju program pdftotext, koji ovdje nije instaliran. Uvezi ovu datoteku na računalu koje ga ima ili radije upotrijebi CSV izvoz iz banke.',
+        'not_an_email_file' => 'Ova datoteka nije ni poruka e-pošte ni arhiva pretinca e-pošte, pa se u njoj nema što pročitati kao potvrda. Odaberi vrstu uvoza i format koji odgovaraju tvojoj datoteci.',
+        'pdf_has_no_text_layer' => 'Ovaj PDF ne sadrži tekst — to je skenirani izvod ili njegova fotografija, pa se u njemu nema što pročitati. Preuzmi sam izvod iz svoje banke ili upotrijebi CSV izvoz.',
+        'pdf_password_protected' => 'Ovaj PDF zaštićen je lozinkom, pa ga nijedan čitač ne može otvoriti. U svojem PDF pregledniku spremi nezaštićenu kopiju i uvezi nju.',
+        'pdf_reader_unavailable' => 'Ova verzija aplikacije nema nikakav čitač PDF-a, pa se PDF izvod ovdje ne može otvoriti. Uvezi ovu datoteku na drugom uređaju ili radije upotrijebi CSV izvoz iz banke.',
+        'row_belongs_to_another_statement' => 'Ovaj redak pripada transakciji u drugoj datoteci izvatka. Uvezite i taj izvadak — dva se čitaju zajedno.',
         'row_unreadable' => 'Ovaj redak nije bilo moguće pročitati.',
+        'row_unreadable_detail' => 'Aplikacija nije mogla pročitati ovaj redak (:code). Potpuni podaci nalaze se u zapisniku aplikacije; navedite ovaj kôd ako prijavljujete problem.',
         'unknown_account' => 'Ovaj redak pripada računu kojem još nisi dao naziv.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Ova datoteka pročitana je kao e-pošta',
+        'saved' => 'Što je sadržavala, navedeno je niže, a svaka poruka je spremljena.',
+        'none_imported' => 'Ništa od toga nije postalo transakcija, pa u tvoju glavnu knjigu nije dodano ništa.',
+        'shown' => 'Prikazane poruke: :shown od :total',
+        'no_subject' => 'Bez predmeta',
+
+        'state' => [
+            'read' => 'Pročitano kao plaćanje — potvrdi ovaj uvoz da uđe u tvoju glavnu knjigu.',
+            'not_a_payment' => 'Nije plaćanje. Ova poruka nešto najavljuje umjesto da potvrđuje plaćanje.',
+            'unreadable' => 'Spremljeno. Aplikacija čita račune ovog pošiljatelja, ali u ovoj poruci nije našla iznos, trgovca ni referencu.',
+            'unknown_sender' => 'Spremljeno. Aplikacija ne čita račune ovog pošiljatelja, pa iz poruke nije uzela ništa.',
+        ],
     ],
 
     'failed' => [

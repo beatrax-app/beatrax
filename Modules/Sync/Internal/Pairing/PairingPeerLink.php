@@ -27,14 +27,25 @@ final readonly class PairingPeerLink
         private PairingFrameCourier $frameCourier,
         private LanPairingOfferFetcher $lanOfferFetcher,
         private LanPairingFramePuller $lanFramePuller,
+        private ScannedPeerAddress $scannedAddress,
     ) {}
 
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
     {
         return $this->lanOfferFetcher->fetchForWordCode($wordCode);
+    }
+
+    public function hasRelayRoad(): bool
+    {
+        return $this->relayConfig->isConfigured();
+    }
+
+    public function knowsWhereToReach(string $tokenHash, string $peerDeviceId): bool
+    {
+        return $this->scannedAddress->forTokenHash($tokenHash, $peerDeviceId) !== null;
     }
 
     public function configureRelayFromQr(?string $endpoint, ?string $authToken, ?string $pin): void

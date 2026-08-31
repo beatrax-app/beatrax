@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Pagamento registado',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list não contabilizado — os pagamentos daí não alteram o saldo',
+    ],
+
     'panel' => [
         'aria' => 'Painel de detalhe do dia',
         'close' => 'Fechar o painel do dia',
+        'close_caption' => 'Fechar',
         'start_of_day' => 'Início do dia',
         'no_payments' => 'Sem pagamentos neste dia.',
         'date_approximate' => '~ data aproximada',

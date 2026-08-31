@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Bokført betaling',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list telles ikke med — betalinger derfra endrer ikke saldoen',
+    ],
+
     'panel' => [
         'aria' => 'Panel med dagsdetaljer',
         'close' => 'Lukk dagspanelet',
+        'close_caption' => 'Lukk',
         'start_of_day' => 'Starten av dagen',
         'no_payments' => 'Ingen betalinger denne dagen.',
         'date_approximate' => '~ omtrentlig dato',

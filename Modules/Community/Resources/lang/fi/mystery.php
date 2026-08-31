@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Ei vielä mitään tuntematonta. Tuo tiliotteita, niin Beatrax nostaa tänne rivit, joita se ei voinut tunnistaa.',
 
+    'showing_capped' => 'Näytetään ensimmäiset :shown / :total.',
+
     'footer' => 'Jaettu lista on Beatraxin mukana toimitettava YAML-tiedosto. Ehdotuksen lähettäminen avaa GitHubin selaimeesi; mitään muuta ei lähde tältä laitteelta.',
 
     'card' => [

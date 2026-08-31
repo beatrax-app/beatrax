@@ -27,9 +27,9 @@ final readonly class ScenarioApplier
 {
     // The add_recurring form has no variance-tolerance field, so its band is a
     // fixed ±5% rather than a series-derived width.
-    private const float ONE_OFF_ENVELOPE_LOW_MULTIPLIER = 0.95;
+    private const float ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER = 0.95;
 
-    private const float ONE_OFF_ENVELOPE_HIGH_MULTIPLIER = 1.05;
+    private const float ADD_RECURRING_ENVELOPE_HIGH_MULTIPLIER = 1.05;
 
     public function __construct(
         private ScenarioQuery $scenarioQuery,
@@ -59,7 +59,7 @@ final readonly class ScenarioApplier
         $horizonEnd = $asOf->addDays($horizonDays);
 
         foreach ($mutations as $mutation) {
-            $contributions = $this->applyOne($contributions, $mutation, $user, $asOf, $horizonEnd, $horizonDays);
+            $contributions = $this->applyOne($contributions, $mutation, $user, $asOf, $horizonEnd);
         }
 
         return $contributions;
@@ -75,10 +75,7 @@ final readonly class ScenarioApplier
         User $user,
         CarbonImmutable $asOf,
         CarbonImmutable $horizonEnd,
-        int $horizonDays,
     ): array {
-        unset($horizonDays);
-
         // The default arm is unreachable — the typed cast raises on an unknown
         // kind at read time — so it no-ops rather than guessing.
         return match (true) {
@@ -86,7 +83,7 @@ final readonly class ScenarioApplier
             $mutation->payload instanceof AddOneOffPayload => $this->applyAddOneOff($contributions, $mutation->payload, $asOf, $horizonEnd, $user),
             $mutation->payload instanceof AddRecurringPayload => $this->applyAddRecurring($contributions, $mutation->payload, $asOf, $horizonEnd, $user),
             $mutation->payload instanceof ChangeSeriesAmountPayload => $this->applyChangeSeriesAmount($contributions, $mutation->payload, $user),
-            $mutation->payload instanceof ShiftSeriesDatePayload => $this->applyShiftSeriesDate($contributions, $mutation->payload, $horizonEnd),
+            $mutation->payload instanceof ShiftSeriesDatePayload => $this->applyShiftSeriesDate($contributions, $mutation->payload, $asOf, $horizonEnd),
             default => $contributions,
         };
     }
@@ -116,7 +113,7 @@ final readonly class ScenarioApplier
     // to SafeDate and keep no horizon of their own.
     private function dateWithinHorizon(string $raw, CarbonImmutable $asOf, CarbonImmutable $horizonEnd): ?CarbonImmutable
     {
-        $date = SafeDate::parseDayOrNull($raw);
+        $date = SafeDate::dayOrNull($raw);
 
         return $date === null || $date->lessThan($asOf) || $date->greaterThan($horizonEnd) ? null : $date;
     }
@@ -165,7 +162,6 @@ final readonly class ScenarioApplier
             lowMinor: $signed,
             highMinor: $signed,
             currency: $payload->currency,
-            fxRateUsed: null,
             seriesId: 0,
             accountId: $accountId,
         );
@@ -222,7 +218,7 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         User $user,
     ): array {
-        $start = SafeDate::parseDayOrNull($payload->startDate);
+        $start = SafeDate::dayOrNull($payload->startDate);
         $cadence = SeriesCadence::tryFrom($payload->cadence);
 
         if ($start === null || $cadence === null || ! $cadence->isRegular()) {
@@ -238,8 +234,8 @@ final readonly class ScenarioApplier
         $magnitude = abs($payload->amountMinor);
         $sign = $payload->direction === Direction::Income->value ? 1 : -1;
         $point = $sign * $magnitude;
-        $lowMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_LOW_MULTIPLIER);
-        $highMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_HIGH_MULTIPLIER);
+        $lowMag = (int) round($magnitude * self::ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER);
+        $highMag = (int) round($magnitude * self::ADD_RECURRING_ENVELOPE_HIGH_MULTIPLIER);
         [$lowMinor, $highMinor] = $sign < 0 ? [-$highMag, -$lowMag] : [$lowMag, $highMag];
 
         foreach ($this->walk->datesInHorizon($start, $cadence, $asOf, $horizonEnd) as $date) {
@@ -249,7 +245,6 @@ final readonly class ScenarioApplier
                 lowMinor: $lowMinor,
                 highMinor: $highMinor,
                 currency: $payload->currency,
-                fxRateUsed: null,
                 seriesId: 0,
                 accountId: $accountId,
             );
@@ -313,9 +308,9 @@ final readonly class ScenarioApplier
             lowMinor: $lowMinor,
             highMinor: $highMinor,
             currency: $c->currency,
-            fxRateUsed: $c->fxRateUsed,
             seriesId: $c->seriesId,
             accountId: $c->accountId,
+            dateIsUncertain: $c->dateIsUncertain,
         );
     }
 
@@ -326,9 +321,10 @@ final readonly class ScenarioApplier
     private function applyShiftSeriesDate(
         array $contributions,
         ShiftSeriesDatePayload $payload,
+        CarbonImmutable $asOf,
         CarbonImmutable $horizonEnd,
     ): array {
-        $newDate = SafeDate::parseDayOrNull($payload->newNextDate);
+        $newDate = SafeDate::dayOrNull($payload->newNextDate);
         $firstIndex = $this->earliestIndexForSeries($contributions, $payload->seriesId);
         $firstDate = $firstIndex === null ? null : $contributions[$firstIndex]->date;
 
@@ -359,15 +355,20 @@ final readonly class ScenarioApplier
             if ($shifted->greaterThan($horizonEnd)) {
                 continue;
             }
+            // Past the far end the charge leaves the window, so dropping it is
+            // the answer. Behind the near end it does not: the fold's walk
+            // starts at asOf and never reads a bucket before it, so a shift
+            // into the past deleted a EUR25.00 charge instead of moving it.
+            $shifted = $shifted->lessThan($asOf) ? $asOf : $shifted;
             $result[] = new ForecastContribution(
                 date: $shifted,
                 pointMinor: $c->pointMinor,
                 lowMinor: $c->lowMinor,
                 highMinor: $c->highMinor,
                 currency: $c->currency,
-                fxRateUsed: $c->fxRateUsed,
                 seriesId: $c->seriesId,
                 accountId: $c->accountId,
+                dateIsUncertain: $c->dateIsUncertain,
             );
         }
 

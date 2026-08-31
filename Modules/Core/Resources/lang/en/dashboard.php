@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Top spending',
     'no_expenses' => 'No categorized expenses yet.',
+    'top_spending_refunded' => 'Not ranked — :amount came back',
 
     'recent_transactions' => 'Recent transactions',
     'view_all' => 'View all',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Category',
     'th_amount' => 'Amount',
     'uncategorized' => 'Uncategorized',
+
+    'jump_to_records' => [
+        'body' => 'Nothing in this period. Your most recent transactions are still here.',
+        'action' => 'Show :period',
+    ],
 
     'reauth' => [
         'title' => 'An inbox needs reconnecting.',

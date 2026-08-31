@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Ce dont tu veux être averti',
+    'background_note' => 'Beatrax les prépare pendant que l\'app est ouverte. Une exécution planifiée en arrière-plan ne le peut pas — le verrou de l\'app détient la seule clé —, donc ce qui est dû est repris pendant que tu continues à utiliser l\'app.',
+    'background_note_phone' => 'Beatrax les prépare pendant que l\'app est ouverte. En arrière-plan, c\'est impossible — le verrou de l\'app détient la seule clé —, donc ce qui est dû arrive à la prochaine ouverture de l\'app.',
 
     'reminders' => [
         'label' => 'Rappels de paiement',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Masquer les détails dans les notifications',
-        'help' => 'Affiche les montants et les noms de commerçants dans la bannière de notification elle-même. Désactive si ton écran peut être vu par d\'autres.',
+        'help' => 'Masque les montants et les noms de commerçants dans la bannière de notification elle-même. Active si ton écran peut être vu par d\'autres.',
     ],
 
     'save' => 'Enregistrer les paramètres de notification',

@@ -36,9 +36,13 @@ return [
     'parse_preview' => 'Inlezen & voorvertonen',
     'cancel_import' => 'Import annuleren',
 
-    'diff_new' => 'nieuw,',
-    'diff_unchanged' => 'ongewijzigd,',
-    'diff_conflicts' => 'conflicten.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: nl · diff_new, diff_unchanged — the attributive -e form for an
+    // elided alias, following the anomaly tile's 2 grote, so both arms match.
+    // Whether a compact diff caption wants the bare nieuw instead is the call.
+    'diff_new' => ':count nieuwe|:count nieuwe',
+    'diff_unchanged' => ':count ongewijzigde|:count ongewijzigde',
+    'diff_conflicts' => ':count conflict|:count conflicten',
 
     'conflicts_heading' => 'Conflicten',
     'conflict_name' => 'naam — bestaand: :existing → bestand: :file',
@@ -53,8 +57,7 @@ return [
     'test_heading' => 'Testen tegen mijn transacties',
     'test_help' => 'Bewerk het gegeneraliseerde patroon van een rij om te zien welke transacties het zou matchen.',
     'typing' => 'Bezig met typen…',
-    'matches_prefix' => 'Matcht',
-    'matches_suffix' => 'transacties in je recente geschiedenis.',
+    'matches' => 'Matcht :count transactie in je recente geschiedenis.|Matcht :count transacties in je recente geschiedenis.',
 
     'merge_modal_title' => ':count alias samenvoegen|:count aliassen samenvoegen',
     'merge_modal_help_html' => 'De overblijvende rij behoudt zijn ruwe omschrijving; de opgenomen rijen worden bewaard in <code class="font-mono text-xs">merged_from</code>.',
@@ -82,5 +85,10 @@ return [
         'no_file' => 'Geen bestand geüpload.',
         'unreadable' => 'Kon het geüploade bestand niet lezen.',
         'too_short' => 'Patroon is te kort om te testen.',
+        'file_not_yaml' => 'Dit bestand is geen geldige YAML, dus er kon niets uit worden gelezen. Exporteer je aliassen opnieuw en upload het bestand dat je krijgt.',
+        'file_unreadable_as_yaml' => 'Dit bestand kon niet als aliaslijst worden gelezen. Exporteer je aliassen opnieuw en upload het bestand dat je krijgt.',
+        'file_has_no_entries_list' => 'Dit bestand begint niet met een entries:-lijst op het hoogste niveau, dus er staan geen aliassen in om te importeren. Controleer of je het juiste bestand hebt gekozen.',
+        'entry_is_not_a_mapping' => 'Item :entry is een losse waarde waar een patroon en een naam werden verwacht. Geef het beide velden, of verwijder het, en upload het bestand opnieuw.',
+        'entry_is_missing_a_field' => 'Bij item :entry ontbreekt het patroon of de naam, en een alias heeft beide nodig. Vul aan wat ontbreekt, of verwijder dat item, en upload het bestand opnieuw.',
     ],
 ];

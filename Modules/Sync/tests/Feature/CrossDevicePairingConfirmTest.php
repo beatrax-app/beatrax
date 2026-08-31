@@ -11,6 +11,7 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmResult;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
@@ -96,7 +97,7 @@ it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> A
     // on a genuinely separate database there is nothing to accept otherwise.
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $accepted = $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
         expect($accepted)->not->toBeFalse();
     });
@@ -138,7 +139,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -207,7 +208,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     // QR, which never crosses the relay.
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -273,7 +274,7 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -318,7 +319,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -366,7 +367,7 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -428,7 +429,7 @@ it('an expired local row rejects a PAIR_CONFIRM — no admission, propagates not
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
@@ -473,7 +474,7 @@ it('a TTL-lapsed local row (natural expiry) rejects a PAIR_CONFIRM the same way'
 
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
+        $service->seedFromInitiator(CDP_USER_ID, new PairingPeerIdentity($desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']), $issuedToken);
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 

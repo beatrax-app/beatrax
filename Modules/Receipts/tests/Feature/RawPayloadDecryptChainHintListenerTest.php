@@ -38,7 +38,7 @@ it('resolves chain hints from an encrypted raw_payload (request-context write an
     $file = UploadedFile::fake()->createWithContent('ics-receipt.eml', $emlBytes);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'email-file')
+        ->set('importType', 'email')
         ->set('sourceFormat', 'eml')
         ->set('file', $file)
         ->call('submit')

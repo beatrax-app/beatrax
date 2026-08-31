@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Prenumeratos →',
     'disclaimer' => 'Oficialios nuorodos iš pagalbos rinkinio — Beatrax už tave nieko nenutraukia ir nekeičia.',
     'dismiss_aria' => 'Slėpti pasiūlymą',
+    'dismiss_caption' => 'Slėpti',
 
     'insight' => [
         'cheaper_message' => ':name gali turėti pigesnį planą — moki :monthly per mėn.',

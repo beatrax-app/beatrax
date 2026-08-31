@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Merge\MergeStrategy;
 
 // `status` has to be an explicit entry on the transactions field map: leaning on
 // strategyFor()'s unknown-field-defaults-to-lww fallback would make the first
@@ -14,7 +15,7 @@ it('registers status as an explicit lww-strategy field on transactions', functio
     $transactionsRules = $registry->rules()['transactions'] ?? [];
 
     expect($transactionsRules)->toHaveKey('status');
-    expect($registry->strategyFor('transactions', 'status'))->toBe('lww');
+    expect($registry->strategyFor('transactions', 'status'))->toBe(MergeStrategy::Lww);
 });
 
 it('never adds status to the transactions _create_required set', function (): void {

@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Add contributions to see a projection',
         'not_enough_history' => 'Not enough history to project a date yet',
         'no_recent_contributions' => 'No recent contributions to project from',
+        'too_far_to_date' => 'Too far off to date at this rate',
         'est' => 'Est. :date ·',
         'projection_note' => '(projection)',
         'projected' => 'Projected: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'More actions for :name',
         'mark_complete' => 'Mark as complete',
+        'mark_complete_caption' => 'Complete',
         'archive' => 'Archive',
         'restore' => 'Restore',
     ],
 
-    'archived_disclosure' => 'Archived goals (:count)',
+    'archived_disclosure' => 'Archived goal (:count)|Archived goals (:count)',
 
     'form' => [
         'title_edit' => 'Edit goal',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Enter a name for your goal.',
         'date' => 'Choose a target date.',
+        'date_invalid' => 'Choose a real date.',
+        'date_before_start' => 'Choose a date on or after the goal\'s start date.',
+        'generic' => 'That goal could not be saved. Check the fields and try again.',
         'amount' => 'Enter a valid amount greater than zero.',
         'pot_linked_category' => 'This pot is linked to a category. Remove that link on the Pots page first.',
+        'pot_already_linked' => 'That pot already funds another goal. Unlink it there first.',
+        'pot_missing' => 'That pot is no longer available. Pick another one, or leave this goal unlinked.',
     ],
 ];

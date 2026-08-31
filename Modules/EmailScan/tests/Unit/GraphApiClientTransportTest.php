@@ -7,6 +7,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
@@ -60,6 +61,33 @@ beforeEach(function (): void {
             new GraphErrorMapper($this->clock),
             new GuzzleClient(['handler' => HandlerStack::create(new MockHandler($responses))]),
         );
+    };
+
+    $this->makeRecordingClient = function (array $responses): GraphApiClient {
+        $transactions = [];
+        $stack = HandlerStack::create(new MockHandler($responses));
+        $stack->push(Middleware::history($transactions));
+
+        $client = new GraphApiClient(
+            $this->secrets,
+            $this->oauth,
+            $this->clock,
+            $this->createStub(EventsDispatcher::class),
+            $this->createStub(DatabaseManager::class),
+            new GraphErrorMapper($this->clock),
+            new GuzzleClient(['handler' => $stack]),
+        );
+
+        // The history container fills as requests flow, so it is read through
+        // a closure rather than captured by value here.
+        $this->recorded = static function () use (&$transactions): array {
+            return array_map(
+                static fn (array $tx): string => (string) $tx['request']->getUri(),
+                $transactions,
+            );
+        };
+
+        return $client;
     };
 });
 
@@ -244,4 +272,43 @@ it('refuses to act on an inbox with no persisted credentials', function (): void
 
     expect(fn () => $client->getRawMessage(7, 'AAA-BBB_CCC'))
         ->toThrow(RuntimeException::class, 'no OAuth credentials persisted for inbox 7');
+});
+
+// Guzzle's `query` option REPLACES the URI's own query string rather than
+// merging into it, and an empty array still counts as "set". A nextLink or
+// deltaLink sent that way arrives with $skiptoken/$deltatoken/$filter gone,
+// so the provider answers page one forever.
+it('follows a nextLink with its query string intact', function (): void {
+    $nextLink = 'https://graph.microsoft.com/v1.0/me/messages?%24skiptoken=SKIP123&%24top=100';
+    $client = ($this->makeRecordingClient)([graphJson(['value' => []])]);
+
+    $client->listSenderMessagesPaged(1, ['billing@shop.example'], new DateTimeImmutable('2026-01-01T00:00:00Z'), $nextLink);
+
+    expect(($this->recorded)())->toBe([$nextLink]);
+});
+
+it('follows a stored delta link with its $deltatoken intact', function (): void {
+    $deltaLink = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?%24deltatoken=STORED_T0';
+    $client = ($this->makeRecordingClient)([graphJson(['value' => []])]);
+
+    $client->deltaPage(1, $deltaLink);
+
+    expect(($this->recorded)())->toBe([$deltaLink]);
+});
+
+it('follows a discovery nextLink with its $search and $skiptoken intact', function (): void {
+    $nextLink = 'https://graph.microsoft.com/v1.0/me/messages?%24search=%22subject%3A(%22receipt%22)%22&%24skiptoken=SKIP9';
+    $client = ($this->makeRecordingClient)([graphJson(['value' => []])]);
+
+    $client->listDiscoveryCandidatesPaged(1, ['receipt'], [], $nextLink);
+
+    expect(($this->recorded)())->toBe([$nextLink]);
+});
+
+it('still sends the composed query on a first-page call', function (): void {
+    $client = ($this->makeRecordingClient)([graphJson(['value' => []])]);
+
+    $client->deltaPage(1, null, new DateTimeImmutable('2026-01-01T00:00:00Z'));
+
+    expect(($this->recorded)()[0])->toContain('%24filter=receivedDateTime%20ge%202026-01-01T00%3A00%3A00Z');
 });

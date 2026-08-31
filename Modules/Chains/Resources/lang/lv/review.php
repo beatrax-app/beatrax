@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Apstipriniet vai noraidiet kandidātu saites, ko ķēžu atrisinātājs nevarēja apstiprināt automātiski.',
 
     'empty_heading' => 'Nav nekā, ko pārskatīt',
-    'empty_body' => 'Katra ķēdes saite ir vai nu apstiprināta, vai noraidīta. Jauni kandidāti parādīsies šeit līdz ar jauniem importiem.',
+    'empty_body' => 'Katra saite, ko atrisinātājs spēja sapārot, ir apstiprināta vai noraidīta. Jauni kandidāti parādīsies šeit līdz ar jauniem importiem.',
 
     'auto_confirm_nudge' => 'Vēl viens apstiprinājums, un līdzīgas saites tiks apstiprinātas automātiski.',
 

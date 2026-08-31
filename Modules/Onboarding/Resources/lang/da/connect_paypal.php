@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Din PayPal-konto',
     'h1' => 'Forbind din PayPal-konto',
 
-    'lede_html' => 'Slip din PayPal-eksport med transaktionsdetaljer — den hedder <em lang="nl">Rapport Transactiegegevens</em> i en hollandsk PayPal-konto. Saldorapporten (<span lang="nl">Saldorapport</span>) virker ikke — vi skal bruge data pr. hændelse.',
+    'lede_html' => 'Slip din PayPal-aktivitetseksport — én række per transaktion, ikke saldooversigten. PayPal navngiver sine rapporter på dit kontos sprog, og indtil videre læser vi det hollandske par: <em lang="nl">Rapport Transactiegegevens</em>, ikke <span lang="nl">Saldorapport</span>. Kommer din på et andet sprog, så skift PayPal til hollandsk, før du henter den.',
 
     'format_group_aria' => 'PayPal eksporterer kun som CSV',
     'got_it_as' => 'Du fik det som:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Hent som CSV',
     ],
 
-    'drop_lead' => 'Slip din CSV med transaktionsdetaljer her',
+    'drop_lead' => 'Slip din aktivitetseksport her',
     'browse_file' => 'eller vælg en fil',
 
     'file_ready' => '· ✓ klar',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Fortsæt →',
 
     'errors' => [
-        'required' => 'Slip først din PayPal-CSV Rapport Transactiegegevens i feltet.',
-        'max' => 'Filen er for stor. Eksporter af Rapport Transactiegegevens fra PayPal ligger normalt et godt stykke under 10 MB.',
-        'extensions' => 'Filen ligner ikke en PayPal-CSV. Hent Rapport Transactiegegevens (ikke saldorapporten Saldorapport) som CSV fra PayPal.',
+        'required' => 'Slip først din PayPal-aktivitetseksport i feltet.',
+        'max' => 'Filen er for stor. En PayPal-aktivitetseksport ligger normalt et godt stykke under 10 MB.',
+        'extensions' => 'Filen ligner ikke en PayPal-CSV. Hent aktivitetseksporten — én række per transaktion, ikke saldooversigten — som CSV.',
         'unreadable' => 'Kunne ikke læse filen. Hele fejlen står i /dev/logs.',
     ],
 ];

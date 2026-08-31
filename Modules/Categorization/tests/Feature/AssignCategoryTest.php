@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Modules\Categorization\Public\Actions\AssignCategory;
+use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Models\User;

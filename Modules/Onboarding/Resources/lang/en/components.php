@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Setup progress',
     'step_progress' => 'Step :current of :total',
-    'step_dot_aria' => 'Step :number of :total',
 
     'eyebrow_step' => 'Step :number — ',
 ];

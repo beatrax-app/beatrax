@@ -19,7 +19,7 @@ use Modules\Migration\Internal\Dto\MigrationPayeeDto;
 use Modules\Migration\Internal\Dto\MigrationTransactionDto;
 use Modules\Migration\Internal\Dto\UnmappedItemDto;
 
-final class StagingWriter
+final readonly class StagingWriter
 {
     private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
@@ -30,7 +30,7 @@ final class StagingWriter
     private const string DEFAULT_ACCOUNT_KIND = AccountKind::Bank->value;
 
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     public function write(MigrationBatch $batch, int $migrationRunId, User $user): void

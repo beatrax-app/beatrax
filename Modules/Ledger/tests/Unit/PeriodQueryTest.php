@@ -124,3 +124,23 @@ it('period contains the instant for every (start_day, instant) pair', function (
     expect($period->start->lessThanOrEqualTo(CarbonImmutable::parse($instant)))->toBeTrue();
     expect($period->endExclusive->greaterThan(CarbonImmutable::parse($instant)))->toBeTrue();
 })->with('period_sweep');
+
+it('canonicalises a mid-period anchor to that periods own start', function (): void {
+    // Any day inside a period selects that period, so an anchor the reader's
+    // URL or a stored view carried mid-month left the page holding one date
+    // while it rendered another period's numbers -- and every later step and
+    // comparison worked from the drifted value.
+    $query = new PeriodQuery(fakeClock('2026-07-20T10:00:00Z'), periodQueryCurrentUser(15));
+
+    $resolved = $query->resolveAnchor('2026-07-17');
+
+    expect($resolved->period->start->toDateString())->toBe('2026-07-15');
+    expect($resolved->isoDate)->toBe('2026-07-15');
+});
+
+it('keeps a null anchor null so the current period stays the default', function (): void {
+    $query = new PeriodQuery(fakeClock('2026-07-20T10:00:00Z'), periodQueryCurrentUser(1));
+    $resolved = $query->resolveAnchor('not-a-date');
+
+    expect($resolved->isoDate)->toBeNull();
+});

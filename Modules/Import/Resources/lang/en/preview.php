@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Name this account.',
 
     'ics' => [
+        'name' => 'ICS card',
         'heading' => 'Name your ICS card account.',
         'help' => "This is the first time you've imported ICS data. Give this card a name so it shows up consistently across the app.",
         'placeholder' => 'e.g. ICS card',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Name your PayPal account.',
         'help' => "This is the first time you've imported PayPal data. Give this wallet a name so it shows up consistently across the app.",
         'placeholder' => 'e.g. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Name your Google Play account.',
+        'help' => "This is the first time you've imported a Google Play receipt. Give this account a name so it shows up consistently across the app.",
+        'placeholder' => 'e.g. Google Play',
     ],
 
     'col_date' => 'Date',
@@ -53,28 +62,41 @@ return [
         'error' => 'Error',
     ],
 
-    'chain' => [
-        'heading' => 'Resolving chains…',
-        'pending' => 'Queued. The chain resolver will start shortly.',
-        'running' => 'Linking funding chains and decomposing statement settlements.',
-        'failed_prefix' => 'Chain resolution failed:',
-        'failed_detail' => 'the details are in the job log',
-        'open_horizon' => 'Open Horizon',
-        'failed_suffix' => 'to retry or inspect.',
-    ],
-
     'rows_shown' => 'Rows shown: :shown of :total',
 
     'show_more' => 'Show more rows',
 
     'errors' => [
         'app_locked' => 'Unlock the app to import: the encryption keys cannot be used while it is locked.',
+        'archive_holds_one_message' => 'This file is a single email message, not a mailbox archive, so reading it as an archive would find nothing in it. Upload it again with the format set to Email message.',
+        'email_file_is_an_archive' => 'This file is a mailbox archive: it holds more than one message, and reading it as a single message would take only the first. Upload it again with the format set to Mailbox archive.',
         'file_stopped_short' => 'The header matched, so the format is right. Reading stopped before the end of the file. One unreadable row does this, and so does a file too large for this device. Try a shorter date range.',
         'file_unreadable' => 'This file could not be read.',
+        'file_unreadable_detail' => 'The app could not read this file (:code). The full details are in the app log; quote this code if you report a problem.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
-        'pdf_reader_unavailable' => 'PDF statements need the pdftotext program, which is not installed here. Import this file on a desktop that has it, or use a CSV export from your bank instead.',
+        'not_an_email_file' => 'This file is neither an email message nor a mailbox archive, so there is nothing in it to read as a receipt. Pick the import type and format that match the file you have.',
+        'pdf_has_no_text_layer' => 'This PDF holds no text — it is a scan or a photo of a statement, so there is nothing in it to read. Download the statement itself from your bank, or use a CSV export instead.',
+        'pdf_password_protected' => 'This PDF is password-protected, so no reader can open it. Save an unprotected copy from your PDF viewer and import that one.',
+        'pdf_reader_unavailable' => 'This build of the app has no PDF reader at all, so a PDF statement cannot be opened here. Import this file on another device, or use a CSV export from your bank instead.',
+        'row_belongs_to_another_statement' => 'This row belongs to a transaction in another statement file. Import that statement as well — the two are read together.',
         'row_unreadable' => 'This row could not be read.',
+        'row_unreadable_detail' => 'The app could not read this row (:code). The full details are in the app log; quote this code if you report a problem.',
         'unknown_account' => 'This row belongs to an account you have not named yet.',
+    ],
+
+    'receipts' => [
+        'heading' => 'This file was read as email',
+        'saved' => 'What it carried is listed below, and every message has been saved.',
+        'none_imported' => 'Nothing here became a transaction, so nothing was added to your ledger.',
+        'shown' => 'Messages shown: :shown of :total',
+        'no_subject' => 'No subject',
+
+        'state' => [
+            'read' => 'Read as a payment — confirm this import to add it to your ledger.',
+            'not_a_payment' => 'Not a payment. This message announces something rather than confirming one.',
+            'unreadable' => 'Saved. The app reads receipts from this sender, but found no amount, merchant and reference in this message.',
+            'unknown_sender' => 'Saved. The app does not read receipts from this sender, so it took nothing from the message.',
+        ],
     ],
 
     'failed' => [

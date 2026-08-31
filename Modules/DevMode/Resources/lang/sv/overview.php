@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Driftvy för den inbyggda utvecklarkonsolen.',
     'worker_heartbeat' => 'Heartbeat för arbetare',
     'not_running' => 'KÖRS INTE',
+    'heartbeat_age' => 'för :count s sedan · ttl :ttl s|för :count s sedan · ttl :ttl s',
     'queue' => 'Kö',
     'pending' => 'väntande',
     'failed' => 'misslyckade',

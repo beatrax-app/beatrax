@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaktion',
     'heading' => 'Transaktion',
+    'booked_on' => 'Gebucht am :date',
 
     'counterparty' => 'Zahlungspartner',
     'description' => 'Beschreibung',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Notiz (optional)',
         'tax_deductible' => 'Steuerlich absetzbar',
         'remove_leg_aria' => 'Diese Kategorie entfernen',
+        'remove_leg_caption' => 'Entfernen',
         'add_category' => '+ Kategorie hinzufügen',
         'soft_cap' => ':count von ~20 Kategorien — kleine Beträge lieber zusammenfassen.',
         'remaining_zero' => 'Rest :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Transaktion löschen',
         'help' => 'Entfernt diese Transaktion dauerhaft. Diese Aktion lässt sich nicht rückgängig machen.',
         'button' => 'Löschen',
-        'confirm_prompt' => 'Bist du sicher?',
+        'confirm_prompt' => 'Diese Transaktion löschen? Notiz, Aufteilung und Steuer-Tags gehen mit ihr.',
         'confirm' => 'Ja, löschen',
         'cancel' => 'Abbrechen',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Kette ansehen',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Abgeglichen und gesperrt',
+        'help' => 'Ein abgeschlossener Abgleich hat diese Transaktion gesperrt. Kategorie, Notiz, Aufteilung und Steuer-Tags bleiben, wie sie sind, bis du sie entsperrst.',
+        'button' => 'Zum Bearbeiten entsperren',
+        'confirm_question' => 'Diese Transaktion zum Bearbeiten entsperren? An ihr ändert sich nichts, und der nächste abgeschlossene Abgleich sperrt sie wieder.',
+        'cancel' => 'Gesperrt lassen',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Diese Transaktion ist abgeglichen. Hebe den Abgleich auf, um Änderungen vorzunehmen.',
         'reclassified_pair_removed' => 'Neu eingeordnet als :type — Paarung entfernt',
         'reclassified' => 'Neu eingeordnet als :type',
         'note_saved' => 'Notiz gespeichert',
         'unreconciled' => 'Abgleich aufgehoben — du kannst diese Transaktion wieder bearbeiten.',
+        'note_too_long' => 'Eine Notiz darf höchstens :max Zeichen lang sein.|Eine Notiz darf höchstens :max Zeichen lang sein.',
         'counterparty_updated' => 'Zahlungspartner aktualisiert',
         'goal_attributed' => 'Wird auf dieses Ziel angerechnet',
         'goal_attribution_removed' => 'Wird nicht mehr auf dieses Ziel angerechnet',

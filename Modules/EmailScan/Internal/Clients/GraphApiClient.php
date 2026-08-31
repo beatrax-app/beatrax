@@ -12,6 +12,7 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\Exceptions\ProviderTransportException;
 use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
@@ -25,25 +26,25 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 /**
  * @link ../../../../.docs/features/email-scan/provider-transport-hardening.md
  */
-final class GraphApiClient implements GraphApiClientContract
+final readonly class GraphApiClient implements GraphApiClientContract
 {
-    private const GRAPH_BASE_URI = 'https://graph.microsoft.com/v1.0/';
+    private const string GRAPH_BASE_URI = 'https://graph.microsoft.com/v1.0/';
 
     // Regional clouds (graph.microsoft.de, graph.microsoft.us) are
     // deliberately excluded — adding one is a reviewed config change.
     /** @var list<string> */
-    private const ALLOWED_HOSTS = ['graph.microsoft.com'];
+    private const array ALLOWED_HOSTS = ['graph.microsoft.com'];
 
-    private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
+    private const string MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
     public function __construct(
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly MicrosoftOAuthProvider $oauth,
-        private readonly Clock $clock,
-        private readonly EventsDispatcher $events,
-        private readonly DatabaseManager $db,
-        private readonly GraphErrorMapper $errorMapper,
-        private readonly ?GuzzleClient $httpClient = null,
+        private OAuthSecretsRepository $secrets,
+        private MicrosoftOAuthProvider $oauth,
+        private Clock $clock,
+        private EventsDispatcher $events,
+        private DatabaseManager $db,
+        private GraphErrorMapper $errorMapper,
+        private ?GuzzleClient $httpClient = null,
     ) {}
 
     /**
@@ -120,6 +121,7 @@ final class GraphApiClient implements GraphApiClientContract
         } catch (GuzzleException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: HTTP error fetching raw message — '.$this->errorMapper->safeMessage($e->getMessage()),
+                previous: $e,
             );
         }
 
@@ -142,8 +144,7 @@ final class GraphApiClient implements GraphApiClientContract
         } else {
             // The caller's pinned anchor wins: without one, messages arriving
             // during a multi-hour backfill slip past both filters.
-            $sinceIso = ($sinceOverride ?? $this->clock->now()->toDateTimeImmutable())
-                ->format('Y-m-d\TH:i:s\Z');
+            $sinceIso = Instant::zulu($sinceOverride ?? $this->clock->now()->toDateTimeImmutable());
             $body = $this->getJson(
                 $client,
                 $accessToken,
@@ -289,7 +290,7 @@ final class GraphApiClient implements GraphApiClientContract
         );
 
         return '('.implode(' or ', $clauses).') and receivedDateTime ge '
-            .$windowStart->format('Y-m-d\TH:i:s\Z');
+            .Instant::zulu($windowStart);
     }
 
     /**
@@ -307,20 +308,29 @@ final class GraphApiClient implements GraphApiClientContract
         // @odata.nextLink/@odata.deltaLink is followed verbatim.
         $this->assertAllowedUrl($url);
 
+        $options = [
+            'headers' => [
+                'Authorization' => 'Bearer '.$accessToken,
+                'Accept' => 'application/json',
+            ],
+            'http_errors' => true,
+        ];
+
+        // Guzzle's `query` option REPLACES the URI's own query string, and an
+        // empty array still counts as set — passing it on a nextLink/deltaLink
+        // call strips $skiptoken/$deltatoken and re-serves page one forever.
+        if ($query !== []) {
+            $options['query'] = $query;
+        }
+
         try {
-            $response = $client->request('GET', $url, [
-                'query' => $query,
-                'headers' => [
-                    'Authorization' => 'Bearer '.$accessToken,
-                    'Accept' => 'application/json',
-                ],
-                'http_errors' => true,
-            ]);
+            $response = $client->request('GET', $url, $options);
         } catch (BadResponseException $e) {
             throw $this->errorMapper->mapErrorResponse($e->getResponse(), 'GET '.$url, $expectsDelta);
         } catch (GuzzleException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: HTTP error against '.$url.' — '.$this->errorMapper->safeMessage($e->getMessage()),
+                previous: $e,
             );
         }
 
@@ -330,6 +340,7 @@ final class GraphApiClient implements GraphApiClientContract
         } catch (JsonException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: failed to decode Graph response JSON ('.$e->getMessage().').',
+                previous: $e,
             );
         }
 

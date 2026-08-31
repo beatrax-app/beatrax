@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'série',
 
+    'template' => [
+        'cancel' => 'Cancelar :name',
+        'change_amount' => 'Alterar o montante de :name',
+    ],
+
     'summary' => [
         'cancel' => 'Cancelar :name',
         'series_fallback' => 'série n.º :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Nome do cenário alterado.',
         'mutation_added' => 'Modificação adicionada.',
         'mutation_updated' => 'Modificação atualizada.',
-        'mutation_removed' => 'Modificação removida. Anular',
+        'mutation_removed' => 'Modificação removida.',
     ],
 
     'errors' => [
         'name_empty' => 'O nome do cenário não pode estar vazio.',
         'name_too_long' => 'O nome do cenário não pode ter mais de :max carácter.|O nome do cenário não pode ter mais de :max caracteres.',
         'name_taken' => 'Já existe um cenário com esse nome.',
+        'date_out_of_range' => 'Essa data está fora de todos os horizontes de previsão — de hoje a :days dia à frente — pelo que o cenário não mudaria nada.|Essa data está fora de todos os horizontes de previsão — de hoje a :days dias à frente — pelo que o cenário não mudaria nada.',
         'pick_kind_first' => 'Escolhe primeiro um tipo de modificação.',
         'amount_positive' => 'O montante tem de ser um número positivo.',
+        'scenario_gone' => 'Este cenário já não existe — foi eliminado noutro lado. Escolhe outro cenário ou cria um novo.',
+        'mutation_gone' => 'Esta alteração já não existe — foi removida noutro lado. Fecha o editor e volta a adicioná-la se ainda a quiseres.',
     ],
 ];

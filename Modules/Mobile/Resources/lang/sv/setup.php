@@ -12,6 +12,7 @@ return [
         'locked' => 'Lås upp appen för att fortsätta konfigurationen.',
         'revoked' => 'Den här enheten har tagits bort från din andra enhet. Parkoppla igen för att fortsätta synkronisera.',
     ],
+    'unlock_cta' => 'Lås upp appen',
     'step' => [
         'connect' => 'Ansluter till din andra enhet',
         'keys' => 'Tar emot krypteringsnycklar',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Bygger om din historik',
     ],
     'step_current' => 'aktuellt steg',
-    'working' => [
-        'connect' => 'Kontaktar din andra enhet…',
-        'keys' => 'Låser upp dina data…',
-        'transfer' => 'Begär din historik…',
-        'rebuild' => 'Bygger om din historik — det kan ta en stund.',
-    ],
     'page_title' => 'Konfigurerar…',
     'resuming' => 'Återupptar konfigurationen…',
     'setting_up' => 'Konfigurerar den här enheten…',
     'progress_aria' => 'Förlopp för konfigurationen',
     'records' => ':count post|:count poster',
-    'records_preparing' => 'Väntar på den andra enheten…',
 ];

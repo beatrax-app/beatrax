@@ -22,6 +22,9 @@ final class FakeGmailApiClient implements GmailApiClientContract
     /** @var array<int, int> */
     private array $historyRateLimitedInboxes = [];
 
+    /** @var list<string> */
+    private array $unavailableMessageIds = [];
+
     /** @var array{history: list<array<string, mixed>>, historyId: ?string}|null */
     private ?array $queuedHistoryResponse = null;
 
@@ -99,6 +102,12 @@ final class FakeGmailApiClient implements GmailApiClientContract
             'inboxId' => $inboxId,
             'providerMessageId' => $providerMessageId,
         ]];
+
+        if (in_array($providerMessageId, $this->unavailableMessageIds, strict: true)) {
+            throw new MessageUnavailableException(
+                "FakeGmailApiClient: message {$providerMessageId} is no longer available on inbox {$inboxId}.",
+            );
+        }
 
         $fixture = 'messages-get-raw-'.$this->fixtureSlug($providerMessageId).'.json';
         $payload = $this->readJson($fixture);
@@ -202,6 +211,13 @@ final class FakeGmailApiClient implements GmailApiClientContract
             'messages' => $messages,
             'nextPageToken' => $nextPageToken,
         ];
+    }
+
+    // Stands in for a message deleted between the history read and the fetch,
+    // which the real client surfaces as a 404 from users.messages.get.
+    public function simulateMissingMessage(string $providerMessageId): void
+    {
+        $this->unavailableMessageIds[] = $providerMessageId;
     }
 
     public function simulateRateLimit(int $inboxId, int $retryAfterSeconds = 2): void

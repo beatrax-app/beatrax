@@ -12,6 +12,7 @@ return [
         'locked' => 'Odomkni aplikáciu a pokračuj v nastavovaní.',
         'revoked' => 'Toto zariadenie bolo z druhého zariadenia odstránené. Spárujte ho znova a synchronizácia bude pokračovať.',
     ],
+    'unlock_cta' => 'Odomkni aplikáciu',
     'step' => [
         'connect' => 'Pripájanie k druhému zariadeniu',
         'keys' => 'Prijímanie šifrovacích kľúčov',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Obnova tvojej histórie',
     ],
     'step_current' => 'aktuálny krok',
-    'working' => [
-        'connect' => 'Hľadá sa druhé zariadenie…',
-        'keys' => 'Odomykajú sa tvoje údaje…',
-        'transfer' => 'Žiada sa tvoja história…',
-        'rebuild' => 'Obnovuje sa tvoja história — môže to chvíľu trvať.',
-    ],
     'page_title' => 'Nastavuje sa…',
     'resuming' => 'Pokračuje sa v nastavení…',
     'setting_up' => 'Nastavuje sa toto zariadenie…',
     'progress_aria' => 'Priebeh nastavenia',
     'records' => ':count záznam|:count záznamy|:count záznamov',
-    'records_preparing' => 'Čaká sa na druhé zariadenie…',
 ];

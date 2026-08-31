@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Miről értesítsünk',
+    'background_note' => 'A Beatrax akkor készíti elő ezeket, amikor az alkalmazás nyitva van. Egy ütemezett háttérfutás nem tudja — az appzár őrzi az egyetlen kulcsot —, így a várakozókat az alkalmazás további használata közben pótolja.',
+    'background_note_phone' => 'A Beatrax akkor készíti elő ezeket, amikor az alkalmazás nyitva van. A háttérben nem tudja — az appzár őrzi az egyetlen kulcsot —, így a várakozók akkor érkeznek meg, amikor legközelebb megnyitod az appot.',
 
     'reminders' => [
         'label' => 'Fizetési emlékeztetők',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Részletek elrejtése az értesítésekben',
-        'help' => 'Megjeleníti az összegeket és a kereskedők nevét magában az értesítési sávban. Kapcsold ki, ha mások is láthatják a képernyőd.',
+        'help' => 'Elrejti az összegeket és a kereskedők nevét magában az értesítési sávban. Kapcsold be, ha mások is láthatják a képernyőd.',
     ],
 
     'save' => 'Értesítési beállítások mentése',

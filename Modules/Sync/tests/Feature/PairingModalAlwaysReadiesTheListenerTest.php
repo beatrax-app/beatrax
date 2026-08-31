@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingState;
@@ -46,8 +46,8 @@ function listenerModalRow(int $userId, string $state, CarbonImmutable $expiresAt
         'initiator_ed25519_pub_hex' => str_repeat('a', 64),
         'initiator_x25519_pub_hex' => str_repeat('b', 64),
         'state' => $state,
-        'expires_at' => ZuluTimestamp::stamp($expiresAt),
-        'created_at' => ZuluTimestamp::stamp(CarbonImmutable::now()),
+        'expires_at' => Instant::zulu($expiresAt),
+        'created_at' => Instant::zulu(CarbonImmutable::now()),
     ]);
 }
 

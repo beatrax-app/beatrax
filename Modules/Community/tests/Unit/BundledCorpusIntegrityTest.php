@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Community\Internal\Corpus\MerchantContactReader;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
+use Modules\Community\Public\Services\SupportResourceProvider;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Yaml;
@@ -193,4 +194,76 @@ it('uses only recognised contact keys on bundled merchant entries', function ():
     }
 
     expect($unknown)->toBe([], "Corpus entries must use only documented keys. Unknown keys:\n  ".implode("\n  ", $unknown));
+});
+
+it('leaves every bundled support entry reachable in its own country', function (): void {
+    // SupportResourceProvider buckets an entry under the word key of its name
+    // inside its country file. Two entries in one file that share that key and
+    // type answer as one, and the loser ships as a cancellation route no lookup
+    // can ever return.
+    $found = glob(base_path('resources/corpus/support/*.yaml'));
+    $files = $found !== false ? $found : [];
+    sort($files);
+    expect($files)->not->toBe([], 'the bundled support corpus must not be empty');
+
+    /** @var SupportResourceProvider $provider */
+    $provider = app(SupportResourceProvider::class);
+
+    $unreachable = [];
+    foreach ($files as $file) {
+        $country = basename($file, '.yaml');
+        $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+        expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+
+        foreach ($parsed['entries'] as $index => $raw) {
+            $name = is_array($raw) && is_string($raw['name'] ?? null) ? trim($raw['name']) : '';
+            $type = is_array($raw) && is_string($raw['type'] ?? null) ? trim($raw['type']) : '';
+            if ($name === '' || $type === '') {
+                $unreachable[] = "{$country} #{$index}: entry needs a name and a type";
+
+                continue;
+            }
+            $resolved = $provider->forCounterparty($name, $type, $country);
+            if ($resolved?->name !== $name) {
+                $unreachable[] = "{$country} #{$index}: {$name} ({$type}) resolves to ".($resolved?->name ?? 'nothing');
+            }
+        }
+    }
+
+    expect($unreachable)->toBe([], "Every support entry must answer its own name. Unreachable:\n  ".implode("\n  ", $unreachable));
+});
+
+it('files every support entry under a key no sibling in its country takes', function (): void {
+    // Two entries in one country file that share a word key AND a type are one
+    // entry as far as a lookup is concerned: the bucket answers with the first
+    // and the second's cancellation route is unreachable data. Names differing
+    // only by a legal-entity suffix collide here, because the key drops those.
+    $found = glob(base_path('resources/corpus/support/*.yaml'));
+    $files = $found !== false ? $found : [];
+    sort($files);
+    expect($files)->not->toBe([], 'the bundled support corpus must not be empty');
+
+    $collisions = [];
+    foreach ($files as $file) {
+        $country = basename($file, '.yaml');
+        $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+
+        $seen = [];
+        foreach ($parsed['entries'] as $index => $raw) {
+            $name = is_array($raw) && is_string($raw['name'] ?? null) ? trim($raw['name']) : '';
+            $type = is_array($raw) && is_string($raw['type'] ?? null) ? trim($raw['type']) : '';
+            $key = SupportResourceProvider::wordKey($name).'|'.$type;
+            if ($name === '' || $type === '') {
+                continue;
+            }
+            if (isset($seen[$key])) {
+                $collisions[] = "{$country} #{$index}: {$name} ({$type}) shares its key with {$seen[$key]}";
+
+                continue;
+            }
+            $seen[$key] = $name;
+        }
+    }
+
+    expect($collisions)->toBe([], "A support entry must be the only one under its key. Collisions:\n  ".implode("\n  ", $collisions));
 });

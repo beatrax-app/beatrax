@@ -9,12 +9,14 @@ return [
     'device_local_note' => 'Pravila ostaju na ovom uređaju. Ne dele se sa vašim drugim uređajima.',
 
     'reapply' => 'Ponovo primeni pravila na istoriju',
+    // i18n-review: sr · reapply_confirm — "druga strana" is this locale's counterparty,
+    // but standing in a bare list of nouns it reads as "the other side". Whether it needs
+    // a fuller phrase here, or the list a different order, wants a native call.
+    'reapply_confirm' => 'Ponovo primeniti sva pravila na celu tvoju istoriju? Svaka kategorija, druga strana, beleška i poreska oznaka koju je postavilo pravilo biće prepisana. Ono što je postavljeno ručno ostaje, kao i sve na usaglašenom izvodu. Stare vrednosti ništa ne vraća.',
     'reapplying' => 'Ponovna primena…',
     'new_rule' => 'Novo pravilo',
 
-    'reapply_progress_lead' => 'Ponovna primena pravila…',
-    'reapply_progress_of' => 'od',
-    'reapply_progress_trail' => 'proverenih transakcija',
+    'reapply_progress' => 'Ponovna primena pravila… :checked od :count proverene transakcije|Ponovna primena pravila… :checked od :count proverene transakcije|Ponovna primena pravila… :checked od :count proverenih transakcija',
 
     'empty_heading' => 'Još nema pravila',
     'empty_body' => 'Pravila prepoznaju transakcije po više uslova i automatski primenjuju izmene kategorije, druge strane, beleške i poreske oznake — pri uvozu i svaki put kada ih ponovo primeniš na postojeću istoriju.',
@@ -26,8 +28,10 @@ return [
     'col_hits' => 'Pogoci',
     'col_created' => 'Napravljeno',
     'col_row_actions' => 'Radnje',
-    'inactive_badge' => 'Искључено',
-    'inactive_title' => 'Ово правило се не примењује. Правило се искључује када се обрише категорија или друга страна на коју упућује.',
+    'inactive_badge' => 'Isključeno',
+    'combinator_all' => 'SVI',
+    'combinator_any' => 'BILO KOJI',
+    'inactive_title' => 'Ovo pravilo se ne primenjuje. Pravilo se isključuje kada se obriše kategorija ili druga strana na koju upućuje.',
 
     'more_conditions' => '+:count više',
 

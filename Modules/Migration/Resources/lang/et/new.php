@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'See ei tundu olevat YNAB4, nYNAB ega Actual eksport, mida oskaksime lugeda. Kontrolli faili ja proovi uuesti.',
         'file_too_large' => 'See fail on ülekandmise ekspordi jaoks liiga suur.',
+        'archive_reader_unavailable' => 'Sellel rakenduse versioonil pole ZIP-lugejat, mis selle ekspordi avaks, nii et seda ei saa siin lugeda. Impordi see lauaarvuti rakenduses või paki eksport tavalise pakkimisega uuesti.',
+        'internal_detail' => 'Rakendus ei suutnud seda eksporti lugeda (:code). Täielikud üksikasjad on rakenduse logis; probleemist teatades viita sellele koodile.',
     ],
 ];

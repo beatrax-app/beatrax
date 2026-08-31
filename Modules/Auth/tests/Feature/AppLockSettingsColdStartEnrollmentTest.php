@@ -84,7 +84,9 @@ it('does not offer it when no cold-start gate exists', function (): void {
 
 it('enrolls against the OS instead of dispatching the WebAuthn event', function (): void {
     $this->actingAs(coldStartSettingsUser('cold-enrolls'));
-    bindColdStartVault(available: true);
+    // setPin() provisions a fresh data key, so it clears the OS entry on its
+    // way through; this suite is about the enrolment that follows it.
+    bindColdStartVault(available: true)->shouldReceive('forget');
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('newPin', '123456')
@@ -106,7 +108,6 @@ it('says the app is locked when there is no live key to store', function (): voi
     bindColdStartVault(available: true);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertSet('biometricEnrolled', false)
         ->assertSee('Unlock the app before enrolling.');
@@ -114,7 +115,7 @@ it('says the app is locked when there is no live key to store', function (): voi
 
 it('reports a device that declines to store the key', function (): void {
     $this->actingAs(coldStartSettingsUser('cold-declines'));
-    bindColdStartVault(available: true, enrolls: false);
+    bindColdStartVault(available: true, enrolls: false)->shouldReceive('forget');
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('newPin', '123456')
@@ -138,7 +139,6 @@ it('refuses in the shell rather than dispatching into nothing, and does not blam
     app(ConfigRepository::class)->set('nativephp-internal.running', true);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertNotDispatched('beatrax:webauthn-create')
         ->assertSee('This version of Beatrax has nowhere to store an unlock key, so biometric unlock is not offered. Your device is not the limitation.')
@@ -152,7 +152,6 @@ it('offers no biometric row without blaming the device it is drawn on', function
     bindColdStartVault(available: false);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->assertSee('This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here.')
         ->assertDontSee('not available on this device');
 });
@@ -167,7 +166,6 @@ it('still asks the browser when there is no shell and no OS gate', function (): 
     bindColdStartProtectingShield();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('lockEnabled', true)
         ->call('startEnroll')
         ->assertDispatched('beatrax:webauthn-create');
 });

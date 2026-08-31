@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Redigér navnet',
     'edit_name_aria' => 'Omdøb tilbagevendende serie :id',
     'new_name_label' => 'Nyt navn til denne serie',
+    'load_more' => 'Indlæs flere',
     'save' => 'Gem',
 
     'toast' => [

@@ -39,7 +39,7 @@ function calendarEntryNamesThisMonth(User $user): array
 it('gives every approved demo series its own observed occurrence', function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
 
-    $user = User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    $user = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($user);
 
     $seriesIds = DB::table('recurring_series')
@@ -62,7 +62,7 @@ it('gives every approved demo series its own observed occurrence', function (): 
 it('places every approved demo series on this month grid', function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
 
-    $user = User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    $user = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($user);
 
     $names = calendarEntryNamesThisMonth($user);

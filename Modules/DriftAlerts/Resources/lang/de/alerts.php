@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Abweichungswarnungen',
-    'heading' => 'Warnungen',
     'intro_anomaly' => 'Einzelne Abbuchungen, die für dich ungewöhnlich aussehen.',
     'intro_drift' => 'Bestätigte wiederkehrende Reihen, deren letzte Abbuchung außerhalb deiner Schwelle liegt.',
     'adjust_threshold' => 'Schwelle anpassen →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/Jahr',
         'meta_prior_now' => 'vorher :prior → jetzt :now',
         'meta_detected' => 'erkannt am :date',
-        'meta_threshold' => 'Schwelle ±:percent%',
+        'meta_threshold' => 'Schwelle ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/Jahr)',
         'cancel_impact' => 'Das kündigen → :amount/Jahr sparen',
         'cadence_flipped' => 'Rhythmus geändert — erscheint auch in',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Diese Meldung gibt es nicht mehr.',
         'acknowledged' => 'Bestätigt',
         'snoozed' => 'Zurückgestellt',
         'dismissed' => 'Verworfen',

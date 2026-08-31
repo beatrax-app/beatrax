@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Internal\Listeners;
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
@@ -16,7 +17,7 @@ final readonly class ProjectForecastOnScenarioChange
 
     public function handle(ScenarioCreated|ScenarioMutated|ScenarioDeleted $event): void
     {
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $event->userId,
                 scenarioId: null,
@@ -28,7 +29,7 @@ final readonly class ProjectForecastOnScenarioChange
             return;
         }
 
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $event->userId,
                 scenarioId: $event->scenarioId,

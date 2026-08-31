@@ -13,20 +13,28 @@ convention.
 `Modules\Sync\Tests\Support\CrossDevicePairingHarness` is the trait that
 removes the shortcut.
 
-## The three connections
+## The four connections
 
-The trait configures three physically distinct in-memory SQLite connections
+The trait configures four physically distinct in-memory SQLite connections
 and purges any previous binding for each:
 
 | Connection | What it is |
 |---|---|
 | `desktop` | The desktop device's own local database |
 | `phone` | The phone device's own local database |
-| `relay` | The zero-knowledge mailbox store, reachable by both and holding neither device's `pairing_tokens` |
+| `peer` | A second device of the same kind as the acting one, for a pairing whose two ends are both desktops |
+| `relay` | The zero-knowledge mailbox store, reachable by all and holding no device's `pairing_tokens` |
 
-`desktop` and `phone` get the production `pairing_tokens`, `device_registry`
-and `sync_encryption_state` schema, including the indexes, so uniqueness and
-lookup behaviour match production rather than a simplified test table.
+`desktop`, `phone` and `peer` get the production `pairing_tokens`,
+`device_registry` and `sync_encryption_state` schema, including the indexes, so
+uniqueness and lookup behaviour match production rather than a simplified test
+table.
+
+`peer` exists because the connection name is what a later reader takes the
+fixture to mean. A desktop-to-desktop typed-code test written over `phone`
+would put the one platform that cannot play the initiator role
+([why](pairing-handshake.md#a-phone-can-only-be-scanned)) into the fixture for
+the ceremony that proves it works.
 
 ## Making a device "act as itself"
 
@@ -85,8 +93,8 @@ roles:
 - On `relay` it is the **transport-level zero-knowledge mailbox** that the
   real `RelayServeCommand` handler reads and writes for pairing frames.
 
-So the harness migrates the relay schema onto all three connections, not
-just `relay`. Skip the two device copies and the GDK epoch fan-out tests
+So the harness migrates the relay schema onto every device connection, not
+just `relay`. Skip the device copies and the GDK epoch fan-out tests
 fail on a missing table, with an error that points at the transport rather
 than at the local outbox that is actually absent.
 
@@ -104,3 +112,5 @@ already configured and a drain registry already populated.
 
 - [Sync architecture](architecture.md) — the pairing ceremony, the relay
   transport, and the GDK epoch fan-out these tests exercise.
+- [Pairing two devices without trusting the network](pairing-handshake.md) —
+  what the ceremony these tests drive is defending against.

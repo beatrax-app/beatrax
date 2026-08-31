@@ -67,14 +67,11 @@ function egressGuardRejectionSecrets(): OpenBankingSecretsRepository
     };
 }
 
-function egressGuardAcceptedSecrets(string $privateKeyPem, ?string $bankScaHost = null): OpenBankingSecretsRepository
+function egressGuardAcceptedSecrets(string $privateKeyPem): OpenBankingSecretsRepository
 {
-    return new class($privateKeyPem, $bankScaHost) extends OpenBankingSecretsRepository
+    return new class($privateKeyPem) extends OpenBankingSecretsRepository
     {
-        public function __construct(
-            private readonly string $privateKeyPem,
-            private readonly ?string $bankScaHost,
-        ) {}
+        public function __construct(private readonly string $privateKeyPem) {}
 
         public function load(): ?OpenBankingCredentials
         {
@@ -83,7 +80,7 @@ function egressGuardAcceptedSecrets(string $privateKeyPem, ?string $bankScaHost 
                 privateKeyPem: $this->privateKeyPem,
                 sessionId: null,
                 consentExpiresAt: null,
-                bankScaHost: $this->bankScaHost,
+                bankScaHost: 'sca.asnbank.example',
                 institutionId: 'asn',
             );
         }
@@ -109,9 +106,9 @@ function egressGuardRejectionClient(string $attackerBaseUri): EnableBankingHttpC
     };
 }
 
-function egressGuardAcceptedClient(string $baseUri, MockHandler $mock, ?string $bankScaHost = null): EnableBankingHttpClient
+function egressGuardAcceptedClient(string $baseUri, MockHandler $mock): EnableBankingHttpClient
 {
-    $secrets = egressGuardAcceptedSecrets(egressGuardValidPrivateKeyPem(), $bankScaHost);
+    $secrets = egressGuardAcceptedSecrets(egressGuardValidPrivateKeyPem());
 
     return new class($secrets, egressGuardRealSigner(), $baseUri, $mock) extends EnableBankingHttpClient
     {
@@ -221,36 +218,43 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
     });
 }
 
-it('accepts the dynamically-resolved bank SCA host once persisted, without weakening the attacker-host rejection', function (): void {
-    $mockBody = ['aspsps' => []];
-    $mock = new MockHandler([
-        new Response(200, ['Content-Type' => 'application/json'], json_encode($mockBody, JSON_THROW_ON_ERROR)),
-    ]);
-    $acceptedClient = egressGuardAcceptedClient('https://sca.asnbank.example/', $mock, bankScaHost: 'sca.asnbank.example');
+// The SCA host is reached by the READER's browser, through Redirector::away()
+// in the connect controller. No URL this client builds ever lands on it, so a
+// persisted SCA host must not widen the list a bearer token is checked against.
+it('refuses the persisted bank SCA host, and still refuses an attacker host beside it', function (): void {
+    $scaClient = egressGuardRejectionClientWithScaHost('https://sca.asnbank.example/');
 
-    expect($acceptedClient->aspsps('NL'))->toBe($mockBody);
+    expect(fn () => $scaClient->aspsps('NL'))->toThrow(
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: sca.asnbank.example',
+    );
 
-    $rejectionClient = new class(egressGuardRejectionSecretsWithScaHost('sca.asnbank.example'), egressGuardRealSigner(), 'https://attacker.example.com/') extends EnableBankingHttpClient
+    $attackerClient = egressGuardRejectionClientWithScaHost('https://attacker.example.com/');
+
+    expect(fn () => $attackerClient->aspsps('NL'))->toThrow(
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: attacker.example.com',
+    );
+});
+
+function egressGuardRejectionClientWithScaHost(string $baseUri): EnableBankingHttpClient
+{
+    return new class(egressGuardRejectionSecretsWithScaHost('sca.asnbank.example'), egressGuardRealSigner(), $baseUri) extends EnableBankingHttpClient
     {
         public function __construct(
             OpenBankingSecretsRepository $secrets,
             EnableBankingJwtSigner $jwtSigner,
-            private readonly string $attackerBaseUri,
+            private readonly string $baseUri,
         ) {
             parent::__construct($secrets, $jwtSigner);
         }
 
         protected function baseUri(): string
         {
-            return $this->attackerBaseUri;
+            return $this->baseUri;
         }
     };
-
-    expect(fn () => $rejectionClient->aspsps('NL'))->toThrow(
-        UnsafeOpenBankingRequestException::class,
-        'non-allow-listed host: attacker.example.com',
-    );
-});
+}
 
 function egressGuardRejectionSecretsWithScaHost(string $bankScaHost): OpenBankingSecretsRepository
 {

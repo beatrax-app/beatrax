@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Receipts from email (optional)',
     'h1' => 'Let Beatrax watch for purchase emails',
     'lede' => 'Connect Gmail or Outlook so order confirmations and subscription receipts auto-attach to your transactions. You can skip this and add it later.',
+    'h1_phone' => 'Purchase emails are watched on the desktop',
+    'lede_phone' => 'Order confirmations and subscription receipts auto-attach to your transactions in the desktop app, and reach this phone over sync. Nothing on this phone reads a mailbox, so skip this step here and connect on the desktop.',
 
     'mini' => [
         'signin_label' => 'Sign in',

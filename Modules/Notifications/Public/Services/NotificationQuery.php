@@ -18,13 +18,21 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
+// A page carries the cursor that follows it, because whether there IS another
+// page is the query's answer and not one the caller can derive from the rows.
+// Deriving it is what put the page size in the Blade as a literal, where it
+// drifted from the query's own.
+/**
+ * @phpstan-type NotificationPage array{rows: list<NotificationDto>, nextCursor: ?string}
+ */
 final readonly class NotificationQuery
 {
     use CoercesScalars;
 
-    // 25 rows plus one lookahead: the extra row is what tells the page there
-    // is another, without paying for a second COUNT.
-    private const PAGE_LIMIT = 26;
+    // The page as the reader sees it. One row past this is read and then
+    // withheld — that lookahead is what tells the page there is another,
+    // without paying for a second COUNT.
+    public const int PAGE_SIZE = 25;
 
     public function __construct(
         private DatabaseManager $db,
@@ -34,7 +42,7 @@ final readonly class NotificationQuery
     ) {}
 
     /**
-     * @return list<NotificationDto>
+     * @return NotificationPage
      */
     public function unreadForUser(User $user, ?string $cursor = null): array
     {
@@ -47,7 +55,7 @@ final readonly class NotificationQuery
     }
 
     /**
-     * @return list<NotificationDto>
+     * @return NotificationPage
      */
     public function allForUser(User $user, ?string $cursor = null): array
     {
@@ -59,7 +67,7 @@ final readonly class NotificationQuery
     }
 
     /**
-     * @return list<NotificationDto>
+     * @return NotificationPage
      */
     public function dismissedForUser(User $user, ?string $cursor = null): array
     {
@@ -87,7 +95,7 @@ final readonly class NotificationQuery
     }
 
     /**
-     * @return list<NotificationDto>
+     * @return NotificationPage
      */
     private function paginate(Builder $query, User $user, ?string $cursor): array
     {
@@ -105,7 +113,7 @@ final readonly class NotificationQuery
 
         $rows = $query->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->limit(self::PAGE_LIMIT)
+            ->limit(self::PAGE_SIZE + 1)
             ->get();
 
         $result = [];
@@ -114,9 +122,23 @@ final readonly class NotificationQuery
             $result[] = $this->hydrate($row, $user);
         }
 
-        $this->reportUnnamed($result);
+        // The lookahead row is read and dropped. Rendering it put PAGE_SIZE + 1
+        // rows on the page and then took the cursor from the last of them, so
+        // an inbox holding an exact multiple of that many paged straight into
+        // the empty state with no way back.
+        $hasMore = count($result) > self::PAGE_SIZE;
+        $page = $hasMore ? array_slice($result, 0, self::PAGE_SIZE) : $result;
 
-        return $result;
+        $this->reportUnnamed($page);
+
+        $last = $page === [] ? null : $page[count($page) - 1];
+
+        return [
+            'rows' => $page,
+            'nextCursor' => $hasMore && $last !== null
+                ? self::encodeCursor($last->createdAt->toDateTimeString(), $last->id)
+                : null,
+        ];
     }
 
     // The reader gets a neutral chip and a sentence; nothing about that reaches

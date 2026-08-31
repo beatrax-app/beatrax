@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
@@ -64,7 +65,7 @@ it('constructs a DriftAlertDto in the EUR-only scenario with a null eurEquivalen
         annualizedImpact: Money::ofMinor(-1800, 'EUR'),
         eurEquivalent: null,
         thresholdPercentUsed: 5,
-        thresholdSource: 'global',
+        thresholdSource: ThresholdSource::Global,
         detectedAt: CarbonImmutable::parse('2026-05-19 12:00:00'),
         actionedAt: null,
         snoozedUntil: null,
@@ -83,7 +84,7 @@ it('constructs a DriftAlertDto in the EUR-only scenario with a null eurEquivalen
     expect($dto->annualizedImpact->toMinor())->toBe(-1800);
     expect($dto->eurEquivalent)->toBeNull();
     expect($dto->thresholdPercentUsed)->toBe(5);
-    expect($dto->thresholdSource)->toBe('global');
+    expect($dto->thresholdSource)->toBe(ThresholdSource::Global);
     expect($dto->detectedAt)->toBeInstanceOf(CarbonImmutable::class);
     expect($dto->actionedAt)->toBeNull();
     expect($dto->snoozedUntil)->toBeNull();
@@ -102,7 +103,7 @@ it('constructs a DriftAlertDto in the USD scenario with a non-null eurEquivalent
         annualizedImpact: Money::ofMinor(-1800, 'USD'),
         eurEquivalent: Money::ofMinor(-1670, 'EUR'),
         thresholdPercentUsed: 8,
-        thresholdSource: 'series_override',
+        thresholdSource: ThresholdSource::SeriesOverride,
         detectedAt: CarbonImmutable::parse('2026-05-19 12:00:00'),
         actionedAt: CarbonImmutable::parse('2026-05-19 12:34:56'),
         snoozedUntil: null,
@@ -113,7 +114,7 @@ it('constructs a DriftAlertDto in the USD scenario with a non-null eurEquivalent
     expect($dto->eurEquivalent)->toBeInstanceOf(Money::class);
     expect($dto->eurEquivalent?->toMinor())->toBe(-1670);
     expect($dto->eurEquivalent?->currency())->toBe('EUR');
-    expect($dto->thresholdSource)->toBe('series_override');
+    expect($dto->thresholdSource)->toBe(ThresholdSource::SeriesOverride);
     expect($dto->actionedAt)->toBeInstanceOf(CarbonImmutable::class);
 });
 
@@ -130,7 +131,7 @@ it('refuses to reassign a readonly property on DriftAlertDto', function (): void
         annualizedImpact: Money::ofMinor(-1800, 'EUR'),
         eurEquivalent: null,
         thresholdPercentUsed: 5,
-        thresholdSource: 'global',
+        thresholdSource: ThresholdSource::Global,
         detectedAt: CarbonImmutable::parse('2026-05-19 12:00:00'),
         actionedAt: null,
         snoozedUntil: null,
@@ -175,7 +176,7 @@ it('hydrates a DriftAlert factory row and projects it into a DriftAlertDto round
         annualizedImpact: Money::ofMinor($alert->annualized_impact_minor, $currency),
         eurEquivalent: null,
         thresholdPercentUsed: $alert->threshold_percent_used,
-        thresholdSource: $alert->threshold_source,
+        thresholdSource: ThresholdSource::from($alert->threshold_source),
         detectedAt: $alert->detected_at,
         actionedAt: $alert->actioned_at,
         snoozedUntil: $alert->snoozed_until,
@@ -185,7 +186,7 @@ it('hydrates a DriftAlert factory row and projects it into a DriftAlertDto round
     expect($dto->latestAmount->toMinor())->toBe(-1149);
     expect($dto->latestAmount->currency())->toBe('EUR');
     expect($dto->delta->toMinor())->toBe(-150);
-    expect($dto->thresholdSource)->toBe('global');
+    expect($dto->thresholdSource)->toBe(ThresholdSource::Global);
 });
 
 it('constructs a CancellationImpactDto and round-trips every readonly property', function (): void {

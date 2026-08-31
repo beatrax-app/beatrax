@@ -4,34 +4,59 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Actions;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
+use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-final class ApplyEnrichments implements AppliesEnrichments
+final readonly class ApplyEnrichments implements AppliesEnrichments
 {
-    // Mirrors FingerprintStage::detectConflicts(). Anything else is dropped
-    // before the SQL builder, so a poisoned cache cannot inject a column.
-    private const ALLOWED_CONFLICT_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
+    use CoercesScalars;
+
+    // The columns the row is read under so the recompose has every term of the
+    // tuple without a second SELECT outside the row lock.
+    /** @var list<string> */
+    private const array LOCKED_ROW_COLUMNS = [
+        'id',
+        'source_ref',
+        'source_format',
+        'enriched_from',
+        'account_id',
+        'posted_at',
+        'booked_at',
+        'amount_minor',
+        'currency',
+        'settled_amount_minor',
+        'settled_currency',
+        'fx_rate_used',
+        'counterparty_normalized',
+    ];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly SourceRefRanker $ranker,
-        private readonly LoggerInterface $logger,
-        private readonly Dispatcher $events,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private SourceRefRanker $ranker,
+        private LoggerInterface $logger,
+        private Dispatcher $events,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private FingerprintComposer $fingerprints,
+        private CounterpartyKey $counterpartyKey,
     ) {}
 
     public function __invoke(array $enrichments, User $user): int
@@ -62,7 +87,7 @@ final class ApplyEnrichments implements AppliesEnrichments
                 ->where('id', $enrichment->existingTransactionId)
                 ->where('user_id', $user->id)
                 ->lockForUpdate()
-                ->first(['id', 'source_ref', 'source_format', 'enriched_from']);
+                ->first(self::LOCKED_ROW_COLUMNS);
 
             if ($row === null || ! $this->shouldEnrich($row, $enrichment)) {
                 return false;
@@ -110,7 +135,18 @@ final class ApplyEnrichments implements AppliesEnrichments
 
     private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): void
     {
-        $extraUpdates = $this->resolveFieldConflicts($enrichment, $user, $userChoice);
+        $plainUpdates = $this->resolveFieldConflicts($enrichment, $user, $userChoice);
+
+        // The four amount columns and the rate are one value. Writing only the
+        // native leg left every balance, budget and forecast summing the old
+        // settled figure while the fingerprint was composed over the new one.
+        $amount = self::resolvedAmount($row, $plainUpdates);
+
+        // Derived from the plaintext, before encryptAttrs seals the name: the
+        // counterparty key is a digest of the normalised name, and AEAD
+        // ciphertext differs on every write of the same value.
+        $rederived = $this->rederivedFingerprint($row, $plainUpdates, $amount, $user);
+        $extraUpdates = $this->codec->encryptAttrs('transactions', $plainUpdates, $user->id, ($this->session)());
 
         $rawEnrichedFrom = is_string($row->enriched_from) ? $row->enriched_from : null;
         $provenance = $this->decodeEnrichedFrom($rawEnrichedFrom);
@@ -118,18 +154,90 @@ final class ApplyEnrichments implements AppliesEnrichments
             'format' => $enrichment->sourceFormat,
             'ran_at' => $this->clock->now()->toIso8601String(),
             'import_run_id' => $enrichment->importRunId,
-            'added' => array_merge(['source_ref'], array_keys($extraUpdates)),
+            'added' => array_merge(['source_ref'], array_keys($plainUpdates)),
         ];
 
         $this->db->connection()
             ->table('transactions')
             ->where('id', $enrichment->existingTransactionId)
             ->where('user_id', $user->id)
-            ->update($extraUpdates + [
+            ->update(($amount?->toColumns() ?? []) + $extraUpdates + $rederived + [
                 'source_ref' => $enrichment->newSourceRef,
                 'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
                 'updated_at' => $this->clock->now()->toDateTimeString(),
             ]);
+    }
+
+    // Null where the resolution touches neither leg's amount nor its currency,
+    // so a name-only conflict leaves the amount set exactly as it stands.
+    /**
+     * @param  array<string, mixed>  $plainUpdates
+     */
+    private static function resolvedAmount(stdClass $row, array $plainUpdates): ?TransactionAmount
+    {
+        $newAmount = $plainUpdates[EnrichmentConflictField::AmountMinor->value] ?? null;
+        $newCurrency = $plainUpdates[EnrichmentConflictField::Currency->value] ?? null;
+
+        if ($newAmount === null && $newCurrency === null) {
+            return null;
+        }
+
+        $amount = new TransactionAmount(
+            self::toInt($row->amount_minor),
+            self::toString($row->currency),
+            self::toInt($row->settled_amount_minor),
+            self::toString($row->settled_currency),
+            self::toStringOrNull($row->fx_rate_used),
+        );
+
+        if ($newAmount !== null) {
+            $amount = $amount->withAmountMinor(self::toInt($newAmount));
+        }
+
+        return $newCurrency === null ? $amount : $amount->withCurrency(self::toString($newCurrency));
+    }
+
+    // Mirrors CounterpartyKeyBackfill::convertedTransaction(): the fingerprint
+    // is composed OVER these columns, so it travels in the statement that
+    // rewrites them or the row stops matching its own re-import and lands twice.
+    // The dates round-trip through CarbonImmutable to reach NormalizeStage's tuple.
+    /**
+     * @param  array<string, mixed>  $plainUpdates
+     * @return array<string, mixed>
+     */
+    private function rederivedFingerprint(stdClass $row, array $plainUpdates, ?TransactionAmount $amount, User $user): array
+    {
+        $touched = array_filter(
+            $plainUpdates,
+            static fn (string $field): bool => EnrichmentConflictField::tryFrom($field)?->isFingerprintInput() === true,
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        if ($touched === []) {
+            return [];
+        }
+
+        $rederived = [];
+        $normalized = self::toString($row->counterparty_normalized);
+
+        if (array_key_exists(EnrichmentConflictField::CounterpartyName->value, $touched)) {
+            $normalized = $this->counterpartyKey->forName(self::toStringOrNull($touched[EnrichmentConflictField::CounterpartyName->value]), $user->id);
+            $rederived['counterparty_normalized'] = $normalized;
+            $rederived['normalization_version'] = $this->fingerprints->version();
+        }
+
+        $rederived['fingerprint'] = $this->fingerprints->composeTuple(
+            $user->id,
+            self::toInt($row->account_id),
+            CarbonImmutable::parse(self::toString($row->posted_at))->toDateString(),
+            CarbonImmutable::parse(self::toString($row->booked_at))->toDateTimeString(),
+            $amount->amountMinor ?? self::toInt($row->amount_minor),
+            $amount->currency ?? self::toString($row->currency),
+            $normalized,
+        );
+        $rederived['fingerprint_version'] = $this->fingerprints->version();
+
+        return $rederived;
     }
 
     /**
@@ -143,7 +251,7 @@ final class ApplyEnrichments implements AppliesEnrichments
 
         return match ($userChoice) {
             null => $this->resolveUnsetPolicy($enrichment, $user),
-            ReceiptConflictChoice::PreferReceipt => $this->extractIncomingValues($enrichment, $user),
+            ReceiptConflictChoice::PreferReceipt => self::extractIncomingValues($enrichment),
             ReceiptConflictChoice::PreferFirstWrite => [],
         };
     }
@@ -173,7 +281,7 @@ final class ApplyEnrichments implements AppliesEnrichments
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
             // An unknown field name here would reach an UPDATE column list
             // later, via ApplyReceiptConflictResolution.
-            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+            if (EnrichmentConflictField::tryFrom((string) $fieldName) === null) {
                 continue;
             }
 
@@ -203,20 +311,23 @@ final class ApplyEnrichments implements AppliesEnrichments
         }
     }
 
+    // Plaintext: the caller seals these on the way into the UPDATE, after
+    // rederivedFingerprint() has read the name it needs to re-key.
     /**
      * @return array<string, mixed>
      */
-    private function extractIncomingValues(PendingEnrichment $enrichment, User $user): array
+    private static function extractIncomingValues(PendingEnrichment $enrichment): array
     {
         $updates = [];
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
-            if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
+            $field = EnrichmentConflictField::tryFrom((string) $fieldName);
+            if ($field === null) {
                 continue;
             }
-            $updates[$fieldName] = $values['incoming'] ?? null;
+            $updates[$field->value] = $values['incoming'] ?? null;
         }
 
-        return $this->codec->encryptAttrs('transactions', $updates, $user->id, ($this->session)());
+        return $updates;
     }
 
     private function loadReceiptConflictChoice(User $user): ?ReceiptConflictChoice

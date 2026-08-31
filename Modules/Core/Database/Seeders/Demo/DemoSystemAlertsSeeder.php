@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 
 // Materialises one row per `system_alerts.kind` (see ALERTS below) so the
@@ -72,6 +73,7 @@ final class DemoSystemAlertsSeeder
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -79,10 +81,11 @@ final class DemoSystemAlertsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
+            $now = $this->clock->now();
             foreach (self::ALERTS as $row) {
-                $this->upsertAlert($primary, $row);
+                $this->upsertAlert($primary, $row, $now);
             }
         }
 
@@ -94,7 +97,7 @@ final class DemoSystemAlertsSeeder
     /**
      * @param  array{kind: string, severity: string, message: string, ageHours: int, acknowledgedAgeHours: ?int, seedKey: string, metadata?: array<string, mixed>}  $row
      */
-    private function upsertAlert(User $user, array $row): void
+    private function upsertAlert(User $user, array $row, CarbonImmutable $now): void
     {
         $existing = $this->db->connection()
             ->table('system_alerts')
@@ -107,7 +110,6 @@ final class DemoSystemAlertsSeeder
             return;
         }
 
-        $now = CarbonImmutable::now();
         $createdAt = $now->subHours($row['ageHours']);
         $acknowledgedAt = $row['acknowledgedAgeHours'] === null
             ? null

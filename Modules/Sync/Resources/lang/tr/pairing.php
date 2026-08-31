@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Adım 3 / 3',
 
     'show_my_code' => 'Kodumu göster',
-    'show_my_code_help' => 'Bu cihazın QR kodunu ve kelime kodunu diğer cihaz için göster.',
+    'show_my_code_help' => 'Bu cihazın kodunu, diğer cihaz okusun diye gösterir.',
     'enter_a_code' => 'Kod gir',
     'safety_number_changed' => 'Karşılaştırırken diğer cihaz değişti. Onaylamadan önce aşağıdaki kelimeleri tekrar kontrol et.',
     'enter_a_code_help' => 'Diğer cihazda görünen kodu yaz.',
 
     'show_this_code' => 'Bu kodu göster',
     'enter_on_other' => 'Bu kodu diğer cihaza gir veya QR kodunu ona tarat.',
+    'scan_on_other' => 'Bu kodu diğer cihazın kamerasıyla tara. Bilgisayarın kamerası yoktur — onun kodunu göster ve buraya gir.',
     'expires_in' => 'Kalan süre',
     'code_expired' => 'Kodun süresi doldu.',
     'generate_new_code' => 'Yeni kod oluştur',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Cihaz kimliğin kilitli. Uygulamanın kilidini açıp yeniden dene.',
     'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
+    'code_incomplete' => 'Bu kod eksik. Diğer cihazdakiyle karşılaştır ve tamamını gir.',
+    'code_not_accepted' => 'Bu ağdaki hiçbir cihaz bu kodu kabul etmedi. Kodu ve diğer cihazın onu hâlâ gösterip göstermediğini kontrol et.',
+    'no_peer_answered' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazda eşitlemenin çalıştığını kontrol et.',
+    'no_peer_search' => 'Bu cihaz ağda arama yapamadı, bu yüzden kodu doğrulayamadı. Bunun yerine bu cihazın kodunu göster ve diğer cihaza gir.',
+    'rate_limited' => 'Çok fazla deneme. Bir dakika bekle ve tekrar dene.',
 ];

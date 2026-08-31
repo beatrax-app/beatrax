@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Könyvelt fizetés',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list nem számít bele — az ottani fizetések nem mozdítják az egyenleget',
+    ],
+
     'panel' => [
         'aria' => 'Napi részletek panel',
         'close' => 'Napi panel bezárása',
+        'close_caption' => 'Bezárása',
         'start_of_day' => 'Nap eleje',
         'no_payments' => 'Ezen a napon nincs fizetés.',
         'date_approximate' => '~ hozzávetőleges dátum',

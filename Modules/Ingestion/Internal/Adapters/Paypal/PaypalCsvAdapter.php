@@ -11,15 +11,15 @@ use League\Csv\Reader;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
-use Modules\Ledger\Public\Enums\Currency;
 
 final class PaypalCsvAdapter implements SourceAdapter
 {
     // A PayPal wallet has no IBAN, so this literal stands in as the account
     // key; AccountResolver scopes by user, so it cannot collide.
-    private const PAYPAL_OWN_IBAN = 'PAYPAL';
+    private const PAYPAL_OWN_IBAN = SyntheticIban::Paypal->value;
 
     private ?StatementSummaryData $lastStatementMetadata = null;
 
@@ -40,8 +40,12 @@ final class PaypalCsvAdapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        $this->sniffer->sniff($localPath, PaypalCsvLanguageProfile::FORMAT);
+        // Cleared before the sniff, not after: this adapter is a singleton, so
+        // a run refused at the door would otherwise answer statementMetadata()
+        // with the previous file's statement.
         $this->lastStatementMetadata = null;
+
+        $this->sniffer->sniff($localPath, PaypalCsvLanguageProfile::FORMAT);
 
         $reader = Reader::createFromPath($localPath, 'r');
         $reader->setDelimiter(PaypalCsvLanguageProfile::DELIMITER);
@@ -86,31 +90,39 @@ final class PaypalCsvAdapter implements SourceAdapter
 
         /** @var list<CarbonImmutable> $bookedDates */
         $bookedDates = [];
-        $netSumMinor = 0;
+        /** @var array<string, int> $netByCurrency */
+        $netByCurrency = [];
         $count = 0;
         foreach ($rolledUp as $dto) {
             yield $dto;
             $bookedDates[] = $dto->bookedAt;
-            $netSumMinor += $dto->amountMinor;
+            // The settled leg, which is what the wallet moved by: a USD row's
+            // native minor units added into a euro total is arithmetic across
+            // two denominations, and it is the figure /reconcile targets.
+            $currency = $dto->settledCurrency ?? $dto->currency;
+            $netByCurrency[$currency] = ($netByCurrency[$currency] ?? 0)
+                + ($dto->settledAmountMinor ?? $dto->amountMinor);
             $count++;
         }
 
         $this->lastStatementMetadata = $this->buildStatementMetadata(
             bookedDates: $bookedDates,
-            netSumMinor: $netSumMinor,
+            netByCurrency: $netByCurrency,
             entryCount: $count,
             language: $language,
         );
     }
 
-    // PayPal ships no opening/closing balance rows, so closing = sum(net) and opening = 0
-    // are placeholders; the walker counters in $extras carry this format's audit signal.
+    // PayPal ships no opening/closing balance rows, so it is the one format here
+    // whose closing balance is summed rather than read. The walker counters in
+    // $extras carry the rest of this format's audit signal.
     /**
      * @param  list<CarbonImmutable>  $bookedDates
+     * @param  array<string, int>  $netByCurrency
      */
     private function buildStatementMetadata(
         array $bookedDates,
-        int $netSumMinor,
+        array $netByCurrency,
         int $entryCount,
         string $language,
     ): StatementSummaryData {
@@ -135,6 +147,11 @@ final class PaypalCsvAdapter implements SourceAdapter
             $extras['skippedMalformedRowCount'] = $skippedMalformedRowCount;
         }
 
+        // No single currency, no balance: /reconcile reads this as a target and
+        // asks the reader to close any gap by toggling rows, so one that no row
+        // can close is worse than none at all.
+        $currency = count($netByCurrency) === 1 ? array_key_first($netByCurrency) : null;
+
         return new StatementSummaryData(
             importRunId: 0,
             accountId: 0,
@@ -142,11 +159,11 @@ final class PaypalCsvAdapter implements SourceAdapter
             statementNumber: null,
             periodStart: $periodStart,
             periodEnd: $periodEnd,
-            openingBalanceMinor: 0,
-            openingBalanceCurrency: Currency::Eur->value,
+            openingBalanceMinor: $currency === null ? null : 0,
+            openingBalanceCurrency: $currency,
             openingBalanceDate: $periodStart,
-            closingBalanceMinor: $netSumMinor,
-            closingBalanceCurrency: Currency::Eur->value,
+            closingBalanceMinor: $currency === null ? null : $netByCurrency[$currency],
+            closingBalanceCurrency: $currency,
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
             extras: $extras,

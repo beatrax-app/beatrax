@@ -6,7 +6,7 @@ return [
     'page_title' => 'Сортування контрагентів',
     'heading' => 'Розібрати невідомих контрагентів',
 
-    'progress' => ':seen з :total · :percent % · залишилось ~:minutes хв',
+    'progress' => ':seen з :total · :percent% · залишилось ~:minutes хв',
     'progress_aria' => 'Прогрес сортування',
 
     'all_caught_aria' => 'Усі контрагенти позначені',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Транзакцій поки немає.',
 
     'label_manually' => 'Або познач вручну',
+    'label_question' => 'Що це за контрагент?',
     'display_name_label' => 'Відображувана назва',
-    'display_name_placeholder' => 'Відображувана назва…',
     'type_label' => 'Тип',
     'type_merchant' => 'Продавець',
     'type_personal' => 'Особистий',
     'type_bank' => 'Банк',
     'type_government' => 'Держава',
     'save_label' => 'Зберегти позначку',
+    'name_required' => 'Спершу дай цьому контрагенту назву.',
+    'draft_kept' => 'Написане зберігається, поки ти рухаєшся чергою.',
 
     'skip' => 'Поки пропустити',
-    'mark_ignored' => 'Позначити як ігнорований',
+    'mark_ignored' => 'Більше не питати про цього',
+    'not_now_note' => 'Жодна з дій не змінює контрагента — його ще можна позначити пізніше на сторінці Контрагенти.',
     'previous' => 'Попередній невідомий',
-    'next' => 'Далі',
 
     'kbd_yes' => 'так',
     'kbd_no' => 'ні',

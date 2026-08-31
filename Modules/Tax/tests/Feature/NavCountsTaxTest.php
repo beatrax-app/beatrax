@@ -72,9 +72,18 @@ function nctTransaction(DatabaseManager $db, int $userId, array $overrides = [])
         'updated_at' => now(),
     ];
 
-    return $db->connection()->table('transactions')->insertGetId(
-        array_merge($defaults, $overrides),
-    );
+    $row = array_merge($defaults, $overrides);
+
+    // Every adapter but the card one writes the two columns as one day, and a
+    // fixture that moves only `booked_at` names a transaction the ingestion
+    // pipeline cannot produce. Both dates move together unless a test means
+    // them to differ and says so.
+    if (isset($overrides['booked_at']) && ! isset($overrides['posted_at'])) {
+        $row['posted_at'] = substr((string) $overrides['booked_at'], 0, 10);
+        $row['value_date'] = $row['posted_at'];
+    }
+
+    return $db->connection()->table('transactions')->insertGetId($row);
 }
 
 function nctCategory(DatabaseManager $db, int $userId, string $name = 'NCT Category'): int

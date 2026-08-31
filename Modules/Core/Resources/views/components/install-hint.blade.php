@@ -5,13 +5,21 @@
     Two placements: dashboard card (bottom of main content column) and
     Settings → General row ("Install as app"). Use the same component in both.
 
-    Behavior:
+    Behavior — and there are exactly two arms, which is the whole of it:
     - Captures beforeinstallprompt on phones/Chromium to show a native install CTA.
     - Always shown on desktop as a feature-discovery hint ("Also want to see your
       data on your phone?") pointing the user to open Beatrax on their phone.
     - Dismissable but returns (standing hint, not one-time dismissed forever).
-    - iOS Safari: shows instructions ("Tap Share, then Add to Home Screen") since
-      beforeinstallprompt is not supported.
+
+    There is NO iOS arm. `shown` is set true only by beforeinstallprompt, which
+    is Chromium-only, and by the >=1024px media query, so an iPhone matches
+    neither and this card never renders there. This docblock used to promise a
+    Share-sheet instruction; no such branch and no such copy has ever existed,
+    and the same claim was repeated on the dashboard. Adding the arm is a copy
+    job before it is a code job: it needs an iOS headline and an iOS
+    instruction in all 26 locales, because the two strings below are written in
+    the desktop voice ("… on your phone") and read as nonsense to somebody who
+    is already holding the phone.
 
     Accent CTA uses --color-emerald per UI-SPEC §4 reserved-for list.
     Copy contract per UI-SPEC §14.
@@ -73,6 +81,7 @@
             </div>
             <x-core::emoji-action
                 :label="Lang::get('core::components.install.dismiss_aria')"
+                :caption="Lang::get('core::components.install.dismiss_caption')"
                 x-on:click="dismiss()"
             >✖️</x-core::emoji-action>
         </div>

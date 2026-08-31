@@ -16,7 +16,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
@@ -108,7 +108,7 @@ function bnrStoredBody(int $userId): string
 {
     $body = app(DatabaseManager::class)->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE)
+        ->where('trigger_type', NotificationTrigger::BudgetNudge)
         ->value('body');
 
     return is_string($body) ? $body : '';
@@ -118,7 +118,7 @@ function bnrReadBodyIn(User $user, string $locale): string
 {
     App::setLocale($locale);
 
-    $rows = app(NotificationQuery::class)->allForUser($user);
+    $rows = app(NotificationQuery::class)->allForUser($user)['rows'];
 
     return $rows === [] ? '' : $rows[0]->body;
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Internal;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\WeekStart;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
 /**
@@ -12,52 +13,37 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
  */
 final class CadenceInferrer
 {
-    private const WEEKLY_MAX_EXCLUSIVE = 10;
+    private const int WEEKLY_MAX_EXCLUSIVE = 10;
 
-    private const MONTHLY_MIN = 10;
+    private const int MONTHLY_MIN = 10;
 
-    private const MONTHLY_MAX = 45;
+    private const int MONTHLY_MAX = 45;
 
-    private const QUARTERLY_MIN = 80;
+    private const int QUARTERLY_MIN = 80;
 
-    private const QUARTERLY_MAX = 100;
+    private const int QUARTERLY_MAX = 100;
 
-    private const YEARLY_MIN = 350;
+    private const int YEARLY_MIN = 350;
 
-    private const YEARLY_MAX = 380;
+    private const int YEARLY_MAX = 380;
 
-    private const MISSED_INTERVAL_MULTIPLIER = 1.8;
+    private const float MISSED_INTERVAL_MULTIPLIER = 1.8;
 
-    private const MAX_MISSED_PER_WINDOW = 2;
+    private const int MAX_MISSED_PER_WINDOW = 2;
 
-    private const MISSED_WINDOW_SIZE = 6;
+    private const int MISSED_WINDOW_SIZE = 6;
 
-    private const CONFIDENCE_LOW_STDDEV_THRESHOLD = 5.0;
+    private const float CONFIDENCE_LOW_STDDEV_THRESHOLD = 5.0;
 
-    private const DAYS_PER_WEEK = 7;
-
-    private const MONTHS_PER_QUARTER = 3;
+    private const int MONTHS_PER_QUARTER = 3;
 
     /**
      * @param  list<CarbonImmutable>  $sortedTimestamps  ascending
-     * @return array{
-     *   cadence: SeriesCadence,
-     *   median_interval_days: float,
-     *   next_expected_at: ?CarbonImmutable,
-     *   confidence_low: bool,
-     *   missed_count: int,
-     * }
      */
-    public function infer(array $sortedTimestamps): array
+    public function infer(array $sortedTimestamps): InferredCadence
     {
         if (count($sortedTimestamps) < 2) {
-            return [
-                'cadence' => SeriesCadence::Irregular,
-                'median_interval_days' => 0.0,
-                'next_expected_at' => null,
-                'confidence_low' => false,
-                'missed_count' => 0,
-            ];
+            return new InferredCadence(SeriesCadence::Irregular, 0.0, null, false, 0);
         }
 
         // No defensive abs(): the ascending contract makes the diff
@@ -91,13 +77,7 @@ final class CadenceInferrer
         // Too many misses in any rolling window means the cluster is too
         // unstable to snap into a band at all.
         if (self::exceedsMissedWindowCap($missedFlags)) {
-            return [
-                'cadence' => SeriesCadence::Irregular,
-                'median_interval_days' => $provisionalMedian,
-                'next_expected_at' => null,
-                'confidence_low' => true,
-                'missed_count' => $missedCount,
-            ];
+            return new InferredCadence(SeriesCadence::Irregular, $provisionalMedian, null, true, $missedCount);
         }
 
         $refinedMedian = $filtered === [] ? $provisionalMedian : self::median($filtered);
@@ -110,41 +90,70 @@ final class CadenceInferrer
         $cadence = self::snapToBand($provisionalMedian);
 
         $nextExpectedAt = null;
+        $billingDay = null;
         if ($cadence->isRegular()) {
             $last = $sortedTimestamps[count($sortedTimestamps) - 1];
-            $nextExpectedAt = self::stepOnePeriod($last, $sortedTimestamps[0], $cadence);
+            $billingDay = self::billingDay($sortedTimestamps);
+            $nextExpectedAt = self::stepOnePeriod($last, $billingDay, $cadence);
         }
 
-        return [
-            'cadence' => $cadence,
-            'median_interval_days' => $refinedMedian,
-            'next_expected_at' => $nextExpectedAt,
-            'confidence_low' => $confidenceLow,
-            'missed_count' => $missedCount,
-        ];
+        return new InferredCadence($cadence, $refinedMedian, $nextExpectedAt, $confidenceLow, $missedCount, $billingDay);
+    }
+
+    // A posting on its month's last day is clamped evidence: the real billing
+    // day is at least that, never less. Only unclamped postings can name it,
+    // and the most frequent of those does — read off whichever row happened to
+    // be oldest in the window, a month-end bill moved by up to three days.
+    /**
+     * @param  list<CarbonImmutable>  $sortedTimestamps
+     */
+    private static function billingDay(array $sortedTimestamps): int
+    {
+        $exact = [];
+        $clamped = 1;
+        foreach ($sortedTimestamps as $timestamp) {
+            if ($timestamp->day < $timestamp->daysInMonth) {
+                $exact[] = $timestamp->day;
+
+                continue;
+            }
+            $clamped = max($clamped, $timestamp->day);
+        }
+
+        if ($exact === []) {
+            return $clamped;
+        }
+
+        $counts = [];
+        foreach ($exact as $day) {
+            $counts[$day] = ($counts[$day] ?? 0) + 1;
+        }
+
+        // Ties keep the earliest posting's day: a cluster whose days never
+        // agree has no billing day to find, and moving it would be noise.
+        $billingDay = $exact[0];
+        foreach ($counts as $day => $count) {
+            if ($count > $counts[$billingDay]) {
+                $billingDay = $day;
+            }
+        }
+
+        return $billingDay;
     }
 
     // A day count drifts a monthly bill off its own day of the month every
     // period, so the projection steps the calendar unit the band names. A band
     // with no step of its own answers null and the caller falls back to the
     // day median.
-    private static function stepOnePeriod(CarbonImmutable $last, CarbonImmutable $first, SeriesCadence $cadence): ?CarbonImmutable
+    private static function stepOnePeriod(CarbonImmutable $last, int $billingDay, SeriesCadence $cadence): ?CarbonImmutable
     {
         return match ($cadence) {
-            SeriesCadence::Weekly => $last->addDays(self::DAYS_PER_WEEK),
-            SeriesCadence::Monthly => self::onBillingDay($last->addMonthNoOverflow(), $first),
-            SeriesCadence::Quarterly => self::onBillingDay($last->addMonthsNoOverflow(self::MONTHS_PER_QUARTER), $first),
-            SeriesCadence::Yearly => self::onBillingDay($last->addYearNoOverflow(), $first),
+            SeriesCadence::Weekly => $last->addDays(WeekStart::DAYS_IN_WEEK),
+            SeriesCadence::Monthly => SeriesCadence::onBillingDay($last->addMonthNoOverflow(), $billingDay),
+            SeriesCadence::Quarterly => SeriesCadence::onBillingDay($last->addMonthsNoOverflow(self::MONTHS_PER_QUARTER), $billingDay),
+            SeriesCadence::Yearly => SeriesCadence::onBillingDay($last->addYearNoOverflow(), $billingDay),
             SeriesCadence::Irregular => null,
         };
-    }
-
-    // February clamps a bill charged on the 31st to the 28th, and a stepped date
-    // never recovers the 31st from there. The billing day is read off the first
-    // posting every time instead, so the step out of February restores it.
-    private static function onBillingDay(CarbonImmutable $stepped, CarbonImmutable $first): CarbonImmutable
-    {
-        return $stepped->setDay(min($first->day, $stepped->daysInMonth));
     }
 
     private static function snapToBand(float $medianDays): SeriesCadence

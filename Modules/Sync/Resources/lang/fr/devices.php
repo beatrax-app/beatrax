@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Tes appareils',
 
-    'moved_help' => 'L\'appairage, les noms d\'appareils et le chiffrement se trouvent désormais avec ton état de synchronisation.',
-    'moved_cta' => 'Ouvrir Synchronisation et appareil',
     'device_name' => 'Nom de l\'appareil',
     'save' => 'Enregistrer',
     'peer_default_name' => 'Appareil appairé',
     'rename_device' => 'Renommer l\'appareil',
+    'rename_device_caption' => 'Renommer',
     'this_device' => 'Cet appareil',
     'removed' => 'Supprimé',
     'confirmed' => 'Confirmé',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Point de terminaison du relais',
     'relay_endpoint_help' => 'Facultatif. Une fois défini, les appareils hors ligne se synchronisent via ce relais. Laisse vide pour du LAN&#8209;direct uniquement.',
+    'relay_endpoint_help_phone' => 'Facultatif. Une fois défini, les changements transitent par ce relais même quand tes appareils ne sont pas sur le même réseau. Cet appareil les récupère quand tu synchronises depuis cet écran — jamais en arrière-plan, car le verrou de l\'app détient la seule clé. Laisse vide pour du LAN&#8209;direct uniquement.',
     'relay_endpoint_aria' => 'URL du point de terminaison du relais',
     'relay_insecure_warning' => 'Ce point de terminaison de relais utilise du HTTP simple. Même si le relais ne déchiffre jamais tes données, une connexion non sécurisée expose la taille des paquets chiffrés et leur horodatage aux observateurs du réseau. Utilise un point de terminaison <strong>https://</strong> pour une confidentialité optimale.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Suppression :',
     'remove_rotates_key' => 'Supprimer cet appareil renouvelle la clé de chiffrement, si bien qu\'il ne reçoit plus aucune mise à jour.',
     'remove_cannot_erase' => 'Cela n\'efface pas les données déjà présentes sur cet appareil. S\'il a été perdu ou volé, considère comme exposées toutes les données qu\'il contenait.',
+    'remove_is_local' => 'Tes autres appareils ont leur propre liste. Tant que tu ne l’y supprimes pas aussi, ils continueront à se synchroniser avec lui.',
     'remove_device' => 'Supprimer l\'appareil',
     'keep_device' => 'Garder l\'appareil',
     'rotating_key' => 'Renouvellement de la clé de chiffrement…',

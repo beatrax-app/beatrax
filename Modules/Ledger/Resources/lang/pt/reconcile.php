@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'escolhe uma conta',
+        'choose_date' => 'escolhe a data do extrato',
         'enter_balance' => 'introduz um saldo do extrato',
         'matched' => 'coincide — :amount',
         'discrepancy' => 'discrepância — :amount',
+        'reconciled_through' => 'reconciliada até :date',
     ],
 
     'mismatch_html' => 'O saldo do extrato ainda não coincide com o teu saldo compensado. Alterna as linhas compensadas na <a href=":url" class="underline">lista de transações</a> ou ajusta o saldo introduzido até a diferença chegar a zero — este fluxo nunca cria um lançamento de acerto.',
+    'unreachable_no_baseline_html' => 'Nenhuma combinação de linhas consegue levar esta diferença a zero. Esta conta não tem saldo inicial registado, por isso o seu saldo é medido a partir de zero. Importa o extrato com que a conta abre, ou define o saldo inicial nas <a href=":url" class="underline">Definições</a>.',
+    'unreachable' => 'Nenhuma combinação de linhas consegue levar esta diferença a zero: fica fora do intervalo de todas as linhas desta conta até à data indicada. Verifica a data do extrato e o saldo introduzido.',
 
     'check' => 'Verificar',
     'complete' => 'Concluir a reconciliação',
+    'complete_unavailable' => 'Até esta data já não há nada para fixar — marca mais linhas como compensadas ou escolhe uma data do extrato posterior.',
 
     'errors' => [
         'choose_account' => 'Escolhe primeiro uma conta.',

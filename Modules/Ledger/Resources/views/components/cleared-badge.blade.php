@@ -30,8 +30,10 @@
 @endphp
 
 @if ($isReconciled)
-    {{-- Reconciled: locked, non-interactive — un-reconcile happens on the
-         /reconcile workflow (13.3-04), never via this badge. --}}
+    {{-- Reconciled: locked, non-interactive. The way out is the
+         un-reconcile control on the transaction detail page, never this
+         badge — the same badge draws on every row of the list, where one
+         mis-tap would unlock a transaction the reader meant only to read. --}}
     <span
         class="status-pill ok"
         title="{{ Lang::get('ledger::common.badge.reconciled_hint') }}"

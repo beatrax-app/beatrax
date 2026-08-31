@@ -10,7 +10,9 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Navigation\NavBadgeEvents;
 use Modules\Core\Public\Support\Lang;
+use Modules\Notifications\Internal\Enums\NotificationTab;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
@@ -21,12 +23,10 @@ final class NotificationsPage extends Component
 {
     use DispatchesToast;
 
-    private const TABS = ['unread', 'all', 'dismissed'];
-
-    // setTab() ignores an unknown value and render() falls back to 'unread';
-    // neither path throws.
-    #[Url(as: 'tab', except: 'unread')]
-    public string $tab = 'unread';
+    // setTab() ignores an unknown value and render() falls back to the
+    // default; neither path throws.
+    #[Url(as: 'tab', except: NotificationTab::DEFAULT)]
+    public string $tab = NotificationTab::DEFAULT;
 
     // Opaque compound (created_at, id) cursor - a string cursor, since
     // the sha256 PK is not insertion-ordered.
@@ -34,7 +34,7 @@ final class NotificationsPage extends Component
 
     public function setTab(string $tab): void
     {
-        if (! in_array($tab, self::TABS, true)) {
+        if (NotificationTab::tryFrom($tab) === null) {
             return;
         }
 
@@ -42,21 +42,38 @@ final class NotificationsPage extends Component
         $this->cursor = null;
     }
 
+    // The wire can send anything, and a #[Url] value can arrive from a
+    // bookmarked or hand-edited address bar, so the slice the reader sees is
+    // resolved from the enum rather than trusted.
+    private function activeTab(): NotificationTab
+    {
+        return NotificationTab::tryFrom($this->tab) ?? NotificationTab::Unread;
+    }
+
+    // All three change what the rail's unread badge counts, and the rail is
+    // mounted by the layout, which a component update never re-renders.
     public function markRead(string $notificationId, CurrentUser $currentUser, MarkNotificationRead $action): void
     {
         $action($notificationId, $currentUser->user());
+        $this->dispatch(NavBadgeEvents::REFRESH);
     }
 
     public function dismiss(string $notificationId, CurrentUser $currentUser, DismissNotification $action): void
     {
         $action($notificationId, $currentUser->user());
+        $this->dispatch(NavBadgeEvents::REFRESH);
 
-        $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.dismissed'), undo: 'undoDismiss', undoArg: $notificationId);
+        $this->toastWithUndo(
+            Lang::get('notifications::inbox.toast.dismissed'),
+            undoAction: 'undoDismiss',
+            undoPayload: $notificationId,
+        );
     }
 
     public function undoDismiss(string $notificationId, CurrentUser $currentUser, UndoDismissNotification $action): void
     {
         $action($notificationId, $currentUser->user());
+        $this->dispatch(NavBadgeEvents::REFRESH);
         $this->toast(Lang::get('notifications::inbox.toast.restored'));
     }
 
@@ -68,24 +85,25 @@ final class NotificationsPage extends Component
     ): View {
         $user = $currentUser->user();
 
-        // Whitelist re-validated at render time too (a #[Url] value can
-        // arrive from a bookmarked/hand-edited URL, not just setTab()).
-        $tab = in_array($this->tab, self::TABS, true) ? $this->tab : 'unread';
+        $activeTab = $this->activeTab();
 
-        $rows = match ($tab) {
-            'all' => $query->allForUser($user, $this->cursor),
-            'dismissed' => $query->dismissedForUser($user, $this->cursor),
-            default => $query->unreadForUser($user, $this->cursor),
+        $page = match ($activeTab) {
+            NotificationTab::All => $query->allForUser($user, $this->cursor),
+            NotificationTab::Dismissed => $query->dismissedForUser($user, $this->cursor),
+            NotificationTab::Unread => $query->unreadForUser($user, $this->cursor),
         };
 
         $resolvedRows = [];
-        foreach ($rows as $row) {
+        foreach ($page['rows'] as $row) {
             $resolvedRows[] = $deepLinks->resolve($row, $user);
         }
 
         $view = $views->make('notifications::livewire.notifications-page', [
-            'tab' => $tab,
+            // Not 'tab': Livewire hands the view every public property, and
+            // the string one on this component would shadow it.
+            'activeTab' => $activeTab,
             'rows' => $resolvedRows,
+            'nextCursor' => $page['nextCursor'],
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

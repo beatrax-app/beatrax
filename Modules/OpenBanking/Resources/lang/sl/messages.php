@@ -20,6 +20,7 @@ return [
         'manage' => 'Upravljaj odprto bančništvo',
         'not_connected' => 'Nobena banka ni povezana. Poveži jo, da samodejno uvažaš transakcije.',
         'expired' => 'Privolitev je potekla — potrebna je ponovna povezava.',
+        'revoked' => 'Tvoja banka je prekinila povezavo — poveži se znova.',
         'connected' => 'Povezano z banko :bank prek Enable Bankinga. Zadnja sinhronizacija :when.',
         'never' => 'nikoli',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Potekla — poveži znova',
         'pill_expiring' => 'Kmalu poteče',
         'pill_connected' => 'Povezano',
+        'pill_revoked' => 'Prekinila tvoja banka — poveži se znova',
         'whats_fetched_label' => 'Kaj se pridobiva',
         'whats_fetched' => 'Knjižene transakcije in stanja, zadnjih 90 dni',
         'last_successful_sync_label' => 'Zadnja uspešna sinhronizacija',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — neuspešno (:reason)',
         'reason_consent_expired' => 'privolitev je potekla',
         'reason_error' => 'napaka',
+        'reason_truncated' => 'ustavljeno predčasno',
+        'reason_nothing_imported' => 'ničesar ni bilo mogoče zabeležiti',
+        'reason_consent_revoked' => 'prekinila tvoja banka',
         'disconnect_button' => 'Prekini povezavo',
     ],
 
     'consent_banner' => [
         'heading' => 'Privolitev je potekla — poveži znova',
+        'heading_revoked' => 'Tvoja banka je prekinila povezavo',
         'body' => 'Zadnja uspešna sinhronizacija je bila :when. Poveži se znova, da se samodejna sinhronizacija nadaljuje.',
+        'body_revoked' => 'Tvoja banka ali Enable Banking je odvzela dostop, zato se je sinhronizacija ustavila. Zadnja uspešna sinhronizacija je bila :when. Poveži se znova, da se nadaljuje.',
         'never' => 'nikoli',
         'reconnect' => 'Poveži znova',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Enable Banking začasno ni na voljo. Poskusi znova čez nekaj časa.',
         'new_found' => 'Najdena je :count nova transakcija.|Najdeni sta :count novi transakciji.|Najdene so :count nove transakcije.|Najdenih je :count novih transakcij.',
         'none' => 'Ni novih transakcij.',
+        'none_importable' => 'Tvoja banka je poslala transakcije, a nobene ni bilo mogoče zabeležiti. Odpri pregled uvoza, da vidiš zakaj.',
+        'in_progress' => 'Sinhronizacija že poteka. Poskusite znova čez trenutek.',
+        'truncated' => 'Tvoja banka je imela več transakcij, kot jih ena sinhronizacija lahko prenese, zato se je ta izvedba predčasno ustavila. Nič ni bilo zabeleženo kot sinhronizirano — naslednja sinhronizacija se začne na istem mestu.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Znova poveži svojo banko',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Najprej dokončaj čarovnika za nastavitev odprtega bančništva.',
         'no_bank_chosen' => 'Pred povezovanjem izberi banko.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Enable Banking je vrnil nevaren naslov URL za privolitev.',
         'no_authorization_code' => 'Povratni klic Enable Bankinga ni vrnil avtorizacijske kode.',
         'no_session_id' => 'Enable Banking ni vrnil ID-ja seje.',
+        'oauth_state_mismatch' => 'Ta povezava za povezovanje je potekla ali je bila že uporabljena. Znova začni povezovanje banke.',
     ],
 ];

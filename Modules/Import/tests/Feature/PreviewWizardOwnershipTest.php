@@ -12,6 +12,10 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 
+beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
+});
+
 // IDOR regression: the mount() gate alone was bypassable, because $importRunId
 // was a client-mutable Livewire property and the PreviewCache key is not
 // user-scoped. These fail if #[Locked] or the per-request ownership re-check in

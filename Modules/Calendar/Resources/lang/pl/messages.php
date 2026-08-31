@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Zaksięgowana płatność',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list nie jest liczone — tamtejsze płatności nie zmieniają salda',
+    ],
+
     'panel' => [
         'aria' => 'Panel szczegółów dnia',
         'close' => 'Zamknij panel dnia',
+        'close_caption' => 'Zamknij',
         'start_of_day' => 'Początek dnia',
         'no_payments' => 'Brak płatności w tym dniu.',
         'date_approximate' => '~ data przybliżona',

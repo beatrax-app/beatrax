@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Tilaukset →',
     'disclaimer' => 'Viralliset linkit tukiaineistosta — Beatrax ei koskaan irtisano tai vaihda mitään puolestasi.',
     'dismiss_aria' => 'Ohita ehdotus',
+    'dismiss_caption' => 'Ohita',
 
     'insight' => [
         'cheaper_message' => 'Palvelulla :name voi olla edullisempi paketti — maksat :monthly/kk.',

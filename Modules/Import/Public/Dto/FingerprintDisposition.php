@@ -23,7 +23,7 @@ abstract class FingerprintDisposition extends Data
     }
 
     /**
-     * @param  array<string, array{stored: mixed, incoming: mixed}>  $conflictingFields
+     * @param  array<array-key, array{stored: mixed, incoming: mixed}>  $conflictingFields
      */
     public static function enriched(int $existingId, ?string $fromSourceRef, string $toSourceRef, array $conflictingFields = []): EnrichedDisposition
     {

@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Prenumerationer →',
     'disclaimer' => 'Officiella länkar från supportkorpuset — Beatrax säger aldrig upp och byter aldrig något åt dig.',
     'dismiss_aria' => 'Stäng förslaget',
+    'dismiss_caption' => 'Stäng',
 
     'insight' => [
         'cheaper_message' => ':name kan ha ett billigare abonnemang — du betalar :monthly/mån.',

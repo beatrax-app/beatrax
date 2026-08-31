@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— pri osobných kontaktoch nie sú finančné reťazce',
     'tab_note_bank' => '— protistrana s bankovými poplatkami negeneruje finančné reťazce',
+    'tab_note_bank_institution' => '— pri inštitucionálnych protistranách nie sú finančné reťazce',
     'tab_note_government' => '— pri štátnych protistranách nie sú finančné reťazce',
 
     'recent_activity' => 'Nedávna aktivita',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankové poplatky podľa kategórie',
+        'activity_heading' => 'Aktivita podľa kategórie',
         'no_fees' => 'Pri tejto protistrane zatiaľ nie sú zaznamenané žiadne poplatky.',
     ],
 

@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategorija',
         'assigned' => 'Paskirstyta',
+        'carried_in' => 'Pernešta',
+        'moved' => 'Perkelta',
         'spent' => 'Išleista',
         'available' => 'Likę',
         'if_overspent' => 'Jei viršyta',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Slėpti istoriją ↑',
         'moved_from' => 'Perkelta iš :category',
         'moved_to' => 'Perkelta į :category',
+        'moved_unreadable' => 'Perkelta su :category naujesne Beatrax versija',
         'undo' => 'Anuliuoti',
     ],
 
     'phone' => [
         'spent' => 'Išleista :amount',
+        'carried_in' => 'Pernešta :amount',
+        'moved' => 'Perkelta :amount',
         'available' => 'Likę :amount',
         'notify_at' => 'Pranešti, kai',
     ],

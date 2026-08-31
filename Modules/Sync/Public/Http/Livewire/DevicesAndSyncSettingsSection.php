@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Public\AppLockEvents;
@@ -15,6 +16,7 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
@@ -49,9 +51,14 @@ final class DevicesAndSyncSettingsSection extends Component
     // ordinary off-state and quietly failing every action behind it.
     public bool $identityUnreadable = false;
 
+    // Loaded from the device registry and named by no binding, while the row
+    // it renders subscripts seven keys and parses one of them as a date. The
+    // sibling peer list narrows each field instead; a lock is available here,
+    // so the shape is refused rather than repaired.
     /**
      * @var list<array<string, mixed>>
      */
+    #[Locked]
     public array $devices = [];
 
     // The peer of a handshake that has reached the safety-word comparison and
@@ -64,6 +71,7 @@ final class DevicesAndSyncSettingsSection extends Component
 
     public string $renameValue = '';
 
+    #[Locked]
     public ?int $removingDeviceId = null;
 
     // A separate boolean flag (rather than binding <flux:modal wire:model>
@@ -100,10 +108,18 @@ final class DevicesAndSyncSettingsSection extends Component
     public string $relayEndpointUrl = '';
 
     // Whether the configured relay URL uses plain HTTP (not HTTPS); surfaces
-    // a warning in the blade view.
+    // a warning in the blade view. Written only by RelayConfig, and a payload
+    // naming it false is a payload that hides that warning.
+    #[Locked]
     public bool $relayIsInsecure = false;
 
     public string $relayFlashMessage = '';
+
+    // A phone has no unattended pull to describe: MobileBackgroundSchedule
+    // declares mobile.sync-pull impossible on a device, so what the relay does
+    // for it is hold changes until the reader syncs from this screen.
+    #[Locked]
+    public bool $onPhone = false;
 
     public function mount(
         CurrentUser $currentUser,
@@ -130,6 +146,7 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
         $this->relayIsInsecure = $relayConfig->isInsecure();
+        $this->onPhone = UserDataPathService::platform() !== null;
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
 
@@ -348,6 +365,27 @@ final class DevicesAndSyncSettingsSection extends Component
         $this->showRemoveModal = false;
     }
 
+    // Only the ROTATION half of a removal is household-wide. Clearing the
+    // peer's confirmed_at happens on this device alone, so a third device goes
+    // on admitting and feeding the removed one until it is removed there too.
+    /**
+     * @link ../../../../../.docs/features/sync/device-removal-and-epoch-rotation.md#the-revoke-half-is-local-to-the-device-you-perform-it-on
+     */
+    public function removalLeavesAnotherDeviceHolding(): bool
+    {
+        foreach ($this->devices as $device) {
+            $isSelf = ($device['is_self'] ?? false) === true;
+            $isRemoved = ($device['removed'] ?? false) === true;
+            $isTarget = ($device['id'] ?? null) === $this->removingDeviceId;
+
+            if (! $isSelf && ! $isRemoved && ! $isTarget) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Flux's own close-on-backdrop/-Escape flow only flips the bound
     // $showRemoveModal to false — keep $removingDeviceId in sync so a stale
     // target id never lingers after a non-button dismissal.
@@ -369,6 +407,7 @@ final class DevicesAndSyncSettingsSection extends Component
         DatabaseManager $db,
         DeviceRegistryService $registry,
         SyncStatusService $statusService,
+        LoggerInterface $logger,
     ): void {
         if ($this->removingDeviceId === null) {
             return;
@@ -405,7 +444,15 @@ final class DevicesAndSyncSettingsSection extends Component
             // so removing the real one left those behind — still red, still
             // listed, with nothing tying them to anything removable.
             $statusService->forgetOrphanedSessions($userId);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // rotateAndRevoke() writes the keyring FILE outside its SQL
+            // transaction, so a failure mid-flight can leave that file and
+            // current_epoch disagreeing. Discarding the exception left the
+            // reader a flash and nothing to diagnose the split state from.
+            $logger->error('DevicesAndSyncSettingsSection: device removal failed.', [
+                'device_registry_id' => $targetId,
+                ...SafeExceptionContext::describe($e),
+            ]);
             $this->flashMessage = Lang::get('sync::devices.flash.remove_failed');
             $this->cancelRemove();
 
@@ -492,7 +539,12 @@ final class DevicesAndSyncSettingsSection extends Component
             $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
             $this->relayFlashMessage = $url === '' ? Lang::get('sync::devices.flash.relay_cleared') : Lang::get('sync::devices.flash.relay_saved');
         } catch (\RuntimeException $e) {
-            $this->relayFlashMessage = Lang::get('sync::devices.flash.relay_save_failed', ['message' => $e->getMessage()]);
+            // The thrower's sentence is one language and names a path; the
+            // class name is what a reader can quote back and is the same word
+            // in all twenty-six.
+            $this->relayFlashMessage = Lang::get('sync::devices.flash.relay_save_failed', [
+                'message' => SafeExceptionContext::shortName($e),
+            ]);
         }
     }
 

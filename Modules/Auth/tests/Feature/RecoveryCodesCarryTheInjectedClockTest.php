@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
@@ -55,7 +57,7 @@ it('stamps the codes signup issues with the injected clock', function (): void {
         ->each->toBe($this->frozenNow->toDateTimeString());
 });
 
-it('stamps the codes a partner account is given with the injected clock', function (): void {
+it('stamps the codes a partner is handed at their first password change with the injected clock', function (): void {
     /** @var SignupAction $signup */
     $signup = $this->app->make(SignupAction::class);
     $owner = $signup('owner', 'a-long-password-12chars')['user'];
@@ -63,6 +65,12 @@ it('stamps the codes a partner account is given with the injected clock', functi
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
     $partner = $addUser($owner, 'partner', 'a-long-password-12chars');
+
+    Livewire::actingAs($partner)->test(ChangePasswordPage::class)
+        ->set('currentPassword', 'a-long-password-12chars')
+        ->set('newPassword', 'a-password-of-their-own')
+        ->set('newPasswordConfirmation', 'a-password-of-their-own')
+        ->call('submit');
 
     expect(issuedRecoveryCodeStamps($partner->id))
         ->toHaveCount(10)

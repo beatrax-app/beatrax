@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
+use Modules\Community\Public\Services\CommunitySettings;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -60,6 +63,7 @@ function memoColdResolver(): MerchantNameResolver
         app(DatabaseManager::class),
         app(CommunityCorpusQuery::class),
         app(UserCountry::class),
+        app(CommunitySettings::class),
     );
 }
 
@@ -220,4 +224,23 @@ it('sees a renamed alias after the memo was already warm', function (): void {
 
     expect($resolver->resolve('SHELL 4411', $user->id))->toBe('Shell Station')
         ->and(MerchantAlias::query()->where('user_id', $user->id)->count())->toBe(1);
+});
+
+// The same invariant the two tests above pin for CreateMerchantAlias. Deleting
+// is the commonest alias edit after creating one, and the settings page is the
+// only screen that offers it.
+it('stops answering from an alias the reader deleted after the memo was warm', function (): void {
+    $user = memoUser('memo-invalidation-delete');
+    memoAlias($user->id, 'SHELL 4411', 'shell', 'Shell');
+    $this->actingAs($user);
+
+    $resolver = app(MerchantNameResolver::class);
+    expect($resolver->resolve('SHELL 4411', $user->id))->toBe('Shell');
+
+    $aliasId = (int) MerchantAlias::query()->where('user_id', $user->id)->value('id');
+
+    Livewire::test(AliasesSettingsPage::class)->call('deleteAlias', $aliasId);
+
+    expect(MerchantAlias::query()->where('user_id', $user->id)->count())->toBe(0)
+        ->and($resolver->resolve('SHELL 4411', $user->id))->toBeNull();
 });

@@ -13,7 +13,9 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 use Modules\Recurring\Internal\CadenceInferrer;
+use Modules\Recurring\Internal\Console\DetectRecurringSeriesCommand;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
@@ -35,6 +37,7 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Recurring\Public\Services\TransactionSeriesMembershipQuery;
 use Psr\Log\LoggerInterface;
@@ -42,6 +45,7 @@ use Psr\Log\LoggerInterface;
 final class RecurringServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -78,6 +82,7 @@ final class RecurringServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(RecurringSeriesProjector::class);
+        $this->app->singleton(RecurringOccurrenceQuery::class);
         $this->app->singleton(RecurringSeriesQuery::class);
         $this->app->singleton(TransactionSeriesMembershipQuery::class);
         $this->app->singleton(FixedPaymentsViewQuery::class);
@@ -96,6 +101,8 @@ final class RecurringServiceProvider extends ServiceProvider
     public function boot(LivewireManager $livewire): void
     {
         $this->loadModuleResources('recurring');
+
+        $this->registerScheduledCommands([DetectRecurringSeriesCommand::class]);
 
         $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);

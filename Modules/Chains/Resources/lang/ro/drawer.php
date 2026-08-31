@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Niciun lanț de finanțare dincolo de acest segment.',
 
     'covers_charges' => 'Acoperă :count plată ICS|Acoperă :count plăți ICS|Acoperă :count de plăți ICS',
-    'no_ics_charges' => 'Nicio plată ICS în această decontare',
     'show_more_fanout' => 'Arată încă :count · :shown din :total',
 
     'confirm' => 'Confirmă',
     'reject' => 'Respinge',
     'confirm_aria' => 'Confirmă legătura de lanț :id',
     'reject_aria' => 'Respinge legătura de lanț :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministă',
+        'confirmed' => 'Confirmată',
+        'candidate' => 'Candidat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Încredere: potrivire deterministă',

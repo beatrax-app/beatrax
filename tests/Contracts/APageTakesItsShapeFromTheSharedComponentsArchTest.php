@@ -13,6 +13,13 @@ declare(strict_types=1);
 // something else, and two carried a second column inside x-core::page-shell,
 // which already owns one. On the phone that put the same title at 119, 129,
 // 138, 146 or 170 pixels from the top depending on where you had navigated.
+//
+// The step is now `py-6`. `py-12` was 51px of empty band above every title at
+// the 17px coarse-pointer root, which is what the product owner saw; it was
+// never chosen, it was the majority of a drift. The rhythm also has to be read
+// off a page's ROOT element and not only off its `mx-auto` column: /tax splits
+// the two across a wrapper and its column, so the band it draws was invisible
+// to a rule that looked at `mx-auto` alone.
 
 /**
  * Surfaces that are not routed pages and keep their own type on purpose: the
@@ -39,6 +46,11 @@ function nonPageSurfaces(): array
         '/mobile-restore-from-backup.blade.php',
         '/sync-health-page.blade.php',
     ];
+}
+
+function pageRhythmStep(): string
+{
+    return '6';
 }
 
 /**
@@ -96,7 +108,7 @@ it('gives every page container the same vertical rhythm', function (): void {
             preg_match_all('/(?:^|\s)(?:sm:)?py-(\d+)/', $classes, $paddings);
 
             foreach ($paddings[1] as $step) {
-                if ($step !== '12') {
+                if ($step !== pageRhythmStep()) {
                     $offenders[] = str_replace(base_path().'/', '', $path)." carries py-{$step}";
                 }
             }
@@ -107,7 +119,48 @@ it('gives every page container the same vertical rhythm', function (): void {
 
     expect(array_values(array_unique($offenders)))->toBe(
         [],
-        'Nineteen page containers say py-12. A page that says anything else puts its title at a '
+        'Every page container says py-'.pageRhythmStep().'. A page that says anything else puts its title at a '
         ."different height from every page either side of it:\n  ".implode("\n  ", $offenders)
+    );
+});
+
+it('reads the rhythm off a page root that is not the column', function (): void {
+    $offenders = [];
+    $roots = 0;
+
+    foreach (pageTemplates() as $path) {
+        if (str_contains($path, '/partials/') || str_contains($path, '/views/components/')) {
+            continue;
+        }
+
+        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+
+        if (preg_match('/<([a-zA-Z][a-zA-Z0-9:.-]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>/', $source, $tag) !== 1) {
+            continue;
+        }
+
+        $roots++;
+
+        if (preg_match('/class="([^"]*)"/', $tag[2], $class) !== 1) {
+            continue;
+        }
+
+        preg_match_all('/(?:^|\s)(?:sm:)?py-(\d+)/', $class[1], $paddings);
+
+        foreach ($paddings[1] as $step) {
+            if ($step !== pageRhythmStep()) {
+                $offenders[] = str_replace(base_path().'/', '', $path)." opens <{$tag[1]}> carrying py-{$step}";
+            }
+        }
+    }
+
+    expect($roots)->toBeGreaterThan(50, 'The root-element scan matched almost nothing, which means the tag pattern stopped reading rather than that the tree is clean.');
+
+    sort($offenders);
+
+    expect(array_values(array_unique($offenders)))->toBe(
+        [],
+        'A page that draws its band on a wrapper above its column still draws a band, and /tax drew '
+        ."51px of one where the mx-auto rule could not see it:\n  ".implode("\n  ", $offenders)
     );
 });

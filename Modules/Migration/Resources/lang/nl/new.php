@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Dit lijkt geen YNAB4-, nYNAB- of Actual-export te zijn die we kunnen lezen. Controleer het bestand en probeer het opnieuw.',
         'file_too_large' => 'Dat bestand is te groot voor een migratie-export.',
+        'archive_reader_unavailable' => 'Deze versie van de app heeft geen zip-lezer die deze export kan openen, dus hier valt hij niet te lezen. Importeer hem in de desktop-app, of pak de export opnieuw in met gewone compressie.',
+        'internal_detail' => 'De app kon deze export niet lezen (:code). De volledige gegevens staan in het app-logboek; vermeld deze code als je een probleem meldt.',
     ],
 ];

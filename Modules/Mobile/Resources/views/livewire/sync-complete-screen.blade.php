@@ -10,6 +10,10 @@
 
     Unlike that screen this one is NOT blocking: it offers exactly one way on,
     and nothing here is doing work in the background.
+
+    Every line about syncing carries :action, filled from the label the very
+    next screen puts on its button, so the two cannot name different things —
+    this one used to deny the button that one is built around.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div
@@ -53,7 +57,7 @@
                     {{ Lang::get('mobile::sync_complete.automatic_title') }}
                 </dt>
                 <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('mobile::sync_complete.automatic_body') }}
+                    {{ Lang::get('mobile::sync_complete.automatic_body', ['action' => $syncAction]) }}
                 </dd>
 
                 <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">
@@ -73,8 +77,8 @@
                 </dt>
                 <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {{ $hasRelay
-                        ? Lang::get('mobile::sync_complete.relay_body')
-                        : Lang::get('mobile::sync_complete.no_relay_body') }}
+                        ? Lang::get('mobile::sync_complete.relay_body', ['action' => $syncAction])
+                        : Lang::get('mobile::sync_complete.no_relay_body', ['action' => $syncAction]) }}
                 </dd>
 
                 <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">

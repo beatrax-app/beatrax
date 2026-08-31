@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Krok 3 ze 3',
 
     'show_my_code' => 'Zobrazit můj kód',
-    'show_my_code_help' => 'Zobrazí QR kód a slovní kód tohoto zařízení pro to druhé.',
+    'show_my_code_help' => 'Zobrazí kód tohoto zařízení, aby si ho druhé přečetlo.',
     'enter_a_code' => 'Zadat kód',
     'safety_number_changed' => 'Druhé zařízení se během porovnávání změnilo. Než potvrdíš, zkontroluj slova níže znovu.',
     'enter_a_code_help' => 'Napiš kód zobrazený na druhém zařízení.',
 
     'show_this_code' => 'Zobrazit tento kód',
     'enter_on_other' => 'Zadej tento kód na druhém zařízení, nebo ho nech naskenovat QR kód.',
+    'scan_on_other' => 'Naskenuj tento kód fotoaparátem druhého zařízení. Počítač fotoaparát nemá — zobraz jeho kód a zadej ho sem.',
     'expires_in' => 'Vyprší za',
     'code_expired' => 'Kód vypršel.',
     'generate_new_code' => 'Vygenerovat nový kód',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Identita tvého zařízení je zamčená. Odemkni aplikaci a zkus to znovu.',
     'invalid_code' => 'Tento kód je neplatný nebo vypršel. Nech si na druhém zařízení vygenerovat nový.',
+    'code_incomplete' => 'Tento kód není úplný. Porovnej ho s druhým zařízením a zadej ho celý.',
+    'code_not_accepted' => 'Žádné zařízení v této síti tento kód nepřijalo. Zkontroluj kód a jestli ho druhé zařízení stále zobrazuje.',
+    'no_peer_answered' => 'Na této síti na tento kód nic neodpovědělo. Zkontroluj, že na druhém zařízení běží synchronizace.',
+    'no_peer_search' => 'Toto zařízení nemohlo prohledat síť, a tak kód nemohlo ověřit. Zobraz místo toho kód tohoto zařízení a zadej ho na druhém.',
+    'rate_limited' => 'Příliš mnoho pokusů. Počkej minutu a zkus to znovu.',
 ];

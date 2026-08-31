@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'O teu cartão de crédito (ICS)',
+    'eyebrow' => 'O teu cartão de crédito',
     'h1' => 'Vai buscar os PDF dos teus extratos mensais',
-    'lede' => 'Larga todos os PDF dos teus extratos mensais da ICS — juntamo-los numa só pré-visualização.',
+    'lede' => 'Larga todos os PDF dos teus extratos mensais — juntamo-los numa só pré-visualização.',
 
     'format_group_aria' => 'A ICS exporta apenas em PDF',
+    'issuer_note' => 'A ICS é, para já, a única emissora de cartões que conseguimos ler, e só o extrato dela em neerlandês. Se o teu cartão for de outra emissora, salta este passo.',
     'got_it_as' => 'Obtive-o como:',
     'badge_only_format' => 'único formato',
 

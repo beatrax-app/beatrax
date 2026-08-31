@@ -21,12 +21,15 @@ divided by how long "recently" really was.
 private const int TRAILING_WINDOW_DAYS = 90;
 private const int HORIZON_LIMIT_DAYS   = 90;
 private const int MIN_OBSERVATION_DAYS = 7;
+private const int MAX_DATE_DAYS        = 36_500;
 ```
 
 `TRAILING_WINDOW_DAYS` is how far back the rate is measured.
 `HORIZON_LIMIT_DAYS` is how far forward the answer is trusted. They hold
 the same value and are separate constants on purpose — they answer
 different questions and either can move without the other.
+`MAX_DATE_DAYS` is a century, and it is a safety bound rather than a
+product decision: see [From rate to date](#from-rate-to-date).
 
 ## Computing the rate
 
@@ -39,7 +42,7 @@ goal's own `start_date`, compared as `Y-m-d` strings.
 **2. Measure the window that actually exists.**
 
 ```php
-$elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today());
+$elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays($today);
 ```
 
 The divisor is this measured `$elapsedDays`, **not** the constant 90.
@@ -47,13 +50,14 @@ Dividing a 30-day-old goal's contributions by 90 would understate its
 rate by two thirds and push its finish date three times too far out,
 which is exactly the goal a user most wants an answer for.
 
-**3. Suppress a window too short to mean anything.** Below
-`MIN_OBSERVATION_DAYS = 7` the method returns `0.0`, which the caller
-treats as no projection. Seven days is the point at which a single early
-deposit stops dominating the arithmetic: on day two, one €500 deposit
-divides by a one-day window into €500/day and projects a €6 000 goal
-finished within a fortnight. The card shows building-a-projection copy
-instead until enough signal accrues.
+**3. Suppress a window too short to mean anything.** The floor is applied
+by `project()`, not by the rate method: `hasNoProjection()` returns true
+below `MIN_OBSERVATION_DAYS = 7` and the rate is never computed at all.
+Seven days is the point at which a single early deposit stops dominating
+the arithmetic: on day two, one €500 deposit divides by a one-day window
+into €500/day and projects a €6 000 goal finished within a fortnight. The
+card shows building-a-projection copy instead until enough signal
+accrues.
 
 **4. Sum the window from the goal's own funding source.** This is the
 step that keeps the answer coherent:
@@ -85,23 +89,43 @@ seven-day floor has already rejected every window it could apply to.
 `project()` composes it:
 
 ```php
-if ($contributedMinor >= $goal->target_minor) return NO_PROJECTION;
-if ($dailyRateMinor <= 0.0)                   return NO_PROJECTION;
+if ($this->hasNoProjection($goal, $contributedMinor, $today)) return self::NO_PROJECTION;
+
+$dailyRateMinor = $this->dailyContributionRate(..., $today);
+if ($dailyRateMinor <= 0.0)                                  return self::STALLED;
 
 $remainingMinor = $goal->target_minor - $contributedMinor;
-$daysToFinish   = (int) ceil($remainingMinor / $dailyRateMinor);
+$daysToFinish   = ceil($remainingMinor / $dailyRateMinor);
+
+if ($daysToFinish > (float) self::MAX_DATE_DAYS)             return self::BEYOND_DATING;
 
 return [
-    'date'          => CarbonImmutable::today()->addDays($daysToFinish)->format('Y-m-d'),
-    'beyondHorizon' => $daysToFinish > self::HORIZON_LIMIT_DAYS,
+    'date'          => $today->addDays((int) $daysToFinish)->format('Y-m-d'),
+    'beyondHorizon' => $daysToFinish > (float) self::HORIZON_LIMIT_DAYS,
+    'stalled'       => false,
 ];
 ```
 
-Three cases return no date at all, and they are distinct: a goal already
-at or past its target has nothing to project; a goal with no history in
-the window has no rate; a goal whose net movement in the window was zero
-or negative — money came back out — would project a finish in the past
-or never, so it reports nothing rather than a lie.
+`$today` is read **once by the caller** and threaded through every step,
+so a render that straddles midnight cannot measure one goal's window from
+yesterday and date the next one from today.
+
+Four cases return no date at all, and they are distinct in the return
+value as well as in the reason. `NO_PROJECTION` covers two of them — a
+goal already at or past its target has nothing to project, and a goal
+younger than the observation window has no window to measure. `STALLED`
+is the third: a goal with plenty of history whose net movement in the
+*window* was zero or negative — money came back out — would project a
+finish in the past or never. "Not enough history" is a definite claim and
+a false one there, so the card carries the flag and says something else.
+
+`BEYOND_DATING` is the fourth. `$daysToFinish` stays a float until the
+bound is applied, because a rate of a few cents a day answers past
+`PHP_INT_MAX`, where the int cast wraps and `addDays()` walks *backwards*,
+printing a finish date twenty years in the past. Clamping to
+`MAX_DATE_DAYS` instead printed a date the arithmetic never produced and
+labelled it an estimate, so past a century there is no date at all —
+flagged `beyondHorizon`, which is still decided from the true value.
 
 `ceil()` rounds toward the honest answer. A remaining €10.00 at €4.00 a
 day is 2.5 days, and reporting three days is right; reporting two would

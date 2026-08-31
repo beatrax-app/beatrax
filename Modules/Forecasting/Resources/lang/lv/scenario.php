@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'sērija',
 
+    'template' => [
+        'cancel' => 'Atcelt :name',
+        'change_amount' => 'Mainīt :name summu',
+    ],
+
     'summary' => [
         'cancel' => 'Atcelt :name',
         'series_fallback' => 'sērija #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenārijs pārdēvēts.',
         'mutation_added' => 'Korekcija pievienota.',
         'mutation_updated' => 'Korekcija atjaunināta.',
-        'mutation_removed' => 'Korekcija noņemta. Atsaukt',
+        'mutation_removed' => 'Korekcija noņemta.',
     ],
 
     'errors' => [
         'name_empty' => 'Scenārija nosaukums nevar būt tukšs.',
         'name_too_long' => 'Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmju.|Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmei.|Scenārija nosaukumā jābūt ne vairāk kā :max rakstzīmēm.',
         'name_taken' => 'Scenārijs ar šādu nosaukumu jau pastāv.',
+        'date_out_of_range' => 'Šis datums ir ārpus katra prognozes horizonta — no šodienas līdz :days dienām uz priekšu —, tāpēc scenārijs neko nemainītu.|Šis datums ir ārpus katra prognozes horizonta — no šodienas līdz :days dienai uz priekšu —, tāpēc scenārijs neko nemainītu.|Šis datums ir ārpus katra prognozes horizonta — no šodienas līdz :days dienām uz priekšu —, tāpēc scenārijs neko nemainītu.',
         'pick_kind_first' => 'Vispirms izvēlieties korekcijas veidu.',
         'amount_positive' => 'Summai jābūt pozitīvam skaitlim.',
+        'scenario_gone' => 'Šī scenārija vairs nav — tas ir dzēsts citur. Izvēlieties citu scenāriju vai izveidojiet jaunu.',
+        'mutation_gone' => 'Šīs izmaiņas vairs nav — tā ir noņemta citur. Aizveriet redaktoru un pievienojiet to atkal, ja joprojām to vēlaties.',
     ],
 ];

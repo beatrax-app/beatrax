@@ -7,6 +7,9 @@ namespace Modules\Sync\Internal\Pairing;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Encoder\Encoder;
 
+/**
+ * @link ../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
+ */
 final class QrPayloadBuilder
 {
     private const int SIZE = 240;
@@ -26,6 +29,7 @@ final class QrPayloadBuilder
         string $token,
         ?string $deviceName = null,
         ?RelayBootstrap $relay = null,
+        ?LanBootstrap $lan = null,
     ): string {
         $uri = sprintf(
             'beatrax://pair?v=1&token=%s&ed=%s&kx=%s&device=%s',
@@ -57,6 +61,13 @@ final class QrPayloadBuilder
             }
         }
 
+        // The direct road. A responder that cannot browse has no other way to
+        // learn where this device is, and the QR is the one channel that
+        // reaches it before the handshake needs an address (see @link).
+        if ($lan !== null && $lan->isAdvertisable()) {
+            $uri .= '&host='.rawurlencode((string) $lan->host).'&port='.$lan->port;
+        }
+
         return $uri;
     }
 
@@ -70,8 +81,9 @@ final class QrPayloadBuilder
         string $token,
         ?string $deviceName = null,
         ?RelayBootstrap $relay = null,
+        ?LanBootstrap $lan = null,
     ): string {
-        $uri = $this->buildUri($deviceId, $ed25519PubHex, $x25519PubHex, $token, $deviceName, $relay);
+        $uri = $this->buildUri($deviceId, $ed25519PubHex, $x25519PubHex, $token, $deviceName, $relay, $lan);
 
         return $this->renderSvg($uri);
     }

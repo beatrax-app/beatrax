@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Add meg a kódot',
     'camera_off' => 'A kamerahozzáférés ki van kapcsolva. Helyette add meg a másik eszközön látható kódot.',
+    'camera_off_no_search' => 'A kamerahozzáférés ki van kapcsolva, és a másik eszköz keresése a hálózaton iPhone-on még nem működik — a begépelt kódnak így nincs mivel megtalálnia. Kapcsold vissza a kamerahozzáférést a Beatrax számára az eszközbeállításokban, majd olvasd be a másik eszköz kódját.',
+    'no_search' => 'A másik eszköz keresése a hálózaton iPhone-on még nem működik, így a begépelt kódnak nincs mit megtalálnia. Olvasd be helyette a kódot a kamerával — a kamerának nem kell keresnie a hálózaton.',
     'word_code_aria' => 'Add meg a másik eszközön látható szókódot',
     'submit_code' => 'Kód elküldése',
     'cancel' => 'Mégse',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'A másik eszköz nem érhető el. Győződj meg róla, hogy mindkettő ugyanazon a hálózaton van, és a szinkronizálás be van kapcsolva az asztali gépen.',
+        'no_road_home' => 'Ez az eszköz nem tud keresni a hálózaton, és a beolvasott kód nem tartalmaz címet a másik eszközhöz. Kérd meg, hogy mutasson új kódot, és olvasd be azt.',
         'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
+        'code_incomplete' => 'Ez a kód nem teljes. Vesd össze a másik eszközzel, és add meg az egészet.',
         'code_not_accepted' => 'A hálózaton egyetlen eszköz sem fogadta el ezt a kódot. Ellenőrizd a kódot, és hogy a másik eszköz még mutatja-e.',
         'no_peer_answered' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. Ellenőrizd, hogy fut-e a szinkronizálás a másik eszközön, vagy olvasd be a kódját a kamerával — a kamerának nem kell keresnie a hálózaton.',
         'no_peer_answered_ios' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. A másik eszköz keresése a hálózaton iPhone-on még nem működik, ezért olvasd be a kódját a kamerával.',
+        'no_peer_answered_camera_off' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. A másik eszköz keresése a hálózaton iPhone-on még nem működik, a kamerahozzáférés pedig ki van kapcsolva — kapcsold ezért vissza a kamerahozzáférést a Beatrax számára az eszközbeállításokban, majd olvasd be a másik eszköz kódját.',
         'rate_limited' => 'Túl sok próbálkozás. Várj egy percet, és próbáld újra.',
         'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
         'identity_needs_lock' => 'Először állítsa be az alkalmazászárat — ez védi az eszköz identitását.',

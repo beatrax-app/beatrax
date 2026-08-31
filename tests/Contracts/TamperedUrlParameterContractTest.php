@@ -98,6 +98,64 @@ function urlBoundComponentRoutes(): array
 }
 
 /**
+ * The property paths a date picker binds anywhere in the tree, so this arm
+ * discovers its own subjects instead of listing them: a `#[Url]` property whose
+ * name is also bound to `<x-core::date-input>` is a date the address bar can
+ * carry. Blade comments are stripped, since the goals modal names the component
+ * inside one.
+ *
+ * @return list<string>
+ */
+function tamperedUrlDateProperties(): array
+{
+    $names = [];
+    $directory = new RecursiveDirectoryIterator(base_path('Modules'), FilesystemIterator::SKIP_DOTS);
+
+    /** @var SplFileInfo $file */
+    foreach (new RecursiveIteratorIterator($directory) as $file) {
+        $path = $file->getPathname();
+
+        if (! $file->isFile() || ! str_ends_with($path, '.blade.php')) {
+            continue;
+        }
+
+        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+
+        preg_match_all('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source, $tags);
+
+        foreach ($tags[0] as $tag) {
+            preg_match_all('/wire:model[.\w]*\s*=\s*"([\w]+)"/', $tag, $models);
+            foreach ($models[1] as $model) {
+                $names[] = $model;
+            }
+        }
+    }
+
+    sort($names);
+
+    return array_values(array_unique($names));
+}
+
+// A date the reader cannot have typed: the picker only ever emits Y-m-d, so
+// each of these arrives from a bookmark, a hand-edited URL or a stale link.
+// None of them failed to parse — every one produced a different, usable date,
+// or a string a DATE comparison then read one character at a time.
+/**
+ * @return array<string, string>
+ */
+function tamperedUrlMalformedDates(): array
+{
+    return [
+        'a bare year' => '2026',
+        'a bare year-month' => '2026-07',
+        'an unpadded day' => '2026-1-5',
+        'a day February does not have' => '2026-02-29',
+        'a relative English date' => 'tomorrow',
+        'a day with a time after it' => '2026-07-01 13:45:00',
+    ];
+}
+
+/**
  * @return array<string, mixed>
  */
 function tamperedUrlShapes(): array
@@ -384,26 +442,18 @@ it('renders every component that binds a query parameter, whatever the parameter
         ...$ungated,
     ]));
 
-    // A 4xx is a deliberate answer, not a crash, and this repo makes it in one
-    // place: Forecasting refuses an account or scenario id the reader cannot
-    // see rather than falling back to the aggregate tab, which
-    // ForecastCrossUser404Test asserts on purpose. Reports takes the opposite
-    // decision for the same shape, so neither is the house rule and the set is
-    // pinned in both directions instead — a page that starts refusing a junk
-    // parameter has to be a visible diff rather than something this arm absorbs.
+    // A 4xx is a deliberate answer, not a crash, so the set is pinned in both
+    // directions — a page that starts refusing a junk parameter has to be a
+    // visible diff rather than something this arm absorbs. Empty because every
+    // page now soft-resets a junk id; see the doc named in the message below.
     sort($refused);
 
-    expect($refused)->toBe([
-        'GET /forecast?account= a negative number → HTTP 404',
-        'GET /forecast?account= a number past every column width → HTTP 404',
-        'GET /forecast?account= zero → HTTP 404',
-        'GET /forecast?scenarioId= a negative number → HTTP 404',
-        'GET /forecast?scenarioId= zero → HTTP 404',
-    ], implode("\n", [
+    expect($refused)->toBe([], implode("\n", [
         'The set of query parameters answered with a 4xx has changed. Refusing is a',
         'decision a page is allowed to make, but only on purpose: a page that starts',
         'refusing a value it used to render is a dead end the reader reaches from a',
         'bookmark, and one that stops refusing has given up a check somebody wrote.',
+        'The rule this set encodes is .docs/features/forecasting/url-parameters.md.',
         ...$refused,
     ]));
 
@@ -494,6 +544,90 @@ it('answers with none of a neighbouring reader\'s rows when a parameter names on
         ...$leaks,
     ]));
 
+    expect($checked)->not->toBe([]);
+});
+
+// The loud failure is a 500 and the leaky one is a neighbour's row. The third
+// is neither: a 200 listing a DIFFERENT set of the reader's own rows because a
+// parameter that is not a date was applied as though it were. `?before=2026`
+// bound the string '2026' against a DATE column, compared it a character at a
+// time, and answered with an empty list under a chip still reading "Before
+// 2026" and a badge still counting one active filter.
+//
+// The doc's rule for an unknown URL value is to coerce it to the default, so
+// the assertion is equality with the page carrying no parameter at all: same
+// rows, and none of the reader's own missing.
+it('lists the same rows for a date parameter that is not a date as for no parameter at all', function (): void {
+    $marker = $this->tamperReader['marker'];
+    $dateProperties = tamperedUrlDateProperties();
+
+    $narrowed = [];
+    $checked = [];
+
+    foreach (urlBoundComponentFiles() as $relativePath) {
+        $component = urlBoundComponentClass($relativePath);
+
+        if ($component === null) {
+            continue;
+        }
+
+        foreach ((new ReflectionClass($component))->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            $attributes = $property->getAttributes(Url::class);
+
+            if ($attributes === [] || ! in_array($property->getName(), $dateProperties, true)) {
+                continue;
+            }
+
+            $parameter = $attributes[0]->newInstance()->as ?? $property->getName();
+
+            foreach (tamperedUrlMalformedDates() as $description => $value) {
+                // Counted, not merely looked for: the fixture's name is on the
+                // account and counterparty chips as well as on the row, so a
+                // page listing nothing still SAYS 'Reader'. The baseline is
+                // re-taken with the query string explicitly emptied, because
+                // withQueryParams() persists onto the request and the previous
+                // parameter was still narrowing it.
+                try {
+                    $html = Livewire::withQueryParams([$parameter => $value])->test($component)->html();
+                    $baseline = substr_count(Livewire::withQueryParams([])->test($component)->html(), $marker);
+                } catch (Throwable) {
+                    // The crash arm owns throwing; this one owns what a page
+                    // that answers 200 puts on the screen.
+                    continue;
+                }
+
+                $checked[] = $relativePath.'?'.$parameter.'='.$value;
+
+                $found = substr_count($html, $marker);
+
+                if ($found !== $baseline) {
+                    $narrowed[] = sprintf(
+                        '%s  ?%s= %s (%s)  →  names the reader\'s own rows %d time(s); with no parameter at all, %d',
+                        $relativePath,
+                        $parameter,
+                        $value,
+                        $description,
+                        $found,
+                        $baseline,
+                    );
+                }
+            }
+        }
+    }
+
+    expect($narrowed)->toBe([], implode("\n", [
+        'A query parameter that is not a date changed which of the reader\'s own rows',
+        'the page listed, and said nothing. That is a 200 nobody can debug: the list',
+        'is wrong, the chip prints the value back, and the only signal is rows that',
+        'are not there. Coerce the parameter to the default at the boundary — a shape',
+        'check before the date parse — or refuse it and say so.',
+        '',
+        ...$narrowed,
+    ]));
+
+    // Discovered rather than listed, so a picker added to a #[Url] property
+    // joins this arm on its own; an empty walk means the discovery broke.
+    expect($dateProperties)->not->toBe([]);
     expect($checked)->not->toBe([]);
 });
 

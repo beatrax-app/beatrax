@@ -26,7 +26,7 @@ function readerGridCurrencySetUp(string $username, ?string $chosen): array
     ]);
 
     DB::table('users')->where('id', $user->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
         ...($chosen === null ? ['base_currency' => null] : []),
     ]);
 

@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Kategorien',
     'section_goals_recurring' => 'Ziele & Wiederkehrendes',
     'no_name' => '(kein Name)',
-    'see_all_prefix' => 'Alle ',
-    'see_all_suffix' => ' Ergebnisse anzeigen →',
-    'no_transactions_prefix' => 'Keine Transaktionen passen zu "',
-    'no_transactions_suffix' => '"',
+    'see_all' => ':count Ergebnis anzeigen →|Alle :count Ergebnisse anzeigen →',
+    'no_transactions' => 'Keine Transaktionen passen zu ":query"',
     'source_txn' => 'txn',
     'source_counterparty' => 'Zahlungspartner',
     'source_category' => 'Kategorie',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'auswählen',
     'foot_close' => 'schließen',
     'close_aria' => 'Suche schließen',
+    'close_caption' => 'Schließen',
     'foot_try' => 'Versuche',
-    'results_suffix' => ' Ergebnisse',
+    'results' => ':count Ergebnis|:count Ergebnisse',
+
+    'action' => [
+        'run_import' => ['label' => 'Import starten', 'hint' => 'Import-Assistenten öffnen'],
+        'scan_email' => ['label' => 'E-Mail jetzt scannen', 'hint' => 'Postfach-Synchronisierung sofort ausführen'],
+        'open_profile' => ['label' => 'Profil öffnen', 'hint' => 'Einstellungen — Konto und Voreinstellungen'],
+        'toggle_theme' => ['label' => 'Design wechseln', 'hint' => 'Zwischen hellem und dunklem Design wechseln'],
+    ],
+
+    'run_command' => ':command ausführen',
+
+    'nav' => [
+        'overview' => ['label' => 'Dev-Übersicht', 'hint' => 'Systemkacheln + letzte Läufe'],
+        'artisan' => ['label' => 'Artisan-Runner', 'hint' => 'Freigegebene Befehle ausführen'],
+        'audit' => ['label' => 'Dev-Audit-Log', 'hint' => 'Jede Aktion im Dev-Modus'],
+        'logs' => ['label' => 'Log-Tailer', 'hint' => 'Live-Stream von laravel-*.log'],
+        'queue' => ['label' => 'Queue-Inspektor', 'hint' => 'Ausstehend / fehlgeschlagen / Batches'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Systemprüfungen'],
+        'sql' => ['label' => 'SQL-Panel', 'hint' => 'Browser nur für SELECT'],
+        'system' => ['label' => 'System-Momentaufnahme', 'hint' => 'Umgebung + Pfade + Konfiguration'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Eingebettetes Queue-Dashboard'],
+        'sync_health' => ['label' => 'Sync-Status', 'hint' => 'Merge-Vorgänge in Quarantäne oder übersprungen'],
+    ],
 ];

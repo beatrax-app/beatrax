@@ -15,7 +15,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 // The nudge reads the live envelope model through CarryoverQuery, not the
@@ -136,7 +136,7 @@ function bntNudgeCount(int $userId, ?string $bodyContains = null): int
 
     $query = $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE);
+        ->where('trigger_type', NotificationTrigger::BudgetNudge);
 
     if ($bodyContains !== null) {
         $query->where('body', 'like', '%'.$bodyContains.'%');

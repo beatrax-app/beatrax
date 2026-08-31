@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Instant;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -49,9 +49,9 @@ function ttlRow(int $userId, string $state, CarbonImmutable $expiresAt, ?string 
         'responder_ed25519_pub_hex' => $responderDeviceId === null ? null : str_repeat('c', 64),
         'responder_x25519_pub_hex' => $responderDeviceId === null ? null : str_repeat('d', 64),
         'state' => $state,
-        'expires_at' => ZuluTimestamp::stamp($expiresAt),
-        'responder_confirmed_at' => ZuluTimestamp::stamp(CarbonImmutable::now()),
-        'created_at' => ZuluTimestamp::stamp(CarbonImmutable::now()),
+        'expires_at' => Instant::zulu($expiresAt),
+        'responder_confirmed_at' => Instant::zulu(CarbonImmutable::now()),
+        'created_at' => Instant::zulu(CarbonImmutable::now()),
     ]);
 }
 

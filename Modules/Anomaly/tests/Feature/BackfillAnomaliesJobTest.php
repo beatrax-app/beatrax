@@ -45,6 +45,46 @@ it('backfills the full history, lands the anomalous charge in Open, and sets ano
     expect($user->anomaly_backfilled_at)->not->toBeNull();
 });
 
+// The reason a backfill exists is history, and history is exactly where a
+// merchant's first charge is followed by later ones. Asking for no OTHER
+// charge made `first_time` unreachable from this path: the shipped demo
+// dataset carried 25 backfilled alerts and not one of them.
+it('reaches first_time over a history where the merchant was used again later', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = AnomalyCorpusSeeder::makeUser();
+
+    $fixture = AnomalyCorpusSeeder::load('first-time-large');
+    $fixture['history_after'] = [
+        ['counterparty' => 'new-electronics-shop', 'amount_minor' => -2200, 'currency' => 'EUR', 'posted_at' => '2026-06-16'],
+    ];
+    $firstChargeId = AnomalyCorpusSeeder::seed($db, $user, $fixture);
+
+    backfillRunJob($user->id);
+
+    $alert = AnomalyAlert::query()->where('transaction_id', $firstChargeId)->first();
+    expect($alert)->not->toBeNull();
+    expect($alert->reasons)->toContain('first_time');
+});
+
+// A duplicate-only alert carries no per-merchant baseline, and the row that
+// reads it back must still know what was charged.
+it('stamps the charge and its currency on an alert no baseline explains', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = AnomalyCorpusSeeder::makeUser();
+
+    $txnId = AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('duplicate-in-window'));
+
+    backfillRunJob($user->id);
+
+    $alert = AnomalyAlert::query()->where('transaction_id', $txnId)->firstOrFail();
+    expect($alert->reasons)->toBe(['duplicate'])
+        ->and($alert->baseline_amount_minor)->toBeNull()
+        ->and($alert->latest_amount_minor)->toBe(-4999)
+        ->and($alert->currency)->toBe('EUR');
+});
+
 it('is a no-op on a second run once anomaly_backfilled_at is set', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

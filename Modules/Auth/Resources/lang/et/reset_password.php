@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Kasuta vähemalt 12 märki.',
     'error_wrong_code' => 'See kasutajanimi ja taastekood ei sobi kokku. Kontrolli koodi hoolikalt — suurtähed, ilma nullita, ilma O-täheta, ilma ühelise ja L-täheta.',
+    'error_throttled' => 'Liiga palju katseid — proovi uuesti :wait pärast.',
 ];

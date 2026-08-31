@@ -11,11 +11,13 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Public\Events\PaymentSettled;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 // A charge that settles before the job runs is skipped outright; one that
@@ -121,6 +123,7 @@ function rsiRunJob(User $user, int $leadDays = 3): void
         $job = new EmitPaymentRemindersJob($user->id, $leadDays);
         $job->handle(
             app(RecurringSeriesQuery::class),
+            app(RecurringOccurrenceQuery::class),
             app(Dispatcher::class),
             app(Clock::class),
         );
@@ -150,7 +153,7 @@ function rsiNotificationRow(int $userId, int $seriesId, string $dueDate): ?objec
     /** @var DeterministicKeyDeriver $keys */
     $keys = app(DeterministicKeyDeriver::class);
 
-    $id = $keys->derive($userId, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $seriesId, $dueDate);
+    $id = $keys->derive($userId, NotificationTrigger::PaymentReminder, (string) $seriesId, $dueDate);
 
     return $db->connection()->table('notifications')->where('id', $id)->first();
 }
@@ -244,7 +247,7 @@ it('rejects a direct resolved -> resolved transition via the state machine', fun
 
     /** @var DeterministicKeyDeriver $keys */
     $keys = app(DeterministicKeyDeriver::class);
-    $id = $keys->derive((int) $user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $series->id, $due->toDateString());
+    $id = $keys->derive((int) $user->id, NotificationTrigger::PaymentReminder, (string) $series->id, $due->toDateString());
 
     /** @var NotificationStateMachine $machine */
     $machine = app(NotificationStateMachine::class);

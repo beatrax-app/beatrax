@@ -25,6 +25,7 @@ return [
 
     'top_spending' => 'Lielākie tēriņi',
     'no_expenses' => 'Vēl nav kategorizētu izdevumu.',
+    'top_spending_refunded' => 'Nav rangā — :amount atgriezās',
 
     'recent_transactions' => 'Jaunākie darījumi',
     'view_all' => 'Skatīt visus',
@@ -34,6 +35,11 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Summa',
     'uncategorized' => 'Bez kategorijas',
+
+    'jump_to_records' => [
+        'body' => 'Šajā periodā nekā nav. Jūsu jaunākie darījumi joprojām ir šeit.',
+        'action' => 'Rādīt periodu :period',
+    ],
 
     'reauth' => [
         'title' => 'Kāda pastkaste ir jāpievieno atkārtoti.',

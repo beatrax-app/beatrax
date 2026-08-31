@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Iegrāmatots maksājums',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list netiek ieskaitīts — tur veiktie maksājumi nemaina atlikumu',
+    ],
+
     'panel' => [
         'aria' => 'Dienas detaļu panelis',
         'close' => 'Aizvērt dienas paneli',
+        'close_caption' => 'Aizvērt',
         'start_of_day' => 'Dienas sākums',
         'no_payments' => 'Šajā dienā nav maksājumu.',
         'date_approximate' => '~ aptuvens datums',

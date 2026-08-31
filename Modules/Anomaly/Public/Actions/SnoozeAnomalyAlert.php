@@ -6,25 +6,23 @@ namespace Modules\Anomaly\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use InvalidArgumentException;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertSnoozed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SnoozeUntil;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The (now, now+6mo] bound lives in the action rather than the Livewire
-// layer, so a tampered payload is rejected for every caller.
-final class SnoozeAnomalyAlert
+// The bound lives in the action rather than the Livewire layer, so a tampered
+// payload is rejected for every caller.
+final readonly class SnoozeAnomalyAlert
 {
-    private const MAX_SNOOZE_MONTHS = 6;
-
     public function __construct(
-        private readonly AnomalyAlertStateMachine $stateMachine,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
+        private AnomalyAlertStateMachine $stateMachine,
+        private Dispatcher $events,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $alertId, User $user, CarbonImmutable $until): void
@@ -41,15 +39,8 @@ final class SnoozeAnomalyAlert
 
         // The 404 guard runs first so a cross-user probe never learns
         // whether its tampered target was in range.
-        $now = $this->clock->now();
-        if ($until->lessThanOrEqualTo($now)) {
-            throw new InvalidArgumentException('Snooze target must be in the future.');
-        }
-        if ($until->greaterThan($now->addMonths(self::MAX_SNOOZE_MONTHS))) {
-            throw new InvalidArgumentException('Snooze target may not exceed six months from now.');
-        }
-
-        $untilString = $until->toDateTimeString();
+        $bounded = SnoozeUntil::from($until, $this->clock->now());
+        $untilString = $bounded->toDateTimeString();
 
         // Compare through the same toDateTimeString() round-trip the stored
         // value took: it drops sub-second precision and the source offset, so
@@ -59,6 +50,13 @@ final class SnoozeAnomalyAlert
             && $alert->snoozed_until !== null
             && $alert->snoozed_until->toDateTimeString() === $untilString
         ) {
+            return;
+        }
+
+        // A second tab, or the paired device, acting on a row this one still
+        // shows as open is a no-op, not a 500: acknowledged is terminal and
+        // dismissed leads only back to open.
+        if (! AnomalyAlertState::from($alert->state)->allows(AnomalyAlertState::Snoozed)) {
             return;
         }
 
@@ -74,7 +72,7 @@ final class SnoozeAnomalyAlert
         $this->events->dispatch(new AnomalyAlertSnoozed(
             userId: $user->id,
             anomalyAlertId: $alertId,
-            snoozedUntil: $until,
+            snoozedUntil: $bounded->at,
         ));
     }
 }

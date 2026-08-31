@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
@@ -34,7 +35,7 @@ final class DriftAlertDto extends Data
         public readonly Money $annualizedImpact,
         public readonly ?Money $eurEquivalent,
         public readonly int $thresholdPercentUsed,
-        public readonly string $thresholdSource,
+        public readonly ThresholdSource $thresholdSource,
         public readonly CarbonImmutable $detectedAt,
         public readonly ?CarbonImmutable $actionedAt,
         public readonly ?CarbonImmutable $snoozedUntil,

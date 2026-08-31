@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Jūsu banka',
     'bank_desc' => 'Ievelciet konta izraksta failu. Lasām CSV, MT940 un CAMT.053 no lielākās daļas Eiropas banku.',
-    'card_title' => 'Jūsu kredītkarte (ICS)',
-    'card_desc' => 'Ievelciet mēneša PDF konta izrakstu no Mijn ICS.',
+    'card_title' => 'Jūsu kredītkarte',
+    'card_desc' => 'Ievelciet savas kartes mēneša PDF izrakstus. Pagaidām protam nolasīt izdevēju ICS.',
     'email_title' => 'Čeki no e-pasta',
     'email_desc' => 'Pievienojiet Gmail vai Outlook, lai automātiski uztvertu pirkumu apstiprinājumus.',
+    'email_desc_phone' => 'Pirkumu apstiprinājumus uztver datora lietotne; šis tālrunis ar sinhronizāciju rāda, ko tā atradusi.',
 
     'continue' => 'Turpināt →',
 ];

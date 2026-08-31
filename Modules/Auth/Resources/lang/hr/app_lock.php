@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Tvoj uređaj je odbio pohraniti ključ. Biometrijsko otključavanje nije dostupno.',
     'heading' => 'Zaključavanje aplikacije',
 
-    'moved_help' => 'Tvoj PIN, vrijeme automatskog zaključavanja i biometrijsko otključavanje nalaze se uz postavke sinkronizacije ovog uređaja.',
-    'moved_cta' => 'Otvori Sinkronizaciju i uređaj',
-
     'toggle_label' => 'Zaključaj aplikaciju PIN-om',
     'toggle_description' => 'Zamjenjuje svakodnevnu prijavu PIN-om. Sesije ostaju aktivne 30 dana.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Zadrži PIN',
 
     'error_pin_too_short' => 'PIN mora imati barem 6 znamenke.',
-    'error_pin_digits' => 'PIN mora imati 6 do 10 znamenki — samo brojevi.',
+    'error_pin_digits' => 'PIN mora imati :min do :max znamenki — samo brojevi.',
     'error_pin_mismatch' => 'PIN-ovi se ne podudaraju. Pokušaj ponovno.',
     'error_pin_required' => 'Unesi svoj PIN.',
     'error_pin_incorrect' => 'Neispravan PIN.',

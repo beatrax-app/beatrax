@@ -320,7 +320,7 @@ it('compare() keeps BOTH currencies for a group present in EUR and USD under cur
     expect($byCurrency['USD']->amountMinor)->toBe(3_000);
 });
 
-it('hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
+it('surfaces an unconvertible currency that ONLY existed in the previous period, and counts it once', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pctUser();
@@ -331,7 +331,7 @@ it('hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency th
     $previousDate = $previousPeriod->start->addDays(2)->toDateString();
 
     // Current period: fully convertible EUR only — the CURRENT period's own
-    // result carries hasExcludedAccounts = false.
+    // result excludes nothing at all.
     pctTransaction($db, $user, $account, [
         'settled_amount_minor' => -5_000, 'settled_currency' => 'EUR',
         'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
@@ -347,6 +347,6 @@ it('hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency th
 
     // Only the current period's flags used to survive onto the final DTO, so the
     // previous period's exclusion was invisible behind the compare delta.
-    expect($result->hasExcludedAccounts)->toBeTrue();
-    expect($result->accountsWithoutRate)->toBeGreaterThanOrEqual(1);
+    expect($result->hasExclusions())->toBeTrue();
+    expect($result->excludedCurrencies)->toBe(['JPY']);
 });

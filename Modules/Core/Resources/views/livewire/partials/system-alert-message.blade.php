@@ -11,10 +11,15 @@
 
     Unknown kinds fall through to the row's own `message` column so
     future modules can write rows of new kinds without an immediate
-    Blade change.
+    Blade change. A writer that knows its line puts the spec in
+    `metadata.copy` and the rendered sentence in `message`: the spec
+    follows this reader, and the sentence is what a household peer on
+    an older build — which cannot read a spec — still shows.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\StoredCopy')
 @use('Modules\Core\Internal\Enums\BackupAlertKind')
+@use('Modules\Core\Internal\Enums\BackupFailureCause')
 @use('Modules\Core\Public\Enums\OAuthAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
 @use('Modules\EmailScan\Public\Enums\MailProvider')
@@ -29,7 +34,7 @@
         @if ($latestVersion !== null)
             {{ Lang::get('core::alerts.messages.update_available', ['version' => $latestVersion]) }}
         @else
-            {{ $alert->message }}
+            {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
     @case (UpdateAlertKind::Stale->value)
@@ -48,7 +53,7 @@
                  with e() before substitution, so no untrusted markup leaks. --}}
             {!! Lang::get('core::alerts.messages.update_stale', ['current' => e($currentVersion), 'latest' => e($latestVersion)]) !!}
         @else
-            {{ $alert->message }}
+            {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
     @case (UpdateAlertKind::Critical->value)
@@ -64,10 +69,14 @@
         @if ($newVersion !== null && $summary !== null)
             {{ Lang::get('core::alerts.messages.update_critical', ['version' => $newVersion, 'summary' => $summary]) }}
         @else
-            {{ $alert->message }}
+            {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
     @case (BackupAlertKind::Corrupt->value)
+        {{-- The kind covers every backup AND restore failure, so the sentence
+             is chosen by the recorded `cause`. Choosing it from suspect_path
+             alone told a reader whose disk was full, and one whose restore had
+             failed, that their database had failed its integrity check. --}}
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $timestamp = isset($metadata['timestamp']) && is_string($metadata['timestamp'])
@@ -76,12 +85,22 @@
             $suspectPath = isset($metadata['suspect_path']) && is_string($metadata['suspect_path']) && $metadata['suspect_path'] !== ''
                 ? basename($metadata['suspect_path'])
                 : null;
+            $cause = isset($metadata['cause']) && is_string($metadata['cause'])
+                ? BackupFailureCause::tryFrom($metadata['cause'])
+                : null;
+            $snapshot = isset($metadata['pre_restore_snapshot']) && is_string($metadata['pre_restore_snapshot']) && $metadata['pre_restore_snapshot'] !== ''
+                ? basename($metadata['pre_restore_snapshot'])
+                : null;
         @endphp
         <span aria-hidden="true">⚠</span>
-        @if ($suspectPath !== null)
+        @if ($cause === BackupFailureCause::RestoreFailed && $snapshot !== null)
+            {{ Lang::get('core::alerts.messages.backup_restore_failed', ['timestamp' => $timestamp, 'snapshot' => $snapshot]) }}
+        @elseif ($suspectPath !== null)
             {{ Lang::get('core::alerts.messages.backup_corrupt_with_path', ['timestamp' => $timestamp, 'path' => $suspectPath]) }}
-        @else
+        @elseif ($cause === BackupFailureCause::SourceUnreadable || $cause === null)
             {{ Lang::get('core::alerts.messages.backup_corrupt_no_path', ['timestamp' => $timestamp]) }}
+        @else
+            {{ Lang::get('core::alerts.messages.backup_write_failed', ['timestamp' => $timestamp]) }}
         @endif
         @break
     @case (BackupAlertKind::Overdue->value)
@@ -89,10 +108,17 @@
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $hoursOld = isset($metadata['hours_old']) && is_numeric($metadata['hours_old'])
                 ? (int) $metadata['hours_old']
-                : 0;
+                : null;
         @endphp
-        {{-- App-static copy with an inline <code> span; :hours is an integer. --}}
-        {!! Lang::get('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]) !!}
+        {{-- Escaped like ordinary copy: this line named a terminal command no
+             shipped bundle can open, and the <code> span went with it. A row
+             with no age is the probe finding no backup at all, which the age
+             sentence rendered as a backup made "0h old". --}}
+        @if ($hoursOld === null)
+            {{ Lang::get('core::alerts.messages.backup_none_found') }}
+        @else
+            {{ Lang::get('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]) }}
+        @endif
         @break
     @case ('wal_mode_missing')
         @php
@@ -158,7 +184,7 @@
         @if ($username !== null)
             {{ Lang::get('core::alerts.messages.auth_recovery_code_consumed', ['username' => $username]) }}
         @else
-            {{ $alert->message }}
+            {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
     @case ('auth.recovery_code_failed')
@@ -169,7 +195,7 @@
         @if ($username !== null)
             {{ Lang::get('core::alerts.messages.auth_recovery_code_failed', ['username' => $username]) }}
         @else
-            {{ $alert->message }}
+            {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
     {{-- Both branches that raise this kind mean the same thing to the reader,
@@ -201,13 +227,18 @@
     @case ('open_banking_reconsent_required')
         {{ Lang::get('core::alerts.messages.open_banking_reconsent') }}
         @break
+    {{-- The count of rows the bank sent is in metadata rather than the
+         sentence: what the reader acts on is that none of them landed, and a
+         number beside a plural noun has to decline in 26 languages. --}}
+    @case ('open_banking_nothing_imported')
+        {{ Lang::get('core::alerts.messages.open_banking_nothing_imported') }}
+        @break
     @default
-        {{-- $alert->message is operator-authored text from
-             BackupDatabaseCommand::recordCorruptAlert,
-             HealthCheckListener::recordDriftAlert, and
-             BackupFreshnessProbe::recordOverdueAlert. Blade's `{{ }}`
-             expression auto-escapes HTML, so a future module writing
-             an unsanitised string into the column cannot turn into a
+        {{-- The line the writer stored, or the column verbatim when it
+             stored none — an older build's row, or an operator's own
+             words. Both are plain strings, and Blade's `{{ }}`
+             expression auto-escapes them, so a module writing an
+             unsanitised string into the column cannot turn into a
              stored-XSS surface. Never swap this to `{!! !!}`. --}}
-        {{ $alert->message }}
+        {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
 @endswitch

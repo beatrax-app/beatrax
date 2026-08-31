@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Porovnáno se základem výše',
 
+    'run_failed' => 'Tuto předpověď se nepodařilo vypočítat. Čára níže ukazuje jen to, co už je zaúčtováno.',
+
     'scenario_editor_aria' => 'Editor scénáře',
     'series_confidence' => 'Spolehlivost řady',
     'no_series_contribute' => 'Do předpovědi tohoto účtu zatím žádná řada nepřispívá.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Aktualizuje se',
     'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrývá :days den.|Graf vyžaduje JavaScript. Rozsah pokrývá :days dny.|Graf vyžaduje JavaScript. Rozsah pokrývá :days dní.',
     'total_balance' => 'Celkový zůstatek',
+    'projection_range' => 'Rozpětí předpovědi',
+    'point_estimate' => 'Bodový odhad',
 
     'per_month_suffix' => '/měs.',
     'confidence_chip_aria' => ':name, spolehlivost :confidence — rozpětí předpovědi je :percent procent bodového odhadu',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Nejnižší za 30 dní',
     'next_ics' => 'Příští vypořádání ICS: :amount dne :date',
     'ics_overdue' => 'Vypořádání ICS po splatnosti: :amount, splatné :date',
+
+    'stale_run' => 'Prognóza z :date — od té doby neaktualizována.',
+
+    'confidence' => [
+        'high' => 'Vysoká',
+        'medium' => 'Střední',
+        'low' => 'Nízká',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Částka je povinná.',
+        'amount_decimals' => 'Částka musí být číslo s nejvýše :decimals desetinným místem.|Částka musí být číslo s nejvýše :decimals desetinnými místy.|Částka musí být číslo s nejvýše :decimals desetinnými místy.',
+        'amount_whole' => 'Částka musí být celé číslo — tato měna nemá menší jednotku.',
+        'amount_non_negative' => 'Částka musí být nula nebo kladná.',
+        'amount_non_zero' => 'Částka nesmí být nula.',
+        'field_required' => 'Pole :field je povinné.',
+    ],
 ];

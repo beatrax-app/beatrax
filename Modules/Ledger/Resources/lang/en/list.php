@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Full history.',
     'subtitle_recent' => 'Recent transactions (last 90 days).',
 
-    'currency_aria' => 'Currency view',
-    'currency_eur' => ':code only',
-    'currency_original' => 'Original currency',
+    'currency_aria' => 'Amount shown',
+    'currency_eur' => 'Settled amount',
+    'currency_original' => 'Original amount',
 
     'show_recent' => 'Show recent only',
     'show_full' => 'Show full history',
 
     'empty_period' => 'Nothing here for this period.',
 
+    'empty_recent_has_older' => 'Nothing in the last 90 days. Your older transactions are still here.',
+
+    'empty_history' => 'No transactions yet.',
     'loading_more' => 'Loading more transactions',
     'load_more' => 'Load more',
 

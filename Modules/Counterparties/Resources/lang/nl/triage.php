@@ -6,7 +6,7 @@ return [
     'page_title' => 'Tegenpartijen sorteren',
     'heading' => 'Onbekende tegenpartijen sorteren',
 
-    'progress' => ':seen van :total · :percent % · nog ~:minutes min',
+    'progress' => ':seen van :total · :percent% · nog ~:minutes min',
     'progress_aria' => 'Sorteervoortgang',
 
     'all_caught_aria' => 'Alle tegenpartijen gelabeld',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Nog geen transacties bekend.',
 
     'label_manually' => 'Of handmatig labelen',
+    'label_question' => 'Wat is deze tegenpartij?',
     'display_name_label' => 'Weergavenaam',
-    'display_name_placeholder' => 'Weergavenaam…',
     'type_label' => 'Type',
     'type_merchant' => 'Winkelier',
     'type_personal' => 'Persoonlijk',
     'type_bank' => 'Bank',
     'type_government' => 'Overheid',
     'save_label' => 'Label opslaan',
+    'name_required' => 'Geef deze tegenpartij eerst een naam.',
+    'draft_kept' => 'Wat je typt blijft bewaard terwijl je door de rij loopt.',
 
     'skip' => 'Nu overslaan',
-    'mark_ignored' => 'Markeren als genegeerd',
+    'mark_ignored' => 'Vraag hier niet meer naar',
+    'not_now_note' => 'Geen van beide verandert de tegenpartij — je kunt deze later alsnog labelen op de pagina Tegenpartijen.',
     'previous' => 'Vorige onbekende',
-    'next' => 'Volgende',
 
     'kbd_yes' => 'ja',
     'kbd_no' => 'nee',

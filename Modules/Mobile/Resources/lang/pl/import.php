@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Hasła nie są zgodne.',
         'password_length' => 'Użyj co najmniej 12 znaków.',
         'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',
+        'pin_digits' => 'PIN musi mieć od 6 do 10 cyfr — tylko cyfry.',
         'pins_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
         'session_expired' => 'Sesja wygasła przed zakończeniem konfiguracji. Wpisz ponownie PIN i hasło.',
         'retry_failed' => 'Nadal nie udało się dokończyć konfiguracji tego urządzenia. Spróbuj ponownie.',

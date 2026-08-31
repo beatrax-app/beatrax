@@ -10,9 +10,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class TrustedHostGuard
+final readonly class TrustedHostGuard
 {
-    public function __construct(private readonly Repository $config) {}
+    public function __construct(private Repository $config) {}
 
     public function handle(Request $request, Closure $next): Response
     {

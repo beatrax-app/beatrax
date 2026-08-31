@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Upload endnu et kontoudtog',
 
+    'chain' => [
+        'heading' => 'Løser kæder op…',
+        'pending' => 'I kø. Kædeløseren starter om lidt.',
+        'running' => 'Forbinder finansieringskæder og opdeler afregninger fra kontoudtoget.',
+    ],
+
     'issues' => [
         'row' => 'Række :row: :reason',
         'file_stopped' => 'Filen kunne ikke læses længere end til række :row. Intet efter den række blev importeret.',

@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valūtas attēlojums',
+        'heading' => 'Summas attēlojums',
         'label' => 'Noklusējuma skats darījumu sarakstā',
-        'eur_only' => 'Tikai :code',
-        'original' => 'Sākotnējā valūta',
+        'eur_only' => 'Norēķina summa',
+        'original' => 'Sākotnējā summa',
         'help' => 'Katrā lapā to joprojām varat pārslēgt darījumu sarakstā.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Tiek izmantoti komplektā iekļautie kursi. Nekādi dati šo ierīci nepamet.',
         'fetch_aria' => 'Iegūt aktuālos valūtas kursus tiešsaistē',
         'refreshing' => 'Atsvaidzina…',
-        'next_refresh' => 'Nākamā automātiskā atsvaidzināšana: katru dienu plkst. 09:00',
+        'next_refresh' => 'Automātiskā atsvaidzināšana: reizi dienā',
         'refresh_gave_up' => 'Neizdevās atsvaidzināt kursus. Joprojām tiek izmantoti ierīcē esošie kursi.',
         'refresh_now' => 'Atsvaidzināt tagad',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Periods',
         'label' => 'Perioda sākuma diena',
         'help' => 'No 1 līdz 28. Lielākā daļa lietotāju atstāj 1 (kalendārais mēnesis). Izvēlieties 25, ja alga pienāk 25. datumā un „jūsu mēnesis” sākas tieši tad.',
+
+        'move_confirm' => 'Ja periods sākas :day. dienā, visas aplokšņu summas tiek pārkārtotas un saskaitītas kopā tur, kur divi mēneši saplūst vienā. Dienas atgriešana tās vairs nesadala.',
+        'move_cancel' => 'Atcelt',
+        'move_apply' => 'Lietot',
     ],
 
     'recurring' => [
         'heading' => 'Regulāro maksājumu atpazīšana',
         'window_label' => 'Atpazīšanas logs (mēneši)',
         'window_help' => 'Cik mēnešu vēstures skenēt, grupējot darījumus regulāros modeļos.',
-        'income_label' => 'Ieņēmumu minimums (centos)',
-        'income_help' => 'Ieņēmumi zem šī sliekšņa netiek automātiski grupēti. Glabā centos — 200000 nozīmē :example. Iestatiet 0, lai slieksni izslēgtu.',
+        'income_label' => 'Ieņēmumu minimums (mazākajās vienībās)',
+        'income_help' => 'Ieņēmumi zem šī sliekšņa netiek automātiski grupēti. Glabā mazākajās vienībās — :minor nozīmē :example. Iestatiet 0, lai slieksni izslēgtu.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Nomešanas mape ir aktīva. Beatrax ik pēc 5 minūtēm pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot jaunus failus.',
         'inactive_html' => 'Kad ieslēgts, Beatrax ik pēc 5 minūtēm pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> un <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> failus, un importē tos pa to pašu apstrādes ķēdi, ko vednis. Apstrādātie faili tiek pārvietoti uz <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, lai tie nekad netiktu importēti divreiz.',
+        'active_phone_html' => 'Nomešanas mape ir aktīva. Beatrax fonā pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot jaunus failus. Kad fona pārbaude notiks, izlemj tavs tālrunis — tās var būt minūtes vai stundas.',
+        'inactive_phone_html' => 'Kad ieslēgts, Beatrax fonā pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> un <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> failus, un importē tos pa to pašu apstrādes ķēdi, ko vednis. Kad fona pārbaude notiks, izlemj tavs tālrunis — tās var būt minūtes vai stundas. Apstrādātie faili tiek pārvietoti uz <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, lai tie nekad netiktu importēti divreiz.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Nodokļi',
-    'shared_merchant_heading' => 'Kopīgotais tirgotāju saraksts',
     'data_backup_heading' => 'Dati un dublējumi',
-    'install_heading' => 'Instalēšana',
 
     'about_updates' => [
         'heading' => 'Par atjauninājumiem',
         'body' => 'Pēc instalēšanas Beatrax atjaunina sevi automātiski. Kad ir uzstādīta pati pirmā versija, nākamās pienāk ar paziņojumu lietotnē — GitHub vairs nav jāapmeklē. Ja kāds atjauninājums neizdotos, jaunāko instalētāju vienmēr varat lejupielādēt manuāli laidienu lapā.',
+        'body_phone' => 'Šeit Beatrax sevi neatjaunina. Tālruņa lietotnes jaunās versijas pienāk caur App Store vai Google Play, tāpat kā pārējās jūsu lietotnes. Laidienu lapā ir uzskaitīts, kas katrā ir mainījies.',
         'open_releases' => 'Atvērt laidienu lapu →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Budžeta mēnesi neizdevās pārvietot, tāpēc tas palika, kur bija.',
         'currency_required' => 'Izvēlieties valūtu.',
         'window_months' => 'Izvēlieties no 2 līdz 60 mēnešiem.',
         'threshold' => 'Izvēlieties slieksni no 1%, 2%, 5%, 10%, 25% vai 50%.',

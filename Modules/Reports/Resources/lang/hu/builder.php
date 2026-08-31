@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategorizálatlan',
+    'no_counterparty' => 'Nincs partner',
+    'unavailable_counterparty' => 'A partner nincs meg ezen az eszközön',
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
     'subtitle' => 'Állíts össze jelentést a nyilvántartásodból.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Egyéni tartomány',
         'from' => 'Ettől',
         'to' => 'Eddig',
+        'error' => [
+            'incomplete' => 'Válassz kezdő és záró dátumot is.',
+            'malformed' => 'Adj meg érvényes dátumot ÉÉÉÉ-HH-NN formában.',
+            'inverted' => 'A záró dátum korábbi a kezdőnél.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Szűrők',
+        'net_worth_note' => 'A nettó vagyon egyenleg: csak a számlaszűrő érvényes.',
     ],
 
     'compare' => 'Összehasonlítás az előző időszakkal',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'A diagram :currency pénznemben — :list nem jelenik meg',
+        'undrawn' => 'Nincs a gyűrűben — :amount az ellenkező irányba mozog',
         'bar_title' => 'Kattints egy oszlopra a tranzakciói megtekintéséhez',
         'line_title' => 'Kattints egy pontra a tranzakciói megtekintéséhez',
         'donut_title' => 'Kattints egy szegmensre a tranzakciói megtekintéséhez',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Díjak és korrekciók (a fentiben nem szerepel)',
+    'other_movement_with_refunds' => 'Díjak, visszatérítések és korrekciók (a fentiben nem szerepel)',
 ];

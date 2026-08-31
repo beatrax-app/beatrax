@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
@@ -70,7 +71,7 @@ it('sendResponderAccept() + drainPairingFrames() propagates the responder identi
     // Seed + accept mirrors submitCode()'s import branch.
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $issuedToken, $tokenHash): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PRC_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $issuedToken);
+        $service->seedFromInitiator(PRC_PHONE_USER_ID, new PairingPeerIdentity($desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex), $issuedToken);
         $service->accept($issuedToken, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, $phoneIdentity->ed25519PublicKeyHex, $phoneIdentity->x25519PublicKeyHex);
 
         /** @var Session $session */
@@ -107,7 +108,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
 
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $issuedToken, $tokenHash): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PRC_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $issuedToken);
+        $service->seedFromInitiator(PRC_PHONE_USER_ID, new PairingPeerIdentity($desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex), $issuedToken);
         $service->accept($issuedToken, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, $phoneIdentity->ed25519PublicKeyHex, $phoneIdentity->x25519PublicKeyHex);
 
         /** @var Session $session */
@@ -199,7 +200,7 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
 
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $issuedToken, $tokenHash): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PRC_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $issuedToken);
+        $service->seedFromInitiator(PRC_PHONE_USER_ID, new PairingPeerIdentity($desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex), $issuedToken);
         $service->accept($issuedToken, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, $phoneIdentity->ed25519PublicKeyHex, $phoneIdentity->x25519PublicKeyHex);
 
         /** @var Session $session */
@@ -241,7 +242,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
 
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $issuedToken, $tokenHash): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PRC_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $issuedToken);
+        $service->seedFromInitiator(PRC_PHONE_USER_ID, new PairingPeerIdentity($desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex), $issuedToken);
         $service->accept($issuedToken, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, $phoneIdentity->ed25519PublicKeyHex, $phoneIdentity->x25519PublicKeyHex);
 
         /** @var Session $session */

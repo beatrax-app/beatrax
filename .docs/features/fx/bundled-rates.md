@@ -13,10 +13,11 @@ is the consent gate for the app's only outbound traffic. `BundledSnapshotProvide
 sits in the same registry as the two network providers, so the refusal took the
 offline provider down with the online ones.
 
-The consequence was silent. `ExchangeRateService::convertWithRows()` degrades to
-`ConversionResult::passthrough()` on an empty rate set, so a reader who chose USD
-as their reporting currency saw every total keep its euro sign and its euro
-value, while Settings said "Bundled rates are used. No data leaves this device."
+The consequence was silent. `ExchangeRateService` returns
+`ConversionResult::noRate()` on an empty rate set — the amount comes back in the
+currency it arrived in — so a reader who chose USD as their reporting currency
+saw every total keep its euro sign and its euro value, while Settings said
+"Bundled rates are used. No data leaves this device."
 
 `2026_08_23_000010_seed_bundled_exchange_rates` writes the snapshot into
 `exchange_rates` at install and on upgrade. The rows carry `source = 'bundled'`,

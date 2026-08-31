@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Forecasting\Internal\Http\Livewire\ForecastPage')
+@use('Modules\Forecasting\Public\Enums\ForecastHorizon')
 {{--
     /forecast page — the cash-flow projection surface: a baseline
     balance range, a horizon control, and side-by-side scenario
@@ -30,7 +31,7 @@
     $eurFmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 @endphp
 
-<div class="mx-auto max-w-7xl px-4 py-12">
+<div class="mx-auto max-w-7xl px-4 py-6">
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <x-core::page-heading>{{ Lang::get('forecasting::forecast.heading') }}</x-core::page-heading>
@@ -101,7 +102,7 @@
         >
             <div class="mb-4 flex flex-wrap items-center gap-3">
                 <div class="inline-flex flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:bg-slate-950 dark:border-slate-700" role="radiogroup" aria-label="{{ Lang::get('forecasting::forecast.horizon_label') }}">
-                    @foreach (\Modules\Forecasting\Internal\Jobs\ProjectForecastJob::HORIZON_DAYS as $option)
+                    @foreach (ForecastHorizon::days() as $option)
                         <button
                             type="button"
                             role="radio"
@@ -205,23 +206,75 @@
             {{-- All-accounts aggregate region. Renders a single-line EUR
                  rollup chart instead of a per-account rangeArea band. The
                  confidence legend hides on this tab since the aggregate has
-                 no per-series identity. --}}
-            @if ($isAllAccountsView)
-                <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
-                    <header class="mb-3">
-                        <x-core::section-heading :title="Lang::get('forecasting::forecast.all_accounts').' · '.($activeScenarioName ?? Lang::get('forecasting::forecast.baseline'))" />
-                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
-                        </p>
-                    </header>
+                 no per-series identity.
 
-                    @include('forecasting::livewire.partials.aggregate-line-chart', [
-                        'chartElementId' => $aggregateChartElementId,
-                        'aggregatePoints' => $aggregatePoints,
-                        'aggregateBufferFloor' => $aggregateBufferFloor,
-                        'aggregateCurrency' => $aggregateCurrency,
-                    ])
-                </section>
+                 This is the tab the reader lands on, so it is also where a
+                 scenario has to be answerable: creating one here used to
+                 change nothing on screen and offer no way to add a single
+                 what-if, because the editor only existed beside a per-account
+                 chart the reader had not opened. --}}
+            @if ($isAllAccountsView)
+                <div class="grid grid-cols-1 gap-6 @if ($activeScenarioId !== null) lg:grid-cols-[1fr_18rem] @endif">
+                    <div class="grid grid-cols-1 gap-4 @if ($activeScenarioId !== null) lg:grid-cols-2 @endif">
+                        <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                            <header class="mb-3">
+                                <x-core::section-heading :title="Lang::get('forecasting::forecast.all_accounts').' · '.Lang::get('forecasting::forecast.baseline')" />
+                                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                    {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
+                                    @if ($aggregateUnconverted !== [])
+                                        {{-- "every account" was a claim the total could not keep:
+                                             an account in a currency no rate reaches is silently
+                                             out of it, while its tab sits two lines above. --}}
+                                        <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $aggregateUnconverted)]) }}</span>
+                                    @endif
+                                </p>
+                            </header>
+
+                            @if ($aggregateRunFailed)
+                                <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
+                            @endif
+
+                            @include('forecasting::livewire.partials.aggregate-line-chart', [
+                                'chartElementId' => $aggregateChartElementId,
+                                'aggregatePoints' => $aggregatePoints,
+                                'aggregateBufferFloor' => $aggregateBufferFloor,
+                                'aggregateCurrency' => $aggregateCurrency,
+                                'chartTestId' => 'all-accounts-aggregate-chart',
+                            ])
+                        </section>
+
+                        @if ($activeScenarioId !== null)
+                            <section class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                                <header class="mb-3">
+                                    <x-core::section-heading :title="Lang::get('forecasting::forecast.all_accounts').' · '.($activeScenarioName ?? Lang::get('forecasting::forecast.scenario_word'))" />
+                                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                        {{ Lang::get('forecasting::forecast.compared_against_baseline') }}
+                                    </p>
+                                </header>
+
+                                @if ($aggregateScenarioRunFailed)
+                                    <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
+                                @endif
+
+                                @include('forecasting::livewire.partials.aggregate-line-chart', [
+                                    'chartElementId' => $aggregateScenarioChartElementId,
+                                    'aggregatePoints' => $aggregateScenarioPoints,
+                                    'aggregateBufferFloor' => $aggregateBufferFloor,
+                                    'aggregateCurrency' => $aggregateCurrency,
+                                    'chartTestId' => 'all-accounts-aggregate-scenario-chart',
+                                ])
+                            </section>
+                        @endif
+                    </div>
+
+                    @if ($activeScenarioId !== null)
+                        <aside aria-label="{{ Lang::get('forecasting::forecast.scenario_editor_aria') }}" class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
+                            @livewire('forecasting.scenario-editor-sidebar', [
+                                'scenarioId' => $activeScenarioId,
+                            ], key('scenario-sidebar-aggregate-' . $activeScenarioId))
+                        </aside>
+                    @endif
+                </div>
             @endif
 
             {{-- Net diff tile + side-by-side region. --}}
@@ -230,7 +283,7 @@
                     @include('forecasting::livewire.partials.net-diff-tile', [
                         'netDiff' => $netDiff,
                         'netDiffCurrency' => $defaultCurrency,
-                        'horizonDays' => \Modules\Forecasting\Internal\Jobs\ProjectForecastJob::HORIZON_DAYS,
+                        'horizonDays' => ForecastHorizon::days(),
                     ])
                 @endif
 
@@ -251,6 +304,15 @@
                                         &nbsp;&rarr;&nbsp;
                                         {{ $eurFmt($horizonLowMinor, $defaultCurrency) }} &ndash; {{ $eurFmt($horizonHighMinor, $defaultCurrency) }} {{ Lang::get('forecasting::forecast.on_day') }} {{ $horizon }}
                                     </p>
+                                    @if ($baseline->isStale)
+                                        <p class="mt-1 text-xs text-amber-700 dark:text-amber-500" data-testid="forecast-stale-note" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.stale_run', ['date' => $baseline->asOf->translatedFormat('d M Y')]) }}</p>
+                                    @endif
+                                    @if ($baseline->unconvertedCurrencies !== [])
+                                        {{-- A series the rate table cannot reach is out of this curve
+                                             entirely. Unnamed, the reader reads a balance that is
+                                             missing a subscription and has no way to tell. --}}
+                                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $baseline->unconvertedCurrencies)]) }}</p>
+                                    @endif
                                 </div>
                                 @if ($selectedAccountId !== null && ! ($scenario instanceof ForecastDto))
                                     <div x-data="{ open: false }" class="relative">
@@ -283,6 +345,10 @@
                                 @endif
                             </header>
 
+                            @if ($baselineRunFailed)
+                                <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
+                            @endif
+
                             @foreach ($shortfallWindows as $window)
                                 <p class="mb-2 flex items-center gap-1 text-xs text-rose-700 dark:text-rose-500" style="font-variant-numeric: tabular-nums;">
                                     <span aria-hidden="true">↘</span>
@@ -314,6 +380,10 @@
                                         </p>
                                     </div>
                                 </header>
+
+                                @if ($scenarioRunFailed)
+                                    <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
+                                @endif
 
                                 @include('forecasting::livewire.partials.range-area-chart', [
                                     'forecast' => $scenario,

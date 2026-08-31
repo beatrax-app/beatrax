@@ -18,23 +18,29 @@ credential exists on disk, until the user completes the consent wizard.
   array-key addition.
 - **`EnableBankingHttpClient` is the sole HTTP boundary** to Enable Banking.
   Every request (a) resolves the caller's own credentials, (b) checks the
-  target URL against a host allow-list — `api.enablebanking.com` plus the
-  resolved per-connection bank SCA host once one is known — with an
-  explicit https-only + exact-host check, and only then (c) signs and
-  attaches an RS256 bearer JWT. The allow-list check runs before the JWT is
-  built, on every call site, so no response-derived follow-up URL can ever
-  reach the network with a valid bearer attached. Guzzle's `allow_redirects`
-  is `false` — a 3xx is surfaced as an error body, never followed, since a
-  `Location` header could otherwise bypass the allow-list check or
-  downgrade https to http.
-- **The bank SCA host is validated before it ever widens the allow-list.**
+  target URL against a host allow-list of exactly one entry,
+  `api.enablebanking.com`, with an explicit https-only + exact-host check,
+  and only then (c) signs and attaches an RS256 bearer JWT. The allow-list
+  check runs before the JWT is built, on every call site, so no
+  response-derived follow-up URL can ever reach the network with a valid
+  bearer attached. Guzzle's `allow_redirects` is `false` — a 3xx is surfaced
+  as an error body, never followed, since a `Location` header could
+  otherwise bypass the allow-list check or downgrade https to http.
+
+  The list is one entry because every URL this client builds comes from
+  `baseUri()`, which is the API host and nothing else. The bank's SCA origin
+  is reached by the **reader's browser**, never by this client, so admitting
+  it here would have authorised a bearer-token request no code path issues —
+  at a host the aggregator's own response chooses.
+- **The bank SCA host is validated before the browser is sent to it.**
   `OpenBankingConnectController` resolves the SCA host from the aggregator's
   `/auth` response and rejects `localhost`, bare single-label hosts, and any
   IP literal in a loopback/link-local/private/reserved range before
-  persisting it — an aggregator response (or a TLS-defeating MITM) can never
-  smuggle an internal target into the egress allow-list. The same controller
-  also re-validates the consent redirect URL itself (https + host must equal
-  the just-resolved SCA host) before issuing the outward redirect.
+  persisting it, then re-validates the consent redirect URL itself (https +
+  host must equal the just-resolved SCA host) before issuing the outward
+  `Redirector::away()`. What that protects is the redirect: an aggregator
+  response (or a TLS-defeating MITM) must not be able to point the reader's
+  browser at an internal target or turn this into an open redirect.
 - **The RSA private key never leaves the machine.** `EnableBankingJwtSigner`
   signs locally (via `firebase/php-jwt`, not hand-rolled base64url +
   `openssl_sign`); only the resulting signed token crosses the wire.
@@ -130,7 +136,11 @@ session.
   fresh-acknowledgement flag on every call and scopes every write to the
   current user's own `user_id`; `$pendingConnectionId` is attacker-settable
   as a Livewire property, so the `user_id` predicate, not the property
-  itself, is what actually prevents a cross-user enable.
+  itself, is what actually prevents a cross-user enable. Its two UPDATEs —
+  stand every other row down, then stand this one up — run in **one
+  transaction**, because they are one invariant. Half of that pair leaves
+  every row disabled with its consent blanked and none enabled:
+  single-live-connection satisfied by having no live connection.
 - `disconnect()` clears the on-disk secrets entry and blanks `enabled`/
   `consent_expires_at` on **every** row belonging to the user, not just the
   one connection currently displayed — otherwise an orphaned row from a
@@ -148,8 +158,17 @@ adapter's choices byte for byte:
 - `bookedAt` **and** `postedAt` are both the aggregator's `booking_date`,
   zeroed to midnight — never `value_date`. `value_date` is carried
   separately (outside the fingerprint tuple).
-- Amounts are derived via `Brick\Money`, never `(float)`, and explicitly
-  negated when `credit_debit_indicator === 'DBIT'`.
+- Amounts are derived via `Brick\Money`, never `(float)`, parsed at the
+  scale the row's **own** currency declares rather than a fixed hundred, and
+  explicitly negated when `credit_debit_indicator === 'DBIT'`. A yen has no
+  minor unit: parsed at the hundred, every JPY row lands a hundred times the
+  figure the bank sent, and a fractional yen the currency cannot express is
+  accepted instead of skipped. `MoneyInput::tryToMinor()` takes the currency
+  code for exactly that. The CAMT adapter never parses a decimal string at
+  all — `genkgo/camt` hands it a `Money\Money` already in the currency's own
+  minor units — so the EB path has to reach the same integer by parsing at
+  the same scale, or the two adapters disagree on the same transaction and
+  fingerprint parity is gone.
 - Counterparty name/IBAN follow the same DBIT→creditor / CRDT→debtor
   direction rule the CAMT adapter applies.
 - Only `status === 'BOOK'` rows are consumed; PSD2 `'PDNG'` (pending) rows
@@ -163,6 +182,10 @@ adapter's choices byte for byte:
   never re-collide).
 - A single malformed-money row is skipped (logged) at the row level rather
   than aborting the whole fetch generator.
+- The `continuation_key` walk is bounded — a repeated cursor, 100 pages or
+  25,000 scanned rows — and the generator RETURNS a `FetchWalk` naming why
+  it stopped, so a truncated window can never be mistaken for a quiet one.
+  See [Fetch cursor](fetch-cursor.md#bounding-the-page-walk).
 
 `OpenBankingFetchService::buildFetch()` eagerly materializes the adapter's
 generator (`iterator_to_array`) before handing rows to the shared import
@@ -175,23 +198,67 @@ consent-failure detection.
 
 ## Sync job and freshness accounting
 
-`SyncOpenBankingAccountJob` (the scheduler + "Sync now" target) and
-`OpenBankingSettingsPage::syncNow()` both follow the same two-timestamp
-rule: `last_successful_sync_at` is written **only** in the success branch,
-never in a `finally` — a failed attempt must never advance the freshness
-signal a user reads as "how current is my data." Every attempt (success or
-failure) writes `last_attempt_at`/`last_attempt_status` independently, so a
-silently-failing scheduled sync stays visible. A 401/403 from Enable
-Banking (detected by inspecting `EnableBankingHttpClient`'s error message
-for `"HTTP 401"`/`"HTTP 403"`, since no typed exception distinguishes a
-consent failure yet) is terminal for that attempt and dispatches
-`OpenBankingConsentFailed`, which `RaiseOpenBankingReconsentAlert` turns
-into a deduplicated `system_alerts` row (at most one active alert per
-`(user, connection)`). Any other failure rethrows so the queue's retry
-envelope applies. Both the job and the fetch service independently re-check
-`enabled` + `consent_expires_at > now()` on pickup — a race where the user
-disables the connection or the consent expires while a job sits queued must
-still no-op with zero fetch attempt and zero timestamp write.
+`OpenBankingSyncRunner` owns the two-timestamp rule, and both entry points
+— `SyncOpenBankingAccountJob` (the 06:00 scheduler) and
+`OpenBankingSettingsPage::syncNow()` (the button) — go through it.
+`last_successful_sync_at` is written **only** in the success branch, never
+in a `finally` — a failed attempt must never advance the freshness signal a
+user reads as "how current is my data." Every attempt (success or failure)
+writes `last_attempt_at`/`last_attempt_status` independently, so a
+silently-failing scheduled sync stays visible. Every write is scoped to the
+connection's `user_id` as well as its id: the owner can be cleared by a
+cascading delete while a fetch is in flight, and a timestamp then describes
+an attempt made for somebody who is gone.
+
+The freshness signal is **not** the fetch cursor. `fetched_through_at` is,
+and it advances only from a `committedThrough` the write returned — never
+from the window the fetch asked for. `preview()` cannot produce one, so
+"Sync now" leaves the cursor where it was; `fetchAndConfirm()` produces one
+only when the page walk also reached the end of the bank's pages. The
+window it opens re-reads a backdating overlap behind that cursor, and a
+walk that stopped on a bound is recorded as `SyncAttemptStatus::Truncated`
+rather than passed off as a success. All three decisions, and the numbers
+behind them, are [Fetch cursor](fetch-cursor.md).
+
+`SyncAttemptStatus::NothingImported` is the third non-success, and the only
+one where the bank, the consent and the walk all worked: rows arrived and not
+one of them could be filed. It is derived in one place —
+`OpenBankingFetchResult::attemptStatus()` — so the status the connection row
+keeps and the status the outcome hands back cannot be two readings of the
+same fetch. Why it is neither `Ok` nor `Error`, and why the run is announced
+rather than failed, is [A feed that imports nothing](a-feed-that-imports-nothing.md).
+
+A 401/403 is also written onto the row, not merely logged as a failed
+attempt: `consent_revoked_at` is stamped in the same UPDATE, and
+`ConsentStatus::Revoked` is what the tile, the status row and the banner
+then read. Without it a withdrawn session kept reading "Connected" off a
+`consent_expires_at` still months away — see [Consent
+window](consent-window.md#revocation-is-not-expiry).
+
+The runner returns an `OpenBankingSyncOutcome` and the two entry points
+differ only in what they do with it. The job rethrows a retryable failure so
+the queue's retry envelope applies; the page turns the same failure into a
+flash, because a browser round trip has no retry envelope. A 401/403 from
+Enable Banking is terminal either way: `EnableBankingApiException` carries
+the HTTP status as typed state and `consentFailureWithin()` walks
+`getPrevious()`, so the detection survives the import pipeline wrapping what
+it rethrows. It dispatches `OpenBankingConsentFailed`, which
+`RaiseOpenBankingReconsentAlert` turns into a deduplicated `system_alerts`
+row (at most one active alert per `(user, connection)`).
+
+The runner also takes the job's **own** uniqueness key for the duration of
+the fetch. `ShouldBeUniqueUntilProcessing` releases that lock before
+`handle()` runs, so the fetch itself was unguarded: a "Sync now" click could
+race the scheduled job against the same connection, and whichever UPDATE
+landed second decided `last_successful_sync_at`. A manual sync that cannot
+take the key reports that a sync is already running rather than starting a
+second one.
+
+Both entry points and the fetch service independently re-check `enabled` +
+a live consent on pickup — a race where the user disables the connection or
+the consent expires while a job sits queued must still no-op with zero fetch
+attempt and zero timestamp write. That consent boundary is
+`ConsentWindow`'s: see [Consent window](consent-window.md).
 
 ## Onboarding wizard
 
@@ -207,21 +274,33 @@ callback's flash values. A reconnect flow (triggered from the settings
 page's consent-expiry banner) can skip straight to step 4, reusing the
 already-registered application — `open()` only honors a requested start
 step when `hasApplication()` is true, so a reconnect can never accidentally
-regenerate a keypair or wipe an existing registration.
+regenerate a keypair or wipe an existing registration. The requested step
+also has to be a step: it arrives on a client-triggerable Livewire event and
+picks which branch the modal renders, so `WizardStep` is what it is matched
+against. A number outside the enum is not honoured at all, because a step
+number no branch matches rendered a dialog with a heading, no controls, and
+no way out of it.
 
-## Reconsent alerting
+## Connection alerting
 
-`RaiseOpenBankingReconsentAlert` writes a single un-acknowledged
-`system_alerts` row whenever `OpenBankingConsentFailed` fires, deduplicated
-to at most one active row per `(user_id, connection_id)` — the existence
-check filters on `acknowledged_at IS NULL`, so once a prior alert is
-acknowledged a fresh failure creates a new row. The dedup lookup prefers
-SQLite's `json_extract` against the `metadata` column, falling back to a
-dual-needle LIKE match (`%"connection_id":N,%` OR `%"connection_id":N}%`) on
-a SQLite build without the JSON1 extension compiled in — a single needle
-would let `connection_id=1` falsely match `connection_id=10`/`11`/`123`. The
-listener never throws upward (a try/catch around the insert, logging a
-warning on failure) since its caller is typically already mid-error-recovery.
+Two faults are worth a standing `system_alerts` row per connection: a consent
+the bank withdrew (`OpenBankingConsentFailed` →
+`RaiseOpenBankingReconsentAlert`) and a run that filed none of the rows it
+fetched (`OpenBankingImportedNothing` →
+`RaiseOpenBankingNothingImportedAlert`). Both go through `ConnectionAlerts`,
+which raises at most one active row per `(user_id, kind, connection_id)` — the
+existence check filters on `acknowledged_at IS NULL`, so once a prior alert is
+acknowledged a fresh failure creates a new row. It is not
+`SystemAlertWriter::raiseOnceForUser()`, which dedups per kind alone: a reader
+with two banks needs to be told about each of them.
+
+The dedup lookup prefers SQLite's `json_extract` against the `metadata`
+column, falling back to a dual-needle LIKE match (`%"connection_id":N,%` OR
+`%"connection_id":N}%`) on a SQLite build without the JSON1 extension compiled
+in — a single needle would let `connection_id=1` falsely match
+`connection_id=10`/`11`/`123`. The raise never throws upward (a try/catch
+around the insert, logging a warning on failure) since its callers are
+listeners running inside somebody else's error recovery.
 
 ## Local dev/UAT: HTTPS loopback tunnel
 
@@ -239,11 +318,23 @@ once."
 
 ## Public surface
 
-- **Contracts** — `RemoteSourceAdapter` (the remote-fetch analog of the
-  local-file `SourceAdapter` contract; deliberately has no
-  `statementMetadata()` method since a balance reading is a point-in-time
-  value, not an opening/closing pair).
-- **Dto** — `FetchWindow`, `OpenBankingCredentials`, `OpenBankingConnectionView`.
-- **Events** — `OpenBankingConsentFailed`.
-- **Services** — `OpenBankingSecretsRepository`, `OpenBankingFetchService`,
-  `OpenBankingConnectionQuery`.
+The module's entire `Public/` directory is one file:
+`Modules/OpenBanking/Public/Http/Livewire/OpenBankingStatusRow.php`. Its
+Livewire alias `openbanking.open-banking-status-row` is mounted by
+`Modules/Mobile/Resources/views/livewire/sync-screen.blade.php`, and that
+mount is the module's only cross-module surface. It is pinned in
+`pinnedCrossModuleLivewireMounts`.
+
+Everything else this module owns is `Internal\` and importing it from
+another module is refused by `BoundaryRule` — including
+`RemoteSourceAdapter`, `FetchWindow`, `OpenBankingCredentials`,
+`OpenBankingConnectionView`, `OpenBankingConsentFailed`,
+`OpenBankingSecretsRepository`, `OpenBankingFetchService` and
+`OpenBankingConnectionQuery`, each of which reads like a public name and is
+not one. A neighbour that needs any of them needs a new `Public/` contract
+instead.
+
+`RemoteSourceAdapter` is worth one note even so: it is the remote-fetch
+analog of the local-file `SourceAdapter` contract and deliberately has no
+`statementMetadata()` method, since a balance reading is a point-in-time
+value, not an opening/closing pair.

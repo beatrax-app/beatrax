@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Sobre o que te notificar',
+    'background_note' => 'O Beatrax prepara-as enquanto a app está aberta. Uma execução agendada em segundo plano não consegue — o bloqueio da app guarda a única chave — por isso o que estiver pendente é recolhido enquanto continuas a usar a app.',
+    'background_note_phone' => 'O Beatrax prepara-as enquanto a app está aberta. Em segundo plano não pode — o bloqueio da app guarda a única chave — por isso o que estiver pendente chega da próxima vez que abrires a app.',
 
     'reminders' => [
         'label' => 'Lembretes de pagamento',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Ocultar detalhes nas notificações',
-        'help' => 'Mostra montantes e nomes de comerciantes na própria notificação. Desliga se o teu ecrã puder ser visto por outras pessoas.',
+        'help' => 'Oculta montantes e nomes de comerciantes na própria notificação. Liga se o teu ecrã puder ser visto por outras pessoas.',
     ],
 
     'save' => 'Guardar as definições de notificações',

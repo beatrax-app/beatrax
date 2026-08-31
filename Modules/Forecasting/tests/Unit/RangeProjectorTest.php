@@ -56,7 +56,6 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
         'nextExpectedConfidenceLow' => false,
         'varianceTolerancePercent' => 5,
         'snoozedUntil' => null,
-        'latestFxRateUsed' => null,
     ];
     $merged = array_merge($base, $overrides);
 
@@ -75,7 +74,6 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
         nextExpectedConfidenceLow: $merged['nextExpectedConfidenceLow'],
         varianceTolerancePercent: $merged['varianceTolerancePercent'],
         snoozedUntil: $merged['snoozedUntil'],
-        latestFxRateUsed: $merged['latestFxRateUsed'],
     );
 }
 
@@ -124,9 +122,11 @@ function rpSeedPercentileSeries(DatabaseManager $db, int $userId, array $observe
     return $seriesId;
 }
 
-it('routes a wide-variance series with enough occurrences through the percentile tier and jitters the band', function (): void {
+it('hands the percentile tier to the fold as one occurrence per charge, marked date-uncertain', function (): void {
     // 50% tolerance clears the 40% bar and six occurrences clear the 6-sample
-    // minimum, which is what escalates project() to the percentile tier.
+    // minimum, which is what escalates project() to the percentile tier. The
+    // smearing itself happens after every stage that selects occurrences —
+    // seven replicas reaching a scenario mutation charged the series sevenfold.
     $seriesId = rpSeedPercentileSeries($this->db, $this->user->id, [-1000, -1100, -1200, -1300, -1400, -1500]);
 
     $series = rpDtoSeries([
@@ -141,12 +141,22 @@ it('routes a wide-variance series with enough occurrences through the percentile
 
     $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 30, user: $this->user);
 
-    // The one in-horizon occurrence is smeared over a ±3-day window, so
-    // 2 × 3 + 1 replicas centred on 2026-05-25.
-    expect($contribs)->toHaveCount(7);
-    $dates = array_map(static fn ($c): string => $c->date->toDateString(), $contribs);
-    expect(min($dates))->toBe('2026-05-22')
-        ->and(max($dates))->toBe('2026-05-28');
+    expect($contribs)->toHaveCount(1);
+    expect($contribs[0]->date->toDateString())->toBe('2026-05-25');
+    expect($contribs[0]->dateIsUncertain)->toBeTrue();
+});
+
+it('leaves an envelope-tier occurrence date alone, so the jitter pass never touches it', function (): void {
+    $series = rpDtoSeries([
+        'varianceTolerancePercent' => 5,
+        'nextExpectedAt' => CarbonImmutable::parse('2026-05-25'),
+    ]);
+    $asOf = CarbonImmutable::parse('2026-05-19');
+
+    $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 30, user: $this->user);
+
+    expect($contribs)->toHaveCount(1);
+    expect($contribs[0]->dateIsUncertain)->toBeFalse();
 });
 
 it('emits one monthly expense contribution inside a 30-day horizon with sign-aware low/high', function (): void {
@@ -259,11 +269,13 @@ it('emits no contributions when nextExpectedAt is null', function (): void {
     expect($contribs)->toBe([]);
 });
 
-it('carries the contribution currency + stored fxRateUsed for FX series (USD)', function (): void {
+// The projector leaves the amount in the series' own currency and carries no
+// rate: the account a contribution lands on is not settled until routing, so
+// the pair to convert across is not known here.
+it('carries the contribution currency for FX series (USD)', function (): void {
     $series = rpDtoSeries([
         'latestAmount' => Money::ofMinor(-599, 'USD'),
         'nextExpectedAt' => CarbonImmutable::parse('2026-05-25'),
-        'latestFxRateUsed' => 0.9050,
     ]);
     $asOf = CarbonImmutable::parse('2026-05-19');
 
@@ -271,7 +283,6 @@ it('carries the contribution currency + stored fxRateUsed for FX series (USD)', 
 
     expect($contribs)->toHaveCount(1);
     expect($contribs[0]->currency)->toBe('USD');
-    expect($contribs[0]->fxRateUsed)->toBe(0.9050);
 });
 
 it('skips occurrences strictly before asOf even when nextExpectedAt is in the past', function (): void {
@@ -360,8 +371,6 @@ it('keeps the 31st through the percentile tier too', function (): void {
 
     $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 220, user: $this->user);
 
-    // The last occurrence in the horizon is 2026-07-31 and the jitter window
-    // reaches three days past it.
     $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $contribs);
-    expect(max($dates))->toBe('2026-08-03');
+    expect(max($dates))->toBe('2026-07-31');
 });

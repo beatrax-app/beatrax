@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Upozorenja o odstupanju',
-    'heading' => 'Upozorenja',
     'intro_anomaly' => 'Pojedinačna terećenja koja za tebe izgledaju neuobičajeno.',
     'intro_drift' => 'Odobrene ponavljajuće serije čije je posljednje terećenje izašlo izvan tvojeg praga.',
     'adjust_threshold' => 'Prilagodi prag →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/god.',
         'meta_prior_now' => 'prije :prior → sada :now',
         'meta_detected' => 'otkriveno :date',
-        'meta_threshold' => 'prag ±:percent%',
+        'meta_threshold' => 'prag ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/god.)',
         'cancel_impact' => 'Otkaži ovo → uštedi :amount/god.',
         'cadence_flipped' => 'Učestalost je promijenjena — prikazuje se i u',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'To upozorenje više ne postoji.',
         'acknowledged' => 'Potvrđeno',
         'snoozed' => 'Odgođeno',
         'dismissed' => 'Odbačeno',

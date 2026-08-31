@@ -168,11 +168,11 @@ it('links the counter-leg id PairLookup returns, tie-break included', function (
             accountId: $this->asn->id,
             amountMinor: -$paypalTx->amount_minor,
             types: [TransactionType::TransferIn],
-            currency: null,
+            currency: 'EUR',
             unpairedOnly: false,
             excludeTransactionId: null,
         ),
-        new CounterLegWindow(CarbonImmutable::parse($paypalTx->booked_at), PaypalFundingResolver::DATE_WINDOW_DAYS, CounterLegOrder::NearestToCentre),
+        new CounterLegWindow(CarbonImmutable::parse($paypalTx->booked_at), CounterLegWindow::DEFAULT_DAYS, CounterLegOrder::NearestToCentre),
         $this->user,
     );
 
@@ -184,6 +184,9 @@ it('links the counter-leg id PairLookup returns, tie-break included', function (
         ->where('kind', ChainLinkKind::PaypalFunding->value)
         ->firstOrFail();
 
-    expect($link->state)->toBe(ChainLinkState::Confirmed->value);
+    // Two answers to one question is not a deterministic match, so the arm
+    // hands it to the review queue rather than confirming it. Which of the two
+    // it names is still PairLookup's answer, which is what this file pins.
+    expect($link->state)->toBe(ChainLinkState::Candidate->value);
     expect((int) $link->to_transaction_id)->toBe($viaLookup);
 });

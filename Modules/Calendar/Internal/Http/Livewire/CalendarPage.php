@@ -12,10 +12,11 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Calendar\Internal\Dto\CalendarDayDto;
+use Modules\Calendar\Internal\Services\CalendarGrid;
+use Modules\Calendar\Internal\Services\CalendarMonthWindow;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
@@ -69,30 +70,35 @@ final class CalendarPage extends Component
         }
     }
 
-    public function prevMonth(Clock $clock): void
+    public function prevMonth(CalendarMonthWindow $window): void
     {
-        $display = $this->resolveDisplay($clock);
-        $prev = CarbonImmutable::parse(sprintf('%04d-%02d-01', $display['year'], $display['month']))->subMonth();
-        $this->year = $prev->year;
-        $this->month = $prev->month;
-        $this->selectedDay = null;
-    }
+        $display = $window->display($this->year, $this->month);
+        $previous = $window->previous($display['year'], $display['month']);
 
-    public function nextMonth(Clock $clock): void
-    {
-        $display = $this->resolveDisplay($clock);
-        $next = CarbonImmutable::parse(sprintf('%04d-%02d-01', $display['year'], $display['month']))->addMonth();
-
-        if ($this->exceedsCeiling($next->year, $next->month, $clock)) {
+        if ($previous === null) {
             return;
         }
 
-        $this->year = $next->year;
-        $this->month = $next->month;
+        $this->year = $previous['year'];
+        $this->month = $previous['month'];
         $this->selectedDay = null;
     }
 
-    public function selectDay(string $date, Clock $clock): void
+    public function nextMonth(CalendarMonthWindow $window): void
+    {
+        $display = $window->display($this->year, $this->month);
+        $next = $window->next($display['year'], $display['month']);
+
+        if ($next === null) {
+            return;
+        }
+
+        $this->year = $next['year'];
+        $this->month = $next['month'];
+        $this->selectedDay = null;
+    }
+
+    public function selectDay(string $date, CalendarMonthWindow $window): void
     {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
             return;
@@ -105,10 +111,14 @@ final class CalendarPage extends Component
             return;
         }
 
-        $display = $this->resolveDisplay($clock);
+        $display = $window->display($this->year, $this->month);
         $parsed = CarbonImmutable::parse($date);
 
-        if ($parsed->year !== $display['year'] || $parsed->month !== $display['month']) {
+        // The grid, not the month: a lead-in or lead-out cell is rendered with
+        // a balance, entries and a click target like any other, so refusing it
+        // here made a cell the reader can see and cannot open.
+        $grid = CalendarGrid::range($display['year'], $display['month']);
+        if ($parsed->lt($grid['start']) || $parsed->gt($grid['end'])) {
             return;
         }
 
@@ -167,11 +177,11 @@ final class CalendarPage extends Component
         CalendarQuery $calendarQuery,
         CurrentUser $currentUser,
         DatabaseManager $db,
-        Clock $clock,
+        CalendarMonthWindow $window,
         BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
-        $display = $this->resolveDisplay($clock);
+        $display = $window->display($this->year, $this->month);
         $year = $display['year'];
         $month = $display['month'];
 
@@ -182,6 +192,13 @@ final class CalendarPage extends Component
             ->get(['id', 'name', 'kind']);
 
         $accountRoster = self::buildAccountRoster($accounts);
+
+        // Sanitised on the way OUT as well as on the way to the preference
+        // row: both properties are client-controlled, and a nested array in
+        // one of them reached the query builder and came back as a 500.
+        $ownedIds = array_column($accountRoster, 'id');
+        $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
+        $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
 
         // With zero accounts there is nothing to filter on, and [] would read
         // as deselect-all — null is the only value that still shows unlinked
@@ -205,19 +222,18 @@ final class CalendarPage extends Component
             $user,
         );
 
-        $ceiling = $clock->now()->addMonths(CalendarQuery::HORIZON_MONTHS);
-        $atCeiling = ($year > $ceiling->year)
-            || ($year === $ceiling->year && $month >= $ceiling->month);
-
         $view = $views->make('calendar::livewire.calendar-page', [
             'days' => $days,
+            'unconvertedCurrencies' => self::unconvertedAcross($days),
+            'uncountedAccounts' => self::uncountedAcross($days),
             'hasProjectableEntries' => $calendarQuery->hasProjectableEntries($user),
             'selectedDayDto' => $this->findSelectedDay($days),
             'displayYear' => $year,
             'displayMonth' => $month,
             'isComputingAny' => $balanceSources !== [] && self::daysAreComputing($days),
             'accountRoster' => $accountRoster,
-            'atCeiling' => $atCeiling,
+            'atCeiling' => $window->atCeiling($year, $month),
+            'atFloor' => $window->atFloor($year, $month),
             'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
@@ -245,18 +261,56 @@ final class CalendarPage extends Component
         return $roster;
     }
 
+    // Named once above the grid rather than per cell: the same code is missing
+    // a rate on every day it appears on, and forty-two copies of the sentence
+    // is not forty-two facts.
+    /**
+     * @param  list<CalendarDayDto>  $days
+     * @return list<string>
+     */
+    private static function unconvertedAcross(array $days): array
+    {
+        $seen = [];
+        foreach ($days as $day) {
+            foreach ($day->unconvertedCurrencies as $currency) {
+                $seen[$currency] = true;
+            }
+        }
+
+        $codes = array_keys($seen);
+        sort($codes);
+
+        return $codes;
+    }
+
+    // The same economy as the line above it: an account the balance line
+    // leaves out is left out on every cell it appears on, so the grid says it
+    // once and the day panel is where a reader finds which cell it was on.
+    /**
+     * @param  list<CalendarDayDto>  $days
+     * @return list<string>
+     */
+    private static function uncountedAcross(array $days): array
+    {
+        $seen = [];
+        foreach ($days as $day) {
+            foreach ($day->uncountedAccounts as $name) {
+                $seen[$name] = true;
+            }
+        }
+
+        $names = array_keys($seen);
+        sort($names);
+
+        return $names;
+    }
+
     /**
      * @param  list<CalendarDayDto>  $days
      */
     private static function daysAreComputing(array $days): bool
     {
-        foreach ($days as $day) {
-            if ($day->isComputing) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($days, fn (CalendarDayDto $day): bool => $day->isComputing);
     }
 
     /**
@@ -275,38 +329,6 @@ final class CalendarPage extends Component
         }
 
         return null;
-    }
-
-    /**
-     * @return array{year: int, month: int}
-     */
-    private function resolveDisplay(Clock $clock): array
-    {
-        $now = $clock->now();
-        $year = ($this->year !== null && $this->year >= 2000 && $this->year <= 2100)
-            ? $this->year
-            : $now->year;
-        $month = ($this->month !== null && $this->month >= 1 && $this->month <= 12)
-            ? $this->month
-            : $now->month;
-
-        // Clamps to the same ceiling nextMonth() enforces, so a tampered
-        // ?year=&month= cannot render past the forecast horizon.
-        $ceiling = $now->addMonths(CalendarQuery::HORIZON_MONTHS);
-        if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
-            $year = $ceiling->year;
-            $month = $ceiling->month;
-        }
-
-        return ['year' => $year, 'month' => $month];
-    }
-
-    private function exceedsCeiling(int $year, int $month, Clock $clock): bool
-    {
-        $ceiling = $clock->now()->addMonths(CalendarQuery::HORIZON_MONTHS);
-
-        return ($year > $ceiling->year)
-            || ($year === $ceiling->year && $month > $ceiling->month);
     }
 
     /**

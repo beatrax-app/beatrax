@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Smazat :count úlohu|Smazat :count úlohy|Smazat :count úloh',
     'empty_pending' => 'Fronta je prázdná.',
     'empty_failed' => 'Žádné neúspěšné úlohy.',
-    'empty_batches' => 'Žádné aktivní dávky.',
+    'empty_batches' => 'Žádné dávky.',
     'select_aria' => 'Vybrat',
     'select_row_aria' => 'Vybrat řádek :key',
     'col_id' => 'Id',
     'col_queue' => 'Fronta',
     'col_attempts' => 'Pokusy',
+    'col_state' => 'Stav',
     'col_created' => 'Vytvořeno',
     'col_uuid' => 'UUID',
     'col_failed' => 'Neúspěšné',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Čekající',
     'col_actions' => 'Akce',
     'delete_job' => 'Smazat úlohu',
+    'worker_running' => 'Worker ji zpracovává',
     'delete_pending_confirm' => 'Smazat čekající úlohu #:key?',
     'retry_job' => 'Zopakovat úlohu',
     'forget_confirm' => 'Odstranit neúspěšnou úlohu :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Vybrané neúspěšné úlohy se vrátí do fronty, aby je worker zkusil znovu.',
     'cancel' => 'Zrušit',
 
+    'state' => [
+        'available' => 'Připravena',
+        'reserved' => 'Rezervována',
+        'scheduled' => 'Naplánována',
+    ],
+
     'tab' => [
         'pending' => 'Čekající',
         'failed' => 'Neúspěšné',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Čekající úloha smazána',
+        'pending_already_gone' => 'Úloha už tam nebyla',
         'failed_requeued' => 'Neúspěšná úloha vrácena do fronty',
         'failed_removed' => 'Neúspěšná úloha odstraněna',
         'batch_cancelled' => 'Dávka zrušena',
         'batch_deleted' => 'Dávka smazána',
         'batch_failures_requeued' => 'Neúspěchy dávky vráceny do fronty',
+        'batch_failures_none' => 'V dávce nezbyly žádné chyby k opětovnému zařazení',
         'failed_jobs_requeued' => 'Neúspěšné úlohy vráceny do fronty',
+        'failed_jobs_none' => 'Nezbyly žádné neúspěšné úlohy k opětovnému zařazení',
         'bulk_refused' => 'Hromadné mazání odmítnuto — :reason',
         'rows_deleted' => 'Vybrané řádky smazány',
     ],

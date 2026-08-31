@@ -9,8 +9,13 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
+
+beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
+});
 
 // RunImport short-circuits a SHA256 it has already landed, so re-uploading a
 // finished file returns that run and its preview cache is long gone. Reporting
@@ -19,11 +24,26 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 
 function alreadyImportedUser(): User
 {
-    return User::query()->create([
+    /** @var User $user */
+    $user = User::query()->create([
         'username' => 'already-imported@beatrax.local',
         'password' => 'x',
         'period_start_day' => 1,
     ]);
+
+    // The account the fixture's rows land in. Without it every row fails as an
+    // unknown IBAN and ConfirmImport refuses the run, which is the whole point
+    // of that gate -- this test needs a run that genuinely confirmed.
+    Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'ASN current',
+        'slug' => 'asn-current-already-imported',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0123456789',
+        'default_currency' => 'EUR',
+    ]);
+
+    return $user;
 }
 
 function confirmedRunFor(User $user): int

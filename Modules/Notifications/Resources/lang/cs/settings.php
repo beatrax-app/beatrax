@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'O čem posílat oznámení',
+    'background_note' => 'Beatrax je připraví, když je aplikace otevřená. Naplánovaný běh na pozadí to nezvládne — zámek aplikace drží jediný klíč — takže čekající se doplní, jak dál aplikaci používáš.',
+    'background_note_phone' => 'Beatrax je připraví, když je aplikace otevřená. Na pozadí to nejde — zámek aplikace drží jediný klíč — takže čekající dorazí, až aplikaci příště otevřeš.',
 
     'reminders' => [
         'label' => 'Připomínky plateb',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Skrýt podrobnosti v oznámeních',
-        'help' => 'Zobrazovat částky a jména obchodníků přímo v banneru oznámení. Vypni to, pokud ti na obrazovku můžou vidět ostatní.',
+        'help' => 'Skrývat částky a jména obchodníků přímo v banneru oznámení. Zapni to, pokud ti na obrazovku můžou vidět ostatní.',
     ],
 
     'save' => 'Uložit nastavení oznámení',

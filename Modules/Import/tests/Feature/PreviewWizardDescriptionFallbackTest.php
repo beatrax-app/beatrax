@@ -10,6 +10,7 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 // ASN bank-fee, interest and ATM rows arrive with neither a counterparty name
 // nor an IBAN, and asn-sample-1.csv carries several of them.
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });

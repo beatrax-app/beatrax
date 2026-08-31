@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -9,6 +10,18 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 
 uses(RefreshDatabase::class);
+
+// The fixtures here book at an absolute date and TransactionsList queries a
+// rolling recent(daysBack: 90) off the real clock, so the pair has an expiry
+// date. TaxBadgeSurfacesTest reached its on 2026-08-31; this freezes the clock
+// before the same arithmetic reaches this one.
+beforeEach(function (): void {
+    CarbonImmutable::setTestNow('2026-06-14 10:00:00');
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
 
 // The popover body is included twice — once for the desktop popover, once for
 // the phone bottom sheet — and both copies are in the document at all times,

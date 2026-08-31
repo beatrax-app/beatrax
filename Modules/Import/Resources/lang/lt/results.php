@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Įkelti kitą išrašą',
 
+    'chain' => [
+        'heading' => 'Nustatomos grandinės…',
+        'pending' => 'Eilėje. Grandinių nustatymas netrukus prasidės.',
+        'running' => 'Siejamos lėšų grandinės ir skaidomi išrašo atsiskaitymai.',
+    ],
+
     'issues' => [
         'row' => 'Eilutė :row: :reason',
         'file_stopped' => 'Failo nepavyko perskaityti toliau nei :row eilutė. Niekas po tos eilutės nebuvo importuota.',

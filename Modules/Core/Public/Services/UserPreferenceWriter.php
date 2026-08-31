@@ -13,11 +13,11 @@ use Modules\Sync\Public\Events\EntityMutated;
 // components each ran their own updateOrCreate, so capture would have been the
 // same dispatch copied four times — and the fifth caller is the one that
 // forgets it and puts the table back on the uncaptured backlog.
-final class UserPreferenceWriter
+final readonly class UserPreferenceWriter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     // Takes the owner explicitly and bypasses the global scope, so the write

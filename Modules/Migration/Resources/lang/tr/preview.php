@@ -16,7 +16,9 @@ return [
         'budget' => 'Bütçe ayları',
     ],
 
-    'all_clean' => 'Her şey sorunsuz eşlendi — onaylamadan önce ilgini bekleyen bir şey yok.',
+    'all_clean' => 'Her şey sorunsuz eşlendi — burada karar vermen gereken bir şey yok.',
+
+    'nothing_staged' => 'Bu dışa aktarımda içe aktarılacak bir şey yoktu — burada onaylanacak bir şey yok.',
 
     'groups' => [
         'conflict' => 'Kararını bekliyor',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Bu işlem, yukarıda gösterilen sayıları kategorilerinde, bütçelerinde ve defterinde oluşturur veya günceller.',
     'discard_button' => 'İçe aktarmayı at',
+    'discard_confirm' => 'Bu içe aktarma atılsın mı? Dışa aktarma dosyandan okunan her şey burada silinir ve geri getirmek, dosyanın tamamını yeniden yükleyip ayrıştırmak demektir. Defterine henüz hiçbir şey ulaşmadı.',
     'confirm_button' => 'İçe aktarmayı onayla',
 ];

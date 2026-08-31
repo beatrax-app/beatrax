@@ -22,12 +22,12 @@ function driftCorpusFixtures(): iterable
     }
 }
 
-it('produces exactly 24 fixture files', function (): void {
+it('produces exactly 29 fixture files', function (): void {
     $dir = __DIR__.'/../fixtures/drift-corpus';
     /** @var list<string> $paths */
     $paths = glob($dir.'/*.php') ?: [];
 
-    expect(count($paths))->toBe(24);
+    expect(count($paths))->toBe(29);
 });
 
 it('every drift-corpus fixture returns the documented shape', function (string $name, string $path): void {
@@ -52,6 +52,18 @@ it('every drift-corpus fixture returns the documented shape', function (string $
     $alerts = $expected['alerts'];
     assertIsArray($alerts, "Fixture {$name}: 'expected.alerts' must be a list (may be empty).");
     assertIsList($alerts, "Fixture {$name}: 'expected.alerts' must be a 0-indexed list.");
+
+    $allowedExpectedKeys = [
+        'alerts', 'transitions', 'series_state', 'series_cadence', 'series_currency',
+        'series_drift_threshold_percent', 'user_drift_threshold_percent',
+    ];
+    foreach (array_keys($expected) as $key) {
+        assertContains(
+            $key,
+            $allowedExpectedKeys,
+            "Fixture {$name}: 'expected' has unrecognised key '{$key}'."
+        );
+    }
 
     $allowedAlertKeys = [
         'state', 'direction', 'baseline_amount_minor', 'latest_amount_minor',
@@ -99,36 +111,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
     }
 })->with(driftCorpusFixtures());
 
-it('large-drift-above-threshold encodes the canonical Spotify-15% math', function (): void {
-    /** @var array{expected: array{alerts: list<array<string, mixed>>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/drift-corpus/large-drift-above-threshold.php';
-
-    expect($fixture['expected']['alerts'])->toHaveCount(1);
-    expect($fixture['expected']['alerts'][0]['delta_minor'])->toBe(-150);
-    expect($fixture['expected']['alerts'][0]['annualized_impact_minor'])->toBe(-1800);
-});
-
-it('fx-only-swing fires zero alerts (FX-exclusion invariant)', function (): void {
-    /** @var array{expected: array{alerts: list<array<string, mixed>>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/drift-corpus/fx-only-swing.php';
-
-    expect($fixture['expected']['alerts'])->toBe([]);
-});
-
-it('weekly-cadence annualizes via the x52 multiplier', function (): void {
-    /** @var array{expected: array{alerts: list<array<string, mixed>>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/drift-corpus/weekly-cadence.php';
-
-    expect($fixture['expected']['alerts'])->toHaveCount(1);
-
-    /** @var array{delta_minor: int, annualized_impact_minor: int} $alert */
-    $alert = $fixture['expected']['alerts'][0];
-    expect($alert['annualized_impact_minor'])->toBe($alert['delta_minor'] * 52);
-});
-
-it('multi-drift queues exactly two open alerts (queue-all-as-open invariant)', function (): void {
-    /** @var array{expected: array{alerts: list<array<string, mixed>>}} $fixture */
-    $fixture = require __DIR__.'/../fixtures/drift-corpus/multi-drift.php';
-
-    expect($fixture['expected']['alerts'])->toHaveCount(2);
-});
+// Whether the numbers below are the ones the evaluator actually produces is
+// settled by replaying each fixture through it, in
+// tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php. What is left
+// here is the fixture vocabulary, which that driver reads.

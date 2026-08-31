@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Otključavanje',
 
-    'digits_entered' => 'unetih cifara',
+    'digits_entered' => 'uneta :count cifra|unete :count cifre|uneto :count cifara',
     'pin_pad' => 'PIN tastatura',
     'digit' => 'Cifra :digit',
     'backspace' => 'Backspace',

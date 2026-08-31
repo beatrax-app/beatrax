@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorii',
+    'no_counterparty' => 'Brak kontrahenta',
+    'unavailable_counterparty' => 'Kontrahent niedostępny na tym urządzeniu',
     'title' => 'Raporty',
     'page_title' => 'Raporty · Beatrax',
     'subtitle' => 'Ułóż raport na podstawie swojej księgi.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Własny zakres',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Wybierz datę początkową i końcową.',
+            'malformed' => 'Podaj poprawną datę w formacie RRRR-MM-DD.',
+            'inverted' => 'Data końcowa jest wcześniejsza niż początkowa.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtry',
+        'net_worth_note' => 'Wartość netto to saldo: działa tylko filtr konta.',
     ],
 
     'compare' => 'Porównaj z poprzednim okresem',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Wykres w walucie :currency — :list nie jest pokazane',
+        'undrawn' => 'Poza pierścieniem — :amount płynie w drugą stronę',
         'bar_title' => 'Kliknij słupek, aby zobaczyć jego transakcje',
         'line_title' => 'Kliknij punkt, aby zobaczyć jego transakcje',
         'donut_title' => 'Kliknij segment, aby zobaczyć jego transakcje',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Opłaty i korekty (nieuwzględnione powyżej)',
+    'other_movement_with_refunds' => 'Opłaty, zwroty i korekty (nieuwzględnione powyżej)',
 ];

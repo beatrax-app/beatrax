@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Διαγραφή :count εργασίας|Διαγραφή :count εργασιών',
     'empty_pending' => 'Η ουρά είναι κενή.',
     'empty_failed' => 'Καμία εργασία δεν απέτυχε.',
-    'empty_batches' => 'Δεν υπάρχουν ενεργές παρτίδες.',
+    'empty_batches' => 'Καμία παρτίδα.',
     'select_aria' => 'Επιλογή',
     'select_row_aria' => 'Επιλογή της γραμμής :key',
     'col_id' => 'Id',
     'col_queue' => 'Ουρά',
     'col_attempts' => 'Προσπάθειες',
+    'col_state' => 'Κατάσταση',
     'col_created' => 'Δημιουργήθηκε',
     'col_uuid' => 'Αναγνωριστικό UUID',
     'col_failed' => 'Απέτυχε',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Σε αναμονή',
     'col_actions' => 'Ενέργειες',
     'delete_job' => 'Διαγραφή εργασίας',
+    'worker_running' => 'Εκτελείται από worker',
     'delete_pending_confirm' => 'Να διαγραφεί η εργασία σε αναμονή #:key;',
     'retry_job' => 'Επανάληψη εργασίας',
     'forget_confirm' => 'Να αφαιρεθεί η εργασία που απέτυχε :uuid;',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Οι επιλεγμένες εργασίες που απέτυχαν θα μπουν ξανά στην ουρά για να τις επαναλάβει ο worker.',
     'cancel' => 'Άκυρο',
 
+    'state' => [
+        'available' => 'Διαθέσιμη',
+        'reserved' => 'Δεσμευμένη',
+        'scheduled' => 'Προγραμματισμένη',
+    ],
+
     'tab' => [
         'pending' => 'Σε αναμονή',
         'failed' => 'Απέτυχαν',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Η εργασία σε αναμονή διαγράφηκε',
+        'pending_already_gone' => 'Η εργασία είχε ήδη φύγει',
         'failed_requeued' => 'Η εργασία που απέτυχε μπήκε ξανά στην ουρά',
         'failed_removed' => 'Η εργασία που απέτυχε αφαιρέθηκε',
         'batch_cancelled' => 'Η παρτίδα ακυρώθηκε',
         'batch_deleted' => 'Η παρτίδα διαγράφηκε',
         'batch_failures_requeued' => 'Οι αποτυχίες της παρτίδας μπήκαν ξανά στην ουρά',
+        'batch_failures_none' => 'Δεν απομένουν αποτυχίες παρτίδας για επανατοποθέτηση',
         'failed_jobs_requeued' => 'Οι εργασίες που απέτυχαν μπήκαν ξανά στην ουρά',
+        'failed_jobs_none' => 'Δεν απομένουν αποτυχημένες εργασίες για επανατοποθέτηση',
         'bulk_refused' => 'Η μαζική διαγραφή απορρίφθηκε — :reason',
         'rows_deleted' => 'Οι επιλεγμένες γραμμές διαγράφηκαν',
     ],

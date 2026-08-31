@@ -7,10 +7,8 @@ namespace Modules\Ledger\Public\ValueObjects;
 use Brick\Math\RoundingMode;
 use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money as BrickMoney;
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Translation\Translator;
 use IntlException;
-use Modules\Core\Public\Enums\Locale;
+use Modules\Ledger\Internal\Support\MoneyText;
 use Modules\Ledger\Public\Exceptions\CurrencyMismatchException;
 use Stringable;
 use ValueError;
@@ -18,7 +16,7 @@ use ValueError;
 /**
  * @link ../../../../.docs/features/ledger/money-formatting.md
  */
-final class Money implements Stringable
+final readonly class Money implements Stringable
 {
     // The 2-decimal scale factor every parse and format boundary in the repo
     // multiplies by. Currency::Jpy is declared today and JPY has no minor
@@ -36,13 +34,23 @@ final class Money implements Stringable
 
     // The glyph alone, for a label that names the currency a field is typed in
     // rather than printing an amount. A code with no glyph answers itself, the
-    // same fallback assemble() applies.
+    // same fallback the rendering takes when it places a symbol.
     public static function symbolFor(string $currencyCode): string
     {
         return self::SYMBOLS[$currencyCode] ?? $currencyCode;
     }
 
-    private function __construct(private readonly BrickMoney $inner) {}
+    // The way back, for a parser reading a figure a message marked with a
+    // glyph rather than a code. A second glyph list in the reader would drift
+    // from the one format() writes, which is how '¥' stayed unreadable.
+    public static function codeForSymbol(string $symbol): ?string
+    {
+        $found = array_search($symbol, self::SYMBOLS, true);
+
+        return $found === false ? null : $found;
+    }
+
+    private function __construct(private BrickMoney $inner) {}
 
     // The only constructor — no ofFloat, no fromString, on purpose. Negative
     // is a debit (money out), positive a credit (money in).
@@ -83,6 +91,43 @@ final class Money implements Stringable
             && $this->inner->getAmount()->isEqualTo($other->inner->getAmount());
     }
 
+    // Brick carries each currency's real minor-unit count; the constant above
+    // is the two-decimal assumption every parse boundary in this repo still
+    // makes, and JPY has no minor unit at all.
+    public function minorUnitsPerMajor(): int
+    {
+        return 10 ** $this->inner->getCurrency()->getDefaultFractionDigits();
+    }
+
+    // A number in major units, for a chart axis. Callers were parsing
+    // __toString() to reach it, because Brick may only be named from here.
+    public function toMajorFloat(): float
+    {
+        return $this->inner->getAmount()->toFloat();
+    }
+
+    // The same figure exactly, as a decimal string. An fx rate is derived from
+    // two of these and lands in a decimal(18,8) column, so the float above
+    // cannot serve it -- and a caller outside this file may not reach Brick to
+    // get the amount itself.
+    public function toMajorString(): string
+    {
+        return (string) $this->inner->getAmount();
+    }
+
+    // The one chart-coordinate seam: a series has to be a number in major
+    // units and the divisor is not a hundred everywhere, so a ¥980,000 row was
+    // plotted at -9800 beside an axis still labelled in yen. A code no
+    // currency table knows falls back to the repo's two-decimal assumption.
+    public static function majorUnits(int $minor, string $currencyCode): float
+    {
+        $money = self::tryOfMinor($minor, $currencyCode);
+
+        return $money === null
+            ? $minor / self::MINOR_UNITS_PER_MAJOR
+            : $money->toMajorFloat();
+    }
+
     public function toMinor(): int
     {
         return $this->inner->getMinorAmount()->toInt();
@@ -104,7 +149,7 @@ final class Money implements Stringable
     public function format(): string
     {
         try {
-            return $this->inner->formatToLocale($this->language()->value);
+            return $this->inner->formatToLocale(MoneyText::language()->value);
         } catch (IntlException|ValueError) {
             // The mobile build's ICU carries English-only locale data, so
             // every other language throws. Not fixable by bundling more.
@@ -117,15 +162,7 @@ final class Money implements Stringable
     // while the fallback can only be reached by making ICU throw.
     public function formatWithoutIcu(): string
     {
-        $amount = (string) $this->inner->getAmount();
-        [$whole, $fraction] = array_pad(explode('.', ltrim($amount, '-')), 2, '');
-        $digits = $this->group($whole);
-
-        if ($fraction !== '') {
-            $digits .= $this->language()->decimalMark().$fraction;
-        }
-
-        return $this->assemble($digits, str_starts_with($amount, '-'));
+        return MoneyText::ofDecimal((string) $this->inner->getAmount(), $this->currency());
     }
 
     // Whole units, for a surface with no room for cents: a calendar cell is
@@ -134,48 +171,9 @@ final class Money implements Stringable
     // JPY has none, so dividing by a hundred would render a hundredth of it.
     public function formatWholeUnits(): string
     {
-        $rounded = (string) $this->inner->getAmount()->toScale(0, RoundingMode::HalfUp);
+        $rounded = $this->inner->getAmount()->toScale(0, RoundingMode::HalfUp);
 
-        return $this->assemble($this->group(ltrim($rounded, '-')), str_starts_with($rounded, '-'));
-    }
-
-    // Chunked from the right by reversing the digits, then turned back before
-    // the mark goes in: strrev() over the assembled string would split the two
-    // bytes of a non-breaking space, which is the group mark in eleven locales.
-    private function group(string $whole): string
-    {
-        $chunks = array_map(strrev(...), str_split(strrev($whole), 3));
-
-        return implode($this->language()->groupMark(), array_reverse($chunks));
-    }
-
-    private function assemble(string $digits, bool $negative): string
-    {
-        $locale = $this->language();
-        $known = self::SYMBOLS[$this->currency()] ?? null;
-        $symbol = $known ?? $this->currency();
-        $sign = $negative ? '-' : '';
-
-        // ICU spaces an alphabetic symbol off the digits whatever the locale's
-        // own pattern says, which is how a currency it has no sign for reads
-        // "CHF 3,850.00" in English.
-        $gap = $known === null ? "\u{00A0}" : $locale->symbolGap();
-
-        if (! $locale->symbolBeforeAmount()) {
-            return $sign.$digits.$gap.$symbol;
-        }
-
-        return $locale->signPrecedesSymbol()
-            ? $sign.$symbol.$gap.$digits
-            : $symbol.$gap.$sign.$digits;
-    }
-
-    // The reader's locale, which is what decides separators and symbol
-    // position; the currency decides only which symbol is placed. Anything
-    // unrecognised reads as English rather than throwing mid-render.
-    private function language(): Locale
-    {
-        return Locale::tryFrom(Container::getInstance()->make(Translator::class)->getLocale()) ?? Locale::En;
+        return MoneyText::ofDecimal((string) $rounded, $this->currency());
     }
 
     public function __toString(): string

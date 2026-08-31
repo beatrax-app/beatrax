@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Utilise au moins 12 caractères.',
     'error_wrong_code' => 'Ce nom d\'utilisateur et ce code de récupération ne correspondent pas. Vérifie le code attentivement — majuscules, pas de zéro, pas de O, pas de un, pas de L.',
+    'error_throttled' => 'Trop de tentatives — réessaie dans :wait.',
 ];

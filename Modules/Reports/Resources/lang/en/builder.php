@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Uncategorized',
+    'no_counterparty' => 'No counterparty',
+    'unavailable_counterparty' => 'Counterparty not on this device',
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
     'subtitle' => 'Compose a report from your ledger.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Custom range',
         'from' => 'From',
         'to' => 'To',
+        'error' => [
+            'incomplete' => 'Pick both a start and an end date.',
+            'malformed' => 'Use a valid date in YYYY-MM-DD form.',
+            'inverted' => 'The end date falls before the start date.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filters',
+        'net_worth_note' => 'Net worth is a balance: only the account filter applies.',
     ],
 
     'compare' => 'Compare to previous period',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Chart drawn in :currency — :list not plotted',
+        'undrawn' => 'Not in the ring — :amount moves the other way',
         'bar_title' => 'Click a bar to view its transactions',
         'line_title' => 'Click a point to view its transactions',
         'donut_title' => 'Click a segment to view its transactions',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Fees and adjustments (not counted above)',
+    'other_movement_with_refunds' => 'Fees, refunds and adjustments (not counted above)',
 ];

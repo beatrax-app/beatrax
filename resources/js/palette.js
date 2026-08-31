@@ -4,10 +4,10 @@ import { createPaletteMatcher } from './palette-match.js';
  * Alpine factory for the command palette modal.
  *
  * Mounted by `Modules/DevMode/Resources/views/livewire/command-palette-modal.blade.php`
- * via `<div x-data="palette(registry, recent)">`. The two arguments
+ * via `<div x-data="palette(registry, recent, arms)">`. The arguments
  * are the server-emitted JSON registry (already filtered by
- * `is_developer` at the controller layer) and the seeded Recent
- * list.
+ * `is_developer` at the controller layer), the seeded Recent
+ * list, and the plural arms the two counted rows are drawn from.
  *
  * Filtering the registry — the tiers, the plural and accent folding, and the
  * locked Fuse.js weights — lives in ./palette-match.js.
@@ -35,7 +35,7 @@ import { createPaletteMatcher } from './palette-match.js';
  *
  * Every selection also dispatches `palette:picked` so the Livewire
  * `CommandPaletteModal` component can write the entry into the
- * per-user Recent cache (`dev_mode.palette_recent.{userId}`, 30-day
+ * per-user Recent cache (`dev_mode.palette_recent:{userId}`, 30-day
  * TTL, deduped, capped at 5 per UI-SPEC).
  */
 
@@ -56,13 +56,19 @@ const ROW_SELECTOR = '[data-palette-row]';
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]';
 
-export const palette = (registry, recent) => ({
+export const palette = (registry, recent, arms) => ({
     visible: false,
     query: '',
     activeIndex: 0,
     recent: Array.isArray(recent) ? recent : [],
     registry: Array.isArray(registry) ? registry : [],
     match: null,
+
+    // The plural arms for the two counted rows, plus the reader locale's own
+    // selection table, from Lang::arms(). The counts they are chosen on —
+    // matched rows, server total — exist only here, after the response has
+    // left, so no trans_choice on the server could have picked the arm.
+    arms: arms ?? { span: 1, index: [], forms: {} },
 
     // Server-backed search state (08-05)
     serverTransactionHits: [],

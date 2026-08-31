@@ -6,52 +6,70 @@ namespace Modules\Forecasting\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\DemoNames;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Models\ForecastShortfallWindow;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
+use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 final class DemoForecastSeeder
 {
     public function __construct(
         private readonly ProjectionPipeline $pipeline,
+        private readonly Clock $clock,
     ) {}
 
     /**
-     * @var list<array{name: string, description: string}>
+     * @var list<array{nameKey: string, descriptionKey: string}>
      */
     private const SCENARIOS = [
         [
-            'name' => 'Base Case',
-            'description' => 'Baseline 60-day projection — no manual mutations, mirrors the live ledger forward.',
+            'nameKey' => 'forecast_base_case',
+            'descriptionKey' => 'forecast_base_case_description',
         ],
         [
-            'name' => 'What-If: Summer holiday',
-            'description' => 'What-if projection adding a one-off €500 holiday charge inside the 60-day horizon.',
+            'nameKey' => 'forecast_summer_holiday',
+            'descriptionKey' => 'forecast_summer_holiday_description',
         ],
     ];
+
+    private const WHAT_IF_NOTE_KEY = 'forecast_summer_holiday_charge';
+
+    private const int WHAT_IF_AMOUNT_MINOR = -50000;
 
     /**
      * @param  array<string, User>  $users
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $today = $this->clock->now()->startOfDay();
+
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
-            $baseCase = $this->upsertScenario($primary, self::SCENARIOS[0]);
+            $this->upsertScenario($primary, self::SCENARIOS[0]);
             $whatIf = $this->upsertScenario($primary, self::SCENARIOS[1]);
 
-            $this->upsertWhatIfMutation($primary, $whatIf);
-            $this->upsertBaseCaseShortfall($primary, $baseCase);
+            $this->upsertWhatIfMutation($primary, $whatIf, $today);
         }
 
         foreach ($users as $user) {
             $this->projectAllHorizons($user);
+        }
+
+        // After the projection, never before it: the detector delete-then-writes
+        // every (user, account, horizon, scenario) tuple it runs, so a window
+        // seeded first is wiped by the run that follows.
+        if ($primary !== null) {
+            $this->upsertBaseCaseShortfall($primary, $today);
         }
 
         return ForecastScenario::query()
@@ -69,7 +87,7 @@ final class DemoForecastSeeder
             ->pluck('id')
             ->all();
 
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonDays) {
+        foreach (ForecastHorizon::days() as $horizonDays) {
             $this->pipeline->project($user, null, $horizonDays);
 
             foreach ($scenarioIds as $scenarioId) {
@@ -79,22 +97,39 @@ final class DemoForecastSeeder
     }
 
     /**
-     * @param  array{name: string, description: string}  $row
+     * @param  array{nameKey: string, descriptionKey: string}  $row
      */
     private function upsertScenario(User $user, array $row): ForecastScenario
     {
-        return ForecastScenario::query()->updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'name' => $row['name'],
-            ],
-            [
-                'description' => $row['description'],
-            ],
-        );
+        // Every locale's rendering, not just today's: the row is found by a
+        // translated name, so a re-seed under another APP_LOCALE duplicated it.
+        $existing = ForecastScenario::query()
+            ->where('user_id', $user->id)
+            ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
+            ->first();
+
+        // Left as first seeded, the way every peer demo seeder leaves its own
+        // rows: a scenario carries a rename action, and re-seeding is not the
+        // reader asking for the name they chose to be written over.
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $scenario = new ForecastScenario;
+        $scenario->user_id = $user->id;
+        $scenario->name = Lang::get('core::demo.'.$row['nameKey']);
+        // The sentence names the size of the charge the mutation below
+        // writes, so both read the one constant — a description naming an
+        // amount the scenario does not carry is worse than naming none.
+        $scenario->description = Lang::get('core::demo.'.$row['descriptionKey'], [
+            'amount' => Money::ofMinor(abs(self::WHAT_IF_AMOUNT_MINOR), Currency::Eur->value)->format(),
+        ]);
+        $scenario->save();
+
+        return $scenario;
     }
 
-    private function upsertWhatIfMutation(User $user, ForecastScenario $whatIf): void
+    private function upsertWhatIfMutation(User $user, ForecastScenario $whatIf, CarbonImmutable $today): void
     {
         $existing = ForecastScenarioMutation::query()
             ->where('user_id', $user->id)
@@ -106,13 +141,12 @@ final class DemoForecastSeeder
             return;
         }
 
-        $today = CarbonImmutable::today();
         $payload = new AddOneOffPayload(
             date: $today->addDays(25)->toDateString(),
-            amountMinor: -50000,
+            amountMinor: self::WHAT_IF_AMOUNT_MINOR,
             currency: Currency::Eur->value,
             direction: 'expense',
-            note: 'Hypothetical summer holiday charge',
+            note: Lang::get('core::demo.'.self::WHAT_IF_NOTE_KEY),
         );
 
         // The cast checks `payload.kind() === row.kind` at write time, so `kind`
@@ -126,7 +160,9 @@ final class DemoForecastSeeder
         $mutation->save();
     }
 
-    private function upsertBaseCaseShortfall(User $user, ForecastScenario $baseCase): void
+    // scenario_id NULL, horizon 30: the sidebar badge and the chart's default
+    // band both read the baseline run at the tile horizon and nothing else.
+    private function upsertBaseCaseShortfall(User $user, CarbonImmutable $today): void
     {
         $asn = Account::query()
             ->where('user_id', $user->id)
@@ -137,12 +173,13 @@ final class DemoForecastSeeder
             return;
         }
 
-        $today = CarbonImmutable::today();
         $startsAt = $today->addDays(18);
 
         $existing = ForecastShortfallWindow::query()
             ->where('user_id', $user->id)
-            ->where('scenario_id', $baseCase->id)
+            ->where('account_id', $asn->id)
+            ->whereNull('scenario_id')
+            ->where('horizon_days', ForecastHighlightsQuery::TILE_HORIZON)
             ->whereDate('starts_at', $startsAt->toDateString())
             ->exists();
 
@@ -153,7 +190,8 @@ final class DemoForecastSeeder
         ForecastShortfallWindow::query()->create([
             'user_id' => $user->id,
             'account_id' => $asn->id,
-            'scenario_id' => $baseCase->id,
+            'scenario_id' => null,
+            'horizon_days' => ForecastHighlightsQuery::TILE_HORIZON,
             'starts_at' => $startsAt,
             'ends_at' => $today->addDays(22),
             'lowest_balance_minor' => -8500,

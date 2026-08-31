@@ -6,8 +6,8 @@ namespace Modules\OpenBanking\Internal\Exceptions;
 
 use RuntimeException;
 
-// Refused before sending, because the bearer token would go somewhere outside
-// the API host and the bank's SCA origin. Never retryable.
+// Refused before sending, because the bearer token would go somewhere other
+// than the Enable Banking API host. Never retryable.
 final class UnsafeOpenBankingRequestException extends RuntimeException
 {
     public static function nonHttpsScheme(): self

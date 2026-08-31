@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Über dieses Glied hinaus wurde keine Finanzierungskette gefunden.',
 
     'covers_charges' => 'Deckt :count ICS-Abbuchung ab|Deckt :count ICS-Abbuchungen ab',
-    'no_ics_charges' => 'Keine ICS-Abbuchungen in dieser Abrechnung',
     'show_more_fanout' => ':count weitere anzeigen · :shown von :total',
 
     'confirm' => 'Bestätigen',
     'reject' => 'Ablehnen',
     'confirm_aria' => 'Kettenverknüpfung :id bestätigen',
     'reject_aria' => 'Kettenverknüpfung :id ablehnen',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministisch',
+        'confirmed' => 'Bestätigt',
+        'candidate' => 'Kandidat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Zuverlässigkeit: deterministische Übereinstimmung',

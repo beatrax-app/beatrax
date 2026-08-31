@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Zamietnuté — Vrátiť späť',
+        'dismissed' => 'Zamietnuté',
         'restored' => 'Obnovené',
     ],
 ];

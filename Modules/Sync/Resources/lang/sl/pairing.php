@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Korak 3 od 3',
 
     'show_my_code' => 'Prikaži mojo kodo',
-    'show_my_code_help' => 'Drugi napravi pokaži kodo QR in besedno kodo te naprave.',
+    'show_my_code_help' => 'Pokaže kodo te naprave, da jo druga naprava prebere.',
     'enter_a_code' => 'Vnesi kodo',
     'safety_number_changed' => 'Druga naprava se je med primerjanjem spremenila. Pred potrditvijo znova preveri spodnje besede.',
     'enter_a_code_help' => 'Vtipkaj kodo, prikazano na drugi napravi.',
 
     'show_this_code' => 'Prikaži to kodo',
     'enter_on_other' => 'Vnesi to kodo v drugo napravo ali ji dovoli, da skenira kodo QR.',
+    'scan_on_other' => 'To kodo skeniraj s kamero druge naprave. Računalnik kamere nima — pokaži njegovo kodo in jo vnesi sem.',
     'expires_in' => 'Poteče čez',
     'code_expired' => 'Koda je potekla.',
     'generate_new_code' => 'Ustvari novo kodo',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
     'invalid_code' => 'Ta koda ni veljavna ali je potekla. Na drugi napravi ustvari novo.',
+    'code_incomplete' => 'Ta koda ni popolna. Primerjaj jo z drugo napravo in jo vnesi v celoti.',
+    'code_not_accepted' => 'Nobena naprava v tem omrežju ni sprejela te kode. Preveri kodo in ali jo druga naprava še vedno prikazuje.',
+    'no_peer_answered' => 'Nič v tem omrežju ni odgovorilo na to kodo. Preveri, ali na drugi napravi teče sinhronizacija.',
+    'no_peer_search' => 'Ta naprava ni mogla iskati po omrežju, zato kode ni mogla preveriti. Namesto tega pokaži kodo te naprave in jo vnesi v drugo.',
+    'rate_limited' => 'Preveč poskusov. Počakaj minuto in poskusi znova.',
 ];

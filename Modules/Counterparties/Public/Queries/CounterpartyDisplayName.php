@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Support\LocaleCollator;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -28,10 +29,10 @@ final readonly class CounterpartyDisplayName
             ->table('counterparties')
             ->where('user_id', $userId)
             ->orderBy('id')
-            ->get(['id', 'display_name'])
+            ->get(['id', 'display_name', 'metadata'])
             ->map(fn (stdClass $row): stdClass => (object) [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'display_name' => $this->decrypt($row->display_name ?? null, $userId),
+                'display_name' => $this->readable($row, $userId),
             ]);
 
         return $rows
@@ -57,14 +58,25 @@ final readonly class CounterpartyDisplayName
             ->table('counterparties')
             ->whereIn('id', $ids)
             ->where('user_id', $userId)
-            ->get(['id', 'display_name']);
+            ->get(['id', 'display_name', 'metadata']);
 
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $names[is_numeric($row->id) ? (int) $row->id : 0] = $this->decrypt($row->display_name ?? null, $userId);
+            $names[is_numeric($row->id) ? (int) $row->id : 0] = $this->readable($row, $userId);
         }
 
         return $names;
+    }
+
+    // Both callers hand the same row to the same two steps, and this list
+    // feeds a rule form, a report filter and a transaction's own picker, so
+    // one of them skipping the second step is one screen still in English.
+    private function readable(stdClass $row, int $userId): string
+    {
+        return CounterpartyDefaultName::resolve(
+            $this->decrypt($row->display_name ?? null, $userId),
+            $row->metadata ?? null,
+        );
     }
 
     // Never an ORDER BY on this column: it is ciphertext at rest once the user

@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serija',
 
+    'template' => [
+        'cancel' => 'Otkaži :name',
+        'change_amount' => 'Promeni iznos za :name',
+    ],
+
     'summary' => [
         'cancel' => 'Otkaži :name',
         'series_fallback' => 'serija br. :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenario je preimenovan.',
         'mutation_added' => 'Izmena je dodata.',
         'mutation_updated' => 'Izmena je ažurirana.',
-        'mutation_removed' => 'Izmena je uklonjena. Opozovi',
+        'mutation_removed' => 'Izmena je uklonjena.',
     ],
 
     'errors' => [
         'name_empty' => 'Naziv scenarija ne može biti prazan.',
         'name_too_long' => 'Naziv scenarija sme da ima najviše :max znak.|Naziv scenarija sme da ima najviše :max znaka.|Naziv scenarija sme da ima najviše :max znakova.',
         'name_taken' => 'Scenario sa tim nazivom već postoji.',
+        'date_out_of_range' => 'Taj datum je izvan svakog horizonta prognoze — od danas do :days dana unapred — pa scenario ne bi ništa promenio.|Taj datum je izvan svakog horizonta prognoze — od danas do :days dana unapred — pa scenario ne bi ništa promenio.|Taj datum je izvan svakog horizonta prognoze — od danas do :days dana unapred — pa scenario ne bi ništa promenio.',
         'pick_kind_first' => 'Prvo izaberi vrstu izmene.',
         'amount_positive' => 'Iznos mora biti pozitivan broj.',
+        'scenario_gone' => 'Ovaj scenario više ne postoji — obrisan je drugde. Izaberi drugi scenario ili napravi novi.',
+        'mutation_gone' => 'Ova izmena više ne postoji — uklonjena je drugde. Zatvori uređivač i dodaj je ponovo ako je još želiš.',
     ],
 ];

@@ -5,36 +5,32 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\Clients;
 
 use DateTimeImmutable;
-use Google\Client as GoogleClient;
 use Google\Service\Exception as GoogleServiceException;
-use Google\Service\Gmail as GmailService;
-use Google\Service\Gmail\Resource\Users;
+use Google\Service\Gmail\History;
+use Google\Service\Gmail\ListHistoryResponse;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
-use GuzzleHttp\Client as GuzzleClient;
-use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
-use Illuminate\Database\DatabaseManager;
-use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\Duration;
-use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
-use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
-use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
-use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
-use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Events\InboxTokenFailed;
-use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Modules\Core\Public\Support\Instant;
 use Symfony\Component\HttpFoundation\Response;
 
-final class GmailApiClient implements GmailApiClientContract
+final readonly class GmailApiClient implements GmailApiClientContract
 {
-    public function __construct(
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly GoogleOAuthProvider $oauth,
-        private readonly Clock $clock,
-        private readonly EventsDispatcher $events,
-        private readonly DatabaseManager $db,
-        private readonly ?GuzzleClient $httpClient = null,
-    ) {}
+    // A mailbox that has moved a very long way since the stored cursor can
+    // paginate history further than one tick should hold in memory; the
+    // watermark returned with a capped walk lets the next tick carry on.
+    private const int HISTORY_PAGE_CAP = 25;
+
+    /** @var list<string> */
+    private const array LEGACY_THROTTLING_REASONS = ['rateLimitExceeded', 'userRateLimitExceeded', 'dailyLimitExceeded'];
+
+    /** @var list<string> */
+    private const array THROTTLING_STATUSES = ['RESOURCE_EXHAUSTED', 'UNAVAILABLE'];
+
+    // Gmail does not publish an exact q= ceiling; this sits well inside the
+    // ~2KB a query string survives across Google's front ends.
+    private const int MAX_DISCOVERY_QUERY_LENGTH = 1800;
+
+    public function __construct(private GmailInboxResources $resources) {}
 
     /**
      * @param  list<string>  $senderPatterns
@@ -46,7 +42,7 @@ final class GmailApiClient implements GmailApiClientContract
         ?string $pageToken,
         ?DateTimeImmutable $windowStart = null,
     ): array {
-        $resource = $this->messagesResource($inboxId);
+        $resource = $this->resources->messages($inboxId);
         $q = 'from:('.implode(' OR ', $senderPatterns).')';
         if ($windowStart !== null) {
             // Gmail's `after:` takes a date string or a unix timestamp;
@@ -87,7 +83,7 @@ final class GmailApiClient implements GmailApiClientContract
     // current historyId; users.messages.list does not carry one.
     public function currentHistoryId(int $inboxId): ?string
     {
-        $resource = $this->usersResource($inboxId);
+        $resource = $this->resources->users($inboxId);
         try {
             $profile = $resource->getProfile('me');
         } catch (GoogleServiceException $e) {
@@ -101,10 +97,16 @@ final class GmailApiClient implements GmailApiClientContract
 
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
-        $resource = $this->messagesResource($inboxId);
+        $resource = $this->resources->messages($inboxId);
         try {
             $msg = $resource->get('me', $providerMessageId, ['format' => 'raw']);
         } catch (GoogleServiceException $e) {
+            if ($e->getCode() === Response::HTTP_NOT_FOUND) {
+                throw new MessageUnavailableException(
+                    "GmailApiClient: message {$providerMessageId} is no longer available on inbox {$inboxId}.",
+                    previous: $e,
+                );
+            }
             throw $this->mapRateLimit($e);
         }
 
@@ -116,26 +118,43 @@ final class GmailApiClient implements GmailApiClientContract
      */
     public function listHistory(int $inboxId, string $startHistoryId): array
     {
-        $resource = $this->historyResource($inboxId);
-        try {
-            $response = $resource->listUsersHistory('me', [
-                'startHistoryId' => $startHistoryId,
-            ]);
-        } catch (GoogleServiceException $e) {
-            if ($e->getCode() === Response::HTTP_NOT_FOUND) {
-                throw CursorExpiredException::gmail();
-            }
-            throw $this->mapRateLimit($e);
-        }
+        $resource = $this->resources->history($inboxId);
 
-        $historyId = $response->getHistoryId();
-        $historyIdStr = $historyId === '' ? null : $historyId;
+        $history = [];
+        $mailboxHistoryId = null;
+        $lastRecordId = null;
+        $pageToken = null;
+        $pagesRead = 0;
+
+        do {
+            $response = $this->historyPage($resource, $startHistoryId, $pageToken);
+
+            foreach ($response->getHistory() as $record) {
+                $history[] = self::historyRecord($record);
+                $recordId = self::sdkString($record->getId());
+                if ($recordId !== null) {
+                    $lastRecordId = $recordId;
+                }
+            }
+
+            $responseHistoryId = self::sdkString($response->getHistoryId());
+            if ($responseHistoryId !== null) {
+                $mailboxHistoryId = $responseHistoryId;
+            }
+
+            $pageToken = self::sdkString($response->getNextPageToken());
+            $pagesRead++;
+        } while ($pageToken !== null && $pagesRead < self::HISTORY_PAGE_CAP);
+
+        // The last record consumed is the only watermark a capped walk can
+        // resume from without loss. Where the cap was reached without one,
+        // there is nothing to resume from and the mailbox's own historyId is
+        // what keeps the cursor moving instead of stalling on it forever.
+        $exhausted = $pageToken === null;
 
         return [
-            // Not yet unpacked: the History payload is heterogeneous
-            // and only the historyId below is read back today.
-            'history' => [],
-            'historyId' => $historyIdStr,
+            'history' => $history,
+            'historyId' => $exhausted || $lastRecordId === null ? $mailboxHistoryId : $lastRecordId,
         ];
     }
 
@@ -152,7 +171,7 @@ final class GmailApiClient implements GmailApiClientContract
         array $excludeSenders,
         ?string $pageToken = null,
     ): array {
-        $resource = $this->messagesResource($inboxId);
+        $resource = $this->resources->messages($inboxId);
         $q = self::buildDiscoveryQuery($keywords, $excludeSenders);
 
         $params = ['q' => $q, 'maxResults' => 100];
@@ -211,7 +230,83 @@ final class GmailApiClient implements GmailApiClientContract
             $excludeSenders,
         );
 
-        return $q.' -from:('.implode(' OR ', $safeExcludes).')';
+        $fitted = self::excludesThatFit($q, $safeExcludes);
+
+        return $fitted === [] ? $q : $q.' -from:('.implode(' OR ', $fitted).')';
+    }
+
+    // The exclude list grows by one entry for every sender ever promoted or
+    // dismissed, and past Gmail's q= ceiling every discovery call 400s. The
+    // overflow is safe to drop: DiscoveryScanJob re-applies the same exclude
+    // list client-side before any upsert.
+    /**
+     * @param  list<string>  $safeExcludes
+     * @return list<string>
+     */
+    private static function excludesThatFit(string $keywordClause, array $safeExcludes): array
+    {
+        $budget = self::MAX_DISCOVERY_QUERY_LENGTH - strlen($keywordClause) - strlen(' -from:()');
+        $fitted = [];
+        $used = 0;
+
+        foreach ($safeExcludes as $exclude) {
+            $cost = strlen($exclude) + ($fitted === [] ? 0 : strlen(' OR '));
+            if ($used + $cost > $budget) {
+                break;
+            }
+            $fitted[] = $exclude;
+            $used += $cost;
+        }
+
+        return $fitted;
+    }
+
+    private function historyPage(UsersHistory $resource, string $startHistoryId, ?string $pageToken): ListHistoryResponse
+    {
+        // messageAdded only: labelAdded/labelRemoved/messageDeleted records
+        // carry no id the fetcher could pull bytes for, and asking for them
+        // spends pages of the walk on records that map to nothing.
+        $params = [
+            'startHistoryId' => $startHistoryId,
+            'historyTypes' => 'messageAdded',
+        ];
+        if ($pageToken !== null && $pageToken !== '') {
+            $params['pageToken'] = $pageToken;
+        }
+
+        try {
+            return $resource->listUsersHistory('me', $params);
+        } catch (GoogleServiceException $e) {
+            if ($e->getCode() === Response::HTTP_NOT_FOUND) {
+                throw CursorExpiredException::gmail();
+            }
+            throw $this->mapRateLimit($e);
+        }
+    }
+
+    // The SDK declares these getters as string and returns null in the field, so
+    // taking them as mixed is what makes the guard expressible: narrowing a value
+    // the stub already calls a string reads as dead code and gets removed.
+    private static function sdkString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function historyRecord(History $record): array
+    {
+        $added = [];
+        foreach ($record->getMessagesAdded() as $messageAdded) {
+            $message = $messageAdded->getMessage();
+            $id = self::sdkString($message->getId());
+            if ($id !== null) {
+                $added[] = ['message' => ['id' => $id, 'threadId' => $message->getThreadId()]];
+            }
+        }
+
+        return ['id' => $record->getId(), 'messagesAdded' => $added];
     }
 
     /**
@@ -249,140 +344,10 @@ final class GmailApiClient implements GmailApiClientContract
         ];
     }
 
-    private function messagesResource(int $inboxId): UsersMessages
-    {
-        $gmail = $this->makeGmailService($inboxId);
-        $resource = $gmail->users_messages;
-        if (! $resource instanceof UsersMessages) {
-            throw new GmailResourceUnavailableException(
-                'GmailApiClient: Gmail service has no users_messages resource.',
-            );
-        }
-
-        return $resource;
-    }
-
-    private function historyResource(int $inboxId): UsersHistory
-    {
-        $gmail = $this->makeGmailService($inboxId);
-        $resource = $gmail->users_history;
-        if (! $resource instanceof UsersHistory) {
-            throw new GmailResourceUnavailableException(
-                'GmailApiClient: Gmail service has no users_history resource.',
-            );
-        }
-
-        return $resource;
-    }
-
-    private function usersResource(int $inboxId): Users
-    {
-        $gmail = $this->makeGmailService($inboxId);
-        $resource = $gmail->users;
-        if (! $resource instanceof Users) {
-            throw new GmailResourceUnavailableException(
-                'GmailApiClient: Gmail service has no users resource.',
-            );
-        }
-
-        return $resource;
-    }
-
-    private function makeGmailService(int $inboxId): GmailService
-    {
-        $accessToken = $this->ensureFreshAccessToken($inboxId);
-        $client = new GoogleClient;
-        $client->setAccessToken([
-            'access_token' => $accessToken,
-            'expires_in' => Duration::Hour->seconds(),
-        ]);
-
-        // The Google SDK builds its own Guzzle instance unless given
-        // one, so this is the only seam a test can drive it through.
-        if ($this->httpClient instanceof GuzzleClient) {
-            $client->setHttpClient($this->httpClient);
-        }
-
-        return new GmailService($client);
-    }
-
-    private function ensureFreshAccessToken(int $inboxId): string
-    {
-        $creds = $this->secrets->loadInbox($inboxId);
-        if ($creds === null) {
-            throw new InboxNotConfiguredException(
-                "GmailApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
-            );
-        }
-
-        $nowTs = $this->clock->now()->getTimestamp();
-        $expiresTs = $creds->expiresAt?->getTimestamp();
-        $cachedAccessToken = $creds->accessToken;
-
-        // Unlike Microsoft, Gmail does not rotate refresh tokens
-        // single-use, so the same one is written back unchanged.
-        if (
-            $cachedAccessToken === null
-            || $cachedAccessToken === ''
-            || $expiresTs === null
-            || $expiresTs < $nowTs + 60
-        ) {
-            try {
-                $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
-            } catch (InvalidGrantException $e) {
-                throw $this->raiseReconsentRequired($inboxId, $e);
-            }
-            $this->secrets->rotateRefreshToken(
-                $inboxId,
-                $fresh->refreshToken ?? $creds->refreshToken,
-                $fresh->accessToken,
-                $fresh->expiresAt,
-            );
-
-            return $fresh->accessToken;
-        }
-
-        return $cachedAccessToken;
-    }
-
-    private function raiseReconsentRequired(int $inboxId, InvalidGrantException $cause): ReconsentRequiredException
-    {
-        $userId = $this->lookupInboxUserId($inboxId);
-        $this->events->dispatch(new InboxTokenFailed(
-            inboxId: $inboxId,
-            userId: $userId,
-            provider: MailProvider::Gmail->value,
-        ));
-
-        return new ReconsentRequiredException(
-            inboxId: $inboxId,
-            userId: $userId,
-            provider: MailProvider::Gmail->value,
-            previous: $cause,
-        );
-    }
-
-    // Returns 0 rather than throwing: the inbox can be deleted between scan
-    // kick-off and a failed refresh, and recovery still has to complete.
-    private function lookupInboxUserId(int $inboxId): int
-    {
-        $value = $this->db->connection()
-            ->table('inboxes')
-            ->where('id', $inboxId)
-            ->value('user_id');
-
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     private function mapRateLimit(GoogleServiceException $e): GoogleServiceException|RateLimitedException
     {
-        $errors = $e->getErrors();
-        $reason = '';
-        if (isset($errors[0]['reason'])) {
-            $reason = $errors[0]['reason'];
-        }
-
-        if (in_array($reason, ['rateLimitExceeded', 'userRateLimitExceeded', 'dailyLimitExceeded'], strict: true)) {
+        $reason = self::throttlingReason($e);
+        if ($reason !== null) {
             return new RateLimitedException(
                 retryAfterSeconds: 60,
                 message: 'Gmail rate limit exceeded ('.$reason.').',
@@ -390,6 +355,32 @@ final class GmailApiClient implements GmailApiClientContract
         }
 
         return $e;
+    }
+
+    // Two shapes reach here: the legacy error.errors[].reason the SDK unpacks
+    // into getErrors(), and the newer error.status Google returns without an
+    // errors[] array at all — where getErrors() is null and the only signal
+    // left is the body the exception message carries verbatim.
+    private static function throttlingReason(GoogleServiceException $e): ?string
+    {
+        $errors = $e->getErrors();
+        $legacy = $errors[0]['reason'] ?? null;
+        if (is_string($legacy) && in_array($legacy, self::LEGACY_THROTTLING_REASONS, strict: true)) {
+            return $legacy;
+        }
+
+        if ($e->getCode() === Response::HTTP_TOO_MANY_REQUESTS) {
+            return 'HTTP '.Response::HTTP_TOO_MANY_REQUESTS;
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($e->getMessage(), true);
+        $error = is_array($decoded) ? ($decoded['error'] ?? null) : null;
+        $status = is_array($error) ? ($error['status'] ?? null) : null;
+
+        return is_string($status) && in_array($status, self::THROTTLING_STATUSES, strict: true)
+            ? $status
+            : null;
     }
 
     // Gmail returns base64url with the padding stripped; base64_decode
@@ -412,11 +403,10 @@ final class GmailApiClient implements GmailApiClientContract
     private static function internalDateMsToIso(mixed $internalDateMs): string
     {
         if (! is_numeric($internalDateMs)) {
-            return gmdate('Y-m-d\TH:i:s\Z');
+            return Instant::zulu(new DateTimeImmutable);
         }
-        $seconds = intdiv((int) $internalDateMs, 1000);
 
-        return gmdate('Y-m-d\TH:i:s\Z', $seconds);
+        return Instant::zulu(new DateTimeImmutable('@'.intdiv((int) $internalDateMs, 1000)));
     }
 
     // The address comes back lowercased so callers can compare it against

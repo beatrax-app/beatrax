@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Vergi etiketini düzenle: :label',
     'tag' => 'Etiketle',
     'tag_aria' => 'Vergiyle ilgili olarak etiketle',
+    'tag_caption' => 'Etiketle',
 ];

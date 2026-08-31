@@ -10,6 +10,9 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Enums\PaletteSource;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
@@ -24,9 +27,12 @@ final class CommandPaletteModal extends Component
      */
     public array $recent = [];
 
-    public const RECENT_LIMIT = 5;
+    public const int RECENT_LIMIT = 5;
 
-    public const RECENT_TTL_SECONDS = 30 * 86400;
+    public static function recentTtlSeconds(): int
+    {
+        return 30 * Duration::Day->seconds();
+    }
 
     public function mount(CurrentUser $user, CacheRepository $cache): void
     {
@@ -66,7 +72,7 @@ final class CommandPaletteModal extends Component
         $cache->put(
             $this->recentCacheKey($user->id()),
             $capped,
-            self::RECENT_TTL_SECONDS,
+            self::recentTtlSeconds(),
         );
 
         $this->recent = $capped;
@@ -78,10 +84,11 @@ final class CommandPaletteModal extends Component
         NavigationRegistry $nav,
         DevCommandRegistry $commands,
         AppActionRegistry $actions,
+        DevConsoleBuildGate $build,
         ?SearchResultsProvider $searchProvider = null,
     ): View {
         return $views->make('dev::livewire.command-palette-modal', [
-            'registry' => $this->buildRegistry($user, $nav, $commands, $actions),
+            'registry' => $this->buildRegistry($user, $nav, $commands, $actions, $build),
             'recent' => $this->recent,
             'searchAvailable' => $searchProvider !== null,
         ]);
@@ -95,10 +102,25 @@ final class CommandPaletteModal extends Component
         NavigationRegistry $nav,
         DevCommandRegistry $commands,
         AppActionRegistry $actions,
+        DevConsoleBuildGate $build,
     ): array {
-        $registry = [];
+        $isDeveloper = $build->permits()
+            && $user->isAuthenticated()
+            && $user->user()->is_developer === true;
 
-        $isDeveloper = $user->isAuthenticated() && $user->user()->is_developer === true;
+        return [
+            ...$this->viewRows($nav, $isDeveloper),
+            ...($isDeveloper ? $this->devCommandRows($commands) : []),
+            ...$this->actionRows($actions),
+        ];
+    }
+
+    /**
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     */
+    private function viewRows(NavigationRegistry $nav, bool $isDeveloper): array
+    {
+        $registry = [];
 
         foreach ($nav->all() as $entry) {
             // The rendered JSON reaches the client, so dev labels have to be
@@ -125,35 +147,54 @@ final class CommandPaletteModal extends Component
             ];
         }
 
-        if ($isDeveloper) {
-            // Safe tier only: destructive commands stay behind the Re-run
-            // affordance's triple gate. `hasArgs` lets palette.js pick
-            // direct-spawn or the arg prompt without a round trip.
-            foreach ($commands->safe() as $spec) {
-                $hasArgs = count($spec->argsSchema) > 0;
-                $registry[] = [
-                    'id' => 'dev.cmd.'.$spec->name,
-                    'label' => 'Run '.$spec->name,
-                    'icon' => '›_',
-                    'hint' => $spec->label,
-                    'source' => PaletteSource::Dev->value,
-                    'sourceLabel' => PaletteSource::Dev->label(),
-                    'url' => null,
-                    'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
-                    'name' => $spec->name,
-                    'tier' => CommandTier::Safe->value,
-                    'hasArgs' => $hasArgs,
-                    'keywords' => [$spec->label, $spec->description ?? ''],
-                ];
-            }
+        return $registry;
+    }
+
+    /**
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     */
+    private function devCommandRows(DevCommandRegistry $commands): array
+    {
+        $registry = [];
+
+        // Safe tier only: destructive commands stay behind the Re-run
+        // affordance's triple gate. `hasArgs` lets palette.js pick
+        // direct-spawn or the arg prompt without a round trip.
+        foreach ($commands->safe() as $spec) {
+            $hasArgs = count($spec->argsSchema) > 0;
+            $label = Lang::get($spec->labelKey);
+            $registry[] = [
+                'id' => 'dev.cmd.'.$spec->name,
+                'label' => Lang::get('dev::palette.run_command', ['command' => $spec->name]),
+                'icon' => '›_',
+                'hint' => $label,
+                'source' => PaletteSource::Dev->value,
+                'sourceLabel' => PaletteSource::Dev->label(),
+                'url' => null,
+                'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
+                'name' => $spec->name,
+                'tier' => CommandTier::Safe->value,
+                'hasArgs' => $hasArgs,
+                'keywords' => [$label, $spec->descriptionKey === null ? '' : Lang::get($spec->descriptionKey)],
+            ];
         }
+
+        return $registry;
+    }
+
+    /**
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     */
+    private function actionRows(AppActionRegistry $actions): array
+    {
+        $registry = [];
 
         foreach ($actions->all() as $action) {
             $registry[] = [
                 'id' => $action->id,
-                'label' => $action->label,
+                'label' => Lang::get($action->labelKey),
                 'icon' => $action->icon,
-                'hint' => $action->hint,
+                'hint' => Lang::get($action->hintKey),
                 'source' => PaletteSource::Action->value,
                 'sourceLabel' => PaletteSource::Action->label(),
                 'url' => $action->url,
@@ -218,8 +259,14 @@ final class CommandPaletteModal extends Component
         ];
     }
 
+    // The owner is the key's `:`-separated suffix, which is the one shape
+    // UserScopedDataPurge sweeps. Under a `.` this row held the reader's last
+    // five search queries for 30 days after their account was deleted.
+    /**
+     * @link ../../../../../.docs/features/auth/user-scoped-purge.md#four-things-the-schema-sweep-cannot-see
+     */
     private function recentCacheKey(int $userId): string
     {
-        return 'dev_mode.palette_recent.'.$userId;
+        return 'dev_mode.palette_recent:'.$userId;
     }
 }

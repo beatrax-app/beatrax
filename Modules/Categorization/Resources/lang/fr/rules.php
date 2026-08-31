@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Les règles restent sur cet appareil. Elles ne sont pas partagées avec vos autres appareils.',
 
     'reapply' => 'Réappliquer les règles à l\'historique',
+    'reapply_confirm' => 'Réappliquer toutes les règles à tout ton historique ? Chaque catégorie, tiers, note et marquage fiscal posé par une règle est réécrit. Ce que tu as saisi à la main reste, tout comme ce qui figure sur un relevé rapproché. Rien ne remet les anciennes valeurs.',
     'reapplying' => 'Réapplication…',
     'new_rule' => 'Nouvelle règle',
 
-    'reapply_progress_lead' => 'Réapplication des règles…',
-    'reapply_progress_of' => 'sur',
-    'reapply_progress_trail' => 'transactions vérifiées',
+    'reapply_progress' => 'Réapplication des règles… :checked sur :count transaction vérifiée|Réapplication des règles… :checked sur :count transactions vérifiées',
 
     'empty_heading' => 'Aucune règle pour l\'instant',
     'empty_body' => 'Les règles comparent les transactions sur plusieurs conditions et appliquent automatiquement les changements de catégorie, de tiers, de note et de marquage fiscal — à l\'import, et chaque fois que tu les réappliques à ton historique existant.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Créée le',
     'col_row_actions' => 'Actions',
     'inactive_badge' => 'Inactive',
+    'combinator_all' => 'TOUTES',
+    'combinator_any' => 'AU MOINS UNE',
     'inactive_title' => 'Cette règle ne s\'applique pas. Une règle se désactive lorsque la catégorie ou la contrepartie qu\'elle vise est supprimée.',
 
     'more_conditions' => '+:count de plus',

@@ -8,14 +8,14 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Public\Enums\Locale;
 
-final class LocaleNegotiator
+final readonly class LocaleNegotiator
 {
     // The choice of not choosing. Stored as NULL for a user and absent from the
     // session for a guest, so both switchers need a value to name it with;
     // resolve() then falls through to the browser and to English.
     public const string SYSTEM = 'auto';
 
-    public function __construct(private readonly Application $app) {}
+    public function __construct(private Application $app) {}
 
     // Resolve the active UI locale in precedence order: an explicit per-user
     // choice wins, then a guest's session choice, then the browser's

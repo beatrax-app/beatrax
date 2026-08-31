@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Verwijderd apparaat',
     'dismiss_peer' => 'Dit apparaat verwijderen',
+    'dismiss_peer_caption' => 'Verwijderen',
     'dismiss_stale' => 'Verwijder apparaten die niet meer gekoppeld zijn',
     'not_synced_yet' => 'Nog niet gesynchroniseerd',
     'error' => 'Synchronisatiefout op een of meer apparaten',

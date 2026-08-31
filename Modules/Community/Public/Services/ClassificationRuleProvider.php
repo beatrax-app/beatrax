@@ -10,9 +10,9 @@ use Psr\Log\LoggerInterface;
 
 final class ClassificationRuleProvider
 {
-    public const TYPE_GOVERNMENT = 'government';
+    public const string TYPE_GOVERNMENT = 'government';
 
-    public const TYPE_BANK_FEES = 'bank-fees';
+    public const string TYPE_BANK_FEES = 'bank-fees';
 
     /** @var array<string, list<ClassificationRule>> */
     private array $cache = [];

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Models\User;
@@ -126,7 +128,7 @@ it('returns open alerts with the resolved merchant display name', function (): v
     expect($open)->toHaveCount(1)
         ->and($open[0]->state)->toBe('open')
         ->and($open[0]->displayName)->toBe('Spotify')
-        ->and($open[0]->reasons)->toBe(['large']);
+        ->and($open[0]->reasons)->toBe([AnomalyDetector::Large]);
 });
 
 it('treats a snoozed-but-expired alert as open (revival-aware)', function (): void {
@@ -154,7 +156,7 @@ it('lists dismissed alerts via the plain dismissed state', function (): void {
 
     expect($dismissed)->toHaveCount(1)
         ->and($dismissed[0]->state)->toBe('dismissed')
-        ->and($dismissed[0]->dismissedAs)->toBe('expected')
+        ->and($dismissed[0]->dismissedAs)->toBe(DismissedAs::Expected)
         ->and($this->query->openForUser($this->user))->toHaveCount(0);
 });
 

@@ -10,6 +10,10 @@ use Modules\Ledger\Public\Enums\AccountKind;
 
 final class DefaultKnownCounterpartyIbansSeeder
 {
+    // The note becomes the bank counterparty's display name, so it holds the
+    // registered name of the institution behind the IBAN and the bank it sits
+    // at — proper nouns and punctuation, no word of it copy. An English
+    // connective here was a sentence a Dutch reader would have read back.
     /**
      * @var list<array{real_iban: string, target_account_kind: string, notes: string}>
      */
@@ -17,12 +21,12 @@ final class DefaultKnownCounterpartyIbansSeeder
         [
             'real_iban' => 'LU89751000135104200E',
             'target_account_kind' => AccountKind::Paypal->value,
-            'notes' => 'PayPal SARL et Cie SCA, Luxembourg.',
+            'notes' => 'PayPal (Sàrl et Cie, SCA) — Luxembourg',
         ],
         [
             'real_iban' => 'NL08ABNA0526650664',
             'target_account_kind' => AccountKind::IcsCard->value,
-            'notes' => 'International Card Services BV at ABN AMRO.',
+            'notes' => 'International Card Services BV — ABN AMRO',
         ],
     ];
 

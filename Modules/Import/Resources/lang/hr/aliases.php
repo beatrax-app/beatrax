@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Obradi i pregledaj',
     'cancel_import' => 'Odustani od uvoza',
 
-    'diff_new' => 'novih,',
-    'diff_unchanged' => 'nepromijenjenih,',
-    'diff_conflicts' => 'sukoba.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: hr · diff_new, diff_unchanged — the elided noun is alias, so the
+    // first arm is written definite (novi) and the paucal takes the genitive
+    // singular. Whether the indefinite nov reads better at one is open.
+    'diff_new' => ':count novi|:count nova|:count novih',
+    'diff_unchanged' => ':count nepromijenjeni|:count nepromijenjena|:count nepromijenjenih',
+    'diff_conflicts' => ':count sukob|:count sukoba|:count sukoba',
 
     'conflicts_heading' => 'Sukobi',
     'conflict_name' => 'naziv — postojeće: :existing → datoteka: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Testiraj na mojim transakcijama',
     'test_help' => 'Uredi generalizirani uzorak u retku da vidiš kojim bi transakcijama odgovarao.',
     'typing' => 'Tipkanje…',
-    'matches_prefix' => 'Odgovara',
-    'matches_suffix' => 'transakcija u tvojoj nedavnoj povijesti.',
+    'matches' => 'Odgovara :count transakciji u tvojoj nedavnoj povijesti.|Odgovara :count transakcijama u tvojoj nedavnoj povijesti.|Odgovara :count transakcijama u tvojoj nedavnoj povijesti.',
 
     'merge_modal_title' => 'Spoji :count alias|Spoji :count aliasa|Spoji :count aliasa',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Nijedna datoteka nije učitana.',
         'unreadable' => 'Učitanu datoteku nije moguće pročitati.',
         'too_short' => 'Uzorak je prekratak za testiranje.',
+        'file_not_yaml' => 'Ova datoteka nije valjani YAML, pa iz nje nije bilo moguće ništa pročitati. Izvezi svoje aliase ponovno i učitaj dobivenu datoteku.',
+        'file_unreadable_as_yaml' => 'Ovu datoteku nije bilo moguće pročitati kao popis aliasa. Izvezi svoje aliase ponovno i učitaj dobivenu datoteku.',
+        'file_has_no_entries_list' => 'Ova datoteka ne počinje popisom entries: na najvišoj razini, pa u njoj nema aliasa za uvoz. Provjeri je li to prava datoteka.',
+        'entry_is_not_a_mapping' => 'Unos :entry je obična vrijednost ondje gdje su očekivani uzorak i naziv. Dodaj mu oba polja ili ga ukloni, pa ponovno učitaj datoteku.',
+        'entry_is_missing_a_field' => 'Unosu :entry nedostaje uzorak ili naziv, a alias treba oboje. Dopuni ono što nedostaje ili ukloni taj unos, pa ponovno učitaj datoteku.',
     ],
 ];

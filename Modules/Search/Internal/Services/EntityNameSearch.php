@@ -9,28 +9,36 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Search\Public\Contracts\SearchResultsProvider;
+use Modules\Search\Public\Enums\SearchEntityKind;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // Name-only search across the palette's entity types. Two of them cannot be
 // matched in SQL: a counterparty's display_name is ciphertext once encryption
-// is on, and a category's stored name is not the name on screen.
-final class EntityNameSearch
+// is on, and neither table's stored name is reliably the name on screen — the
+// rows the app had to name itself store English and display a translation.
+/**
+ * @phpstan-import-type PaletteEntity from SearchResultsProvider
+ */
+final readonly class EntityNameSearch
 {
-    private const COUNTERPARTY_MATCH_LIMIT = 3;
+    private const int COUNTERPARTY_MATCH_LIMIT = 3;
 
-    private const ENTITY_MATCH_LIMIT = 3;
+    private const int ENTITY_MATCH_LIMIT = 3;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryptionService,
     ) {}
 
     /**
-     * @return list<array{id: int, type: string, label: string, url: string}>
+     * @return list<PaletteEntity>
      */
     public function query(User $user, string $q): array
     {
@@ -41,18 +49,20 @@ final class EntityNameSearch
         return [
             ...$this->counterpartyMatches($user, $q),
             ...$this->categoryMatches($user, $q),
-            ...$this->ownedNameMatches($user, $q, 'goals', 'goal', '/goals'),
-            ...$this->ownedNameMatches($user, $q, 'pots', 'pot', '/pots'),
+            ...$this->ownedNameMatches($user, $q, 'goals', SearchEntityKind::Goal, '/goals'),
+            ...$this->ownedNameMatches($user, $q, 'pots', SearchEntityKind::Pot, '/pots'),
             ...$this->recurringMatches($user, $q),
         ];
     }
 
-    // Fetch the user's counterparties — a naturally small, per-user
-    // bounded set — decrypt display_name per row, and substring-match
-    // in PHP; the cap moves from SQL to PHP since matching now happens
-    // post-decrypt.
+    // Fetch the user's counterparties — a naturally small, per-user bounded
+    // set — decrypt display_name per row, and substring-match in PHP; the cap
+    // moves from SQL to PHP because ciphertext has no name predicate to widen,
+    // which is why the reader's word for an app-named row costs no extra read.
     /**
-     * @return list<array{id: int, type: string, label: string, url: string}>
+     * @link ../../../../.docs/features/counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name
+     *
+     * @return list<PaletteEntity>
      */
     private function counterpartyMatches(User $user, string $q): array
     {
@@ -61,7 +71,7 @@ final class EntityNameSearch
             ->table('counterparties')
             ->where('user_id', $user->id)
             ->orderBy('id')
-            ->get(['id', 'display_name', 'slug']);
+            ->get(['id', 'display_name', 'slug', 'metadata']);
 
         $needle = mb_strtolower($q);
         $results = [];
@@ -70,15 +80,23 @@ final class EntityNameSearch
                 break;
             }
 
-            $label = $this->decryptedDisplayName($user, $row, $encryptionEnabled);
-            if ($label === '' || ! str_contains(mb_strtolower($label), $needle)) {
+            $stored = $this->decryptedDisplayName($user, $row, $encryptionEnabled);
+            if ($stored === '') {
+                continue;
+            }
+
+            // Both words reach the match, and only the reader's is shown. The
+            // stored English is what a screenshot, an export and a support
+            // thread all say, so typing it has to keep working.
+            $label = CounterpartyDefaultName::resolve($stored, $row->metadata ?? null);
+            if (! str_contains(mb_strtolower($label), $needle) && ! str_contains(mb_strtolower($stored), $needle)) {
                 continue;
             }
 
             $slug = is_string($row->slug) ? $row->slug : '';
             $results[] = [
                 'id' => $this->intField($row, 'id'),
-                'type' => 'counterparty',
+                'type' => SearchEntityKind::Counterparty->value,
                 'label' => $label,
                 'url' => '/counterparties/'.$slug,
             ];
@@ -112,38 +130,45 @@ final class EntityNameSearch
     /**
      * @link ../../../../.docs/features/ledger/category-display-names.md
      *
-     * @return list<array{id: int, type: string, label: string, url: string}>
+     * @return list<PaletteEntity>
      */
     private function categoryMatches(User $user, string $q): array
     {
         $slugs = self::slugsDisplayingSubstring($q);
 
-        $rows = $this->db->connection()
-            ->table('categories')
+        $rows = CategoryPathName::joinParent($this->db->connection()->table('categories'), $user->id, 'categories', 'parent_categories')
             ->where(function (Builder $scope) use ($user): void {
                 // Own rows OR global (seeded, null-user) categories —
                 // every user sees the shared seeded set.
-                $scope->where('user_id', $user->id)->orWhereNull('user_id');
+                $scope->where('categories.user_id', $user->id)->orWhereNull('categories.user_id');
             })
             ->where(function (Builder $match) use ($q, $slugs): void {
-                $match->where('name', 'LIKE', $this->likePattern($q));
+                LikeNeedle::contains($match, 'categories.name', $q);
                 if ($slugs !== []) {
                     $match->orWhere(function (Builder $translated) use ($slugs): void {
-                        $translated->where('name_is_default', true)->whereIn('slug', $slugs);
+                        $translated->where('categories.name_is_default', true)->whereIn('categories.slug', $slugs);
                     });
                 }
             })
-            ->orderBy('id')
+            ->orderBy('categories.id')
             ->limit(self::ENTITY_MATCH_LIMIT)
-            ->get(['id', ...CategoryDisplayName::bareColumns()]);
+            ->get(['categories.id', ...CategoryPathName::columns('categories', 'parent_categories')]);
+
+        // Disambiguated across what this hands back, not the whole tree: the
+        // palette's row bound is measured, and widening it to number the labels
+        // would cost every keystroke the category table. A colliding pair
+        // matches one term and sorts by id, so the bounded set holds both.
+        $paths = [];
+        foreach ($rows as $row) {
+            $paths[$this->intField($row, 'id')] = CategoryPathName::fromRow($row) ?? '';
+        }
 
         $results = [];
-        foreach ($rows as $row) {
-            $id = $this->intField($row, 'id');
+        foreach (CategoryPathName::distinct($paths) as $id => $label) {
             $results[] = [
                 'id' => $id,
-                'type' => 'category',
-                'label' => CategoryDisplayName::fromRow($row) ?? '',
+                'type' => SearchEntityKind::Category->value,
+                'label' => $label,
                 'url' => '/transactions?category='.$id,
             ];
         }
@@ -169,16 +194,19 @@ final class EntityNameSearch
     }
 
     // Goals and pots share the same shape: own-rows-only, LIKE on `name`,
-    // and a fixed section URL. The $type/$url pair is all that varies.
+    // and a fixed section URL. The $kind/$url pair is all that varies.
     /**
-     * @return list<array{id: int, type: string, label: string, url: string}>
+     * @return list<PaletteEntity>
      */
-    private function ownedNameMatches(User $user, string $q, string $table, string $type, string $url): array
+    private function ownedNameMatches(User $user, string $q, string $table, SearchEntityKind $kind, string $url): array
     {
-        $rows = $this->db->connection()
+        $query = $this->db->connection()
             ->table($table)
-            ->where('user_id', $user->id)
-            ->where('name', 'LIKE', $this->likePattern($q))
+            ->where('user_id', $user->id);
+
+        LikeNeedle::contains($query, 'name', $q);
+
+        $rows = $query
             ->limit(self::ENTITY_MATCH_LIMIT)
             ->get(['id', 'name']);
 
@@ -186,7 +214,7 @@ final class EntityNameSearch
         foreach ($rows as $row) {
             $results[] = [
                 'id' => $this->intField($row, 'id'),
-                'type' => $type,
+                'type' => $kind->value,
                 'label' => is_string($row->name) ? $row->name : '',
                 'url' => $url,
             ];
@@ -196,17 +224,16 @@ final class EntityNameSearch
     }
 
     /**
-     * @return list<array{id: int, type: string, label: string, url: string}>
+     * @return list<PaletteEntity>
      */
     private function recurringMatches(User $user, string $q): array
     {
-        $like = $this->likePattern($q);
         $rows = $this->db->connection()
             ->table('recurring_series')
             ->where('user_id', $user->id)
-            ->where(function (Builder $scope) use ($like): void {
-                $scope->where('detected_name', 'LIKE', $like)
-                    ->orWhere('display_name_override', 'LIKE', $like);
+            ->where(function (Builder $scope) use ($q): void {
+                LikeNeedle::contains($scope, 'detected_name', $q);
+                LikeNeedle::orContains($scope, 'display_name_override', $q);
             })
             ->limit(self::ENTITY_MATCH_LIMIT)
             ->get(['id', 'detected_name', 'display_name_override']);
@@ -218,18 +245,13 @@ final class EntityNameSearch
             $detected = is_string($row->detected_name) ? $row->detected_name : '';
             $results[] = [
                 'id' => $id,
-                'type' => 'recurring',
+                'type' => SearchEntityKind::Recurring->value,
                 'label' => $override !== '' ? $override : $detected,
                 'url' => '/recurring/series/'.$id,
             ];
         }
 
         return $results;
-    }
-
-    private function likePattern(string $q): string
-    {
-        return '%'.str_replace(['%', '_'], ['\\%', '\\_'], $q).'%';
     }
 
     private function intField(stdClass $row, string $key): int

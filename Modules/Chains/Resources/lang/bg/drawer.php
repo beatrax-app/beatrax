@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Няма верига на финансиране след този участък.',
 
     'covers_charges' => 'Покрива :count плащане по ICS|Покрива :count плащания по ICS',
-    'no_ics_charges' => 'Няма плащания по ICS в това уреждане',
     'show_more_fanout' => 'Покажи още :count · :shown от :total',
 
     'confirm' => 'Потвърди',
     'reject' => 'Отхвърли',
     'confirm_aria' => 'Потвърди връзката във веригата :id',
     'reject_aria' => 'Отхвърли връзката във веригата :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Детерминистично',
+        'confirmed' => 'Потвърдено',
+        'candidate' => 'Кандидат',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Увереност: детерминистично съвпадение',

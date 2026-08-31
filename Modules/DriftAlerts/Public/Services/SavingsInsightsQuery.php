@@ -5,59 +5,91 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Public\Services;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\SupportResource;
 use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\DriftAlerts\Internal\Dto\InsightCandidate;
+use Modules\DriftAlerts\Internal\Dto\InsightFacts;
+use Modules\DriftAlerts\Internal\Enums\SavingsInsightKind;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
-use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Sync\Public\Events\EntityMutated;
 
-final class SavingsInsightsQuery
+final readonly class SavingsInsightsQuery
 {
-    private const REVIEW_FLOOR = 500;
+    private const int REVIEW_FLOOR = 500;
 
-    private const CACHE_TTL = 600;
+    private const int CACHE_TTL = 600;
 
     public function __construct(
-        private readonly RecurringSeriesQuery $recurring,
-        private readonly CounterpartyProfileQuery $counterparties,
-        private readonly SupportResourceProvider $support,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly CacheRepository $cache,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CrossCurrencyTotal $fx,
+        private DriftAlertQuery $alerts,
+        private RecurringSeriesQuery $recurring,
+        private CounterpartyProfileQuery $counterparties,
+        private SupportResourceProvider $support,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private CacheRepository $cache,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
+        private Dispatcher $events,
     ) {}
 
+    // Only the facts are cached — the sentence and the amount are built per
+    // request, because both follow the reader and the reader of a cache entry
+    // is not the one who filled it.
     /**
-     * @return list<SavingsInsight> cached per user — invalidated on dismiss() and
-     *                              expires within CACHE_TTL
+     * @return list<SavingsInsight>
+     *
+     * @link ../../../../.docs/features/drift-alerts/cached-facts-not-sentences.md
      */
     public function forUser(User $user): array
     {
-        return $this->cache->remember(
+        /** @var list<InsightFacts> $facts */
+        $facts = $this->cache->remember(
             $this->cacheKey($user),
             self::CACHE_TTL,
             fn (): array => $this->compute($user),
         );
+
+        return array_map(self::render(...), $facts);
+    }
+
+    private static function render(InsightFacts $facts): SavingsInsight
+    {
+        $monthly = Money::ofMinor($facts->monthlyMinor, $facts->currency)->format();
+
+        return new SavingsInsight(
+            key: $facts->kind->keyFor($facts->seriesId),
+            type: $facts->kind->value,
+            seriesId: $facts->seriesId,
+            name: $facts->name,
+            monthlyMinor: $facts->monthlyMinor,
+            currency: $facts->currency,
+            message: Lang::get($facts->kind->messageKey(), ['name' => $facts->name, 'monthly' => $monthly]),
+            messageKey: $facts->kind->messageKey(),
+            actionLabel: Lang::get($facts->kind->actionKey()),
+            actionUrl: $facts->actionUrl,
+            counterpartySlug: $facts->counterpartySlug,
+        );
     }
 
     /**
-     * @return list<SavingsInsight>
+     * @return list<InsightFacts>
      */
     private function compute(User $user): array
     {
-        $openAlerts = $this->openAlertSeriesIds($user);
+        $openAlerts = $this->alerts->openSeriesIdsForUser($user);
         $dismissed = $this->dismissedKeys($user);
 
         $approved = $this->recurring->allApprovedForUser($user);
@@ -87,7 +119,7 @@ final class SavingsInsightsQuery
             }
 
             $monthlyMinor = abs($series->monthlyEquivalent->toMinor());
-            $insight = $this->pick(
+            $facts = $this->pick(
                 new InsightCandidate(
                     seriesId: $series->seriesId,
                     name: $series->displayName(),
@@ -100,8 +132,8 @@ final class SavingsInsightsQuery
                 isset($openAlerts[$series->seriesId]),
             );
 
-            if ($insight !== null && ! isset($dismissed[$insight->key])) {
-                $insights[] = $insight;
+            if ($facts !== null && ! isset($dismissed[$facts->kind->keyFor($facts->seriesId)])) {
+                $insights[] = $facts;
             }
         }
 
@@ -126,9 +158,9 @@ final class SavingsInsightsQuery
     // USD150.00 subscription outranked a EUR100.00 one while being cheaper. An
     // insight the rate table cannot reach sorts after every one it can.
     /**
-     * @param  list<SavingsInsight>  $insights
+     * @param  list<InsightFacts>  $insights
      * @param  array<string, string>  $rates
-     * @return list<SavingsInsight>
+     * @return list<InsightFacts>
      */
     private function costliestFirst(array $insights, string $baseCurrency, array $rates): array
     {
@@ -147,103 +179,97 @@ final class SavingsInsightsQuery
             return ($inBase[$b] ?? $insights[$b]->monthlyMinor) <=> ($inBase[$a] ?? $insights[$a]->monthlyMinor);
         });
 
-        return array_map(static fn (int $index): SavingsInsight => $insights[$index], $order);
+        return array_map(static fn (int $index): InsightFacts => $insights[$index], $order);
     }
 
+    // The key crosses the wire from the card, and the column is 64 chars: a
+    // tampered payload stored a 500-character key. Only a key this module can
+    // itself produce is persisted.
     public function dismiss(User $user, string $key): void
     {
+        if (SavingsInsightKind::tryParse($key) === null) {
+            return;
+        }
+
+        $userId = $user->id;
         $now = $this->clock->now()->toDateTimeString();
-        $this->db->connection()->table('savings_insight_dismissals')->insertOrIgnore([
+
+        // Derived from the (user_id, insight_key) its own UNIQUE names. The key
+        // embeds a recurring_series id, which is itself derived, so the card the
+        // reader waved away on the desktop is the same row on the phone.
+        $dismissalId = DerivedRowId::for('savings_insight_dismissals', [
+            'user_id' => $userId,
+            'insight_key' => $key,
+        ]);
+
+        $row = [
             'user_id' => $user->id,
             'insight_key' => $key,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        $held = $this->db->connection()->table('savings_insight_dismissals')->where('id', $dismissalId)->exists();
+
+        $this->db->connection()->table('savings_insight_dismissals')->insertOrIgnore(['id' => $dismissalId] + $row);
 
         $this->cache->forget($this->cacheKey($user));
+
+        // Asked before the write: insertOrIgnore reports nothing, and a second
+        // create op for a dismissal this device already holds is noise.
+        if ($held) {
+            return;
+        }
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'savings_insight_dismissals',
+            pk: $dismissalId,
+            userId: $userId,
+            mutationType: 'create',
+            dirtyFields: $row,
+        ));
     }
 
+    // The segment is not decoration: an install upgrading mid-window would
+    // otherwise hand the render step an entry holding the finished DTOs this
+    // key used to carry.
     private function cacheKey(User $user): string
     {
-        return 'savings-insights:'.$user->id;
+        return 'savings-insights:facts:'.$user->id;
     }
 
     private function pick(
         InsightCandidate $candidate,
         SupportResource $resource,
         bool $hasOpenAlert,
-    ): ?SavingsInsight {
-        $seriesId = $candidate->seriesId;
-        $name = $candidate->name;
-        $monthlyMinor = $candidate->monthlyMinor;
-        $currency = $candidate->currency;
-        $monthlyInBaseMinor = $candidate->monthlyInBaseMinor;
-        $slug = $candidate->counterpartySlug;
-
-        $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
-
+    ): ?InsightFacts {
         // The review floor is a threshold in the reader's reporting currency,
         // so the series is converted into it before the comparison rather than
         // refused for not already being denominated in it.
-        return match (true) {
-            $resource->cheaperUrl !== null => new SavingsInsight(
-                key: 'cheaper:'.$seriesId,
-                type: 'cheaper',
-                seriesId: $seriesId,
-                name: $name,
-                monthlyMinor: $monthlyMinor,
-                currency: $currency,
-                message: Lang::get('drift-alerts::savings.insight.cheaper_message', ['name' => $name, 'monthly' => $monthly]),
-                actionLabel: Lang::get('drift-alerts::savings.insight.cheaper_action'),
-                actionUrl: $resource->cheaperUrl,
-                counterpartySlug: $slug,
-            ),
-            $hasOpenAlert && $resource->cancelUrl !== null => new SavingsInsight(
-                key: 'cancel:'.$seriesId,
-                type: 'cancel',
-                seriesId: $seriesId,
-                name: $name,
-                monthlyMinor: $monthlyMinor,
-                currency: $currency,
-                message: Lang::get('drift-alerts::savings.insight.cancel_message', ['name' => $name, 'monthly' => $monthly]),
-                actionLabel: Lang::get('drift-alerts::savings.insight.cancel_action'),
-                actionUrl: $resource->cancelUrl,
-                counterpartySlug: $slug,
-            ),
-            $monthlyInBaseMinor !== null && $monthlyInBaseMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
-                key: 'review:'.$seriesId,
-                type: 'review',
-                seriesId: $seriesId,
-                name: $name,
-                monthlyMinor: $monthlyMinor,
-                currency: $currency,
-                message: Lang::get('drift-alerts::savings.insight.review_message', ['name' => $name, 'monthly' => $monthly]),
-                actionLabel: Lang::get('drift-alerts::savings.insight.review_action'),
-                actionUrl: $resource->cancelUrl,
-                counterpartySlug: $slug,
-            ),
+        $kind = match (true) {
+            $resource->cheaperUrl !== null => SavingsInsightKind::Cheaper,
+            $hasOpenAlert && $resource->cancelUrl !== null => SavingsInsightKind::Cancel,
+            $candidate->monthlyInBaseMinor !== null
+                && $candidate->monthlyInBaseMinor >= self::REVIEW_FLOOR
+                && $resource->cancelUrl !== null => SavingsInsightKind::Review,
             default => null,
         };
-    }
 
-    /**
-     * @return array<int, true>
-     */
-    private function openAlertSeriesIds(User $user): array
-    {
-        $ids = [];
-        $rows = $this->db->connection()->table('drift_alerts')
-            ->where('user_id', $user->id)
-            ->where('state', DriftAlertState::Open->value)
-            ->get(['recurring_series_id']);
+        $url = $kind === SavingsInsightKind::Cheaper ? $resource->cheaperUrl : $resource->cancelUrl;
 
-        foreach ($rows as $row) {
-            if (is_numeric($row->recurring_series_id)) {
-                $ids[(int) $row->recurring_series_id] = true;
-            }
+        if ($kind === null || $url === null) {
+            return null;
         }
 
-        return $ids;
+        return new InsightFacts(
+            kind: $kind,
+            seriesId: $candidate->seriesId,
+            name: $candidate->name,
+            monthlyMinor: $candidate->monthlyMinor,
+            currency: $candidate->currency,
+            actionUrl: $url,
+            counterpartySlug: $candidate->counterpartySlug,
+        );
     }
 
     /**

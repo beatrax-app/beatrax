@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
-use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 
 function readerWithLogFixture(string $fixture): RecentLogEntriesReader
 {
@@ -15,7 +14,7 @@ function readerWithLogFixture(string $fixture): RecentLogEntriesReader
     }
     file_put_contents($logFile, $fixture);
 
-    return new RecentLogEntriesReader(app(RedactSecretsProcessor::class));
+    return app(RecentLogEntriesReader::class);
 }
 
 afterEach(function (): void {
@@ -30,7 +29,7 @@ it('returns an empty array when the daily log file is missing', function (): voi
     if (is_file($logFile)) {
         @unlink($logFile);
     }
-    $reader = new RecentLogEntriesReader(app(RedactSecretsProcessor::class));
+    $reader = app(RecentLogEntriesReader::class);
 
     expect($reader->recent(5))->toBe([]);
 });
@@ -153,4 +152,67 @@ it('drops lines that do not match the Laravel log format when no preceding entry
 
     expect($entries)->toHaveCount(1);
     expect($entries[0]['message'])->toBe('first real entry');
+});
+
+it('reads the tail of a large daily log without loading the whole file into memory', function (): void {
+    // The pane backs /dev, the page opened BECAUSE something is wrong, and
+    // file() on a multi-megabyte log tripled the request's peak memory.
+    $line = '[2026-05-24 12:00:01] local.INFO: '.str_repeat('x', 480).PHP_EOL;
+    $logFile = UserDataPathService::dailyLogFile();
+    $logDir = dirname($logFile);
+    if (! is_dir($logDir)) {
+        @mkdir($logDir, 0700, true);
+    }
+    $handle = fopen($logFile, 'wb');
+    for ($i = 0; $i < 16_000; $i++) {
+        fwrite($handle, $line);
+    }
+    fwrite($handle, '[2026-05-24 12:00:02] local.ERROR: the last line'.PHP_EOL);
+    fclose($handle);
+    expect(filesize($logFile))->toBeGreaterThan(8_000_000);
+
+    $reader = app(RecentLogEntriesReader::class);
+
+    memory_reset_peak_usage();
+    $before = memory_get_usage(true);
+    $entries = $reader->recent(5);
+    $peakGrowth = memory_get_peak_usage(true) - $before;
+
+    expect($entries[4]['message'])->toBe('the last line');
+    expect($peakGrowth)->toBeLessThan(4_000_000);
+});
+
+// /dev/logs matches `contains` with a literal String.includes() against the
+// message it parsed off the line. Collapsing runs of whitespace in the needle
+// therefore made the deep-link miss its own row — and `PHP Warning:  Undefined
+// array key` carries PHP's own two spaces, which is the most common ERROR shape
+// in a Laravel log.
+it('builds a contains needle that is a literal substring of the source message', function (): void {
+    $message = 'PHP Warning:  Undefined array key "iban" in /app/Modules/Ledger/Import.php on line 42';
+    $reader = readerWithLogFixture('[2026-05-24 12:00:01] local.ERROR: '.$message.PHP_EOL);
+
+    $entries = $reader->recent(5);
+
+    expect($entries)->toHaveCount(1);
+    parse_str((string) parse_url($entries[0]['href'], PHP_URL_QUERY), $query);
+    $needle = $query['contains'];
+
+    expect($needle)->not->toBe('');
+    expect($needle)->toContain('  ');
+    expect(str_contains($message, $needle))->toBeTrue(
+        'the contains needle must appear verbatim in the line it deep-links to',
+    );
+});
+
+it('keeps the needle on the entry own line rather than running into a folded stack trace', function (): void {
+    $reader = readerWithLogFixture(
+        '[2026-05-24 12:00:01] local.ERROR: short boom'.PHP_EOL.
+        '#0 /app/foo.php(12): doStuff()'.PHP_EOL,
+    );
+
+    $entries = $reader->recent(5);
+
+    parse_str((string) parse_url($entries[0]['href'], PHP_URL_QUERY), $query);
+
+    expect($query['contains'])->toBe('short boom');
 });

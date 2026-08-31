@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Aus der Ansicht ausblenden (ändert die Logdatei nicht)',
     'dismiss_aria' => 'Log-Eintrag aus der Ansicht ausblenden',
     'totals' => [
-        'showing' => 'Zeigt',
-        'of' => 'von',
-        'received' => 'empfangen (Pufferlimit 10k)',
-        'lines_today' => 'Zeilen heute',
+        'showing' => 'Zeigt :shown von :count empfangenen Zeile (Pufferlimit :cap)|Zeigt :shown von :count empfangenen Zeilen (Pufferlimit :cap)',
+        'lines_today' => ':count Zeile heute|:count Zeilen heute',
+        'lines_today_capped' => 'über :count Zeile heute|über :count Zeilen heute',
         'today' => 'heute',
-        'across' => 'über',
-        'daily_files' => 'Tagesdateien',
+        'all_files' => ':size über :count Tagesdatei|:size über :count Tagesdateien',
     ],
 
     'status' => [

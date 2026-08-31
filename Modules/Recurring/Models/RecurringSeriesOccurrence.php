@@ -7,6 +7,7 @@ namespace Modules\Recurring\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Core\Public\Casts\DateOnlyCast;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Transaction;
 
@@ -42,7 +43,7 @@ final class RecurringSeriesOccurrence extends Model
     protected function casts(): array
     {
         return [
-            'observed_at' => 'immutable_date',
+            'observed_at' => DateOnlyCast::class,
             'observed_amount_minor' => 'integer',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

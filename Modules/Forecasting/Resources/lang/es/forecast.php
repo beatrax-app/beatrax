@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Comparado con la referencia de arriba',
 
+    'run_failed' => 'No se pudo calcular esta proyección. La línea de abajo solo muestra lo que ya está contabilizado.',
+
     'scenario_editor_aria' => 'Editor de escenarios',
     'series_confidence' => 'Confianza de las series',
     'no_series_contribute' => 'Todavía no hay series que aporten a la previsión de esta cuenta.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Actualizando',
     'chart_noscript' => 'El gráfico requiere JavaScript. El rango abarca :days día.|El gráfico requiere JavaScript. El rango abarca :days días.',
     'total_balance' => 'Saldo total',
+    'projection_range' => 'Rango de proyección',
+    'point_estimate' => 'Estimación puntual',
 
     'per_month_suffix' => '/mes',
     'confidence_chip_aria' => ':name, confianza :confidence — el rango de proyección es el :percent por ciento de la estimación puntual',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Mínimo en 30 días',
     'next_ics' => 'Próxima liquidación ICS: :amount el :date',
     'ics_overdue' => 'Liquidación ICS vencida: :amount, vencía el :date',
+
+    'stale_run' => 'Proyectado desde el :date — sin actualizar desde entonces.',
+
+    'confidence' => [
+        'high' => 'Alta',
+        'medium' => 'Media',
+        'low' => 'Baja',
+    ],
+
+    'errors' => [
+        'amount_required' => 'El importe es obligatorio.',
+        'amount_decimals' => 'El importe debe ser un número con como máximo :decimals decimal.|El importe debe ser un número con como máximo :decimals decimales.',
+        'amount_whole' => 'El importe debe ser un número entero: esta moneda no tiene unidad menor.',
+        'amount_non_negative' => 'El importe debe ser cero o positivo.',
+        'amount_non_zero' => 'El importe no puede ser cero.',
+        'field_required' => 'El campo :field es obligatorio.',
+    ],
 ];

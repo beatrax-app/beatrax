@@ -17,6 +17,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });

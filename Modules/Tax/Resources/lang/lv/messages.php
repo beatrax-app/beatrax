@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Kategorijas nosaukums nedrīkst būt tukšs.',
         'name_duplicate' => 'Kategorija ar šādu nosaukumu jau pastāv.',
+        'category_not_saved' => 'Šo kategoriju neizdevās saglabāt. Mēģiniet vēlreiz.',
+        'tag_refused' => 'Šo atzīmi neizdevās saglabāt. Aizveriet atlasītāju un mēģiniet vēlreiz.',
     ],
 ];

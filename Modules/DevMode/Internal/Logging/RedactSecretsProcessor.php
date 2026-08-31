@@ -8,16 +8,49 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
-final class RedactSecretsProcessor implements ProcessorInterface
+final readonly class RedactSecretsProcessor implements ProcessorInterface
 {
-    private const BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';
+    // What every rule here writes in place of what it matched. One spelling,
+    // because a reader greps for this string to check a log was scrubbed.
+    private const string REDACTED = '[REDACTED]';
 
-    private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
+    // Keys whose VALUE is a credential whatever it looks like. Guzzle and
+    // Laravel log headers as ['Authorization' => 'Bearer ...'], and
+    // scrubArray() visits each leaf on its own, so the header word and the
+    // token were never in one string for a value pattern to match.
+    /** @var list<string> */
+    private const array SECRET_KEYS = [
+        'authorization', 'proxy_authorization', 'cookie', 'set_cookie',
+        'x_api_key', 'api_key', 'apikey', 'x_auth_token',
+        'token', 'access_token', 'refresh_token', 'id_token', 'tokens_blob',
+        'password', 'secret', 'client_secret', 'private_key', 'kek', 'dek',
+    ];
+
+    // Value shapes, each anchored on a prefix that only a credential carries,
+    // so an ordinary log line is never touched.
+    /** @var array<string, string> */
+    private const array VALUE_PATTERNS = [
+        '/(Authorization:\s*)(Bearer|Basic)\s+\S+/i' => '$1$2 '.self::REDACTED,
+        // Without the header word a length floor keeps the English word
+        // "bearer" followed by an ordinary word out of it.
+        '/\b(Bearer|Basic)\s+[A-Za-z0-9._~+\/=-]{8,}/i' => '$1 '.self::REDACTED,
+        '/\bya29\.[A-Za-z0-9._-]{10,}/' => self::REDACTED,
+        '/\bgh[pousr]_[A-Za-z0-9]{20,}/' => self::REDACTED,
+        '/\bsk_(?:live|test)_[A-Za-z0-9]{10,}/' => self::REDACTED,
+        '/\bxox[baprs]-[A-Za-z0-9-]{10,}/' => self::REDACTED,
+        // A DSN carries its password in the userinfo segment,
+        // scheme://user:password@host, which no key-name match reaches.
+        '/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/i' => '$1'.self::REDACTED.'@',
+    ];
+
+    // The signature of an HS256 JWT is 43 characters and its payload can be
+    // shorter still, so requiring 20 in every segment let real tokens through.
+    private const string JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/';
 
     // Nullable so the Bearer + JWT branches can be exercised without a
     // container; the binding always passes the real singleton.
     public function __construct(
-        private readonly ?OAuthScrubSet $scrubSet = null,
+        private ?OAuthScrubSet $scrubSet = null,
     ) {}
 
     public function __invoke(LogRecord $record): LogRecord
@@ -43,6 +76,8 @@ final class RedactSecretsProcessor implements ProcessorInterface
         foreach ($values as $key => $value) {
             if (is_array($value)) {
                 $out[$key] = $this->scrubArray($value);
+            } elseif ($this->isSecretKey($key)) {
+                $out[$key] = self::REDACTED;
             } elseif (is_string($value)) {
                 $out[$key] = $this->scrub($value);
             } else {
@@ -68,9 +103,19 @@ final class RedactSecretsProcessor implements ProcessorInterface
             }
         }
 
-        $text = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $text);
-        $text = (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
+        foreach (self::VALUE_PATTERNS as $pattern => $replacement) {
+            $text = (string) preg_replace($pattern, $replacement, $text);
+        }
 
-        return $text;
+        return (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
+    }
+
+    private function isSecretKey(int|string $key): bool
+    {
+        if (! is_string($key)) {
+            return false;
+        }
+
+        return in_array(strtolower(str_replace(['-', ' '], '_', $key)), self::SECRET_KEYS, true);
     }
 }

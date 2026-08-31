@@ -6,12 +6,16 @@ namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
-use Modules\Budgets\Public\Services\EnvelopeWriter;
+use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
+use Modules\Core\Public\Support\IdReadBack;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\UniqueSlug;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
@@ -22,16 +26,18 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
-use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Migration\Public\Support\MigrationSourceFormat;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
@@ -41,13 +47,14 @@ final class PromoteStagingToDomain
 
     private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
-    private const CATEGORY_SLUG_FALLBACK = 'item';
+    private const string CATEGORY_SLUG_FALLBACK = 'item';
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SourceMapWriter $sourceMapWriter,
-        private readonly EnvelopeWriter $envelopeWriter,
+        private readonly UnmappedItemReporter $unmappedItems,
+        private readonly PromoteBudgetAssignments $budgetAssignments,
         private readonly RecordsTransactions $recordTransactions,
         private readonly ResolvesCounterparties $resolvesCounterparties,
         private readonly SavesTransactionSplit $splitSaver,
@@ -71,9 +78,14 @@ final class PromoteStagingToDomain
         $this->importRunId = null;
 
         $categories = $this->promoteCategories($runId, $user, $sourceProduct);
-        $this->promoteBudgetAssignments($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
+        $this->budgetAssignments->promote($runId, $user, $sourceProduct, $categories['idMap'], $skipBudgetAssignmentKeys);
 
         $accounts = $this->promoteAccounts($runId, $user, $sourceProduct);
+
+        // RecordTransactions dispatches TransactionImported per row, and the
+        // Transfers listener pairs most legs there and then, so the sweep's own
+        // return counts only the leftovers. Both halves land in this delta.
+        $pairedRowsBefore = $this->countPairedRows($user);
 
         $transactions = $this->promoteTransactions(
             $runId,
@@ -83,7 +95,9 @@ final class PromoteStagingToDomain
             $accounts['idMap'],
         );
 
-        $transfersPaired = $this->transferPairer->pairOrphansForUser($user);
+        $this->transferPairer->pairOrphansForUser($user);
+
+        $transfersPaired = intdiv(max(0, $this->countPairedRows($user) - $pairedRowsBefore), 2);
 
         $goalsCreated = $this->promoteGoals($runId, $user, $sourceProduct);
 
@@ -97,6 +111,16 @@ final class PromoteStagingToDomain
             counterpartiesResolved: $transactions['counterparties'],
             goalsCreated: $goalsCreated,
         );
+    }
+
+    // Every new pair sets pair_transaction_id on exactly two rows, so the
+    // half-difference across a promotion is the number of pairs it formed.
+    private function countPairedRows(User $user): int
+    {
+        return $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereNotNull('pair_transaction_id')
+            ->count();
     }
 
     /**
@@ -130,17 +154,24 @@ final class PromoteStagingToDomain
                 $name = self::toString($row->name);
                 $kind = self::toString($row->kind);
 
-                /** @var Category $category */
-                $category = Category::query()->create([
-                    'user_id' => $user->id,
-                    'parent_id' => $parentId,
-                    'name' => $name,
-                    'slug' => $this->uniqueCategorySlug($user, $name),
-                    'kind' => $kind,
-                    'display_order' => 100,
-                ]);
+                $existing = $this->categoryAlreadyAtThisPath($user, $parentId, $name, $kind);
 
-                $resolved = $category->id;
+                if ($existing === null) {
+                    /** @var Category $category */
+                    $category = Category::query()->create([
+                        'user_id' => $user->id,
+                        'parent_id' => $parentId,
+                        'name' => $name,
+                        'slug' => $this->uniqueCategorySlug($user, $name),
+                        'kind' => $kind,
+                        'display_order' => 100,
+                    ]);
+
+                    $existing = $category->id;
+                    $created++;
+                }
+
+                $resolved = $existing;
 
                 $this->sourceMapWriter->record(
                     $user,
@@ -149,8 +180,6 @@ final class PromoteStagingToDomain
                     $resolved,
                     ['name' => $name, 'kind' => $kind],
                 );
-
-                $created++;
             }
 
             $this->db->connection()->table('migration_staging_categories')
@@ -162,56 +191,6 @@ final class PromoteStagingToDomain
         }
 
         return ['idMap' => $idMap, 'created' => $created];
-    }
-
-    /**
-     * @param  array<string, int>  $categoryIdMap
-     * @param  list<string>  $skipKeys  `{categoryExternalId}|{period_start}` composite keys to leave
-     *                                  untouched (reconciliation conflicts).
-     */
-    private function promoteBudgetAssignments(int $runId, User $user, string $sourceProduct, array $categoryIdMap, array $skipKeys = []): void
-    {
-        $rows = $this->db->connection()->table('migration_staging_budget_assignments')
-            ->where('user_id', $user->id)
-            ->where('migration_run_id', $runId)
-            ->get();
-
-        /** @var stdClass $row */
-        foreach ($rows as $row) {
-            $categoryExternalId = self::toString($row->source_category_external_id);
-            $categoryId = $categoryIdMap[$categoryExternalId] ?? null;
-            if ($categoryId === null) {
-                continue;
-            }
-
-            $periodStart = CarbonImmutable::parse(self::toString($row->period_start));
-
-            if (in_array($categoryExternalId.'|'.$periodStart->toDateString(), $skipKeys, true)) {
-                continue;
-            }
-
-            $minor = self::toInt($row->budgeted_minor);
-
-            $this->envelopeWriter->setAssigned($user, $categoryId, $periodStart, $minor);
-
-            $assignmentId = $this->db->connection()->table('envelope_assignments')
-                ->where('user_id', $user->id)
-                ->where('category_id', $categoryId)
-                ->where('period_start', $periodStart->toDateString())
-                ->value('id');
-
-            if ($assignmentId !== null) {
-                $externalId = $categoryExternalId.'|'.$periodStart->toDateString();
-
-                $this->sourceMapWriter->record(
-                    $user,
-                    new SourceMapKey($sourceProduct, 'budget_assignment', $externalId),
-                    'envelope_assignment',
-                    self::toInt($assignmentId),
-                    ['budgeted_minor' => (string) $minor],
-                );
-            }
-        }
     }
 
     /**
@@ -423,14 +402,13 @@ final class PromoteStagingToDomain
                 : null;
 
             if ($transactionId === null) {
-                $this->db->connection()->table('migration_staging_unmapped_items')->insert([
-                    'user_id' => $user->id,
-                    'migration_run_id' => $runId,
-                    'item_type' => UnmappedItemType::Extra->value,
-                    'source_external_id' => self::toString($row->source_external_id),
-                    'display_label' => 'Transaction: '.($description ?? '(no description)'),
-                    'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
-                ]);
+                $this->unmappedItems->transactionNotCarried(
+                    $runId,
+                    $user,
+                    $row,
+                    $payeeNameMap,
+                    CopyLine::of('migration::unmapped.reason.fingerprint_collision'),
+                );
 
                 continue;
             }
@@ -455,7 +433,7 @@ final class PromoteStagingToDomain
 
             $inserted++;
 
-            if ((bool) $row->is_split_parent && $this->createSplitLegs($runId, $user, $row, $transactionId, $categoryIdMap)) {
+            if ((bool) $row->is_split_parent && $this->createSplitLegs($runId, $user, $row, $transactionId, $categoryIdMap, $payeeNameMap)) {
                 $splitsCreated++;
             }
 
@@ -510,8 +488,9 @@ final class PromoteStagingToDomain
 
     /**
      * @param  array<string, int>  $categoryIdMap
+     * @param  array<string, string>  $payeeNameMap
      */
-    private function createSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $categoryIdMap): bool
+    private function createSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $categoryIdMap, array $payeeNameMap): bool
     {
         $legRows = $this->db->connection()->table('migration_staging_transactions')
             ->where('user_id', $user->id)
@@ -522,6 +501,7 @@ final class PromoteStagingToDomain
 
         /** @var list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}> $legs */
         $legs = [];
+        $withoutCategory = 0;
 
         /** @var stdClass $legRow */
         foreach ($legRows as $legRow) {
@@ -529,6 +509,8 @@ final class PromoteStagingToDomain
             $legCategoryId = is_string($legCategoryExternalId) ? ($categoryIdMap[$legCategoryExternalId] ?? null) : null;
 
             if ($legCategoryId === null) {
+                $withoutCategory++;
+
                 continue;
             }
 
@@ -540,11 +522,65 @@ final class PromoteStagingToDomain
             ];
         }
 
-        if (count($legs) < 2) {
+        // transaction_splits.category_id is NOT NULL, so a leg with no category
+        // cannot be carried at all. Keeping the rest would leave them short of
+        // the parent, which throws only after the parent row is already in.
+        if ($withoutCategory > 0) {
+            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $payeeNameMap, CopyLine::plural(
+                'migration::unmapped.reason.split_legs_without_category',
+                $withoutCategory,
+                [
+                    'legs' => $withoutCategory + count($legs),
+                    'uncategorized' => CopyParam::line('ledger::common.uncategorized'),
+                ],
+            ));
+        }
+
+        // Fewer than two legs is not a split, and a leg that lost its category
+        // has already been reported above; both leave the parent uncarried.
+        if ($withoutCategory > 0 || count($legs) < 2) {
             return false;
         }
 
-        $this->splitSaver->save($user, $transactionId, $legs);
+        return $this->saveSplitLegs($runId, $user, $parentRow, $transactionId, $legs, $payeeNameMap);
+    }
+
+    /**
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     * @param  array<string, string>  $payeeNameMap
+     */
+    private function saveSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $legs, array $payeeNameMap): bool
+    {
+        try {
+            $this->splitSaver->save($user, $transactionId, $legs);
+        } catch (SplitSumMismatchException) {
+            // The sum is checked before any leg is written, so nothing partial
+            // survives — but the parent is already in, so this cannot surface
+            // as a failed run.
+            $settledCurrency = self::toString($parentRow->settled_currency);
+            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $payeeNameMap, CopyLine::of(
+                'migration::unmapped.reason.split_sum_mismatch',
+                [
+                    'legs' => CopyParam::money(array_sum(array_column($legs, 'settled_amount_minor')), $settledCurrency),
+                    'total' => CopyParam::money(self::toInt($parentRow->settled_amount_minor), $settledCurrency),
+                ],
+            ));
+
+            return false;
+        } catch (InvalidArgumentException) {
+            // A shape the split writer will not store — legs that cancel to a
+            // zero-net transaction are the one that reaches here from a real
+            // export. One such row must not cost the reader the whole file.
+            $this->unmappedItems->transactionNotCarried(
+                $runId,
+                $user,
+                $parentRow,
+                $payeeNameMap,
+                CopyLine::of('migration::unmapped.reason.split_unstorable'),
+            );
+
+            return false;
+        }
 
         return true;
     }
@@ -608,14 +644,13 @@ final class PromoteStagingToDomain
             currency: self::toString($row->currency),
             settledAmountMinor: self::toInt($row->settled_amount_minor),
             settledCurrency: self::toString($row->settled_currency),
-            fxRateUsed: null,
             counterpartyName: $counterpartyName,
             counterpartyIban: $counterpartyIban,
             counterpartyNormalized: $counterpartyNormalized,
             normalizationVersion: $this->fingerprints->version(),
             description: $row->description !== null ? self::toString($row->description) : null,
             categoryId: $categoryId,
-            sourceFormat: 'migration_'.$sourceProduct,
+            sourceFormat: MigrationSourceFormat::forProduct($sourceProduct),
             importRunId: $this->migrationImportRunId($user, $sourceProduct),
             sourceRowIndex: 0,
             sourceRef: 'migration:'.$sourceProduct.':'.self::toString($row->source_external_id),
@@ -679,36 +714,41 @@ final class PromoteStagingToDomain
     // statement each across a ledger the size of a life.
     private ?int $importRunId = null;
 
+    /**
+     * @link ../../../../.docs/features/core/an-id-read-after-an-insert.md
+     */
     private function migrationImportRunId(User $user, string $sourceProduct): int
     {
         if ($this->importRunId !== null) {
             return $this->importRunId;
         }
 
-        $sourceFormat = 'migration_'.$sourceProduct;
         $connection = $this->db->connection();
+        $match = ['user_id' => $user->id, 'source_format' => MigrationSourceFormat::forProduct($sourceProduct)];
 
-        $existingId = $connection->table('import_runs')
-            ->where('user_id', $user->id)
-            ->where('source_format', $sourceFormat)
-            ->value('id');
+        $existingId = IdReadBack::orNull($connection, 'import_runs', $match);
 
-        if (is_numeric($existingId)) {
-            return $this->importRunId = (int) $existingId;
+        if ($existingId !== null) {
+            return $this->importRunId = $existingId;
         }
 
         $now = $this->clock->now();
 
-        return $this->importRunId = self::toInt($connection->table('import_runs')->insertGetId([
-            'user_id' => $user->id,
-            'source_format' => $sourceFormat,
+        $connection->table('import_runs')->insert([
+            ...$match,
             'raw_file_path' => 'migration',
             'sha256' => hash('sha256', 'migration:'.$sourceProduct),
             'uploaded_at' => $now,
             'status' => MigrationRunStatus::Confirmed->value,
             'created_at' => $now,
             'updated_at' => $now,
-        ]));
+        ]);
+
+        // The id is read back by the match, never taken from insertGetId():
+        // lastInsertId() is per connection, and the sidebar's badge listener
+        // writes a `cache` row from inside this INSERT's own event. Every row
+        // this promote files would then name an import run that does not exist.
+        return $this->importRunId = IdReadBack::of($connection, 'import_runs', $match);
     }
 
     private function promoteGoals(int $runId, User $user, string $sourceProduct): int
@@ -732,23 +772,27 @@ final class PromoteStagingToDomain
             $name = self::toString($row->name);
 
             if (! is_string($targetDate) || $targetDate === '') {
-                $this->db->connection()->table('migration_staging_unmapped_items')->insert([
-                    'user_id' => $user->id,
-                    'migration_run_id' => $runId,
-                    'item_type' => UnmappedItemType::Extra->value,
-                    'source_external_id' => $categoryExternalId,
-                    'display_label' => 'Goal: '.$name,
-                    'reason' => 'This goal has no target date; Beatrax requires one to create a savings goal.',
-                ]);
+                $this->unmappedItems->goalNotCarried($runId, $user, $categoryExternalId, $name, CopyLine::of('migration::unmapped.reason.goal_without_target_date'));
 
                 continue;
             }
 
+            // The name is a required field exactly like the target date above,
+            // and a staged file can be missing either one.
+            if (trim($name) === '') {
+                $this->unmappedItems->goalNotCarried($runId, $user, $categoryExternalId, $name, CopyLine::of('migration::unmapped.reason.goal_without_name'));
+
+                continue;
+            }
+
+            $targetCurrency = self::toString($row->target_currency);
+
             $goal = $this->goalWriter->save(
                 $user,
                 $name,
-                MoneyInput::toDecimalString(self::toInt($row->target_minor)),
+                MoneyInput::toDecimalString(self::toInt($row->target_minor), $targetCurrency),
                 $targetDate,
+                $targetCurrency,
             );
 
             $this->sourceMapWriter->record(
@@ -766,6 +810,35 @@ final class PromoteStagingToDomain
         }
 
         return $created;
+    }
+
+    // Same group, same name, same kind is the category the reader already has,
+    // and a second one renders byte-identically in every picker. Matched on the
+    // stored name AND on the reader's translation of it, so an export written
+    // in their own language lands on the seeded row rather than beside it.
+    /**
+     * @link ../../../../.docs/features/ledger/category-display-names.md#which-one-of-them-is-it-categorypathname
+     */
+    private function categoryAlreadyAtThisPath(User $user, ?int $parentId, string $name, string $kind): ?int
+    {
+        $query = $this->db->connection()->table('categories')
+            ->where(static function (QueryBuilder $scope) use ($user): void {
+                $scope->whereNull('user_id')->orWhere('user_id', $user->id);
+            })
+            ->where('kind', $kind);
+
+        $siblings = ($parentId === null ? $query->whereNull('parent_id') : $query->where('parent_id', $parentId))
+            ->orderBy('id')
+            ->get(['id', ...CategoryDisplayName::bareColumns()]);
+
+        /** @var stdClass $sibling */
+        foreach ($siblings as $sibling) {
+            if ($name === self::toString($sibling->name) || $name === CategoryDisplayName::fromRow($sibling)) {
+                return self::toInt($sibling->id);
+            }
+        }
+
+        return null;
     }
 
     private function uniqueCategorySlug(User $user, string $name): string

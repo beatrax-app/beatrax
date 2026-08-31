@@ -9,16 +9,17 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
+use Modules\Mobile\Internal\Boot\SchemaCompletionMarker;
 use Symfony\Component\HttpFoundation\Response;
 
-final class MobileEnsureDatabaseReady
+final readonly class MobileEnsureDatabaseReady
 {
     // Every route here runs before any user account exists on this
     // device (the welcome/signup/import/pair/setup chain), or is a public
     // artifact (webmanifest/icon) required before any user exists - see
     // .docs/features/mobile/architecture.md.
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_PREFIXES = [
+    private const array EXEMPT_ROUTE_PREFIXES = [
         'mobile.welcome',
         'signup',
         'mobile.import',
@@ -27,6 +28,9 @@ final class MobileEnsureDatabaseReady
         'mobile.restore',
         'mobile.pair',
         'mobile.setup',
+        // Its own destination, and the only screen a half-built schema can
+        // render at all.
+        'mobile.database-incomplete',
         'setup',
         'site.webmanifest',
         'pwa.icon',
@@ -41,7 +45,7 @@ final class MobileEnsureDatabaseReady
     // The Livewire AJAX update endpoint must reach the signup form's
     // submit() handler on a fresh install.
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_SUFFIXES = [
+    private const array EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
         // The restore form's file input posts here. Redirected, it answers
         // with the welcome page at 200 -- iOS turns a redirect into the
@@ -52,21 +56,24 @@ final class MobileEnsureDatabaseReady
     ];
 
     public function __construct(
-        private readonly MobileFirstLaunchBootstrap $bootstrap,
-        private readonly UrlGenerator $urls,
+        private MobileFirstLaunchBootstrap $bootstrap,
+        private UrlGenerator $urls,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->isExempt($request)) {
-            /** @var Response $response */
-            $response = $next($request);
+        if (! $this->isExempt($request)) {
+            // Ahead of the fresh-install check: a run that died partway still
+            // created `users`, so an empty table reads as "new phone" and the
+            // welcome screen opens over a schema missing everything after it.
+            // A marker, not a question to the migrator — this runs every request.
+            if (SchemaCompletionMarker::isRaised()) {
+                return new RedirectResponse($this->urls->route('mobile.database-incomplete'));
+            }
 
-            return $response;
-        }
-
-        if ($this->bootstrap->isFreshInstall()) {
-            return new RedirectResponse($this->urls->route('mobile.welcome'));
+            if ($this->bootstrap->isFreshInstall()) {
+                return new RedirectResponse($this->urls->route('mobile.welcome'));
+            }
         }
 
         /** @var Response $response */
@@ -87,23 +94,11 @@ final class MobileEnsureDatabaseReady
 
     private function matchesExemptPrefix(string $name): bool
     {
-        foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::EXEMPT_ROUTE_PREFIXES, fn (string $prefix): bool => str_starts_with($name, $prefix));
     }
 
     private function matchesExemptSuffix(string $name): bool
     {
-        foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
-            if (str_ends_with($name, $suffix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::EXEMPT_ROUTE_SUFFIXES, fn (string $suffix): bool => str_ends_with($name, $suffix));
     }
 }

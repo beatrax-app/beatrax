@@ -84,3 +84,47 @@ it('ShiftSeriesDatePayload rejects an unknown scope', function (): void {
         scope: 'next_only', // typo — would silently fall through to 'next' downstream
     ))->toThrow(InvalidArgumentException::class, "must be one of: 'next' | 'all_subsequent'");
 });
+
+it('AddOneOffPayload folds a lower-case currency to its ISO-4217 spelling', function (): void {
+    $payload = new AddOneOffPayload(
+        date: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'usd',
+        direction: 'expense',
+    );
+
+    expect($payload->currency)->toBe('USD');
+});
+
+it('AddOneOffPayload rejects a currency code that is not a currency', function (): void {
+    // Unchecked this reached DailyFold, which raises on a code it cannot
+    // convert — and the run it raises in is the whole projection.
+    expect(fn () => new AddOneOffPayload(
+        date: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'ZZZ',
+        direction: 'expense',
+    ))->toThrow(InvalidArgumentException::class, 'must be an ISO-4217 code');
+});
+
+it('AddRecurringPayload folds a lower-case currency to its ISO-4217 spelling', function (): void {
+    $payload = new AddRecurringPayload(
+        startDate: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'gbp',
+        direction: 'expense',
+        cadence: 'monthly',
+    );
+
+    expect($payload->currency)->toBe('GBP');
+});
+
+it('AddRecurringPayload rejects a currency code that is not a currency', function (): void {
+    expect(fn () => new AddRecurringPayload(
+        startDate: '2026-06-01',
+        amountMinor: -1000,
+        currency: 'ZZZ',
+        direction: 'expense',
+        cadence: 'monthly',
+    ))->toThrow(InvalidArgumentException::class, 'must be an ISO-4217 code');
+});

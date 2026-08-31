@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Atbloķēt',
 
-    'digits_entered' => 'ievadītie cipari',
+    'digits_entered' => 'ievadīti :count cipari|ievadīts :count cipars|ievadīti :count cipari',
     'pin_pad' => 'PIN kodu tastatūra',
     'digit' => 'Cipars :digit',
     'backspace' => 'Atpakaļatkāpe',

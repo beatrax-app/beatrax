@@ -94,6 +94,7 @@ return [
         'heading' => 'Ontwikkelaar',
         'open_console' => 'Dev Console openen',
         'pulse' => 'Wachtrij :queue · Worker :worker',
+        'worker_ago' => ':count s geleden|:count s geleden',
     ],
 
     'account' => [

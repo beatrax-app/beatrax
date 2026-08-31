@@ -192,7 +192,6 @@ function makeCpCaptureTx(int $accountId, int $userId, string $description): Cano
         currency: 'EUR',
         settledAmountMinor: -1099,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: null,
         counterpartyIban: null,
         counterpartyNormalized: 'fixture',

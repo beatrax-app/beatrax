@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Název kategorie nemůže být prázdný.',
         'name_duplicate' => 'Kategorie s tímto názvem už existuje.',
+        'category_not_saved' => 'Tuto kategorii se nepodařilo uložit. Zkuste to znovu.',
+        'tag_refused' => 'Tento štítek se nepodařilo uložit. Zavřete výběr a zkuste to znovu.',
     ],
 ];

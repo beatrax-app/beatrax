@@ -11,6 +11,7 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->resolver = new class implements AccountResolver
     {
         public function resolve(string $iban): AccountResolution

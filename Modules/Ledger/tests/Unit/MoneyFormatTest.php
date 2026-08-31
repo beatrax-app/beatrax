@@ -163,3 +163,47 @@ it('reads an unrecognised locale as English rather than throwing mid-render', fu
 
     expect(Money::ofMinor(123456, 'EUR')->formatWithoutIcu())->toBe('€1,234.56');
 })->group('phase-3');
+
+it('renders identically with and without ICU in all twenty-six languages', function (): void {
+    // The dataset above reaches six languages, none of which ICU gives a
+    // typographic minus. CHF has no glyph on either side, so it is safe
+    // everywhere; EUR is skipped where ICU writes the code, this class
+    // carrying one symbol per currency rather than CLDR's per-locale names.
+    $codeOnlyEuro = [Locale::Hu, Locale::Ro, Locale::Uk];
+    $amounts = [123456, -123456, -123450, -5, 5, 0, -123456789];
+    $mismatches = [];
+
+    foreach (Locale::cases() as $locale) {
+        app()->setLocale($locale->value);
+
+        foreach (in_array($locale, $codeOnlyEuro, true) ? ['CHF'] : ['EUR', 'CHF'] as $currency) {
+            foreach ($amounts as $minor) {
+                $money = Money::ofMinor($minor, $currency);
+
+                if ($money->formatWithoutIcu() !== $money->format()) {
+                    $mismatches[] = $locale->value." {$minor} {$currency}: "
+                        .$money->format().' vs '.$money->formatWithoutIcu();
+                }
+            }
+        }
+    }
+
+    expect($mismatches)->toBe([]);
+})->group('phase-3');
+
+it('writes the minus sign the reader\'s own language writes', function (): void {
+    // Seven locales write U+2212 where the fallback wrote the ASCII hyphen, so
+    // every negative amount read differently on a phone than on the desktop
+    // beside it. CHF because its glyph is the code on both paths in all of them.
+    foreach (Locale::cases() as $locale) {
+        app()->setLocale($locale->value);
+        $formatted = Money::ofMinor(-123456, 'CHF')->formatWithoutIcu();
+
+        expect($formatted)->toContain($locale->minusSign())
+            ->and($formatted)->toBe(Money::ofMinor(-123456, 'CHF')->format());
+
+        if ($locale->minusSign() !== '-') {
+            expect($formatted)->not->toContain('-');
+        }
+    }
+})->group('phase-3');

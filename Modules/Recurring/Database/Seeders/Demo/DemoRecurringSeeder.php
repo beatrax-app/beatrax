@@ -7,6 +7,7 @@ namespace Modules\Recurring\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
@@ -34,6 +35,9 @@ final class DemoRecurringSeeder
             'clusterKey' => 'demo:spotify:monthly:1099',
             'state' => RecurringSeriesState::Approved->value,
         ],
+        // cadence_changed, matching the transition below: the review tab reads
+        // the series' own state, so a row left approved emptied the tab its
+        // transition said it belonged in.
         [
             'detectedName' => 'Netflix International BV',
             'displayName' => 'Netflix',
@@ -41,7 +45,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 15,
             'clusterKey' => 'demo:netflix:monthly:1499',
-            'state' => RecurringSeriesState::Approved->value,
+            'state' => RecurringSeriesState::CadenceChanged->value,
         ],
         [
             'detectedName' => 'Sport City Nederland BV',
@@ -78,6 +82,17 @@ final class DemoRecurringSeeder
             'dayOfMonth' => 13,
             'clusterKey' => 'demo:nordvpn:monthly:499',
             'state' => RecurringSeriesState::Rejected->value,
+        ],
+        // The one series /recurring/review opens on: its default tab is
+        // strictly pending, and the demo shipped without a single such row.
+        [
+            'detectedName' => 'Ziggo',
+            'displayName' => 'Ziggo internet + TV',
+            'latestAmountMinor' => 5995,
+            'cadence' => 'monthly',
+            'dayOfMonth' => 5,
+            'clusterKey' => 'demo:ziggo:monthly:5995',
+            'state' => RecurringSeriesState::Pending->value,
         ],
     ];
 
@@ -116,6 +131,7 @@ final class DemoRecurringSeeder
         private readonly DatabaseManager $db,
         private readonly CounterpartyKey $counterpartyKey,
         private readonly OccurrenceWriter $occurrences,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -123,13 +139,15 @@ final class DemoRecurringSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
+            $today = $this->clock->now()->startOfDay();
+
             foreach (self::SERIES as $row) {
-                $this->upsertSeries($primary, $row);
+                $this->upsertSeries($primary, $row, $today);
                 $this->upsertOccurrences($primary, $row);
             }
-            $this->upsertTransitionsForUser($primary);
+            $this->upsertTransitionsForUser($primary, $today);
         }
 
         return RecurringSeries::query()
@@ -140,10 +158,8 @@ final class DemoRecurringSeeder
     // The append-only schema has no DB-level UNIQUE on transitions, so this keys
     // on (recurring_series_id, transition_reason) in application code — enough,
     // since the demo set carries one transition per (series, reason) by design.
-    private function upsertTransitionsForUser(User $user): void
+    private function upsertTransitionsForUser(User $user, CarbonImmutable $today): void
     {
-        $today = CarbonImmutable::today();
-
         foreach (self::TRANSITIONS as $row) {
             $series = RecurringSeries::query()
                 ->where('user_id', $user->id)
@@ -180,11 +196,10 @@ final class DemoRecurringSeeder
     /**
      * @param  array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}  $row
      */
-    private function upsertSeries(User $user, array $row): void
+    private function upsertSeries(User $user, array $row, CarbonImmutable $today): void
     {
         // The demo file shows this month's instalment as already paid, so the
         // next expected date sits on the same day-of-month next month.
-        $today = CarbonImmutable::today();
         $nextMonth = $today->addMonthNoOverflow()->startOfMonth();
         $nextExpected = $nextMonth->setDay(min($row['dayOfMonth'], $nextMonth->daysInMonth));
 
@@ -209,7 +224,6 @@ final class DemoRecurringSeeder
                 'state' => $row['state'],
                 'cadence' => $row['cadence'],
                 'latest_amount_minor' => $signedMinor,
-                'latest_fx_rate_used' => null,
                 'monthly_equivalent_minor' => $signedMinor,
                 'variance_tolerance_percent' => 25,
                 'latest_funding_chain_link_id' => null,
@@ -251,11 +265,14 @@ final class DemoRecurringSeeder
         }
 
         $seriesId = (int) $series->id;
-        $signedMinor = self::signedMinor($row['latestAmountMinor'], Direction::Expense);
 
+        // Matched on the merchant, each occurrence carrying its own charge's
+        // amount. Selecting by latest_amount_minor could only find charges at
+        // today's price, so a subscription that stepped lost every charge at
+        // the old one and drift had nothing left to detect.
         $charges = $connection->table('transactions')
             ->where('user_id', $user->id)
-            ->where('amount_minor', $signedMinor)
+            ->where('counterparty_normalized', $this->counterpartyKey->forName($row['detectedName'], (int) $user->id))
             ->where('currency', Currency::Eur->value)
             ->orderBy('booked_at')
             ->get(['id', 'booked_at', 'amount_minor', 'currency']);
@@ -270,7 +287,7 @@ final class DemoRecurringSeeder
             $observed[] = (object) [
                 'id' => $charge->id,
                 'posted_at' => $bookedAt->toDateString(),
-                'amount_minor' => $signedMinor,
+                'amount_minor' => self::signedMinor(self::intValue($charge->amount_minor), Direction::Expense),
             ];
         }
 
@@ -283,5 +300,10 @@ final class DemoRecurringSeeder
     private static function stringValue(mixed $value): string
     {
         return is_scalar($value) ? (string) $value : '';
+    }
+
+    private static function intValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
     }
 }

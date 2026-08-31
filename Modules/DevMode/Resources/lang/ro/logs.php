@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Ascunde din vizualizare (nu modifică fișierul de jurnal)',
     'dismiss_aria' => 'Ascunde intrarea de jurnal din vizualizare',
     'totals' => [
-        'showing' => 'Se afișează',
-        'of' => 'din',
-        'received' => 'primite (limită buffer 10k)',
-        'lines_today' => 'rânduri azi',
+        'showing' => 'Se afișează :shown din :count rând primit (limită buffer :cap)|Se afișează :shown din :count rânduri primite (limită buffer :cap)|Se afișează :shown din :count de rânduri primite (limită buffer :cap)',
+        'lines_today' => ':count rând azi|:count rânduri azi|:count de rânduri azi',
+        'lines_today_capped' => 'peste :count rând azi|peste :count rânduri azi|peste :count de rânduri azi',
         'today' => 'azi',
-        'across' => 'în',
-        'daily_files' => 'fișiere zilnice',
+        'all_files' => ':size în :count fișier zilnic|:size în :count fișiere zilnice|:size în :count de fișiere zilnice',
     ],
 
     'status' => [

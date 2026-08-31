@@ -6,7 +6,7 @@ return [
     'page_title' => 'Porządkowanie kontrahentów',
     'heading' => 'Uporządkuj nieznanych kontrahentów',
 
-    'progress' => ':seen z :total · :percent % · pozostało ~:minutes min',
+    'progress' => ':seen z :total · :percent% · pozostało ~:minutes min',
     'progress_aria' => 'Postęp porządkowania',
 
     'all_caught_aria' => 'Wszyscy kontrahenci opisani',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Brak zapisanych transakcji.',
 
     'label_manually' => 'Albo opisz ręcznie',
+    'label_question' => 'Czym jest ten kontrahent?',
     'display_name_label' => 'Nazwa wyświetlana',
-    'display_name_placeholder' => 'Nazwa wyświetlana…',
     'type_label' => 'Typ',
     'type_merchant' => 'Sprzedawca',
     'type_personal' => 'Osoba prywatna',
     'type_bank' => 'Bank',
     'type_government' => 'Instytucja publiczna',
     'save_label' => 'Zapisz etykietę',
+    'name_required' => 'Najpierw nadaj temu kontrahentowi nazwę.',
+    'draft_kept' => 'To, co wpiszesz, zostaje zachowane, gdy przechodzisz przez kolejkę.',
 
     'skip' => 'Pomiń na razie',
-    'mark_ignored' => 'Oznacz jako ignorowany',
+    'mark_ignored' => 'Nie pytaj już o tego',
+    'not_now_note' => 'Żadne z nich nie zmienia kontrahenta — nadal możesz go opisać później na stronie Kontrahenci.',
     'previous' => 'Poprzedni nieznany',
-    'next' => 'Następny',
 
     'kbd_yes' => 'tak',
     'kbd_no' => 'nie',

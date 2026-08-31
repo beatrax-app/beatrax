@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Odblokuj',
 
-    'digits_entered' => 'wpisanych cyfr',
+    'digits_entered' => 'wpisana :count cyfra|wpisane :count cyfry|wpisanych :count cyfr',
     'pin_pad' => 'Klawiatura PIN',
     'digit' => 'Cyfra :digit',
     'backspace' => 'Usuń znak',

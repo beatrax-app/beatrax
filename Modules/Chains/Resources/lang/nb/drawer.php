@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Fant ingen finansieringskjede utover dette leddet.',
 
     'covers_charges' => 'Dekker :count ICS-belastning|Dekker :count ICS-belastninger',
-    'no_ics_charges' => 'Ingen ICS-belastninger i dette oppgjøret',
     'show_more_fanout' => 'Vis :count til · :shown av :total',
 
     'confirm' => 'Bekreft',
     'reject' => 'Avvis',
     'confirm_aria' => 'Bekreft kjedelenke :id',
     'reject_aria' => 'Avvis kjedelenke :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministisk',
+        'confirmed' => 'Bekreftet',
+        'candidate' => 'Kandidat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Sikkerhet: deterministisk treff',

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Drift alerts',
-    'heading' => 'Alerts',
     'intro_anomaly' => 'Individual charges that look out of the ordinary for you.',
     'intro_drift' => 'Approved recurring series whose latest charge moved outside your threshold.',
     'adjust_threshold' => 'Adjust threshold →',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'That alert is no longer there.',
         'acknowledged' => 'Acknowledged',
         'snoozed' => 'Snoozed',
         'dismissed' => 'Dismissed',

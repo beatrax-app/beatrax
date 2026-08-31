@@ -7,6 +7,7 @@ namespace Modules\Auth\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 
 final class DemoRecoveryCodesSeeder
 {
@@ -21,15 +22,20 @@ final class DemoRecoveryCodesSeeder
         ['seedKey' => 'recovery-5', 'usedAgeHours' => 240],
     ];
 
+    public function __construct(
+        private readonly Clock $clock,
+    ) {}
+
     /**
      * @param  array<string, User>  $users
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
+            $now = $this->clock->now();
             foreach (self::CODES as $row) {
-                $this->upsertCode($primary, $row);
+                $this->upsertCode($primary, $row, $now);
             }
         }
 
@@ -41,12 +47,12 @@ final class DemoRecoveryCodesSeeder
     /**
      * @param  array{seedKey: string, usedAgeHours: ?int}  $row
      */
-    private function upsertCode(User $user, array $row): void
+    private function upsertCode(User $user, array $row, CarbonImmutable $now): void
     {
         $hash = hash('sha256', 'demo-'.$row['seedKey']);
         $usedAt = $row['usedAgeHours'] === null
             ? null
-            : CarbonImmutable::now()->subHours($row['usedAgeHours']);
+            : $now->subHours($row['usedAgeHours']);
 
         UserRecoveryCode::query()->updateOrCreate(
             ['code_hash' => $hash],

@@ -10,7 +10,11 @@ use Illuminate\Console\Scheduling\Schedule;
 // resulting backup_overdue banner could not be cleared by a manual db:backup,
 // which skips a genuinely unchanged database for the same reason.
 
-it('registers a db.backup-daily schedule entry at 03:00 with --force and a withoutOverlapping mutex', function (): void {
+// Midnight rather than `dailyAt('03:00')`: `0 3 * * *` is not an interval, and
+// the phone's background runner takes nothing else — so the one device that may
+// be holding the only copy of this data never backed it up.
+
+it('registers a db.backup-daily schedule entry daily with --force and a withoutOverlapping mutex', function (): void {
     /** @var Schedule $schedule */
     $schedule = $this->app->make(Schedule::class);
 
@@ -25,7 +29,7 @@ it('registers a db.backup-daily schedule entry at 03:00 with --force and a witho
 
     expect($matched)->not->toBeNull('Expected a registered schedule entry with description "db.backup-daily".');
 
-    expect($matched->expression)->toBe('0 3 * * *');
+    expect($matched->expression)->toBe('0 0 * * *');
     expect((string) $matched->command)->toContain('db:backup');
     expect((string) $matched->command)->toContain('--force');
     expect($matched->mutexName())->not->toBe('');

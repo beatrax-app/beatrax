@@ -6,16 +6,16 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Enums\PairingSide;
 
-final class PeerConfirmVerifier
+final readonly class PeerConfirmVerifier
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly DeviceKeySigner $deviceKeySigner,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private DeviceKeySigner $deviceKeySigner,
     ) {}
 
     // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
@@ -35,7 +35,7 @@ final class PeerConfirmVerifier
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
-            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
+            ->where('expires_at', '>', Instant::zulu($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {

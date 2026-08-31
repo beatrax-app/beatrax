@@ -100,8 +100,7 @@ it('updates an existing goals name and target via edit', function (): void {
         'status' => 'active',
     ]);
 
-    Livewire::test(GoalsPage::class)
-        ->set('editGoalId', $goal->id)
+    Livewire::test(GoalsPage::class, ['editGoalId' => $goal->id])
         ->set('name', 'New name')
         ->set('targetAmount', '750.00')
         ->set('targetDate', '2027-06-01')
@@ -205,8 +204,7 @@ it('cross-user cannot edit another users goal', function (): void {
         'status' => 'active',
     ]);
 
-    Livewire::test(GoalsPage::class)
-        ->set('editGoalId', $foreignGoal->id)
+    Livewire::test(GoalsPage::class, ['editGoalId' => $foreignGoal->id])
         ->set('name', 'Hacked')
         ->set('targetAmount', '1')
         ->call('updateGoal');
@@ -288,8 +286,7 @@ it('resets the form instead of writing when updating a goal the user does not ow
     // A valid name + date clears validation so the write is attempted; the
     // cross-user id then raises GoalNotFoundException, which resets the form
     // rather than surfacing a field error.
-    Livewire::test(GoalsPage::class)
-        ->set('editGoalId', $foreignGoal->id)
+    Livewire::test(GoalsPage::class, ['editGoalId' => $foreignGoal->id])
         ->set('name', 'Hacked')
         ->set('targetAmount', '100.00')
         ->set('targetDate', '2027-01-01')
@@ -337,8 +334,7 @@ it('relinks the goal to a different pot on update', function (): void {
         'goal_id' => null,
     ]);
 
-    Livewire::test(GoalsPage::class)
-        ->set('editGoalId', $goal->id)
+    Livewire::test(GoalsPage::class, ['editGoalId' => $goal->id])
         ->set('name', 'Renamed')
         ->set('targetAmount', '500.00')
         ->set('targetDate', '2027-06-01')
@@ -361,8 +357,7 @@ it('clears the pot link when the picker is emptied on update', function (): void
         'goal_id' => $goal->id,
     ]);
 
-    Livewire::test(GoalsPage::class)
-        ->set('editGoalId', $goal->id)
+    Livewire::test(GoalsPage::class, ['editGoalId' => $goal->id])
         ->set('name', 'Renamed')
         ->set('targetAmount', '500.00')
         ->set('targetDate', '2027-06-01')
@@ -402,7 +397,7 @@ it('tells a goal with no measurable rate that history is short, not that work is
         'user_id' => $this->user->id,
         'target_minor' => 120000,
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -456,7 +451,7 @@ it('gives the phone list the same progress bar the desktop list has', function (
         'target_minor' => 500000,
         'currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addMonths(4)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonthsNoOverflow(4)->toDateString(),
         'status' => 'active',
     ]);
 
@@ -475,7 +470,7 @@ it('tells the phone what it says about the finish date, not only a percentage', 
         'target_minor' => 500000,
         'currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addMonths(4)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonthsNoOverflow(4)->toDateString(),
         'status' => 'active',
     ]);
 
@@ -560,7 +555,7 @@ it('qualifies a beyond-horizon estimate as a projection on the phone list, as th
         'name' => 'Noodfonds',
         'target_minor' => 1000000,
         'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYears(3)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearsNoOverflow(3)->toDateString(),
         'status' => 'active',
     ]);
 
@@ -614,7 +609,7 @@ it('draws the same minimum sliver in both lists for a goal with a tiny but real 
         'name' => 'Noodfonds',
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -715,7 +710,7 @@ it('does not tell a goal closed short of its target that the target was reached'
         'target_minor' => 60000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addMonths(3)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonthsNoOverflow(3)->toDateString(),
         'status' => 'completed',
     ]);
     Pot::create([
@@ -749,8 +744,8 @@ it('still tells a goal completed on its target that the target was reached', fun
         'name' => 'Winter tyres',
         'target_minor' => 60000,
         'target_currency' => 'EUR',
-        'start_date' => CarbonImmutable::now()->subMonths(2)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addMonths(3)->toDateString(),
+        'start_date' => CarbonImmutable::now()->subMonthsNoOverflow(2)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addMonthsNoOverflow(3)->toDateString(),
         'status' => 'completed',
     ]);
     $pot = Pot::create([

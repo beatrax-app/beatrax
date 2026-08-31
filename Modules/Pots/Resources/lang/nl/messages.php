@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Potjes · Beatrax',
     'heading' => 'Potjes',
-    'subtitle' => 'Virtuele deelsaldo\'s die altijd optellen tot je werkelijke rekeningsaldo.',
+    'subtitle' => 'Virtuele deelsaldo\'s die je afzondert van je werkelijke rekeningsaldo.',
     'add_pot' => 'Potje toevoegen',
     'pot_fallback' => 'potje',
 
@@ -56,6 +56,7 @@ return [
     'history' => [
         'show' => 'Geschiedenis tonen ↓',
         'hide' => 'Geschiedenis verbergen ↑',
+        'truncated' => 'Recentste mutaties: :shown van :count',
     ],
 
     'movement' => [
@@ -63,10 +64,12 @@ return [
         'withdraw' => 'Opname',
         'moved_from' => 'Verplaatst van :name',
         'moved_to' => 'Verplaatst naar :name',
+        'unreadable' => 'Vastgelegd door een nieuwere versie van Beatrax',
+        'released_on_archive' => 'Vrijgegeven bij archivering',
     ],
 
     'archived' => [
-        'toggle' => 'Gearchiveerde potjes (:count)',
+        'toggle' => 'Gearchiveerd potje (:count)|Gearchiveerde potjes (:count)',
         'badge' => 'Gearchiveerd',
     ],
 
@@ -118,9 +121,18 @@ return [
     'errors' => [
         'enter_name' => 'Voer een naam in voor dit potje.',
         'select_account' => 'Kies een rekening voor dit potje.',
-        'amount_exceeds_unallocated' => 'Bedrag overschrijdt het niet-toegewezen saldo.',
         'amount_exceeds_unallocated_available' => 'Bedrag overschrijdt het niet-toegewezen saldo (:amount beschikbaar).',
         'amount_exceeds_pot_balance' => 'Bedrag overschrijdt het saldo in :name (:amount beschikbaar).',
+        'generic' => 'Dit potje kon niet worden opgeslagen. Controleer de velden en probeer het opnieuw.',
+        'amount_invalid' => 'Voer een bedrag groter dan nul in.',
+        'goal_already_linked' => 'Dit doel heeft al een actief gekoppeld potje. Archiveer dat eerst.',
+        'account_cannot_hold_pots' => 'Een potje heeft een rekening nodig waar geld op staat. Kies een andere rekening.',
+        'select_target_pot' => 'Kies een potje om naar te verplaatsen.',
+        'move_target_missing' => 'Dat potje is niet meer beschikbaar. Kies een ander.',
+        'move_same_pot' => 'Een potje kan geen geld naar zichzelf verplaatsen. Kies een ander potje.',
+        'move_cross_account' => 'Potjes wisselen alleen geld uit binnen één rekening, en :name staat op :account.',
+        'pot_missing' => 'Dat potje is niet meer beschikbaar.',
+        'operation_failed' => 'Dit is niet doorgegaan. Er is geen geld verplaatst — probeer het opnieuw.',
     ],
 
     'toast' => [

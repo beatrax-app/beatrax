@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Tvoj račun PayPal',
     'h1' => 'Poveži svoj račun PayPal',
 
-    'lede_html' => 'Spusti izvoz podrobnosti o transakcijah PayPal — na nizozemskem računu PayPal naveden kot <em lang="nl">Rapport Transactiegegevens</em>. Poročilo o stanju (<span lang="nl">Saldorapport</span>) ne bo delovalo — potrebujemo podatke po dogodkih.',
+    'lede_html' => 'Spusti izvoz prometa iz PayPala — ena vrstica na transakcijo, ne povzetek stanja. PayPal svoja poročila poimenuje v jeziku tvojega računa, zaenkrat pa beremo nizozemski par: <em lang="nl">Rapport Transactiegegevens</em>, ne <span lang="nl">Saldorapport</span>. Če tvoj pride v drugem jeziku, pred prenosom preklopi PayPal na nizozemščino.',
 
     'format_group_aria' => 'PayPal izvaža samo v CSV',
     'got_it_as' => 'Preneseno kot:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Prenesi kot CSV',
     ],
 
-    'drop_lead' => 'Sem spusti CSV s podrobnostmi o transakcijah',
+    'drop_lead' => 'Spusti sem svoj izvoz prometa',
     'browse_file' => 'ali poišči datoteko',
 
     'file_ready' => '· ✓ pripravljeno',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Nadaljuj →',
 
     'errors' => [
-        'required' => 'Najprej spusti svoj CSV PayPal Rapport Transactiegegevens v okvir.',
-        'max' => 'Ta datoteka je prevelika. Izvozi PayPal Rapport Transactiegegevens so običajno precej manjši od 10 MB.',
-        'extensions' => 'Ta datoteka ni videti kot CSV PayPal. S PayPala prenesi Rapport Transactiegegevens (ne poročila o stanju Saldorapport) kot CSV.',
+        'required' => 'Najprej spusti v okvir izvoz prometa iz PayPala.',
+        'max' => 'Ta datoteka je prevelika. Izvoz prometa iz PayPala je običajno precej manjši od 10 MB.',
+        'extensions' => 'Ta datoteka ni videti kot CSV iz PayPala. Prenesi izvoz prometa — ena vrstica na transakcijo, ne povzetek stanja — kot CSV.',
         'unreadable' => 'Te datoteke ni bilo mogoče prebrati. Celotna napaka je v /dev/logs.',
     ],
 ];

@@ -6,18 +6,19 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\Lang;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
  */
-final class PairedDeviceAdmitter
+final readonly class PairedDeviceAdmitter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly SafetyNumberDeriver $safetyNumberDeriver,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private SafetyNumberDeriver $safetyNumberDeriver,
     ) {}
 
     // Admits the confirmed RESPONDER identity into device_registry.
@@ -26,13 +27,15 @@ final class PairedDeviceAdmitter
     public function admitResponderDevice(\stdClass $row, int $userId): void
     {
         $this->admitDevice(
-            deviceId: $this->asString($row->responder_device_id),
-            publicEdHex: $this->asString($row->responder_ed25519_pub_hex),
-            publicKxHex: $this->asString($row->responder_x25519_pub_hex),
+            peer: $this->peerFromRow(
+                $row->responder_device_id,
+                $row->responder_ed25519_pub_hex,
+                $row->responder_x25519_pub_hex,
+                $row->responder_name ?? null,
+            ),
             initiatorEdHex: $this->asString($row->initiator_ed25519_pub_hex),
             responderEdHex: $this->asString($row->responder_ed25519_pub_hex),
             userId: $userId,
-            deviceName: $this->asString($row->responder_name ?? null),
         );
     }
 
@@ -42,13 +45,46 @@ final class PairedDeviceAdmitter
     public function admitInitiatorDevice(\stdClass $row, int $userId): void
     {
         $this->admitDevice(
-            deviceId: $this->asString($row->initiator_device_id),
-            publicEdHex: $this->asString($row->initiator_ed25519_pub_hex),
-            publicKxHex: $this->asString($row->initiator_x25519_pub_hex),
+            peer: $this->peerFromRow(
+                $row->initiator_device_id,
+                $row->initiator_ed25519_pub_hex,
+                $row->initiator_x25519_pub_hex,
+                $row->initiator_name ?? null,
+                $row->initiator_lan_host ?? null,
+                $row->initiator_lan_port ?? null,
+            ),
             initiatorEdHex: $this->asString($row->initiator_ed25519_pub_hex),
             responderEdHex: $this->asString($row->responder_ed25519_pub_hex),
             userId: $userId,
-            deviceName: $this->asString($row->initiator_name ?? null),
+        );
+    }
+
+    // A pairing_tokens row is untyped, so the identity is only an identity once
+    // all three key columns read as strings. Null here is the same refusal the
+    // admit makes on a malformed row: nothing is written.
+    private function peerFromRow(
+        mixed $deviceId,
+        mixed $edHex,
+        mixed $kxHex,
+        mixed $deviceName,
+        mixed $lanHost = null,
+        mixed $lanPort = null,
+    ): ?PairingPeerIdentity {
+        $deviceId = $this->asString($deviceId);
+        $edHex = $this->asString($edHex);
+        $kxHex = $this->asString($kxHex);
+
+        if ($deviceId === null || $edHex === null || $kxHex === null) {
+            return null;
+        }
+
+        return new PairingPeerIdentity(
+            $deviceId,
+            $edHex,
+            $kxHex,
+            $this->asString($deviceName),
+            $this->asString($lanHost),
+            $this->asInt($lanPort),
         );
     }
 
@@ -57,21 +93,16 @@ final class PairedDeviceAdmitter
     // word list. The self-device guard blocks a crafted peer device_id from
     // ever overwriting this user's own self-row keys.
     private function admitDevice(
-        ?string $deviceId,
-        ?string $publicEdHex,
-        ?string $publicKxHex,
+        ?PairingPeerIdentity $peer,
         ?string $initiatorEdHex,
         ?string $responderEdHex,
         int $userId,
-        ?string $deviceName = null,
     ): void {
-        if ($deviceId === null
-            || $publicEdHex === null
-            || $publicKxHex === null
-            || $initiatorEdHex === null
-            || $responderEdHex === null) {
+        if ($peer === null || $initiatorEdHex === null || $responderEdHex === null) {
             return;
         }
+
+        $deviceId = $peer->deviceId;
 
         $selfDeviceId = $this->db->connection()->table('device_registry')
             ->where('user_id', $userId)
@@ -83,7 +114,7 @@ final class PairedDeviceAdmitter
         }
 
         $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEdHex, $responderEdHex));
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         // Scope the lookup/update to NON-self rows — defense-in-depth so an
         // admit can never mutate the local self-row even if the collision
@@ -100,11 +131,17 @@ final class PairedDeviceAdmitter
                 ->where('device_id', $deviceId)
                 ->where('is_self', 0)
                 ->update([
-                    'ed25519_public_key_hex' => $publicEdHex,
-                    'x25519_public_key_hex' => $publicKxHex,
+                    'ed25519_public_key_hex' => $peer->ed25519PubHex,
+                    'x25519_public_key_hex' => $peer->x25519PubHex,
                     'safety_number_words' => $safetyWords,
                     'confirmed_at' => $now,
                     'updated_at' => $now,
+                    // Conditional: a re-admit over the relay carries no
+                    // address, and writing null would throw away the one the
+                    // LAN pairing already recorded.
+                    ...($peer->lanHost !== null && $peer->lanPort !== null
+                        ? ['last_lan_host' => $peer->lanHost, 'last_lan_port' => $peer->lanPort]
+                        : []),
                 ]);
 
             return;
@@ -116,15 +153,20 @@ final class PairedDeviceAdmitter
             // The peer's own name from its accept frame, else a placeholder.
             // NEVER deviceNameDetector: that reports THIS machine, which is
             // how a paired phone showed up as "This device (Mac)".
-            'name' => $deviceName !== null && $deviceName !== ''
-                ? $deviceName
+            'name' => $peer->deviceName !== null && $peer->deviceName !== ''
+                ? $peer->deviceName
                 : Lang::get('sync::devices.peer_default_name'),
-            'ed25519_public_key_hex' => $publicEdHex,
-            'x25519_public_key_hex' => $publicKxHex,
+            'ed25519_public_key_hex' => $peer->ed25519PubHex,
+            'x25519_public_key_hex' => $peer->x25519PubHex,
             'safety_number_words' => $safetyWords,
             'is_self' => 0,
             'paired_at' => $now,
             'confirmed_at' => $now,
+            // Where the offer was fetched from, so the first sync dial has an
+            // address without paying a browse — the only address an iPhone
+            // gets at all while its multicast entitlement is ungranted.
+            'last_lan_host' => $peer->lanHost,
+            'last_lan_port' => $peer->lanPort,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -133,5 +175,10 @@ final class PairedDeviceAdmitter
     private function asString(mixed $value): ?string
     {
         return is_string($value) ? $value : null;
+    }
+
+    private function asInt(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
     }
 }

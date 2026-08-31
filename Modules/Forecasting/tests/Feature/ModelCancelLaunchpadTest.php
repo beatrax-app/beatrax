@@ -9,7 +9,7 @@ use Modules\Core\Models\User;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
-use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
+use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
@@ -132,13 +132,13 @@ beforeEach(function (): void {
     $this->user = mclUser();
 });
 
-it('CreateCancellationScenarioForAlert happy path: persists scenario + one cancel_series mutation', function (): void {
+it('CreateScenarioFromTemplate happy path: persists scenario + one cancel_series mutation', function (): void {
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
 
-    /** @var CreateCancellationScenarioForAlert $action */
-    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
-    $newId = ($action)($alertId, $this->user);
+    /** @var CreateScenarioFromTemplate $action */
+    $action = $this->app->make(CreateScenarioFromTemplate::class);
+    $newId = $action->forDriftAlert($alertId, $this->user);
 
     expect($newId)->toBeGreaterThan(0);
     $scenario = $this->db->connection()->table('forecast_scenarios')->where('id', $newId)->first();
@@ -151,28 +151,28 @@ it('CreateCancellationScenarioForAlert happy path: persists scenario + one cance
     expect((int) $mutations->first()->target_series_id)->toBe($seriesId);
 });
 
-it('CreateCancellationScenarioForAlert returns 404 for another user\'s alert', function (): void {
+it('CreateScenarioFromTemplate returns 404 for another user\'s alert', function (): void {
     $other = mclUser('other');
     $seriesId = mclSeries($this->db, $other->id);
     $alertId = mclAlert($this->db, $other->id, $seriesId);
 
-    /** @var CreateCancellationScenarioForAlert $action */
-    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+    /** @var CreateScenarioFromTemplate $action */
+    $action = $this->app->make(CreateScenarioFromTemplate::class);
 
-    expect(fn () => ($action)($alertId, $this->user))->toThrow(NotFoundHttpException::class);
+    expect(fn () => $action->forDriftAlert($alertId, $this->user))->toThrow(NotFoundHttpException::class);
 });
 
-it('CreateCancellationScenarioForAlert atomic rollback when AddScenarioMutation fails', function (): void {
+it('CreateScenarioFromTemplate atomic rollback when AddScenarioMutation fails', function (): void {
     // An alert left pointing at a series that has since been deleted is what
     // makes AddScenarioMutation fail partway through the launchpad.
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix-soon-to-vanish');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
     $this->db->connection()->table('recurring_series')->where('id', $seriesId)->delete();
 
-    /** @var CreateCancellationScenarioForAlert $action */
-    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
+    /** @var CreateScenarioFromTemplate $action */
+    $action = $this->app->make(CreateScenarioFromTemplate::class);
 
-    expect(fn () => ($action)($alertId, $this->user))->toThrow(NotFoundHttpException::class);
+    expect(fn () => $action->forDriftAlert($alertId, $this->user))->toThrow(NotFoundHttpException::class);
     // The launchpad's outer transaction wraps CreateScenario as well, so the
     // scenario insert must not survive the failed mutation.
     expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
@@ -207,9 +207,9 @@ it('the launchpad uses display_name_override when present', function (): void {
         ->update(['display_name_override' => 'My Netflix sub']);
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
 
-    /** @var CreateCancellationScenarioForAlert $action */
-    $action = $this->app->make(CreateCancellationScenarioForAlert::class);
-    $newId = ($action)($alertId, $this->user);
+    /** @var CreateScenarioFromTemplate $action */
+    $action = $this->app->make(CreateScenarioFromTemplate::class);
+    $newId = $action->forDriftAlert($alertId, $this->user);
 
     expect($this->db->connection()->table('forecast_scenarios')->where('id', $newId)->value('name'))->toBe('Cancel My Netflix sub');
 });

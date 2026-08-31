@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
+use Modules\Notifications\Public\Enums\NotificationTrigger;
+
 final readonly class NotificationDraft
 {
     /**
@@ -11,7 +13,7 @@ final readonly class NotificationDraft
      */
     public function __construct(
         public int $userId,
-        public string $triggerType,
+        public NotificationTrigger $triggerType,
         public string $subjectKey,
         public string $occurrence,
         public string $title,
@@ -29,7 +31,7 @@ final readonly class NotificationDraft
      */
     public static function fromCopy(
         int $userId,
-        string $triggerType,
+        NotificationTrigger $triggerType,
         string $subjectKey,
         string $occurrence,
         NotificationCopySpec $copy,

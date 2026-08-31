@@ -49,12 +49,14 @@ final readonly class RowMatcher
         }
 
         $settledAmountMinor = is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0;
+        $settledCurrency = is_string($row->settled_currency) ? $row->settled_currency : '';
         $postedAt = is_string($row->posted_at) ? CarbonImmutable::parse($row->posted_at) : CarbonImmutable::now();
 
         return new RuleMatchInput(
             counterpartyName: $counterpartyName,
             description: $description,
             settledAmountMinor: $settledAmountMinor,
+            settledCurrency: $settledCurrency,
             postedAt: $postedAt,
         );
     }

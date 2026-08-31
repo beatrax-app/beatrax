@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Kredi kartın (ICS)',
+    'eyebrow' => 'Kredi kartın',
     'h1' => 'Aylık ekstre PDF dosyalarını indir',
-    'lede' => 'Tüm aylık ICS PDF ekstrelerini bırak — hepsini tek bir önizlemede birleştiririz.',
+    'lede' => 'Tüm aylık PDF ekstrelerini bırak — hepsini tek bir önizlemede birleştiririz.',
 
     'format_group_aria' => 'ICS yalnızca PDF olarak dışa aktarır',
+    'issuer_note' => 'ICS şimdilik okuyabildiğimiz tek kart sağlayıcısı ve yalnızca onun Hollandaca ekstresi. Kartın başka bir sağlayıcıdansa bu adımı atla.',
     'got_it_as' => 'Şu biçimde aldım:',
     'badge_only_format' => 'tek biçim',
 

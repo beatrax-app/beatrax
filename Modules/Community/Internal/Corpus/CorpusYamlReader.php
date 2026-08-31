@@ -11,12 +11,12 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-final class CorpusYamlReader
+final readonly class CorpusYamlReader
 {
     public function __construct(
-        private readonly LoggerInterface $logger,
-        private readonly ConfigRepository $config,
-        private readonly Application $app,
+        private LoggerInterface $logger,
+        private ConfigRepository $config,
+        private Application $app,
     ) {}
 
     public function resolve(string $configKey, string $default = ''): string

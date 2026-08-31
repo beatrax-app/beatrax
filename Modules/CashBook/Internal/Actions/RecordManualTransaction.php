@@ -6,41 +6,50 @@ namespace Modules\CashBook\Internal\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\QueryException;
+use Modules\CashBook\Internal\Services\ManualEntryAnchors;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
-use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
-use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // Routed through the same canonical pipeline imports use, so a hand-entered
-// row categorises, recur-detects and reports identically to an imported one.
+// row categorises, recur-detects, resolves its counterparty and reports
+// identically to an imported one.
 /**
  * @see RecordsTransactions
  */
-final class RecordManualTransaction
+final readonly class RecordManualTransaction
 {
-    private const MAX_ATTEMPTS = 5;
+    private const int MAX_ATTEMPTS = 5;
 
-    private const string ACCOUNT_NAME = 'Cash';
+    // The last second of the entered day the retry offset can start from, so
+    // an entry added just before midnight cannot be nudged into the next day.
+    private const int LATEST_BOOKED_SECOND = CarbonImmutable::SECONDS_PER_MINUTE
+        * CarbonImmutable::MINUTES_PER_HOUR
+        * CarbonImmutable::HOURS_PER_DAY
+        - self::MAX_ATTEMPTS;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly RecordsTransactions $record,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly Clock $clock,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly CounterpartyKey $counterpartyKey,
-        private readonly AccountSlugResolver $accountSlugs,
+        private DatabaseManager $db,
+        private RecordsTransactions $record,
+        private FingerprintComposer $fingerprints,
+        private Clock $clock,
+        private CounterpartyKey $counterpartyKey,
+        private ManualEntryAnchors $anchors,
+        private ResolvesCounterparties $resolveCounterparty,
     ) {}
 
+    // False when nothing was written, so the page can say so. It used to end
+    // the retry loop on a `return` of nothing, and the caller toasted "Cash
+    // entry added." either way: six identical coffees on one day produced
+    // twelve of that sentence and six rows.
     public function __invoke(
         User $user,
         string $direction,
@@ -49,130 +58,114 @@ final class RecordManualTransaction
         string $counterparty,
         ?int $categoryId = null,
         ?string $description = null,
-    ): void {
+    ): bool {
         $magnitude = abs($amountMinor);
         $isIncome = $direction === Direction::Income->value;
         $signed = $isIncome ? $magnitude : -$magnitude;
         $type = $isIncome ? TransactionType::Income->value : TransactionType::Expense->value;
 
-        $accountId = $this->cashAccountId($user);
-        $currency = $this->currencyOfAccount($accountId, $user);
-        $importRunId = $this->manualRunId($user);
-        $counterpartyName = trim($counterparty) !== '' ? trim($counterparty) : 'Cash';
+        $accountId = $this->anchors->accountIdFor($user);
+        $importRunId = $accountId === null ? null : $this->anchors->runIdFor($user);
+
+        // Nothing to hang the entry on. Reported as "not recorded" rather than
+        // thrown, because the page keeps the reader's fields on a false and
+        // raw SQL is not an answer a reader can act on.
+        if ($accountId === null || $importRunId === null) {
+            return false;
+        }
+
+        $currency = $this->anchors->currencyFor($accountId, $user);
+
+        // An entry the reader named nobody on has no counterparty, rather than
+        // one the app invents for them: a stand-in name would be stored as
+        // data, and would mint a counterparty row that spend analysis, triage
+        // and merchant matching would then treat as somewhere they shop.
+        $counterpartyName = trim($counterparty) !== '' ? trim($counterparty) : null;
 
         $counterpartyNormalized = $this->counterpartyKey->forName($counterpartyName, $user->id);
 
-        // Both fingerprint indexes key booked_at at second precision, so two
-        // identical same-second cash spends collide.
-        $now = $this->clock->now();
+        $bookedAt = $this->nextFreeBookedAt($user, $accountId, $date, $signed, $currency, $counterpartyNormalized);
+        $counterpartyId = null;
+
         for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
             $canonical = new CanonicalTransaction(
                 userId: $user->id,
                 accountId: $accountId,
                 type: $type,
                 postedAt: $date,
-                bookedAt: $now->addSeconds($attempt),
+                bookedAt: $bookedAt->addSeconds($attempt),
                 valueDate: $date,
                 amountMinor: $signed,
                 currency: $currency,
                 settledAmountMinor: $signed,
                 settledCurrency: $currency,
-                fxRateUsed: null,
                 counterpartyName: $counterpartyName,
                 counterpartyIban: null,
                 counterpartyNormalized: $counterpartyNormalized,
                 normalizationVersion: $this->fingerprints->version(),
                 description: $description,
                 categoryId: $categoryId,
-                sourceFormat: 'manual',
+                sourceFormat: SyntheticSourceFormat::Manual->value,
                 importRunId: $importRunId,
                 sourceRowIndex: 0,
                 sourceRef: 'manual-'.bin2hex(random_bytes(8)),
                 rawPayload: null,
                 autoCategoryProvenance: null,
                 paymentType: PaymentType::Cash,
+                counterpartyId: $counterpartyId,
             );
 
+            // Resolved once, on the first attempt: the retries differ only in
+            // the second they book at, and the stage's upsert is a write.
+            if ($attempt === 0) {
+                $canonical = $this->resolveCounterparty->run($canonical, $user);
+                $counterpartyId = $canonical->counterpartyId;
+            }
+
             if (($this->record)([$canonical], $user)->inserted > 0) {
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
-    // The slug comes from the ledger's own walk rather than from the user id:
-    // `cash-<id>` is a spelling the walk also hands out, so a user whose id is
-    // 2 and who already owns an account named "Cash 2" collided on
-    // unique(user_id, slug) and lost the cash book outright.
-    private function cashAccountId(User $user): int
-    {
-        $now = $this->clock->now()->toDateTimeString();
+    // The time of day is the clock's, and is the only column two otherwise
+    // identical entries can differ in: a blind five-second walk from now gave
+    // up on the sixth coffee, so this starts past the last second this exact
+    // entry already occupies. The day is the reader's, for the tax year.
+    private function nextFreeBookedAt(
+        User $user,
+        int $accountId,
+        CarbonImmutable $date,
+        int $signedMinor,
+        string $currency,
+        string $counterpartyNormalized,
+    ): CarbonImmutable {
+        $startOfDay = $date->startOfDay();
+        $earliest = $startOfDay->addSeconds(
+            min($this->clock->now()->secondsSinceMidnight(), self::LATEST_BOOKED_SECOND),
+        );
 
-        return $this->findOrCreate('accounts', ['user_id' => $user->id, 'kind' => AccountKind::Cash->value], [
-            'user_id' => $user->id,
-            'name' => self::ACCOUNT_NAME,
-            'slug' => $this->accountSlugs->resolveUnique($user->id, self::ACCOUNT_NAME),
-            'kind' => AccountKind::Cash->value,
-            'iban' => 'CASH'.str_pad((string) $user->id, 12, '0', STR_PAD_LEFT),
-            'default_currency' => $this->baseCurrency->code(),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-    }
-
-    // The reader can relabel the cash account in /settings like any other, and
-    // an entry booked in a currency the account does not name never joins the
-    // line pots, /reconcile and the forecast anchor read.
-    private function currencyOfAccount(int $accountId, User $user): string
-    {
-        $currency = $this->db->connection()
-            ->table('accounts')
-            ->where('id', $accountId)
+        $latest = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
-            ->value('default_currency');
+            ->where('account_id', $accountId)
+            ->where('posted_at', $date->toDateString())
+            ->where('amount_minor', $signedMinor)
+            ->where('currency', $currency)
+            ->where('counterparty_normalized', $counterpartyNormalized)
+            ->where('booked_at', '>=', $earliest->toDateTimeString())
+            ->max('booked_at');
 
-        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->code();
-    }
-
-    private function manualRunId(User $user): int
-    {
-        $now = $this->clock->now()->toDateTimeString();
-
-        return $this->findOrCreate('import_runs', ['user_id' => $user->id, 'source_format' => 'manual'], [
-            'user_id' => $user->id,
-            'source_format' => 'manual',
-            'raw_file_path' => 'manual',
-            'sha256' => str_repeat('0', 64),
-            'uploaded_at' => $now,
-            'status' => 'confirmed',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-    }
-
-    // Re-selects on a unique violation, so two adds racing to create the
-    // singleton Cash account never surface as a 500.
-    /**
-     * @param  array<string, mixed>  $match
-     * @param  array<string, mixed>  $attributes
-     */
-    private function findOrCreate(string $table, array $match, array $attributes): int
-    {
-        $connection = $this->db->connection();
-        $find = static fn (): mixed => $connection->table($table)->where($match)->value('id');
-
-        $existing = $find();
-        if (is_numeric($existing)) {
-            return (int) $existing;
+        if (! is_string($latest)) {
+            return $earliest;
         }
 
-        try {
-            return $connection->table($table)->insertGetId($attributes);
-        } catch (QueryException $e) {
-            $retry = $find();
-            if (is_numeric($retry)) {
-                return (int) $retry;
-            }
-            throw $e;
-        }
+        $next = CarbonImmutable::parse($latest)->addSecond();
+        $lastOfDay = $startOfDay->addSeconds(self::LATEST_BOOKED_SECOND);
+
+        // An entry added just before midnight must not be nudged into the next
+        // day, which is a different tax year on the last day of December.
+        return $next->gt($lastOfDay) ? $lastOfDay : $next;
     }
 }

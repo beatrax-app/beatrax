@@ -32,8 +32,10 @@ shape and a fixed position relative to one end.
 
 ## Extraction
 
-`PdfTextExtractor::extract()` shells out to poppler's `pdftotext` through
-`spatie/pdf-to-text` with exactly four options, all of them load-bearing:
+`PdfTextExtractor::extract()` prefers poppler's `pdftotext`, reached
+through `spatie/pdf-to-text`, and falls back to the in-app reader below
+when the binary is not on the machine. When it runs, it runs with exactly
+four options, all of them load-bearing:
 
 | Option | Why |
 |---|---|
@@ -48,10 +50,71 @@ check is defence in depth for callers that bypass the upload wizard's
 `HeaderSniffer` — `Pdf::text()` invokes Symfony Process with an argv
 array, so the path never reaches a shell either way.
 
-Every failure — missing binary, unreadable file, any Process error —
-surfaces as `PdfExtractionFailed`. That typed identity is what lets the
-upload wizard render "pdftotext binary missing — install poppler"
-instead of an amount-parser exception thrown three layers deeper.
+The binary itself is located by `Symfony\Component\Process\ExecutableFinder`
+over `PATH` plus `PdfTextExtractor::EXTRA_BINARY_DIRS`, not by the
+five hard-coded paths `spatie/pdf-to-text` searches on its own. A desktop
+launched from the dock or from a NativePHP bundle inherits a `PATH` that
+often has none of those on it, and a Linux install with poppler in a Nix
+or Snap prefix has it on `PATH` and nowhere on that list. The found path
+is then passed to `Pdf` explicitly, so the library never runs its own
+discovery.
+
+## Reading a statement without poppler
+
+iOS and Android ship no `pdftotext`, and no App Store or Play build can
+add one: neither platform permits executing a second binary. `pdftotext`
+absent is therefore not an error condition on a phone, it is the normal
+case, and `PdfTextLayoutReader` is what runs instead — a pure-PHP reader
+over `smalot/pdfparser`, present in both Composer roots and bundled into
+the mobile app with the rest of `vendor/`.
+
+`PdfTextExtractor::popplerBinary()` is the single place the question is
+asked. It answers a path on a machine that has poppler and `null` on one
+that does not, and the two branches below it are the platform split
+entire. Desktop accuracy is unchanged: when the binary is there it is
+used, exactly as before.
+
+The reader does **not** use `Document::getText()`. That method separates
+runs by a kerning heuristic, and on a statement whose cells are each
+positioned with their own `Tm` it renders `21,78Af` with no space — which
+`looksLikeTransactionRow()` does not recognise as a row at all, so the
+purchase disappears silently. Instead the reader takes `Page::getDataTm()`,
+which carries every run's text matrix, and rebuilds the page the way
+`-layout` does:
+
+1. Every run is placed at its matrix's x/y. A run containing its own
+   newlines is split, each part nudged a hundredth of a point below the
+   last so it keeps its written order.
+2. Runs are grouped into lines by y, within `LINE_TOLERANCE_POINTS`
+   (2.0) — wide enough for a generator that rounds each cell's baseline
+   separately, narrow enough that the next row starts a new line.
+3. Inside a line, runs are sorted by x and written at column
+   `round(x / COLUMN_WIDTH_POINTS)` — but never closer than one space to
+   what is already written. That floor is the whole defence against the
+   fused `21,78Af`; the column figure itself only decides how wide the
+   padding looks, because every column downstream is matched with `\s+`.
+4. Each page ends with a blank line, which is what `-nopgbrk` leaves
+   behind and what the adapter reads as the end of the table.
+
+`PdfTextExtractorSmokeTest` runs the committed
+`Modules/Chains/tests/fixtures/scenario-1/ics-statement.pdf` through both
+readers and compares the resulting `SourceTransactionDto` tuples field by
+field; they are identical, 23 rows either way.
+
+## What each refusal means
+
+The three PDF refusals are three different pieces of news and they are
+kept apart, because collapsing them made the app tell a phone user to go
+install a program that would not have helped and could not be installed:
+
+| Exception | `ImportFailureReason` | When |
+|---|---|---|
+| `PdfPasswordProtectedException` | `PdfPasswordProtected` | the trailer declares `/Encrypt`. Checked only *after* a read has already failed, because the same eight bytes inside an uncompressed content stream would otherwise refuse a statement that reads fine |
+| `PdfHasNoTextLayerException` | `PdfHasNoTextLayer` | the file parsed and its pages carry no text: a scan or a photo. No reader recovers words that are not there |
+| `PdfReaderUnavailableException` | `PdfReaderUnavailable` | neither `pdftotext` nor `smalot/pdfparser` is present. A packaging fault, not a platform one |
+
+Everything else — an unreadable file, a Process error, a malformed
+object graph — stays `PdfExtractionFailed`.
 
 ## Raw text and cleaned text are both needed
 
@@ -120,10 +183,11 @@ the year of the statement header date, which `parseStatementDate()`
 recovers from the raw text as a full Dutch month name (`15 februari
 2026`); when that line is absent the current calendar year is used.
 
-The one exception: when the transaction month is December and the
-booking month is January, the transaction year rolls back by one. That
-is the January-statement rollover — a purchase made in late December
-that books in the new year.
+The one exception: a statement never lists a month past its own, so a
+row month LATER than the statement's is last year's tail. The
+transaction month and the booking month are each resolved that way on
+their own, which is what lets a late-December purchase booked in
+January carry two different years on one line.
 
 ## Counterparty name
 

@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Les mots de passe ne correspondent pas.',
         'password_length' => 'Utilise au moins 12 caractères.',
         'pin_length' => 'Le PIN doit comporter au moins 6 chiffres.',
+        'pin_digits' => 'Le PIN doit comporter 6 à 10 chiffres — uniquement des chiffres.',
         'pins_mismatch' => 'Les PIN ne correspondent pas. Réessaie.',
         'session_expired' => 'Ta session a expiré avant la fin de la configuration. Ressaisis ton PIN et ton mot de passe.',
         'retry_failed' => 'La configuration de cet appareil n\'a toujours pas pu aboutir. Réessaie.',

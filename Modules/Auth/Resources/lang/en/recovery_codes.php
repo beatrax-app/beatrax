@@ -23,5 +23,6 @@ return [
         'body' => 'Recovery codes are the only way back into your account if you forget your password.',
         'warning' => 'They are stored hashed, so they cannot be shown again. Generating a new set retires the old one straight away.',
         'regenerate' => 'Generate new codes',
+        'regenerate_confirm' => 'Generate a new set of recovery codes? The set you have now stops working the moment the new one is made, and it cannot be shown again — a printed or written-down copy becomes useless. Save the new codes before leaving this page.',
     ],
 ];

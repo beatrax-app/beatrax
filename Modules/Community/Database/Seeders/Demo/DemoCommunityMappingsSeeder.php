@@ -41,22 +41,27 @@ final class DemoCommunityMappingsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::MAPPINGS as $row) {
-                CommunityMerchantMapping::query()->updateOrCreate(
-                    [
-                        'user_id' => $primary->id,
-                        'pattern' => $row['pattern'],
-                    ],
-                    [
-                        'generalized_pattern' => $row['generalizedPattern'],
-                        'name' => $row['name'],
-                        'category' => $row['category'],
-                        'region' => $row['region'],
-                        'contributor' => $primary->username,
-                    ],
-                );
+                // Both tiers. Every lookup and the headline count read the
+                // shared one (user_id IS NULL); "Your contributions" counts the
+                // reader's own, and a user-scoped row alone reached neither.
+                foreach ([null, $primary->id] as $ownerId) {
+                    CommunityMerchantMapping::query()->updateOrCreate(
+                        [
+                            'user_id' => $ownerId,
+                            'pattern' => $row['pattern'],
+                        ],
+                        [
+                            'generalized_pattern' => $row['generalizedPattern'],
+                            'name' => $row['name'],
+                            'category' => $row['category'],
+                            'region' => $row['region'],
+                            'contributor' => $primary->username,
+                        ],
+                    );
+                }
             }
         }
 

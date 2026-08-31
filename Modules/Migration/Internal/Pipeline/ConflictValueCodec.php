@@ -7,7 +7,7 @@ namespace Modules\Migration\Internal\Pipeline;
 final class ConflictValueCodec
 {
     /** @var list<string> Fields whose stored value is an integer minor-unit amount. */
-    private const INT_FIELDS = ['budgeted_minor', 'amount_minor'];
+    private const array INT_FIELDS = ['budgeted_minor', 'amount_minor'];
 
     public static function toStorage(mixed $value): ?string
     {

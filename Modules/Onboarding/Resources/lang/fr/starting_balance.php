@@ -19,7 +19,7 @@ return [
 
     'editing_h3' => 'Modifie le solde de départ de ton :label',
     'input_label' => 'SOLDE DE DÉPART',
-    'minor_units' => '(en centimes)',
+    'minor_units' => '(en sous-unités)',
     'on_date_label' => 'À LA DATE DU',
     'cancel' => 'Annuler',
     'save' => 'Enregistrer',

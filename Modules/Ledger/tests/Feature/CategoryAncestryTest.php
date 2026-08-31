@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\CategoryAncestry;
+use Modules\Ledger\Public\Support\CategoryPathName;
 
 // One walk now serves the dashboard panel and the report builder. These pin the
 // three properties the two copies each got right, so a future merge into either
@@ -26,7 +27,7 @@ it('loads a category and its whole parent chain in one map', function (): void {
     $byId = $this->ancestry->load([$leaf->id], $this->user->id);
 
     expect(array_keys($byId))->toContain($root->id, $mid->id, $leaf->id)
-        ->and($this->ancestry->fullPath($leaf->id, $byId))->toBe('Home / Utilities / Water');
+        ->and($this->ancestry->fullPath($leaf->id, $byId))->toBe(CategoryPathName::fromParts(['Home', 'Utilities', 'Water']));
 });
 
 // A parent_id pointing at another tenant's row ends the breadcrumb at the
@@ -73,7 +74,7 @@ it('terminates on a parent cycle instead of walking forever', function (): void 
 
     $byId = $this->ancestry->load([$b->id], $this->user->id);
 
-    expect($this->ancestry->fullPath($b->id, $byId))->toBe('A / B');
+    expect($this->ancestry->fullPath($b->id, $byId))->toBe(CategoryPathName::fromParts(['A', 'B']));
 });
 
 // The depth cap is the second half of that guard, and it was a named constant
@@ -98,7 +99,7 @@ it('stops the breadcrumb at the depth cap on a chain longer than it', function (
     $byId = $this->ancestry->load([$ids[19]], $this->user->id);
     $path = $this->ancestry->fullPath($ids[19], $byId);
 
-    expect(substr_count($path, ' / ') + 1)->toBe(16)
+    expect(substr_count($path, CategoryPathName::SEPARATOR) + 1)->toBe(16)
         ->and($path)->toEndWith('L20')
         ->and($path)->toStartWith('L5');
 });

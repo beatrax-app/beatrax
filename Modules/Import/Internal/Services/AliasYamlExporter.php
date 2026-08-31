@@ -8,9 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Symfony\Component\Yaml\Yaml;
 
-final class AliasYamlExporter
+final readonly class AliasYamlExporter
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     public function export(User $user): string
     {

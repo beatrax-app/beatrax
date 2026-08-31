@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Használj legalább 12 karaktert.',
     'error_wrong_code' => 'Ez a felhasználónév és helyreállítási kód nem illik össze. Ellenőrizd figyelmesen a kódot — csupa nagybetű, nincs benne nulla, O betű, egyes és L betű.',
+    'error_throttled' => 'Túl sok próbálkozás — próbáld újra ennyi múlva: :wait.',
 ];

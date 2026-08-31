@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Zařízení odmítlo uložit klíč. Biometrické odemykání není dostupné.',
     'heading' => 'Zámek aplikace',
 
-    'moved_help' => 'PIN, čas automatického zamčení i biometrické odemykání najdeš v nastavení synchronizace tohoto zařízení.',
-    'moved_cta' => 'Otevřít Synchronizaci a zařízení',
-
     'toggle_label' => 'Zamykat aplikaci PINem',
     'toggle_description' => 'Nahradí každodenní přihlašování PINem. Relace zůstávají aktivní 30 dní.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Ponechat PIN',
 
     'error_pin_too_short' => 'PIN musí mít aspoň 6 číslice.',
-    'error_pin_digits' => 'PIN musí mít 6 až 10 číslic — pouze číslice.',
+    'error_pin_digits' => 'PIN musí mít :min až :max číslic — pouze číslice.',
     'error_pin_mismatch' => 'PINy se neshodují. Zkus to znovu.',
     'error_pin_required' => 'Zadej svůj PIN.',
     'error_pin_incorrect' => 'Nesprávný PIN.',

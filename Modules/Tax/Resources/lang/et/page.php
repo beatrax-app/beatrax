@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Ekspordi PDF',
     'export_pdf_aria' => 'Ekspordi PDF',
     'export_pdf_title' => 'Laadi alla beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Peida',
 
     'country_prompt_heading' => 'Millises riigis sa makse deklareerid?',
     'country_prompt_body' => 'Saad seda igal ajal muuta jaotises Seaded → :section.',

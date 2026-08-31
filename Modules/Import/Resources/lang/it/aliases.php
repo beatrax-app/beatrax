@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Analizza e visualizza',
     'cancel_import' => "Annulla l'importazione",
 
-    'diff_new' => 'nuovi,',
-    'diff_unchanged' => 'invariati,',
-    'diff_conflicts' => 'conflitti.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count nuovo|:count nuovi',
+    'diff_unchanged' => ':count invariato|:count invariati',
+    'diff_conflicts' => ':count conflitto|:count conflitti',
 
     'conflicts_heading' => 'Conflitti',
     'conflict_name' => 'nome — esistente: :existing → file: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Prova sulle mie transazioni',
     'test_help' => 'Modifica lo schema generalizzato di una riga per vedere quali transazioni troverebbe.',
     'typing' => 'Digitazione…',
-    'matches_prefix' => 'Corrisponde a',
-    'matches_suffix' => 'transazioni nella tua cronologia recente.',
+    'matches' => 'Corrisponde a :count transazione nella tua cronologia recente.|Corrisponde a :count transazioni nella tua cronologia recente.',
 
     'merge_modal_title' => 'Unisci :count alias|Unisci :count alias',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Nessun file caricato.',
         'unreadable' => 'Impossibile leggere il file caricato.',
         'too_short' => 'Lo schema è troppo corto per essere testato.',
+        'file_not_yaml' => 'Questo file non è YAML valido, quindi non è stato possibile leggerne nulla. Esporta di nuovo i tuoi alias e carica il file che ottieni.',
+        'file_unreadable_as_yaml' => 'Non è stato possibile leggere questo file come un elenco di alias. Esporta di nuovo i tuoi alias e carica il file che ottieni.',
+        'file_has_no_entries_list' => 'Questo file non inizia con un elenco entries: di primo livello, quindi non contiene alias da importare. Controlla di aver scelto il file giusto.',
+        'entry_is_not_a_mapping' => 'La voce :entry è un valore semplice dove erano attesi uno schema e un nome. Dalle entrambi i campi, oppure rimuovila, e carica di nuovo il file.',
+        'entry_is_missing_a_field' => 'Alla voce :entry manca lo schema o il nome, e un alias ha bisogno di entrambi. Aggiungi ciò che manca, oppure rimuovi quella voce, e carica di nuovo il file.',
     ],
 ];

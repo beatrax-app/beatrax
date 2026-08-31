@@ -17,14 +17,12 @@ use Throwable;
 // WindowManager is not bound.
 final readonly class SyncListenerProcess
 {
-    private const ALIAS = 'sync-listener';
-
-    private const PROBE_TIMEOUT_SECONDS = 1;
+    private const string ALIAS = 'sync-listener';
 
     // Which device id the listener now running was spawned with. Survives the
     // request that spawned it because the app and the daemon are separate
     // processes, so nothing in memory can answer this on the next unlock.
-    private const CREDENTIALLED_DEVICE_KEY = 'sync-listener:credentialled-device';
+    private const string CREDENTIALLED_DEVICE_KEY = 'sync-listener:credentialled-device';
 
     public function __construct(
         private DeviceRegistryService $devices,
@@ -159,7 +157,7 @@ final readonly class SyncListenerProcess
     // leaving every later request spawning another through Electron's sync IPC.
     private function portIsBound(): bool
     {
-        $socket = @fsockopen('127.0.0.1', $this->ports->lan(), $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
+        $socket = @fsockopen('127.0.0.1', $this->ports->lan(), $errno, $errstr, LoopbackProbe::TIMEOUT_SECONDS);
 
         if ($socket === false) {
             return false;

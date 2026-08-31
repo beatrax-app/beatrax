@@ -78,6 +78,10 @@ INSER = "INSER"
 UPDAT = "UPDAT"
 DELET = "DELET"
 SELEC = "SELEC"
+# SchmeNm (Scheme Name) splits on the capital, leaving the half the
+# dictionary rejects; UNIQUEs splits into UNIQU + Es.
+Schme = "Schme"
+UNIQU = "UNIQU"
 
 # Words the dictionary lacks that are correct in this codebase.
 unparseable = "unparseable"
@@ -86,6 +90,9 @@ invokable = "invokable"
 appliable = "appliable"
 encrypter = "encrypter"
 COSE = "COSE"
+# The PDF stream filter is spelled FlateDecode, after the zlib "deflate"
+# it wraps — the reader's own comment names the encoding it rebuilds.
+Flate = "Flate"
 
 # Misspelled upstream. bacon/qr-code names the constant
 # DEFAULT_BYTE_MODE_ECODING, and the reference has to match the library
@@ -99,6 +106,12 @@ USERA = "USERA"
 usera = "usera"
 ND = "ND"
 SMAL = "SMAL"
+# Synthetic IBAN prefixes, built so each test's accounts are its own:
+# 'NL00SER…' and 'NL00FRAM…' split on the digits.
+SER = "SER"
+FRAM = "FRAM"
+# A cursor-test series id, 'thr-a'.
+thr = "thr"
 Caf = "Caf"
 
 # Words from the shipped locales, quoted verbatim by tests that assert on
@@ -111,6 +124,9 @@ cours = "cours"    # fr: "cours" in en cours
 collegate = "collegate"    # it: "connected", feminine plural
 duplicat = "duplicat"      # ro: "duplicate"
 importerad = "importerad"  # sv: "imported"
+Leeg = "Leeg"                    # nl: "empty", in a goal name
+Deterministisch = "Deterministisch"  # nl: "deterministic"
+Extracto = "Extracto"            # es: "statement"
 
 [files]
 # Vendored, generated, and fixture trees are not ours to spell-check. Bank

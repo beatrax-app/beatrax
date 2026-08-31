@@ -6,17 +6,17 @@ namespace Modules\Budgets\Internal\Fold;
 
 use Modules\Budgets\Public\Dto\EnvelopeRow;
 
-final class FoldStep
+final readonly class FoldStep
 {
     /**
      * @param  array<int, int>  $carriedIn
      * @param  array<int, EnvelopeRow>  $rows
      */
     public function __construct(
-        public readonly int $poolCarry,
-        public readonly array $carriedIn,
-        public readonly int $toBudgetMinor,
-        public readonly int $overspentCount,
-        public readonly array $rows,
+        public int $poolCarry,
+        public array $carriedIn,
+        public int $toBudgetMinor,
+        public int $overspentCount,
+        public array $rows,
     ) {}
 }

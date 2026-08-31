@@ -15,13 +15,13 @@ use Modules\Migration\Internal\Pipeline\StagingWriter;
 use Modules\Migration\Models\MigrationRun;
 use Throwable;
 
-final class StartMigrationRun
+final readonly class StartMigrationRun
 {
     /** @var array<string, ParsesMigrationSource> */
-    private readonly array $parsers;
+    private array $parsers;
 
     public function __construct(
-        private readonly StagingWriter $stagingWriter,
+        private StagingWriter $stagingWriter,
         Ynab4Parser $ynab4Parser,
         NynabParser $nynabParser,
         ActualParser $actualParser,

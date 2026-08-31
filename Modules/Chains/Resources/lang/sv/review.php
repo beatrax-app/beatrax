@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Bekräfta eller avvisa kandidatlänkar som kedjelösaren inte kunde bekräfta automatiskt.',
 
     'empty_heading' => 'Inget att granska',
-    'empty_body' => 'Varje kedjelänk är antingen bekräftad eller avvisad. Nya kandidater dyker upp här allteftersom importer kommer in.',
+    'empty_body' => 'Varje länk som lösaren kunde para ihop är bekräftad eller avvisad. Nya kandidater dyker upp här allteftersom importer kommer in.',
 
     'auto_confirm_nudge' => 'En bekräftelse till, så bekräftas liknande länkar automatiskt.',
 

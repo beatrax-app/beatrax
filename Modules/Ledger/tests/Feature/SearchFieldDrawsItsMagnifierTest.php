@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-// Measured on an iPhone 12 mini: ⌕ (U+2315) has no glyph in Inter and the
-// system fallback drew it at roughly 9x9 of ink beside 15px placeholder text,
-// on the same screen as the top bar's drawn magnifier.
+// Measured on an iPhone 12 mini: ⌕ (U+2315) has no glyph in the body stack and
+// the fallback drew it at roughly 9x9 of ink beside 15px placeholder text, on
+// the same screen as the top bar's drawn magnifier.
 
 it('draws the search field magnifier instead of typing the character', function (): void {
     $blade = (string) file_get_contents(

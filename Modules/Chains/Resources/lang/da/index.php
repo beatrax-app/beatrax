@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importér et par kontoudtog (bank, PayPal, kort), så viser kædeløseren automatisk kæder på tværs af konti her.',
 
     'no_counterparty' => '(ingen modpart)',
-    'open_from_row' => 'Åbn fra-rækken',
-    'open_to_row' => 'Åbn til-rækken',
     'leg_count' => ':count betaling|:count betalinger',
+    'legs_more' => '+ :count mere',
     'state_aria' => 'Status: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Bekræftet',
+        'rejected' => 'Afvist',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal-finansiering',

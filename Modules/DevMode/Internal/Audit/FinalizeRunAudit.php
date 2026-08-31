@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Audit;
 
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DevMode\Internal\Process\RunExitCodeFile;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
@@ -14,9 +15,9 @@ final readonly class FinalizeRunAudit
     // Read up to 32 KiB so the 8 KiB cap has headroom after redaction —
     // a Bearer-header replacement can leave the text shorter than the
     // input, so reading more guarantees the cap consumes real content.
-    private const READ_BYTES = 32_768;
+    private const int READ_BYTES = 32_768;
 
-    private const CANCELLED_SIGTERM_EXIT_CODE = -15;
+    private const int CANCELLED_SIGTERM_EXIT_CODE = -15;
 
     public function __construct(
         private AuditWriter $audit,
@@ -43,6 +44,11 @@ final readonly class FinalizeRunAudit
         if ($cancelled && $effectiveExit === null) {
             $effectiveExit = self::CANCELLED_SIGTERM_EXIT_CODE;
         }
+
+        // The caller has no exit code for a detached run: the PID vanishing is
+        // all it saw. The watcher subshell wrote the real one beside the
+        // output file, and the run card's Failed state is keyed on it.
+        $effectiveExit ??= RunExitCodeFile::read($record->outPath);
 
         // Merges onto the spawner's eager row via run_id, falling back to an
         // append-only write so the fact of the run is never lost.

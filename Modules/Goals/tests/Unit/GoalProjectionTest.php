@@ -79,7 +79,7 @@ it('returns a projected finish date when there is a contribution history', funct
         'user_id' => $this->user->id,
         'target_minor' => 300000,
         'start_date' => $startDate,
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -139,7 +139,7 @@ it('sets projectionBeyondHorizon to true when projected finish exceeds 90 days',
         'user_id' => $this->user->id,
         'target_minor' => 1000000, // 10 000 EUR — large target
         'start_date' => $startDate,
-        'target_date' => CarbonImmutable::now()->addYears(3)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearsNoOverflow(3)->toDateString(),
         'status' => 'active',
     ]);
 
@@ -159,7 +159,7 @@ it('derives the run-rate from pot movements for a pot-linked goal', function ():
         'user_id' => $this->user->id,
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -192,7 +192,7 @@ it('returns null projectedFinishDate when there is no contribution history', fun
         'user_id' => $this->user->id,
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -240,7 +240,7 @@ it('reports a stalled projection, not missing history, for a long-lived goal wit
         'user_id' => $this->user->id,
         'target_minor' => 300000,
         'start_date' => CarbonImmutable::now()->subDays(180)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 
@@ -258,7 +258,7 @@ it('reports missing history, not a stall, for a goal younger than the observatio
         'user_id' => $this->user->id,
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(2)->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 

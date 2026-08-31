@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Afvigelsesadvarsler',
-    'heading' => 'Advarsler',
     'intro_anomaly' => 'Enkelte posteringer, der ser usædvanlige ud for dig.',
     'intro_drift' => 'Godkendte tilbagevendende serier, hvis seneste postering endte uden for din tærskel.',
     'adjust_threshold' => 'Justér tærskel →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/år',
         'meta_prior_now' => 'tidligere :prior → nu :now',
         'meta_detected' => 'opdaget :date',
-        'meta_threshold' => 'tærskel ±:percent%',
+        'meta_threshold' => 'tærskel ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Opsig denne → spar :amount/år',
         'cadence_flipped' => 'Intervallet er ændret — vises også i',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Denne advarsel findes ikke længere.',
         'acknowledged' => 'Bekræftet',
         'snoozed' => 'Udsat',
         'dismissed' => 'Lukket',

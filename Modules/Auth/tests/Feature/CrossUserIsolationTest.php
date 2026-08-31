@@ -40,8 +40,8 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // developer's own runs — never another user's rows.
     'dev.overview',
     'dev.artisan.stream',
-    // dev.audit deliberately shows every operator's runs: mutual visibility is
-    // the Dev Console's contract, not a leak.
+    // dev.audit reads and clears on the same causer_id predicate, so it neither
+    // shows nor destroys a row another operator wrote.
     'dev.artisan',
     'dev.audit',
     // The log file is system-wide on a single-user-per-machine install, so the
@@ -78,6 +78,10 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // exercise a mocked HTTP client; the settings surface they feed is probed.
     'oauth.open-banking.connect',
     'oauth.open-banking.callback',
+    // Static copy and a retry that re-runs migrations. It exists precisely
+    // because the schema is incomplete, so there are no user-scoped rows on
+    // this device for it to read, let alone another account's.
+    'mobile.database-incomplete',
 ];
 
 /**
@@ -461,11 +465,11 @@ it('does not bleed the owner budget category into the partner budgets page', fun
         'display_order' => 40,
     ]);
 
-    $this->db->connection()->table('category_budgets')->insert([
+    $this->db->connection()->table('envelope_assignments')->insert([
         'user_id' => $this->owner->id,
         'category_id' => $ownerCategory->id,
-        'period_type' => 'monthly',
-        'budget_minor' => 50000,
+        'period_start' => '2026-05-01',
+        'assigned_minor' => 50000,
         'currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',

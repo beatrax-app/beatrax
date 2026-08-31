@@ -14,4 +14,11 @@ enum ChainLinkState: string
     case Confirmed = 'confirmed';
 
     case Rejected = 'rejected';
+
+    // The stored value is a key fragment, not a label: ucfirst() on it put
+    // English on a badge the aria-label beside it had already translated.
+    public function labelKey(): string
+    {
+        return 'chains::index.state.'.$this->value;
+    }
 }

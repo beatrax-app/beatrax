@@ -6,26 +6,26 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Ledger\Public\Enums\Direction;
-use Modules\Notifications\Internal\Support\CopyLine;
-use Modules\Notifications\Internal\Support\CopyParam;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class PersistDriftAlert
+final readonly class PersistDriftAlert
 {
     public function __construct(
-        private readonly NotificationWriter $writer,
-        private readonly UrlGenerator $urls,
-        private readonly LoggerInterface $log,
-        private readonly NotificationCopyRenderer $copyRenderer,
+        private NotificationWriter $writer,
+        private UrlGenerator $urls,
+        private LoggerInterface $log,
+        private NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(DriftAlertOpened $event): void
@@ -45,7 +45,7 @@ final class PersistDriftAlert
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
-                triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
+                triggerType: NotificationTrigger::DriftChanged,
                 subjectKey: (string) $event->recurringSeriesId,
                 occurrence: (string) $event->driftAlertId,
                 copy: $copy,

@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Twoje urządzenia',
 
-    'moved_help' => 'Parowanie, nazwy urządzeń i szyfrowanie znajdziesz teraz przy statusie synchronizacji.',
-    'moved_cta' => 'Otwórz Synchronizację i urządzenie',
     'device_name' => 'Nazwa urządzenia',
     'save' => 'Zapisz',
     'peer_default_name' => 'Sparowane urządzenie',
     'rename_device' => 'Zmień nazwę urządzenia',
+    'rename_device_caption' => 'Zmień nazwę',
     'this_device' => 'To urządzenie',
     'removed' => 'Usunięte',
     'confirmed' => 'Potwierdzone',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Adres przekaźnika',
     'relay_endpoint_help' => 'Opcjonalne. Gdy jest ustawiony, urządzenia offline synchronizują się przez ten przekaźnik. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
+    'relay_endpoint_help_phone' => 'Opcjonalne. Gdy jest ustawiony, zmiany podróżują przez ten przekaźnik nawet wtedy, gdy Twoje urządzenia nie są w tej samej sieci. To urządzenie odbiera je, gdy synchronizujesz z tego ekranu — nigdy w tle, bo blokada aplikacji przechowuje jedyny klucz. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
     'relay_endpoint_aria' => 'Adres URL przekaźnika',
     'relay_insecure_warning' => 'Ten adres przekaźnika używa zwykłego HTTP. Przekaźnik nigdy nie odszyfrowuje Twoich danych, ale niezabezpieczone połączenie ujawnia obserwatorom sieci rozmiary i czasy zaszyfrowanych przesyłek. Dla najlepszej prywatności użyj adresu <strong>https://</strong>.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Usuwanie:',
     'remove_rotates_key' => 'Usunięcie tego urządzenia powoduje rotację klucza szyfrowania, więc nie otrzyma ono żadnych przyszłych aktualizacji.',
     'remove_cannot_erase' => 'Nie usunie to danych, które już są na tamtym urządzeniu. Jeśli urządzenie zostało zgubione lub skradzione, potraktuj wszystkie znajdujące się na nim dane jako ujawnione.',
+    'remove_is_local' => 'Twoje pozostałe urządzenia mają własną listę. Dopóki nie usuniesz go także tam, będą się z nim nadal synchronizować.',
     'remove_device' => 'Usuń urządzenie',
     'keep_device' => 'Zachowaj urządzenie',
     'rotating_key' => 'Rotacja klucza szyfrowania…',

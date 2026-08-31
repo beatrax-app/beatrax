@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Upiši kod',
     'camera_off' => 'Pristup kameri je isključen. Umjesto toga upiši kod s drugog uređaja.',
+    'camera_off_no_search' => 'Pristup kameri je isključen, a traženje drugog uređaja na mreži na iPhoneu još ne radi — pa upisani kod nema čime doći do njega. Ponovno uključi pristup kameri za Beatrax u postavkama uređaja i skeniraj kod s drugog uređaja.',
+    'no_search' => 'Traženje drugog uređaja na mreži na iPhoneu još ne radi, pa upisani kod nema što pronaći. Umjesto toga skeniraj kod kamerom — kamera ne treba pretraživati mrežu.',
     'word_code_aria' => 'Upiši kod u riječima s drugog uređaja',
     'submit_code' => 'Pošalji kod',
     'cancel' => 'Odustani',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Nije moguće doprijeti do drugog uređaja. Provjeri jesu li oba na istoj mreži i je li sinkronizacija uključena na računalu.',
+        'no_road_home' => 'Ovaj uređaj ne može pretraživati mrežu, a kod koji si skenirao ne sadrži adresu drugog uređaja. Zatraži novi kod i skeniraj njega.',
         'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj izradi novi.',
+        'code_incomplete' => 'Ovaj kod nije potpun. Usporedi ga s drugim uređajem i unesi ga u cijelosti.',
         'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kôd. Provjeri kôd i prikazuje li ga drugi uređaj još uvijek.',
         'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Provjeri radi li sinkronizacija na drugom uređaju ili skeniraj njegov kod kamerom — kamera ne treba pretraživati mrežu.',
         'no_peer_answered_ios' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Traženje drugog uređaja na mreži na iPhoneu još ne radi, pa skeniraj njegov kod kamerom.',
+        'no_peer_answered_camera_off' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Traženje drugog uređaja na mreži na iPhoneu još ne radi, a pristup kameri je isključen — zato ponovno uključi pristup kameri za Beatrax u postavkama uređaja i skeniraj kod s drugog uređaja.',
         'rate_limited' => 'Previše pokušaja. Pričekaj minutu i pokušaj ponovno.',
         'identity_locked' => 'Identitet tvojeg uređaja je zaključan. Otključaj aplikaciju pa pokušaj ponovno.',
         'identity_needs_lock' => 'Najprije postavite zaključavanje aplikacije — ono štiti identitet vašeg uređaja.',

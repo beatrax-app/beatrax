@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -16,13 +18,18 @@ use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Import\Internal\Exceptions\AliasFileRejectedException;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
 use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
+use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Mobile\Public\Services\ShareSheetExport;
+use Modules\Sync\Public\Events\EntityMutated;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -33,7 +40,14 @@ final class AliasesSettingsPage extends Component
     use HoldsFlashMessage;
     use WithFileUploads;
 
-    public int $perPage = 25;
+    private const int PER_PAGE = 25;
+
+    // A SQL LIMIT, and no control on this page offers to change it: the list
+    // is one fixed page size with a paginator under it. Locked rather than
+    // clamped, because a clamp would legitimise a client-chosen limit that
+    // nothing here ever asks the reader to pick. Zero divided the paginator.
+    #[Locked]
+    public int $perPage = self::PER_PAGE;
 
     // 0 means no row is in edit mode; int rather than ?int so the blade
     // branches on one typed comparison.
@@ -42,7 +56,7 @@ final class AliasesSettingsPage extends Component
     public string $editingPattern = '';
 
     /**
-     * @var array{total: int, first5: list<array{description: string, counterparty_name: string, booked_at: string}>, emptyMessage: ?string}|array{}
+     * @var array{total: int, first5: list<array{description: string, counterparty_name: string, postedAt: string}>, emptyMessage: ?string}|array{}
      */
     public array $previewResult = [];
 
@@ -135,7 +149,7 @@ final class AliasesSettingsPage extends Component
             $first5[] = [
                 'description' => isset($row->description) && is_string($row->description) ? $row->description : '',
                 'counterparty_name' => isset($row->counterparty_name) && is_string($row->counterparty_name) ? $row->counterparty_name : '',
-                'booked_at' => isset($row->booked_at) && is_string($row->booked_at) ? $row->booked_at : '',
+                'postedAt' => isset($row->posted_at) && is_string($row->posted_at) ? Fmt::shortDate($row->posted_at) : '',
             ];
         }
         $this->previewResult = [
@@ -145,7 +159,7 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    public function saveAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    public function saveAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Dispatcher $events, MerchantNameResolver $resolver): void
     {
         $value = trim($this->editingPattern);
         if ($value === '') {
@@ -184,13 +198,29 @@ final class AliasesSettingsPage extends Component
             return;
         }
 
+        // Renaming a counterparty is one of the commonest edits in the app and
+        // none of these three writes reached the op log, so it never left the
+        // device it was made on.
+        $events->dispatch(new EntityMutated(
+            table: 'merchant_aliases',
+            pk: $aliasId,
+            userId: $currentUser->user()->id,
+            mutationType: 'edit',
+            dirtyFields: ['generalized_pattern' => $value],
+        ));
+
+        // The resolver memoises this reader's aliases for the life of the
+        // container, so an edit it is not told about leaves the next resolve
+        // answering with the pattern the reader just replaced.
+        $resolver->forget($currentUser->user()->id);
+
         $this->editingId = 0;
         $this->editingPattern = '';
         $this->previewResult = [];
         $this->flashMessage = Lang::get('import::aliases.flash.updated');
     }
 
-    public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
+    public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Dispatcher $events, MerchantNameResolver $resolver): void
     {
         $affected = $db->connection()
             ->table('merchant_aliases')
@@ -203,6 +233,15 @@ final class AliasesSettingsPage extends Component
 
             return;
         }
+
+        $events->dispatch(new EntityMutated(
+            table: 'merchant_aliases',
+            pk: $aliasId,
+            userId: $currentUser->user()->id,
+            mutationType: 'delete',
+        ));
+
+        $resolver->forget($currentUser->user()->id);
 
         $this->selectedIds = array_values(array_filter(
             $this->selectedIds,
@@ -289,7 +328,9 @@ final class AliasesSettingsPage extends Component
         } catch (Throwable $e) {
             $logger->error('AliasesSettingsPage: bulk-merge failed.', SafeExceptionContext::describe($e));
             $this->showMergeModal = false;
-            $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', ['class' => $e::class]);
+            $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', [
+                'class' => SafeExceptionContext::shortName($e),
+            ]);
 
             return;
         }
@@ -305,8 +346,18 @@ final class AliasesSettingsPage extends Component
         AliasYamlExporter $exporter,
         CurrentUser $currentUser,
         ResponseFactory $responses,
-    ): StreamedResponse {
+        ShareSheetExport $shareSheet,
+    ): ?StreamedResponse {
         $user = $currentUser->user();
+
+        // Import is offered on every shell; export was offered on every shell
+        // and delivered on only some. Where the WebView drops the download the
+        // file leaves through the OS share sheet instead.
+        if ($shareSheet->replacesWebViewDownload()) {
+            $this->flashMessage = $shareSheet->export('aliases.yaml', $exporter->export($user))->message();
+
+            return null;
+        }
 
         return $responses->streamDownload(
             static function () use ($exporter, $user): void {
@@ -341,8 +392,8 @@ final class AliasesSettingsPage extends Component
 
         try {
             $entries = $importer->parse($contents);
-        } catch (InvalidArgumentException $e) {
-            $this->importError = $e->getMessage();
+        } catch (AliasFileRejectedException $rejected) {
+            $this->importError = $rejected->sentence();
 
             return;
         }

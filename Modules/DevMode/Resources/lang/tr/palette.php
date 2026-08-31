@@ -17,10 +17,11 @@ return [
     'section_categories' => 'Kategoriler',
     'section_goals_recurring' => 'Hedefler ve düzenli işlemler',
     'no_name' => '(adsız)',
-    'see_all_prefix' => 'Tümünü gör: ',
-    'see_all_suffix' => ' sonuç →',
-    'no_transactions_prefix' => 'Şununla eşleşen işlem yok: "',
-    'no_transactions_suffix' => '"',
+    // i18n-review: tr · see_all — Turkish selects one arm, so this line carries the
+    // whole range. Tüm :count sonucu gör puts the numeral before the noun with no
+    // plural marking, which is the rule; whether tümünü reads better is the call.
+    'see_all' => 'Tüm :count sonucu gör →',
+    'no_transactions' => 'Şununla eşleşen işlem yok: ":query"',
     'source_txn' => 'işlem',
     'source_counterparty' => 'karşı taraf',
     'source_category' => 'kategori',
@@ -30,6 +31,29 @@ return [
     'foot_select' => 'seç',
     'foot_close' => 'kapat',
     'close_aria' => 'Aramayı kapat',
+    'close_caption' => 'Kapat',
     'foot_try' => 'Dene',
-    'results_suffix' => ' sonuç',
+    'results' => ':count sonuç',
+
+    'action' => [
+        'run_import' => ['label' => 'İçe aktarmayı çalıştır', 'hint' => 'İçe aktarma sihirbazını aç'],
+        'scan_email' => ['label' => 'E-postaları şimdi tara', 'hint' => 'Gelen kutusu eşitlemesini hemen çalıştır'],
+        'open_profile' => ['label' => 'Profili aç', 'hint' => 'Ayarlar — hesap ve tercihler'],
+        'toggle_theme' => ['label' => 'Temayı değiştir', 'hint' => 'Açık ve koyu tema arasında geçiş yap'],
+    ],
+
+    'run_command' => ':command çalıştır',
+
+    'nav' => [
+        'overview' => ['label' => 'Dev genel bakış', 'hint' => 'Sistem kartları + son çalıştırmalar'],
+        'artisan' => ['label' => 'Artisan runner', 'hint' => 'İzin verilen komutları çalıştır'],
+        'audit' => ['label' => 'Dev denetim günlüğü', 'hint' => 'Geliştirici modundaki her işlem'],
+        'logs' => ['label' => 'Log izleyici', 'hint' => 'Canlı laravel-*.log akışı'],
+        'queue' => ['label' => 'Kuyruk denetleyicisi', 'hint' => 'Bekleyen / başarısız / batch'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Sistem probeları'],
+        'sql' => ['label' => 'SQL paneli', 'hint' => 'Yalnızca SELECT tarayıcısı'],
+        'system' => ['label' => 'Sistem anlık görüntüsü', 'hint' => 'Ortam + yollar + yapılandırma'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Gömülü kuyruk paneli'],
+        'sync_health' => ['label' => 'Eşitleme durumu', 'hint' => 'Karantinaya alınan veya atlanan birleştirme işlemleri'],
+    ],
 ];

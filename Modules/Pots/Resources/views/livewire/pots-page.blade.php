@@ -1,6 +1,8 @@
 @use('Modules\Core\Public\Navigation\Destination')
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Pots\Internal\Enums\PotLinkType')
+@use('Modules\Pots\Public\Enums\PotMovementKind')
 {{--
     /pots page — savings pots grouped by account with per-account reconciliation
     headers (real · allocated · unallocated), negative-unallocated amber
@@ -15,19 +17,38 @@
 
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format();
 
+    // The accounts a pot may be created on. A group whose account is not among
+    // them is a pot the server now refuses to add to, so the button is not drawn.
+    $allocatableAccountIds = array_map(static fn ($account) => (int) $account->id, $accounts);
+
     // Derived once for both withdraw surfaces. It used to be derived inside
     // the modal, which put it out of scope for the sheet that renders first.
-    $withdrawPot = null;
+    $operationPot = null;
     foreach ($groups as $accountPots) {
         foreach ($accountPots as $p) {
             if ($p->id === $operationPotId) {
-                $withdrawPot = $p;
+                $operationPot = $p;
                 break 2;
             }
+        }
+    }
+
+    // Fund, withdraw and move all act on this pot and are read at its own
+    // denomination, so the box has to state the scale the writer will use.
+    $operationCurrency = $operationPot?->currency;
+
+    // A new pot takes the currency of the account it is opened on, which is
+    // the select above the amount; before one is picked there is no scale.
+    $newPotCurrency = null;
+    foreach ($accounts as $account) {
+        if ((string) $account->id === (string) $accountId) {
+            $newPotCurrency = (string) $account->default_currency;
+            break;
         }
     }
 @endphp
@@ -47,7 +68,7 @@
      orphaned, no /livewire/update request was ever sent, and each write
      silently did nothing while the sheets still opened — those ride
      $dispatch, which is a plain window event and needs no binding. --}}
-<div class="mx-auto max-w-3xl px-4 py-12">
+<div class="mx-auto max-w-3xl px-4 py-6">
     <style>
         @media (min-width: 768px) {
             .pots-phone-list { display: none !important; }
@@ -71,8 +92,10 @@
         @endif
     </header>
 
-    {{-- No accounts / no pots: empty state --}}
-    @if (count($accounts) === 0 || count($groups) === 0)
+    {{-- No pots: empty state. Gated on the pots, not on the accounts: a pot
+         created on an account that can no longer hold one still has to be
+         reachable, and hiding the whole list left it with no way off the page. --}}
+    @if (count($groups) === 0)
         <x-core::empty-state
             :heading="Lang::get('pots::messages.empty.heading')"
             :body="Lang::get('pots::messages.empty.body')"
@@ -95,12 +118,13 @@
             @foreach ($groups as $accountId => $pots)
                 @php
                     /** @var \Modules\Pots\Public\Dto\PotRow[] $pots */
-                    $phoneRec = $reconciliations[$accountId] ?? null;
+                    $phoneRecs = $reconciliations[$accountId] ?? [];
                 @endphp
-                {{-- The three figures the pots have to add up to. They were in
-                     the desktop group header only, so a phone showed envelopes
-                     with nothing to weigh them against. --}}
-                @if ($phoneRec !== null)
+                {{-- The three figures the pots have to add up to, one line per
+                     currency the account still holds pots in. They were in the
+                     desktop group header only, so a phone showed envelopes with
+                     nothing to weigh them against. --}}
+                @foreach ($phoneRecs as $phoneRec)
                     <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
                         <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $pots[0]->accountName }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
@@ -115,8 +139,11 @@
                                 {{ Lang::get('pots::messages.recon.over_allocated', ['amount' => $fmt(abs($phoneRec->unallocatedMinor), $phoneRec->currency)]) }}
                             </p>
                         @endif
+                        @if ($phoneRec->isPartial())
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $phoneRec->unconvertedList()]) }}</p>
+                        @endif
                     </div>
-                @endif
+                @endforeach
                 @foreach ($pots as $pot)
                     <div class="card-list-item flex-wrap">
                         <div class="flex-1 min-w-0">
@@ -126,8 +153,33 @@
                         <span class="amount">{{ $fmt($pot->balanceMinor, $pot->currency) }}</span>
                         {{-- Actions on their own line. Five 44px targets and
                              the amount left the name 6px wide on a 375pt
-                             screen, so the row said which pot it was not. --}}
-                        <div class="flex w-full items-center justify-end gap-1">
+                             screen, so the row said which pot it was not.
+
+                             flex-wrap because the captions are as long as the
+                             language makes them: measured at 375px the German
+                             set needs 333px against 309px of row, and the list
+                             around it is overflow-hidden, so without the wrap
+                             Archivieren is clipped away rather than scrolled
+                             to. It takes a second line and every target stays
+                             reachable. --}}
+                        {{-- The strip the archive button arms. It existed only
+                             in the desktop list, which this breakpoint hides, so
+                             the phone's 🗄️ set the id and then nothing appeared
+                             — the control read as dead because its answer was
+                             rendered somewhere unreachable. Goals carries the
+                             same pair; the guard below keeps them in step. --}}
+                        @if ($archivingPotId === $pot->id)
+                            <x-core::confirm-strip
+                                class="mt-3 w-full"
+                                :question="Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($pot->balanceMinor, $pot->currency)])"
+                                :cancel-label="Lang::get('pots::messages.common.cancel')"
+                                :confirm-label="Lang::get('pots::messages.actions.archive')"
+                                :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
+                                cancel="cancelArchive"
+                                :confirm="'archivePot('.$pot->id.')'"
+                            />
+                        @else
+                        <div class="flex w-full flex-wrap items-center justify-end gap-1">
                         {{-- Row actions always visible on phone --}}
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.fund')"
@@ -153,6 +205,7 @@
                             wire:click="confirmArchive({{ $pot->id }})"
                         >🗄️</x-core::emoji-action>
                         </div>
+                        @endif
                     </div>
                 @endforeach
             @endforeach
@@ -163,7 +216,7 @@
             @foreach ($groups as $accountId => $pots)
                 @php
                     /** @var \Modules\Pots\Public\Dto\PotRow[] $pots */
-                    $rec = $reconciliations[$accountId] ?? null;
+                    $recs = $reconciliations[$accountId] ?? [];
                     $firstPot = $pots[0];
                 @endphp
 
@@ -171,14 +224,19 @@
                     {{-- Account group header row --}}
                     <div class="flex items-center justify-between gap-4 mb-2">
                         <x-core::section-heading :title="$firstPot->accountName" />
-                        <x-core::secondary-button
-                            size="sm"
-                            x-on:click="$wire.set('accountId', '{{ $accountId }}'); $wire.set('editPotId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'pot-form' }); } else { $flux.modal('pot-form').show(); }"
-                        >{{ Lang::get('pots::messages.add_pot') }}</x-core::secondary-button>
+                        @if (in_array((int) $accountId, $allocatableAccountIds, true))
+                            <x-core::secondary-button
+                                size="sm"
+                                x-on:click="$wire.set('accountId', '{{ $accountId }}'); $wire.set('editPotId', 0); if (window.innerWidth < 768) { $dispatch('open-sheet', { name: 'pot-form' }); } else { $flux.modal('pot-form').show(); }"
+                            >{{ Lang::get('pots::messages.add_pot') }}</x-core::secondary-button>
+                        @endif
                     </div>
 
-                    {{-- Negative-unallocated amber warning banner --}}
-                    @if ($rec !== null && $rec->isOverAllocated)
+                    {{-- One banner and one line per currency: the account's own
+                         denomination first, then every other currency it still
+                         holds pots in. --}}
+                    @foreach ($recs as $rec)
+                    @if ($rec->isOverAllocated)
                         <x-core::alert tone="warning" class="mb-2" role="alert">
                             <span class="mr-1" aria-hidden="true">
                                 <flux:icon.exclamation-triangle class="inline-block h-4 w-4 align-text-bottom" />
@@ -187,8 +245,6 @@
                         </x-core::alert>
                     @endif
 
-                    {{-- Reconciliation line --}}
-                    @if ($rec !== null)
                         <p class="mb-4 text-xs text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                             {{ Lang::get('pots::messages.recon.real_balance') }} {{ $fmt($rec->realBalanceMinor, $rec->currency) }}
                             <span aria-hidden="true"> · </span>
@@ -196,7 +252,13 @@
                             <span aria-hidden="true"> · </span>
                             {{ Lang::get('pots::messages.recon.unallocated') }} <span class="{{ $rec->isOverAllocated ? 'font-medium text-amber-600 dark:text-amber-400' : '' }}">{{ $fmt($rec->unallocatedMinor, $rec->currency) }}</span>
                         </p>
-                    @endif
+                        {{-- A currency the account holds that no line above
+                             answers for is named, the way every other money
+                             surface names what it could not price. --}}
+                        @if ($rec->isPartial())
+                            <p class="mb-4 -mt-2 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $rec->unconvertedList()]) }}</p>
+                        @endif
+                    @endforeach
 
                     {{-- Pot cards --}}
                     <ul class="space-y-4">
@@ -232,26 +294,22 @@
                                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                         {{ $pot->categoryName }}: {{ $fmt($pot->categorySpentMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.spent') }} · {{ $fmt($pot->balanceMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.in_pot') }}
                                     </p>
+                                    @if ($pot->categorySpentIsPartial())
+                                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $pot->categorySpentUnconvertedList()]) }}</p>
+                                    @endif
                                 @endif
 
                                 {{-- Archive micro-confirm or footer action row --}}
                                 @if ($archivingPotId === $pot->id)
-                                    <div class="mt-3 flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900">
-                                        <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">
-                                            {{ Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($pot->balanceMinor, $pot->currency)]) }}
-                                        </p>
-                                        <button
-                                            type="button"
-                                            wire:click="cancelArchive"
-                                            class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
-                                        >{{ Lang::get('pots::messages.common.cancel') }}</button>
-                                        <button
-                                            type="button"
-                                            wire:click="archivePot({{ $pot->id }})"
-                                            aria-label="{{ Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name]) }}"
-                                            class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
-                                        >{{ Lang::get('pots::messages.actions.archive') }}</button>
-                                    </div>
+                                    <x-core::confirm-strip
+                                        class="mt-3"
+                                        :question="Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($pot->balanceMinor, $pot->currency)])"
+                                        :cancel-label="Lang::get('pots::messages.common.cancel')"
+                                        :confirm-label="Lang::get('pots::messages.actions.archive')"
+                                        :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
+                                        cancel="cancelArchive"
+                                        :confirm="'archivePot('.$pot->id.')'"
+                                    />
                                 @else
                                     {{-- Both actions carried the phone idiom the /budgets
                                          row uses — a sm:hidden glyph beside a sr-only
@@ -354,13 +412,17 @@
                                             <ul>
                                                 @foreach ($pot->recentMovements as $movement)
                                                     @php
-                                                        $isIncoming = in_array($movement->kind, ['fund', 'transfer_in'], true);
+                                                        $isIncoming = $movement->kind?->isIncoming() ?? false;
+                                                        // A kind this build has no case for is named as such rather
+                                                        // than folded into one of the four: the wording and the '+'
+                                                        // both claim a direction only the newer version knows.
                                                         $label = match ($movement->kind) {
-                                                            'fund' => Lang::get('pots::messages.movement.fund'),
-                                                            'withdraw' => Lang::get('pots::messages.movement.withdraw'),
-                                                            'transfer_in' => Lang::get('pots::messages.movement.moved_from', ['name' => $movement->counterpartPotName ?? Lang::get('pots::messages.pot_fallback')]),
-                                                            'transfer_out' => Lang::get('pots::messages.movement.moved_to', ['name' => $movement->counterpartPotName ?? Lang::get('pots::messages.pot_fallback')]),
-                                                            default => $movement->kind,
+                                                            PotMovementKind::Fund => Lang::get('pots::messages.movement.fund'),
+                                                            PotMovementKind::Withdraw => Lang::get('pots::messages.movement.withdraw'),
+                                                            PotMovementKind::TransferIn => Lang::get('pots::messages.movement.moved_from', ['name' => $movement->counterpartPotName ?? Lang::get('pots::messages.pot_fallback')]),
+                                                            PotMovementKind::TransferOut => Lang::get('pots::messages.movement.moved_to', ['name' => $movement->counterpartPotName ?? Lang::get('pots::messages.pot_fallback')]),
+                                                            PotMovementKind::ReleasedOnArchive => Lang::get('pots::messages.movement.released_on_archive'),
+                                                            null => Lang::get('pots::messages.movement.unreadable'),
                                                         };
                                                     @endphp
                                                     <li class="flex items-center justify-between gap-4 py-2 px-0 text-sm">
@@ -375,11 +437,16 @@
                                                             class="shrink-0 text-sm tabular-nums {{ $isIncoming ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}"
                                                             style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
                                                         >
-                                                            {{ $isIncoming ? '+' : '' }}{{ $fmt($movement->amountMinor, $movement->currency) }}
+                                                            {{ $movement->kind === null ? '' : ($isIncoming ? '+' : '') }}{{ $fmt($movement->amountMinor, $movement->currency) }}
                                                         </span>
                                                     </li>
                                                 @endforeach
                                             </ul>
+                                            @if ($pot->hasOlderMovements())
+                                                <p class="pb-2 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
+                                                    {{ Lang::get('pots::messages.history.truncated', ['shown' => Fmt::number(count($pot->recentMovements)), 'count' => Fmt::number($pot->movementCount)]) }}
+                                                </p>
+                                            @endif
                                         </div>
                                     </div>
                                 @endif
@@ -399,7 +466,7 @@
                 wire:click="$toggle('showArchived')"
                 class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
             >
-                <span>{{ Lang::get('pots::messages.archived.toggle', ['count' => count($archived)]) }}</span>
+                <span>{{ Lang::choice('pots::messages.archived.toggle', count($archived)) }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 transition-transform {{ $showArchived ? 'rotate-180' : '' }}" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -492,9 +559,9 @@
                         :label="Lang::get('pots::messages.form.initial_amount')"
                         :hint="Lang::get('pots::messages.form.initial_amount_help')"
                         size="base"
-                        inputmode="decimal"
+                        inputmode="{{ MoneyInput::decimalPlaces($newPotCurrency) === 0 ? 'numeric' : 'decimal' }}"
                         wire:model.live.blur="amount"
-                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :placeholder="MoneyInput::formatAbsMinor(0, $newPotCurrency)"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'pot-amount-sheet-error' : null"
                         style="font-size: 16px; font-variant-numeric: tabular-nums;"
@@ -563,9 +630,9 @@
                     field-id="fund-amount-sheet"
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
-                    inputmode="decimal"
+                    inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                     wire:model.live.blur="operationAmount"
-                    :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                     :aria-invalid="$errorAmount !== '' ? 'true' : null"
                     :aria-describedby="$errorAmount !== '' ? 'fund-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
@@ -599,7 +666,7 @@
     {{-- Withdraw sheet. The phone row's ↑ dispatches open-sheet for this
          name; without a sheet listening, the only thing that answered was a
          flux:modal the phone never opens, so Withdraw did nothing at all. --}}
-    <x-core::bottom-sheet name="pot-withdraw" title="{{ Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}">
+    <x-core::bottom-sheet name="pot-withdraw" title="{{ Lang::get('pots::messages.withdraw.heading', ['name' => $operationPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}">
         <form wire:submit="withdrawPot" class="space-y-4">
             <div>
                 <x-core::form-field
@@ -607,9 +674,9 @@
                     field-id="withdraw-amount-sheet"
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
-                    inputmode="decimal"
+                    inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                     wire:model.live.blur="operationAmount"
-                    :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                     :aria-invalid="$errorAmount !== '' ? 'true' : null"
                     :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
@@ -617,9 +684,9 @@
                 @if ($errorAmount !== '')
                     <p id="withdraw-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
-                @if ($withdrawPot !== null)
+                @if ($operationPot !== null)
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('pots::messages.available_in', ['name' => $withdrawPot->name, 'amount' => $fmt($withdrawPot->balanceMinor, $withdrawPot->currency)]) }}
+                        {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $fmt($operationPot->balanceMinor, $operationPot->currency)]) }}
                     </p>
                 @endif
             </div>
@@ -655,29 +722,36 @@
                 : [];
         @endphp
         <form wire:submit="movePot" class="space-y-4">
-            <x-core::form-field
-                name="transferTargetPotId"
-                field-id="move-to-sheet"
-                type="select"
-                :label="Lang::get('pots::messages.move.to')"
-                size="base"
-                wire:model="transferTargetPotId"
-                style="font-size: 16px;"
-            >
-                <option value="">{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
-                @foreach ($moveDestPotsSheet as $destPot)
-                    <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
-                @endforeach
-            </x-core::form-field>
+            <div>
+                <x-core::form-field
+                    name="transferTargetPotId"
+                    field-id="move-to-sheet"
+                    type="select"
+                    :label="Lang::get('pots::messages.move.to')"
+                    size="base"
+                    wire:model.live="transferTargetPotId"
+                    :aria-invalid="$errorTarget !== '' ? 'true' : null"
+                    :aria-describedby="$errorTarget !== '' ? 'move-to-sheet-error' : null"
+                    style="font-size: 16px;"
+                >
+                    <option value="">{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
+                    @foreach ($moveDestPotsSheet as $destPot)
+                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                    @endforeach
+                </x-core::form-field>
+                @if ($errorTarget !== '')
+                    <p id="move-to-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorTarget }}</p>
+                @endif
+            </div>
             <div>
                 <x-core::form-field
                     name="operationAmount"
                     field-id="move-amount-sheet"
                     :label="Lang::get('pots::messages.common.amount')"
                     size="base"
-                    inputmode="decimal"
+                    inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                     wire:model.live.blur="operationAmount"
-                    :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                     :aria-invalid="$errorAmount !== '' ? 'true' : null"
                     :aria-describedby="$errorAmount !== '' ? 'move-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
@@ -752,9 +826,9 @@
                             field-id="pot-amount"
                             :label="Lang::get('pots::messages.form.initial_amount')"
                             :hint="Lang::get('pots::messages.form.initial_amount_help')"
-                            inputmode="decimal"
+                            inputmode="{{ MoneyInput::decimalPlaces($newPotCurrency) === 0 ? 'numeric' : 'decimal' }}"
                             wire:model.live.blur="amount"
-                            :placeholder="Lang::get('core::components.amount_placeholder')"
+                            :placeholder="MoneyInput::formatAbsMinor(0, $newPotCurrency)"
                             :aria-invalid="$errorAmount !== '' ? 'true' : null"
                             :aria-describedby="$errorAmount !== '' ? 'pot-amount-error' : null"
                             style="font-variant-numeric: tabular-nums;"
@@ -829,9 +903,13 @@
                         }
                     }
                 }
-                $fundRec = $fundPot !== null && isset($reconciliations[$fundPot->accountId])
-                    ? $reconciliations[$fundPot->accountId]
-                    : null;
+                $fundRec = null;
+                foreach ($fundPot === null ? [] : ($reconciliations[$fundPot->accountId] ?? []) as $candidate) {
+                    if ($candidate->currency === $fundPot->currency) {
+                        $fundRec = $candidate;
+                        break;
+                    }
+                }
             @endphp
             <x-core::section-heading :title="Lang::get('pots::messages.fund.heading', ['name' => $fundPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="fundPot" class="mt-6 space-y-4">
@@ -840,9 +918,9 @@
                         name="operationAmount"
                         field-id="fund-amount"
                         :label="Lang::get('pots::messages.common.amount')"
-                        inputmode="decimal"
+                        inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                         wire:model.live.blur="operationAmount"
-                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'fund-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
@@ -892,26 +970,33 @@
             @endphp
             <x-core::section-heading :title="Lang::get('pots::messages.move.heading', ['name' => $moveSrcPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="movePot" class="mt-6 space-y-4">
-                <x-core::form-field
-                    name="transferTargetPotId"
-                    field-id="move-to"
-                    type="select"
-                    :label="Lang::get('pots::messages.move.to')"
-                    wire:model="transferTargetPotId"
-                >
-                    <option value="">{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
-                    @foreach ($moveDestPots as $destPot)
-                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
-                    @endforeach
-                </x-core::form-field>
+                <div>
+                    <x-core::form-field
+                        name="transferTargetPotId"
+                        field-id="move-to"
+                        type="select"
+                        :label="Lang::get('pots::messages.move.to')"
+                        wire:model.live="transferTargetPotId"
+                        :aria-invalid="$errorTarget !== '' ? 'true' : null"
+                        :aria-describedby="$errorTarget !== '' ? 'move-to-error' : null"
+                    >
+                        <option value="">{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
+                        @foreach ($moveDestPots as $destPot)
+                            <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                        @endforeach
+                    </x-core::form-field>
+                    @if ($errorTarget !== '')
+                        <p id="move-to-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorTarget }}</p>
+                    @endif
+                </div>
                 <div>
                     <x-core::form-field
                         name="operationAmount"
                         field-id="move-amount"
                         :label="Lang::get('pots::messages.common.amount')"
-                        inputmode="decimal"
+                        inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                         wire:model.live.blur="operationAmount"
-                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'move-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
@@ -949,23 +1034,23 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="pot-withdraw" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">
-            <x-core::section-heading :title="Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
+            <x-core::section-heading :title="Lang::get('pots::messages.withdraw.heading', ['name' => $operationPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="withdrawPot" class="mt-6 space-y-4">
                 <div>
                     <x-core::form-field
                         name="operationAmount"
                         field-id="withdraw-amount"
                         :label="Lang::get('pots::messages.common.amount')"
-                        inputmode="decimal"
+                        inputmode="{{ MoneyInput::decimalPlaces($operationCurrency) === 0 ? 'numeric' : 'decimal' }}"
                         wire:model.live.blur="operationAmount"
-                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :placeholder="MoneyInput::formatAbsMinor(0, $operationCurrency)"
                         :aria-invalid="$errorAmount !== '' ? 'true' : null"
                         :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
                     />
-                    @if ($withdrawPot !== null)
+                    @if ($operationPot !== null)
                         <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            {{ Lang::get('pots::messages.available_in', ['name' => $withdrawPot->name, 'amount' => $fmt($withdrawPot->balanceMinor, $withdrawPot->currency)]) }}
+                            {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $fmt($operationPot->balanceMinor, $operationPot->currency)]) }}
                         </p>
                     @endif
                     @if ($errorAmount !== '')

@@ -14,7 +14,7 @@ final class FilingSeason
     // January-April is still spent filing the previous year's return, so the
     // year every tax surface defaults to follows the filing season and not
     // the calendar.
-    public const LAST_MONTH_OF_PREVIOUS_YEARS_SEASON = 4;
+    public const int LAST_MONTH_OF_PREVIOUS_YEARS_SEASON = 4;
 
     public static function defaultYear(CarbonImmutable $now): int
     {

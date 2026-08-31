@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Võrreldud ülaloleva baasjoonega',
 
+    'run_failed' => 'Seda prognoosi ei õnnestunud arvutada. Allolev joon näitab ainult seda, mis on juba kirjendatud.',
+
     'scenario_editor_aria' => 'Stsenaariumi redaktor',
     'series_confidence' => 'Seeria kindlus',
     'no_series_contribute' => 'Ükski seeria ei mõjuta veel selle konto prognoosi.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Uuendan',
     'chart_noscript' => 'Graafik vajab JavaScripti. Vahemik hõlmab :days päeva.|Graafik vajab JavaScripti. Vahemik hõlmab :days päeva.',
     'total_balance' => 'Kogujääk',
+    'projection_range' => 'Prognoosi vahemik',
+    'point_estimate' => 'Punkthinnang',
 
     'per_month_suffix' => '/kuus',
     'confidence_chip_aria' => ':name, kindlus :confidence — prognoosi vahemik on :percent protsenti punkthinnangust',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Madalaim 30 päeva jooksul',
     'next_ics' => 'Järgmine ICS arveldus: :amount kuupäeval :date',
     'ics_overdue' => 'ICS arveldus on tähtaja ületanud: :amount, tähtaeg oli :date',
+
+    'stale_run' => 'Prognoos seisuga :date — pole sellest ajast värskendatud.',
+
+    'confidence' => [
+        'high' => 'Kõrge',
+        'medium' => 'Keskmine',
+        'low' => 'Madal',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Summa on kohustuslik.',
+        'amount_decimals' => 'Summa peab olema arv, milles on kuni :decimals kümnendkoht.|Summa peab olema arv, milles on kuni :decimals kümnendkohta.',
+        'amount_whole' => 'Summa peab olema täisarv — sellel valuutal pole väiksemat ühikut.',
+        'amount_non_negative' => 'Summa peab olema null või positiivne.',
+        'amount_non_zero' => 'Summa ei tohi olla null.',
+        'field_required' => 'Väli :field on kohustuslik.',
+    ],
 ];

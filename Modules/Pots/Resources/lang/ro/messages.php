@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Pușculițe · Beatrax',
     'heading' => 'Pușculițe',
-    'subtitle' => 'Solduri parțiale virtuale care însumate dau mereu soldul real al contului.',
+    'subtitle' => 'Solduri parțiale virtuale, desprinse din soldul real al contului.',
     'add_pot' => 'Adaugă pușculiță',
 
     'pot_fallback' => 'pușculiță',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Arată istoricul ↓',
         'hide' => 'Ascunde istoricul ↑',
+        'truncated' => 'Mișcări recente: :shown din :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Retragere',
         'moved_from' => 'Mutat din :name',
         'moved_to' => 'Mutat în :name',
+        'unreadable' => 'Înregistrat de o versiune mai nouă a Beatrax',
+        'released_on_archive' => 'Eliberat la arhivare',
     ],
 
     'archived' => [
-        'toggle' => 'Pușculițe arhivate (:count)',
+        'toggle' => 'Pușculiță arhivată (:count)|Pușculițe arhivate (:count)|Pușculițe arhivate (:count)',
         'badge' => 'Arhivată',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Introdu un nume pentru această pușculiță.',
         'select_account' => 'Alege un cont pentru această pușculiță.',
-        'amount_exceeds_unallocated' => 'Suma depășește soldul nealocat.',
         'amount_exceeds_unallocated_available' => 'Suma depășește soldul nealocat (:amount disponibil).',
         'amount_exceeds_pot_balance' => 'Suma depășește soldul din :name (:amount disponibil).',
+        'generic' => 'Plicul nu a putut fi salvat. Verificați câmpurile și încercați din nou.',
+        'amount_invalid' => 'Introduceți o sumă mai mare decât zero.',
+        'goal_already_linked' => 'Acest obiectiv are deja un plic activ asociat. Arhivați-l mai întâi.',
+        'account_cannot_hold_pots' => 'O pușculiță are nevoie de un cont care ține bani. Alege alt cont.',
+        'select_target_pot' => 'Alege o pușculiță în care să muți.',
+        'move_target_missing' => 'Această pușculiță nu mai este disponibilă. Alege alta.',
+        'move_same_pot' => 'O pușculiță nu poate muta bani către ea însăși. Alege altă pușculiță.',
+        'move_cross_account' => 'Pușculițele schimbă bani doar în cadrul aceluiași cont, iar :name este în contul :account.',
+        'pot_missing' => 'Această pușculiță nu mai este disponibilă.',
+        'operation_failed' => 'Nu a trecut. Nu s-au mutat bani — încearcă din nou.',
     ],
 
     'toast' => [

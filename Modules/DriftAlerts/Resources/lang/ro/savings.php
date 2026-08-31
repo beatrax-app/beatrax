@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abonamente →',
     'disclaimer' => 'Linkuri oficiale din corpusul de asistență — Beatrax nu anulează și nu schimbă nimic în locul tău.',
     'dismiss_aria' => 'Închide sugestia',
+    'dismiss_caption' => 'Închide',
 
     'insight' => [
         'cheaper_message' => ':name ar putea avea un plan mai ieftin — plătești :monthly/lună.',

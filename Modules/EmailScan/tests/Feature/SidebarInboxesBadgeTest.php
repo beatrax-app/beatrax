@@ -65,7 +65,6 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
             // own 2-occurrences-in-90-days rule.
             'occurrence_count' => 2,
             'last_seen_at' => $now,
-            'sample_message_id' => null,
             'state' => 'candidate',
             'created_at' => $now,
             'updated_at' => $now,

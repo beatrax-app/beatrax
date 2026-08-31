@@ -7,6 +7,7 @@ namespace Modules\Migration\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
@@ -15,6 +16,10 @@ use Modules\Migration\Models\MigrationRun;
 
 final class MigrationResults extends Component
 {
+    // Locked for the reason its Import twin is: render() re-checks ownership
+    // so a foreign id 404s, but unlocked the client still picks which of
+    // its own runs this page reports on.
+    #[Locked]
     public int $runId = 0;
 
     public function mount(int $id): void

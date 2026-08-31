@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Taisyklės lieka šiame įrenginyje. Jos nėra bendrinamos su kitais jūsų įrenginiais.',
 
     'reapply' => 'Taikyti taisykles istorijai iš naujo',
+    'reapply_confirm' => 'Iš naujo pritaikyti visas taisykles visai tavo istorijai? Kiekviena kategorija, kita šalis, pastaba ir mokesčių žyma, kurią priskyrė taisyklė, bus perrašyta. Tai, ką nustatei ranka, išlieka, taip pat ir viskas, kas yra suderintame išraše. Senų reikšmių niekas nesugrąžins.',
     'reapplying' => 'Taikoma iš naujo…',
     'new_rule' => 'Nauja taisyklė',
 
-    'reapply_progress_lead' => 'Taisyklės taikomos iš naujo…',
-    'reapply_progress_of' => 'iš',
-    'reapply_progress_trail' => 'operacijų patikrinta',
+    'reapply_progress' => 'Taisyklės taikomos iš naujo… :checked iš :count operacijos patikrinta|Taisyklės taikomos iš naujo… :checked iš :count operacijų patikrinta|Taisyklės taikomos iš naujo… :checked iš :count operacijų patikrinta',
 
     'empty_heading' => 'Kol kas taisyklių nėra',
     'empty_body' => 'Taisyklės atrenka operacijas pagal kelias sąlygas ir automatiškai pritaiko kategorijos, kitos šalies, pastabos ir mokesčių žymos pakeitimus — importuojant ir kaskart, kai jas iš naujo pritaikai esamai istorijai.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Sukurta',
     'col_row_actions' => 'Veiksmai',
     'inactive_badge' => 'Išjungta',
+    'combinator_all' => 'VISOS',
+    'combinator_any' => 'BET KURI',
     'inactive_title' => 'Ši taisyklė neveikia. Taisyklė išjungiama, kai ištrinama kategorija arba sandorio šalis, į kurią ji nurodo.',
 
     'more_conditions' => 'dar :count',

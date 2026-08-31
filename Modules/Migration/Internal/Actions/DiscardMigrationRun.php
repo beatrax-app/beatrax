@@ -11,12 +11,12 @@ use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyConfirmedException;
 use Modules\Migration\Models\MigrationRun;
 
-final class DiscardMigrationRun
+final readonly class DiscardMigrationRun
 {
     /**
      * @var list<string>
      */
-    private const STAGING_TABLES = [
+    private const array STAGING_TABLES = [
         'migration_staging_categories',
         'migration_staging_accounts',
         'migration_staging_payees',
@@ -26,11 +26,19 @@ final class DiscardMigrationRun
         'migration_staging_unmapped_items',
     ];
 
-    private const ABANDONED_THRESHOLD_HOURS = 24;
+    private const int ABANDONED_THRESHOLD_HOURS = 24;
+
+    /**
+     * @var list<string>
+     */
+    private const array NEVER_CONFIRMED_STATUSES = [
+        MigrationRunStatus::Parsed->value,
+        MigrationRunStatus::NeedsAttention->value,
+    ];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $migrationRunId, User $user): void
@@ -54,9 +62,13 @@ final class DiscardMigrationRun
     {
         $cutoff = $this->clock->now()->subHours(self::ABANDONED_THRESHOLD_HOURS)->toDateTimeString();
 
+        // Both never-confirmed states, not just the first-time one: a
+        // reconciliation abandoned at its preview sits in 'needs_attention'
+        // holding a whole export's staging rows, and wrote no domain row to
+        // orphan by deleting it.
         $staleRunIds = $this->db->connection()->table('migration_runs')
             ->where('user_id', $user->id)
-            ->where('status', MigrationRunStatus::Parsed->value)
+            ->whereIn('status', self::NEVER_CONFIRMED_STATUSES)
             ->where('created_at', '<', $cutoff)
             ->pluck('id');
 

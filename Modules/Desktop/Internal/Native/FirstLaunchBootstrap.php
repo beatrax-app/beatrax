@@ -11,13 +11,13 @@ use Modules\Core\Public\Services\UserDataPathService;
 
 // Migrations run before APP_KEY is minted, so any table an encrypt-on-store step
 // needs already exists the first time the encrypter is used. Both are idempotent.
-final class FirstLaunchBootstrap
+final readonly class FirstLaunchBootstrap
 {
     public function __construct(
-        private readonly Migrator $migrator,
-        private readonly UserDataPathService $paths,
-        private readonly DatabaseManager $db,
-        private readonly EnsureAppKey $ensureAppKey,
+        private Migrator $migrator,
+        private UserDataPathService $paths,
+        private DatabaseManager $db,
+        private EnsureAppKey $ensureAppKey,
     ) {}
 
     public function databasePath(): string

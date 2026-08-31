@@ -9,15 +9,15 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockUnlocked;
 
-final class LockStateManager
+final readonly class LockStateManager
 {
-    public const SESSION_KEY = 'beatrax_locked';
+    public const string SESSION_KEY = 'beatrax_locked';
 
-    public const DATA_KEY_SESSION = 'beatrax_data_key';
+    public const string DATA_KEY_SESSION = 'beatrax_data_key';
 
     // An unlock is activity, but only the PIN path stamped the config row to
     // say so, so a biometric unlock re-locked on the very next request.
-    public const SESSION_UNLOCK_ACTIVITY_PENDING = 'beatrax_unlock_activity_pending';
+    public const string SESSION_UNLOCK_ACTIVITY_PENDING = 'beatrax_unlock_activity_pending';
 
     /**
      * @param  KeyCustodian  $custodian  Defaults to the pass-through
@@ -28,8 +28,8 @@ final class LockStateManager
      *                                   container-resolved instance always receives one.
      */
     public function __construct(
-        private readonly KeyCustodian $custodian = new NullKeyCustodian,
-        private readonly ?Dispatcher $events = null,
+        private KeyCustodian $custodian = new NullKeyCustodian,
+        private ?Dispatcher $events = null,
     ) {}
 
     public function isLocked(Session $session): bool
@@ -39,26 +39,34 @@ final class LockStateManager
 
     public function lock(Session $session): void
     {
-        // Before forgetting the handle: a no-op on web/desktop, a Keychain
-        // delete on mobile.
-        $handle = $session->get(self::DATA_KEY_SESSION);
-        if (is_string($handle)) {
-            $this->custodian->forget($handle);
-        }
+        $this->releaseHandle($session);
 
         $session->put(self::SESSION_KEY, true);
-        $session->forget(self::DATA_KEY_SESSION);
 
         // The pending record belongs to the unlock just undone; carrying it
         // past a lock credits the next session with presence nobody proved.
         $session->forget(self::SESSION_UNLOCK_ACTIVITY_PENDING);
     }
 
-    // Releases a lock flag no PIN or biometric could ever clear. No data key
-    // is stored: such a user never had one.
+    // Releases a lock flag no PIN or biometric could ever clear, through the
+    // same release as lock(): dropping the handle alone would strand the key
+    // it names in the Keychain with nothing left pointing at it.
     public function clearStaleLock(Session $session): void
     {
+        $this->releaseHandle($session);
+
         $session->put(self::SESSION_KEY, false);
+    }
+
+    // The custodian first: a no-op on web/desktop, a Keychain delete on
+    // mobile, and it needs the handle the session is about to forget.
+    private function releaseHandle(Session $session): void
+    {
+        $handle = $session->get(self::DATA_KEY_SESSION);
+        if (is_string($handle)) {
+            $this->custodian->forget($handle);
+        }
+
         $session->forget(self::DATA_KEY_SESSION);
     }
 

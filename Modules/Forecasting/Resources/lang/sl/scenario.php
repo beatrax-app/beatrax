@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'serija',
 
+    'template' => [
+        'cancel' => 'Prekliči :name',
+        'change_amount' => 'Spremeni znesek za :name',
+    ],
+
     'summary' => [
         'cancel' => 'Prekliči :name',
         'series_fallback' => 'serija št. :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenarij je preimenovan.',
         'mutation_added' => 'Sprememba je dodana.',
         'mutation_updated' => 'Sprememba je posodobljena.',
-        'mutation_removed' => 'Sprememba je odstranjena. Razveljavi',
+        'mutation_removed' => 'Sprememba je odstranjena.',
     ],
 
     'errors' => [
         'name_empty' => 'Ime scenarija ne sme biti prazno.',
         'name_too_long' => 'Ime scenarija sme imeti največ :max znak.|Ime scenarija sme imeti največ :max znaka.|Ime scenarija sme imeti največ :max znake.|Ime scenarija sme imeti največ :max znakov.',
         'name_taken' => 'Scenarij s tem imenom že obstaja.',
+        'date_out_of_range' => 'Ta datum je zunaj vsakega napovednega obzorja — od danes do :days dneva vnaprej — zato scenarij ne bi ničesar spremenil.|Ta datum je zunaj vsakega napovednega obzorja — od danes do :days dni vnaprej — zato scenarij ne bi ničesar spremenil.|Ta datum je zunaj vsakega napovednega obzorja — od danes do :days dni vnaprej — zato scenarij ne bi ničesar spremenil.|Ta datum je zunaj vsakega napovednega obzorja — od danes do :days dni vnaprej — zato scenarij ne bi ničesar spremenil.',
         'pick_kind_first' => 'Najprej izberi vrsto spremembe.',
         'amount_positive' => 'Znesek mora biti pozitivno število.',
+        'scenario_gone' => 'Tega scenarija ni več — izbrisan je bil drugje. Izberi drug scenarij ali ustvari novega.',
+        'mutation_gone' => 'Te spremembe ni več — odstranjena je bila drugje. Zapri urejevalnik in jo dodaj znova, če jo še želiš.',
     ],
 ];

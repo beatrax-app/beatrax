@@ -48,22 +48,26 @@
 
     <div style="display:flex; flex-wrap:wrap; gap:var(--space-2);">
         @foreach ($links as $link)
-            <a href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer"
+            <a class="support-chip" href="{{ $link['href'] }}" target="_blank" rel="noopener noreferrer"
                 style="{{ ($link['primary'] ?? false) ? $chipPrimary : $chip }}">
                 {{ $link['label'] }}
                 <span aria-hidden="true" style="opacity:.6;">↗</span>
             </a>
         @endforeach
 
+        {{-- The envelope and the telephone below each end in an invisible
+             U+FE0F. Without it the two phone engines disagree about whether the
+             character is a picture or a glyph, and an editor shows nothing
+             there to delete. --}}
         @if ($mailto !== null)
-            <a href="{{ $mailto }}" style="{{ $chip }}">
-                {{ Lang::get('counterparties::profile.support.cancel_by_email') }} <span aria-hidden="true" style="opacity:.6;">✉</span>
+            <a class="support-chip" href="{{ $mailto }}" style="{{ $chip }}">
+                {{ Lang::get('counterparties::profile.support.cancel_by_email') }} <span aria-hidden="true" style="opacity:.6;">✉️</span>
             </a>
         @endif
 
         @if ($phoneHref !== null)
-            <a href="{{ $phoneHref }}" style="{{ $chip }}">
-                {{ $resource->phone }} <span aria-hidden="true" style="opacity:.6;">☎</span>
+            <a class="support-chip" href="{{ $phoneHref }}" style="{{ $chip }}">
+                {{ $resource->phone }} <span aria-hidden="true" style="opacity:.6;">☎️</span>
             </a>
         @endif
     </div>

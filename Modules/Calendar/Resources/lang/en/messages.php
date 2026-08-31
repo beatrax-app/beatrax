@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Booked payment',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list not counted — payments there do not move the balance',
+    ],
+
     'panel' => [
         'aria' => 'Day detail panel',
         'close' => 'Close day panel',
+        'close_caption' => 'Close',
         'start_of_day' => 'Start of day',
         'no_payments' => 'No payments on this day.',
         'date_approximate' => '~ date approximate',

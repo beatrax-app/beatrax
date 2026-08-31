@@ -144,7 +144,7 @@ it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes
 it('encrypts display_name/merchant_name at rest when manualLabel() labels an unknown counterparty as a merchant', function (): void {
     $user = cpteUser('cpte-manual-merchant');
     $session = $this->enablesEncryptionForUser($user);
-    cpteUnknown($user, 'cpte-mystery-manual-1');
+    $unknown = cpteUnknown($user, 'cpte-mystery-manual-1');
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
@@ -152,7 +152,9 @@ it('encrypts display_name/merchant_name at rest when manualLabel() labels an unk
     Livewire::actingAs($user)->test(CounterpartyTriage::class)
         ->call('manualLabel', 'Corner Bakery', 'merchant');
 
-    $rawRow = DB::table('counterparties')->where('slug', 'cpte-mystery-manual-1')->first();
+    // By id, not by the slug the fixture chose: labelling re-derives the slug
+    // from the name the reader typed, so the row is at corner-bakery now.
+    $rawRow = DB::table('counterparties')->where('id', $unknown->id)->first();
     expect($rawRow)->not->toBeNull();
     expect($rawRow->display_name)->not->toBe('Corner Bakery');
     expect($rawRow->merchant_name)->not->toBe('Corner Bakery');
@@ -164,7 +166,7 @@ it('encrypts display_name/merchant_name at rest when manualLabel() labels an unk
 it('encrypts display_name (merchant_name left null) when manualLabel() labels an unknown counterparty as personal', function (): void {
     $user = cpteUser('cpte-manual-personal');
     $session = $this->enablesEncryptionForUser($user);
-    cpteUnknown($user, 'cpte-mystery-manual-2');
+    $unknown = cpteUnknown($user, 'cpte-mystery-manual-2');
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
@@ -172,7 +174,7 @@ it('encrypts display_name (merchant_name left null) when manualLabel() labels an
     Livewire::actingAs($user)->test(CounterpartyTriage::class)
         ->call('manualLabel', 'Jane Doe', 'personal');
 
-    $rawRow = DB::table('counterparties')->where('slug', 'cpte-mystery-manual-2')->first();
+    $rawRow = DB::table('counterparties')->where('id', $unknown->id)->first();
     expect($rawRow)->not->toBeNull();
     expect($rawRow->display_name)->not->toBe('Jane Doe');
     expect($rawRow->merchant_name)->toBeNull();
@@ -182,12 +184,12 @@ it('encrypts display_name (merchant_name left null) when manualLabel() labels an
 
 it('leaves display_name/merchant_name as plaintext for a non-encrypted user', function (): void {
     $user = cpteUser('cpte-plaintext');
-    cpteUnknown($user, 'cpte-mystery-plaintext');
+    $unknown = cpteUnknown($user, 'cpte-mystery-plaintext');
 
     Livewire::actingAs($user)->test(CounterpartyTriage::class)
         ->call('manualLabel', 'Plain Corp', 'merchant');
 
-    $rawRow = DB::table('counterparties')->where('slug', 'cpte-mystery-plaintext')->first();
+    $rawRow = DB::table('counterparties')->where('id', $unknown->id)->first();
     expect($rawRow->display_name)->toBe('Plain Corp');
     expect($rawRow->merchant_name)->toBe('Plain Corp');
 });

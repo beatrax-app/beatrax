@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Über die gemeinsame Liste',
     'about_body' => 'Eine mitgelieferte YAML-Datei, die kryptische Kontoauszugscodes verständlichen Händlernamen zuordnet. Wenn du sie aktivierst, liest Beatrax die Liste beim Import; beim Abschicken eines Vorschlags öffnet sich GitHub in deinem Browser.',
 
-    'mappings' => 'Zuordnungen',
-    'contributors' => 'Mitwirkende',
+    'mappings' => ':count Zuordnung|:count Zuordnungen',
+    // i18n-review: de · contributors — Mitwirkende is an adjectival noun, so the
+    // singular has to pick a gender; this takes the strong masculine Mitwirkender
+    // after a bare numeral. Whether a stats caption wants that form is the call.
+    'contributors' => ':count Mitwirkender|:count Mitwirkende',
 
     'use_shared_list' => [
         'title' => 'Gemeinsame Händlerliste verwenden',
@@ -22,6 +24,7 @@ return [
     'update_on_updates' => [
         'title' => 'Gemeinsame Liste bei App-Updates aktualisieren',
         'help' => 'Die mitgelieferte Liste jedes Mal auffrischen, wenn Beatrax sich selbst aktualisiert.',
+        'help_phone' => 'Die mitgelieferte Liste jedes Mal auffrischen, wenn eine neue Version von Beatrax aus dem App Store oder von Google Play installiert wird.',
         'note' => 'Wird mit einem künftigen App-Update aktiv — die aktuelle Version findest du unter Einstellungen → Über.',
     ],
 ];

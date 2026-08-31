@@ -15,7 +15,7 @@ final readonly class SelfReferenceDeferral
 {
     // Columns whose FK targets their OWN table, named per table so the
     // stripping pass knows what to defer.
-    private const SELF_REFERENCES = [
+    private const array SELF_REFERENCES = [
         'transactions' => ['pair_transaction_id'],
         'categories' => ['parent_id'],
     ];

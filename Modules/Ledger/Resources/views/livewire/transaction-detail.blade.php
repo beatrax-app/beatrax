@@ -1,7 +1,9 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\ClearedStatus')
+@use('Modules\Sync\Public\Transport\SensitiveTextBudget')
 @php
-    use Carbon\CarbonImmutable;
+    use Modules\Core\Public\Support\SafeDate;
     use Modules\Ledger\Public\ValueObjects\Money;
     use Modules\Ledger\Public\ValueObjects\MoneyInput;
     use Modules\Ledger\Public\ValueObjects\Rate;
@@ -12,7 +14,13 @@
     // persisted decimal(18,8) precision, which is the whole reason the
     // column is read as a string.
     $fxRate = $transaction->fx_rate_used === null ? null : Rate::of($transaction->fx_rate_used);
-    $fxRateDisplay = $fxRate === null ? null : (string) $fxRate->toScale(3);
+    $fxRateDisplay = $fxRate?->forDisplay();
+
+    // booked_at is a DATETIME and posted_at a DATE, so the two are compared as
+    // days: a same-day pair differs by the time-of-day the importer bolts on to
+    // keep fingerprints apart, and that is not a second date to show.
+    $postedDay = SafeDate::normalisedDayOrNull((string) $transaction->posted_at);
+    $bookedDay = SafeDate::normalisedDayOrNull((string) $transaction->booked_at);
 @endphp
 
 <div>
@@ -32,7 +40,7 @@
          stays this page's own -- page-shell's px-8 at phone width breaks
          the "Transaction" heading across two lines mid-word. --}}
     <div class="min-h-screen bg-white dark:bg-slate-950">
-        <div class="mx-auto max-w-3xl px-4 py-12 space-y-6 sm:px-8" data-testid="transaction-detail">
+        <div class="mx-auto max-w-3xl px-4 py-6 space-y-6 sm:px-8" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
                     <x-core::page-heading>{{ Lang::get('ledger::detail.heading') }}</x-core::page-heading>
@@ -43,10 +51,59 @@
                          so without this the page never says what it is. --}}
                     <x-core::status-pill data-testid="tx-detail-type">{{ Lang::get('ledger::detail.type_label.'.$transaction->type) }}</x-core::status-pill>
                 </div>
-                <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ CarbonImmutable::parse($transaction->posted_at)->translatedFormat('j M Y') }}
+                <p class="text-sm text-slate-500 dark:text-slate-400" data-testid="tx-detail-posted-at">
+                    {{ $postedDay?->translatedFormat('j M Y') }}
                 </p>
+                {{-- A card statement carries two dates and they are a day apart:
+                     the day it was spent and the day the issuer booked it. Only
+                     the second one is drawn, and only when it is a different
+                     day, because every other source writes the two equal and a
+                     repeated date on every row is noise. --}}
+                @if ($bookedDay !== null && $postedDay !== null && ! $bookedDay->isSameDay($postedDay))
+                    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="tx-detail-booked-at">
+                        {{ Lang::get('ledger::detail.booked_on', ['date' => $bookedDay->translatedFormat('j M Y')]) }}
+                    </p>
+                @endif
             </header>
+
+            {{-- Where the reader looks after a reconciled-lock toast: beside
+                 the badge that announced the lock, and drawn only while it
+                 holds. The row keeps every field it had, so the question the
+                 strip asks names the effect rather than a loss. --}}
+            @if ($clearedStatus === ClearedStatus::Reconciled->value)
+                <section
+                    aria-labelledby="unreconcile-heading"
+                    class="space-y-3"
+                    data-testid="unreconcile-section"
+                >
+                    <x-core::alert>
+                        <h2 id="unreconcile-heading" class="font-medium">
+                            {{ Lang::get('ledger::detail.unreconcile.heading') }}
+                        </h2>
+                        <p class="mt-1">{{ Lang::get('ledger::detail.unreconcile.help') }}</p>
+                    </x-core::alert>
+
+                    @if ($confirmingUnreconcile)
+                        <x-core::confirm-strip
+                            :question="Lang::get('ledger::detail.unreconcile.confirm_question')"
+                            :cancel-label="Lang::get('ledger::detail.unreconcile.cancel')"
+                            :confirm-label="Lang::get('ledger::detail.unreconcile.button')"
+                            cancel="cancelUnreconcile"
+                            confirm="unreconcile"
+                            data-testid="unreconcile-confirm"
+                        />
+                    @else
+                        <x-core::secondary-button
+                            size="sm"
+                            class="shadow-sm"
+                            wire:click="startUnreconcile"
+                            data-testid="unreconcile-button"
+                        >
+                            {{ Lang::get('ledger::detail.unreconcile.button') }}
+                        </x-core::secondary-button>
+                    @endif
+                </section>
+            @endif
 
             {{-- The bank's own narrative for the line, and the string the
                  counterparty above was RESOLVED from. Search matches on it and
@@ -95,7 +152,7 @@
                     <dl class="space-y-1" data-testid="fx-rate-row">
                         <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.effective_rate') }}</dt>
                         <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                            €{{ $fxRateDisplay }} / {{ $transaction->currency }}
+                            {{ Money::symbolFor($transaction->settled_currency) }}{{ $fxRateDisplay }} / {{ $transaction->currency }}
                         </dd>
                         <dd class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.ics_markup') }}</dd>
                     </dl>
@@ -174,13 +231,16 @@
                                     </div>
 
                                     <span class="budget-step-amount">
-                                        <span aria-hidden="true">€</span>
+                                        {{-- The leg is read at the transaction's own currency, so a
+                                             pinned euro sign over a yen figure named the wrong money
+                                             and the box under it offered a decimal the parser refuses. --}}
+                                        <span aria-hidden="true">{{ Money::symbolFor($transaction->settled_currency) }}</span>
                                         <label class="sr-only" for="split-leg-amount-{{ $index }}">{{ Lang::get('ledger::list.table.amount') }}</label>
                                         <input
                                             type="text"
-                                            inputmode="decimal"
+                                            inputmode="{{ MoneyInput::decimalPlaces($transaction->settled_currency) === 0 ? 'numeric' : 'decimal' }}"
                                             id="split-leg-amount-{{ $index }}"
-                                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                            placeholder="{{ MoneyInput::formatAbsMinor(0, $transaction->settled_currency) }}"
                                             wire:model.live.debounce.300ms="legs.{{ $index }}.amount"
                                             data-testid="split-leg-amount-{{ $index }}"
                                         >
@@ -217,6 +277,7 @@
 
                                     <x-core::emoji-action
                                         :label="Lang::get('ledger::detail.split.remove_leg_aria')"
+                                        :caption="Lang::get('ledger::detail.split.remove_leg_caption')"
                                         tone="danger"
                                         wire:click="removeLeg({{ $index }})"
                                         data-testid="split-leg-remove-{{ $index }}"
@@ -296,18 +357,18 @@
                                 </span>
                                 <button
                                     type="button"
+                                    wire:click="cancelRemoveToOne"
+                                    class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                >
+                                    {{ Lang::get('ledger::detail.split.keep_category') }}
+                                </button>
+                                <button
+                                    type="button"
                                     wire:click="confirmRemoveToOneAction"
                                     class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
                                     data-testid="split-remove-to-one-confirm-button"
                                 >
                                     {{ Lang::get('ledger::detail.split.remove_category') }}
-                                </button>
-                                <button
-                                    type="button"
-                                    wire:click="cancelRemoveToOne"
-                                    class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                                >
-                                    {{ Lang::get('ledger::detail.split.keep_category') }}
                                 </button>
                             </div>
                         @endif
@@ -327,7 +388,7 @@
 
                                                 // Parsed back from the string the user typed so the symbol
                                                 // and grouping come from the leg's currency, not a literal €.
-                                                $radioMinor = MoneyInput::tryToMinor((string) ($leg['amount'] ?? ''));
+                                                $radioMinor = MoneyInput::tryToMinor((string) ($leg['amount'] ?? ''), $transaction->settled_currency);
                                             @endphp
                                             <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                                 <input
@@ -344,18 +405,18 @@
                                 <div class="flex items-center gap-3">
                                     <button
                                         type="button"
+                                        wire:click="cancelUnsplit"
+                                        class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                    >
+                                        {{ Lang::get('ledger::detail.split.keep_split') }}
+                                    </button>
+                                    <button
+                                        type="button"
                                         wire:click="confirmUnsplitAction"
                                         class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
                                         data-testid="split-unsplit-confirm-button"
                                     >
                                         {{ Lang::get('ledger::detail.split.confirm_unsplit') }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="cancelUnsplit"
-                                        class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                                    >
-                                        {{ Lang::get('ledger::detail.split.keep_split') }}
                                     </button>
                                 </div>
                             </div>
@@ -468,6 +529,7 @@
                         wire:model="note"
                         id="transaction-note"
                         rows="3"
+                        maxlength="{{ SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS }}"
                         placeholder="{{ Lang::get('ledger::detail.note.placeholder') }}"
                         class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                         data-testid="note-textarea"
@@ -636,23 +698,27 @@
                         {{ Lang::get('ledger::detail.delete.button') }}
                     </button>
 
+                    {{-- flex-wrap and shrink-0 are the 44px touch floor's trap: the
+                         coarse-pointer min-width REPLACES a button's min-width: auto,
+                         so a shrinkable answer squeezes to 44px and breaks its
+                         label one word per line. --}}
                     <template x-if="confirmDelete">
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('ledger::detail.delete.confirm_prompt') }}</span>
                             <button
                                 type="button"
-                                wire:click="deleteTransaction"
-                                class="rounded-md bg-rose-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-rose-800"
-                                data-testid="delete-confirm-button"
+                                @click="confirmDelete = false"
+                                class="shrink-0 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
                             >
-                                {{ Lang::get('ledger::detail.delete.confirm') }}
+                                {{ Lang::get('ledger::detail.delete.cancel') }}
                             </button>
                             <button
                                 type="button"
-                                @click="confirmDelete = false"
-                                class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                wire:click="deleteTransaction"
+                                class="shrink-0 rounded-md bg-rose-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-rose-800"
+                                data-testid="delete-confirm-button"
                             >
-                                {{ Lang::get('ledger::detail.delete.cancel') }}
+                                {{ Lang::get('ledger::detail.delete.confirm') }}
                             </button>
                         </div>
                     </template>

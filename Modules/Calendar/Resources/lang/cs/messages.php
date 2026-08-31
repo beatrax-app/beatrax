@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Zaúčtovaná platba',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list se nepočítá — platby tam zůstatek nemění',
+    ],
+
     'panel' => [
         'aria' => 'Panel s detailem dne',
         'close' => 'Zavřít panel dne',
+        'close_caption' => 'Zavřít',
         'start_of_day' => 'Začátek dne',
         'no_payments' => 'V tento den nejsou žádné platby.',
         'date_approximate' => '~ přibližné datum',

@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Par kopīgoto sarakstu',
     'about_body' => 'Komplektā iekļauts YAML fails, kas saista neskaidrus konta izraksta kodus ar saprotamiem tirgotāju nosaukumiem. Ieslēdzot to, Beatrax importa laikā lasa šo sarakstu; ieteikuma iesniegšana atver GitHub jūsu pārlūkā.',
 
-    'mappings' => 'Atbilstības',
-    'contributors' => 'Ieguldītāji',
+    'mappings' => ':count atbilstību|:count atbilstība|:count atbilstības',
+    'contributors' => ':count ieguldītāju|:count ieguldītājs|:count ieguldītāji',
 
     'use_shared_list' => [
         'title' => 'Izmantot kopīgoto tirgotāju sarakstu',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Atjaunināt kopīgoto sarakstu līdz ar lietotnes atjauninājumiem',
         'help' => 'Atsvaidzināt komplektā iekļauto sarakstu ikreiz, kad Beatrax atjaunina sevi.',
+        'help_phone' => 'Atsvaidzināt komplektā iekļauto sarakstu ikreiz, kad no App Store vai Google Play tiek instalēta jauna Beatrax versija.',
         'note' => 'Stāsies spēkā ar nākamo lietotnes atjauninājumu — pašreizējo versiju skatiet sadaļā Iestatījumi → Par.',
     ],
 ];

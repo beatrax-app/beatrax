@@ -6,8 +6,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
-use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Forecasting\Internal\Enums\ScenarioTemplate;
+use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
 use Modules\Forecasting\Public\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -61,7 +61,7 @@ it('mounts with the current series amount pre-populated', function (): void {
         ->assertSet('newAmountInput', '9.99');
 });
 
-it('Model cancellation invokes CreateCancellationScenarioForSeries + redirects to /forecast', function (): void {
+it('Model cancellation invokes CreateScenarioFromTemplate + redirects to /forecast', function (): void {
     $this->actingAs($this->user);
     $seriesId = mwidSeries($this->db, $this->user->id);
 
@@ -87,7 +87,7 @@ it('Model amount change form opens with the current amount pre-populated', funct
         ->assertSet('newAmountInput', '9.99');
 });
 
-it('Model amount change saves + invokes CreateAmountChangeScenarioForSeries + redirects', function (): void {
+it('Model amount change saves + invokes CreateScenarioFromTemplate + redirects', function (): void {
     $this->actingAs($this->user);
     $seriesId = mwidSeries($this->db, $this->user->id);
 
@@ -130,20 +130,12 @@ it('invalid amount input surfaces the inline error and does NOT invoke the launc
     expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('CreateCancellationScenarioForSeries returns 404 for another user\'s series', function (): void {
+it('CreateScenarioFromTemplate returns 404 for another user\'s series, cancelling or repricing', function (): void {
     $other = mwidUser('other2');
     $seriesId = mwidSeries($this->db, $other->id);
-    /** @var CreateCancellationScenarioForSeries $action */
-    $action = $this->app->make(CreateCancellationScenarioForSeries::class);
+    /** @var CreateScenarioFromTemplate $action */
+    $action = $this->app->make(CreateScenarioFromTemplate::class);
 
-    expect(fn () => ($action)($seriesId, $this->user))->toThrow(NotFoundHttpException::class);
-});
-
-it('CreateAmountChangeScenarioForSeries returns 404 for another user\'s series', function (): void {
-    $other = mwidUser('other3');
-    $seriesId = mwidSeries($this->db, $other->id);
-    /** @var CreateAmountChangeScenarioForSeries $action */
-    $action = $this->app->make(CreateAmountChangeScenarioForSeries::class);
-
-    expect(fn () => ($action)($seriesId, $this->user, 1499))->toThrow(NotFoundHttpException::class);
+    expect(fn () => ($action)(ScenarioTemplate::Cancel, $seriesId, $this->user))->toThrow(NotFoundHttpException::class)
+        ->and(fn () => ($action)(ScenarioTemplate::ChangeAmount, $seriesId, $this->user, 1499))->toThrow(NotFoundHttpException::class);
 });

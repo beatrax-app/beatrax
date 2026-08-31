@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Pairing\Concerns;
 
 use Carbon\CarbonImmutable;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Pairing\HeldPeerConfirm;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
@@ -89,7 +89,7 @@ trait AppliesResponderAccept
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
+            ->where('expires_at', '>', Instant::zulu($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
@@ -201,8 +201,8 @@ trait AppliesResponderAccept
                 // see the migration for why it rides on this row.
                 'responder_name' => $responderName !== '' ? $responderName : null,
                 'state' => PairingState::AwaitingConfirm->value,
-                'accepted_at' => ZuluTimestamp::stamp($now),
-                'expires_at' => ZuluTimestamp::stamp($newExpiry),
+                'accepted_at' => Instant::zulu($now),
+                'expires_at' => Instant::zulu($newExpiry),
                 // A confirm held for the responder this replaces was signed
                 // over keys the row no longer binds, so the replay would refuse
                 // it anyway; dropping it keeps dead key material off the row.

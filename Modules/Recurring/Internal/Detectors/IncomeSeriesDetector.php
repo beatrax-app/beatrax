@@ -8,60 +8,103 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
+use Modules\Recurring\Internal\InferredCadence;
+use Modules\Recurring\Internal\Support\DerivedSeriesId;
+use Modules\Recurring\Internal\Support\SeriesDetectionGate;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
-use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
+use Modules\Recurring\Public\Support\RecurringDetectionWindow;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 use stdClass;
 
 /**
  * @link ../../../../.docs/features/recurring/detection-encryption-posture.md
  */
-final class IncomeSeriesDetector implements SeriesDetector
+final readonly class IncomeSeriesDetector implements SeriesDetector
 {
     use CoercesScalars;
 
-    private const DEFAULT_WINDOW_MONTHS = 2;
-
-    private const DEFAULT_MIN_AMOUNT_MINOR = 200000;
-
-    private const MIN_OCCURRENCES = 2;
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly CadenceInferrer $cadenceInferrer,
-        private readonly ClusterKeyComposer $clusterKeyComposer,
-        private readonly Dispatcher $events,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly OccurrenceWriter $occurrences,
-        private readonly SeriesRefresher $refresher,
-        private readonly MerchantDisplayName $merchantNames,
-        private readonly CounterpartyKey $counterpartyKey,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private CadenceInferrer $cadenceInferrer,
+        private ClusterKeyComposer $clusterKeyComposer,
+        private Dispatcher $events,
+        private SensitiveColumnCodec $codec,
+        private OccurrenceWriter $occurrences,
+        private SeriesRefresher $refresher,
+        private MerchantDisplayName $merchantNames,
+        private CounterpartyKey $counterpartyKey,
+        private LoggerInterface $logger,
+        private BaseCurrency $baseCurrency,
+        private CrossCurrencyTotal $fx,
     ) {}
+
+    // The floor is an amount in the reader's money: a ¥250,000 stipend worth
+    // about €1,571 carried the integer 250000 past a floor meaning €2,000. A
+    // currency no rate reaches keeps the reader's integer, as before.
+    /**
+     * @return array<string, int>
+     *
+     * @link ../../../../.docs/features/ledger/minor-units-and-zero-decimal-currencies.md#the-other-half-comparing-two-denominations-as-bare-integers
+     */
+    private function floorsByCurrency(User $user, int $readerMinor, string $since): array
+    {
+        $readerCurrency = $this->baseCurrency->forUser($user);
+
+        $currencies = array_values(array_filter(
+            array_map(self::toString(...), $this->db->connection()->table('transactions')
+                ->where('user_id', $user->id)
+                ->where('type', TransactionType::Income->value)
+                ->where('posted_at', '>=', $since)
+                ->distinct()
+                ->pluck('currency')
+                ->all()),
+            static fn (string $code): bool => $code !== '',
+        ));
+
+        $floor = Money::tryOfMinor($readerMinor, $readerCurrency);
+        $floors = [];
+        foreach ($currencies as $currency) {
+            if ($currency === $readerCurrency || $floor === null) {
+                $floors[$currency] = $readerMinor;
+
+                continue;
+            }
+
+            $converted = $this->fx->convert($floor, $currency, $this->fx->ratesTo([$readerCurrency], $currency));
+            $floors[$currency] = $converted?->toMinor() ?? $readerMinor;
+        }
+
+        return $floors === [] ? [$readerCurrency => $readerMinor] : $floors;
+    }
 
     public function detectForUser(User $user, ?Session $session = null): void
     {
-        $windowMonths = $user->recurring_detection_window_months;
-        if ($windowMonths <= 0) {
-            $windowMonths = self::DEFAULT_WINDOW_MONTHS;
-        }
         $threshold = $user->recurring_income_min_amount_minor;
         if ($threshold <= 0) {
-            $threshold = self::DEFAULT_MIN_AMOUNT_MINOR;
+            $threshold = User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR;
         }
-        $since = $this->clock->now()->subMonths($windowMonths)->toDateString();
+        $since = RecurringDetectionWindow::opensOn($user, $this->clock);
+
+        $floors = $this->floorsByCurrency($user, $threshold, $since);
 
         $rows = $this->db->connection()->table('transactions')
             ->select([
@@ -78,7 +121,15 @@ final class IncomeSeriesDetector implements SeriesDetector
             ])
             ->where('user_id', $user->id)
             ->where('type', TransactionType::Income->value)
-            ->where('amount_minor', '>=', $threshold)
+            ->where(function (Builder $overItsOwnFloor) use ($floors): void {
+                foreach ($floors as $currency => $floorMinor) {
+                    $overItsOwnFloor->orWhere(
+                        fn (Builder $bucket): Builder => $bucket
+                            ->where('currency', $currency)
+                            ->where('amount_minor', '>=', $floorMinor),
+                    );
+                }
+            })
             ->where('posted_at', '>=', $since)
             ->orderBy('posted_at')
             ->get();
@@ -86,53 +137,74 @@ final class IncomeSeriesDetector implements SeriesDetector
         $groups = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $counterparty = self::toString($row->counterparty_normalized);
-            $iban = self::toString($row->counterparty_iban);
-            if ($iban !== '' && $session !== null) {
-                // Decrypt BEFORE the value becomes a grouping key; a no-op
-                // pass-through when the stored value is not encrypted.
-                $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
-            }
             $currency = self::toString($row->currency);
             if ($currency === '') {
                 continue;
             }
 
-            // IBAN first: banks rewrite the free-form description, the SEPA
-            // IBAN is constant. Keyed before it becomes a stored grouping key —
-            // a decrypted IBAN written verbatim put the salary payer, the
-            // benefits agency and the pension provider back in the clear.
-            $counterpartyKey = $iban !== ''
-                ? $this->counterpartyKey->forIban($iban, $user->id)
-                : $counterparty;
-
-            if ($counterpartyKey === '' || $counterpartyKey === CounterpartyKey::NONE) {
+            $counterpartyKey = $this->payerKeyFor($row, $user, $session);
+            if ($counterpartyKey === null) {
                 continue;
             }
 
             $groupKey = $counterpartyKey.'|'.$currency;
             $groups[$groupKey] = $groups[$groupKey] ?? [
                 'counterparty_key' => $counterpartyKey,
-                'counterparty_normalized' => $counterparty,
+                'counterparty_normalized' => self::toString($row->counterparty_normalized),
                 'currency' => $currency,
                 'rows' => [],
             ];
             $groups[$groupKey]['rows'][] = $row;
         }
 
+        $deferred = 0;
         foreach ($groups as $group) {
-            $this->processCluster(
+            $deferred += $this->processCluster(
                 $user,
                 $group['counterparty_key'],
                 $group['counterparty_normalized'],
                 $group['currency'],
                 $group['rows'],
+            ) ? 0 : 1;
+        }
+
+        // A keyed cluster with no readable name is held back rather than
+        // written as a digest. Silent, it was indistinguishable from a user
+        // who simply has no recurring income.
+        if ($deferred > 0) {
+            $this->logger->warning(
+                'IncomeSeriesDetector: clusters held back this sweep because no readable payer name resolved for their counterparty key; the next sweep that can read one picks them up.',
+                ['user_id' => $user->id, 'deferred_clusters' => $deferred],
             );
         }
     }
 
+    // IBAN first: banks rewrite the free-form description, the SEPA IBAN is
+    // constant. Keyed before it becomes a stored grouping key — a decrypted
+    // IBAN written verbatim put the salary payer, the benefits agency and the
+    // pension provider back in the clear.
+    /**
+     * @return string|null null when the row carries no payer to cluster on
+     */
+    private function payerKeyFor(stdClass $row, User $user, ?Session $session): ?string
+    {
+        $iban = self::toString($row->counterparty_iban);
+        if ($iban !== '' && $session !== null) {
+            // Decrypt BEFORE the value becomes a grouping key; a no-op
+            // pass-through when the stored value is not encrypted.
+            $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
+        }
+
+        $key = $iban !== ''
+            ? $this->counterpartyKey->forIban($iban, $user->id)
+            : self::toString($row->counterparty_normalized);
+
+        return $key === '' || $key === CounterpartyKey::NONE ? null : $key;
+    }
+
     /**
      * @param  list<stdClass>  $rows
+     * @return bool false only when the cluster qualified but had no readable name
      */
     private function processCluster(
         User $user,
@@ -140,17 +212,30 @@ final class IncomeSeriesDetector implements SeriesDetector
         string $counterpartyNormalized,
         string $currency,
         array $rows,
-    ): void {
-        $cadenceResult = $this->qualifyCluster($rows);
-        if ($cadenceResult === null) {
-            return;
+    ): bool {
+        // Keyed on the counterparty identifier, not detected_name: two payroll
+        // providers can normalise to the same display string. Read before the
+        // cluster qualifies because it carries the tolerance that decides it.
+        /** @var RecurringSeries|null $existingByCounterparty */
+        $existingByCounterparty = RecurringSeries::query()
+            ->where('user_id', $user->id)
+            ->where('direction', Direction::Income->value)
+            ->where('cluster_counterparty_key', $counterpartyKey)
+            ->where('latest_currency', $currency)
+            ->oldest('id')
+            ->first();
+
+        $qualified = $this->qualifyCluster(self::toleranceOf($existingByCounterparty), $rows);
+        if ($qualified === null) {
+            return true;
         }
+        [$filtered, $cadenceResult] = $qualified;
 
         $clusterKey = $this->clusterKeyComposer->compose(
             Direction::Income->value,
             $counterpartyKey,
             $currency,
-            $cadenceResult['cadence']->value,
+            $cadenceResult->cadence->value,
         );
 
         /** @var RecurringSeries|null $existingBySameCluster */
@@ -159,70 +244,82 @@ final class IncomeSeriesDetector implements SeriesDetector
             ->where('direction', Direction::Income->value)
             ->where('cluster_key', $clusterKey)
             ->where('latest_currency', $currency)
-            ->first();
-
-        // Keyed on the counterparty identifier, not detected_name: two payroll
-        // providers can normalise to the same display string.
-        /** @var RecurringSeries|null $existingByCounterparty */
-        $existingByCounterparty = RecurringSeries::query()
-            ->where('user_id', $user->id)
-            ->where('direction', Direction::Income->value)
-            ->where('cluster_counterparty_key', $counterpartyKey)
-            ->where('latest_currency', $currency)
+            ->oldest('id')
             ->first();
 
         $existing = $existingBySameCluster ?? $existingByCounterparty;
 
-        $latestRow = $rows[count($rows) - 1];
+        $latestRow = $filtered[count($filtered) - 1];
         $latestAmount = self::toInt($latestRow->amount_minor);
 
-        $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $rows);
+        $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $filtered);
 
         if ($existing === null) {
-            $this->insertNewSeries($user, $counterpartyNormalized, $counterpartyKey, $detected);
-
-            return;
+            return $this->insertNewSeries($user, $counterpartyNormalized, $counterpartyKey, $detected);
         }
 
         // Rejection covers the whole (counterparty, currency) pair across every
         // cadence variant. Refreshing a snoozed row would change the amount the
         // user paused on; the next sweep's expiry pass unpauses it first.
-        if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
-            return;
+        $paused = in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true);
+
+        if (! $paused) {
+            $this->refresher->refresh(
+                $existing,
+                $counterpartyKey,
+                $detected,
+                $user,
+                Direction::Income->value,
+                $this->merchantNames->healed($existing->detected_name, $user->id, $counterpartyNormalized),
+            );
         }
 
-        $this->refresher->refresh(
-            $existing,
-            $counterpartyKey,
-            $detected,
-            $user,
-            Direction::Income->value,
-            $this->merchantNames->healed($existing->detected_name, $user->id, $counterpartyNormalized),
-        );
+        return true;
     }
 
-    // Unlike the expense detector this applies no variance filter, so it
-    // returns only the cadence result and never a narrowed row list.
-    /**
-     * @param  list<stdClass>  $rows
-     * @return array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}|null
-     */
-    private function qualifyCluster(array $rows): ?array
+    private static function toleranceOf(?RecurringSeries $existing): ?int
     {
-        if (count($rows) < self::MIN_OCCURRENCES) {
+        if ($existing === null || ! in_array($existing->state, SeriesDetectionGate::TOLERANCE_STATES, true)) {
+            return null;
+        }
+
+        return $existing->variance_tolerance_percent;
+    }
+
+    // Null means the cluster failed one of the qualifying tests and there is
+    // nothing to record.
+    /**
+     * @param  int|null  $existingTolerance  the variance tolerance percent stored on an existing
+     *                                       series for this (user, counterparty, currency); honours
+     *                                       a user-edited value so a widened tolerance does not
+     *                                       fragment the cluster on the next sweep
+     * @param  list<stdClass>  $rows
+     * @return array{0: list<stdClass>, 1: InferredCadence}|null
+     */
+    private function qualifyCluster(?int $existingTolerance, array $rows): ?array
+    {
+        if (count($rows) < SeriesDetectionGate::MIN_OCCURRENCES) {
+            return null;
+        }
+
+        $filtered = ClusterAmountFilter::keep($rows, $existingTolerance ?? SeriesDetectionGate::DEFAULT_VARIANCE_TOLERANCE_PERCENT);
+        if (count($filtered) < SeriesDetectionGate::MIN_OCCURRENCES) {
             return null;
         }
 
         $timestamps = [];
-        foreach ($rows as $row) {
+        foreach ($filtered as $row) {
             $timestamps[] = CarbonImmutable::parse(self::toString($row->posted_at));
         }
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
 
-        return $cadenceResult['cadence']->isRegular() ? $cadenceResult : null;
+        return $cadenceResult->cadence->isRegular() ? [$filtered, $cadenceResult] : null;
     }
 
-    private function insertNewSeries(User $user, string $counterpartyNormalized, string $counterpartyKey, DetectedSeries $detected): void
+    /**
+     * @return bool false when the row was deferred for want of a readable name
+     */
+    private function insertNewSeries(User $user, string $counterpartyNormalized, string $counterpartyKey, DetectedSeries $detected): bool
     {
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
@@ -233,10 +330,13 @@ final class IncomeSeriesDetector implements SeriesDetector
         // the next one rather than inserting a digest into a shown column.
         $displayName = $this->merchantNames->forStoredKey($user->id, $counterpartyNormalized);
         if ($displayName === null) {
-            return;
+            return false;
         }
 
-        $newId = $connection->table('recurring_series')->insertGetId([
+        $userId = self::toInt($user->id);
+        $newId = DerivedSeriesId::for($userId, Direction::Income->value, $counterpartyKey, $detected->currency);
+
+        $row = [
             'user_id' => $user->id,
             'direction' => Direction::Income->value,
             'detected_name' => $displayName,
@@ -245,14 +345,29 @@ final class IncomeSeriesDetector implements SeriesDetector
             'latest_amount_minor' => $detected->latestAmountMinor,
             'latest_currency' => $detected->currency,
             'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
-            'variance_tolerance_percent' => 25,
+            'variance_tolerance_percent' => SeriesDetectionGate::DEFAULT_VARIANCE_TOLERANCE_PERCENT,
             'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
             'next_expected_confidence_low' => $detected->confidenceLow,
+            'billing_day' => $detected->billingDay,
             'cluster_key' => $detected->clusterKey,
             'cluster_counterparty_key' => $counterpartyKey,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        $connection->table('recurring_series')->insert(['id' => $newId] + $row);
+
+        // Before the occurrences: each one names this series through a NOT NULL
+        // foreign key, so a peer receiving the child op first has nothing to
+        // hang it on. `$row` omits `id` — the pk carries it, which is the same
+        // create-op shape the pairing backfill emits.
+        $this->events->dispatch(new EntityMutated(
+            table: 'recurring_series',
+            pk: $newId,
+            userId: $userId,
+            mutationType: 'create',
+            dirtyFields: $row,
+        ));
 
         $this->occurrences->write($user->id, $newId, $detected->rows, $detected->currency);
 
@@ -272,5 +387,7 @@ final class IncomeSeriesDetector implements SeriesDetector
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,
         ));
+
+        return true;
     }
 }

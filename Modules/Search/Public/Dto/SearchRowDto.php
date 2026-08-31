@@ -12,7 +12,7 @@ final readonly class SearchRowDto
 {
     public function __construct(
         public int $id,
-        public string $bookedAt,
+        public string $postedAt,
         public ?string $counterpartyName,
         public ?string $counterpartySlug,
         public ?int $categoryId,

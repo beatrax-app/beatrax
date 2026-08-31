@@ -6,12 +6,15 @@ namespace Modules\Notifications\Public\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\DigestCadence;
+use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 final class NotificationsSettingsSection extends Component
@@ -38,9 +41,27 @@ final class NotificationsSettingsSection extends Component
 
     public bool $saved = false;
 
-    public function mount(CurrentUser $currentUser, NotificationPreferenceQuery $prefs): void
-    {
+    // Every switch below turns on work a scheduled pass has to do, and on a
+    // sealed ledger no scheduled pass can do it: the app lock holds the key
+    // its notification writes need. The reader is told once, here, rather than
+    // left to conclude from an inbox that stays empty that nothing happened.
+    public bool $preparedOnlyWhileOpen = false;
+
+    // The wait differs by platform. RunDeferredNotificationPasses is web
+    // middleware on both roots, so a desktop reader is already inside the app
+    // that replays the pass; a phone reader is not, most of the time.
+    #[Locked]
+    public bool $onPhone = false;
+
+    public function mount(
+        CurrentUser $currentUser,
+        NotificationPreferenceQuery $prefs,
+        EncryptionMigrationService $encryption,
+    ): void {
         $dto = $prefs->forCurrentDevice($currentUser->user());
+
+        $this->preparedOnlyWhileOpen = $encryption->isEnabled($currentUser->id());
+        $this->onPhone = UserDataPathService::platform() !== null;
 
         $this->remindersEnabled = $dto->remindersEnabled;
         $this->reminderLeadDays = $dto->reminderLeadDays;

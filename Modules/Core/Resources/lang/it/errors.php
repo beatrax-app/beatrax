@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Torna a Beatrax',
 
+    'not_saved' => 'Non è stato salvato nulla. I tuoi dati sono invariati: riprova.',
+
+    'no_longer_here' => 'Questo non c’è più.',
+
     '404' => [
         'title' => 'Questa pagina non esiste',
         'body' => 'Il link potrebbe essere vecchio, o la pagina è stata rinominata. Ai tuoi dati non è successo nulla.',

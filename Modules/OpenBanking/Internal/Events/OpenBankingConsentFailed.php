@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Events;
 
-final class OpenBankingConsentFailed
+final readonly class OpenBankingConsentFailed
 {
     public function __construct(
-        public readonly int $connectionId,
-        public readonly int $userId,
-        public readonly string $reason,
+        public int $connectionId,
+        public int $userId,
+        public string $reason,
     ) {}
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Sem categoria',
+    'no_counterparty' => 'Sem contraparte',
+    'unavailable_counterparty' => 'Contraparte não está neste dispositivo',
     'title' => 'Relatórios',
     'page_title' => 'Relatórios · Beatrax',
     'subtitle' => 'Compõe um relatório a partir do teu livro-razão.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Intervalo personalizado',
         'from' => 'De',
         'to' => 'Até',
+        'error' => [
+            'incomplete' => 'Escolha uma data de início e uma de fim.',
+            'malformed' => 'Use uma data válida no formato AAAA-MM-DD.',
+            'inverted' => 'A data de fim é anterior à de início.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtros',
+        'net_worth_note' => 'O património líquido é um saldo: só se aplica o filtro de conta.',
     ],
 
     'compare' => 'Comparar com o período anterior',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Gráfico em :currency — :list não representado',
+        'undrawn' => 'Fora do anel — :amount segue no sentido contrário',
         'bar_title' => 'Clica numa barra para ver as suas transações',
         'line_title' => 'Clica num ponto para ver as suas transações',
         'donut_title' => 'Clica num segmento para ver as suas transações',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Taxas e ajustes (não contados acima)',
+    'other_movement_with_refunds' => 'Taxas, reembolsos e ajustes (não contados acima)',
 ];

@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Категорія',
         'assigned' => 'Розподілено',
+        'carried_in' => 'Перенесено',
+        'moved' => 'Переміщено',
         'spent' => 'Витрачено',
         'available' => 'Доступно',
         'if_overspent' => 'Якщо перевитрата',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Сховати історію ↑',
         'moved_from' => 'Переміщено з категорії: :category',
         'moved_to' => 'Переміщено в категорію: :category',
+        'moved_unreadable' => 'Переміщено з категорією: :category новішою версією Beatrax',
         'undo' => 'Скасувати',
     ],
 
     'phone' => [
         'spent' => 'Витрачено :amount',
+        'carried_in' => 'Перенесено :amount',
+        'moved' => 'Переміщено :amount',
         'available' => 'Доступно :amount',
         'notify_at' => 'Сповіщати на',
     ],

@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ingestion\Public\Services\CsvPresetRegistry')
+@use('Modules\Import\Internal\Enums\ImportType')
 {{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
@@ -28,31 +28,39 @@
 
     <form wire:submit="submit" class="space-y-4">
         <x-core::form-field
-            name="issuer"
+            name="importType"
             type="select"
-            :label="Lang::get('import::upload.source_label')"
-            wire:model.live="issuer"
+            :label="Lang::get('import::upload.type_label')"
+            wire:model.live="importType"
         >
-            <option value="asn">ASN</option>
-            <option value="ics">ICS</option>
-            <option value="paypal">PayPal</option>
-            <option value="{{ CsvPresetRegistry::ISSUER }}">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
-            <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
+            @foreach (ImportType::cases() as $type)
+                <option value="{{ $type->value }}">{{ $type->label() }}</option>
+            @endforeach
         </x-core::form-field>
 
         {{-- aria-live wraps the field: the option list is rebuilt whenever the
-             issuer above changes, and that swap has to be announced. --}}
+             import type above changes, and that swap has to be announced. --}}
         <div aria-live="polite">
             <x-core::form-field
                 name="sourceFormat"
                 type="select"
                 :label="Lang::get('import::upload.format_label')"
-                wire:model="sourceFormat"
+                wire:model.live="sourceFormat"
             >
                 @foreach ($this->availableFormats() as $fmt)
                     <option value="{{ $fmt['value'] }}">{{ $fmt['label'] }}</option>
                 @endforeach
             </x-core::form-field>
+
+            {{-- Inside the aria-live region on purpose: this line is only ever
+                 written because the screen changed the select the reader is
+                 looking at, and a silent change is the surprise it exists to
+                 prevent. --}}
+            @if ($formatNotice !== null)
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400" data-testid="format-notice">
+                    {{ $formatNotice }}
+                </p>
+            @endif
         </div>
 
         <div class="space-y-1">
@@ -60,8 +68,8 @@
             <x-core::file-input
                 id="file"
                 name="file"
-                wire:model="file"
-                accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf,.eml,.mbox,.zip"
+                wire:model.live="file"
+                accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf,.eml,.mbox"
                 {{-- The hint has always carried this id; nothing pointed at
                      it, so a screen reader met the list on page entry with no
                      idea which control it described. --}}

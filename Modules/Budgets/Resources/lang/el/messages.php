@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Κατηγορία',
         'assigned' => 'Κατανεμημένα',
+        'carried_in' => 'Μεταφερόμενα',
+        'moved' => 'Μετακινημένα',
         'spent' => 'Δαπάνες',
         'available' => 'Διαθέσιμα',
         'if_overspent' => 'Σε περίπτωση υπέρβασης',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Απόκρυψη ιστορικού ↑',
         'moved_from' => 'Μεταφέρθηκε από :category',
         'moved_to' => 'Μεταφέρθηκε σε :category',
+        'moved_unreadable' => 'Μεταφέρθηκε με :category από νεότερη έκδοση του Beatrax',
         'undo' => 'Αναίρεση',
     ],
 
     'phone' => [
         'spent' => 'Δαπάνες :amount',
+        'carried_in' => 'Μεταφερόμενα :amount',
+        'moved' => 'Μετακινημένα :amount',
         'available' => 'Διαθέσιμα :amount',
         'notify_at' => 'Ειδοποίηση στο',
     ],

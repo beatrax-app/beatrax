@@ -94,6 +94,7 @@ return [
         'heading' => 'Kehittäjä',
         'open_console' => 'Avaa kehityskonsoli',
         'pulse' => 'Jono :queue · Työntekijä :worker',
+        'worker_ago' => ':count s sitten|:count s sitten',
     ],
 
     'account' => [

@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Modules\Sync\Public\Transport\SensitiveTextBudget;
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -217,4 +218,43 @@ it('renders the delete button on the transaction detail page', function (): void
     $response->assertSee('delete-section', false);
     $response->assertSee('Delete', false);
     $response->assertSee('deleteTransaction', false);
+})->group('phase-11');
+
+it('saveNote — refuses a note the sync transport could never carry, and says so', function (): void {
+    $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
+        'type' => 'expense',
+        'amount_minor' => -2500,
+        'posted_at' => '2026-06-14',
+        'booked_at' => '2026-06-14 12:00:00',
+    ]);
+
+    // Saved, this note would be withheld from every peer for as long as it
+    // exists — the frame budget is a hard ceiling on one op-log entry, and the
+    // sealed form of this value is past it.
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->set('note', str_repeat('v', SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS + 1))
+        ->call('saveNote')
+        ->assertSet('noteSaved', false);
+
+    $tx->refresh();
+    expect($tx->note)->toBeNull();
+})->group('phase-11');
+
+it('saveNote — accepts a note at exactly the budget', function (): void {
+    $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
+        'type' => 'expense',
+        'amount_minor' => -2500,
+        'posted_at' => '2026-06-14',
+        'booked_at' => '2026-06-14 12:00:00',
+    ]);
+
+    $note = str_repeat('v', SensitiveTextBudget::MAX_PLAINTEXT_CHARACTERS);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->set('note', $note)
+        ->call('saveNote')
+        ->assertSet('noteSaved', true);
+
+    $tx->refresh();
+    expect($tx->note)->toBe($note);
 })->group('phase-11');

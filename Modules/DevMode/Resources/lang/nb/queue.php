@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Slett :count jobb|Slett :count jobber',
     'empty_pending' => 'Køen er tom.',
     'empty_failed' => 'Ingen feilede jobber.',
-    'empty_batches' => 'Ingen aktive batcher.',
+    'empty_batches' => 'Ingen batcher.',
     'select_aria' => 'Velg',
     'select_row_aria' => 'Velg rad :key',
     'col_id' => 'Id',
     'col_queue' => 'Kø',
     'col_attempts' => 'Forsøk',
+    'col_state' => 'Status',
     'col_created' => 'Opprettet',
     'col_uuid' => 'UUID',
     'col_failed' => 'Feilet',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Ventende',
     'col_actions' => 'Handlinger',
     'delete_job' => 'Slett jobb',
+    'worker_running' => 'Worker kjører den',
     'delete_pending_confirm' => 'Slette ventende jobb #:key?',
     'retry_job' => 'Prøv jobben igjen',
     'forget_confirm' => 'Fjerne feilet jobb :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'De valgte feilede jobbene legges i køen igjen slik at arbeideren kan prøve dem på nytt.',
     'cancel' => 'Avbryt',
 
+    'state' => [
+        'available' => 'Klar',
+        'reserved' => 'Reservert',
+        'scheduled' => 'Planlagt',
+    ],
+
     'tab' => [
         'pending' => 'Ventende',
         'failed' => 'Feilet',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Ventende jobb slettet',
+        'pending_already_gone' => 'Jobben var allerede borte',
         'failed_requeued' => 'Feilet jobb lagt i køen igjen',
         'failed_removed' => 'Feilet jobb fjernet',
         'batch_cancelled' => 'Batch avbrutt',
         'batch_deleted' => 'Batch slettet',
         'batch_failures_requeued' => 'Feilede batchjobber lagt i køen igjen',
+        'batch_failures_none' => 'Ingen feil igjen i batchen å kø på nytt',
         'failed_jobs_requeued' => 'Feilede jobber lagt i køen igjen',
+        'failed_jobs_none' => 'Ingen mislykkede jobber igjen å kø på nytt',
         'bulk_refused' => 'Massesletting avvist — :reason',
         'rows_deleted' => 'Valgte rader slettet',
     ],

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'Izvozi iz PayPala ne vsebujejo vrstic s stanjem, zato to nastavi ročno.',
-    'help_asn' => 'Samodejno zasidrano po tvojem zadnjem izpisku. Povozi samo, če veš, da se dejansko stanje razlikuje.',
     'help_default' => 'Povozi samo, če veš, da se trenutno dejansko stanje razlikuje od tistega, kar izračuna Beatrax.',
 
     'legend' => 'Začetno stanje napovedi za :name',
     'opening_label' => 'Začetno stanje',
-    'opening_placeholder' => 'npr. 1.250,00',
+    'opening_placeholder' => 'npr. :amount',
     'as_of_label' => 'Začetno stanje na dan',
     'as_of_help' => 'Datum, za katerega velja zgornji znesek.',
 
     'divergence' => 'To za več kot :threshold odstopa od stanja, ki ga Beatrax izračuna iz tvojih uvoženih transakcij. Si prepričan?',
+    'computed_is' => 'Beatrax izračuna :amount.',
     'use_beatrax' => 'Uporabi Beatraxov znesek',
     'use_mine' => 'Uporabi moj znesek',
 

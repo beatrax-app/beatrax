@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Κατηγορίες',
     'section_goals_recurring' => 'Στόχοι και επαναλαμβανόμενα',
     'no_name' => '(χωρίς όνομα)',
-    'see_all_prefix' => 'Δες και τα ',
-    'see_all_suffix' => ' αποτελέσματα →',
-    'no_transactions_prefix' => 'Καμία συναλλαγή δεν ταιριάζει με "',
-    'no_transactions_suffix' => '"',
+    'see_all' => 'Δες :count αποτέλεσμα →|Δες και τα :count αποτελέσματα →',
+    'no_transactions' => 'Καμία συναλλαγή δεν ταιριάζει με ":query"',
     'source_txn' => 'txn',
     'source_counterparty' => 'αντισυμβαλλόμενος',
     'source_category' => 'κατηγορία',
@@ -30,6 +28,32 @@ return [
     'foot_select' => 'επιλογή',
     'foot_close' => 'κλείσιμο',
     'close_aria' => 'Κλείσιμο αναζήτησης',
+    'close_caption' => 'Κλείσιμο',
     'foot_try' => 'Δοκίμασε',
-    'results_suffix' => ' αποτελέσματα',
+    'results' => ':count αποτέλεσμα|:count αποτελέσματα',
+
+    'action' => [
+        'run_import' => ['label' => 'Εκτέλεση εισαγωγής', 'hint' => 'Άνοιγμα του οδηγού εισαγωγής'],
+        'scan_email' => ['label' => 'Σάρωση email τώρα', 'hint' => 'Άμεση εκτέλεση του συγχρονισμού του γραμματοκιβωτίου'],
+        'open_profile' => ['label' => 'Άνοιγμα προφίλ', 'hint' => 'Ρυθμίσεις — λογαριασμός και προτιμήσεις'],
+        'toggle_theme' => ['label' => 'Εναλλαγή θέματος', 'hint' => 'Εναλλαγή ανάμεσα σε φωτεινό και σκούρο θέμα'],
+    ],
+
+    'run_command' => 'Εκτέλεση :command',
+
+    'nav' => [
+        'overview' => ['label' => 'Επισκόπηση προγραμματιστή', 'hint' => 'Πλακίδια συστήματος + πρόσφατες εκτελέσεις'],
+        'artisan' => ['label' => 'Εκτέλεση εντολών Artisan', 'hint' => 'Εκτέλεση εγκεκριμένων εντολών'],
+        'audit' => ['label' => 'Αρχείο ελέγχου προγραμματιστή', 'hint' => 'Κάθε ενέργεια σε λειτουργία προγραμματιστή'],
+        'logs' => ['label' => 'Παρακολούθηση καταγραφών', 'hint' => 'Ζωντανή ροή του laravel-*.log'],
+        'queue' => ['label' => 'Επιθεωρητής ουράς', 'hint' => 'Σε αναμονή / απέτυχαν / παρτίδες'],
+        'doctor' => ['label' => 'Διαγνωστικά', 'hint' => 'Έλεγχοι συστήματος'],
+        // i18n-review: el · nav.sql.label — Πάνελ SQL is a loanword. Πίνακας
+        // would collide with the word for a database table, which is what the
+        // screen lists, so the loanword is the lesser of the two.
+        'sql' => ['label' => 'Πάνελ SQL', 'hint' => 'Περιήγηση μόνο με SELECT'],
+        'system' => ['label' => 'Στιγμιότυπο συστήματος', 'hint' => 'Περιβάλλον + διαδρομές + διαμόρφωση'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Ενσωματωμένος πίνακας ελέγχου ουράς'],
+        'sync_health' => ['label' => 'Κατάσταση συγχρονισμού', 'hint' => 'Λειτουργίες συγχώνευσης σε καραντίνα ή που παραλείφθηκαν'],
+    ],
 ];

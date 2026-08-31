@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Vilk CAMT.053 failą čia',
     'drop_lead_mt940' => 'Vilk MT940 failą čia',
-    'drop_lead_asn' => 'Vilk ASN CSV failą čia',
-    'drop_lead_ing' => 'Vilk ING CSV failą čia',
+    'drop_lead_csv_layout' => 'Vilk :layout CSV failą čia',
     'drop_lead_pick_bank' => 'Pasirink, kuris bankas eksportavo tavo CSV — tai žinodami perskaitysime jį teisingai.',
     'drop_lead_default' => 'Vilk išrašo failą čia',
     'browse_file' => 'arba pasirink failą',
 
-    'banks_mt940' => 'Palaikoma: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Palaikoma: ASN, ING — daugiau formatų atsiras naudotojams atsiuntus pavyzdžių.',
-    'banks_default' => 'Palaikoma: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 – tai XML formato išrašas. Ieškok jo internetinėje bankininkystėje tarp išrašų arba atsisiuntimų.',
+    'format_help_mt940' => 'MT940 – tai grynojo teksto išrašas, siūlomas kaip .sta arba .940 šalia XML ir CSV atsisiuntimų.',
+    'format_help_csv' => 'CSV – tai skaičiuoklės eksportas. Kiekvienas bankas stulpelius rikiuoja savaip, todėl pasirink tinkamą išdėstymą. Jei tavojo sąraše nėra, paprašyk banko CAMT.053 arba MT940.',
+
+    'account_name_default' => 'Banko sąskaita',
+    'account_name_layout' => ':layout sąskaita',
 
     'file_ready' => '· ✓ paruošta',
 

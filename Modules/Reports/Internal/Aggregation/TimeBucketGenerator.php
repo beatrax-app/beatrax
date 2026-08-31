@@ -12,7 +12,7 @@ final class TimeBucketGenerator
 {
     // ~5 years of monthly points. Exceeding it widens the stepping rather than
     // truncating the range, so the full window still renders, just coarser.
-    public const MAX_BUCKET_POINTS = 60;
+    public const int MAX_BUCKET_POINTS = 60;
 
     /**
      * @return list<Period>
@@ -25,26 +25,44 @@ final class TimeBucketGenerator
         };
     }
 
-    // Widens weekly -> monthly over the cap; generateMonthly() then applies its
-    // own monthly -> quarterly widening on top.
+    // Steps tried in order, coarsest last. The cap was checked once per level
+    // and then stopped being checked, so a range starting in the year 1000 made
+    // 4108 buckets -- each one a query per account plus an FX conversion, 7.8
+    // seconds on a 164-transaction database, from a plain GET.
+    /**
+     * @param  list<array{step: callable(CarbonImmutable): CarbonImmutable, label: callable(CarbonImmutable, CarbonImmutable): string}>  $steps
+     * @return list<Period>
+     */
+    private function firstStepInsideTheCap(Period $period, array $steps): array
+    {
+        foreach ($steps as $step) {
+            if ($this->countSteps($period, $step['step'], self::MAX_BUCKET_POINTS) <= self::MAX_BUCKET_POINTS) {
+                return $this->stepBuckets($period, $step['step'], $step['label']);
+            }
+        }
+
+        // Nothing on the calendar fits, so the step is computed from the range
+        // itself: whole years, widened until the point count is inside the cap.
+        // NoOverflow like the calendar steps above it — a range opening on 29
+        // February otherwise walks every later bucket edge into March.
+        $years = max(1, (int) ceil(($period->start->diffInYears($period->endExclusive) + 1) / self::MAX_BUCKET_POINTS));
+
+        return $this->stepBuckets(
+            $period,
+            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addYearsNoOverflow($years),
+            self::spanLabel('Y'),
+        );
+    }
+
     /**
      * @return list<Period>
      */
     private function generateWeekly(Period $period): array
     {
-        $uncappedPointCount = $this->countSteps(
-            $period,
-            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addWeek(),
-        );
-
-        if ($uncappedPointCount > self::MAX_BUCKET_POINTS) {
-            return $this->generateMonthly($period);
-        }
-
-        return $this->stepBuckets(
-            $period,
-            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addWeek(),
-        );
+        return $this->firstStepInsideTheCap($period, [
+            ['step' => static fn (CarbonImmutable $c): CarbonImmutable => $c->addWeek(), 'label' => self::startLabel('j M Y')],
+            ...self::monthlyAndCoarser(),
+        ]);
     }
 
     /**
@@ -52,28 +70,49 @@ final class TimeBucketGenerator
      */
     private function generateMonthly(Period $period): array
     {
-        $uncappedPointCount = $this->countSteps(
-            $period,
-            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addMonthNoOverflow(),
-        );
+        return $this->firstStepInsideTheCap($period, self::monthlyAndCoarser());
+    }
 
-        if ($uncappedPointCount > self::MAX_BUCKET_POINTS) {
-            return $this->stepBuckets(
-                $period,
-                static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addMonthsNoOverflow(3),
-            );
-        }
+    /**
+     * @return list<array{step: callable(CarbonImmutable): CarbonImmutable, label: callable(CarbonImmutable, CarbonImmutable): string}>
+     */
+    private static function monthlyAndCoarser(): array
+    {
+        return [
+            ['step' => static fn (CarbonImmutable $c): CarbonImmutable => $c->addMonthNoOverflow(), 'label' => self::startLabel('M Y')],
+            ['step' => static fn (CarbonImmutable $c): CarbonImmutable => $c->addMonthsNoOverflow(3), 'label' => self::spanLabel('M Y')],
+        ];
+    }
 
-        return $this->stepBuckets(
-            $period,
-            static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addMonthNoOverflow(),
-        );
+    // Every bucket used to be labelled with the month its range STARTS in,
+    // whatever its length, so a weekly report printed three distinct labels
+    // over fourteen rows and no row could be told from another.
+    /**
+     * @return callable(CarbonImmutable, CarbonImmutable): string
+     */
+    private static function startLabel(string $format): callable
+    {
+        return static fn (CarbonImmutable $start, CarbonImmutable $endExclusive): string => $start->translatedFormat($format);
+    }
+
+    /**
+     * @return callable(CarbonImmutable, CarbonImmutable): string
+     */
+    private static function spanLabel(string $format): callable
+    {
+        return static function (CarbonImmutable $start, CarbonImmutable $endExclusive) use ($format): string {
+            $endInclusive = $endExclusive->subDay();
+            $from = $start->translatedFormat($format);
+            $to = $endInclusive->translatedFormat($format);
+
+            return $from === $to ? $from : $from.' – '.$to;
+        };
     }
 
     /**
      * @param  callable(CarbonImmutable): CarbonImmutable  $step
      */
-    private function countSteps(Period $period, callable $step): int
+    private function countSteps(Period $period, callable $step, int $stopAfter = PHP_INT_MAX): int
     {
         $cursor = $period->start;
         $count = 0;
@@ -81,6 +120,12 @@ final class TimeBucketGenerator
         while ($cursor->lessThan($period->endExclusive)) {
             $cursor = $step($cursor);
             $count++;
+
+            // Counting a millennium of weeks to learn it is "more than 60"
+            // costs 52 000 iterations and answers the same question.
+            if ($count > $stopAfter) {
+                return $count;
+            }
         }
 
         return $count;
@@ -88,9 +133,10 @@ final class TimeBucketGenerator
 
     /**
      * @param  callable(CarbonImmutable): CarbonImmutable  $step
+     * @param  callable(CarbonImmutable, CarbonImmutable): string  $label
      * @return list<Period>
      */
-    private function stepBuckets(Period $period, callable $step): array
+    private function stepBuckets(Period $period, callable $step, callable $label): array
     {
         $buckets = [];
         $cursor = $period->start;
@@ -104,7 +150,7 @@ final class TimeBucketGenerator
             $buckets[] = new Period(
                 start: $cursor,
                 endExclusive: $endExclusive,
-                label: $cursor->translatedFormat('M Y'),
+                label: $label($cursor, $endExclusive),
             );
 
             $cursor = $endExclusive;

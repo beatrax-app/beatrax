@@ -28,19 +28,17 @@ it('has copy for every blocked reason in both languages', function (): void {
     expect($missing)->toBe([], implode(', ', $missing));
 });
 
-it('has a name and a working line for every setup step in both languages', function (): void {
+it('has a name for every setup step in both languages', function (): void {
     $missing = [];
 
     foreach (['en', 'nl'] as $locale) {
         app('translator')->setLocale($locale);
 
         foreach (SetupStep::cases() as $step) {
-            foreach (['step', 'working'] as $group) {
-                $key = "mobile::setup.{$group}.{$step->value}";
+            $key = 'mobile::setup.step.'.$step->value;
 
-                if (Lang::get($key) === $key) {
-                    $missing[] = "{$locale}: {$key}";
-                }
+            if (Lang::get($key) === $key) {
+                $missing[] = "{$locale}: {$key}";
             }
         }
     }

@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Ajoute des versements pour voir une prévision',
         'not_enough_history' => 'Pas encore assez d\'historique pour estimer une date',
         'no_recent_contributions' => 'Aucun versement récent sur lequel fonder une estimation',
+        'too_far_to_date' => 'Trop loin pour être daté à ce rythme',
         'est' => 'Est. :date ·',
         'projection_note' => '(prévision)',
         'projected' => 'Prévu : :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Plus d\'actions pour :name',
         'mark_complete' => 'Marquer comme terminé',
+        'mark_complete_caption' => 'Marquer',
         'archive' => 'Archiver',
         'restore' => 'Restaurer',
     ],
 
-    'archived_disclosure' => 'Objectifs archivés (:count)',
+    'archived_disclosure' => 'Objectif archivé (:count)|Objectifs archivés (:count)',
 
     'form' => [
         'title_edit' => 'Modifier l\'objectif',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Saisis un nom pour ton objectif.',
         'date' => 'Choisis une date cible.',
+        'date_invalid' => 'Choisissez une date réelle.',
+        'date_before_start' => 'Choisis une date égale ou postérieure au début de l\'objectif.',
+        'generic' => 'L\'objectif n\'a pas pu être enregistré. Vérifiez les champs et réessayez.',
         'amount' => 'Saisis un montant valide supérieur à zéro.',
         'pot_linked_category' => 'Cette cagnotte est liée à une catégorie. Supprime d\'abord ce lien sur la page Cagnottes.',
+        'pot_already_linked' => 'Cette cagnotte alimente déjà un autre objectif. Supprime d\'abord ce lien là-bas.',
+        'pot_missing' => 'Cette cagnotte n\'est plus disponible. Choisis-en une autre, ou laisse cet objectif sans lien.',
     ],
 ];

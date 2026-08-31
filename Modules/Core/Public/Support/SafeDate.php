@@ -7,8 +7,13 @@ namespace Modules\Core\Public\Support;
 use Carbon\CarbonImmutable;
 use Throwable;
 
+/**
+ * @link ../../../../.docs/conventions/invariants-from-shipped-failures.md#a-date-from-outside-normalised-instead-of-refused
+ */
 final class SafeDate
 {
+    public const string DAY_FORMAT = 'Y-m-d';
+
     // CarbonImmutable::parse('') returns NOW instead of throwing, so a blank
     // field would sail past a bare try/catch and book itself today. The
     // emptiness check is the load-bearing half; the catch is the rest.
@@ -25,10 +30,33 @@ final class SafeDate
         }
     }
 
-    // A date-only field parsed off a form: the time half is whatever the
-    // parser inferred rather than anything the reader typed, so it is
-    // flattened here instead of leaking into a range comparison.
-    public static function parseDayOrNull(string $raw): ?CarbonImmutable
+    // The one reading of "is this the day somebody meant". Every parser in PHP
+    // rolls an out-of-range component FORWARD rather than refusing it, so the
+    // result is formatted back and compared to what arrived: '2027-02-29',
+    // '2026-1-5', '2026' and 'tomorrow' all fail that comparison.
+    public static function dayOrNull(string $raw): ?CarbonImmutable
+    {
+        $trimmed = trim($raw);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        try {
+            $parsed = CarbonImmutable::createFromFormat('!'.self::DAY_FORMAT, $trimmed);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $parsed instanceof CarbonImmutable && $parsed->format(self::DAY_FORMAT) === $trimmed
+            ? $parsed
+            : null;
+    }
+
+    // Named for what it does, because it is the wrong answer for anything a
+    // reader or a peer supplies: a machine-emitted free-form string — a MIME
+    // `Date:` header, a stored timestamp whose time half is an artefact — has
+    // no Y-m-d shape to check, so this parses what it can and rolls the rest.
+    public static function normalisedDayOrNull(string $raw): ?CarbonImmutable
     {
         return self::parseOrNull(trim($raw))?->startOfDay();
     }

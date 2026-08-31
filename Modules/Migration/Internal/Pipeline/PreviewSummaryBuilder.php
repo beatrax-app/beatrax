@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\PreviewSummary;
@@ -19,19 +22,24 @@ use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
+use Modules\Migration\Internal\Support\ConflictLabel;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-final class PreviewSummaryBuilder
+final readonly class PreviewSummaryBuilder
 {
     use CoercesScalars;
 
+    private const string BUDGET_KEY_SEPARATOR = '|';
+
+    private const string BUDGET_KEY_PERIOD_FORMAT = '!Y-m-d';
+
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly BaseCurrency $baseCurrency,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function forRun(int $migrationRunId, User $user): PreviewSummary
@@ -117,8 +125,8 @@ final class PreviewSummaryBuilder
                 ? $this->conflictItem($connection, $user, $sourceProduct, $row)
                 : [
                     'id' => self::toInt($row->id),
-                    'label' => self::toString($row->display_label),
-                    'reason' => self::toString($row->reason),
+                    'label' => StoredCopy::read(self::toString($row->display_label)),
+                    'reason' => StoredCopy::read(self::toString($row->reason)),
                     'resolution' => ConflictResolution::KeepLocal->value,
                 ];
         }
@@ -145,8 +153,8 @@ final class PreviewSummaryBuilder
         if ($entityType === '' || $fieldName === '') {
             return [
                 'id' => self::toInt($row->id),
-                'label' => self::toString($row->display_label),
-                'reason' => self::toString($row->reason),
+                'label' => StoredCopy::read(self::toString($row->display_label)),
+                'reason' => StoredCopy::read(self::toString($row->reason)),
                 'resolution' => $resolution->value,
             ];
         }
@@ -169,7 +177,7 @@ final class PreviewSummaryBuilder
     private function conflictLabel(Connection $connection, User $user, string $sourceProduct, string $entityType, string $fieldName, ?string $sourceExternalId): string
     {
         if ($sourceExternalId === null) {
-            return ucfirst($entityType).' '.$fieldName;
+            return Lang::get(ConflictLabel::keyFor($entityType, $fieldName));
         }
 
         return match ($entityType) {
@@ -177,52 +185,66 @@ final class PreviewSummaryBuilder
             'category' => $this->categoryOrAccountLabel($connection, $user, $sourceProduct, 'category', 'categories', $sourceExternalId),
             'account' => $this->categoryOrAccountLabel($connection, $user, $sourceProduct, 'account', 'accounts', $sourceExternalId),
             'transaction' => $this->transactionLabel($connection, $user, $sourceProduct, $sourceExternalId, $fieldName),
-            default => ucfirst($entityType).' '.$fieldName,
+            default => Lang::get(ConflictLabel::keyFor($entityType, $fieldName)),
         };
     }
 
     private function budgetAssignmentLabel(Connection $connection, User $user, string $sourceProduct, string $sourceExternalId): string
     {
-        [$categoryExternalId, $periodStart] = array_pad(explode('|', $sourceExternalId, 2), 2, null);
+        // Split at the LAST separator, not the first: the period start can never
+        // hold one, and a category the reader named "Rent | Utilities" put one in
+        // the other half — which sent a category-name fragment to the date parser
+        // and threw the whole preview away instead of listing their conflicts.
+        $separator = strrpos($sourceExternalId, self::BUDGET_KEY_SEPARATOR);
+
+        $categoryExternalId = $separator === false ? null : substr($sourceExternalId, 0, $separator);
+        $periodStart = $separator === false ? null : substr($sourceExternalId, $separator + 1);
 
         $categoryName = $categoryExternalId !== null
             ? $this->resolvedName($connection, $user, $sourceProduct, 'category', $categoryExternalId, 'categories')
             : null;
 
-        $monthYear = $periodStart !== null ? CarbonImmutable::parse($periodStart)->translatedFormat('F Y') : null;
+        $monthYear = $periodStart !== null
+            ? SafeDate::fromFormatOrNull(self::BUDGET_KEY_PERIOD_FORMAT, $periodStart)?->translatedFormat('F Y')
+            : null;
 
         return match (true) {
-            $categoryName !== null && $monthYear !== null => "{$categoryName} · {$monthYear} budget",
-            $categoryName !== null => "{$categoryName} budget",
-            default => 'Budget assignment',
+            $categoryName !== null && $monthYear !== null => Lang::get('migration::unmapped.conflict.budget_for_month', ['category' => $categoryName, 'month' => $monthYear]),
+            $categoryName !== null => Lang::get('migration::unmapped.conflict.budget_for_category', ['category' => $categoryName]),
+            default => Lang::get('migration::unmapped.conflict.budget_assignment'),
         };
     }
 
     private function categoryOrAccountLabel(Connection $connection, User $user, string $sourceProduct, string $entityType, string $table, string $sourceExternalId): string
     {
         $name = $this->resolvedName($connection, $user, $sourceProduct, $entityType, $sourceExternalId, $table);
-        $kind = $entityType === MigrationEntityType::Category->value ? 'category' : 'account';
+        $isCategory = $entityType === MigrationEntityType::Category->value;
 
-        return $name !== null ? "\"{$name}\" {$kind} name" : ucfirst($kind).' name';
+        if ($name === null) {
+            return Lang::get($isCategory ? 'migration::unmapped.conflict.category_name' : 'migration::unmapped.conflict.account_name');
+        }
+
+        return Lang::get(
+            $isCategory ? 'migration::unmapped.conflict.category_name_of' : 'migration::unmapped.conflict.account_name_of',
+            ['name' => $name],
+        );
     }
 
     private function transactionLabel(Connection $connection, User $user, string $sourceProduct, string $sourceExternalId, string $fieldName): string
     {
         $beatraxId = $this->resolveBeatraxId($connection, $user, $sourceProduct, MigrationEntityType::Transaction->value, $sourceExternalId);
-        $fieldLabel = $fieldName === 'amount_minor' ? 'amount' : 'description';
-
-        if ($beatraxId === null) {
-            return 'Transaction '.$fieldLabel;
-        }
+        $isAmount = $fieldName === 'amount_minor';
 
         /** @var stdClass|null $txn */
-        $txn = $connection->table('transactions')
+        $txn = $beatraxId === null ? null : $connection->table('transactions')
             ->where('id', $beatraxId)
             ->where('user_id', $user->id)
             ->first(['counterparty_name', 'description', 'posted_at']);
 
+        // Never mapped and mapped-then-gone read the same to the reader: in
+        // neither case is there a transaction here to name.
         if ($txn === null) {
-            return 'Transaction '.$fieldLabel;
+            return Lang::get($isAmount ? 'migration::unmapped.conflict.transaction_amount' : 'migration::unmapped.conflict.transaction_description');
         }
 
         $counterpartyName = $txn->counterparty_name === null
@@ -232,10 +254,20 @@ final class PreviewSummaryBuilder
             ? null
             : $this->codec->decryptValue('transactions', 'description', self::toString($txn->description), $user->id, ($this->session)())['value'];
 
-        $identifier = $counterpartyName ?? $description ?? 'Transaction';
+        $identifier = $counterpartyName ?? $description ?? Lang::get('migration::unmapped.label.transaction_unnamed');
         $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toString($txn->posted_at))->translatedFormat('j M Y') : null;
 
-        return $date !== null ? "{$identifier} · {$date} {$fieldLabel}" : "{$identifier} {$fieldLabel}";
+        if ($date === null) {
+            return Lang::get(
+                $isAmount ? 'migration::unmapped.conflict.transaction_amount_of' : 'migration::unmapped.conflict.transaction_description_of',
+                ['name' => $identifier],
+            );
+        }
+
+        return Lang::get(
+            $isAmount ? 'migration::unmapped.conflict.transaction_amount_of_dated' : 'migration::unmapped.conflict.transaction_description_of_dated',
+            ['name' => $identifier, 'date' => $date],
+        );
     }
 
     private function resolvedName(Connection $connection, User $user, string $sourceProduct, string $entityType, string $sourceExternalId, string $table): ?string
@@ -264,29 +296,28 @@ final class PreviewSummaryBuilder
 
     private function conflictReason(ConflictResolution $resolution, bool $isMoney, ?string $currency, ?string $localRaw, ?string $sourceRaw, ?string $baselineRaw): string
     {
-        $intro = $resolution === ConflictResolution::TakeSource
-            ? "The new export's value will be applied when you confirm — your local value will be replaced."
-            : 'Your local value will be kept — the new export\'s value will not be applied.';
+        $intro = Lang::get($resolution === ConflictResolution::TakeSource
+            ? 'migration::unmapped.reason.take_source'
+            : 'migration::unmapped.reason.keep_local');
 
-        return sprintf(
-            "%s\nLocal: %s · Source: %s · Last imported: %s",
-            $intro,
-            $this->formatConflictValue($localRaw, $isMoney, $currency),
-            $this->formatConflictValue($sourceRaw, $isMoney, $currency),
-            $this->formatConflictValue($baselineRaw, $isMoney, $currency),
-        );
+        return Lang::get('migration::unmapped.reason.compared_values', [
+            'intro' => $intro,
+            'local' => $this->formatConflictValue($localRaw, $isMoney, $currency),
+            'source' => $this->formatConflictValue($sourceRaw, $isMoney, $currency),
+            'baseline' => $this->formatConflictValue($baselineRaw, $isMoney, $currency),
+        ]);
     }
 
     private function formatConflictValue(?string $raw, bool $isMoney, ?string $currency): string
     {
         if ($raw === null) {
-            return '(none)';
+            return Lang::get('migration::unmapped.value.none');
         }
 
         if ($isMoney) {
             return Money::ofMinor((int) $raw, $currency ?? $this->baseCurrency->code())->format();
         }
 
-        return '"'.$raw.'"';
+        return Lang::get('migration::unmapped.value.quoted', ['value' => $raw]);
     }
 }

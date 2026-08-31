@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Afișarea monedei',
+        'heading' => 'Afișarea sumei',
         'label' => 'Vizualizarea implicită din lista de tranzacții',
-        'eur_only' => 'Doar :code',
-        'original' => 'Moneda originală',
+        'eur_only' => 'Sumă decontată',
+        'original' => 'Sumă originală',
         'help' => 'Poți schimba în continuare pentru fiecare pagină din lista de tranzacții.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Se folosesc cursurile incluse în aplicație. Niciun fel de date nu părăsesc acest dispozitiv.',
         'fetch_aria' => 'Preia online cursurile valutare actuale',
         'refreshing' => 'Se reîmprospătează…',
-        'next_refresh' => 'Următoarea reîmprospătare automată: zilnic la 09:00',
+        'next_refresh' => 'Reîmprospătare automată: o dată pe zi',
         'refresh_gave_up' => 'Cursurile nu au putut fi reîmprospătate. Se folosesc în continuare cele de pe acest dispozitiv.',
         'refresh_now' => 'Reîmprospătează acum',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Perioadă',
         'label' => 'Perioada începe în ziua',
         'help' => 'Numerotate de la 1 la 28. Majoritatea utilizatorilor lasă 1 (luna calendaristică). Alege 25 dacă salariul îți intră pe 25 și te gândești la „luna ta” ca începând atunci.',
+
+        'move_confirm' => 'Dacă perioada începe în ziua :day, toate sumele din plicuri sunt reorganizate și adunate acolo unde două luni se contopesc într-una. Revenirea la ziua anterioară nu le mai separă.',
+        'move_cancel' => 'Anulează',
+        'move_apply' => 'Aplică',
     ],
 
     'recurring' => [
         'heading' => 'Detectarea plăților recurente',
         'window_label' => 'Fereastră de detectare (luni)',
         'window_help' => 'Câte luni de istoric să fie scanate la gruparea tranzacțiilor în tipare recurente.',
-        'income_label' => 'Venit minim (cenți)',
-        'income_help' => 'Veniturile sub acest prag nu sunt grupate automat. Stocat în cenți — 200000 înseamnă :example. Setează 0 ca să dezactivezi pragul.',
+        'income_label' => 'Venit minim (unități minore)',
+        'income_help' => 'Veniturile sub acest prag nu sunt grupate automat. Stocat în unități minore — :minor înseamnă :example. Setează 0 ca să dezactivezi pragul.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Pragul implicit pentru alertele de abatere',
         'help' => 'Alertele se declanșează când suma cea mai recentă a unei plăți recurente diferă de cea anterioară cu mai mult decât acest procent. Setările per serie au prioritate.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (implicit)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (implicit)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Folderul de depunere este activ. Beatrax scanează <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> la fiecare 5 minute după fișiere noi.',
         'inactive_html' => 'Când este pornit, Beatrax scanează <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> la fiecare 5 minute după fișiere <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> și <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> și le importă prin același flux de potrivire ca asistentul. Fișierele procesate se mută în <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, ca să nu fie importate niciodată de două ori.',
+        'active_phone_html' => 'Folderul de depunere este activ. Beatrax scanează <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> în fundal după fișiere noi. Telefonul tău decide când rulează o scanare în fundal, așa că pot trece minute sau ore.',
+        'inactive_phone_html' => 'Când este pornit, Beatrax scanează <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> în fundal după fișiere <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> și <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> și le importă prin același flux de potrivire ca asistentul. Telefonul tău decide când rulează o scanare în fundal, așa că pot trece minute sau ore. Fișierele procesate se mută în <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, ca să nu fie importate niciodată de două ori.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Impozite',
-    'shared_merchant_heading' => 'Listă de comercianți partajată',
     'data_backup_heading' => 'Date și copii de rezervă',
-    'install_heading' => 'Instalare',
 
     'about_updates' => [
         'heading' => 'Despre actualizări',
         'body' => 'Beatrax se actualizează singur odată instalat. După ce instalezi prima versiune, versiunile viitoare ajung printr-un banner în aplicație — nu mai trebuie să revii pe GitHub. Dacă vreodată o actualizare nu se aplică, poți oricând să descarci manual cel mai recent installer de pe pagina de versiuni.',
+        'body_phone' => 'Aici Beatrax nu se actualizează singur. Versiunile noi ale aplicației de telefon ajung prin App Store sau Google Play, la fel ca celelalte aplicații ale tale. Pagina de versiuni arată ce s-a schimbat în fiecare.',
         'open_releases' => 'Deschide pagina de versiuni →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Luna de buget nu a putut fi mutată, așa că a rămas unde era.',
         'currency_required' => 'Alege o monedă.',
         'window_months' => 'Alege între 2 și 60 de luni.',
-        'threshold' => 'Alege un prag dintre 1%, 2%, 5%, 10%, 25% sau 50%.',
+        'threshold' => 'Alege un prag dintre 1 %, 2 %, 5 %, 10 %, 25 % sau 50 %.',
         'amount' => 'Introdu o sumă de la :zero în sus.',
         'period_day' => 'Alege o zi de la 1 la 28.',
         'currency_view' => 'Alege una dintre opțiunile disponibile.',

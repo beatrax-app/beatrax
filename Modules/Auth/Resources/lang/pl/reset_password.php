@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Użyj co najmniej 12 znaków.',
     'error_wrong_code' => 'Ta nazwa użytkownika i kod odzyskiwania do siebie nie pasują. Sprawdź kod uważnie — same wielkie litery, bez zera, bez litery O, bez jedynki, bez litery L.',
+    'error_throttled' => 'Zbyt wiele prób — spróbuj ponownie za :wait.',
 ];

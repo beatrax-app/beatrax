@@ -12,12 +12,12 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\Concerns\ManagesBlindIndexKey;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Exceptions\KeyringStateException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
-use Modules\Sync\Internal\Identity\SecureTempFile;
+use Modules\Sync\Internal\Identity\SealedJsonFile;
+use Modules\Sync\Public\Services\PortableKeyMaterial;
 use SodiumException;
 
 final class GdkKeyringService
@@ -26,18 +26,22 @@ final class GdkKeyringService
 
     // Wide enough that two distinct KEKs cannot collide onto one cache entry;
     // this is a lookup key, not a security boundary.
-    private const CACHE_FINGERPRINT_BYTES = 16;
+    private const int CACHE_FINGERPRINT_BYTES = 16;
 
     // Above this, the keyring file was written with password-hardening cost
     // and is worth re-writing once. Deliberately a threshold rather than an
     // equality check on the current setting, so tuning the write cost never
     // turns into a re-write loop.
-    private const CHEAP_READ_MEMLIMIT = 1048576;
+    private const int CHEAP_READ_MEMLIMIT = 1048576;
+
+    private const string STAGING_PREFIX = 'beatrax_gdk_';
 
     // Decrypted keyrings for this process, keyed by user + KEK fingerprint
     // so a withheld or rotated key can never resolve to a cached entry.
     /** @var array<string, GdkKeyring> */
     private array $keyringCache = [];
+
+    private readonly SealedJsonFile $sealedFile;
 
     // Every keyring read/write HARD-throws \LogicException when the KEK is
     // null — the keyring is never touched under anything weaker than the
@@ -49,7 +53,9 @@ final class GdkKeyringService
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SodiumPrimitives $sodium,
-    ) {}
+    ) {
+        $this->sealedFile = new SealedJsonFile($backupEncryptor);
+    }
 
     // Mints the first GDK epoch, persists the encrypted keyring file, and
     // points sync_encryption_state.current_epoch at it. The id is random, not
@@ -346,9 +352,12 @@ final class GdkKeyringService
         return is_string($hash) ? $hash : null;
     }
 
+    // Through PortableKeyMaterial, not a literal: the same path is spelled by
+    // the re-wrap service and by the backup that has to carry this file, and a
+    // copy that drifts is a keyring written where nothing will look for it.
     private function keyringPath(int $userId): string
     {
-        return UserDataPathService::appPath("sync/gdk/{$userId}.enc");
+        return (new PortableKeyMaterial)->keyringPath($userId);
     }
 
     // Declared, not swallowed: leaving the encryptor's own type off the
@@ -365,29 +374,18 @@ final class GdkKeyringService
             return GdkKeyring::empty();
         }
 
-        $dir = dirname($encPath);
-        @mkdir($dir, 0700, true);
+        $payload = json_decode(
+            $this->sealedFile->readPlaintext($encPath, $kek, self::STAGING_PREFIX),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
 
-        // Stage the decrypted plaintext inside the sanctioned 0700 gdk
-        // directory — never sys_get_temp_dir() — and lock it to 0600
-        // immediately after BackupEncryptor::decrypt() writes it (its
-        // file-path API has no permission handling of its own).
-        $tmpPath = $dir.DIRECTORY_SEPARATOR.'beatrax_gdk_'.bin2hex(random_bytes(8)).'.tmp';
-
-        try {
-            $this->backupEncryptor->decrypt($encPath, $tmpPath, $kek);
-            SecureTempFile::lockDown($tmpPath);
-
-            $payload = json_decode((string) file_get_contents($tmpPath), true, flags: JSON_THROW_ON_ERROR);
-            if (! is_array($payload)) {
-                throw KeyringStateException::corruptPayload($userId);
-            }
-
-            /** @var array<string, mixed> $payload */
-            return GdkKeyring::fromArray($payload);
-        } finally {
-            @unlink($tmpPath);
+        if (! is_array($payload)) {
+            throw KeyringStateException::corruptPayload($userId);
         }
+
+        /** @var array<string, mixed> $payload */
+        return GdkKeyring::fromArray($payload);
     }
 
     private function writeKeyringFile(int $userId, GdkKeyring $keyring, string $kek): void
@@ -416,33 +414,12 @@ final class GdkKeyringService
     // finalize). Returns the .tmp path.
     private function stageKeyringFile(int $userId, GdkKeyring $keyring, string $kek): string
     {
-        $encPath = $this->keyringPath($userId);
-        $dir = dirname($encPath);
-        @mkdir($dir, 0700, true);
-
-        $payload = json_encode($keyring->toArray(), JSON_THROW_ON_ERROR);
-
-        // Stage the plaintext keyring JSON inside the 0700 gdk directory —
-        // never sys_get_temp_dir() — locked to 0600 immediately
-        // (SecureTempFile::write throws if the chmod fails).
-        $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_gdk_'.bin2hex(random_bytes(8)).'.tmp';
-        SecureTempFile::write($tmpPlainPath, $payload);
-
-        // Randomized rather than a fixed `{userId}.enc.tmp` — a fixed path let
-        // two concurrent stage/write operations, or a stale `.tmp` from a
-        // crashed run, collide and silently overwrite each other.
-        $tmpEncPath = $encPath.'.'.bin2hex(random_bytes(8)).'.tmp';
-
-        try {
-            // The KEK is 256 random bits, not a passphrase — encryptWithKey
-            // skips the password-hardening cost that made every keyring read
-            // ~500ms for no security gain.
-            $this->backupEncryptor->encryptWithKey($tmpPlainPath, $tmpEncPath, $kek);
-        } finally {
-            @unlink($tmpPlainPath);
-        }
-
-        return $tmpEncPath;
+        return $this->sealedFile->stageSealed(
+            $this->keyringPath($userId),
+            json_encode($keyring->toArray(), JSON_THROW_ON_ERROR),
+            $kek,
+            self::STAGING_PREFIX,
+        );
     }
 
     // Upserts sync_encryption_state.current_epoch — NEVER any key material.

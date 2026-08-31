@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'O :subject',
+        'close' => 'Zamknij',
+    ],
+
     'page_title' => 'Gdzie są moje dane?',
     'intro' => 'Beatrax przechowuje wszystko na tym urządzeniu. Nic nie jest wysyłane na serwer, nic nie synchronizuje się z chmurą, nic nie opuszcza tego urządzenia bez Twojego eksportu.',
 

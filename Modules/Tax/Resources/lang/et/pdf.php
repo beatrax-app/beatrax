@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Summa',
 
     'subtotal' => 'Vahesumma',
+    'subtotal_income' => 'Tulude vahesumma',
 
     'footer' => 'Koostanud Beatrax — ainult sinu seadmes hoitav rahaülevaade — :year',
 ];

@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Sem presuň súbor CAMT.053',
     'drop_lead_mt940' => 'Sem presuň súbor MT940',
-    'drop_lead_asn' => 'Sem presuň CSV z ASN',
-    'drop_lead_ing' => 'Sem presuň CSV z ING',
+    'drop_lead_csv_layout' => 'Sem presuň CSV z :layout',
     'drop_lead_pick_bank' => 'Vyber banku, ktorá vyexportovala tvoj CSV — bez toho ho nedokážeme správne prečítať.',
     'drop_lead_default' => 'Sem presuň súbor s výpisom',
     'browse_file' => 'alebo vyber súbor z disku',
 
-    'banks_mt940' => 'Podporované: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Podporované: ASN, ING — ďalšie formáty pribudnú, ako budú používatelia posielať vzorky.',
-    'banks_default' => 'Podporované: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 je výpis vo formáte XML — hľadaj ho v internetbankingu pri výpisoch alebo stiahnutiach.',
+    'format_help_mt940' => 'MT940 je textový výpis ponúkaný ako .sta alebo .940 vedľa súborov XML a CSV.',
+    'format_help_csv' => 'CSV je export do tabuľky. Každá banka radí stĺpce inak, preto vyber zodpovedajúce rozloženie. Ak tvoje v zozname nie je, požiadaj banku o CAMT.053 alebo MT940.',
+
+    'account_name_default' => 'Bankový účet',
+    'account_name_layout' => 'Účet :layout',
 
     'file_ready' => '· ✓ pripravené',
 

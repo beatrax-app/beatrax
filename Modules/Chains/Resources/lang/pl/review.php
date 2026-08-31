@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Potwierdź lub odrzuć kandydujące powiązania, których mechanizm łańcuchów nie potwierdził automatycznie.',
 
     'empty_heading' => 'Nie ma nic do przejrzenia',
-    'empty_body' => 'Każde powiązanie łańcucha jest potwierdzone albo odrzucone. Nowi kandydaci pojawią się tutaj wraz z kolejnymi importami.',
+    'empty_body' => 'Każde powiązanie, które resolver zdołał sparować, jest potwierdzone albo odrzucone. Nowi kandydaci pojawią się tutaj wraz z kolejnymi importami.',
 
     'auto_confirm_nudge' => 'Jeszcze jedno potwierdzenie i podobne powiązania będą potwierdzane automatycznie.',
 

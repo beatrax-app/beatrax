@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Wyświetlanie waluty',
+        'heading' => 'Wyświetlanie kwoty',
         'label' => 'Domyślny widok na liście transakcji',
-        'eur_only' => 'Tylko :code',
-        'original' => 'Waluta oryginalna',
+        'eur_only' => 'Kwota rozliczona',
+        'original' => 'Kwota pierwotna',
         'help' => 'Widok nadal można przełączać dla każdej strony z poziomu listy transakcji.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Używane są kursy dołączone do aplikacji. Żadne dane nie opuszczają tego urządzenia.',
         'fetch_aria' => 'Pobierz aktualne kursy walut online',
         'refreshing' => 'Odświeżanie…',
-        'next_refresh' => 'Następne automatyczne odświeżenie: codziennie o 09:00',
+        'next_refresh' => 'Automatyczne odświeżanie: raz dziennie',
         'refresh_gave_up' => 'Nie udało się odświeżyć kursów. Nadal używane są kursy zapisane na tym urządzeniu.',
         'refresh_now' => 'Odśwież teraz',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Okres',
         'label' => 'Okres zaczyna się w dniu',
         'help' => 'Numer od 1 do 28. Większość osób zostawia 1 (miesiąc kalendarzowy). Wybierz 25, jeśli wypłata wpływa 25. dnia i właśnie wtedy zaczyna się „Twój miesiąc”.',
+
+        'move_confirm' => 'Jeśli okres zaczyna się :day. dnia, wszystkie kwoty w kopertach zostaną przeniesione i zsumowane tam, gdzie dwa miesiące zlewają się w jeden. Cofnięcie dnia już ich nie rozdzieli.',
+        'move_cancel' => 'Anuluj',
+        'move_apply' => 'Zastosuj',
     ],
 
     'recurring' => [
         'heading' => 'Wykrywanie płatności cyklicznych',
         'window_label' => 'Okno wykrywania (miesiące)',
         'window_help' => 'Ile miesięcy historii przeszukiwać przy grupowaniu transakcji we wzorce cykliczne.',
-        'income_label' => 'Minimalny przychód (centy)',
-        'income_help' => 'Przychody poniżej tego progu nie są grupowane automatycznie. Zapisywane w centach — 200000 oznacza :example. Ustaw 0, aby wyłączyć próg.',
+        'income_label' => 'Minimalny przychód (najmniejsze jednostki)',
+        'income_help' => 'Przychody poniżej tego progu nie są grupowane automatycznie. Zapisywane w najmniejszych jednostkach — :minor oznacza :example. Ustaw 0, aby wyłączyć próg.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Folder podrzucania jest aktywny. Beatrax skanuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> co 5 minut w poszukiwaniu nowych plików.',
         'inactive_html' => 'Po włączeniu Beatrax skanuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> co 5 minut w poszukiwaniu plików <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> i importuje je tym samym potokiem dopasowania co kreator. Przetworzone pliki trafiają do <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, więc nigdy nie są importowane dwa razy.',
+        'active_phone_html' => 'Folder podrzucania jest aktywny. Beatrax skanuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> w tle w poszukiwaniu nowych plików. To telefon decyduje, kiedy uruchomi się skanowanie w tle — mogą to być minuty albo godziny.',
+        'inactive_phone_html' => 'Po włączeniu Beatrax skanuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> w tle w poszukiwaniu plików <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> i importuje je tym samym potokiem dopasowania co kreator. To telefon decyduje, kiedy uruchomi się skanowanie w tle — mogą to być minuty albo godziny. Przetworzone pliki trafiają do <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, więc nigdy nie są importowane dwa razy.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Podatki',
-    'shared_merchant_heading' => 'Wspólna lista sprzedawców',
     'data_backup_heading' => 'Dane i kopia zapasowa',
-    'install_heading' => 'Instalacja',
 
     'about_updates' => [
         'heading' => 'O aktualizacjach',
         'body' => 'Po zainstalowaniu Beatrax aktualizuje się automatycznie. Po instalacji pierwszej wersji kolejne pojawiają się jako baner w aplikacji — nie trzeba wracać na GitHub. Gdyby przyszła aktualizacja się nie zainstalowała, zawsze można ręcznie pobrać najnowszy instalator ze strony wydań.',
+        'body_phone' => 'Tutaj Beatrax nie aktualizuje się sam. Nowe wersje aplikacji na telefon przychodzą przez App Store lub Google Play, tak jak pozostałe Twoje aplikacje. Na stronie wydań opisano, co się w każdej zmieniło.',
         'open_releases' => 'Otwórz stronę wydań →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Nie udało się przesunąć miesiąca budżetowego, więc został tam, gdzie był.',
         'currency_required' => 'Wybierz walutę.',
         'window_months' => 'Wybierz wartość od 2 do 60 miesięcy.',
         'threshold' => 'Wybierz próg spośród 1%, 2%, 5%, 10%, 25% lub 50%.',

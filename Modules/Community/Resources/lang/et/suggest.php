@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Muster on kohustuslik.',
         'name_required' => 'Nimi on kohustuslik.',
+        'browser_refused' => 'Sinu brauserit ei õnnestunud avada, seega midagi ei saadetud ega lahkunud sellest seadmest. Proovi uuesti või kopeeri ülal olev YAML-eelvaade ise pull requesti.',
     ],
 ];

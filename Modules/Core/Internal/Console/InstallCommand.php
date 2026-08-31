@@ -10,6 +10,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
@@ -33,7 +34,7 @@ class InstallCommand extends Command
     /**
      * @var list<string>
      */
-    private const CLOUD_SYNC_TOKENS = [
+    private const array CLOUD_SYNC_TOKENS = [
         'Library/CloudStorage',
         'Mobile Documents',
         'iCloud Drive',
@@ -134,7 +135,7 @@ class InstallCommand extends Command
             return self::SUCCESS;
         }
 
-        $username = strtolower(trim($this->resolveStringInput('username', 'Username')));
+        $username = Username::normalize($this->resolveStringInput('username', 'Username'));
         $password = $this->resolveStringInput('password', 'Password', secret: true);
         $periodStartDay = $this->resolvePeriodStartDay();
 

@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Principales dépenses',
     'no_expenses' => 'Aucune dépense catégorisée pour l\'instant.',
+    'top_spending_refunded' => 'Hors classement — :amount est revenu',
 
     'recent_transactions' => 'Transactions récentes',
     'view_all' => 'Tout afficher',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Catégorie',
     'th_amount' => 'Montant',
     'uncategorized' => 'Non catégorisé',
+
+    'jump_to_records' => [
+        'body' => 'Rien pour cette période. Vos opérations les plus récentes sont toujours là.',
+        'action' => 'Afficher :period',
+    ],
 
     'reauth' => [
         'title' => 'Une boîte de réception doit être reconnectée.',

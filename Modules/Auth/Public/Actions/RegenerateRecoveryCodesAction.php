@@ -7,6 +7,8 @@ namespace Modules\Auth\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
+use Modules\Auth\Internal\Services\AccountOwner;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -16,12 +18,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * @phpstan-type RecoveryCodeList list<string>
  */
-final class RegenerateRecoveryCodesAction
+final readonly class RegenerateRecoveryCodesAction
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly RecoveryCodeMinter $recoveryCodes,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private RecoveryCodeMinter $recoveryCodes,
+        private AccountOwner $owner,
     ) {}
 
     /**
@@ -29,14 +32,14 @@ final class RegenerateRecoveryCodesAction
      */
     public function __invoke(User $caller, string $targetUsername): array
     {
-        $target = strtolower(trim($targetUsername));
+        $target = Username::normalize($targetUsername);
 
         if ($target === '') {
             throw new InvalidArgumentException('RegenerateRecoveryCodesAction: target username must not be empty.');
         }
 
-        $isOwner = $caller->is_developer === true;
-        $isSelf = strtolower(trim($caller->username)) === $target;
+        $isOwner = $this->owner->isOwner($caller);
+        $isSelf = Username::normalize($caller->username) === $target;
 
         if (! $isOwner && ! $isSelf) {
             throw new NotFoundHttpException;

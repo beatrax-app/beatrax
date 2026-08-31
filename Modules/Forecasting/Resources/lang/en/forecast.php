@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Compared against baseline above',
 
+    'run_failed' => 'This projection could not be computed. The line below shows only what is already booked.',
+
     'scenario_editor_aria' => 'Scenario editor',
     'series_confidence' => 'Series confidence',
     'no_series_contribute' => "No series contribute to this account's forecast yet.",
@@ -63,6 +65,8 @@ return [
     'updating' => 'Updating',
     'chart_noscript' => 'Chart requires JavaScript. Range covers :days day.|Chart requires JavaScript. Range covers :days days.',
     'total_balance' => 'Total balance',
+    'projection_range' => 'Projection range',
+    'point_estimate' => 'Point estimate',
 
     'per_month_suffix' => '/mo',
     'confidence_chip_aria' => ':name, :confidence confidence — projection range is :percent percent of the point estimate',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Lowest in 30 days',
     'next_ics' => 'Next ICS settlement: :amount on :date',
     'ics_overdue' => 'ICS settlement overdue: :amount, due :date',
+
+    'stale_run' => 'Projected from :date — not refreshed since.',
+
+    'confidence' => [
+        'high' => 'High',
+        'medium' => 'Medium',
+        'low' => 'Low',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Amount is required.',
+        'amount_decimals' => 'Amount must be a number with at most :decimals decimal.|Amount must be a number with at most :decimals decimals.',
+        'amount_whole' => 'Amount must be a whole number — this currency has no smaller unit.',
+        'amount_non_negative' => 'Amount must be zero or positive.',
+        'amount_non_zero' => 'Amount must be non-zero.',
+        'field_required' => ':field is required.',
+    ],
 ];

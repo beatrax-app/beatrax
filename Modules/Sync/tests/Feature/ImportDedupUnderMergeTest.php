@@ -95,7 +95,6 @@ beforeEach(function (): void {
         currency: 'EUR',
         settledAmountMinor: -4999,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'ALBERT HEIJN',
         counterpartyIban: null,
         counterpartyNormalized: $composer->normalize('ALBERT HEIJN'),

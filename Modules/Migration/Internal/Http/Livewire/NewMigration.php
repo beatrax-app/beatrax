@@ -4,22 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Livewire\Attributes\Validate;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Services\UploadFilename;
 use Modules\Migration\Internal\Actions\CheckForUpdates;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Enums\MigrationSourceProduct;
+use Modules\Migration\Internal\Exceptions\ArchiveReaderUnavailableException;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\ZipExtractor;
 use Modules\Migration\Models\MigrationRun;
 use Psr\Log\LoggerInterface;
@@ -31,11 +36,10 @@ final class NewMigration extends Component
 
     // Rejects an oversized upload before it reaches disk; ZipExtractor
     // separately caps the post-extraction size.
-    private const MAX_UPLOAD_KB = 204800;
+    private const int MAX_UPLOAD_KB = 204800;
 
     public ?TemporaryUploadedFile $file = null;
 
-    #[Validate('required|in:ynab4,nynab,actual')]
     public string $sourceProduct = MigrationSourceProduct::Ynab4->value;
 
     // Set from a ?reconcile_of={run} parameter resolving to one of this user's
@@ -44,8 +48,8 @@ final class NewMigration extends Component
 
     public bool $formatLocked = false;
 
-    // A fixed user-facing string when parse-or-stage raises, never the raw
-    // exception message.
+    // One of three fixed user-facing lines when parse-or-stage raises, chosen
+    // by what raised, never the raw exception message.
     public ?string $uploadError = null;
 
     public function mount(Request $request, CurrentUser $currentUser): void
@@ -71,7 +75,7 @@ final class NewMigration extends Component
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, list<string|Enum>>
      */
     public function rules(): array
     {
@@ -79,7 +83,7 @@ final class NewMigration extends Component
             // extensions:zip trusts the filename; mimes:zip sniffs the content
             // via finfo. Both run, so a renamed non-ZIP fails either way.
             'file' => ['required', 'file', 'max:'.self::MAX_UPLOAD_KB, 'extensions:zip', 'mimes:zip'],
-            'sourceProduct' => ['required', 'in:ynab4,nynab,actual'],
+            'sourceProduct' => ['required', Rule::enum(MigrationSourceProduct::class)],
         ];
     }
 
@@ -97,21 +101,16 @@ final class NewMigration extends Component
 
     public function formatLabel(string $sourceProduct): string
     {
-        return match ($sourceProduct) {
-            'ynab4' => 'YNAB4',
-            'nynab' => 'New YNAB (nYNAB)',
-            'actual' => 'Actual Budget',
-            default => '',
-        };
+        return MigrationSourceProduct::tryFrom($sourceProduct)?->label() ?? '';
     }
 
     public function formatHint(): string
     {
-        return match ($this->sourceProduct) {
-            'ynab4' => Lang::get('migration::new.hints.ynab4'),
-            'nynab' => Lang::get('migration::new.hints.nynab'),
-            'actual' => Lang::get('migration::new.hints.actual'),
-            default => '',
+        return match (MigrationSourceProduct::tryFrom($this->sourceProduct)) {
+            MigrationSourceProduct::Ynab4 => Lang::get('migration::new.hints.ynab4'),
+            MigrationSourceProduct::Nynab => Lang::get('migration::new.hints.nynab'),
+            MigrationSourceProduct::Actual => Lang::get('migration::new.hints.actual'),
+            null => '',
         };
     }
 
@@ -122,6 +121,7 @@ final class NewMigration extends Component
         CurrentUser $currentUser,
         UrlGenerator $urls,
         LoggerInterface $logger,
+        Application $app,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -152,9 +152,9 @@ final class NewMigration extends Component
                 'reconcile_of' => $this->reconcileOf,
                 'filename' => $originalFilename,
                 ...SafeExceptionContext::describe($e),
-                'exception_trace' => $e->getTraceAsString(),
+                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->uploadError = $this->unrecognisedExportMessage();
+            $this->uploadError = $this->messageFor($e);
 
             return;
         }
@@ -170,10 +170,25 @@ final class NewMigration extends Component
         return $views->make('migration::livewire.new-migration');
     }
 
+    // Three endings the reader has to be able to tell apart: a file that is not
+    // an export we read, an export this build has no reader for, and a fault of
+    // ours. Only the first is answered by choosing a different file, so the
+    // other two said so is a screen blaming the reader for our own failure.
+    private function messageFor(Throwable $e): string
+    {
+        return match (true) {
+            $e instanceof ArchiveReaderUnavailableException => Lang::get('migration::new.errors.archive_reader_unavailable'),
+            $e instanceof UnrecognizedMigrationFileException => $this->unrecognisedExportMessage(),
+            default => Lang::get('migration::new.errors.internal_detail', [
+                'code' => SafeExceptionContext::shortName($e),
+            ]),
+        };
+    }
+
     private function unrecognisedExportMessage(): string
     {
-        // One fixed line shared by the validation messages and submit()'s
-        // banner, never the raw exception message.
+        // One fixed line shared by the validation messages and the banner when
+        // the export itself is unreadable, never the raw exception message.
         return Lang::get('migration::new.errors.unrecognised');
     }
 }

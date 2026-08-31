@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Tvá zařízení',
 
-    'moved_help' => 'Párování, názvy zařízení a šifrování teď najdeš u stavu synchronizace.',
-    'moved_cta' => 'Otevřít Synchronizaci a zařízení',
     'device_name' => 'Název zařízení',
     'save' => 'Uložit',
     'peer_default_name' => 'Spárované zařízení',
     'rename_device' => 'Přejmenovat zařízení',
+    'rename_device_caption' => 'Přejmenovat',
     'this_device' => 'Toto zařízení',
     'removed' => 'Odebráno',
     'confirmed' => 'Potvrzeno',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Adresa relay serveru',
     'relay_endpoint_help' => 'Volitelné. Když je nastavená, zařízení offline se synchronizují přes tento relay server. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
+    'relay_endpoint_help_phone' => 'Volitelné. Když je nastavená, změny putují přes tento relay server i tehdy, když tvá zařízení nejsou ve stejné síti. Toto zařízení si je vyzvedne, když synchronizuješ z této obrazovky — nikdy na pozadí, protože zámek aplikace drží jediný klíč. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
     'relay_endpoint_aria' => 'URL relay serveru',
     'relay_insecure_warning' => 'Tato adresa relay serveru používá prosté HTTP. Relay server tvá data nikdy nedešifruje, ale nezabezpečené spojení odhalí pozorovatelům v síti velikosti a časování zašifrovaných přenosů. Pro nejlepší soukromí použij adresu <strong>https://</strong>.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Odebírá se:',
     'remove_rotates_key' => 'Odebrání tohoto zařízení vymění šifrovací klíč, takže zařízení už nedostane žádné další aktualizace.',
     'remove_cannot_erase' => 'Data, která na něm už jsou, to smazat nedokáže. Pokud se zařízení ztratilo nebo ho někdo ukradl, ber všechna data na něm jako vyzrazená.',
+    'remove_is_local' => 'Tvoje ostatní zařízení mají vlastní seznam. Dokud ho neodebereš i tam, budou se s ním dál synchronizovat.',
     'remove_device' => 'Odebrat zařízení',
     'keep_device' => 'Ponechat zařízení',
     'rotating_key' => 'Vyměňuje se šifrovací klíč…',

@@ -24,6 +24,7 @@ return [
     'to' => 'til',
     'text_placeholder' => 'f.eks. SPOTIFY',
     'remove_condition' => 'Fjern betingelse',
+    'remove_condition_caption' => 'Fjern',
     'add_condition' => '+ Legg til betingelse',
 
     'then' => 'Så',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Legg til',
     'deduction_category_aria' => 'Fradragskategori for handling :number',
     'remove_action' => 'Fjern handling',
+    'remove_action_caption' => 'Fjern',
     'add_action' => '+ Legg til handling',
 
     'this_year_only' => 'Bare i år ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Handlinger med skattemerke trer i kraft neste gang du kjører reglene på nytt, ikke ved den gjeldende importen.',
 
     'priority' => 'Prioritet',
-    'priority_help' => 'Lavere tall kjøres først. Regler uten felles felter kommer aldri i konflikt.',
+    'priority_help' => 'Regler kjøres fra det laveste tallet og oppover, så det høyeste tallet vinner når to setter samme felt. Regler uten felles felter kommer aldri i konflikt.',
 
     'cancel' => 'Avbryt',
     'save_changes' => 'Lagre endringer',

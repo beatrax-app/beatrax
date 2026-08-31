@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Tavo kredito kortelė (ICS)',
+    'eyebrow' => 'Tavo kredito kortelė',
     'h1' => 'Parsisiųsk mėnesinius PDF išrašus',
-    'lede' => 'Įkelk visus mėnesinius ICS PDF išrašus — juos sujungsime į vieną peržiūrą.',
+    'lede' => 'Įkelk visus mėnesinius PDF išrašus — juos sujungsime į vieną peržiūrą.',
 
     'format_group_aria' => 'ICS eksportuoja tik PDF',
+    'issuer_note' => 'ICS kol kas yra vienintelis kortelių išdavėjas, kurio išrašą mokame perskaityti, ir tik olandų kalba. Jei tavo kortelė iš kito išdavėjo, praleisk šį žingsnį.',
     'got_it_as' => 'Turiu kaip:',
     'badge_only_format' => 'vienintelis formatas',
 

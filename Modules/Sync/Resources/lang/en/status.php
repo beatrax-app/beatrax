@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Removed device',
     'dismiss_peer' => 'Dismiss this device',
+    'dismiss_peer_caption' => 'Dismiss',
     'dismiss_stale' => 'Clear devices that are no longer paired',
     'not_synced_yet' => 'Not synced yet',
     'error' => 'Sync error on one or more devices',

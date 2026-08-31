@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
@@ -45,10 +47,17 @@ function ssbSeriesId(DatabaseManager $db, int $userId, string $name = 'Netflix',
 }
 
 beforeEach(function (): void {
+    // The form fixtures below are dated in June 2026 and the write-side now
+    // refuses a date no horizon reaches, so the clock sits where they do.
+    CarbonImmutable::setTestNow('2026-05-19 09:00:00');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
     $this->user = ssbUser();
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow(null);
 });
 
 it('Public Service rejects cross-user mount via ScenarioQuery::find returning null', function (): void {
@@ -89,8 +98,11 @@ it('lists existing mutations in the sidebar render', function (): void {
     $add = $this->app->make(AddScenarioMutation::class);
     ($add)($scenario->id, $this->user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
 
+    // The series' own name, not the "series #7" fallback: the list the
+    // summaries are written from is loaded before them now, so the first paint
+    // resolves it too.
     Livewire::test(ScenarioEditorSidebar::class, ['scenarioId' => $scenario->id])
-        ->assertSee('Cancel series')
+        ->assertSee('Cancel Netflix')
         ->assertSee('Mutations (1)');
 });
 
@@ -265,5 +277,9 @@ it('kind/payload mismatch surfaces a form error inline (defensive contract)', fu
         ->call('selectKind', 'cancel_series')
         // form.seriesId is deliberately left unset.
         ->call('saveAddMutation')
-        ->assertSet('formError', 'Field \'seriesId\' is required.');
+        // The label above the box, in the reader's language — never the array
+        // key the form posts under, in English.
+        ->assertSet('formError', Lang::get('forecasting::forecast.errors.field_required', [
+            'field' => Lang::get('forecasting::scenario.form.series'),
+        ]));
 });

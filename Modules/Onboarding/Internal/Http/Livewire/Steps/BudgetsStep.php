@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Budgets\Public\Services\BudgetProgressQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
 final class BudgetsStep extends Component
@@ -18,18 +19,17 @@ final class BudgetsStep extends Component
     /** @var array<int|string, string> */
     public array $amounts = [];
 
-    public function continue(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods): void
+    public function continue(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, BaseCurrency $baseCurrency): void
     {
         if ($currentUser->isAuthenticated()) {
             $user = $currentUser->user();
             $periodStart = $periods->current()->start;
+            $currency = $baseCurrency->forUser($user);
 
             foreach ($this->amounts as $categoryId => $raw) {
-                $minor = $writer->parseAmount($raw);
+                $minor = $writer->parseAmount($raw, $currency);
                 if ($minor !== null) {
                     try {
-                        // setAssigned() throws on a foreign category id where
-                        // BudgetWriter::save() would silently return false.
                         $writer->setAssigned($user, (int) $categoryId, $periodStart, $minor);
                     } catch (InvalidArgumentException) {
                         // A category the user does not own can only arrive in a
@@ -47,7 +47,7 @@ final class BudgetsStep extends Component
         $this->dispatch('wizard.step.skipped');
     }
 
-    public function render(CurrentUser $currentUser, BudgetProgressQuery $query, ViewFactory $views): View
+    public function render(CurrentUser $currentUser, BudgetProgressQuery $query, BaseCurrency $baseCurrency, ViewFactory $views): View
     {
         $categories = $currentUser->isAuthenticated()
             ? $query->expenseCategories($currentUser->user())
@@ -55,6 +55,7 @@ final class BudgetsStep extends Component
 
         return $views->make('onboarding::livewire.steps.budgets-step', [
             'categories' => $categories,
+            'currency' => $baseCurrency->code(),
         ]);
     }
 }

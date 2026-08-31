@@ -1,0 +1,57 @@
+{
+    "transactions": [
+        {
+            "entry_reference": "20260210-0000010",
+            "transaction_id": "EB-TXN-JPY-0001",
+            "status": "BOOK",
+            "booking_date": "2026-02-10",
+            "value_date": "2026-02-10",
+            "transaction_amount": {
+                "amount": "980000",
+                "currency": "JPY"
+            },
+            "credit_debit_indicator": "DBIT",
+            "creditor": {
+                "name": "Yodobashi Camera"
+            },
+            "creditor_account": {
+                "iban": "JP00BANK0000000010"
+            },
+            "debtor": null,
+            "debtor_account": null,
+            "remittance_information": [
+                "Whole-yen purchase"
+            ],
+            "bank_transaction_code": {
+                "domain": "PMNT",
+                "family": "ICDT",
+                "sub_family": "CARD"
+            }
+        },
+        {
+            "entry_reference": "20260211-0000011",
+            "transaction_id": "EB-TXN-JPY-0002",
+            "status": "BOOK",
+            "booking_date": "2026-02-11",
+            "value_date": "2026-02-11",
+            "transaction_amount": {
+                "amount": "3.99",
+                "currency": "JPY"
+            },
+            "credit_debit_indicator": "DBIT",
+            "creditor": {
+                "name": "Impossible Yen Merchant"
+            },
+            "creditor_account": {
+                "iban": "JP00BANK0000000011"
+            },
+            "debtor": null,
+            "debtor_account": null,
+            "remittance_information": [
+                "A yen has no fractional part"
+            ],
+            "bank_transaction_code": null
+        }
+    ],
+    "continuation_key": null
+}

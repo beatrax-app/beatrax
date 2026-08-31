@@ -140,6 +140,41 @@ compared with `toBe()` in both directions: a crossing that disappears fails the
 test as loudly as one that appears, so the pin cannot rot into a stale
 allow-list. Pin outcomes, not coverage.
 
+### A pin states its reason, and the reason is re-checked
+
+A pinned exemption that carries only a path is a claim nobody can audit: the
+reader has to go and work out why it was granted, and nothing notices when the
+answer stops being true. The newer guards pin an entry rather than a path —
+
+```php
+'Modules/Ledger/Models/Transaction.php' => [
+    'reason' => 'the Eloquent cast map: it declares the columns types, and writes none of them',
+    'proves' => '/function casts\(\)/',
+],
+```
+
+— and a second rule re-runs every `proves` pattern against the file it names.
+The reason is prose for the reader; the pattern is the half a test can hold.
+When the file stops matching, the exemption has outlived what earned it and the
+guard fails there, naming the reason it no longer reads as, rather than waving
+the site on for another year.
+
+Three rules pin this way today: `TheFourAmountColumnsMoveAsASetArchTest`,
+`AColumnAScreenReadsBackHoldsNoSentenceArchTest` and
+`ABladeNeverSpeaksEnglishOfItsOwnArchTest`. Each pairs it with the
+disappearing-pin test above, so a pin fails in both directions.
+
+### A walk that stops reading must say so
+
+`preg_match_all` answers `false` when the engine gives up — a backtrack limit, a
+JIT stack limit on a long template — and every rule that reads its result as a
+count reads that `false` as "nothing matched". A guard which stops reading then
+reports a clean tree, which is worse than no guard: it is a green light nobody
+earned. Every regex-driven rule routes its result through a helper that raises
+with `preg_last_error_msg()` instead, and every walk asserts a floor on what it
+scanned — files, echoes, payload keys — so a scan that ran over nothing fails on
+that assertion rather than on the offender list it never built.
+
 ## Where a rule's rationale lives
 
 The failure message, not a comment. Each `expect(...)->toBe([], "…")` carries the

@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Jūsu ierīces',
 
-    // Iestatījumos paliek norāde uz pārvietoto sadaļu; pati sadaļa
-    // tagad atrodas /sync kopā ar statusu un sinhronizācijas darbību.
-    'moved_help' => 'Sapārošana, ierīču nosaukumi un šifrēšana tagad atrodas kopā ar sinhronizācijas statusu.',
-    'moved_cta' => 'Atvērt sinhronizāciju un ierīci',
     'device_name' => 'Ierīces nosaukums',
     'save' => 'Saglabāt',
     'peer_default_name' => 'Sapārotā ierīce',
     'rename_device' => 'Pārdēvēt ierīci',
+    'rename_device_caption' => 'Pārdēvēt',
     'this_device' => 'Šī ierīce',
     'removed' => 'Noņemta',
     'confirmed' => 'Apstiprināta',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Retranslatora adrese',
     'relay_endpoint_help' => 'Neobligāti. Ja norādīts, bezsaistes ierīces sinhronizējas caur šo retranslatoru. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
+    'relay_endpoint_help_phone' => 'Neobligāti. Ja norādīts, izmaiņas ceļo caur šo retranslatoru arī tad, kad jūsu ierīces nav vienā tīklā. Šī ierīce tās saņem, kad sinhronizējat no šī ekrāna — nekad fonā, jo lietotnes bloķēšana glabā vienīgo atslēgu. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
     'relay_endpoint_aria' => 'Retranslatora adreses URL',
     'relay_insecure_warning' => 'Šī retranslatora adrese izmanto vienkāršu HTTP. Lai gan retranslators jūsu datus nekad neatšifrē, nedrošs savienojums atklāj tīkla novērotājiem šifrēto datu apjomu un laikus. Vislabākā privātuma nodrošināšanai izmantojiet <strong>https://</strong> adresi.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Noņem:',
     'remove_rotates_key' => 'Noņemot šo ierīci, šifrēšanas atslēga tiek nomainīta, tāpēc tā vairs nesaņems turpmākos atjauninājumus.',
     'remove_cannot_erase' => 'Datus, kas tajā ierīcē jau atrodas, izdzēst nav iespējams. Ja šī ierīce ir pazaudēta vai nozagta, uzskatiet visus tajā esošos datus par atklātiem.',
+    'remove_is_local' => 'Tavām pārējām ierīcēm ir savs saraksts. Kamēr neizņemsi to arī tur, tās turpinās ar to sinhronizēties.',
     'remove_device' => 'Noņemt ierīci',
     'keep_device' => 'Paturēt ierīci',
     'rotating_key' => 'Maina šifrēšanas atslēgu…',

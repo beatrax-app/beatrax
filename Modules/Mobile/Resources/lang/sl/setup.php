@@ -12,6 +12,7 @@ return [
         'locked' => 'Odkleni aplikacijo za nadaljevanje nastavitve.',
         'revoked' => 'Ta naprava je bila odstranjena s tvoje druge naprave. Znova jo seznani za nadaljevanje sinhronizacije.',
     ],
+    'unlock_cta' => 'Odkleni aplikacijo',
     'step' => [
         'connect' => 'Povezovanje s tvojo drugo napravo',
         'keys' => 'Prejemanje šifrirnih ključev',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Ponovna gradnja tvoje zgodovine',
     ],
     'step_current' => 'trenutni korak',
-    'working' => [
-        'connect' => 'Vzpostavljanje povezave s tvojo drugo napravo…',
-        'keys' => 'Odklepanje tvojih podatkov…',
-        'transfer' => 'Zahtevamo tvojo zgodovino…',
-        'rebuild' => 'Ponovna gradnja tvoje zgodovine — to lahko traja minuto.',
-    ],
     'page_title' => 'Nastavljanje…',
     'resuming' => 'Nadaljevanje nastavitve…',
     'setting_up' => 'Nastavljanje te naprave…',
     'progress_aria' => 'Napredek nastavitve',
     'records' => ':count zapis|:count zapisa|:count zapisi|:count zapisov',
-    'records_preparing' => 'Čakamo na drugo napravo…',
 ];

@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— özel kişiler için finansman zinciri yoktur',
     'tab_note_bank' => '— banka ücreti karşı tarafı finansman zinciri oluşturmaz',
+    'tab_note_bank_institution' => '— kurumsal karşı taraflar için finansman zinciri yoktur',
     'tab_note_government' => '— kamu karşı tarafları için finansman zinciri yoktur',
 
     'recent_activity' => 'Son etkinlik',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Kategoriye göre banka ücretleri',
+        'activity_heading' => 'Kategoriye göre etkinlik',
         'no_fees' => 'Bu karşı tarafta henüz kayıtlı ücret yok.',
     ],
 

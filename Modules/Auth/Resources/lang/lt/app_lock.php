@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Tavo įrenginys atsisakė išsaugoti raktą. Biometrinis atrakinimas negalimas.',
     'heading' => 'Programėlės užraktas',
 
-    'moved_help' => 'PIN kodas, automatinio užrakinimo laikas ir biometrinis atrakinimas yra šio įrenginio sinchronizavimo nustatymuose.',
-    'moved_cta' => 'Atidaryti sinchronizavimą ir įrenginį',
-
     'toggle_label' => 'Užrakinti programėlę PIN kodu',
     'toggle_description' => 'Kasdienį prisijungimą pakeičia PIN kodas. Seansai lieka aktyvūs 30 dienų.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Palikti PIN kodą',
 
     'error_pin_too_short' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
-    'error_pin_digits' => 'PIN kodą turi sudaryti nuo 6 iki 10 skaitmenų — tik skaitmenys.',
+    'error_pin_digits' => 'PIN kodą turi sudaryti nuo :min iki :max skaitmenų — tik skaitmenys.',
     'error_pin_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
     'error_pin_required' => 'Įvesk savo PIN kodą.',
     'error_pin_incorrect' => 'Neteisingas PIN kodas.',

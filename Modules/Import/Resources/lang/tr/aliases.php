@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Ayrıştır ve önizle',
     'cancel_import' => 'İçe aktarmayı iptal et',
 
-    'diff_new' => 'yeni,',
-    'diff_unchanged' => 'değişmemiş,',
-    'diff_conflicts' => 'çakışma.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count yeni',
+    'diff_unchanged' => ':count değişmemiş',
+    'diff_conflicts' => ':count çakışma',
 
     'conflicts_heading' => 'Çakışmalar',
     'conflict_name' => 'ad — mevcut: :existing → dosya: :file',
@@ -54,8 +55,10 @@ return [
     'test_heading' => 'İşlemlerimde test et',
     'test_help' => 'Hangi işlemlerle eşleşeceğini görmek için bir satırın genelleştirilmiş kalıbını düzenle.',
     'typing' => 'Yazılıyor…',
-    'matches_prefix' => 'Son geçmişindeki',
-    'matches_suffix' => 'işlemle eşleşiyor.',
+    // i18n-review: tr · matches — the old prefix and suffix put the history first
+    // and the verb last, and that order is kept here. Turkish selects one arm, so
+    // this single line covers every count.
+    'matches' => 'Son geçmişindeki :count işlemle eşleşiyor.',
 
     'merge_modal_title' => ':count takma adı birleştir',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Dosya yüklenmedi.',
         'unreadable' => 'Yüklenen dosya okunamadı.',
         'too_short' => 'Kalıp test edilemeyecek kadar kısa.',
+        'file_not_yaml' => 'Bu dosya geçerli bir YAML değil, bu yüzden içinden hiçbir şey okunamadı. Takma adlarını yeniden dışa aktar ve aldığın dosyayı yükle.',
+        'file_unreadable_as_yaml' => 'Bu dosya bir takma ad listesi olarak okunamadı. Takma adlarını yeniden dışa aktar ve aldığın dosyayı yükle.',
+        'file_has_no_entries_list' => 'Bu dosya en üst düzeyde bir entries: listesiyle başlamıyor, bu yüzden içinde içe aktarılacak takma ad yok. Doğru dosyayı seçtiğini kontrol et.',
+        'entry_is_not_a_mapping' => ':entry. kayıt, bir kalıp ve bir ad beklenen yerde tek başına bir değer. Ona her iki alanı da ver ya da kaydı kaldır ve dosyayı yeniden yükle.',
+        'entry_is_missing_a_field' => ':entry. kayıtta kalıp ya da ad eksik, oysa bir takma adın ikisine de ihtiyacı var. Eksik olanı doldur ya da o kaydı kaldır ve dosyayı yeniden yükle.',
     ],
 ];

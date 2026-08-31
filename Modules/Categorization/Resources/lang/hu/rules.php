@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'A szabályok ezen az eszközön maradnak. Nem osztjuk meg őket a többi eszközöddel.',
 
     'reapply' => 'Szabályok újraalkalmazása az előzményekre',
+    'reapply_confirm' => 'Újraalkalmazod az összes szabályt a teljes előzményedre? Minden kategória, partner, megjegyzés és adócímke, amit egy szabály tett oda, felülíródik. Amit kézzel állítottál be, megmarad, és ugyanígy minden, ami egyeztetett kivonaton szerepel. A régi értékeket semmi nem hozza vissza.',
     'reapplying' => 'Újraalkalmazás…',
     'new_rule' => 'Új szabály',
 
-    'reapply_progress_lead' => 'Szabályok újraalkalmazása…',
-    'reapply_progress_of' => '/',
-    'reapply_progress_trail' => 'tranzakció ellenőrizve',
+    'reapply_progress' => 'Szabályok újraalkalmazása… :checked / :count tranzakció ellenőrizve|Szabályok újraalkalmazása… :checked / :count tranzakció ellenőrizve',
 
     'empty_heading' => 'Még nincsenek szabályok',
     'empty_body' => 'A szabályok több feltétel alapján illeszkednek a tranzakciókra, és automatikusan alkalmazzák a kategória-, partner-, megjegyzés- és adócímke-változtatásokat — importáláskor, és bármikor, amikor újraalkalmazod őket a meglévő előzményeidre.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Létrehozva',
     'col_row_actions' => 'Műveletek',
     'inactive_badge' => 'Kikapcsolva',
+    'combinator_all' => 'MINDEN',
+    'combinator_any' => 'BÁRMELYIK',
     'inactive_title' => 'Ez a szabály nem fut. A szabály kikapcsol, ha törlik a kategóriát vagy partnert, amelyre hivatkozik.',
 
     'more_conditions' => '+:count további',

@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Sem spusti svojo datoteko CAMT.053',
     'drop_lead_mt940' => 'Sem spusti svojo datoteko MT940',
-    'drop_lead_asn' => 'Sem spusti svoj CSV ASN',
-    'drop_lead_ing' => 'Sem spusti svoj CSV ING',
+    'drop_lead_csv_layout' => 'Sem spusti svoj CSV :layout',
     'drop_lead_pick_bank' => 'Izberi, katera banka je izvozila tvoj CSV — to moramo vedeti, da ga pravilno preberemo.',
     'drop_lead_default' => 'Sem spusti datoteko izpiska',
     'browse_file' => 'ali poišči datoteko',
 
-    'banks_mt940' => 'Podprto: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Podprto: ASN, ING — več oblik prihaja, ko uporabniki prispevajo vzorce.',
-    'banks_default' => 'Podprto: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 je izpisek v obliki XML — poišči ga v spletni banki med izpiski ali prenosi.',
+    'format_help_mt940' => 'MT940 je izpisek v navadnem besedilu, ponujen kot .sta ali .940 poleg prenosov XML in CSV.',
+    'format_help_csv' => 'CSV je izvoz za preglednice. Vsaka banka stolpce razporedi drugače, zato izberi ustrezno razporeditev. Če tvoje ni na seznamu, banko prosi za CAMT.053 ali MT940.',
+
+    'account_name_default' => 'Bančni račun',
+    'account_name_layout' => 'Račun :layout',
 
     'file_ready' => '· ✓ pripravljeno',
 

@@ -15,4 +15,13 @@ enum ChainLinkKind: string
     case FundedByCardHint = 'funded_by_card_hint';
 
     case RefundOfHint = 'refund_of_hint';
+
+    // Which endpoint is the settlement the other rows fan into. ics_bulk_settle
+    // runs FROM the one bank payment TO each charge it settled; every other kind
+    // runs from the payment TO the leg that funded it. Grouping on the wrong end
+    // renders one card per charge, each claiming the whole settlement amount.
+    public function settlementIsFromSide(): bool
+    {
+        return $this === self::IcsBulkSettle;
+    }
 }

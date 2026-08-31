@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Kinnita või lükka tagasi kandidaatlülid, mida ahelate lahendaja ei suutnud automaatselt kinnitada.',
 
     'empty_heading' => 'Midagi pole üle vaadata',
-    'empty_body' => 'Iga ahela lüli on kas kinnitatud või tagasi lükatud. Uued kandidaadid ilmuvad siia, kui uued impordid saabuvad.',
+    'empty_body' => 'Iga seos, mille lahendaja suutis paari panna, on kas kinnitatud või tagasi lükatud. Uued kandidaadid ilmuvad siia, kui uued impordid saabuvad.',
 
     'auto_confirm_nudge' => 'Veel üks kinnitus ja sarnased lülid kinnitatakse automaatselt.',
 

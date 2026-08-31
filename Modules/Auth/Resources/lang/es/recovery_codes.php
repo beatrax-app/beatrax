@@ -23,5 +23,6 @@ return [
         'body' => 'Los códigos de recuperación son la única forma de volver a entrar en tu cuenta si olvidas la contraseña.',
         'warning' => 'Se guardan con hash, así que no se pueden volver a mostrar. Generar un conjunto nuevo anula el anterior de inmediato.',
         'regenerate' => 'Generar códigos nuevos',
+        'regenerate_confirm' => '¿Generar un conjunto nuevo de códigos de recuperación? El que tienes ahora deja de funcionar en el momento en que se crea el nuevo, y no se puede volver a mostrar: una copia impresa o anotada queda inservible. Guarda los códigos nuevos antes de salir de esta página.',
     ],
 ];

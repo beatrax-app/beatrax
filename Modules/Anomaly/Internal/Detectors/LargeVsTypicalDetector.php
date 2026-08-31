@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Internal\Detectors;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Anomaly\Internal\Support\AnomalySensitivity;
+use Modules\Anomaly\Internal\Support\ChargeAnchor;
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
@@ -33,32 +34,31 @@ final readonly class LargeVsTypicalDetector
      * @return array{baseline_amount_minor: int, latest_amount_minor: int, currency: string}|null
      *                                                                                            the explainable trio on a trip, or null when the charge is not large
      */
-    public function fires(array $txn, User $user, int $sensitivityPercent, int $minFloorMinor): ?array
+    public function fires(array $txn, User $user, AnomalySensitivity $sensitivity, int $minFloorMinor): ?array
     {
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0);
-        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
+        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->forUser($user);
         $absMinor = abs($settledMinor);
 
         if ($absMinor < $minFloorMinor) {
             return null;
         }
 
-        $direction = TransactionType::directionOf($txn['type'] ?? null)->value;
         $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
         $categoryId = self::toPositiveIntOrNull($txn['category_id'] ?? null);
 
         $context = new LargeSampleContext(
             user: $user,
-            types: TransactionType::valuesFor(Direction::from($direction)),
+            types: TransactionType::externalMovementValuesFor(TransactionType::directionOf($txn['type'] ?? null)),
             currency: $settledCurrency,
-            windowStart: $this->clock->now()->subMonthsNoOverflow(RobustStatistics::WINDOW_MONTHS)->toDateString(),
+            windowStart: ChargeAnchor::forRow($txn, $this->clock)->baselineWindowStart(),
             excludeId: self::toInt($txn['id'] ?? 0),
         );
 
         $counterpartySample = $counterpartyId === null ? [] : $this->sample($context, 'counterparty_id', $counterpartyId);
 
         if (count($counterpartySample) >= RobustStatistics::THIN_HISTORY_CUTOFF) {
-            return self::counterpartyTrip($absMinor, $settledMinor, $settledCurrency, $counterpartySample, $sensitivityPercent);
+            return self::counterpartyTrip($absMinor, $settledMinor, $settledCurrency, $counterpartySample, $sensitivity);
         }
 
         return $this->categoryTrip($absMinor, $settledMinor, $context, $categoryId);
@@ -68,15 +68,15 @@ final readonly class LargeVsTypicalDetector
      * @param  list<int>  $sample
      * @return array{baseline_amount_minor: int, latest_amount_minor: int, currency: string}|null
      */
-    private static function counterpartyTrip(int $absMinor, int $settledMinor, string $settledCurrency, array $sample, int $sensitivityPercent): ?array
+    private static function counterpartyTrip(int $absMinor, int $settledMinor, string $settledCurrency, array $sample, AnomalySensitivity $sensitivity): ?array
     {
         $z = RobustStatistics::robustZ($absMinor, $sample, self::madFloorFor($sample));
-        if ($z <= RobustStatistics::kForSensitivity($sensitivityPercent)) {
+        if ($z <= RobustStatistics::kForSensitivity($sensitivity)) {
             return null;
         }
 
         return [
-            'baseline_amount_minor' => (int) round(-RobustStatistics::median(array_map('abs', $sample))),
+            'baseline_amount_minor' => self::signedLike(RobustStatistics::median(array_map('abs', $sample)), $settledMinor),
             'latest_amount_minor' => $settledMinor,
             'currency' => $settledCurrency,
         ];
@@ -101,10 +101,20 @@ final readonly class LargeVsTypicalDetector
         $p95 = RobustStatistics::percentile(array_map('abs', $categorySample), RobustStatistics::CATEGORY_PERCENTILE);
 
         return [
-            'baseline_amount_minor' => (int) round(-$p95),
+            'baseline_amount_minor' => self::signedLike($p95, $settledMinor),
             'latest_amount_minor' => $settledMinor,
             'currency' => $context->currency,
         ];
+    }
+
+    // The sample is drawn same-direction, so the baseline belongs on the same
+    // side of zero as the charge it explains. Negating unconditionally read a
+    // salary's baseline back to the user as "-EUR 3,000.00 -> EUR 9,000.00".
+    private static function signedLike(float $magnitude, int $reference): int
+    {
+        $rounded = (int) round(abs($magnitude));
+
+        return $reference < 0 ? -$rounded : $rounded;
     }
 
     /**

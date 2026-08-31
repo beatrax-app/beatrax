@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Container\Container;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
+use Modules\Core\Public\Support\LivewireClientRefusal;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
@@ -25,6 +29,7 @@ use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
 use Modules\Mobile\Internal\NativeMobileAppServiceProvider;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
+use Modules\Notifications\Internal\Http\Middleware\RunDeferredNotificationPasses;
 use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
 use Psr\Log\LoggerInterface;
 
@@ -92,6 +97,13 @@ return Application::configure(basePath: dirname(__DIR__))
             // translator on config('app.locale'): the language switcher wrote
             // session('locale') and nothing read it.
             SetLocale::class,
+            // The import ceremony leaves the recovery-codes step by a plain
+            // link, so nothing of that screen's ever runs again to clear them.
+            ForgetsSpentRecoveryCodes::class,
+            // Terminate-time. Every scheduled pass on this root is a cold
+            // process with an empty session, so a request is the only thing
+            // here that ever holds the key its notification writes need.
+            RunDeferredNotificationPasses::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -107,6 +119,24 @@ return Application::configure(basePath: dirname(__DIR__))
                 'path' => '/'.ltrim($request->path(), '/'),
             ];
         });
+
+        // The same seam the desktop root maps through. Nothing keeps the two
+        // roots' handlers in step, and left out here this root's exception map
+        // was empty: a refused /livewire/update write answered 403 or 400 on
+        // one bundle and whatever Livewire renders for itself on the other.
+        $exceptions->map(fn (Throwable $e): Throwable => LivewireClientRefusal::refusal($e) ?? $e);
+
+        // A QueryException's message carries its bindings, which here ARE the
+        // financial data the context callback above withholds. Registered on
+        // the desktop root alone, the phone logged every one of them in full.
+        $exceptions->reportable(function (QueryException $e): bool {
+            Container::getInstance()->make(LoggerInterface::class)->error(
+                'Database query failed.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return false;
+        });
     })
     ->booting(function (): void {
         // Both calls have to land before any provider opens the connection:
@@ -120,6 +150,9 @@ return Application::configure(basePath: dirname(__DIR__))
         }
         if (! file_exists($dbFile)) {
             @touch($dbFile);
+            // Owner-only before the migrator writes anything: the usual 0644
+            // umask would expose every balance and account number in plaintext.
+            @chmod($dbFile, 0600);
         }
     })
     ->booted(function (Application $app): void {

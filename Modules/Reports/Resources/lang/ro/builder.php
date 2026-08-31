@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Necategorizat',
+    'no_counterparty' => 'Fără contraparte',
+    'unavailable_counterparty' => 'Contrapartea nu există pe acest dispozitiv',
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
     'subtitle' => 'Compune un raport din registrul tău.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Interval personalizat',
         'from' => 'De la',
         'to' => 'Până la',
+        'error' => [
+            'incomplete' => 'Alege atât o dată de început, cât și una de sfârșit.',
+            'malformed' => 'Folosește o dată validă în formatul AAAA-LL-ZZ.',
+            'inverted' => 'Data de sfârșit este înaintea celei de început.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Valoarea netă este un sold: se aplică doar filtrul de cont.',
     ],
 
     'compare' => 'Compară cu perioada anterioară',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafic în :currency — :list nu este reprezentat',
+        'undrawn' => 'În afara inelului — :amount merge în sens invers',
         'bar_title' => 'Dă clic pe o bară pentru a vedea tranzacțiile ei',
         'line_title' => 'Dă clic pe un punct pentru a vedea tranzacțiile lui',
         'donut_title' => 'Dă clic pe un segment pentru a vedea tranzacțiile lui',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Comisioane și ajustări (necontabilizate mai sus)',
+    'other_movement_with_refunds' => 'Comisioane, rambursări și ajustări (necontabilizate mai sus)',
 ];

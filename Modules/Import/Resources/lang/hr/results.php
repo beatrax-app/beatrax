@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Učitaj još jedan izvod',
 
+    'chain' => [
+        'heading' => 'Rješavanje lanaca…',
+        'pending' => 'U redu čekanja. Rješavanje lanaca uskoro počinje.',
+        'running' => 'Povezivanje lanaca financiranja i razlaganje namira s izvoda.',
+    ],
+
     'issues' => [
         'row' => 'Redak :row: :reason',
         'file_stopped' => 'Datoteku nije bilo moguće pročitati dalje od retka :row. Ništa nakon tog retka nije uvezeno.',

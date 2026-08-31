@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategori',
         'assigned' => 'Dağıtılan',
+        'carried_in' => 'Devreden',
+        'moved' => 'Aktarılan',
         'spent' => 'Harcanan',
         'available' => 'Kullanılabilir',
         'if_overspent' => 'Aşım olursa',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Geçmişi gizle ↑',
         'moved_from' => ':category kategorisinden taşındı',
         'moved_to' => ':category kategorisine taşındı',
+        'moved_unreadable' => ':category ile taşındı — Beatrax uygulamasının daha yeni bir sürümü tarafından',
         'undo' => 'Geri al',
     ],
 
     'phone' => [
         'spent' => 'Harcanan :amount',
+        'carried_in' => 'Devreden :amount',
+        'moved' => 'Aktarılan :amount',
         'available' => 'Kullanılabilir :amount',
         'notify_at' => 'Bildirim eşiği',
     ],

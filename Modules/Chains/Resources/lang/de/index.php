@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importiere ein paar Kontoauszüge (Bank, PayPal, Karte) und der Resolver zeigt hier automatisch kontoübergreifende Ketten.',
 
     'no_counterparty' => '(kein Zahlungspartner)',
-    'open_from_row' => 'Von-Zeile öffnen',
-    'open_to_row' => 'Nach-Zeile öffnen',
     'leg_count' => ':count Zahlung|:count Zahlungen',
+    'legs_more' => '+ :count weitere',
     'state_aria' => 'Status: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Bestätigt',
+        'rejected' => 'Abgelehnt',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal-Finanzierung',

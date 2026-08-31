@@ -164,13 +164,14 @@ it('cross-user 404 on /chains/review reject — userA cannot reject userB\'s cha
     expect($link->state)->toBe('candidate');
 });
 
-it('cross-user 404 via Livewire harness — confirm raises Livewire 404 response status', function (): void {
-    // The Livewire harness converts the NotFoundHttpException into a 404 on
-    // the wire response, so the SFC path is asserted on status.
+// The two tests above own the row-state half of this; here the question is
+// only what the wire round-trip answers.
+it('cross-user refusal via Livewire harness — confirm stays on the queue with its own error line', function (): void {
     Livewire::actingAs($this->userA)
         ->test(ChainReviewQueue::class)
         ->call('confirm', $this->userBCandidateId)
-        ->assertStatus(404);
+        ->assertStatus(200)
+        ->assertSet('actionError', Lang::get('core::errors.no_longer_here'));
 });
 
 it('GET /chains/review for userA renders only userA candidates — never any of userB\'s', function (): void {

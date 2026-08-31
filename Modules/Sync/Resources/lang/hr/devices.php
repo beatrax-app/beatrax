@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Tvoji uređaji',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Uparivanje, nazivi uređaja i šifriranje sada se nalaze uz stanje sinkronizacije.',
-    'moved_cta' => 'Otvori Sinkronizaciju i uređaj',
     'device_name' => 'Naziv uređaja',
     'save' => 'Spremi',
     'peer_default_name' => 'Upareni uređaj',
     'rename_device' => 'Preimenuj uređaj',
+    'rename_device_caption' => 'Preimenuj',
     'this_device' => 'Ovaj uređaj',
     'removed' => 'Uklonjeno',
     'confirmed' => 'Potvrđeno',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Krajnja točka releja',
     'relay_endpoint_help' => 'Neobavezno. Kad je postavljena, uređaji izvan mreže sinkroniziraju se preko ovog releja. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
+    'relay_endpoint_help_phone' => 'Neobavezno. Kad je postavljena, promjene putuju kroz ovaj relej i kad tvoji uređaji nisu na istoj mreži. Ovaj ih uređaj preuzima kad sinkroniziraš s ovog zaslona — nikad u pozadini, jer zaključavanje aplikacije čuva jedini ključ. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
     'relay_endpoint_aria' => 'URL krajnje točke releja',
     'relay_insecure_warning' => 'Ova krajnja točka releja koristi običan HTTP. Iako relej nikad ne dešifrira tvoje podatke, nesigurna veza otkriva promatračima mreže veličine šifriranih podataka i vrijeme slanja. Za najbolju privatnost upotrijebi <strong>https://</strong> krajnju točku.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Uklanja se:',
     'remove_rotates_key' => 'Uklanjanje ovog uređaja mijenja ključ za šifriranje pa uređaj više ne prima nikakva ažuriranja.',
     'remove_cannot_erase' => 'Time se ne brišu podaci koji su već na tom uređaju. Ako je uređaj izgubljen ili ukraden, sve podatke koje je sadržavao smatraj otkrivenima.',
+    'remove_is_local' => 'Tvoji drugi uređaji imaju vlastiti popis. Dok ga ne ukloniš i ondje, nastavit će se s njim sinkronizirati.',
     'remove_device' => 'Ukloni uređaj',
     'keep_device' => 'Zadrži uređaj',
     'rotating_key' => 'Mijenjanje ključa za šifriranje…',

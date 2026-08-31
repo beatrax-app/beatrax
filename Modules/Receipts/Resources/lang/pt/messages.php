@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Larga aqui uma mensagem de e-mail (.eml) ou um arquivo de caixa de correio (.mbox). O comparador reconhece os recibos do PayPal e apresenta-os como transações canónicas; os remetentes sem correspondência ficam no registo de auditoria para triagem.',
-    ],
-
     'conflict' => [
 
         'field' => [

@@ -7,7 +7,7 @@ use Illuminate\View\Factory;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserCountry;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Actions\TaxCategoryStore;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -24,8 +24,8 @@ function taxSettingsUser(string $username): User
 it('seedFromCorpus inserts one row per corpus entry with the correct corpus_key', function (): void {
     $user = taxSettingsUser('tax-seed-01');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $count = $writer->seedFromCorpus($user, 'nl');
 
@@ -48,8 +48,8 @@ it('seedFromCorpus inserts one row per corpus entry with the correct corpus_key'
 it('seedFromCorpus is idempotent: seeding the same country twice returns 0 the second time', function (): void {
     $user = taxSettingsUser('tax-seed-02');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $first = $writer->seedFromCorpus($user, 'nl');
     expect($first)->toBeGreaterThan(0);
@@ -69,8 +69,8 @@ it('seedFromCorpus is idempotent: seeding the same country twice returns 0 the s
 it('seedFromCorpus never overwrites a renamed corpus-key row', function (): void {
     $user = taxSettingsUser('tax-seed-03');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $writer->seedFromCorpus($user, 'nl');
 
@@ -100,8 +100,8 @@ it('seedFromCorpus never overwrites a renamed corpus-key row', function (): void
 it('seedFromCorpus skips a corpus entry whose name collides with a user-created category', function (): void {
     $user = taxSettingsUser('tax-seed-name-collision');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     // "Giften" is also an NL corpus entry, so this row collides on name.
     $userCatId = $writer->add($user->id, 'Giften');
@@ -125,8 +125,8 @@ it('seedFromCorpus skips a corpus entry whose name collides with a user-created 
 it('switching country with seedFromCorpus adds new entries and deletes nothing (additive)', function (): void {
     $user = taxSettingsUser('tax-seed-04');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $nlCount = $writer->seedFromCorpus($user, 'nl');
     expect($nlCount)->toBeGreaterThan(0);
@@ -153,8 +153,8 @@ it('switching country with seedFromCorpus adds new entries and deletes nothing (
 it('add creates a user-owned category with corpus_key null and returns its id', function (): void {
     $user = taxSettingsUser('tax-add-01');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $id = $writer->add($user->id, 'My Custom Category');
 
@@ -173,8 +173,8 @@ it('add creates a user-owned category with corpus_key null and returns its id', 
 it('add rejects a duplicate category name for the same user', function (): void {
     $user = taxSettingsUser('tax-add-02');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $writer->add($user->id, 'Duplicate Category');
 
@@ -185,8 +185,8 @@ it('add rejects a duplicate category name for the same user', function (): void 
 it('rename updates the category name for the owning user', function (): void {
     $user = taxSettingsUser('tax-rename-01');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $id = $writer->add($user->id, 'Original Name');
     $writer->rename($user->id, $id, 'Updated Name');
@@ -201,8 +201,8 @@ it('rename throws NotFoundHttpException on a cross-user category id', function (
     $owner = taxSettingsUser('tax-rename-owner');
     $intruder = taxSettingsUser('tax-rename-intruder');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $ownerId = $writer->add($owner->id, 'Owner Category');
 
@@ -213,8 +213,8 @@ it('rename throws NotFoundHttpException on a cross-user category id', function (
 it('seeding a second country appends after the first country\'s sort_order block — no interleave', function (): void {
     $user = taxSettingsUser('tax-seed-sort-order');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $nlCount = $writer->seedFromCorpus($user, 'nl');
     $writer->seedFromCorpus($user, 'de');
@@ -238,8 +238,8 @@ it('seeding a second country appends after the first country\'s sort_order block
 it('rename to an existing name throws a friendly RuntimeException instead of a QueryException', function (): void {
     $user = taxSettingsUser('tax-rename-dup');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $writer->add($user->id, 'Existing Name');
     $renameMe = $writer->add($user->id, 'Old Name');
@@ -251,8 +251,8 @@ it('rename to an existing name throws a friendly RuntimeException instead of a Q
 it('rename to the SAME name is a no-op, not a duplicate error', function (): void {
     $user = taxSettingsUser('tax-rename-same');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $catId = $writer->add($user->id, 'Stable Name');
 
@@ -267,8 +267,8 @@ it('rename to the SAME name is a no-op, not a duplicate error', function (): voi
 it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing', function (): void {
     $user = taxSettingsUser('tax-rename-ui');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $writer->add($user->id, 'Taken Name');
     $catId = $writer->add($user->id, 'Renameable');
 
@@ -296,8 +296,8 @@ it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing
 it('says so when the category an action names is no longer there', function (): void {
     $user = taxSettingsUser('tax-vanished-row');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $catId = $writer->add($user->id, 'Vanishing Category');
 
     /** @var DatabaseManager $db */
@@ -325,8 +325,8 @@ it('says so when the category an action names is no longer there', function (): 
 it('keeps a name error inline rather than moving it to a toast', function (): void {
     $user = taxSettingsUser('tax-rename-stays-inline');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $catId = $writer->add($user->id, 'Still Here');
 
     Livewire::actingAs($user)->test(TaxSettingsSection::class)
@@ -338,8 +338,8 @@ it('keeps a name error inline rather than moving it to a toast', function (): vo
 it('unarchive restores an archived category to active', function (): void {
     $user = taxSettingsUser('tax-unarchive');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $catId = $writer->add($user->id, 'Resurrect Me');
     $writer->archive($user->id, $catId);
 
@@ -358,8 +358,8 @@ it('unarchive throws NotFoundHttpException on a cross-user category id', functio
     $owner = taxSettingsUser('tax-unarchive-owner');
     $intruder = taxSettingsUser('tax-unarchive-intruder');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $catId = $writer->add($owner->id, 'Owner Archived Cat');
     $writer->archive($owner->id, $catId);
 
@@ -370,8 +370,8 @@ it('unarchive throws NotFoundHttpException on a cross-user category id', functio
 it('unarchiveCategory restores via the settings component', function (): void {
     $user = taxSettingsUser('tax-unarchive-ui');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $catId = $writer->add($user->id, 'UI Restore Cat');
     $writer->archive($user->id, $catId);
 
@@ -387,8 +387,8 @@ it('unarchiveCategory restores via the settings component', function (): void {
 it('archive sets status to archived for the owning user', function (): void {
     $user = taxSettingsUser('tax-archive-01');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $id = $writer->add($user->id, 'To Archive');
     $writer->archive($user->id, $id);
@@ -403,8 +403,8 @@ it('archive throws NotFoundHttpException on a cross-user category id', function 
     $owner = taxSettingsUser('tax-archive-owner');
     $intruder = taxSettingsUser('tax-archive-intruder');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
 
     $ownerId = $writer->add($owner->id, 'Owner Archive Category');
 

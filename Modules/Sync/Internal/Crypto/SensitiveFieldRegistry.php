@@ -60,7 +60,7 @@ final class SensitiveFieldRegistry
     public static function knowinglyPlaintext(): array
     {
         return [
-            'accounts.iban' => 'Matched by equality in nine raw predicates and the Account model, carries unique(user_id, iban), and is string(34) — too narrow to hold base64(nonce || ciphertext).',
+            'accounts.iban' => 'Matched by equality in eleven raw predicates and the Account model, carries unique(user_id, iban), and is string(34) — too narrow to hold base64(nonce || ciphertext).',
             'accounts.slug' => 'Carries unique(user_id, slug), and AccountSlugResolver walks collisions with where(slug), which random-nonce ciphertext reads as always free.',
             'accounts.name' => 'Has no equality predicate of its own, but accounts.slug is Str::slug() of it and cannot be sealed, so encrypting the name leaves a readable copy one column over.',
             'counterparties.slug' => 'The URL segment of /counterparties/{slug} and the key CounterpartySlugResolver predicates its own collision walk on.',

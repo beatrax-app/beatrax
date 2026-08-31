@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Primerjano z izhodiščnim scenarijem zgoraj',
 
+    'run_failed' => 'Te napovedi ni bilo mogoče izračunati. Črta spodaj prikazuje samo to, kar je že knjiženo.',
+
     'scenario_editor_aria' => 'Urejevalnik scenarija',
     'series_confidence' => 'Zanesljivost serije',
     'no_series_contribute' => 'K napovedi tega računa še ne prispeva nobena serija.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Posodabljanje',
     'chart_noscript' => 'Grafikon zahteva JavaScript. Obseg pokriva :days dan.|Grafikon zahteva JavaScript. Obseg pokriva :days dneva.|Grafikon zahteva JavaScript. Obseg pokriva :days dneve.|Grafikon zahteva JavaScript. Obseg pokriva :days dni.',
     'total_balance' => 'Skupno stanje',
+    'projection_range' => 'Razpon napovedi',
+    'point_estimate' => 'Točkovna ocena',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, zanesljivost :confidence — razpon napovedi je :percent odstotkov točkovne ocene',
@@ -74,4 +78,24 @@ return [
     'lowest_in_30_label' => 'Najnižje v 30 dneh',
     'next_ics' => 'Naslednja poravnava ICS: :amount na dan :date',
     'ics_overdue' => 'Poravnava ICS je zapadla: :amount, rok je bil :date',
+
+    'stale_run' => 'Projekcija od :date — od takrat ni bila osvežena.',
+
+    'confidence' => [
+        'high' => 'Visoka',
+        'medium' => 'Srednja',
+        'low' => 'Nizka',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Znesek je obvezen.',
+        // i18n-review: sl · amount_decimals — the same z/s alternation that moved
+        // cashbook::cash-book.errors.amount_unreadable off the instrumental. Rewritten to a
+        // relative clause, which keeps the case but loses a shape a native may prefer.
+        'amount_decimals' => 'Znesek mora biti število, ki ima največ :decimals decimalno mesto.|Znesek mora biti število, ki ima največ :decimals decimalni mesti.|Znesek mora biti število, ki ima največ :decimals decimalna mesta.|Znesek mora biti število, ki ima največ :decimals decimalnih mest.',
+        'amount_whole' => 'Znesek mora biti celo število — ta valuta nima manjše enote.',
+        'amount_non_negative' => 'Znesek mora biti nič ali pozitiven.',
+        'amount_non_zero' => 'Znesek ne sme biti nič.',
+        'field_required' => 'Polje :field je obvezno.',
+    ],
 ];

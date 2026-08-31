@@ -8,6 +8,7 @@ use Illuminate\Contracts\Config\Repository;
 use Modules\Core\Public\Enums\MobilePlatform;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 
 // Browses for a service by speaking mDNS on the wire rather than shelling out
 // to dns-sd or avahi, which a phone has neither of. Without this a fresh device
@@ -40,10 +41,6 @@ final class MulticastMdnsQuery implements PeerDiscovery
     // rather than letting a long response arrive truncated.
     private const int MAX_DATAGRAM_BYTES = 9000;
 
-    // One length byte per label, so 63 is the protocol's own ceiling and a
-    // longer label cannot be encoded at all.
-    private const int MAX_LABEL_BYTES = 63;
-
     private const int MICROSECONDS_PER_SECOND = 1_000_000;
 
     private const string SERVICE_DOMAIN = 'local';
@@ -68,7 +65,7 @@ final class MulticastMdnsQuery implements PeerDiscovery
      * @param  float  $timeoutSeconds  How long to keep collecting answers for.
      * @return list<DiscoveredPeer>
      */
-    public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+    public function browse(string $serviceType, float $timeoutSeconds = ProtocolTimings::BROWSE_SECONDS): array
     {
         // Starts from what the runtime can manage and is only ever lowered
         // from there: a send the kernel accepted proves nothing on a platform
@@ -180,7 +177,7 @@ final class MulticastMdnsQuery implements PeerDiscovery
             // A DNS label is one length byte, so 63 is the protocol's ceiling
             // and anything longer cannot be encoded at all. Silently wrapping
             // it through chr() would emit a different name than was asked for.
-            if ($length < 1 || $length > self::MAX_LABEL_BYTES) {
+            if ($length < 1 || $length > PeerAdvertisementLimits::MAX_LABEL_BYTES) {
                 return '';
             }
 

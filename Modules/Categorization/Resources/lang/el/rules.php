@@ -9,12 +9,17 @@ return [
     'device_local_note' => 'Οι κανόνες παραμένουν σε αυτή τη συσκευή. Δεν κοινοποιούνται στις άλλες συσκευές σας.',
 
     'reapply' => 'Εκ νέου εφαρμογή κανόνων στο ιστορικό',
+    // i18n-review: el · reapply_confirm — «κατάσταση» on its own also reads as "state", so
+    // this writes the fuller «κατάσταση λογαριασμού» where ledger::reconcile.statement_date
+    // carries the bare noun. Confirm the longer form is what a reader here expects.
+    'reapply_confirm' => 'Να εφαρμοστούν ξανά όλοι οι κανόνες σε ολόκληρο το ιστορικό σου; Κάθε κατηγορία, αντισυμβαλλόμενος, σημείωση και φορολογική ετικέτα που έβαλε ένας κανόνας ξαναγράφεται. Ό,τι όρισες με το χέρι παραμένει, όπως και οτιδήποτε βρίσκεται σε συμφωνημένη κατάσταση λογαριασμού. Τίποτα δεν επαναφέρει τις παλιές τιμές.',
     'reapplying' => 'Εφαρμόζονται ξανά…',
     'new_rule' => 'Νέος κανόνας',
 
-    'reapply_progress_lead' => 'Οι κανόνες εφαρμόζονται ξανά…',
-    'reapply_progress_of' => 'από',
-    'reapply_progress_trail' => 'συναλλαγές ελέγχθηκαν',
+    // i18n-review: el · reapply_progress — the verb ελέγχθηκε/ελέγχθηκαν follows the
+    // arm :count selects, but what was checked is :checked. At a total of one the
+    // singular is right; a native eye should say whether a fixed plural reads better.
+    'reapply_progress' => 'Οι κανόνες εφαρμόζονται ξανά… :checked από :count συναλλαγή ελέγχθηκε|Οι κανόνες εφαρμόζονται ξανά… :checked από :count συναλλαγές ελέγχθηκαν',
 
     'empty_heading' => 'Δεν υπάρχουν ακόμη κανόνες',
     'empty_body' => 'Οι κανόνες αντιστοιχίζουν συναλλαγές με βάση πολλαπλές συνθήκες και εφαρμόζουν αυτόματα αλλαγές σε κατηγορία, αντισυμβαλλόμενο, σημείωση και φορολογική ετικέτα — κατά την εισαγωγή και κάθε φορά που τους εφαρμόζεις ξανά στο υπάρχον ιστορικό σου.',
@@ -27,6 +32,8 @@ return [
     'col_created' => 'Δημιουργήθηκε',
     'col_row_actions' => 'Ενέργειες',
     'inactive_badge' => 'Ανενεργός',
+    'combinator_all' => 'ΟΛΕΣ',
+    'combinator_any' => 'ΟΠΟΙΑΔΗΠΟΤΕ',
     'inactive_title' => 'Αυτός ο κανόνας δεν εκτελείται. Ένας κανόνας απενεργοποιείται όταν διαγραφεί η κατηγορία ή ο αντισυμβαλλόμενος στον οποίο παραπέμπει.',
 
     'more_conditions' => '+:count ακόμη',

@@ -11,7 +11,7 @@ use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-final class RateProviderRegistry
+final readonly class RateProviderRegistry
 {
     use CoercesScalars;
 
@@ -21,8 +21,8 @@ final class RateProviderRegistry
 
     /** @param list<RateProvider> $providers Sorted by priority() DESC at injection time. */
     public function __construct(
-        private readonly array $providers,
-        private readonly Repository $cache,
+        private array $providers,
+        private Repository $cache,
     ) {}
 
     /**

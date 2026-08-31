@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Modules\Chains\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class RejectChainLink
+final readonly class RejectChainLink
 {
+    public function __construct(private Dispatcher $events) {}
+
     public function __invoke(int $chainLinkId, User $user): void
     {
         /** @var ChainLink|null $link */
@@ -36,5 +40,13 @@ final class RejectChainLink
 
         $link->state = ChainLinkState::Rejected->value;
         $link->save();
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'chain_links',
+            pk: $link->id,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['state' => ChainLinkState::Rejected->value],
+        ));
     }
 }

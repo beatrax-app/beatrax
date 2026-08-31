@@ -19,13 +19,13 @@ use Throwable;
 // it never rests on disk in the clear.
 final readonly class SyncDaemonIdentity
 {
-    public const ENV_USER = 'BEATRAX_SYNC_USER_ID';
+    public const string ENV_USER = 'BEATRAX_SYNC_USER_ID';
 
-    public const ENV_DEVICE = 'BEATRAX_SYNC_DEVICE_ID';
+    public const string ENV_DEVICE = 'BEATRAX_SYNC_DEVICE_ID';
 
-    public const ENV_SECRET = 'BEATRAX_SYNC_X25519_SECRET_HEX';
+    public const string ENV_SECRET = 'BEATRAX_SYNC_X25519_SECRET_HEX';
 
-    public const ENV_PUBLIC = 'BEATRAX_SYNC_X25519_PUBLIC_HEX';
+    public const string ENV_PUBLIC = 'BEATRAX_SYNC_X25519_PUBLIC_HEX';
 
     public function __construct(
         private DeviceIdentityLoader $identityLoader,

@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Donne un nom à ce compte.',
 
     'ics' => [
+        'name' => 'Carte ICS',
         'heading' => 'Donne un nom à ton compte carte ICS.',
         'help' => 'C\'est la première fois que tu importes des données ICS. Donne un nom à cette carte pour qu\'elle apparaisse de la même façon partout dans l\'app.',
         'placeholder' => 'ex. Carte ICS',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Donne un nom à ton compte PayPal.',
         'help' => 'C\'est la première fois que tu importes des données PayPal. Donne un nom à ce portefeuille pour qu\'il apparaisse de la même façon partout dans l\'app.',
         'placeholder' => 'ex. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Donne un nom à ton compte Google Play.',
+        'help' => "C'est la première fois que tu importes un reçu Google Play. Donne un nom à ce compte pour qu'il apparaisse de la même façon partout dans l'app.",
+        'placeholder' => 'ex. Google Play',
     ],
 
     'col_date' => 'Date',
@@ -53,28 +62,41 @@ return [
         'error' => 'Erreur',
     ],
 
-    'chain' => [
-        'heading' => 'Résolution des chaînes…',
-        'pending' => 'En file d\'attente. Le résolveur de chaînes va démarrer sous peu.',
-        'running' => 'Liaison des chaînes de financement et décomposition des règlements du relevé.',
-        'failed_prefix' => 'La résolution des chaînes a échoué :',
-        'failed_detail' => 'les détails sont dans le journal des tâches',
-        'open_horizon' => 'Ouvre Horizon',
-        'failed_suffix' => 'pour réessayer ou inspecter.',
-    ],
-
     'rows_shown' => 'Lignes affichées : :shown sur :total',
 
     'show_more' => 'Afficher plus de lignes',
 
     'errors' => [
         'app_locked' => 'Déverrouillez l\'application pour importer : les clés de chiffrement ne peuvent pas être utilisées tant qu\'elle est verrouillée.',
+        'archive_holds_one_message' => 'Ce fichier est un seul message e-mail, pas une archive de boîte aux lettres ; lu comme une archive, il ne contient rien. Importe-le à nouveau avec le format Message e-mail.',
+        'email_file_is_an_archive' => 'Ce fichier est une archive de boîte aux lettres : il contient plus d\'un message, et lu comme un seul message il n\'en prendrait que le premier. Importe-le à nouveau avec le format Archive de boîte aux lettres.',
         'file_stopped_short' => 'La ligne d\'en-tête correspondait, le format est donc le bon. La lecture s\'est arrêtée avant la fin du fichier. Une seule ligne illisible suffit, tout comme un fichier trop volumineux pour cet appareil. Essaie une période plus courte.',
         'file_unreadable' => 'Ce fichier n\'a pas pu être lu.',
+        'file_unreadable_detail' => 'L\'application n\'a pas pu lire ce fichier (:code). Les détails complets figurent dans le journal ; citez ce code si vous signalez un problème.',
         'iban_not_in_preview' => 'Cet IBAN ne fait pas partie de l\'aperçu actuel.',
-        'pdf_reader_unavailable' => 'Les relevés PDF ont besoin du programme pdftotext, qui n\'est pas installé ici. Importe ce fichier sur un ordinateur qui l\'a, ou utilise plutôt un export CSV de ta banque.',
+        'not_an_email_file' => 'Ce fichier n\'est ni un message e-mail ni une archive de boîte aux lettres, il n\'y a donc rien à y lire comme reçu. Choisis le type d\'import et le format qui correspondent à ton fichier.',
+        'pdf_has_no_text_layer' => 'Ce PDF ne contient aucun texte — c\'est un scan ou une photo d\'un relevé, il n\'y a donc rien à y lire. Télécharge le relevé lui-même auprès de ta banque, ou utilise plutôt un export CSV.',
+        'pdf_password_protected' => 'Ce PDF est protégé par un mot de passe, aucun lecteur ne peut donc l\'ouvrir. Enregistre une copie non protégée depuis ta visionneuse PDF et importe celle-là.',
+        'pdf_reader_unavailable' => 'Cette version de l\'app n\'a aucun lecteur PDF, un relevé PDF ne peut donc pas être ouvert ici. Importe ce fichier sur un autre appareil, ou utilise plutôt un export CSV de ta banque.',
+        'row_belongs_to_another_statement' => 'Cette ligne appartient à une transaction d\'un autre fichier de relevé. Importez aussi ce relevé : les deux sont lus ensemble.',
         'row_unreadable' => 'Cette ligne n\'a pas pu être lue.',
+        'row_unreadable_detail' => 'L\'application n\'a pas pu lire cette ligne (:code). Les détails complets figurent dans le journal ; citez ce code si vous signalez un problème.',
         'unknown_account' => 'Cette ligne appartient à un compte auquel tu n\'as pas encore donné de nom.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Ce fichier a été lu comme un e-mail',
+        'saved' => 'Ce qu\'il contenait est listé ci-dessous, et chaque message a été conservé.',
+        'none_imported' => 'Rien de tout cela n\'est devenu une transaction, donc rien n\'a été ajouté à ton registre.',
+        'shown' => 'Messages affichés : :shown sur :total',
+        'no_subject' => 'Sans objet',
+
+        'state' => [
+            'read' => 'Lu comme un paiement — confirme cet import pour l\'ajouter à ton registre.',
+            'not_a_payment' => 'Ce n\'est pas un paiement. Ce message annonce quelque chose au lieu de confirmer un paiement.',
+            'unreadable' => 'Conservé. L\'application lit les reçus de cet expéditeur, mais n\'a trouvé ni montant, ni commerçant, ni référence dans ce message.',
+            'unknown_sender' => 'Conservé. L\'application ne lit pas les reçus de cet expéditeur, elle n\'a donc rien pris du message.',
+        ],
     ],
 
     'failed' => [

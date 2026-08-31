@@ -10,13 +10,13 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
-final class SourceMapWriter
+final readonly class SourceMapWriter
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function resolve(User $user, SourceMapKey $key): ?int
@@ -51,6 +51,33 @@ final class SourceMapWriter
         }
 
         return null;
+    }
+
+    // The value this field carried in the export that was last imported. Null
+    // means the entity has never been promoted, which is not the same answer as
+    // "the source said nothing" and callers must not collapse the two.
+    public function baselineFor(User $user, SourceMapKey $key, string $field): ?string
+    {
+        $connection = $this->db->connection();
+
+        $map = $connection->table('migration_source_map')
+            ->where('user_id', $user->id)
+            ->where('source_product', $key->sourceProduct)
+            ->where('source_entity_type', $key->entityType)
+            ->where('source_external_id', $key->sourceExternalId)
+            ->first(['id']);
+
+        if ($map === null) {
+            return null;
+        }
+
+        $value = $connection->table('migration_import_baseline')
+            ->where('user_id', $user->id)
+            ->where('migration_source_map_id', self::toInt($map->id))
+            ->where('field_name', $field)
+            ->value('baseline_value');
+
+        return is_string($value) ? $value : null;
     }
 
     /**

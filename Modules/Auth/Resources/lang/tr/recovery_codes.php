@@ -23,5 +23,6 @@ return [
         'body' => 'Parolanı unutursan hesabına geri dönmenin tek yolu kurtarma kodlarıdır.',
         'warning' => 'Karma olarak saklanır, bu yüzden yeniden gösterilemez. Yeni bir set oluşturmak eskisini anında geçersiz kılar.',
         'regenerate' => 'Yeni kod oluştur',
+        'regenerate_confirm' => 'Yeni bir kurtarma kodu seti oluşturulsun mu? Şu anki set, yenisi oluşturulduğu anda çalışmayı bırakır ve bir daha gösterilemez — yazdırılmış veya not edilmiş bir kopya işe yaramaz hâle gelir. Bu sayfadan ayrılmadan önce yeni kodları kaydet.',
     ],
 ];

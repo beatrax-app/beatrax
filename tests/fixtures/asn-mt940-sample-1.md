@@ -67,7 +67,7 @@ against the 39-name canonical merchant pool documented in `asn-sample-1.md`.
 
 ## ASN `:61:` Tag layout — illustrated
 
-The hand-rolled adapter in `Modules\Ingestion\Internal\Adapters\Asn\AsnMt940Adapter`
+The hand-rolled adapter in `Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter`
 must read the **34-char** extended customer-reference variant. Example
 from this fixture (line 5):
 
@@ -123,7 +123,7 @@ GVC keywords inside `?20–?29` the parser must promote:
 | `:61:` parser (ASN 34-char variant) | `Modules/Ingestion/tests/Unit/AsnMt940Tag61ParserTest.php` |
 | `:86:` GVC structured-subfield decoder | `Modules/Ingestion/tests/Unit/AsnMt940Tag86ParserTest.php` |
 | MT940 counterparty pre-normalisation (strip GVC codes before fingerprinting) | `Modules/Ingestion/tests/Unit/AsnMt940CounterpartyCleanerTest.php` |
-| End-to-end adapter snapshot | `Modules/Ingestion/tests/Unit/AsnMt940AdapterTest.php` |
+| End-to-end adapter snapshot | `Modules/Ingestion/tests/Unit/Mt940AdapterTest.php` |
 | Wizard import happy path | `Modules/Import/tests/Feature/AsnMt940ImportTest.php` |
 
 ## Caveats

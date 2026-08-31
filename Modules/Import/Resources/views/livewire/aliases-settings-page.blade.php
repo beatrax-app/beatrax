@@ -13,7 +13,7 @@
      from layouts.app. --}}
 
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-5xl mx-auto px-6 py-12 space-y-8" data-testid="aliases-settings-page">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8" data-testid="aliases-settings-page">
 
     <header class="space-y-1">
         <x-core::page-heading>{{ Lang::get('import::aliases.heading') }}</x-core::page-heading>
@@ -176,10 +176,12 @@
 
                     @if ($importDiff !== [])
                         <div class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:bg-slate-900 dark:border-slate-700 space-y-3">
-                            <p class="text-slate-900 dark:text-slate-100">
-                                <strong>{{ count($importDiff['new'] ?? []) }}</strong> {{ Lang::get('import::aliases.diff_new') }}
-                                <strong>{{ count($importDiff['unchanged'] ?? []) }}</strong> {{ Lang::get('import::aliases.diff_unchanged') }}
-                                <strong>{{ count($importDiff['conflicts'] ?? []) }}</strong> {{ Lang::get('import::aliases.diff_conflicts') }}
+                            <p class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                {{ Lang::get('import::aliases.diff_summary', [
+                                    'new' => Lang::choice('import::aliases.diff_new', count($importDiff['new'] ?? [])),
+                                    'unchanged' => Lang::choice('import::aliases.diff_unchanged', count($importDiff['unchanged'] ?? [])),
+                                    'conflicts' => Lang::choice('import::aliases.diff_conflicts', count($importDiff['conflicts'] ?? [])),
+                                ]) }}
                             </p>
 
                             @if (count($importDiff['conflicts'] ?? []) > 0)
@@ -237,15 +239,15 @@
                 @elseif (($previewResult['emptyMessage'] ?? null) !== null && ($previewResult['total'] ?? 0) === 0)
                     <p class="mt-2 alias-preview-count">{{ $previewResult['emptyMessage'] }}</p>
                 @else
-                    <p class="mt-2 alias-preview-count">
-                        {{ Lang::get('import::aliases.matches_prefix') }} <strong>{{ $previewResult['total'] ?? 0 }}</strong> {{ Lang::get('import::aliases.matches_suffix') }}
+                    <p class="mt-2 alias-preview-count" style="font-variant-numeric: tabular-nums;">
+                        {{ Lang::choice('import::aliases.matches', (int) ($previewResult['total'] ?? 0)) }}
                     </p>
                     @if (count($previewResult['first5'] ?? []) > 0)
                         <ul class="mt-3 space-y-1 text-xs">
                             @foreach ($previewResult['first5'] as $row)
                                 <li class="flex items-center justify-between gap-2">
                                     <span class="font-mono text-slate-700 dark:text-slate-300 truncate">{{ $row['description'] !== '' ? $row['description'] : $row['counterparty_name'] }}</span>
-                                    <span class="text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $row['booked_at'] }}</span>
+                                    <span class="text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $row['postedAt'] }}</span>
                                 </li>
                             @endforeach
                         </ul>

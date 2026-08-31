@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Potvrdi ili odbij predložene veze koje razrešavač lanaca nije mogao automatski da potvrdi.',
 
     'empty_heading' => 'Nema ničega za pregled',
-    'empty_body' => 'Svaka veza u lancu je potvrđena ili odbijena. Novi kandidati pojaviće se ovde kako budu stizali uvozi.',
+    'empty_body' => 'Svaka veza koju je razrešivač uspeo da upari potvrđena je ili odbijena. Novi kandidati pojaviće se ovde kako budu stizali uvozi.',
 
     'auto_confirm_nudge' => 'Još jedna potvrda i slične veze potvrđivaće se automatski.',
 

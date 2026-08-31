@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Pełna historia.',
     'subtitle_recent' => 'Ostatnie transakcje (ostatnie 90 dni).',
 
-    'currency_aria' => 'Widok waluty',
-    'currency_eur' => 'Tylko :code',
-    'currency_original' => 'Waluta oryginalna',
+    'currency_aria' => 'Wyświetlana kwota',
+    'currency_eur' => 'Kwota rozliczona',
+    'currency_original' => 'Kwota pierwotna',
 
     'show_recent' => 'Pokaż tylko ostatnie',
     'show_full' => 'Pokaż pełną historię',
 
     'empty_period' => 'Nic w tym okresie.',
 
+    'empty_recent_has_older' => 'Nic z ostatnich 90 dni. Starsze transakcje nadal tu są.',
+
+    'empty_history' => 'Nie ma jeszcze transakcji.',
     'loading_more' => 'Wczytywanie kolejnych transakcji',
     'load_more' => 'Wczytaj więcej',
 

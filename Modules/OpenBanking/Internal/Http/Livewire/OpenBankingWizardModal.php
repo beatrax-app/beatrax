@@ -12,30 +12,15 @@ use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Enums\BankChoice;
+use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
+use Modules\OpenBanking\Internal\Enums\WizardStep;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
 final class OpenBankingWizardModal extends Component
 {
-    private const STEP_KEYPAIR = 1;
-
-    private const STEP_REGISTER = 2;
-
-    private const STEP_APPLICATION_ID = 3;
-
-    private const STEP_BANK = 4;
-
-    private const STEP_CONSENT = 5;
-
-    private const INSTITUTION_ASN_ID = 'ASNBNL21';
-
-    private const INSTITUTION_ASN_NAME = 'ASN Bank';
-
-    private const INSTITUTION_SNS_ID = 'SNSBNL21';
-
-    private const INSTITUTION_SNS_NAME = 'SNS (de Volksbank)';
-
-    public int $step = self::STEP_KEYPAIR;
+    public int $step = WizardStep::Keypair->value;
 
     // The public half only: the private key goes straight to disk inside
     // generateKeypair() and never reaches a property, hence never the snapshot.
@@ -56,9 +41,13 @@ final class OpenBankingWizardModal extends Component
         string $bankChoice = '',
         string $otherInstitutionId = '',
     ): void {
-        $canSkipToRequestedStep = $startStep !== null && $secrets->hasApplication();
+        // A step number outside the enum is not honoured at all: the modal
+        // renders one branch per step, so an unknown one draws a dialog with no
+        // controls and no way out of it.
+        $requestedStep = WizardStep::requested($startStep);
+        $canSkipToRequestedStep = $requestedStep !== null && $secrets->hasApplication();
 
-        $this->step = $canSkipToRequestedStep ? $startStep : self::STEP_KEYPAIR;
+        $this->step = ($canSkipToRequestedStep ? $requestedStep : WizardStep::Keypair)->value;
         $this->publicKeyPem = '';
         $this->applicationId = '';
         $this->bankChoice = $canSkipToRequestedStep ? $bankChoice : '';
@@ -103,7 +92,7 @@ final class OpenBankingWizardModal extends Component
         }
 
         $this->publicKeyPem = $publicKeyPem;
-        $this->step = self::STEP_REGISTER;
+        $this->step = WizardStep::Register->value;
     }
 
     /**
@@ -142,7 +131,7 @@ final class OpenBankingWizardModal extends Component
         }
 
         $this->errorMessage = '';
-        $this->step = self::STEP_APPLICATION_ID;
+        $this->step = WizardStep::ApplicationId->value;
     }
 
     public function saveApplicationId(OpenBankingSecretsRepository $secrets): void
@@ -159,7 +148,7 @@ final class OpenBankingWizardModal extends Component
         $existing = $secrets->load();
         if ($existing === null) {
             $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.generate_first');
-            $this->step = self::STEP_KEYPAIR;
+            $this->step = WizardStep::Keypair->value;
 
             return;
         }
@@ -180,12 +169,12 @@ final class OpenBankingWizardModal extends Component
         }
 
         $this->applicationId = $applicationId;
-        $this->step = self::STEP_BANK;
+        $this->step = WizardStep::Bank->value;
     }
 
     public function chooseBank(string $bank): void
     {
-        $this->bankChoice = in_array($bank, ['asn', 'sns', 'other'], strict: true) ? $bank : '';
+        $this->bankChoice = BankChoice::tryFrom($bank)->value ?? '';
     }
 
     public function continueToConsent(): void
@@ -198,7 +187,7 @@ final class OpenBankingWizardModal extends Component
             return;
         }
 
-        $this->step = self::STEP_CONSENT;
+        $this->step = WizardStep::Consent->value;
     }
 
     public function connect(): mixed
@@ -206,7 +195,7 @@ final class OpenBankingWizardModal extends Component
         $institutionId = $this->resolveInstitutionId();
         if ($institutionId === null) {
             $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.choose_bank');
-            $this->step = self::STEP_BANK;
+            $this->step = WizardStep::Bank->value;
 
             return null;
         }
@@ -240,12 +229,12 @@ final class OpenBankingWizardModal extends Component
 
     private function resolveInstitutionId(): ?string
     {
-        return match ($this->bankChoice) {
-            'asn' => self::INSTITUTION_ASN_ID,
-            'sns' => self::INSTITUTION_SNS_ID,
-            'other' => $this->otherInstitutionIdOrNull(),
-            default => null,
-        };
+        $choice = BankChoice::tryFrom($this->bankChoice);
+        if ($choice === null) {
+            return null;
+        }
+
+        return $choice->institution()->value ?? $this->otherInstitutionIdOrNull();
     }
 
     private function otherInstitutionIdOrNull(): ?string
@@ -257,11 +246,14 @@ final class OpenBankingWizardModal extends Component
 
     private function bankDisplayName(): string
     {
-        return match ($this->bankChoice) {
-            'asn' => self::INSTITUTION_ASN_NAME,
-            'sns' => self::INSTITUTION_SNS_NAME,
-            'other' => $this->otherInstitutionIdOrNull() ?? Lang::get('openbanking::messages.wizard.your_bank'),
-            default => Lang::get('openbanking::messages.wizard.your_bank'),
-        };
+        $choice = BankChoice::tryFrom($this->bankChoice);
+        $curated = $choice?->institution();
+        if ($curated instanceof CuratedInstitution) {
+            return $curated->displayName();
+        }
+
+        $typed = $choice === BankChoice::Other ? $this->otherInstitutionIdOrNull() : null;
+
+        return $typed ?? Lang::get('openbanking::messages.wizard.your_bank');
     }
 }

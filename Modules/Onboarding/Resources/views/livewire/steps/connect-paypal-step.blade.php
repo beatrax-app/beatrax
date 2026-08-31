@@ -1,11 +1,19 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Connect-paypal step — wizard step 3. PayPal's per-event export is
-    "Rapport Transactiegegevens" (Transaction Details Report), so the
-    step accepts a single CSV via a single-file drop zone. A single
-    format chip names the only choice; a four-tile mini-step row
-    mirrors the PayPal portal export path (Log in → custom statements
-    → Betalingen tab → Rapport Transactiegegevens).
+    the activity download, so the step accepts a single CSV via a
+    single-file drop zone. A single format chip names the only choice;
+    a four-tile mini-step row mirrors the PayPal portal export path
+    (Log in → custom statements → Betalingen tab → Rapport
+    Transactiegegevens).
+
+    The portal path and the report names are written in Dutch because
+    PaypalCsvLanguageProfile registers one language signature, "nl", and
+    the sniffer refuses every other language's header. Copy that named
+    the report in the reader's own language would name a file this app
+    cannot parse, so the step says outright which language it reads and
+    tags the Dutch names lang="nl". Register a second signature there
+    and this step's copy is what has to change with it.
 
     Submission delegates to the existing `RunsImports` pipeline with
     `paypal-csv` as the format key — the same path the PaypalCsvAdapter
@@ -38,7 +46,7 @@
 
     <div role="group" class="format-chips" aria-label="{{ Lang::get('onboarding::connect_paypal.format_group_aria') }}">
         <span class="format-chips-label">{{ Lang::get('onboarding::connect_paypal.got_it_as') }}</span>
-        <x-onboarding::format-chip label="PayPal CSV" :badge="Lang::get('onboarding::connect_paypal.badge_only_format')" />
+        <x-onboarding::format-chip label="CSV" :badge="Lang::get('onboarding::connect_paypal.badge_only_format')" />
     </div>
 
     <x-onboarding::drop-zone

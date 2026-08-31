@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Paslėpti iš rodinio (žurnalo failas nekeičiamas)',
     'dismiss_aria' => 'Paslėpti žurnalo įrašą iš rodinio',
     'totals' => [
-        'showing' => 'Rodoma',
-        'of' => 'iš',
-        'received' => 'gauta (buferio riba 10 tūkst.)',
-        'lines_today' => 'eilučių šiandien',
+        'showing' => 'Rodoma :shown iš :count gautos eilutės (buferio riba :cap)|Rodoma :shown iš :count gautų eilučių (buferio riba :cap)|Rodoma :shown iš :count gautų eilučių (buferio riba :cap)',
+        'lines_today' => ':count eilutė šiandien|:count eilutės šiandien|:count eilučių šiandien',
+        'lines_today_capped' => 'daugiau nei :count eilutė šiandien|daugiau nei :count eilutės šiandien|daugiau nei :count eilučių šiandien',
         'today' => 'šiandien',
-        'across' => 'iš',
-        'daily_files' => 'dienos failų',
+        'all_files' => ':size iš :count dienos failo|:size iš :count dienos failų|:size iš :count dienos failų',
     ],
 
     'status' => [

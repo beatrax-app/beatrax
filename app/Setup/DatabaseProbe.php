@@ -10,7 +10,7 @@ use PDO;
 // left non-final so a test can substitute the one part needing a server.
 class DatabaseProbe
 {
-    private const CONNECT_TIMEOUT_SECONDS = 5;
+    private const int CONNECT_TIMEOUT_SECONDS = 5;
 
     // Returns the server's own version string, not a bare yes: reachability
     // alone cannot tell an operator they reached the instance they meant.

@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Beløb',
 
     'subtotal' => 'Subtotal',
+    'subtotal_income' => 'Subtotal indtægter',
 
     'footer' => 'Genereret af Beatrax — privatøkonomi kun lokalt — :year',
 ];

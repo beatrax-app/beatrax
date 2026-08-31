@@ -48,16 +48,21 @@ detector the shape is the same:
 
 1. **Window.** Read transactions posted within the last
    `users.recurring_detection_window_months` months (see the tuned
-   default below). `ExpenseSeriesDetector` reads types `expense`, `fee`
-   and `refund`; `IncomeSeriesDetector` reads type `income` only, and
+   default below). `ExpenseSeriesDetector` reads types `expense` and
+   `fee`; `IncomeSeriesDetector` reads type `income` only, and
    only rows at or above `users.recurring_income_min_amount_minor`.
+   `refund` is deliberately absent: `TransactionType::Refund` carries
+   `Direction::Income` and a positive amount, so inside an expense
+   cluster it outranked the subscription as the newest row and the
+   fixed-payments card rendered a **+**€10.99/month subscription.
 2. **Group.** Bucket the rows by a counterparty identifier plus the
    **original** transaction currency. Expense groups on
    `counterparty_normalized`; income groups on the counterparty IBAN
    and falls back to `counterparty_normalized` when there is no IBAN.
-3. **Filter (expense only).** Drop rows whose absolute amount falls
-   outside a tolerance band around the cluster's median absolute
-   amount.
+3. **Filter.** Drop rows whose sign disagrees with the cluster's, then
+   rows whose absolute amount falls outside a tolerance band around the
+   cluster's median absolute amount. Both detectors run it —
+   `ClusterAmountFilter` is shared.
 4. **Infer cadence.** Feed the surviving posting dates to
    `CadenceInferrer`, which returns a cadence band, a median interval,
    a projected `next_expected_at`, a low-confidence flag and a
@@ -114,6 +119,17 @@ The setting is still per-user and can be raised back to 60 months from
 the settings page, which is how a yearly subscription becomes
 detectable: two yearly charges need a window wider than two years.
 
+Both ends of that range and the fallback itself are written once, in
+`Modules\Recurring\Public\Support\RecurringDetectionWindow`
+(`MINIMUM_MONTHS`, `MAXIMUM_MONTHS`), and both detectors open their window
+through `RecurringDetectionWindow::opensOn()` rather than computing it
+themselves. The floor and the fallback are the same number because they are
+the same fact — below two months a monthly series cannot show the two
+occurrences the gate needs — so a settings screen that widened alone would
+offer the reader a window that detects nothing, and a detector that fell back
+differently from its sibling would put a series in the merged set the other
+pass could not see the occurrences of.
+
 ### Why the variance filter uses the median, not the mean
 
 The filter computes the median of the cluster's absolute amounts and
@@ -124,6 +140,25 @@ around itself. The median does not move.
 
 If the median is zero or negative the filter is skipped and every row is
 kept; there is no meaningful band around zero.
+
+The filter runs on **both** detectors. Income ran without one, so a
+€12,000 holiday allowance paid beside four €3,500 salaries became the
+cluster's newest row and was written to both `latest_amount_minor` and
+`monthly_equivalent_minor`. Income also honours a user-widened
+`variance_tolerance_percent` the way expense does — the existing series
+for the (user, counterparty, currency) is read before the cluster
+qualifies, because that row carries the tolerance that decides it.
+
+### The sign guard, which runs before the band
+
+A row carries its magnitude and its direction in one signed integer, so
+comparing on `abs()` alone makes a refund look like a charge of the same
+size. `ClusterAmountFilter` therefore drops rows whose sign disagrees
+with the cluster's dominant sign — the sign of the median of the
+**signed** amounts — before any band is computed. The dominant sign is
+read off the cluster rather than off a direction constant, so a ledger
+that stored one merchant the other way round loses that series' amounts
+rather than every series it has.
 
 The tolerance is not a fixed constant at refresh time. Before filtering,
 the detector looks for an existing series for this
@@ -180,14 +215,35 @@ projected nowhere at all — it is the one band with no calendar step, and
 it is excluded before the step is taken rather than falling through to a
 day-median guess.
 
-The day of the month is read off the series' **first** posting, not off
-the stepped date. February clamps a bill charged on the 31st to the
-28th, and no later step recovers the 31st from a clamped date — every
-month after it would sit on the 28th. Taking the billing day from the
-first posting each time lands February on the 28th (or the 29th) and
-March back on the 31st. `SeriesEntryPlacer` then steps whole periods
-from `next_expected_at` rather than chaining single steps, for the same
-reason.
+The day of the month is derived from the whole window, not off the
+stepped date and not off one posting. February clamps a bill charged on
+the 31st to the 28th, and no later step recovers the 31st from a clamped
+date — every month after it would sit on the 28th.
+
+Reading the billing day off the window's **oldest** posting fixed the
+clamp but made the answer depend on which month happened to be oldest: a
+February + March window projected 28 April for a bill on the 31st, and
+`next_expected_at` moved by up to three days as the window rolled.
+`CadenceInferrer::billingDay()` instead treats a posting that lands on
+its own month's last day as *clamped evidence* — the real day is at
+least that, never less — and:
+
+- takes the most frequent day among the **unclamped** postings, keeping
+  the earliest posting's day on a tie, because a cluster whose days
+  never agree has no billing day to find and moving it would be noise;
+- falls back to the largest clamped day when every posting is a
+  month-end one, which is the 31st-of-the-month case.
+
+`SeriesEntryPlacer` then steps whole periods from `next_expected_at`
+rather than chaining single steps, for the same reason — and it hands
+`SeriesCadence::occurrenceAt()` the series' own `billing_day`, which is
+persisted alongside `next_expected_at` for exactly this. Stepping from
+the anchor alone is not enough, because the anchor is itself clamped
+whenever it lands in a short month: a 31st bill whose next date fell in
+February projected the 28th for every month after it on the calendar and
+the forecast curve, while the reminder — which re-infers from the
+postings each sweep — kept naming the 31st. The two surfaces named
+different days for the same charge.
 
 `confidence_low` is set when the interval standard deviation exceeds 5
 days. It does not change the cadence; it marks `next_expected_at` as a
@@ -208,6 +264,12 @@ twice under slightly different spellings does not spawn two parallel
 series. The key is the payload of the
 `(user_id, direction, cluster_key, latest_currency)` UNIQUE constraint,
 which is what makes re-running the whole sweep idempotent.
+
+It is deliberately NOT what the row's primary key is derived from. `cluster_key`
+moves — see the cadence note below — and a derived id has to come from columns
+that never do, so `DerivedSeriesId` folds
+`(user_id, direction, cluster_counterparty_key, latest_currency)` instead. See
+[the sync architecture](../sync/architecture.md#capture-for-the-last-five-detector-driven-tables).
 
 Because the cadence band is *part* of the key, a series whose cadence
 changes no longer matches its own old key. That is handled deliberately
@@ -307,7 +369,13 @@ pre-encryption clustering key stays on screen until the user renames it. See
   never detected in the first place, so they never reach this
   comparison.
 - The `/recurring` fixed-payments view and the dashboard card read the
-  approved set sorted by absolute monthly equivalent.
+  same two states, sorted by absolute monthly equivalent. They filtered
+  on `approved` alone, so a series the detector had just flipped to
+  `cadence_changed` vanished from the page, the card and the monthly
+  totals while Forecasting and the sidebar badge went on counting it.
+  Every read of the projectable set goes through
+  `RecurringSeriesState::projectableValues()` rather than naming the
+  states, which is what keeps the two sides from drifting apart again.
 
 ## Related pages
 

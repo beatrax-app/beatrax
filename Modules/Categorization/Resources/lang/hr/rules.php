@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Pravila ostaju na ovom uređaju. Ne dijele se s vašim drugim uređajima.',
 
     'reapply' => 'Ponovno primijeni pravila na povijest',
+    'reapply_confirm' => 'Ponovno primijeniti sva pravila na cijelu tvoju povijest? Svaka kategorija, protustranka, bilješka i porezna oznaka koju je postavilo pravilo prepisuje se. Ono što je postavljeno ručno ostaje, kao i sve na usklađenom izvodu. Stare vrijednosti ništa ne vraća.',
     'reapplying' => 'Ponovna primjena…',
     'new_rule' => 'Novo pravilo',
 
-    'reapply_progress_lead' => 'Ponovna primjena pravila…',
-    'reapply_progress_of' => 'od',
-    'reapply_progress_trail' => 'provjerenih transakcija',
+    'reapply_progress' => 'Ponovna primjena pravila… :checked od :count provjerene transakcije|Ponovna primjena pravila… :checked od :count provjerene transakcije|Ponovna primjena pravila… :checked od :count provjerenih transakcija',
 
     'empty_heading' => 'Još nema pravila',
     'empty_body' => 'Pravila prepoznaju transakcije prema više uvjeta i automatski primjenjuju promjene kategorije, protustranke, bilješke i porezne oznake — pri uvozu i svaki put kad ih ponovno primijeniš na postojeću povijest.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Stvoreno',
     'col_row_actions' => 'Radnje',
     'inactive_badge' => 'Isključeno',
+    'combinator_all' => 'SVI',
+    'combinator_any' => 'BILO KOJI',
     'inactive_title' => 'Ovo pravilo se ne primjenjuje. Pravilo se isključuje kada se izbriše kategorija ili druga strana na koju upućuje.',
 
     'more_conditions' => '+:count više',

@@ -11,7 +11,7 @@ use InvalidArgumentException;
  */
 final class LongestCommonPrefix
 {
-    private const MIN_PREFIX_LENGTH = 4;
+    private const int MIN_PREFIX_LENGTH = 4;
 
     /**
      * @param  list<string>  $patterns

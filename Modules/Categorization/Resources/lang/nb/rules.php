@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Regler blir på denne enheten. De deles ikke med de andre enhetene dine.',
 
     'reapply' => 'Bruk reglene på historikken på nytt',
+    'reapply_confirm' => 'Vil du bruke alle reglene på hele historikken din på nytt? Hver kategori, motpart, notat og skattemerke som en regel har satt, blir skrevet over. Det du har satt for hånd, blir stående, og det samme gjør alt på en avstemt kontoutskrift. Ingenting setter de gamle verdiene tilbake.',
     'reapplying' => 'Bruker på nytt…',
     'new_rule' => 'Ny regel',
 
-    'reapply_progress_lead' => 'Bruker regler på nytt…',
-    'reapply_progress_of' => 'av',
-    'reapply_progress_trail' => 'transaksjoner kontrollert',
+    'reapply_progress' => 'Bruker regler på nytt… :checked av :count transaksjon kontrollert|Bruker regler på nytt… :checked av :count transaksjoner kontrollert',
 
     'empty_heading' => 'Ingen regler ennå',
     'empty_body' => 'Regler matcher transaksjoner på flere betingelser og gjør endringer av kategori, motpart, notat og skattemerke automatisk — ved import og hver gang du bruker dem på den eksisterende historikken din på nytt.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Opprettet',
     'col_row_actions' => 'Handlinger',
     'inactive_badge' => 'Av',
+    'combinator_all' => 'ALLE',
+    'combinator_any' => 'MINST ÉN',
     'inactive_title' => 'Denne regelen kjører ikke. En regel slås av når kategorien eller motparten den peker på slettes.',
 
     'more_conditions' => '+:count til',

@@ -16,7 +16,9 @@ return [
         'budget' => 'Költségvetési hónapok',
     ],
 
-    'all_clean' => 'Minden tisztán megfeleltethető — a megerősítés előtt semmi nem igényel figyelmet.',
+    'all_clean' => 'Minden tisztán megfeleltethető — itt nincs miről döntened.',
+
+    'nothing_staged' => 'Ez az export nem tartalmazott importálnivalót — itt nincs mit megerősíteni.',
 
     'groups' => [
         'conflict' => 'Döntést igényel',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Ez a fent látható mennyiségeket hozza létre vagy frissíti a kategóriáidban, a költségvetéseidben és a főkönyvedben.',
     'discard_button' => 'Import elvetése',
+    'discard_confirm' => 'Elveted ezt az importot? Minden, ami az exportfájlodból beolvasódott, itt törlődik, és visszaszerezni csak úgy lehet, ha az egész fájlt újra feltöltöd és feldolgoztatod. A főkönyvedbe még semmi nem került be.',
     'confirm_button' => 'Import megerősítése',
 ];

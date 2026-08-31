@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Naam bewerken',
     'edit_name_aria' => 'Terugkerende reeks :id hernoemen',
     'new_name_label' => 'Nieuwe naam voor deze reeks',
+    'load_more' => 'Meer laden',
     'save' => 'Opslaan',
 
     'toast' => [

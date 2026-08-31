@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Još nema ničeg tajanstvenog. Uvezi nekoliko izvoda i Beatrax će ovdje prikazati retke koje nije uspio prepoznati.',
 
+    'showing_capped' => 'Prikazano prvih :shown od :total.',
+
     'footer' => 'Zajednički popis je YAML datoteka koja dolazi uz Beatrax. Slanje prijedloga otvara GitHub u tvom pregledniku; ništa drugo ne napušta ovaj uređaj.',
 
     'card' => [

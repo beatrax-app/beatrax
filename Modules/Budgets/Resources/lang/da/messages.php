@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategori',
         'assigned' => 'Fordelt',
+        'carried_in' => 'Overført',
+        'moved' => 'Flyttet',
         'spent' => 'Brugt',
         'available' => 'Til rådighed',
         'if_overspent' => 'Ved overforbrug',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Skjul historik ↑',
         'moved_from' => 'Flyttet fra :category',
         'moved_to' => 'Flyttet til :category',
+        'moved_unreadable' => 'Flyttet med :category af en nyere version af Beatrax',
         'undo' => 'Fortryd',
     ],
 
     'phone' => [
         'spent' => 'Brugt :amount',
+        'carried_in' => 'Overført :amount',
+        'moved' => 'Flyttet :amount',
         'available' => 'Til rådighed :amount',
         'notify_at' => 'Notificér ved',
     ],

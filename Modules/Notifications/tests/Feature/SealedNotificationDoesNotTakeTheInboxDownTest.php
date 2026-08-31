@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Notifications\Public\Services\NotificationQuery;
 
@@ -46,7 +46,7 @@ function sealedInsertNotification(DatabaseManager $db, int $userId, string $id, 
         'title' => 'Budget nearly spent',
         'body' => 'Groceries is at 92% of its budget.',
         'params' => json_encode(['target_kind' => 'dashboard'], JSON_THROW_ON_ERROR),
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
+        'trigger_type' => NotificationTrigger::BudgetNudge,
         'created_at' => '2026-08-15 09:00:00',
         'updated_at' => '2026-08-15 09:00:00',
     ], $overrides));
@@ -80,7 +80,7 @@ it('leaves the swept trigger_type as ciphertext at rest', function (): void {
         ->value('trigger_type');
 
     expect($stored)->toBeString()
-        ->not->toBe(DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE)
+        ->not->toBe(NotificationTrigger::BudgetNudge)
         ->and(strlen((string) $stored))->toBeGreaterThan(40);
 });
 
@@ -88,10 +88,10 @@ it('reads the swept row back under the key that sealed it', function (): void {
     /** @var NotificationQuery $query */
     $query = $this->app->make(NotificationQuery::class);
 
-    $rows = $query->allForUser($this->user);
+    $rows = $query->allForUser($this->user)['rows'];
 
     expect($rows)->toHaveCount(1);
-    expect($rows[0]->triggerType)->toBe(DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE);
+    expect($rows[0]->triggerType)->toBe(NotificationTrigger::BudgetNudge->value);
     expect($rows[0]->unreadable)->toBeFalse();
     expect($rows[0]->title)->toBe('Budget nearly spent');
 });
@@ -102,7 +102,7 @@ it('returns a row rather than throwing when the keyring no longer opens', functi
     /** @var NotificationQuery $query */
     $query = $this->app->make(NotificationQuery::class);
 
-    $rows = $query->allForUser($this->user);
+    $rows = $query->allForUser($this->user)['rows'];
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->triggerType)->toBe('');
@@ -116,7 +116,7 @@ it('returns a row rather than throwing when the app lock withholds the key', fun
     /** @var NotificationQuery $query */
     $query = $this->app->make(NotificationQuery::class);
 
-    $rows = $query->allForUser($this->user);
+    $rows = $query->allForUser($this->user)['rows'];
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->unreadable)->toBeTrue();
@@ -136,5 +136,5 @@ it('names an unrecognised trigger type with the neutral chip instead of throwing
     expect(NotificationCopy::typeChip('a_kind_a_later_release_writes'))
         ->toBe(NotificationCopy::typeChip(''));
     expect(NotificationCopy::names('a_kind_a_later_release_writes'))->toBeFalse();
-    expect(NotificationCopy::names(DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE))->toBeTrue();
+    expect(NotificationCopy::names(NotificationTrigger::BudgetNudge->value))->toBeTrue();
 });

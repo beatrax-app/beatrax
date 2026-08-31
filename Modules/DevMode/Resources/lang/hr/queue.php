@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Izbriši :count zadatak|Izbriši :count zadatka|Izbriši :count zadataka',
     'empty_pending' => 'Red čekanja je prazan.',
     'empty_failed' => 'Nema neuspjelih zadataka.',
-    'empty_batches' => 'Nema aktivnih grupa.',
+    'empty_batches' => 'Nema hrpa.',
     'select_aria' => 'Odaberi',
     'select_row_aria' => 'Odaberi redak :key',
     'col_id' => 'Id',
     'col_queue' => 'Red čekanja',
     'col_attempts' => 'Pokušaji',
+    'col_state' => 'Stanje',
     'col_created' => 'Stvoreno',
     'col_uuid' => 'UUID',
     'col_failed' => 'Neuspjelo',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Na čekanju',
     'col_actions' => 'Radnje',
     'delete_job' => 'Izbriši zadatak',
+    'worker_running' => 'Worker ga izvršava',
     'delete_pending_confirm' => 'Izbrisati zadatak na čekanju #:key?',
     'retry_job' => 'Ponovi zadatak',
     'forget_confirm' => 'Ukloniti neuspjeli zadatak :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Odabrani neuspjeli zadaci vratit će se u red čekanja da ih worker ponovno izvrši.',
     'cancel' => 'Odustani',
 
+    'state' => [
+        'available' => 'Spremna',
+        'reserved' => 'Rezervirana',
+        'scheduled' => 'Zakazana',
+    ],
+
     'tab' => [
         'pending' => 'Na čekanju',
         'failed' => 'Neuspjeli',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Zadatak na čekanju izbrisan',
+        'pending_already_gone' => 'Taj posao više nije postojao',
         'failed_requeued' => 'Neuspjeli zadatak vraćen u red čekanja',
         'failed_removed' => 'Neuspjeli zadatak uklonjen',
         'batch_cancelled' => 'Grupa prekinuta',
         'batch_deleted' => 'Grupa izbrisana',
         'batch_failures_requeued' => 'Neuspjeli zadaci grupe vraćeni u red čekanja',
+        'batch_failures_none' => 'U hrpi nema više grešaka za ponovno stavljanje u red',
         'failed_jobs_requeued' => 'Neuspjeli zadaci vraćeni u red čekanja',
+        'failed_jobs_none' => 'Nema više neuspjelih poslova za ponovno stavljanje u red',
         'bulk_refused' => 'Skupno brisanje odbijeno — :reason',
         'rows_deleted' => 'Odabrani retci izbrisani',
     ],

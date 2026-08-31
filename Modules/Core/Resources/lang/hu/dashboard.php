@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Legnagyobb kiadások',
     'no_expenses' => 'Még nincs kategorizált kiadás.',
+    'top_spending_refunded' => 'Nincs rangsorolva — :amount visszajött',
 
     'recent_transactions' => 'Legutóbbi tranzakciók',
     'view_all' => 'Összes megtekintése',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategória',
     'th_amount' => 'Összeg',
     'uncategorized' => 'Kategorizálatlan',
+
+    'jump_to_records' => [
+        'body' => 'Ebben az időszakban nincs semmi. A legutóbbi tételei továbbra is megvannak.',
+        'action' => 'Időszak mutatása: :period',
+    ],
 
     'reauth' => [
         'title' => 'Egy postafiókot újra kell csatlakoztatni.',

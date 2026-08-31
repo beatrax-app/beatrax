@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
+use Modules\Anomaly\Internal\Support\AnomalySensitivity;
 use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
@@ -32,7 +33,7 @@ it('fires the large reason exactly as the corpus expects', function (string $fix
     $detector = $this->app->make(LargeVsTypicalDetector::class);
 
     $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
-    $result = $detector->fires($txn, $user, $user->anomaly_sensitivity_percent, $user->anomaly_min_amount_minor);
+    $result = $detector->fires($txn, $user, AnomalySensitivity::fromStored($user->anomaly_sensitivity_percent), $user->anomaly_min_amount_minor);
 
     if ($expectLarge) {
         expect($result)->not->toBeNull();
@@ -57,7 +58,7 @@ it('maps the default 50% sensitivity to k=3.0 (the large-above baseline)', funct
     $detector = $this->app->make(LargeVsTypicalDetector::class);
     $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
-    $result = $detector->fires($txn, $user, 50, 1000);
+    $result = $detector->fires($txn, $user, AnomalySensitivity::default(), AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR);
     expect($result)->not->toBeNull();
     expect($result['baseline_amount_minor'])->toBe(-999);
 });

@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— keine Finanzierungsketten für private Kontakte',
     'tab_note_bank' => '— ein Zahlungspartner für Bankgebühren erzeugt keine Finanzierungsketten',
+    'tab_note_bank_institution' => '— keine Finanzierungsketten für institutionelle Zahlungspartner',
     'tab_note_government' => '— keine Finanzierungsketten für behördliche Zahlungspartner',
 
     'recent_activity' => 'Letzte Aktivität',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankgebühren nach Kategorie',
+        'activity_heading' => 'Aktivität nach Kategorie',
         'no_fees' => 'Für diesen Zahlungspartner sind noch keine Gebühren erfasst.',
     ],
 

@@ -43,7 +43,7 @@ trait CrossDevicePairingHarness
         /** @var DatabaseManager $db */
         $db = $this->app->make(DatabaseManager::class);
 
-        foreach (['desktop', 'phone', 'relay'] as $name) {
+        foreach (['desktop', 'phone', 'peer', 'relay'] as $name) {
             config(["database.connections.{$name}" => [
                 'driver' => 'sqlite',
                 'database' => ':memory:',
@@ -55,6 +55,10 @@ trait CrossDevicePairingHarness
 
         $this->harnessMigratePairingSchema($db, 'desktop');
         $this->harnessMigratePairingSchema($db, 'phone');
+        // A second device of the SAME kind as the default connection's, for a
+        // pairing whose two ends are both desktops: naming that end 'phone'
+        // would put the one platform that cannot play it into the fixture.
+        $this->harnessMigratePairingSchema($db, 'peer');
         $this->harnessMigrateRelaySchema($db, 'relay');
 
         // Each device carries its own local relay_mailbox outbox, a different thing
@@ -62,6 +66,7 @@ trait CrossDevicePairingHarness
         // the GDK epoch fan-out tests fail on a missing table.
         $this->harnessMigrateRelaySchema($db, 'desktop');
         $this->harnessMigrateRelaySchema($db, 'phone');
+        $this->harnessMigrateRelaySchema($db, 'peer');
 
         $this->harnessRelayConfig = new RelayConfig;
         $this->harnessRelayConfig->setEndpointUrl('https://relay.test');
@@ -89,8 +94,8 @@ trait CrossDevicePairingHarness
         $this->app->instance(RelayClient::class, $relayClient);
     }
 
-    // Runs $fn with the default connection swapped to 'desktop' or 'phone', and
-    // restores the previous default even when $fn throws.
+    // Runs $fn with the default connection swapped to one of the device
+    // connections above, and restores the previous default even when $fn throws.
     protected function asDevice(string $connection, Closure $fn): mixed
     {
         /** @var DatabaseManager $db */
@@ -195,6 +200,8 @@ trait CrossDevicePairingHarness
             $table->text('deferred_peer_confirm')->nullable();
             $table->text('initiator_seeded_at')->nullable();
             $table->string('initiator_name')->nullable();
+            $table->string('initiator_lan_host')->nullable();
+            $table->unsignedInteger('initiator_lan_port')->nullable();
             $table->text('created_at');
         });
 
@@ -214,6 +221,8 @@ trait CrossDevicePairingHarness
             $table->text('paired_at');
             $table->text('confirmed_at')->nullable();
             $table->text('last_seen_at')->nullable();
+            $table->string('last_lan_host')->nullable();
+            $table->unsignedInteger('last_lan_port')->nullable();
             $table->text('created_at');
             $table->text('updated_at');
         });

@@ -8,6 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Internal\ConfidenceScale;
+use Modules\Chains\Internal\Enums\ChainLinkResolver;
+use Modules\Chains\Internal\PaypalFundingSignatureKey;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
@@ -29,62 +32,70 @@ use stdClass;
  * @internal Driven by ResolveChainLinksJob — not called directly
  *           from Public action classes.
  */
-final class PaypalFundingResolver
+final readonly class PaypalFundingResolver
 {
     use CoercesScalars;
 
-    public const AMOUNT_BAND_PERCENT = 2;
+    public const int AMOUNT_BAND_PERCENT = 2;
 
-    public const DATE_WINDOW_DAYS = 3;
+    public const float FUZZY_MIN_CONFIDENCE = 0.6;
 
-    public const FUZZY_MIN_CONFIDENCE = 0.6;
+    public const float FUZZY_MAX_CONFIDENCE = 0.99;
 
-    public const FUZZY_MAX_CONFIDENCE = 0.99;
+    private const string UNIQUE_MATCH_CONFIDENCE = '1.000';
 
-    private const ASN_DIRECT_UNIQUE_CONFIDENCE = '1.000';
+    private const string AMBIGUOUS_MATCH_CONFIDENCE = '0.900';
 
-    private const ASN_DIRECT_AMBIGUOUS_CONFIDENCE = '0.900';
+    // An exact amount on the day already carries 0.5 of the 0.6 threshold, so
+    // without a floor of its own the merchant term decides nothing: "Netflix
+    // International BV" scored 0.625 against "Nationale Nederlanden". The
+    // merchant term has to clear the bar the whole score has to clear.
+    private const float FUZZY_MIN_MERCHANT_SIMILARITY = 0.6;
 
     /** @var list<string> */
-    private const FUNDING_EVENT_TYPES = ['General Withdrawal', 'Bankstorting', 'Transfer to bank'];
+    private const array FUNDING_EVENT_TYPES = ['General Withdrawal', 'Bankstorting', 'Transfer to bank'];
 
     // The NL Activity Download carries the destination IBAN in the Naam
     // column; the remaining keys are EN-locale and ad-hoc memo fallbacks.
     /** @var list<string> */
-    private const IBAN_MEMO_KEYS = ['Naam', 'Memo', 'Note', 'Description', 'Omschrijving'];
+    private const array IBAN_MEMO_KEYS = ['Naam', 'Memo', 'Note', 'Description', 'Omschrijving'];
 
-    private const FUZZY_WEIGHT_MERCHANT = 0.5;
+    private const float FUZZY_WEIGHT_MERCHANT = 0.5;
 
-    private const FUZZY_WEIGHT_AMOUNT = 0.3;
+    private const float FUZZY_WEIGHT_AMOUNT = 0.3;
 
-    private const FUZZY_WEIGHT_DATE = 0.2;
+    private const float FUZZY_WEIGHT_DATE = 0.2;
 
-    private const ASN_DIRECT_CANDIDATE_SCAN_LIMIT = 20;
+    private const int ASN_DIRECT_CANDIDATE_SCAN_LIMIT = 20;
 
-    private const FUZZY_CANDIDATE_SCAN_LIMIT = 20;
+    private const int FUZZY_CANDIDATE_SCAN_LIMIT = 20;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly ChainLinkInsertHelper $inserter,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly PairLookup $pairs,
+        private DatabaseManager $db,
+        private FingerprintComposer $fingerprints,
+        private ChainLinkInsertHelper $inserter,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
+        private PairLookup $pairs,
+        private PaypalFundingSignatureKey $signatureKey,
     ) {}
 
     public function resolveForUser(User $user): void
     {
         $connection = $this->db->connection();
 
-        // Filtering on kind alone leaves rejected pairs in the iteration;
-        // ChainLinkInsertHelper's pre-insert guard is what keeps them rejected.
+        // A rejected link must not take its source row out of the iteration:
+        // the funder the reader turned this one down for may import later.
+        // ChainLinkInsertHelper's pre-insert guard tests every state, so the
+        // rejected PAIR is still never proposed a second time.
         $rows = $connection
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
-                    ->where('chain_links.kind', '=', ChainLinkKind::PaypalFunding->value);
+                    ->where('chain_links.kind', '=', ChainLinkKind::PaypalFunding->value)
+                    ->whereIn('chain_links.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value]);
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', AccountKind::Paypal->value)
@@ -96,7 +107,9 @@ final class PaypalFundingResolver
                 'transactions.counterparty_normalized as counterparty_normalized',
                 'transactions.counterparty_name as counterparty_name',
                 'transactions.amount_minor as amount_minor',
+                'transactions.currency as currency',
                 'transactions.settled_amount_minor as settled_amount_minor',
+                'transactions.settled_currency as settled_currency',
                 'transactions.posted_at as posted_at',
                 'transactions.booked_at as booked_at',
                 'transactions.raw_payload as raw_payload',
@@ -114,21 +127,21 @@ final class PaypalFundingResolver
             /** @var stdClass $row */
             $link = $this->deterministicMatch($row, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user);
+                $this->inserter->insertIfNotExists($link, $user->id);
 
                 continue;
             }
 
             $link = $this->asnDirectMatch($row, $aliasSet, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user);
+                $this->inserter->insertIfNotExists($link, $user->id);
 
                 continue;
             }
 
             $link = $this->fuzzyMatch($row, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user);
+                $this->inserter->insertIfNotExists($link, $user->id);
             }
         }
     }
@@ -150,13 +163,8 @@ final class PaypalFundingResolver
             return null;
         }
 
-        $normalisedMerchant = self::toString($row->counterparty_normalized ?? null);
-        $bookedAt = self::toString($row->booked_at ?? null);
-        $amountMinor = self::toInt($row->amount_minor ?? null);
-        $fromTxId = self::toInt($row->tx_id ?? null);
-
         foreach ($events as $event) {
-            $link = $this->fundingEventLink($event, $normalisedMerchant, $bookedAt, $amountMinor, $fromTxId, $user);
+            $link = $this->fundingEventLink($event, $row, $user);
             if ($link !== null) {
                 return $link;
             }
@@ -185,55 +193,79 @@ final class PaypalFundingResolver
     /**
      * @return ?array<string, mixed>
      */
-    private function fundingEventLink(mixed $event, string $normalisedMerchant, string $bookedAt, int $amountMinor, int $fromTxId, User $user): ?array
+    private function fundingEventLink(mixed $event, stdClass $row, User $user): ?array
     {
         $parsed = $this->fundingEventRow($event);
-        if ($parsed === null) {
+        $iban = $parsed === null ? null : $this->extractIbanFromEventRow($parsed['row']);
+        $accountId = $iban === null ? null : $this->signatureKey->accountIdForIban($iban, $user);
+
+        if ($parsed === null || $accountId === null || $iban === null) {
             return null;
         }
 
-        $iban = $this->extractIbanFromEventRow($parsed['row']);
-        $accountId = $iban === null ? null : $this->accountIdForIban($iban, $user);
-        // A funding leg is asked for by account, amount and date alone: this arm
-        // links rows the transfer matcher never pairs, so an existing pair does
-        // not disqualify one, and the currency it would compare against is the
-        // PayPal event's rather than the row's.
-        $partnerId = $accountId === null ? null : $this->pairs->counterLegOnAccount(
-            new CounterLegMatch(
-                accountId: $accountId,
-                amountMinor: -$amountMinor,
-                types: [TransactionType::TransferIn],
-                currency: null,
-                unpairedOnly: false,
-                excludeTransactionId: null,
-            ),
-            new CounterLegWindow(
-                CarbonImmutable::parse($bookedAt),
-                self::DATE_WINDOW_DAYS,
-                CounterLegOrder::NearestToCentre,
-            ),
-            $user,
-        );
-        if ($iban === null || $partnerId === null) {
+        // This arm links rows the transfer matcher never pairs, so an existing
+        // pair does not disqualify one. The currency does: the amounts compared
+        // are both native `amount_minor`, and without it USD 50.00 matched
+        // EUR 50.00 and was written confirmed at 1.000.
+        $amountMinor = self::toInt($row->amount_minor ?? null);
+        $currency = self::toString($row->currency ?? null);
+        $centre = CarbonImmutable::parse(self::toString($row->booked_at ?? null));
+
+        $partnerId = $this->counterLegFor($accountId, -$amountMinor, $currency, $centre, null, $user);
+        if ($partnerId === null) {
             return null;
         }
+
+        // The PayPal export names the destination ACCOUNT, never the row on it.
+        // A second incoming row of the same size in the window is a second
+        // answer to the same question — a webshop refund took the place of the
+        // real funder and, written confirmed, never reached the review queue.
+        $ambiguous = $this->counterLegFor($accountId, -$amountMinor, $currency, $centre, $partnerId, $user) !== null;
 
         $referenceId = $parsed['row']['Reference Txn ID'] ?? null;
 
         return [
-            'from_transaction_id' => $fromTxId,
+            'from_transaction_id' => self::toInt($row->tx_id ?? null),
             'to_transaction_id' => $partnerId,
             'kind' => ChainLinkKind::PaypalFunding->value,
-            'state' => ChainLinkState::Confirmed->value,
-            'confidence' => '1.000',
-            'resolver' => 'auto',
+            'state' => $ambiguous ? ChainLinkState::Candidate->value : ChainLinkState::Confirmed->value,
+            'confidence' => $ambiguous
+                ? self::AMBIGUOUS_MATCH_CONFIDENCE
+                : self::UNIQUE_MATCH_CONFIDENCE,
+            'resolver' => ChainLinkResolver::Auto->value,
             'evidence' => [
                 'matched_iban' => $iban,
                 'matched_reference_id' => is_string($referenceId) && $referenceId !== '' ? $referenceId : null,
                 'event_type' => $parsed['type'],
-                'signature_hash' => $this->signatureHash($normalisedMerchant, $iban),
+                'ambiguous_counter_leg' => $ambiguous,
+                'signature_hash' => $this->signatureHash(
+                    self::toString($row->counterparty_normalized ?? null),
+                    $iban,
+                ),
             ],
         ];
+    }
+
+    // The one counter-leg search, asked through the service Transfers owns
+    // rather than re-implemented here.
+    private function counterLegFor(int $accountId, int $amountMinor, string $currency, CarbonImmutable $centre, ?int $exclude, User $user): ?int
+    {
+        return $this->pairs->counterLegOnAccount(
+            new CounterLegMatch(
+                accountId: $accountId,
+                amountMinor: $amountMinor,
+                types: [TransactionType::TransferIn],
+                currency: $currency === '' ? null : $currency,
+                unpairedOnly: false,
+                excludeTransactionId: $exclude,
+            ),
+            new CounterLegWindow(
+                $centre,
+                CounterLegWindow::DEFAULT_DAYS,
+                CounterLegOrder::NearestToCentre,
+            ),
+            $user,
+        );
     }
 
     /**
@@ -244,12 +276,13 @@ final class PaypalFundingResolver
     {
         $settledMinor = self::toInt($row->settled_amount_minor ?? null);
         $bookedAtRaw = self::toString($row->booked_at ?? null);
-        if ($settledMinor === 0 || $bookedAtRaw === '' || $aliasSet === []) {
+        $settledCurrency = self::toString($row->settled_currency ?? null);
+        if ($settledMinor === 0 || $bookedAtRaw === '' || $settledCurrency === '' || $aliasSet === []) {
             return null;
         }
 
         $center = CarbonImmutable::parse($bookedAtRaw);
-        $matches = $this->aliasMatchedCandidates($settledMinor, $center, $aliasSet, $user);
+        $matches = $this->aliasMatchedCandidates($settledMinor, $settledCurrency, $center, $aliasSet, $user);
 
         return $matches === []
             ? null
@@ -283,10 +316,10 @@ final class PaypalFundingResolver
      * @param  array<string, bool>  $aliasSet
      * @return list<stdClass>
      */
-    private function aliasMatchedCandidates(int $settledMinor, CarbonImmutable $center, array $aliasSet, User $user): array
+    private function aliasMatchedCandidates(int $settledMinor, string $settledCurrency, CarbonImmutable $center, array $aliasSet, User $user): array
     {
-        $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
-        $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
+        $windowStart = $center->subDays(CounterLegWindow::DEFAULT_DAYS)->startOfDay()->toDateTimeString();
+        $windowEnd = $center->addDays(CounterLegWindow::DEFAULT_DAYS)->endOfDay()->toDateTimeString();
 
         $candidates = $this->db->connection()
             ->table('transactions as tx')
@@ -299,6 +332,10 @@ final class PaypalFundingResolver
             ->where('tx.user_id', $user->id)
             ->where('tx.type', TransactionType::TransferOut->value)
             ->where('tx.settled_amount_minor', $settledMinor)
+            // The predicate the deterministic arm already carries, for the same
+            // reason: these are bare minor units, so USD 13.99 answered
+            // EUR 13.99 and was written confirmed at 1.000.
+            ->where('tx.settled_currency', $settledCurrency)
             ->whereBetween('tx.booked_at', [$windowStart, $windowEnd])
             ->whereNull('existing.id')
             // Two legs can sit the same distance either side of the expense —
@@ -309,6 +346,7 @@ final class PaypalFundingResolver
             ->limit(self::ASN_DIRECT_CANDIDATE_SCAN_LIMIT)
             ->get([
                 'tx.id as candidate_id',
+                'tx.account_id as candidate_account_id',
                 'tx.booked_at as candidate_booked_at',
                 'tx.counterparty_iban as candidate_iban',
             ]);
@@ -346,9 +384,9 @@ final class PaypalFundingResolver
             return null;
         }
 
-        $partnerIban = $this->codec->decryptValue('transactions', 'counterparty_iban', self::toString($closest->candidate_iban ?? null), $user->id, ($this->session)())['value'];
         $ambiguous = count($matches) > 1;
         $bookedCarbon = CarbonImmutable::parse(self::toString($closest->candidate_booked_at ?? null));
+        $fundingKey = $this->signatureKey->forAccount(self::toInt($closest->candidate_account_id ?? null), $user);
 
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
@@ -356,15 +394,16 @@ final class PaypalFundingResolver
             'kind' => ChainLinkKind::PaypalFunding->value,
             'state' => $ambiguous ? ChainLinkState::Candidate->value : ChainLinkState::Confirmed->value,
             'confidence' => $ambiguous
-                ? self::ASN_DIRECT_AMBIGUOUS_CONFIDENCE
-                : self::ASN_DIRECT_UNIQUE_CONFIDENCE,
-            'resolver' => 'auto',
-            // The IBAN this arm matched on is a COUNTERPARTY's, decrypted out of
-            // `transactions.counterparty_iban`, and `evidence` is a plaintext
-            // JSON column. It stays out: the sweep that re-keys the signature
-            // recovers it from the alias set this arm drew it from.
+                ? self::AMBIGUOUS_MATCH_CONFIDENCE
+                : self::UNIQUE_MATCH_CONFIDENCE,
+            'resolver' => ChainLinkResolver::Auto->value,
+            // The IBAN this arm MATCHED on is a counterparty's and `evidence` is
+            // a plaintext column, so it stays out. Named and hashed here is the
+            // funding ACCOUNT, as in the other two arms: hashing the counterparty
+            // gave one merchant on one account two signatures that never met.
             'evidence' => [
                 'matched_via' => 'asn_alias_amount_date',
+                'matched_iban' => $fundingKey,
                 'matched_amount_minor' => $settledMinor,
                 'date_delta_days' => abs((int) $bookedCarbon->diffInDays($center, false)),
                 // Capped at 2 by the scan loop: this is the IBAN-matched count,
@@ -372,7 +411,7 @@ final class PaypalFundingResolver
                 'ambiguous_candidates' => $ambiguous ? count($matches) : null,
                 'signature_hash' => $this->signatureHash(
                     self::toString($row->counterparty_normalized ?? null),
-                    $partnerIban,
+                    $fundingKey,
                 ),
             ],
         ];
@@ -385,7 +424,8 @@ final class PaypalFundingResolver
     {
         $settledMinor = abs(self::toInt($row->settled_amount_minor ?? null));
         $postedAtRaw = self::toString($row->posted_at ?? null);
-        if ($settledMinor === 0 || $postedAtRaw === '') {
+        $settledCurrency = self::toString($row->settled_currency ?? null);
+        if ($settledMinor === 0 || $postedAtRaw === '' || $settledCurrency === '') {
             return null;
         }
 
@@ -408,6 +448,7 @@ final class PaypalFundingResolver
             $user,
             $readableMerchant,
             $settledMinor,
+            $settledCurrency,
             CarbonImmutable::parse($postedAtRaw),
         );
 
@@ -417,37 +458,53 @@ final class PaypalFundingResolver
     /**
      * @return array{transactionId: int, accountId: int, score: float, merchantSimilarity: float, amountDeltaMinor: int, dateDeltaDays: int}|null
      */
-    private function bestFundingCandidate(stdClass $row, User $user, string $readableMerchant, int $settledMinor, CarbonImmutable $postedAt): ?array
+    private function bestFundingCandidate(stdClass $row, User $user, string $readableMerchant, int $settledMinor, string $settledCurrency, CarbonImmutable $postedAt): ?array
     {
         $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
 
-        // SQLite stores `posted_at` as `YYYY-MM-DD` but the window bounds are
-        // datetime strings; lexicographic order matches calendar order for both.
-        $windowStart = $postedAt->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
-        $windowEnd = $postedAt->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
+        // `posted_at` is a DATE column, so both bounds are dates too: as
+        // strings '2026-04-14' < '2026-04-14 00:00:00', which cut the window
+        // to [-2, +3] days while the constant says three either way.
+        // IcsSettlementResolver::periodDay() carries the same rule.
+        $windowStart = $postedAt->subDays(CounterLegWindow::DEFAULT_DAYS)->toDateString();
+        $windowEnd = $postedAt->addDays(CounterLegWindow::DEFAULT_DAYS)->toDateString();
 
         $candidates = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('id', '<>', self::toInt($row->tx_id ?? null))
-            ->where('type', TransactionType::TransferIn->value)
-            ->whereBetween('settled_amount_minor', [
+            // The exclusion the ASN-direct arm carries: without it two PayPal
+            // expenses claimed the same funding leg, putting one transaction in
+            // two chains.
+            ->leftJoin('chain_links as existing', function ($join): void {
+                /** @var JoinClause $join */
+                $join->on('existing.to_transaction_id', '=', 'transactions.id')
+                    ->where('existing.kind', '=', ChainLinkKind::PaypalFunding->value)
+                    ->whereIn('existing.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value]);
+            })
+            ->whereNull('existing.id')
+            ->where('transactions.user_id', $user->id)
+            ->where('transactions.id', '<>', self::toInt($row->tx_id ?? null))
+            ->where('transactions.type', TransactionType::TransferIn->value)
+            ->whereBetween('transactions.settled_amount_minor', [
                 $settledMinor - $amountBand,
                 $settledMinor + $amountBand,
             ])
-            ->whereBetween('posted_at', [$windowStart, $windowEnd])
+            // The amount band is bare minor units, so without this the band is
+            // arithmetic on unlike quantities and the 2% window straddles two
+            // currencies at once.
+            ->where('transactions.settled_currency', $settledCurrency)
+            ->whereBetween('transactions.posted_at', [$windowStart, $windowEnd])
             // The same rule the ASN arm carries, and for a stronger reason: an
             // unordered cut decides WHICH rows get scored at all, so a better
             // match beyond it was never compared. Nearest first also means the
             // rows this keeps are the ones the date term would have favoured.
-            ->orderByRaw('ABS(julianday(posted_at) - julianday(?)), id', [$postedAt->toDateTimeString()])
+            ->orderByRaw('ABS(julianday(transactions.posted_at) - julianday(?)), transactions.id', [$postedAt->toDateTimeString()])
             ->limit(self::FUZZY_CANDIDATE_SCAN_LIMIT)
             ->get([
-                'id',
-                'counterparty_normalized',
-                'counterparty_name',
-                'posted_at',
-                'settled_amount_minor',
-                'account_id',
+                'transactions.id',
+                'transactions.counterparty_normalized',
+                'transactions.counterparty_name',
+                'transactions.posted_at',
+                'transactions.settled_amount_minor',
+                'transactions.account_id',
             ]);
 
         $best = null;
@@ -461,6 +518,9 @@ final class PaypalFundingResolver
             }
 
             $merchantSim = $this->levenshteinSimilarity($readableMerchant, $candidateMerchant);
+            if ($merchantSim < self::FUZZY_MIN_MERCHANT_SIMILARITY) {
+                continue;
+            }
 
             $candidateMinor = abs(self::toInt($candidate->settled_amount_minor ?? null));
             $amountDelta = abs($settledMinor - $candidateMinor);
@@ -468,7 +528,7 @@ final class PaypalFundingResolver
 
             $candidatePosted = CarbonImmutable::parse(self::toString($candidate->posted_at ?? null));
             $dateDelta = abs((int) $candidatePosted->diffInDays($postedAt, false));
-            $dateSim = max(0.0, 1.0 - ($dateDelta / self::DATE_WINDOW_DAYS));
+            $dateSim = max(0.0, 1.0 - ($dateDelta / CounterLegWindow::DEFAULT_DAYS));
 
             $score = (self::FUZZY_WEIGHT_MERCHANT * $merchantSim)
                 + (self::FUZZY_WEIGHT_AMOUNT * $amountSim)
@@ -496,20 +556,21 @@ final class PaypalFundingResolver
      */
     private function fuzzyLink(stdClass $row, array $best, string $storedMerchantKey, User $user): array
     {
-        $fundingIban = $this->ibanForAccountId($best['accountId'], $user) ?? '';
+        $fundingKey = $this->signatureKey->forAccount($best['accountId'], $user);
 
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
             'to_transaction_id' => $best['transactionId'],
             'kind' => ChainLinkKind::PaypalFunding->value,
             'state' => ChainLinkState::Candidate->value,
-            'confidence' => $this->formatConfidence(min(self::FUZZY_MAX_CONFIDENCE, $best['score'])),
-            'resolver' => 'auto',
+            'confidence' => ConfidenceScale::format(min(self::FUZZY_MAX_CONFIDENCE, $best['score'])),
+            'resolver' => ChainLinkResolver::Auto->value,
             'evidence' => [
+                'matched_iban' => $fundingKey,
                 'merchant_similarity' => round($best['merchantSimilarity'], 3),
                 'amount_delta_minor' => $best['amountDeltaMinor'],
                 'date_delta_days' => $best['dateDeltaDays'],
-                'signature_hash' => $this->signatureHash($storedMerchantKey, $fundingIban),
+                'signature_hash' => $this->signatureHash($storedMerchantKey, $fundingKey),
             ],
         ];
     }
@@ -547,36 +608,6 @@ final class PaypalFundingResolver
         }
 
         return null;
-    }
-
-    private function accountIdForIban(string $iban, User $user): ?int
-    {
-        $row = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('iban', $iban)
-            ->first(['id']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        return self::toInt($row->id);
-    }
-
-    private function ibanForAccountId(int $accountId, User $user): ?string
-    {
-        $row = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('id', $accountId)
-            ->first(['iban']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        return self::toString($row->iban);
     }
 
     // The bank's own spelling, normalised, so the similarity compares names
@@ -619,10 +650,5 @@ final class PaypalFundingResolver
     private function signatureHash(string $normalisedMerchant, string $fundingIban): string
     {
         return hash('sha256', $normalisedMerchant.'|'.$fundingIban);
-    }
-
-    private function formatConfidence(float $value): string
-    {
-        return number_format($value, 3, '.', '');
     }
 }

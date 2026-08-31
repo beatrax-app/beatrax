@@ -12,6 +12,9 @@ final readonly class CounterpartyProfileDto
      * @param  string  $currency  the reader's reporting currency, which every figure
      *                            on this profile and its tabs is denominated in
      * @param  list<string>  $unconvertedCurrencies  codes left out for want of a rate
+     * @param  bool  $isBankFee  narrows type='bank', which the chain writes both for a
+     *                           charge the bank levies and for an institution the reader
+     *                           transacts through
      */
     public function __construct(
         public int $id,
@@ -26,6 +29,7 @@ final readonly class CounterpartyProfileDto
         public ?string $lastSeenDate,
         public string $currency = '',
         public array $unconvertedCurrencies = [],
+        public bool $isBankFee = false,
     ) {}
 
     public function isPartial(): bool

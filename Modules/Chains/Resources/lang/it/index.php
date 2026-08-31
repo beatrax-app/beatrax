@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importa qualche estratto conto (banca, PayPal, carta) e il risolutore farà emergere qui automaticamente le catene tra conti.',
 
     'no_counterparty' => '(nessuna controparte)',
-    'open_from_row' => 'Apri la riga di partenza',
-    'open_to_row' => 'Apri la riga di arrivo',
     'leg_count' => ':count pagamento|:count pagamenti',
+    'legs_more' => '+ altri :count',
     'state_aria' => 'Stato: :state',
+
+    'state' => [
+        'candidate' => 'Candidato',
+        'confirmed' => 'Confermata',
+        'rejected' => 'Rifiutata',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Finanziamento PayPal',

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Показано :shown найновіших із :count.',
+
     'drawer_nav' => 'Навігація',
 
     'search_placeholder' => 'Пошук…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Хочеш бачити свої дані ще й на телефоні?',
         'body' => 'Встанови Beatrax на телефон, щоб швидко відкривати свої фінанси.',
         'dismiss_aria' => 'Відхилити підказку про встановлення',
+        'dismiss_caption' => 'Відхилити',
         'install_app' => 'Встановити застосунок',
 
         'desktop_html' => 'Відкрий Beatrax у браузері на телефоні й натисни «Додати на початковий екран» — або натисни піктограму <strong style="color: var(--color-text);">⚡</strong> у меню поширення Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Вибрано файлів: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Вибери дату',
         'prev_month' => 'Попередній місяць',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Хвилина',
         'empty' => 'час не вибрано',
     ],
+
+    'toast_undo' => 'Скасувати',
 
     'veil_locked' => 'Застосунок заблоковано',
 

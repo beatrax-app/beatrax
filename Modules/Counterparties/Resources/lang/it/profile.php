@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— nessuna catena di finanziamento per i contatti personali',
     'tab_note_bank' => '— una controparte di commissioni bancarie non genera catene di finanziamento',
+    'tab_note_bank_institution' => '— nessuna catena di finanziamento per le controparti istituzionali',
     'tab_note_government' => '— nessuna catena di finanziamento per le controparti pubbliche',
 
     'recent_activity' => 'Attività recente',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Commissioni bancarie per categoria',
+        'activity_heading' => 'Attività per categoria',
         'no_fees' => 'Ancora nessuna commissione registrata su questa controparte.',
     ],
 

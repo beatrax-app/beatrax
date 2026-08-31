@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— no hay cadenas de financiación para contactos personales',
     'tab_note_bank' => '— una contraparte de comisiones bancarias no genera cadenas de financiación',
+    'tab_note_bank_institution' => '— no hay cadenas de financiación para contrapartes institucionales',
     'tab_note_government' => '— no hay cadenas de financiación para contrapartes de la Administración',
 
     'recent_activity' => 'Actividad reciente',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Comisiones bancarias por categoría',
+        'activity_heading' => 'Actividad por categoría',
         'no_fees' => 'Aún no hay comisiones registradas en esta contraparte.',
     ],
 

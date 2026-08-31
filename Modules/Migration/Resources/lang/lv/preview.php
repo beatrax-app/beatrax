@@ -16,7 +16,9 @@ return [
         'budget' => 'Budžeta mēneši',
     ],
 
-    'all_clean' => 'Viss sasaistīts tīri — pirms apstiprināšanas nekas neprasa jūsu uzmanību.',
+    'all_clean' => 'Viss sasaistīts tīri — šeit nav nekā, kas jums būtu jāizlemj.',
+
+    'nothing_staged' => 'Šajā eksportā nebija nekā, ko importēt — šeit nav ko apstiprināt.',
 
     'groups' => [
         'conflict' => 'Nepieciešams jūsu lēmums',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Tādējādi jūsu kategorijās, budžetos un virsgrāmatā tiks izveidots vai atjaunināts iepriekš parādītais ierakstu skaits.',
     'discard_button' => 'Atmest importu',
+    'discard_confirm' => 'Vai atmest šo importu? Viss, kas nolasīts no jūsu eksporta faila, tiek šeit izdzēsts, un atgūt to var, tikai augšupielādējot un apstrādājot visu failu no jauna. Virsgrāmatā vēl nekas nav nonācis.',
     'confirm_button' => 'Apstiprināt importu',
 ];

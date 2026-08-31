@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Feloldás',
 
-    'digits_entered' => 'számjegy megadva',
+    'digits_entered' => ':count számjegy megadva|:count számjegy megadva',
     'pin_pad' => 'PIN-billentyűzet',
     'digit' => 'Számjegy :digit',
     'backspace' => 'Visszatörlés',

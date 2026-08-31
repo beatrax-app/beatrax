@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class EditRecurringSeriesVarianceTolerance
+final readonly class EditRecurringSeriesVarianceTolerance
 {
     /** @var list<int> */
-    public const ALLOWED_TOLERANCE_PERCENTS = [10, 25, 50];
+    public const array ALLOWED_TOLERANCE_PERCENTS = [10, 25, 50];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $seriesId, User $user, int $newTolerancePercent): void
@@ -50,5 +53,13 @@ final class EditRecurringSeriesVarianceTolerance
                 'variance_tolerance_percent' => $newTolerancePercent,
                 'updated_at' => $now,
             ]);
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'recurring_series',
+            pk: $series->id,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['variance_tolerance_percent' => $newTolerancePercent],
+        ));
     }
 }

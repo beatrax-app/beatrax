@@ -40,7 +40,7 @@
     </head>
     <body
         class="beatrax-shell antialiased text-slate-900 dark:text-slate-100"
-        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        style="font-family: system-ui, -apple-system, sans-serif;"
     >
         @yield('content')
         @livewireScripts

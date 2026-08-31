@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'As regras ficam neste dispositivo. Não são partilhadas com os teus outros dispositivos.',
 
     'reapply' => 'Reaplicar as regras ao histórico',
+    'reapply_confirm' => 'Reaplicar todas as regras a todo o teu histórico? Cada categoria, contraparte, nota e etiqueta fiscal que uma regra tenha colocado é reescrita. O que definiste à mão mantém-se, tal como tudo o que esteja num extrato reconciliado. Nada repõe os valores antigos.',
     'reapplying' => 'A reaplicar…',
     'new_rule' => 'Nova regra',
 
-    'reapply_progress_lead' => 'A reaplicar as regras…',
-    'reapply_progress_of' => 'de',
-    'reapply_progress_trail' => 'transações verificadas',
+    'reapply_progress' => 'A reaplicar as regras… :checked de :count transação verificada|A reaplicar as regras… :checked de :count transações verificadas',
 
     'empty_heading' => 'Ainda não há regras',
     'empty_body' => 'As regras encontram transações através de várias condições e aplicam automaticamente alterações de categoria, contraparte, nota e etiqueta fiscal — na importação e sempre que as reaplicares ao teu histórico existente.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Criada',
     'col_row_actions' => 'Ações',
     'inactive_badge' => 'Inativa',
+    'combinator_all' => 'TODAS',
+    'combinator_any' => 'QUALQUER',
     'inactive_title' => 'Esta regra não é aplicada. Uma regra é desativada quando a categoria ou a contraparte a que aponta é eliminada.',
 
     'more_conditions' => '+:count mais',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tapahtuma',
     'heading' => 'Tapahtuma',
+    'booked_on' => 'Kirjattu :date',
 
     'counterparty' => 'Vastapuoli',
     'description' => 'Kuvaus',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Muistiinpano (valinnainen)',
         'tax_deductible' => 'Verovähennyskelpoinen',
         'remove_leg_aria' => 'Poista tämä kategoria',
+        'remove_leg_caption' => 'Poista',
         'add_category' => '+ Lisää kategoria',
         'soft_cap' => ':count / ~20 kategoriaa — harkitse pienten summien yhdistämistä.',
         'remaining_zero' => 'Jäljellä :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Poista tapahtuma',
         'help' => 'Poistaa tämän tapahtuman pysyvästi. Toimintoa ei voi peruuttaa.',
         'button' => 'Poista',
-        'confirm_prompt' => 'Oletko varma?',
+        'confirm_prompt' => 'Poistetaanko tämä tapahtuma? Muistiinpano, jako ja verotunnisteet katoavat sen mukana.',
         'confirm' => 'Kyllä, poista',
         'cancel' => 'Peruuta',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Näytä ketju',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Täsmäytetty ja lukittu',
+        'help' => 'Valmis täsmäytys lukitsi tämän tapahtuman. Sen luokka, muistiinpano, jako ja verotunnisteet pysyvät ennallaan, kunnes avaat lukituksen.',
+        'button' => 'Avaa muokattavaksi',
+        'confirm_question' => 'Avataanko tämä tapahtuma muokattavaksi? Siinä ei muutu mikään, ja seuraava valmis täsmäytys lukitsee sen uudelleen.',
+        'cancel' => 'Jätä lukituksi',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Tämä tapahtuma on täsmäytetty. Pura täsmäytys, niin voit tehdä muutoksia.',
         'reclassified_pair_removed' => 'Luokiteltu uudelleen tyypiksi :type — pari purettu',
         'reclassified' => 'Luokiteltu uudelleen tyypiksi :type',
         'note_saved' => 'Muistiinpano tallennettu',
         'unreconciled' => 'Täsmäytys purettu — voit muokata tätä tapahtumaa taas.',
+        'note_too_long' => 'Muistiinpano on enintään :max merkki.|Muistiinpano on enintään :max merkkiä.',
         'counterparty_updated' => 'Vastapuoli päivitetty',
         'goal_attributed' => 'Lasketaan tähän tavoitteeseen',
         'goal_attribution_removed' => 'Ei enää lasketa tähän tavoitteeseen',

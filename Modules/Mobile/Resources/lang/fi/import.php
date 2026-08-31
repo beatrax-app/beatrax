@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Salasanat eivät täsmää.',
         'password_length' => 'Käytä vähintään 12 merkkiä.',
         'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
+        'pin_digits' => 'PIN-koodissa on oltava 6–10 numeroa — vain numeroita.',
         'pins_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
         'session_expired' => 'Istuntosi vanheni ennen käyttöönoton valmistumista. Anna PIN-koodisi ja salasanasi uudelleen.',
         'retry_failed' => 'Tämän laitteen käyttöönottoa ei vieläkään saatu valmiiksi. Yritä uudelleen.',

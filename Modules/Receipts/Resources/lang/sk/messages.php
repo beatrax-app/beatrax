@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Presuň sem e-mailovú správu (.eml) alebo archív schránky (.mbox). Párovanie rozpozná účtenky z PayPal a zobrazí ich ako kanonické transakcie; nespárovaní odosielatelia zostanú na triedenie v audit logu.',
-    ],
-
     'conflict' => [
 
         'field' => [

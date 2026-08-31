@@ -7,7 +7,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 function isrtUser(string $username): User
@@ -42,7 +42,7 @@ function isrtCount(int $userId): int
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY)
+        ->where('trigger_type', NotificationTrigger::IcsStatementReady)
         ->count();
 }
 
@@ -63,7 +63,7 @@ it('deep-links to the guided ICS import anchor and carries no transaction data i
     $db = app(DatabaseManager::class);
     $row = $db->connection()->table('notifications')
         ->where('user_id', $user->id)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY)
+        ->where('trigger_type', NotificationTrigger::IcsStatementReady)
         ->first();
 
     expect($row)->not->toBeNull();

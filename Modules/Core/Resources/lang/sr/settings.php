@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Prikaz valute',
+        'heading' => 'Prikaz iznosa',
         'label' => 'Podrazumevani prikaz na listi transakcija',
-        'eur_only' => 'Samo :code',
-        'original' => 'Originalna valuta',
+        'eur_only' => 'Poravnati iznos',
+        'original' => 'Izvorni iznos',
         'help' => 'Prikaz i dalje možeš da promeniš za svaku stranicu sa liste transakcija.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Koriste se ugrađeni kursevi. Nijedan podatak ne napušta ovaj uređaj.',
         'fetch_aria' => 'Preuzmi aktuelne kurseve sa interneta',
         'refreshing' => 'Osvežavanje…',
-        'next_refresh' => 'Sledeće automatsko osvežavanje: svaki dan u 09:00',
+        'next_refresh' => 'Automatsko osvežavanje: jednom dnevno',
         'refresh_gave_up' => 'Kurseve nije bilo moguće osvežiti. I dalje se koriste kursevi na ovom uređaju.',
         'refresh_now' => 'Osveži sada',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Period',
         'label' => 'Period počinje na dan',
         'help' => 'Broj od 1 do 28. Većina korisnika ostavlja 1 (kalendarski mesec). Izaberi 25 ako ti plata stiže 25. u mesecu i ako tada za tebe počinje „tvoj mesec”.',
+
+        'move_confirm' => 'Ako period počinje :day. dana, svi iznosi u kovertama se premeštaju i sabiraju tamo gde se dva meseca stapaju u jedan. Vraćanje dana nazad ih više ne razdvaja.',
+        'move_cancel' => 'Otkaži',
+        'move_apply' => 'Primeni',
     ],
 
     'recurring' => [
         'heading' => 'Otkrivanje ponavljajućih plaćanja',
         'window_label' => 'Prozor otkrivanja (meseci)',
         'window_help' => 'Koliko meseci istorije pretražiti pri grupisanju transakcija u ponavljajuće obrasce.',
-        'income_label' => 'Najmanji prihod (centi)',
-        'income_help' => 'Prihodi ispod ovog praga ne grupišu se automatski. Čuva se u centima — 200000 znači :example. Postavi 0 da isključiš prag.',
+        'income_label' => 'Najmanji prihod (najmanje jedinice)',
+        'income_help' => 'Prihodi ispod ovog praga ne grupišu se automatski. Čuva se u najmanjim jedinicama — :minor znači :example. Postavi 0 da isključiš prag.',
     ],
 
     'drift' => [
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Fascikla za odlaganje je aktivna. Beatrax svakih 5 minuta pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za novim datotekama.',
         'inactive_html' => 'Kad je uključeno, Beatrax svakih 5 minuta pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za datotekama <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> i uvozi ih kroz isti matcher kao i čarobnjak. Obrađene datoteke premeštaju se u <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pa se nikad ne uvoze dvaput.',
+        'active_phone_html' => 'Fascikla za odlaganje je aktivna. Beatrax u pozadini pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za novim datotekama. Kad će se pozadinsko pretraživanje pokrenuti, odlučuje tvoj telefon — može proći nekoliko minuta ili nekoliko sati.',
+        'inactive_phone_html' => 'Kad je uključeno, Beatrax u pozadini pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za datotekama <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> i uvozi ih kroz isti matcher kao i čarobnjak. Kad će se pozadinsko pretraživanje pokrenuti, odlučuje tvoj telefon — može proći nekoliko minuta ili nekoliko sati. Obrađene datoteke premeštaju se u <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pa se nikad ne uvoze dvaput.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Porez',
-    'shared_merchant_heading' => 'Zajednička lista trgovaca',
     'data_backup_heading' => 'Podaci i rezervna kopija',
-    'install_heading' => 'Instalacija',
 
     'about_updates' => [
         'heading' => 'O ažuriranjima',
         'body' => 'Nakon instalacije Beatrax se ažurira automatski. Kad instaliraš prvu verziju, buduće verzije stižu putem trake u aplikaciji — ne moraš da se vraćaš na GitHub. Ako neko buduće ažuriranje ne uspe da se primeni, uvek možeš ručno da preuzmeš najnoviji instalacioni program sa stranice izdanja.',
+        'body_phone' => 'Ovde se Beatrax ne ažurira sam. Nove verzije mobilne aplikacije stižu preko App Storea ili Google Playa, kao i ostale tvoje aplikacije. Na stranici izdanja piše šta je u svakoj promenjeno.',
         'open_releases' => 'Otvori stranicu izdanja →',
     ],
 
@@ -192,6 +197,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Budžetski mesec nije mogao da se pomeri, pa je ostao gde je bio.',
         'currency_required' => 'Izaberi valutu.',
         'window_months' => 'Izaberi između 2 i 60 meseci.',
         'threshold' => 'Izaberi prag: 1%, 2%, 5%, 10%, 25% ili 50%.',

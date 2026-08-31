@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Suurimmat menot',
     'no_expenses' => 'Ei vielä luokiteltuja menoja.',
+    'top_spending_refunded' => 'Ei sijoituksissa — :amount tuli takaisin',
 
     'recent_transactions' => 'Viimeisimmät tapahtumat',
     'view_all' => 'Näytä kaikki',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategoria',
     'th_amount' => 'Summa',
     'uncategorized' => 'Luokittelematon',
+
+    'jump_to_records' => [
+        'body' => 'Ei mitään tältä jaksolta. Uusimmat tapahtumasi ovat yhä tallessa.',
+        'action' => 'Näytä jakso :period',
+    ],
 
     'reauth' => [
         'title' => 'Postilaatikko täytyy yhdistää uudelleen.',

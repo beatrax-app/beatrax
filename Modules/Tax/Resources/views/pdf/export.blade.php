@@ -165,6 +165,7 @@
             $catName = is_string($category['name'] ?? null) ? $category['name'] : null;
             $isNoCategory = $catName === null;
             $subtotalMinor = is_numeric($category['subtotalMinor'] ?? 0) ? (int) $category['subtotalMinor'] : 0;
+            $incomeSubtotalMinor = is_numeric($category['incomeSubtotalMinor'] ?? 0) ? (int) $category['incomeSubtotalMinor'] : 0;
             $rows = is_array($category['rows'] ?? null) ? $category['rows'] : [];
         @endphp
 
@@ -186,7 +187,7 @@
                     @foreach($rows as $row)
                         @php
                             /** @var array<string, mixed> $row */
-                            $bookedAt = is_string($row['bookedAt'] ?? null) ? substr($row['bookedAt'], 0, 10) : '';
+                            $postedAt = is_string($row['postedAt'] ?? null) ? substr($row['postedAt'], 0, 10) : '';
                             $counterparty = is_string($row['counterpartyName'] ?? null) ? $row['counterpartyName'] : '';
                             $description = is_string($row['description'] ?? null) ? $row['description'] : '';
                             $note = is_string($row['note'] ?? null) ? $row['note'] : '';
@@ -195,17 +196,25 @@
                             $amountStr = Money::ofMinor(abs($settledMinor), $settledCurrency)->format();
                         @endphp
                         <tr>
-                            <td>{{ $bookedAt }}</td>
+                            <td>{{ $postedAt }}</td>
                             <td>{{ $counterparty }}</td>
                             <td>{{ $description }}</td>
                             <td>{{ $note }}</td>
                             <td class="amount">{{ $amountStr }}</td>
                         </tr>
                     @endforeach
+                    {{-- Deductions only, so the subtotals add up to the
+                         "Total deductions" figure in the summary block. --}}
                     <tr class="subtotal-row">
                         <td colspan="4">{{ Lang::get('tax::pdf.subtotal') }}</td>
                         <td class="amount">{{ Money::ofMinor(abs($subtotalMinor), $data->currency)->format() }}</td>
                     </tr>
+                    @if ($incomeSubtotalMinor > 0)
+                        <tr class="subtotal-row">
+                            <td colspan="4">{{ Lang::get('tax::pdf.subtotal_income') }}</td>
+                            <td class="amount">{{ Money::ofMinor($incomeSubtotalMinor, $data->currency)->format() }}</td>
+                        </tr>
+                    @endif
                 </tbody>
             </table>
         </div>

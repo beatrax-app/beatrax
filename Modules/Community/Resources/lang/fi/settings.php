@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Tietoa jaetusta listasta',
     'about_body' => 'Mukana toimitettava YAML-tiedosto, joka yhdistää kryptiset tiliotekoodit selkeisiin kauppiasnimiin. Kun asetus on päällä, Beatrax lukee listaa tuonnin yhteydessä; ehdotuksen lähettäminen avaa GitHubin selaimeesi.',
 
-    'mappings' => 'Vastaavuudet',
-    'contributors' => 'Osallistujat',
+    'mappings' => ':count vastaavuus|:count vastaavuutta',
+    'contributors' => ':count osallistuja|:count osallistujaa',
 
     'use_shared_list' => [
         'title' => 'Käytä jaettua kauppiaslistaa',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Päivitä jaettu lista sovelluspäivitysten yhteydessä',
         'help' => 'Päivitä mukana toimitettava lista aina kun Beatrax päivittää itsensä.',
+        'help_phone' => 'Päivitä mukana toimitettava lista aina kun App Storesta tai Google Playstä asennetaan uusi Beatraxin versio.',
         'note' => 'Aktivoituu tulevassa sovelluspäivityksessä — katso nykyinen versio kohdasta Asetukset → Tietoja.',
     ],
 ];

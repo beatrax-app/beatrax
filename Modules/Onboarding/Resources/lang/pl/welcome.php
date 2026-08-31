@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Twój bank',
     'bank_desc' => 'Upuść plik wyciągu. Odczytujemy CSV, MT940 i CAMT.053 z większości banków europejskich.',
-    'card_title' => 'Twoja karta kredytowa (ICS)',
-    'card_desc' => 'Upuść miesięczny wyciąg PDF z Mijn ICS.',
+    'card_title' => 'Twoja karta kredytowa',
+    'card_desc' => 'Upuść miesięczne wyciągi karty w PDF. Na razie potrafimy odczytać wydawcę ICS.',
     'email_title' => 'Paragony z poczty',
     'email_desc' => 'Połącz Gmaila albo Outlooka, aby automatycznie zbierać potwierdzenia zakupów.',
+    'email_desc_phone' => 'Potwierdzenia zakupów zbiera aplikacja na komputer; ten telefon pokazuje przez synchronizację, co ona znajdzie.',
 
     'continue' => 'Dalej →',
 ];

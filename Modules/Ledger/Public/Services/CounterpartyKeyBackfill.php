@@ -24,7 +24,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
  */
-final class CounterpartyKeyBackfill
+final readonly class CounterpartyKeyBackfill
 {
     use CoercesScalars;
 
@@ -32,18 +32,18 @@ final class CounterpartyKeyBackfill
 
     // ClusterKeyComposer::MAX_PART_LENGTH, which caps a composed part and so
     // truncates a 64-character digest to 240 of its 256 bits.
-    private const CLUSTER_PART_MAX_LENGTH = 60;
+    private const int CLUSTER_PART_MAX_LENGTH = 60;
 
     /** @var array<string, string> table => the plaintext IBAN column on it */
-    private const IBAN_SOURCES = [
+    private const array IBAN_SOURCES = [
         'accounts' => 'iban',
         'known_counterparty_ibans' => 'real_iban',
     ];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly BlindIndexCodec $blindIndex,
-        private readonly FingerprintComposer $fingerprints,
+        private DatabaseManager $db,
+        private BlindIndexCodec $blindIndex,
+        private FingerprintComposer $fingerprints,
     ) {}
 
     // Caller supplies the key rather than the session: this runs inside the
@@ -357,13 +357,20 @@ final class CounterpartyKeyBackfill
         ]);
     }
 
+    // Byte-for-byte what ClusterKeyComposer produces. The sweep keys the
+    // counterparty first, so its input is hex today and the ASCII form could
+    // not diverge -- but a non-ASCII name reaching either copy has to hash the
+    // same, or a series re-keys itself away from its own history.
     private static function clusterPart(string $value): string
     {
-        $hyphenated = (string) preg_replace('/[^a-z0-9]+/', '-', strtolower($value));
+        $lower = mb_strtolower($value, 'UTF-8');
+        $hyphenated = (string) preg_replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
         $trimmed = trim($hyphenated, '-');
 
-        return strlen($trimmed) > self::CLUSTER_PART_MAX_LENGTH
-            ? rtrim(substr($trimmed, 0, self::CLUSTER_PART_MAX_LENGTH), '-')
-            : $trimmed;
+        if (mb_strlen($trimmed, 'UTF-8') > self::CLUSTER_PART_MAX_LENGTH) {
+            return rtrim(mb_substr($trimmed, 0, self::CLUSTER_PART_MAX_LENGTH, 'UTF-8'), '-');
+        }
+
+        return $trimmed;
     }
 }

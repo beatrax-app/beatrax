@@ -11,6 +11,7 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
+use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -37,7 +38,9 @@ function seedTxAndPendingConflict(User $user, Account $account, string $field, m
         'account_id' => $account->id,
         'type' => 'expense',
         'posted_at' => '2026-04-01',
-        'booked_at' => '2026-04-01 12:00:00',
+        // The unique index spans booked_at, so two fixtures in one test have
+        // to differ there or the second insert never lands.
+        'booked_at' => '2026-04-01 12:00:'.str_pad((string) $idx, 2, '0', STR_PAD_LEFT),
         'value_date' => '2026-04-01',
         'amount_minor' => -2500,
         'currency' => 'EUR',
@@ -68,13 +71,21 @@ function seedTxAndPendingConflict(User $user, Account $account, string $field, m
     return ['tx' => $tx, 'conflict_id' => $conflictId];
 }
 
-it('throws InvalidArgumentException for any choice not in the whitelist', function (): void {
-    /** @var ApplyReceiptConflictResolution $resolve */
-    $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
+it('takes the choice as a ReceiptConflictChoice, so no unrepresentable value can reach it', function (): void {
+    $choice = (new ReflectionMethod(ApplyReceiptConflictResolution::class, '__invoke'))->getParameters()[1];
 
-    expect(fn () => $resolve($this->fixtureUser, 'random_choice'))->toThrow(InvalidArgumentException::class);
-    expect(fn () => $resolve($this->fixtureUser, ''))->toThrow(InvalidArgumentException::class);
-    expect(fn () => $resolve($this->fixtureUser, 'unset'))->toThrow(InvalidArgumentException::class); // unset is the DB default, not a resolution choice
+    expect((string) $choice->getType())->toBe(ReceiptConflictChoice::class);
+    expect($choice->getType()?->allowsNull())->toBeFalse();
+});
+
+it('rejects the stored unset sentinel at the type, never as a runtime string', function (): void {
+    // 'unset' is the users.receipt_conflict_resolution default and not a
+    // resolution: the enum has no case for it, so the value the old
+    // string signature had to reject at runtime cannot be constructed.
+    expect(ReceiptConflictChoice::tryFrom('unset'))->toBeNull();
+    expect(ReceiptConflictChoice::tryFrom(''))->toBeNull();
+    expect(array_column(ReceiptConflictChoice::cases(), 'value'))
+        ->toBe(['prefer_receipt', 'prefer_first_write']);
 });
 
 it('rejects an out-of-whitelist field_name without mutating the transactions row (column-injection defence)', function (): void {
@@ -97,7 +108,7 @@ it('rejects an out-of-whitelist field_name without mutating the transactions row
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
-    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+    $count = $resolve($this->fixtureUser, ReceiptConflictChoice::PreferReceipt, $seeded['conflict_id']);
 
     // The action still reports 1 conflict resolved (delete-only path).
     expect($count)->toBe(1);
@@ -121,7 +132,7 @@ it('prefer_receipt: UPDATEs transactions.{field} with incoming value + DELETEs p
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
-    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+    $count = $resolve($this->fixtureUser, ReceiptConflictChoice::PreferReceipt, $seeded['conflict_id']);
 
     expect($count)->toBe(1);
 
@@ -134,7 +145,7 @@ it('prefer_receipt: UPDATEs transactions.{field} with incoming value + DELETEs p
 
     // User setting persisted.
     $userRow = DB::table('users')->where('id', $this->fixtureUser->id)->first(['receipt_conflict_resolution']);
-    expect($userRow->receipt_conflict_resolution)->toBe('prefer_receipt');
+    expect($userRow->receipt_conflict_resolution)->toBe(ReceiptConflictChoice::PreferReceipt->value);
 });
 
 it('prefer_first_write: keeps stored value + DELETEs pending row + persists user setting + returns count', function (): void {
@@ -148,7 +159,7 @@ it('prefer_first_write: keeps stored value + DELETEs pending row + persists user
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
-    $count = $resolve($this->fixtureUser, 'prefer_first_write');
+    $count = $resolve($this->fixtureUser, ReceiptConflictChoice::PreferFirstWrite, $seeded['conflict_id']);
 
     expect($count)->toBe(1);
 
@@ -158,7 +169,7 @@ it('prefer_first_write: keeps stored value + DELETEs pending row + persists user
     expect(DB::table('pending_enrichment_conflicts')->where('id', $seeded['conflict_id'])->count())->toBe(0);
 
     $userRow = DB::table('users')->where('id', $this->fixtureUser->id)->first(['receipt_conflict_resolution']);
-    expect($userRow->receipt_conflict_resolution)->toBe('prefer_first_write');
+    expect($userRow->receipt_conflict_resolution)->toBe(ReceiptConflictChoice::PreferFirstWrite->value);
 });
 
 it('never touches a foreign user\'s pending row from ApplyReceiptConflictResolution', function (): void {
@@ -193,7 +204,12 @@ it('never touches a foreign user\'s pending row from ApplyReceiptConflictResolut
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
-    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+
+    // Naming the foreign conflict id outright resolves nothing: the user_id
+    // predicate, not the id, is what scopes the read.
+    expect($resolve($this->fixtureUser, ReceiptConflictChoice::PreferReceipt, $foreign['conflict_id']))->toBe(0);
+
+    $count = $resolve($this->fixtureUser, ReceiptConflictChoice::PreferReceipt, $own['conflict_id']);
 
     // Only the current user's conflict was resolved.
     expect($count)->toBe(1);
@@ -234,27 +250,77 @@ it('SFC mounts and renders the latest pending conflict from DB', function (): vo
         ->assertSee('Albert Heijn');
 });
 
-it('SFC useReceipt action resolves the held conflict + dismisses the toast', function (): void {
-    $seeded = seedTxAndPendingConflict(
+// The toast names ONE conflict and quotes its two values. Whatever the button
+// does has to be that one conflict: a second outstanding conflict the reader was
+// never shown must survive the press, or they consented to one change and got
+// every change.
+it('SFC useReceipt action resolves the held conflict and leaves an unshown one outstanding', function (): void {
+    $unshown = seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'UNSHOWN STORED',
+        incoming: 'UNSHOWN INCOMING',
+    );
+    $held = seedTxAndPendingConflict(
         $this->fixtureUser,
         $this->fixtureAccount,
         field: 'counterparty_name',
         stored: 'NLPAYPAL ALBERT HEIJN',
         incoming: 'Albert Heijn',
+    );
+
+    Livewire::test(ReceiptConflictToast::class)
+        ->assertSet('receiptValue', 'Albert Heijn')
+        ->call('useReceipt');
+
+    $row = DB::table('transactions')->where('id', $held['tx']->id)->first();
+    expect($row->counterparty_name)->toBe('Albert Heijn');
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $held['conflict_id'])->count())->toBe(0);
+    expect(DB::table('users')->where('id', $this->fixtureUser->id)->first()->receipt_conflict_resolution)->toBe(ReceiptConflictChoice::PreferReceipt->value);
+
+    $untouched = DB::table('transactions')->where('id', $unshown['tx']->id)->first();
+    expect($untouched->counterparty_name)->toBe('UNSHOWN STORED');
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $unshown['conflict_id'])->count())->toBe(1);
+});
+
+// One press, one conflict: the toast then offers the next one rather than
+// vanishing with outstanding conflicts behind it.
+it('SFC offers the next outstanding conflict after the held one is resolved', function (): void {
+    seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'NEXT STORED',
+        incoming: 'NEXT INCOMING',
+    );
+    seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'HELD STORED',
+        incoming: 'HELD INCOMING',
     );
 
     Livewire::test(ReceiptConflictToast::class)
         ->call('useReceipt')
+        ->assertSet('visible', true)
+        ->assertSet('receiptValue', 'NEXT INCOMING')
+        ->call('useReceipt')
         ->assertSet('visible', false);
 
-    $row = DB::table('transactions')->where('id', $seeded['tx']->id)->first();
-    expect($row->counterparty_name)->toBe('Albert Heijn');
-    expect(DB::table('pending_enrichment_conflicts')->where('id', $seeded['conflict_id'])->count())->toBe(0);
-    expect(DB::table('users')->where('id', $this->fixtureUser->id)->first()->receipt_conflict_resolution)->toBe('prefer_receipt');
+    expect(DB::table('pending_enrichment_conflicts')->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
 });
 
-it('SFC keepStatement action keeps stored value + clears pending row + dismisses the toast', function (): void {
-    $seeded = seedTxAndPendingConflict(
+it('SFC keepStatement action clears only the held conflict and dismisses the toast', function (): void {
+    $unshown = seedTxAndPendingConflict(
+        $this->fixtureUser,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'UNSHOWN STORED',
+        incoming: 'UNSHOWN INCOMING',
+    );
+    $held = seedTxAndPendingConflict(
         $this->fixtureUser,
         $this->fixtureAccount,
         field: 'counterparty_name',
@@ -263,13 +329,14 @@ it('SFC keepStatement action keeps stored value + clears pending row + dismisses
     );
 
     Livewire::test(ReceiptConflictToast::class)
-        ->call('keepStatement')
-        ->assertSet('visible', false);
+        ->call('keepStatement');
 
-    $row = DB::table('transactions')->where('id', $seeded['tx']->id)->first();
+    $row = DB::table('transactions')->where('id', $held['tx']->id)->first();
     expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
-    expect(DB::table('pending_enrichment_conflicts')->where('id', $seeded['conflict_id'])->count())->toBe(0);
-    expect(DB::table('users')->where('id', $this->fixtureUser->id)->first()->receipt_conflict_resolution)->toBe('prefer_first_write');
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $held['conflict_id'])->count())->toBe(0);
+    expect(DB::table('users')->where('id', $this->fixtureUser->id)->first()->receipt_conflict_resolution)->toBe(ReceiptConflictChoice::PreferFirstWrite->value);
+
+    expect(DB::table('pending_enrichment_conflicts')->where('id', $unshown['conflict_id'])->count())->toBe(1);
 });
 
 it('Blade view has NO auto-dismiss (UI-SPEC: persists until user acts)', function (): void {
@@ -320,7 +387,7 @@ it('does not error on a malformed (non-JSON) incoming_value; skips the apply but
 
     /** @var ApplyReceiptConflictResolution $resolve */
     $resolve = $this->app->make(ApplyReceiptConflictResolution::class);
-    $count = $resolve($this->fixtureUser, 'prefer_receipt');
+    $count = $resolve($this->fixtureUser, ReceiptConflictChoice::PreferReceipt, $seeded['conflict_id']);
 
     expect($count)->toBe(1);
 

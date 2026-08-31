@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ξεκλείδωμα',
 
-    'digits_entered' => 'ψηφία καταχωρίστηκαν',
+    'digits_entered' => ':count ψηφίο καταχωρίστηκε|:count ψηφία καταχωρίστηκαν',
     'pin_pad' => 'Πληκτρολόγιο PIN',
     'digit' => 'Ψηφίο :digit',
     'backspace' => 'Διαγραφή',

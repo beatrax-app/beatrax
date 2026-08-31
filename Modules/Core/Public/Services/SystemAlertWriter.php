@@ -13,11 +13,11 @@ use Modules\Sync\Public\Events\EntityMutated;
 // only place one is put on the op log. A row with a null user_id is about the
 // machine that noticed the problem — a corrupt backup is that laptop's — and
 // the probes that raise those keep writing the model directly, uncaptured.
-final class SystemAlertWriter
+final readonly class SystemAlertWriter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     // Takes the owner as a plain int rather than a nullable one, so the
@@ -51,6 +51,34 @@ final class SystemAlertWriter
         ));
 
         return $alert;
+    }
+
+    // One open row per (user, kind), for a fault that stands until somebody
+    // acts on it: repeats would bury their own first report, and where an
+    // unauthenticated caller can provoke the kind, the repeats ARE the attack.
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     * @return SystemAlert|null null when a row of this kind is already open
+     */
+    public function raiseOnceForUser(
+        int $userId,
+        string $kind,
+        string $severity,
+        string $message,
+        ?array $metadata = null,
+    ): ?SystemAlert {
+        $alreadyOpen = $this->db->connection()
+            ->table('system_alerts')
+            ->where('user_id', $userId)
+            ->where('kind', $kind)
+            ->whereNull('acknowledged_at')
+            ->exists();
+
+        if ($alreadyOpen) {
+            return null;
+        }
+
+        return $this->raiseForUser($userId, $kind, $severity, $message, $metadata);
     }
 
     // Acknowledging is the one user action on this table, and it is a SET on

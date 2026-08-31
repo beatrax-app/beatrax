@@ -165,6 +165,7 @@ it('a re-apply that changes N fields produces exactly N op_log_entries rows via 
         counterpartyName: 'Spotify AB',
         description: null,
         settledAmountMinor: -1000,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse('2026-07-05'),
     );
     $matched = $engine->match($input, $fixtures['user']);
@@ -205,7 +206,6 @@ it('an import-time rule application produces zero op_log_entries rows for the ru
         currency: 'EUR',
         settledAmountMinor: -1000,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Spotify AB',
         counterpartyIban: null,
         counterpartyNormalized: 'spotify ab',

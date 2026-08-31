@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Lozinke se ne podudaraju.',
         'password_length' => 'Koristi najmanje 12 znakova.',
         'pin_length' => 'PIN mora da ima najmanje 6 cifre.',
+        'pin_digits' => 'PIN mora da ima 6 do 10 cifara — samo brojevi.',
         'pins_mismatch' => 'PIN-ovi se ne podudaraju. Pokušaj ponovo.',
         'session_expired' => 'Tvoja sesija je istekla pre nego što je podešavanje dovršeno. Ponovo unesi PIN i lozinku.',
         'retry_failed' => 'Podešavanje ovog uređaja i dalje nije dovršeno. Pokušaj ponovo.',

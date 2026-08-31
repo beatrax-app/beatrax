@@ -28,7 +28,7 @@
 <div class="safe-screen min-h-screen bg-white dark:bg-slate-950"
      data-testid="mobile-pairing-scan"
      wire:key="pairing-step-{{ $wizardStep->value }}">
-<div class="max-w-lg mx-auto px-6 py-8 space-y-4">
+<div class="max-w-lg mx-auto px-4 sm:px-6 py-8 space-y-4">
 
     {{-- ===== Step: camera scan (default landing) ===== --}}
     @if ($wizardStep === PairingWizardStep::Scan)
@@ -125,6 +125,17 @@
                 {{ Lang::get('mobile::pairing.enter_code_instead') }}
             </button>
 
+            {{-- Qualified where it is offered, not removed: with the camera
+                 refused this control is the reader's only remaining affordance,
+                 so hiding it strands them harder than an equal-looking choice
+                 that cannot work. --}}
+            @if (! $typedCodeCanFindPeer)
+                <p
+                    class="mx-auto mt-1 max-w-xs px-2 text-xs text-slate-500 dark:text-slate-400"
+                    data-testid="typed-code-needs-search"
+                >{{ Lang::get('mobile::pairing.no_search') }}</p>
+            @endif
+
             {{-- The enter_code arm below carries its own Cancel; this step had
                  none, and layouts.lock draws no navigation, so the camera arm
                  could only be left by killing the app. --}}
@@ -145,13 +156,17 @@
     @if ($wizardStep === PairingWizardStep::EnterCode)
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.enter_heading') }}</h1>
 
-        @if ($cameraUnavailableNotice)
+        {{-- One slot, one road. The amber line used to be the camera's alone
+             and said "enter the code from the other device instead" over an
+             error underneath it saying a typed code has nothing to find — two
+             orders on one screen, each ruling out the other's. --}}
+        @if ($entryNotice !== null)
             <x-core::alert
                 tone="warning"
-                data-testid="camera-unavailable-notice"
+                data-testid="pairing-entry-notice"
                 aria-live="polite" aria-atomic="true"
             >
-                {{ Lang::get('mobile::pairing.camera_off') }}
+                {{ Lang::get($entryNotice) }}
             </x-core::alert>
         @endif
 

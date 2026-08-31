@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Sinu PayPali konto',
     'h1' => 'Ühenda oma PayPali konto',
 
-    'lede_html' => 'Lohista siia oma PayPali tehingute üksikasjade eksport — Hollandi PayPali kontol on see <em lang="nl">Rapport Transactiegegevens</em>. Jäägiaruanne (<span lang="nl">Saldorapport</span>) ei sobi — vajame andmeid sündmuste kaupa.',
+    'lede_html' => 'Lohista siia oma PayPali liikumiste eksport — üks rida tehingu kohta, mitte jäägi kokkuvõte. PayPal nimetab oma aruandeid sinu konto keeles ja praegu loeme hollandikeelset paari: <em lang="nl">Rapport Transactiegegevens</em>, mitte <span lang="nl">Saldorapport</span>. Kui sinu oma tuleb mõnes teises keeles, lülita PayPal enne allalaadimist hollandi keelele.',
 
     'format_group_aria' => 'PayPal ekspordib ainult CSV-d',
     'got_it_as' => 'Sain selle kujul:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Laadi alla CSV-na',
     ],
 
-    'drop_lead' => 'Lohista oma tehingute üksikasjade CSV siia',
+    'drop_lead' => 'Lohista oma liikumiste eksport siia',
     'browse_file' => 'või otsi fail üles',
 
     'file_ready' => '· ✓ valmis',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Jätka →',
 
     'errors' => [
-        'required' => 'Lohista kõigepealt kasti oma PayPali Rapport Transactiegegevens CSV.',
-        'max' => 'See fail on liiga suur. PayPali Rapport Transactiegegevens ekspordid jäävad tavaliselt tublisti alla 10 MB.',
-        'extensions' => 'See fail ei tundu olevat PayPali CSV. Laadi PayPalist alla Rapport Transactiegegevens (mitte jäägiaruanne Saldorapport) CSV-na.',
+        'required' => 'Lohista kõigepealt kasti oma PayPali liikumiste eksport.',
+        'max' => 'See fail on liiga suur. PayPali liikumiste eksport jääb tavaliselt tublisti alla 10 MB.',
+        'extensions' => 'See fail ei tundu olevat PayPali CSV. Laadi alla liikumiste eksport — üks rida tehingu kohta, mitte jäägi kokkuvõte — CSV-na.',
         'unreadable' => 'Seda faili ei õnnestunud lugeda. Täielik viga on kaustas /dev/logs.',
     ],
 ];

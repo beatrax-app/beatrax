@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Recibos desde el correo (opcional)',
     'h1' => 'Deja que Beatrax vigile los correos de compra',
     'lede' => 'Conecta Gmail u Outlook para que las confirmaciones de pedido y los recibos de suscripción se adjunten automáticamente a tus transacciones. Puedes omitir este paso y añadirlo más adelante.',
+    'h1_phone' => 'Los correos de compra se vigilan en el escritorio',
+    'lede_phone' => 'Las confirmaciones de pedido y los recibos de suscripción se adjuntan automáticamente a tus transacciones en la aplicación de escritorio y llegan a este teléfono por sincronización. En este teléfono nada lee tu correo, así que omite este paso aquí y conéctalo en el escritorio.',
 
     'mini' => [
         'signin_label' => 'Iniciar sesión',

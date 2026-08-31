@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'A fenti alapesethez viszonyítva',
 
+    'run_failed' => 'Ezt az előrejelzést nem sikerült kiszámítani. Az alábbi vonal csak a már könyvelt tételeket mutatja.',
+
     'scenario_editor_aria' => 'Forgatókönyv-szerkesztő',
     'series_confidence' => 'Sorozat megbízhatósága',
     'no_series_contribute' => 'Ehhez a számlához még egyetlen sorozat sem járul hozzá az előrejelzésben.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Frissítés',
     'chart_noscript' => 'A diagramhoz JavaScript szükséges. A tartomány :days napot ölel fel.|A diagramhoz JavaScript szükséges. A tartomány :days napot ölel fel.',
     'total_balance' => 'Teljes egyenleg',
+    'projection_range' => 'Előrejelzési tartomány',
+    'point_estimate' => 'Pontbecslés',
 
     'per_month_suffix' => '/hó',
     'confidence_chip_aria' => ':name, :confidence megbízhatóság — az előrejelzési tartomány a pontbecslés :percent százaléka',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Legalacsonyabb 30 napon belül',
     'next_ics' => 'Következő ICS-elszámolás: :amount ekkor: :date',
     'ics_overdue' => 'Az ICS-elszámolás lejárt: :amount, esedékes volt: :date',
+
+    'stale_run' => 'Előrejelzés :date napjától — azóta nem frissült.',
+
+    'confidence' => [
+        'high' => 'Magas',
+        'medium' => 'Közepes',
+        'low' => 'Alacsony',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Az összeg megadása kötelező.',
+        'amount_decimals' => 'Az összeg legfeljebb :decimals tizedesjegyű szám lehet.|Az összeg legfeljebb :decimals tizedesjegyű szám lehet.',
+        'amount_whole' => 'Az összegnek egész számnak kell lennie — ennek a pénznemnek nincs kisebb egysége.',
+        'amount_non_negative' => 'Az összeg nulla vagy pozitív lehet.',
+        'amount_non_zero' => 'Az összeg nem lehet nulla.',
+        'field_required' => 'A(z) :field mező kitöltése kötelező.',
+    ],
 ];

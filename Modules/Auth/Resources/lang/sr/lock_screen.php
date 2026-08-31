@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'U redu — potvrdi PIN',
     'ok' => 'U redu',
 
-    'error_too_short' => 'PIN mora da ima bar 6 cifre.',
+    'error_pin_shape' => 'PIN mora da ima :min do :max cifara — samo brojevi.',
 
     'error_backoff' => 'Previše pokušaja — probaj ponovo za :wait.',
 

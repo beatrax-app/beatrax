@@ -6,14 +6,14 @@ namespace Modules\Migration\Internal\Pipeline;
 
 use Modules\Migration\Internal\Enums\ConflictResolution;
 
-final class ConflictRow
+final readonly class ConflictRow
 {
     public function __construct(
-        public readonly string $entityType,
-        public readonly ?string $sourceExternalId,
-        public readonly string $fieldName,
-        public readonly ?string $localValue,
-        public readonly ?string $sourceValue,
-        public readonly ConflictResolution $resolution,
+        public string $entityType,
+        public ?string $sourceExternalId,
+        public string $fieldName,
+        public ?string $localValue,
+        public ?string $sourceValue,
+        public ConflictResolution $resolution,
     ) {}
 }

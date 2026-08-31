@@ -149,3 +149,49 @@ it('renders the sticky action bar markup only when selectedIds is non-empty (bul
     expect($component->html())->toContain('wire:click="bulkApprove"');
     expect($component->html())->toContain('wire:click="bulkReject"');
 })->group('bulk-action-bar-renders-only-when-selection-non-empty');
+
+// Only NotFoundHttpException was caught, so the first row the state graph
+// refused took the batch down: the rows before it were already written, the
+// rows after it never were, and the reader was shown a 500 instead of a count.
+it('applies the rest of a bulk batch when one selected row is in a state the graph refuses', function (): void {
+    $first = rrbSeries($this->user, 'pending', 'rrb::mix::a', 'row-a');
+    $rejected = rrbSeries($this->user, 'rejected', 'rrb::mix::b', 'row-b');
+    $last = rrbSeries($this->user, 'pending', 'rrb::mix::c', 'row-c');
+
+    $component = Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('selectedIds', [$first->id, $rejected->id, $last->id])
+        ->call('bulkApprove');
+
+    expect(RecurringSeries::query()->whereIn('id', [$first->id, $last->id])->pluck('state')->all())
+        ->toBe(['approved', 'approved']);
+    expect(RecurringSeries::query()->find($rejected->id)->state)->toBe('rejected');
+    $component->assertDispatched('toast');
+});
+
+it('drops the selection when the reader switches tab so a batch cannot mix states', function (): void {
+    $pending = rrbSeries($this->user, 'pending', 'rrb::tab::a', 'row-a');
+
+    $component = Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('selectedIds', [$pending->id])
+        ->call('setTab', 'rejected');
+
+    expect($component->get('selectedIds'))->toBe([]);
+});
+
+// bulkUndo was named as the undo action of both bulk toasts and never existed
+// as a method, so the toast promised a rollback nothing could perform.
+it('names no undo action the component cannot perform', function (): void {
+    $pending = rrbSeries($this->user, 'pending', 'rrb::undo::a', 'row-a');
+
+    $component = Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('selectedIds', [$pending->id])
+        ->call('bulkApprove');
+
+    foreach ($component->effects['dispatches'] ?? [] as $dispatch) {
+        $undo = $dispatch['params']['undoAction'] ?? null;
+        expect($undo === null || method_exists(RecurringReviewPage::class, (string) $undo))->toBeTrue();
+    }
+});

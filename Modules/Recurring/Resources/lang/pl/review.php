@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Edytuj nazwę',
     'edit_name_aria' => 'Zmień nazwę serii cyklicznej :id',
     'new_name_label' => 'Nowa nazwa dla tej serii',
+    'load_more' => 'Wczytaj więcej',
     'save' => 'Zapisz',
 
     'toast' => [

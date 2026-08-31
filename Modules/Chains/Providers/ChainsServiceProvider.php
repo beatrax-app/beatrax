@@ -19,6 +19,8 @@ use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainsIndex;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Internal\Listeners\CreateChainLinkFromHint;
+use Modules\Chains\Internal\PaypalFundingSignatureKey;
+use Modules\Chains\Internal\Presentation\ChainLinkRowFactory;
 use Modules\Chains\Internal\Resolvers\IcsSettlementResolver;
 use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Services\BusChainResolutionDispatcher;
@@ -44,6 +46,7 @@ final class ChainsServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CardStatementStateMachine::class);
         $this->app->singleton(ChainLinkInsertHelper::class);
+        $this->app->singleton(PaypalFundingSignatureKey::class);
         $this->app->singleton(IcsSettlementResolver::class);
         $this->app->singleton(PaypalFundingResolver::class);
         $this->app->singleton(ResolveChainLinksJob::class);
@@ -54,6 +57,7 @@ final class ChainsServiceProvider extends ServiceProvider
         $this->app->singleton(CreateChainLinkFromHint::class);
 
         $this->app->singleton(ChainTreeWalker::class);
+        $this->app->singleton(ChainLinkRowFactory::class);
         $this->app->singleton(ChainLinkQuery::class);
         $this->app->singleton(CardStatementQuery::class);
         $this->app->singleton(ConfirmChainLink::class);

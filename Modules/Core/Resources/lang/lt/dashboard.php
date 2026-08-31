@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Didžiausios išlaidos',
     'no_expenses' => 'Kol kas nėra išlaidų su kategorijomis.',
+    'top_spending_refunded' => 'Nėra reitinge — :amount grįžo',
 
     'recent_transactions' => 'Naujausios operacijos',
     'view_all' => 'Žiūrėti visas',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Suma',
     'uncategorized' => 'Be kategorijos',
+
+    'jump_to_records' => [
+        'body' => 'Šiuo laikotarpiu nieko nėra. Naujausios operacijos vis dar čia.',
+        'action' => 'Rodyti laikotarpį :period',
+    ],
 
     'reauth' => [
         'title' => 'Reikia iš naujo prijungti pašto dėžutę.',

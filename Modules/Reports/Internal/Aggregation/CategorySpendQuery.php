@@ -15,17 +15,17 @@ use Modules\Ledger\Public\Services\CategoryAncestry;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
-final class CategorySpendQuery
+final readonly class CategorySpendQuery
 {
     use CoercesScalars;
 
     // An array key for GROUP BY's NULL group, distinct from any real
     // (positive) autoincrement category id.
-    private const UNCATEGORIZED_SENTINEL = -1;
+    private const int UNCATEGORIZED_SENTINEL = -1;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly CategoryAncestry $ancestry,
+        private DatabaseManager $db,
+        private CategoryAncestry $ancestry,
     ) {}
 
     /**
@@ -89,10 +89,13 @@ final class CategorySpendQuery
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $filters->accountIds))
             ->when($filters->categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('ts.category_id', $filters->categoryIds))
             ->when($filters->counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $filters->counterpartyIds))
-            ->when($filters->amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) >= ?', [$filters->amountMinMinor]))
-            ->when($filters->amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(ts.settled_amount_minor) <= ?', [$filters->amountMaxMinor]))
-            ->when($filters->amountDirection === AmountDirection::In->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '>', 0))
-            ->when($filters->amountDirection === AmountDirection::Out->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '<', 0))
+            // The PARENT's amount, never the leg's: every other dimension tests
+            // the transaction, so a leg-level test made the same report total
+            // change when the reader tapped a different "Group by" chip.
+            ->when($filters->amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) >= ?', [$filters->amountMinMinor]))
+            ->when($filters->amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(t.settled_amount_minor) <= ?', [$filters->amountMaxMinor]))
+            ->when($filters->amountDirection === AmountDirection::In->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '>', 0))
+            ->when($filters->amountDirection === AmountDirection::Out->value, static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '<', 0))
             ->groupBy('ts.category_id')
             ->get(['ts.category_id', $connection->raw($reportMetric->sumExpr('ts.').' AS amount_minor')]);
 
@@ -122,9 +125,13 @@ final class CategorySpendQuery
                 continue;
             }
 
+            // A category this device cannot resolve -- cross-tenant, deleted, or
+            // arrived ahead of its own row over Sync -- is a DIFFERENT fact from
+            // having no category at all, and borrowing that label put two rows
+            // called "Uncategorized" in the table with no way to tell them apart.
             $label = isset($categoriesById[$key])
                 ? $this->ancestry->fullPath($key, $categoriesById)
-                : Lang::get('reports::builder.uncategorized');
+                : Lang::get('ledger::common.unavailable_category');
             $result[] = new ReportResultRow(groupKey: $key, groupLabel: $label, amountMinor: $amountMinor, currency: $currency);
         }
 

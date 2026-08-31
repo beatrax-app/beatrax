@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
+use Modules\DevMode\Internal\Process\RunExitCodeFile;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Psr\Log\LoggerInterface;
@@ -19,11 +20,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class ArtisanStreamController
 {
-    private const SSE_DATA_PREFIX = 'data: ';
+    private const string SSE_DATA_PREFIX = 'data: ';
 
-    private const TICK_MICROSECONDS = 150_000;
+    private const int TICK_MICROSECONDS = 150_000;
 
-    private const STREAM_TIMEOUT_SECONDS = 600;
+    private const int STREAM_TIMEOUT_SECONDS = 600;
 
     public function __construct(
         private RunRegistry $registry,
@@ -99,10 +100,12 @@ final readonly class ArtisanStreamController
 
     private function emitTerminal(string $runId, string $outPath, int $offset): void
     {
-        $offset = $this->emitFinalChunk($outPath, $offset);
+        $this->emitFinalChunk($outPath, $offset);
 
         $fresh = $this->registry->find($runId);
-        $exit = $fresh?->exitCode;
+        // The registry only holds a code once something recorded one; for a
+        // detached run that is the watcher subshell's sidecar.
+        $exit = $fresh->exitCode ?? RunExitCodeFile::read($outPath);
         $cancelled = $fresh?->status === 'cancelled';
 
         if ($fresh !== null && $fresh->status === 'running') {

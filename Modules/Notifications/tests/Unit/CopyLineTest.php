@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Modules\Notifications\Internal\Support\CopyLine;
-use Modules\Notifications\Internal\Support\CopyParam;
-use Modules\Notifications\Internal\Support\CopyParamKind;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
+use Modules\Core\Public\Support\CopyParamKind;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 
 function copyLineRoundTrip(NotificationCopySpec $spec): NotificationCopySpec
@@ -40,7 +40,7 @@ it('survives a JSON round trip and renders in whichever language is active', fun
 it('resolves a weekday and a short date against the reading language', function (): void {
     $due = CarbonImmutable::parse('2026-08-25');
     $spec = NotificationCopySpec::of(
-        CopyLine::of('notifications::copy.title.payment_reminder_confident', ['day' => CopyParam::dayName($due)]),
+        CopyLine::of('notifications::copy.title.payment_reminder_confident', ['day' => CopyParam::dayName($due), 'date' => CopyParam::shortDate($due)]),
         CopyLine::of('notifications::copy.body.payment_reminder_confident', [
             'name' => 'Netflix',
             'day' => CopyParam::dayName($due),
@@ -53,11 +53,11 @@ it('resolves a weekday and a short date against the reading language', function 
 
     app()->setLocale('en');
     CarbonImmutable::setLocale('en');
-    expect($rebuilt->title())->toBe('Payment due Tuesday');
+    expect($rebuilt->title())->toBe('Payment due Tuesday (25 Aug)');
 
     app()->setLocale('nl');
     CarbonImmutable::setLocale('nl');
-    expect($rebuilt->title())->toBe('Betaling op dinsdag');
+    expect($rebuilt->title())->toBe('Betaling op dinsdag (25 aug.)');
     expect($rebuilt->body())->toContain('Netflix');
     expect($rebuilt->body())->toContain('dinsdag');
 });
@@ -105,10 +105,12 @@ it('reads a malformed or absent spec as no spec at all', function (mixed $raw): 
     'unknown param kind' => [['title' => ['key' => 'a', 'replace' => ['x' => ['kind' => 'sql', 'value' => 'drop']], 'count' => null], 'body' => [['key' => 'b']]]],
 ]);
 
-it('accepts back every kind it can write, so a sixth kind cannot land half-wired', function (): void {
+it('accepts back every kind it can write, so a further kind cannot land half-wired', function (): void {
     $written = [
         CopyParam::dayName(CarbonImmutable::parse('2026-03-02')),
         CopyParam::shortDate(CarbonImmutable::parse('2026-03-02')),
+        CopyParam::dateWithYear(CarbonImmutable::parse('2026-03-02')),
+        CopyParam::dateAndTime(CarbonImmutable::parse('2026-03-02 14:05:00')),
         CopyParam::line('notifications::copy.digest.shortfall'),
         CopyParam::money(-1250, 'EUR'),
         CopyParam::category('Groceries', 'groceries', true),

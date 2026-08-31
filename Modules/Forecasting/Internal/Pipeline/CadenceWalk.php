@@ -20,6 +20,7 @@ final readonly class CadenceWalk
         SeriesCadence $cadence,
         CarbonImmutable $asOf,
         CarbonImmutable $horizonEnd,
+        ?int $billingDay = null,
     ): array {
         $dates = [];
         $k = 0;
@@ -27,7 +28,7 @@ final readonly class CadenceWalk
         // Occurrences increase strictly in k, so the first one past the horizon
         // ends the walk; an anchor behind asOf is stepped over, not dropped.
         while (true) {
-            $occurrence = $cadence->occurrenceAt($anchor, $k);
+            $occurrence = $cadence->occurrenceAt($anchor, $k, $billingDay);
             $k++;
             if ($occurrence === null || $occurrence->greaterThan($horizonEnd)) {
                 return $dates;

@@ -12,21 +12,21 @@ use SodiumException;
  */
 final class NoiseHandshakeState
 {
-    private const TOKEN_E = 'e';
+    private const string TOKEN_E = 'e';
 
-    private const TOKEN_S = 's';
+    private const string TOKEN_S = 's';
 
-    private const TOKEN_EE = 'ee';
+    private const string TOKEN_EE = 'ee';
 
-    private const TOKEN_ES = 'es';
+    private const string TOKEN_ES = 'es';
 
-    private const TOKEN_SE = 'se';
+    private const string TOKEN_SE = 'se';
 
-    private const TOKEN_SS = 'ss';
+    private const string TOKEN_SS = 'ss';
 
-    private const IK_PROTOCOL = 'Noise_IK_25519_ChaChaPoly_BLAKE2b';
+    private const string IK_PROTOCOL = 'Noise_IK_25519_ChaChaPoly_BLAKE2b';
 
-    private const XX_PROTOCOL = 'Noise_XX_25519_ChaChaPoly_BLAKE2b';
+    private const string XX_PROTOCOL = 'Noise_XX_25519_ChaChaPoly_BLAKE2b';
 
     private const int PUBLIC_KEY_BYTES = 32;
 

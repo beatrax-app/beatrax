@@ -3,21 +3,25 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Modules\Budgets\Public\Services\BudgetProgressQuery;
+use Modules\Budgets\Public\Services\EnvelopeProgressQuery;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
 // Two categories can share a display name — two slugs whose translation
-// collides, or a user category named like a default one. The comparator
-// returns 0 for that pair, and forCurrentPeriod is driven by a JOIN with no
-// ORDER BY, so before the id tiebreak the surviving order was whatever the
-// query plan happened to emit: budget insertion order today, something else
-// after an ANALYZE or a new index.
+// collides, or a user category named like a default one. BudgetProgressQuery
+// now hands the pair to CategoryPathName::distinct() BEFORE the fold sorts, so
+// the labels differ by the time the comparator sees them and the id tiebreak
+// beside it is no longer what decides. The guarantee this pins is the one a
+// reader can still see: the pair comes out in id order, because distinct()
+// numbers by id ascending and the bare name sorts before its numbered twin.
+// Rows are picked by id rather than by label for that reason — the second one
+// is no longer called "Subscriptions".
 
-it('orders two equally-named categories by id, not by the order their budgets were written', function (): void {
+it('orders two equally-named categories by id, not by the order their envelopes were written', function (): void {
     /** @var User $user */
     $user = User::query()->create([
         'username' => 'budget-tie-order',
@@ -46,35 +50,22 @@ it('orders two equally-named categories by id, not by the order their budgets we
 
     expect($second)->toBeGreaterThan($first);
 
-    // Written highest id first, so the join's natural row order is the
-    // reverse of the id order the reader should get.
+    $period = app(PeriodQuery::class)->current();
+
+    // Written highest id first, so write order is the reverse of the id order
+    // the reader should get.
     foreach ([$second, $first] as $categoryId) {
-        DB::table('category_budgets')->insert([
-            'user_id' => $user->id,
-            'category_id' => $categoryId,
-            'budget_minor' => 1000,
-            'currency' => 'EUR',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        app(EnvelopeWriter::class)->setAssigned($user, $categoryId, $period->start, 1000);
     }
 
-    // Without the tiebreak this passes anyway, for a reason that is an
-    // accident: SQLite drives the join through category_budgets_user_category_uniq,
-    // whose (user_id, category_id) order happens to be the order the reader
-    // should get. Drop that index and the same query emits budget-insertion
-    // order — the plan-dependence the tiebreak exists to remove. Any new index,
-    // an ANALYZE, or another driver reshuffles it the same way.
-    DB::statement('DROP INDEX category_budgets_user_category_uniq');
-
-    /** @var BudgetProgressQuery $query */
-    $query = app(BudgetProgressQuery::class);
+    /** @var EnvelopeProgressQuery $query */
+    $query = app(EnvelopeProgressQuery::class);
 
     $ids = array_map(
         static fn (object $row): int => $row->categoryId,
         array_values(array_filter(
-            $query->forCurrentPeriod($user),
-            static fn (object $row): bool => $row->name === 'Subscriptions',
+            $query->forPeriod($user, $period),
+            static fn (object $row): bool => in_array($row->categoryId, [$first, $second], true),
         )),
     );
 

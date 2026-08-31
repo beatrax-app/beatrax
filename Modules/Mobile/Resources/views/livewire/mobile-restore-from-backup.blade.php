@@ -2,7 +2,7 @@
 {{-- .safe-screen: this renders signed out on a fresh install, where
      layouts.app draws no bar and nothing else reserves the system bars. --}}
 <div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6">
+    <div class="w-full max-w-md mx-auto px-4 sm:px-6 space-y-6">
         <header class="space-y-2 text-center">
             <x-core::page-heading>{{ Lang::get('mobile::restore.heading') }}</x-core::page-heading>
             <p class="text-sm text-slate-500 dark:text-slate-400">

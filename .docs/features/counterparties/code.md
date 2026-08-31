@@ -17,19 +17,27 @@ Modules/Counterparties/
 │   │   └── CounterpartyType.php
 │   ├── Events/
 │   │   └── CounterpartyResolved.php
-│   └── Queries/
-│       ├── ChainSummary.php
-│       ├── CounterpartyIndexQuery.php
-│       ├── CounterpartyIndexRow.php
-│       ├── CounterpartyProfileDto.php
-│       ├── CounterpartyProfileQuery.php
-│       ├── CounterpartyTriageQueue.php
-│       └── TriageSuggestion.php
+│   ├── Queries/
+│   │   ├── ChainSummary.php
+│   │   ├── CounterpartyDisplayName.php
+│   │   ├── CounterpartyIndexQuery.php
+│   │   ├── CounterpartyIndexRow.php
+│   │   ├── CounterpartyProfileDto.php
+│   │   ├── CounterpartyProfileQuery.php
+│   │   ├── CounterpartyTriageQueue.php
+│   │   └── TriageSuggestion.php
+│   └── Support/
+│       └── CounterpartyDefaultName.php
 ├── Internal/
+│   ├── Actions/
+│   │   └── LabelCounterparty.php
 │   ├── Enums/
+│   │   ├── CounterpartyMetadataKey.php
+│   │   ├── CounterpartySubcategory.php
 │   │   └── CounterpartyTypeFilter.php
 │   ├── Resolver/
-│   │   └── CounterpartyResolverService.php
+│   │   ├── CounterpartyResolverService.php
+│   │   └── CounterpartySlugResolver.php
 │   ├── Pipeline/
 │   │   └── ResolveCounterpartyStage.php
 │   ├── Jobs/
@@ -43,7 +51,8 @@ Modules/Counterparties/
 ├── Database/
 │   ├── Migrations/
 │   │   ├── 2026_05_27_020001_create_counterparties_table.php
-│   │   └── 2026_05_27_020002_add_counterparty_id_to_transactions.php
+│   │   ├── 2026_05_27_020002_add_counterparty_id_to_transactions.php
+│   │   └── 2026_08_30_000002_mark_the_counterparty_name_the_app_invented_as_its_own.php
 │   └── Seeders/
 │       └── Demo/DemoCounterpartiesSeeder.php
 ├── Routes/
@@ -89,7 +98,9 @@ Modules/Counterparties/
     pathological rows (no name, no IBAN, no description).
 - **Pipeline/**
   - `ResolvesCounterparties::run(CanonicalTransaction $tx, User $user)`
-    → `CanonicalTransaction`. The ImportPipeline-stage contract.
+    → `CanonicalTransaction`. The pipeline-stage contract, consumed by
+    `ImportPipeline`, `PromoteStagingToDomain` and `RecordManualTransaction`
+    — every writer of a canonical row runs it.
 - **DTOs/**
   - `CounterpartyResolutionDto` — `(counterpartyId, slug, type)`.
     `counterpartyId === null` iff `type === 'self_account'`.
@@ -111,11 +122,52 @@ Modules/Counterparties/
     per-row loops in the view read them rather than rebuild them.
   - `CounterpartyProfileQuery::bySlug($user, $slug)`
     → `CounterpartyProfileDto|null`.
+  - `CounterpartyProfileQuery::categoryBreakdown($cp)` /
+    `::taxYearBreakdown($cp)` → `Collection<int, stdClass>`. Both go
+    through `convertedBuckets()`, which converts one currency's whole
+    bucket at a time through `CrossCurrencyTotal::distribute()` — per
+    row it rounded the rows apart from the hero figure they sit under —
+    and hands each row a `currency` and an `unconverted` list of the
+    codes it could not price, which the three tab partials render.
+  - `CounterpartyProfileDto::$isBankFee` — whether the profile body
+    renders the fee panel or the institution one.
+  - `CounterpartyProfileDto::isPartial()` / `unconvertedList()` — the
+    codes the twelve-month hero total leaves out for want of a rate.
+    The index has said this since it was written; the profile it links
+    to computed the same list and rendered none of it.
   - `CounterpartyTriageQueue::forUser($user, $queueFirstId)`
-    → `list<Counterparty>`.
+    → `list<Counterparty>`. Excludes rows the reader marked ignored,
+    as does `unknownCountForUser()` behind the sidebar badge.
 
 ## Internal services
 
+- `Internal/Actions/LabelCounterparty` — the single write seam for the
+  three decisions triage makes. Owns the slug re-derivation a rename
+  needs, the `EntityMutated` announcement that gets the write to the
+  reader's other device, and the ignore predicate the triage queue
+  reads back. Called by `CounterpartyTriage`; the predicate is static
+  so `CounterpartyTriageQueue` shares it.
+- `Internal/Enums/CounterpartySubcategory` — narrows a `type` the chain
+  writes for more than one thing. `Fee` is the only case: it separates a
+  bank-fee row from the institution rows step 2 also lands on
+  `type='bank'`. `CounterpartyProfileDto` carries the answer as a bool
+  rather than this token, because a Public DTO may not declare an
+  Internal type.
+- `Internal/Enums/CounterpartyMetadataKey` — the `metadata` keys
+  something reads back, as opposed to the opaque provenance the resolver
+  only writes. `Ignored` for the triage-queue exclusion, `Subcategory`
+  for the above. `column()` gives the JSON path a query builder
+  addresses the key by, so the SQL predicate and the in-PHP read cannot
+  drift.
+- `Public/Support/CounterpartyDefaultName` — the one place that asks
+  whether a stored `display_name` is the reader's own wording or the
+  app's, and re-resolves the app's for whoever is reading. The token
+  lives under `metadata.default_name`; the seam and the reason for it are
+  in [the resolution chain](resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name).
+- `Internal/Resolver/CounterpartySlugResolver` — `resolveUnique()` and
+  the frozen slugifier behind it. The optional `$ownedBy` argument is
+  the row a rename is moving: an import has no row yet and asks by
+  name, a rename asks by id.
 - `Internal/Enums/CounterpartyTypeFilter` — the chip-row and `?type=`
   vocabulary, and the one place it maps onto the column's. It stays
   Internal because no other module filters this index.
@@ -140,7 +192,12 @@ Modules/Counterparties/
   the query; per-type Blade partial drives the body.
 - `Internal/Http/Livewire/CounterpartyTriage` —
   `/counterparties/triage`. Iterates `type='unknown'` rows; offers a
-  resolver-suggested type the user can accept.
+  resolver-suggested type the user can accept. Every write it makes
+  goes through `LabelCounterparty`. `$draftName` / `$draftType` are the
+  manual-label bindings and `$drafts` keeps one pair per counterparty
+  id, so moving through the queue does not throw typed input away —
+  [what the reader typed is
+  theirs](triage-suggestions.md#what-the-reader-typed-is-theirs).
 
 ## Models + migrations
 

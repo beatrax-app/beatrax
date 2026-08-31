@@ -15,11 +15,11 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * @link ../../../../../.docs/conventions/invariants-from-shipped-failures.md#a-stale-x-livewire-header-on-a-page-load
  */
-final class ForgetStaleLivewireHeaderBetweenRequests
+final readonly class ForgetStaleLivewireHeaderBetweenRequests
 {
     private const string HEADER = 'X-Livewire';
 
-    public function __construct(private readonly LivewireManager $livewire) {}
+    public function __construct(private LivewireManager $livewire) {}
 
     /**
      * @param  Closure(Request): Response  $next

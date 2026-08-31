@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Koko historia.',
     'subtitle_recent' => 'Viimeaikaiset tapahtumat (viimeiset 90 päivää).',
 
-    'currency_aria' => 'Valuuttanäkymä',
-    'currency_eur' => 'Vain :code',
-    'currency_original' => 'Alkuperäinen valuutta',
+    'currency_aria' => 'Näytettävä summa',
+    'currency_eur' => 'Tilitetty summa',
+    'currency_original' => 'Alkuperäinen summa',
 
     'show_recent' => 'Näytä vain viimeaikaiset',
     'show_full' => 'Näytä koko historia',
 
     'empty_period' => 'Ei mitään tältä jaksolta.',
 
+    'empty_recent_has_older' => 'Ei mitään viimeisten 90 päivän ajalta. Vanhemmat tapahtumasi ovat yhä tallessa.',
+
+    'empty_history' => 'Ei vielä tapahtumia.',
     'loading_more' => 'Ladataan lisää tapahtumia',
     'load_more' => 'Lataa lisää',
 

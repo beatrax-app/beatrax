@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kumbaralar · Beatrax',
     'heading' => 'Kumbaralar',
-    'subtitle' => 'Toplamı her zaman gerçek hesap bakiyene eşit olan sanal alt bakiyeler.',
+    'subtitle' => 'Gerçek hesap bakiyesinden ayrılan sanal alt bakiyeler.',
     'add_pot' => 'Kumbara ekle',
 
     'pot_fallback' => 'kumbara',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Geçmişi göster ↓',
         'hide' => 'Geçmişi gizle ↑',
+        'truncated' => 'Son hareketler: :shown / :count',
     ],
 
     'movement' => [
@@ -64,6 +65,8 @@ return [
         'withdraw' => 'Para çekme',
         'moved_from' => ':name kumbarasından taşındı',
         'moved_to' => ':name kumbarasına taşındı',
+        'unreadable' => 'Beatrax uygulamasının daha yeni bir sürümü tarafından kaydedildi',
+        'released_on_archive' => 'Arşivlenirken serbest bırakıldı',
     ],
 
     'archived' => [
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Bu kumbara için bir ad gir.',
         'select_account' => 'Bu kumbara için bir hesap seç.',
-        'amount_exceeds_unallocated' => 'Tutar, dağıtılmamış bakiyeyi aşıyor.',
         'amount_exceeds_unallocated_available' => 'Tutar, dağıtılmamış bakiyeyi aşıyor (:amount kullanılabilir).',
         'amount_exceeds_pot_balance' => 'Tutar, :name kumbarasındaki bakiyeyi aşıyor (:amount kullanılabilir).',
+        'generic' => 'Kumbara kaydedilemedi. Alanları kontrol edip yeniden deneyin.',
+        'amount_invalid' => 'Sıfırdan büyük bir tutar girin.',
+        'goal_already_linked' => 'Bu hedefin zaten etkin bir bağlı kumbarası var. Önce onu arşivleyin.',
+        'account_cannot_hold_pots' => 'Kumbara için para tutan bir hesap gerekir. Başka bir hesap seç.',
+        'select_target_pot' => 'Taşınacak bir kumbara seç.',
+        'move_target_missing' => 'O kumbara artık kullanılamıyor. Başka birini seç.',
+        'move_same_pot' => 'Bir kumbara kendine para taşıyamaz. Başka bir kumbara seç.',
+        'move_cross_account' => 'Kumbaralar yalnızca aynı hesap içinde para alışverişi yapar; :name ise :account hesabında.',
+        'pot_missing' => 'O kumbara artık kullanılamıyor.',
+        'operation_failed' => 'İşlem geçmedi. Hiç para taşınmadı — yeniden dene.',
     ],
 
     'toast' => [

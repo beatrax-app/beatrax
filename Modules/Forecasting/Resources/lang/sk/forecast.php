@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Porovnané s východiskom vyššie',
 
+    'run_failed' => 'Túto predpoveď sa nepodarilo vypočítať. Čiara nižšie ukazuje len to, čo je už zaúčtované.',
+
     'scenario_editor_aria' => 'Editor scenára',
     'series_confidence' => 'Spoľahlivosť série',
     'no_series_contribute' => 'Do prognózy tohto účtu zatiaľ nevstupuje žiadna séria.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Aktualizuje sa',
     'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrýva :days deň.|Graf vyžaduje JavaScript. Rozsah pokrýva :days dni.|Graf vyžaduje JavaScript. Rozsah pokrýva :days dní.',
     'total_balance' => 'Celkový zostatok',
+    'projection_range' => 'Rozsah prognózy',
+    'point_estimate' => 'Bodový odhad',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, spoľahlivosť :confidence — rozsah prognózy je :percent percent bodového odhadu',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Najnižšie za 30 dní',
     'next_ics' => 'Ďalšie zúčtovanie ICS: :amount dňa :date',
     'ics_overdue' => 'Zúčtovanie ICS po splatnosti: :amount, splatné :date',
+
+    'stale_run' => 'Prognóza z :date — odvtedy neaktualizovaná.',
+
+    'confidence' => [
+        'high' => 'Vysoká',
+        'medium' => 'Stredná',
+        'low' => 'Nízka',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Suma je povinná.',
+        'amount_decimals' => 'Suma musí byť číslo s najviac :decimals desatinným miestom.|Suma musí byť číslo s najviac :decimals desatinnými miestami.|Suma musí byť číslo s najviac :decimals desatinnými miestami.',
+        'amount_whole' => 'Suma musí byť celé číslo — táto mena nemá menšiu jednotku.',
+        'amount_non_negative' => 'Suma musí byť nula alebo kladná.',
+        'amount_non_zero' => 'Suma nesmie byť nula.',
+        'field_required' => 'Pole :field je povinné.',
+    ],
 ];

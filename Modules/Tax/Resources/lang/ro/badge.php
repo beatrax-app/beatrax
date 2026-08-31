@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Editează eticheta fiscală: :label',
     'tag' => 'Etichetează',
     'tag_aria' => 'Etichetează drept relevant fiscal',
+    'tag_caption' => 'Etichetează',
 ];

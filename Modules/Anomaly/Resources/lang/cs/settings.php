@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Jak snadno Beatrax označí platbu za neobvyklou u tohoto obchodníka nebo kategorie, od 1 do 100. Vyšší hodnota označí více.',
 
     'min_amount_label' => 'Minimální částka platby',
-    'min_amount_help' => 'Ignorovat anomálie u plateb pod touto částkou. Ukládá se v centech (:symbol) — 1000 znamená :example.',
+    'min_amount_help' => 'Ignorovat anomálie u plateb pod touto částkou. Ukládá se v nejmenších jednotkách (:symbol) — :minor znamená :example.',
 
     'save' => 'Uložit nastavení anomálií',
     'saved' => 'Uloženo.',

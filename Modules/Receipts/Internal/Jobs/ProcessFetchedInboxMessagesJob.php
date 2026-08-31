@@ -20,15 +20,11 @@ use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
-use Modules\Import\Public\Pipeline\NormalizeStage;
-use Modules\Ledger\Models\Account;
-use Modules\Ledger\Models\ImportRun;
-use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
-use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
-use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 // Per-user hourly consumer of inbox_messages rows with status='fetched'.
 // Walks the InboxMessageQuery generator, resolves each row's on-disk
@@ -66,9 +62,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
         InboxMessageQuery $inboxes,
         EmlBlobStore $blobs,
         RecordReceipt $recordReceipt,
-        ReceiptSourceAdapter $receiptAdapter,
-        NormalizeStage $normalize,
-        RecordsTransactions $recorder,
+        ReceiptLedgerBridge $bridge,
     ): void {
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
@@ -99,15 +93,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
             }
 
             $outcome = ($recordReceipt)($files->get($emlPath), $user, null);
-            [$update, $importRunId] = $this->resolveUpdate(
-                $outcome,
-                $user,
-                $importRunId,
-                $clock,
-                $receiptAdapter,
-                $normalize,
-                $recorder,
-            );
+            [$update, $importRunId] = $this->resolveUpdate($outcome, $user, $importRunId, $clock, $bridge);
 
             $db->connection()
                 ->table('inbox_messages')
@@ -135,85 +121,20 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
         User $user,
         ?int $importRunId,
         Clock $clock,
-        ReceiptSourceAdapter $receiptAdapter,
-        NormalizeStage $normalize,
-        RecordsTransactions $recorder,
+        ReceiptLedgerBridge $bridge,
     ): array {
-        $update = ['updated_at' => $clock->now()->toDateTimeString()];
+        $update = [
+            'updated_at' => $clock->now()->toDateTimeString(),
+            'status' => $outcome->kind->toInboxStatus()->value,
+        ];
 
-        if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
-            $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
-            $update['status'] = InboxMessageStatus::Parsed->value;
-            $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
-            $importRunId = $this->bridgeToLedger(
-                $outcome->parsed,
-                $user,
-                $importRunId,
-                $clock,
-                $receiptAdapter,
-                $normalize,
-                $recorder,
-            );
-
+        if ($outcome->kind !== MatchOutcomeKind::Parsed || $outcome->parsed === null) {
             return [$update, $importRunId];
         }
 
-        $update['status'] = $outcome->kind === MatchOutcomeKind::Skipped
-            ? InboxMessageStatus::Skipped->value
-            : InboxMessageStatus::Unmatched->value;
+        $update['matcher_key'] = $outcome->matcherKey;
+        $importRunId = $bridge->bridge($outcome->parsed, $user, $importRunId, SourceFormat::Eml);
 
         return [$update, $importRunId];
-    }
-
-    // Bridge the parsed receipt into the canonical pipeline; the
-    // synthetic per-provider IBAN resolves to the user's matching
-    // Account, absent which the write is skipped (the file_imports row
-    // still records the parse). Returns the ImportRun id in play.
-    private function bridgeToLedger(
-        ParsedReceiptDto $parsed,
-        User $user,
-        ?int $importRunId,
-        Clock $clock,
-        ReceiptSourceAdapter $receiptAdapter,
-        NormalizeStage $normalize,
-        RecordsTransactions $recorder,
-    ): ?int {
-        $account = Account::query()
-            ->where('user_id', $user->id)
-            ->where('iban', $parsed->ownIban)
-            ->first();
-        if ($account === null) {
-            return $importRunId;
-        }
-
-        $importRunId ??= $this->createInboxHandoffRun($user, $clock);
-        $source = $receiptAdapter->toSourceDto($parsed, sourceRowIndex: 0);
-        $canonical = $normalize->run($source, $account->id, $user, importRunId: $importRunId, sourceFormat: 'eml');
-        ($recorder)([$canonical], $user);
-
-        return $importRunId;
-    }
-
-    private function createInboxHandoffRun(User $user, Clock $clock): int
-    {
-        // Sentinel path for raw_file_path — inbox-handoff writes have no
-        // on-disk source file. The sha256 anchor is stable per user+hour
-        // so two runs in the same hour collapse to one ImportRun rather
-        // than diverging on sub-second clock drift.
-        $rawPathSentinel = '__INBOX_HANDOFF__/user-'.$this->userId.'/'.$clock->now()->format('Y-m-d-H');
-        $runAnchor = sprintf('inbox-handoff:%d:%s', $this->userId, $clock->now()->format('Y-m-d-H'));
-
-        $newRun = ImportRun::query()->create([
-            'user_id' => $user->id,
-            'source_format' => 'inbox-handoff',
-            'raw_file_path' => $rawPathSentinel,
-            'sha256' => hash('sha256', $runAnchor),
-            'uploaded_at' => $clock->now()->toDateTimeString(),
-            'status' => 'confirmed',
-            'created_at' => $clock->now()->toDateTimeString(),
-            'updated_at' => $clock->now()->toDateTimeString(),
-        ]);
-
-        return $newRun->id;
     }
 }

@@ -6,6 +6,8 @@ namespace Modules\Counterparties\Database\Seeders\Demo;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
@@ -54,6 +56,7 @@ final class DemoCounterpartiesSeeder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CounterpartyResolver $resolver,
+        private readonly Clock $clock,
     ) {}
 
     // The resolver never produces bank or self_account rows for this dataset —
@@ -118,8 +121,10 @@ final class DemoCounterpartiesSeeder
      */
     public function run(array $users): int
     {
+        $now = Instant::appLocal($this->clock->now());
+
         foreach ($users as $user) {
-            $this->seedAliasesForUser($user);
+            $this->seedAliasesForUser($user, $now);
             $this->resolveForUser($user);
             $this->seedExtraTypeCoverageForUser($user);
         }
@@ -152,10 +157,8 @@ final class DemoCounterpartiesSeeder
         }
     }
 
-    private function seedAliasesForUser(User $user): void
+    private function seedAliasesForUser(User $user, string $now): void
     {
-        $now = (new \DateTimeImmutable)->format('Y-m-d H:i:s');
-
         foreach (self::MERCHANT_ALIASES as $row) {
             $this->db->connection()
                 ->table('merchant_aliases')
@@ -208,13 +211,6 @@ final class DemoCounterpartiesSeeder
             ? $tx->payment_type
             : PaymentType::Unknown;
 
-        // The driver decides whether the attribute bag hands this back as a
-        // string or a float; the DTO insists on `?string`.
-        $fxRateUsed = $tx->fx_rate_used;
-        if ($fxRateUsed !== null && ! is_string($fxRateUsed)) {
-            $fxRateUsed = (string) $fxRateUsed;
-        }
-
         return new CanonicalTransaction(
             userId: $tx->user_id,
             accountId: $tx->account_id,
@@ -226,7 +222,6 @@ final class DemoCounterpartiesSeeder
             currency: $tx->currency,
             settledAmountMinor: $tx->settled_amount_minor,
             settledCurrency: $tx->settled_currency,
-            fxRateUsed: $fxRateUsed,
             counterpartyName: $tx->counterparty_name,
             counterpartyIban: $tx->counterparty_iban,
             counterpartyNormalized: $tx->counterparty_normalized,

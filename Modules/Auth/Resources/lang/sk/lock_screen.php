@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'OK — potvrdiť PIN',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN musí mať aspoň 6 číslice.',
+    'error_pin_shape' => 'PIN musí mať :min až :max číslic — iba číslice.',
 
     'error_backoff' => 'Príliš veľa pokusov — skús to znova o :wait.',
 

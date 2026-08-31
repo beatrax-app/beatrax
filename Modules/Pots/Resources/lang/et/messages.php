@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kogumispotid · Beatrax',
     'heading' => 'Kogumispotid',
-    'subtitle' => 'Virtuaalsed alamjäägid, mis annavad alati kokku sinu tegeliku kontojäägi.',
+    'subtitle' => 'Virtuaalsed alamjäägid, mis on eraldatud konto tegelikust jäägist.',
     'add_pot' => 'Lisa pott',
 
     'pot_fallback' => 'pott',
@@ -57,6 +57,7 @@ return [
     'history' => [
         'show' => 'Näita ajalugu ↓',
         'hide' => 'Peida ajalugu ↑',
+        'truncated' => 'Viimased liikumised: :shown / :count',
     ],
 
     'movement' => [
@@ -64,10 +65,12 @@ return [
         'withdraw' => 'Välja võetud',
         'moved_from' => 'Liigutatud potist :name',
         'moved_to' => 'Liigutatud potti :name',
+        'unreadable' => 'Kirjutatud Beatraxi uuema versiooni poolt',
+        'released_on_archive' => 'Vabastatud arhiveerimisel',
     ],
 
     'archived' => [
-        'toggle' => 'Arhiveeritud potid (:count)',
+        'toggle' => 'Arhiveeritud pott (:count)|Arhiveeritud potid (:count)',
         'badge' => 'Arhiveeritud',
     ],
 
@@ -119,9 +122,18 @@ return [
     'errors' => [
         'enter_name' => 'Sisesta selle poti nimi.',
         'select_account' => 'Vali sellele potile konto.',
-        'amount_exceeds_unallocated' => 'Summa ületab jaotamata jääki.',
         'amount_exceeds_unallocated_available' => 'Summa ületab jaotamata jääki (saadaval :amount).',
         'amount_exceeds_pot_balance' => 'Summa ületab poti :name jääki (saadaval :amount).',
+        'generic' => 'Rahakotti ei õnnestunud salvestada. Kontrollige välju ja proovige uuesti.',
+        'amount_invalid' => 'Sisestage nullist suurem summa.',
+        'goal_already_linked' => 'Sellel eesmärgil on juba aktiivne seotud rahakott. Arhiveerige see esmalt.',
+        'account_cannot_hold_pots' => 'Pott vajab kontot, millel on raha. Vali teine konto.',
+        'select_target_pot' => 'Vali pott, kuhu raha liigutada.',
+        'move_target_missing' => 'See pott ei ole enam saadaval. Vali teine.',
+        'move_same_pot' => 'Pott ei saa raha iseendasse liigutada. Vali teine pott.',
+        'move_cross_account' => 'Potid vahetavad raha ainult ühe konto sees ja :name on kontol :account.',
+        'pot_missing' => 'See pott ei ole enam saadaval.',
+        'operation_failed' => 'See ei läinud läbi. Raha ei liigutatud — proovi uuesti.',
     ],
 
     'toast' => [

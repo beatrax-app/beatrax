@@ -1,0 +1,3 @@
+Datum,Tijd,Tijdzone,Omschrijving,Valuta,"Bruto ","Kosten ",Netto,Saldo,Transactiereferentie,"Van e-mailadres",Naam,"Naam bank",Bankrekening,Verzendkosten,Btw,Factuurreferentie,"Reference Txn ID"
+4/30/2026,23:41:08,Europe/Berlin,"Vooraf goedgekeurde betaling – rekening betaald door gebruiker",USD,"-10,46","0,00","-10,46","-10,46",O-00000000000000201,kaarthouder@example.test,"Cloudflare Inc",,,"0,00","0,00",718803381922610999,O-00000000000000200
+4/30/2026,23:41:09,Europe/Berlin,"Bankstorting naar PP-rekening",EUR,"9,27","0,00","9,27","9,27",O-00000000000000202,,,,,"0,00","0,00",,O-00000000000000201

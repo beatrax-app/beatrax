@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Internal\Mapping\AnomalyAlertDtoMapper;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 
@@ -28,7 +30,7 @@ it('hydrates reasons json into a list and Money fields in the settled currency',
     $dto = AnomalyAlertDtoMapper::hydrate(anomalyRow(), 'Spotify', 'EUR');
 
     expect($dto)->toBeInstanceOf(AnomalyAlertDto::class)
-        ->and($dto->reasons)->toBe(['large', 'first_time'])
+        ->and($dto->reasons)->toBe([AnomalyDetector::Large, AnomalyDetector::FirstTime])
         ->and($dto->displayName)->toBe('Spotify')
         ->and($dto->transactionId)->toBe(7)
         ->and($dto->currency)->toBe('EUR')
@@ -54,16 +56,17 @@ it('uses the row currency for Money even when non-EUR', function (): void {
         ->and($dto->latestAmount->toMinor())->toBe(-1299);
 });
 
-it('collapses a null baseline into a zero-amount Money in the settled currency', function (): void {
+// Zero is an amount, and hydrating the absent baseline to one let the row
+// state a EUR 0.00 comparison the detector never made.
+it('keeps a null baseline null rather than reading it as a zero amount', function (): void {
     $dto = AnomalyAlertDtoMapper::hydrate(
         anomalyRow(['baseline_amount_minor' => null, 'reasons' => json_encode(['first_time', 'large'])]),
         'New Merchant',
         'EUR',
     );
 
-    expect($dto->baselineAmount->toMinor())->toBe(0)
-        ->and($dto->baselineAmount->currency())->toBe('EUR')
-        ->and($dto->reasons)->toBe(['first_time', 'large']);
+    expect($dto->baselineAmount)->toBeNull()
+        ->and($dto->reasons)->toBe([AnomalyDetector::FirstTime, AnomalyDetector::Large]);
 });
 
 it('carries dismissedAs when the alert was dismissed as expected', function (): void {
@@ -74,7 +77,7 @@ it('carries dismissedAs when the alert was dismissed as expected', function (): 
     );
 
     expect($dto->state)->toBe('dismissed')
-        ->and($dto->dismissedAs)->toBe('expected')
+        ->and($dto->dismissedAs)->toBe(DismissedAs::Expected)
         ->and($dto->actionedAt)->not->toBeNull();
 });
 
@@ -87,4 +90,20 @@ it('degrades a malformed reasons payload to an empty list', function (): void {
 it('fails loud when detected_at is missing', function (): void {
     expect(fn () => AnomalyAlertDtoMapper::hydrate(anomalyRow(['detected_at' => null]), null, 'EUR'))
         ->toThrow(InvalidArgumentException::class);
+});
+
+it('maps each dismissal word to its case and refuses one outside the vocabulary', function (): void {
+    $plain = AnomalyAlertDtoMapper::hydrate(
+        anomalyRow(['state' => 'dismissed', 'dismissed_as' => 'dismissed']),
+        'Spotify',
+        'EUR',
+    );
+    $stray = AnomalyAlertDtoMapper::hydrate(
+        anomalyRow(['state' => 'dismissed', 'dismissed_as' => 'not_unusual']),
+        'Spotify',
+        'EUR',
+    );
+
+    expect($plain->dismissedAs)->toBe(DismissedAs::Dismissed)
+        ->and($stray->dismissedAs)->toBeNull();
 });

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Muutuste hoiatused',
-    'heading' => 'Hoiatused',
     'intro_anomaly' => 'Üksikud maksed, mis sinu jaoks tavapärasest erinevad.',
     'intro_drift' => 'Kinnitatud korduvmaksete seeriad, mille viimane makse väljus sinu läve piiridest.',
     'adjust_threshold' => 'Kohanda läve →',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Seda teadet enam ei ole.',
         'acknowledged' => 'Teadmiseks võetud',
         'snoozed' => 'Edasi lükatud',
         'dismissed' => 'Peidetud',

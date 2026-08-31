@@ -42,10 +42,15 @@
     screen reader "running, position unknown" rather than the "0%" a zeroed
     value announces. The sliver animates via .beatrax-indeterminate, which
     already yields to prefers-reduced-motion.
+
+    The announced value is the drawn one. The fill was clamped into the track
+    and aria-valuenow was not, so a value out of range announced a number the
+    bar beside it contradicted and that aria-valuemin/max ruled out.
 --}}
 @php
     $progressSpan = $max > 0 ? $max : 1;
-    $progressPercent = round(max(0, min(100, ($value / $progressSpan) * 100)), 2);
+    $progressValue = max(0, min($progressSpan, $value));
+    $progressPercent = round(($progressValue / $progressSpan) * 100, 2);
     $progressFill = match ($tone) {
         'positive' => 'bg-emerald-500 dark:bg-emerald-400',
         'warning' => 'bg-amber-500 dark:bg-amber-400',
@@ -56,7 +61,7 @@
 
 <div
     role="progressbar"
-    @unless ($indeterminate) aria-valuenow="{{ $value }}" @endunless
+    @unless ($indeterminate) aria-valuenow="{{ $progressValue }}" @endunless
     aria-valuemin="0"
     aria-valuemax="{{ $max }}"
     @if ($label !== null) aria-label="{{ $label }}" @endif

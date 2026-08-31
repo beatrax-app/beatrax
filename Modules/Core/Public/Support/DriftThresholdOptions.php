@@ -12,4 +12,9 @@ final class DriftThresholdOptions
 {
     /** @var list<int> */
     public const array PERCENTS = [1, 2, 5, 10, 25, 50];
+
+    // What a reader who has set nothing is evaluated against. The evaluator
+    // and the demo seeder that reproduces its output each held their own copy,
+    // and the users column defaults to it a third time.
+    public const int DEFAULT_PERCENT = 5;
 }

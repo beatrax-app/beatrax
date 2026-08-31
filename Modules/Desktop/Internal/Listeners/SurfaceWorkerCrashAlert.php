@@ -10,7 +10,9 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
@@ -21,19 +23,19 @@ use Native\Desktop\Facades\Notification;
 // hit), so only a sustained crash-loop within the rolling window escalates.
 final class SurfaceWorkerCrashAlert
 {
-    public const WORKER_ALIAS = 'queue-default';
+    public const string WORKER_ALIAS = 'queue-default';
 
-    public const CRASH_LOOP_THRESHOLD = 3;
+    public const int CRASH_LOOP_THRESHOLD = 3;
 
-    public const CRASH_LOOP_WINDOW_SECONDS = 300;
+    public const int CRASH_LOOP_WINDOW_SECONDS = 300;
 
-    public const ALERT_KIND = 'worker.crashed';
+    public const string ALERT_KIND = 'worker.crashed';
 
     // The English canonical, mirrored in desktop::native.worker_alert.*; escalate()
     // renders through Lang::get, so at the `en` default the two are identical.
-    public const ALERT_BODY = "Beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
+    public const string ALERT_BODY = "Beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
 
-    public const OS_NOTIFICATION_TITLE = 'Background work stopped';
+    public const string OS_NOTIFICATION_TITLE = 'Background work stopped';
 
     /** @var array<string, list<int>> */
     private array $exitTimestampsByAlias = [];
@@ -92,11 +94,17 @@ final class SurfaceWorkerCrashAlert
             ->exists();
 
         if (! $alreadyAlerted) {
+            // The OS notification below stays resolved here — a push fires once
+            // and cannot be re-rendered. The row is read for as long as it is
+            // open, so it carries the line and keeps the sentence beside it.
+            $line = CopyLine::of('core::alerts.messages.worker_crashed');
+
             SystemAlert::query()->create([
                 'user_id' => null,
                 'kind' => self::ALERT_KIND,
                 'severity' => SystemAlertSeverity::Critical->value,
-                'message' => Lang::get('desktop::native.worker_alert.body'),
+                'message' => $line->sentence(),
+                'metadata' => StoredCopy::inParams($line),
             ]);
         }
 

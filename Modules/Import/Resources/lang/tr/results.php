@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Başka bir hesap ekstresi yükle',
 
+    'chain' => [
+        'heading' => 'Zincirler çözümleniyor…',
+        'pending' => 'Kuyruğa alındı. Zincir çözümleyici birazdan başlayacak.',
+        'running' => 'Finansman zincirleri bağlanıyor ve ekstre tahsilatları ayrıştırılıyor.',
+    ],
+
     'issues' => [
         'row' => 'Satır :row: :reason',
         'file_stopped' => 'Dosya :row. satırdan ötesi okunamadı. O satırdan sonrası içe aktarılmadı.',

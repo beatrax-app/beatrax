@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Nolasīt un priekšskatīt',
     'cancel_import' => 'Atcelt importu',
 
-    'diff_new' => 'jauni,',
-    'diff_unchanged' => 'nemainīti,',
-    'diff_conflicts' => 'konflikti.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: lv · diff_new, diff_unchanged, diff_conflicts — Latvian selects
+    // arm 0 for zero, so the genitive plural leads and the singular follows. That
+    // arm does render here: a parsed file can bring nothing new.
+    'diff_new' => ':count jaunu|:count jauns|:count jauni',
+    'diff_unchanged' => ':count nemainītu|:count nemainīts|:count nemainīti',
+    'diff_conflicts' => ':count konfliktu|:count konflikts|:count konflikti',
 
     'conflicts_heading' => 'Konflikti',
     'conflict_name' => 'nosaukums — esošais: :existing → failā: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'Pārbaudīt ar maniem darījumiem',
     'test_help' => 'Rediģējiet rindas vispārināto šablonu, lai redzētu, kuriem darījumiem tas atbilstu.',
     'typing' => 'Raksta…',
-    'matches_prefix' => 'Atbilst',
-    'matches_suffix' => 'darījumiem jūsu nesenajā vēsturē.',
+    'matches' => 'Atbilst :count darījumiem jūsu nesenajā vēsturē.|Atbilst :count darījumam jūsu nesenajā vēsturē.|Atbilst :count darījumiem jūsu nesenajā vēsturē.',
 
     'merge_modal_title' => 'Apvienot :count aizstājvārdu|Apvienot :count aizstājvārdu|Apvienot :count aizstājvārdus',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Nav augšupielādēts neviens fails.',
         'unreadable' => 'Neizdevās nolasīt augšupielādēto failu.',
         'too_short' => 'Šablons ir pārāk īss, lai to pārbaudītu.',
+        'file_not_yaml' => 'Šis fails nav derīgs YAML, tāpēc no tā neizdevās nolasīt neko. Eksportējiet savus aizstājvārdus vēlreiz un augšupielādējiet iegūto failu.',
+        'file_unreadable_as_yaml' => 'Šo failu neizdevās nolasīt kā aizstājvārdu sarakstu. Eksportējiet savus aizstājvārdus vēlreiz un augšupielādējiet iegūto failu.',
+        'file_has_no_entries_list' => 'Šis fails nesākas ar augšējā līmeņa entries: sarakstu, tāpēc tajā nav aizstājvārdu, ko importēt. Pārbaudiet, vai izvēlējāties pareizo failu.',
+        'entry_is_not_a_mapping' => 'Ieraksts :entry ir vienkārša vērtība tur, kur tika gaidīts šablons un nosaukums. Pievienojiet tam abus laukus vai noņemiet to un augšupielādējiet failu vēlreiz.',
+        'entry_is_missing_a_field' => 'Ierakstam :entry trūkst šablona vai nosaukuma, bet aizstājvārdam vajadzīgi abi. Aizpildiet trūkstošo vai noņemiet šo ierakstu un augšupielādējiet failu vēlreiz.',
     ],
 ];

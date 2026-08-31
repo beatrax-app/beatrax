@@ -7,7 +7,9 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
+use Modules\Ingestion\Public\Paypal\PaypalEventAction;
 use Modules\Ledger\Public\Enums\Currency;
 
 final class PaypalTransactionRollup
@@ -63,7 +65,7 @@ final class PaypalTransactionRollup
 
     /**
      * @param  list<array<string, string>>  $rawRows  one entry per CSV record
-     * @return list<array{row: array<string, string>, action: string, txnId: string}>
+     * @return list<array{row: array<string, string>, action: PaypalEventAction, txnId: string}>
      */
     private function filterSurviving(array $rawRows, string $language): array
     {
@@ -76,7 +78,7 @@ final class PaypalTransactionRollup
             }
 
             $action = $this->events->classify($eventType, $language);
-            if ($action === 'skip') {
+            if ($action === PaypalEventAction::Skip) {
                 $this->skippedHoldCount++;
 
                 continue;
@@ -93,7 +95,7 @@ final class PaypalTransactionRollup
     }
 
     /**
-     * @param  list<array{row: array<string, string>, action: string, txnId: string}>  $surviving
+     * @param  list<array{row: array<string, string>, action: PaypalEventAction, txnId: string}>  $surviving
      * @return array{0: list<array<string, string>>, 1: array<string, list<array<string, string>>>}
      */
     private function partitionParents(array $surviving, string $language): array
@@ -115,7 +117,7 @@ final class PaypalTransactionRollup
             $row = $entry['row'];
             $refId = $this->columns->value('referenceTxnId', $language, $row) ?? '';
 
-            $isChildAction = $entry['action'] === 'child-fee' || $entry['action'] === 'child-fx';
+            $isChildAction = $entry['action']->isChild();
             $pointsAtInsideRow = $refId !== '' && $refId !== $entry['txnId'] && isset($byTxnId[$refId]);
 
             if ($isChildAction && $pointsAtInsideRow) {
@@ -158,10 +160,16 @@ final class PaypalTransactionRollup
         $parentGross = $this->columns->value('gross', $language, $parentRow) ?? '0,00';
         $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? Currency::Eur->value;
 
-        $nativeAmountMinor = $this->amounts->parseMinor($parentGross);
+        $nativeAmountMinor = $this->amounts->parseMinor($parentGross, $parentCurrency);
         $nativeCurrency = $parentCurrency;
         $settledAmountMinor = null;
         $settledCurrency = null;
+
+        // PayPal books each conversion leg in the direction ITS OWN balance
+        // moved, so the euro leg funding an outgoing dollar payment is a credit.
+        // One payment has one direction, the parent's; a leg lends the magnitude
+        // and nothing else.
+        $parentAmountMinor = $nativeAmountMinor;
 
         // The foreign leg is identified by its currency, never by row order: both
         // legs of a conversion pair share an event type and a Reference Txn ID.
@@ -169,14 +177,14 @@ final class PaypalTransactionRollup
             $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
             $childAction = $this->events->classify($childEventType, $language);
 
-            if ($childAction !== 'child-fx') {
+            if ($childAction !== PaypalEventAction::ChildFx) {
                 continue;
             }
 
             $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
             $childGross = $this->columns->value('gross', $language, $childRow) ?? '0,00';
             try {
-                $childAmountMinor = $this->amounts->parseMinor($childGross);
+                $childAmountMinor = $this->amounts->parseMinor($childGross, $childCurrency);
             } catch (InvalidAmountException) {
                 // A malformed child amount drops only the FX child; the parent still
                 // emits a DTO, with no FX pair filled in.
@@ -186,12 +194,12 @@ final class PaypalTransactionRollup
             }
 
             if ($childCurrency === Currency::Eur->value && $nativeCurrency !== Currency::Eur->value) {
-                $settledAmountMinor = $childAmountMinor;
+                $settledAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
                 $settledCurrency = $childCurrency;
             } elseif ($childCurrency !== Currency::Eur->value && $nativeCurrency === Currency::Eur->value) {
                 $settledAmountMinor = $nativeAmountMinor;
                 $settledCurrency = $nativeCurrency;
-                $nativeAmountMinor = $childAmountMinor;
+                $nativeAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
                 $nativeCurrency = $childCurrency;
             }
         }
@@ -218,7 +226,7 @@ final class PaypalTransactionRollup
             bookedAt: $bookedAt,
             postedAt: $bookedAt,
             valueDate: $bookedAt,
-            ownIban: 'PAYPAL',
+            ownIban: SyntheticIban::Paypal->value,
             counterpartyIban: ($counterpartyIban === null || $counterpartyIban === '') ? null : $counterpartyIban,
             counterpartyName: ($counterpartyName === null || $counterpartyName === '') ? null : $counterpartyName,
             currency: $nativeCurrency,
@@ -233,8 +241,14 @@ final class PaypalTransactionRollup
             sourceRowIndex: $canonicalIndex,
             settledAmountMinor: $settledAmountMinor,
             settledCurrency: $settledCurrency,
-            fxRateUsed: null,
         );
+    }
+
+    private static function asParentDirected(int $parentAmountMinor, int $childAmountMinor): int
+    {
+        $magnitude = abs($childAmountMinor);
+
+        return $parentAmountMinor < 0 ? -$magnitude : $magnitude;
     }
 
     private function formatDescription(string $eventType, ?string $counterpartyName): ?string

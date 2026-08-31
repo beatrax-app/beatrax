@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Paylaşılan liste hakkında',
     'about_body' => "Anlaşılması güç banka ekstresi kodlarını anlaşılır işyeri adlarıyla eşleyen ve uygulamayla birlikte gelen bir YAML dosyası. Açtığında Beatrax içe aktarma sırasında listeyi okuyabilir; bir öneri göndermek tarayıcında GitHub'ı açar.",
 
-    'mappings' => 'Eşleşmeler',
-    'contributors' => 'Katkıda bulunanlar',
+    'mappings' => ':count eşleşme',
+    'contributors' => ':count katkıda bulunan',
 
     'use_shared_list' => [
         'title' => 'Paylaşılan işyeri listesini kullan',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Uygulama güncellemelerinde paylaşılan listeyi güncelle',
         'help' => 'Beatrax her kendini güncellediğinde hazır listeyi yenile.',
+        'help_phone' => 'App Store ya da Google Play üzerinden Beatrax’ın yeni bir sürümü her kurulduğunda hazır listeyi yenile.',
         'note' => 'Gelecek bir uygulama güncellemesiyle etkinleşir — geçerli sürüm için Ayarlar → Hakkında bölümüne bak.',
     ],
 ];

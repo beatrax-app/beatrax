@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'Suurimad kulutused',
     'no_expenses' => 'Kategoriseeritud kulusid veel pole.',
+    'top_spending_refunded' => 'Edetabelis puudub — :amount tuli tagasi',
 
     'recent_transactions' => 'Viimased tehingud',
     'view_all' => 'Vaata kõiki',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategooria',
     'th_amount' => 'Summa',
     'uncategorized' => 'Kategoriseerimata',
+
+    'jump_to_records' => [
+        'body' => 'Sel perioodil pole siin midagi. Kõige uuemad tehingud on endiselt alles.',
+        'action' => 'Näita perioodi :period',
+    ],
 
     'reauth' => [
         'title' => 'Postkast vajab uuesti ühendamist.',

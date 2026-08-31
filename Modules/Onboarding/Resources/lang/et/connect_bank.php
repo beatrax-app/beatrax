@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Lohista oma CAMT.053 fail siia',
     'drop_lead_mt940' => 'Lohista oma MT940 fail siia',
-    'drop_lead_asn' => 'Lohista oma ASN CSV siia',
-    'drop_lead_ing' => 'Lohista oma ING CSV siia',
+    'drop_lead_csv_layout' => 'Lohista oma :layout CSV siia',
     'drop_lead_pick_bank' => 'Vali, milline pank sinu CSV eksportis — ilma selleta ei oska me seda õigesti lugeda.',
     'drop_lead_default' => 'Lohista oma väljavõtte fail siia',
     'browse_file' => 'või otsi fail üles',
 
-    'banks_mt940' => 'Toetatud: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Toetatud: ASN, ING — vorminguid lisandub, kui kasutajad näidiseid jagavad.',
-    'banks_default' => 'Toetatud: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 on XML-vormingus väljavõte — otsi seda internetipangas väljavõtete või allalaadimiste alt.',
+    'format_help_mt940' => 'MT940 on lihttekstis väljavõte, pakutakse laienditega .sta või .940 XML- ja CSV-failide kõrval.',
+    'format_help_csv' => 'CSV on tabelarvutuse eksport. Iga pank paigutab veerud isemoodi, seega vali sobiv paigutus. Kui sinu oma loendis pole, küsi pangalt hoopis CAMT.053 või MT940 faili.',
+
+    'account_name_default' => 'Pangakonto',
+    'account_name_layout' => ':layout konto',
 
     'file_ready' => '· ✓ valmis',
 

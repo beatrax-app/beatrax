@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Support\Facades\App;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
+use Modules\Core\Public\Support\Lang;
 use Native\Desktop\Contracts\Shell as ShellContract;
 use Native\Desktop\Fakes\ShellFake;
 
@@ -59,7 +61,34 @@ it('keeps the modal open and renders submitError when the configured Compare bas
     Livewire::test(SuggestMappingModal::class)
         ->dispatch('suggest-mapping:open', rawDescription: 'PATTERN-X')
         ->set('name', 'X Co')
-        ->call('submit');
+        ->call('submit')
+        ->assertSet('submitError', Lang::get('community::suggest.errors.browser_refused'));
 
     expect($this->shell->openExternalCalls)->toBe([]);
+});
+
+// The refusal used to be printed verbatim, and it opens with the action's own
+// class name and the URL it rejected.
+it('never shows the reader what the refusing action said', function (): void {
+    /** @var ConfigRepository $config */
+    $config = $this->app->make(ConfigRepository::class);
+    $config->set('community.github_compare_base', 'https://evil.example.com/compare/main');
+
+    App::setLocale('nl');
+    $dutch = Livewire::test(SuggestMappingModal::class)
+        ->dispatch('suggest-mapping:open', rawDescription: 'PATTERN-X')
+        ->set('name', 'X Co')
+        ->call('submit')
+        ->get('submitError');
+
+    App::setLocale('en');
+    $english = Livewire::test(SuggestMappingModal::class)
+        ->dispatch('suggest-mapping:open', rawDescription: 'PATTERN-X')
+        ->set('name', 'X Co')
+        ->call('submit')
+        ->get('submitError');
+
+    expect($dutch)->not->toBe($english)
+        ->and($dutch)->not->toContain('OpenExternalUrlAction')
+        ->and($dutch)->not->toContain('evil.example.com');
 });

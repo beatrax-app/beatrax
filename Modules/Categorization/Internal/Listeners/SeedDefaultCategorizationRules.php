@@ -8,9 +8,9 @@ use Modules\Categorization\Database\Seeders\DefaultCategorizationRuleSeeder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
-final class SeedDefaultCategorizationRules
+final readonly class SeedDefaultCategorizationRules
 {
-    public function __construct(private readonly DefaultCategorizationRuleSeeder $seeder) {}
+    public function __construct(private DefaultCategorizationRuleSeeder $seeder) {}
 
     public function handle(UserInstalled $event): void
     {

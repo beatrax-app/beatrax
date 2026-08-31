@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Di cosa vuoi essere avvisato',
+    'background_note' => 'Beatrax le prepara mentre l\'app è aperta. Un\'esecuzione pianificata in background non può — il blocco app custodisce l\'unica chiave — quindi ciò che è in attesa viene recuperato mentre continui a usare l\'app.',
+    'background_note_phone' => 'Beatrax le prepara mentre l\'app è aperta. In background non può — il blocco app custodisce l\'unica chiave — quindi ciò che è in attesa arriva alla prossima apertura dell\'app.',
 
     'reminders' => [
         'label' => 'Promemoria di pagamento',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Nascondi i dettagli nelle notifiche',
-        'help' => 'Mostra gli importi e i nomi degli esercenti nel banner della notifica. Disattiva se il tuo schermo potrebbe essere visibile ad altri.',
+        'help' => 'Nasconde gli importi e i nomi degli esercenti nel banner della notifica. Attiva se il tuo schermo potrebbe essere visibile ad altri.',
     ],
 
     'save' => 'Salva le impostazioni delle notifiche',

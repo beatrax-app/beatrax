@@ -13,11 +13,14 @@ use Modules\Forecasting\Public\Enums\ShiftScope;
  */
 final class ShiftSeriesDatePayload extends ScenarioMutationPayload
 {
+    public readonly string $newNextDate;
+
     public function __construct(
         public readonly int $seriesId,
-        public readonly string $newNextDate,
+        string $newNextDate,
         public readonly string $scope,
     ) {
+        $this->newNextDate = self::assertCalendarDay($newNextDate, 'newNextDate');
         // ScenarioApplier only tests for 'all_subsequent', so any other value
         // collapses to shifting the first occurrence alone.
         if (ShiftScope::tryFrom($scope) === null) {

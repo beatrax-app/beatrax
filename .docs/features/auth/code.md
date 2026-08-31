@@ -13,14 +13,18 @@ Modules/Auth/
 │       ├── LogoutAction.php
 │       ├── AddUserAction.php
 │       ├── ResetPasswordAction.php
-│       └── RegenerateRecoveryCodesAction.php
+│       ├── RegenerateRecoveryCodesAction.php
+│       ├── DeleteAccountAction.php
+│       └── PurgeUserDataAction.php
+│   └── Recovery/
+│       ├── PendingRecoveryCodes.php
+│       └── RecoveryCodeFormatter.php
 ├── Internal/
 │   ├── Fortify/
 │   │   └── FortifyServiceProvider.php
 │   ├── Recovery/
 │   │   ├── RecoveryCodeGenerator.php
 │   │   ├── RecoveryCodeMinter.php
-│   │   ├── RecoveryCodeFormatter.php
 │   │   ├── RecoveryCodeNormalizer.php
 │   │   └── RecoveryCodeAuthenticator.php
 │   ├── Http/
@@ -35,12 +39,20 @@ Modules/Auth/
 │   │   └── Middleware/
 │   │       ├── FirstUserOnlyMiddleware.php
 │   │       ├── ForcePasswordChangeMiddleware.php
+│   │       ├── ForgetsSpentRecoveryCodes.php
 │   │       └── RequireDeveloperMiddleware.php
 │   ├── Console/
 │   │   ├── ResetPasswordCommand.php
 │   │   ├── GrantDevCommand.php
 │   │   └── RegenerateRecoveryCodesCommand.php
+│   ├── Account/
+│   │   ├── UserScopedDataPurge.php
+│   │   └── UserScopedFilePurge.php
+│   ├── Services/
+│   │   ├── AccountOwner.php
+│   │   └── SessionRevoker.php
 │   └── Listeners/
+│       └── StartLockedOnLogin.php
 ├── Models/
 │   └── UserRecoveryCode.php
 ├── Database/
@@ -86,6 +98,15 @@ domain model uses.
   - `RegenerateRecoveryCodesAction` — invalidates the target user's unused
     codes and issues ten fresh ones. Two call paths: a user regenerates
     their own; the owner regenerates a partner's.
+  - `DeleteAccountAction` — the account leaves this device. Re-checks the
+    password, promotes the oldest survivor if the last administrator is the
+    one leaving, then purges rows, files, keyring and session.
+  - `PurgeUserDataAction` — the same row purge without the password check,
+    for a caller that has no credential to check. `app/Console/Commands/
+    DemoSeedCommand.php` uses it for `demo:seed --reset`; before the seam
+    existed it kept a second list of tables, which went stale and left
+    9,765 rows on a reseeded device. See
+    [the user-scoped purge](user-scoped-purge.md).
 
 - **Contracts/**
   - `PasswordPolicy` — `MINIMUM_LENGTH`, the one passphrase length every
@@ -131,18 +152,33 @@ the cross-module "a user just appeared" surface.
   Returns 404 once `users` table has any row, so the signup surface
   disappears the moment the owner exists.
 - `Internal/Http/Middleware/ForcePasswordChangeMiddleware` — pushed onto
-  the `auth` middleware group. Redirects any authenticated user whose
+  the `auth` middleware group AND registered as Livewire persistent
+  middleware. Redirects any authenticated user whose
   `force_password_change_at_next_login` is true to `/change-password`,
   exempting only that page and `/logout` so a flagged user can never get
-  trapped.
+  trapped. A Livewire update is exempted on the *component* it names
+  (`auth.change-password-page`, plus the action-free `core.app-sidebar`)
+  rather than on the page the snapshot was minted on: `/change-password`
+  renders inside `layouts.app`, which mounts nine unrelated components,
+  and a route-name exemption handed the whole shell to a flagged account.
 - `Internal/Http/Middleware/RequireDeveloperMiddleware` — aliased
   `developer`; gates the owner-only routes.
 - `Internal/Http/Livewire/ManageUserPage` — owner-resets-partner. Writes
   the partner row inline with `force_password_change_at_next_login = true`
   so the partner picks their own password on next sign-in.
-- `Internal/Console/ResetPasswordCommand` — the `diederik:reset-password`
+- `Internal/Console/ResetPasswordCommand` — the `beatrax:reset-password`
   CLI escape hatch. The user's last-resort recovery path when every
   recovery code is lost. See [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
+- `Internal/Services/AccountOwner` — answers "is this the owner", by
+  lowest `users.id`. `is_developer` cannot stand in: `/settings` lets any
+  user set that flag on themselves.
+- `Internal/Services/SessionRevoker` — deletes a user's `sessions` rows
+  **and** rotates their `remember_token`. The four password-writing paths
+  all call it; the token half is what makes the severing real.
+- `Internal/Listeners/StartLockedOnLogin` — on every `Login` event, starts
+  the session locked where the app lock is enabled. The password paths
+  unlock a moment later; the remember-me recaller, which primes nothing,
+  does not.
 
 ## Models + migrations
 

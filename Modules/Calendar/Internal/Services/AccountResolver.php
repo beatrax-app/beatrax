@@ -10,18 +10,12 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\AccountKind;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/calendar/architecture.md#account-preference-resolution
+ */
 final readonly class AccountResolver
 {
     use CoercesScalars;
-
-    // Credit-card kinds are absent on purpose: their liability already reaches
-    // the balance through the settlement leg, so including them double-counts.
-    private const array SPENDABLE_KINDS = [
-        AccountKind::Bank->value,
-        AccountKind::Cash->value,
-        AccountKind::Paypal->value,
-        AccountKind::PaypalFunding->value,
-    ];
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -70,6 +64,10 @@ final readonly class AccountResolver
         return array_values(array_intersect($callerIds, $ownedIds));
     }
 
+    // Which kinds those are, and why each of the other three is outside them,
+    // is AccountKind's to answer: the balance line, net worth and the reports
+    // series each kept their own list, and the one that had paypal_funding in
+    // it handed the reader back money their bank had already paid out.
     /**
      * @return list<int>
      */
@@ -77,7 +75,7 @@ final readonly class AccountResolver
     {
         $rows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->whereIn('kind', self::SPENDABLE_KINDS)
+            ->whereIn('kind', AccountKind::spendableValues())
             ->pluck('id');
 
         $ids = [];

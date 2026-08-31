@@ -56,7 +56,7 @@ it('stops trusting a peer the moment its confirmation is revoked', function (): 
     $registry = app(DeviceRegistryService::class);
     expect($registry->isStillConfirmed($userId, 'peer-revoked'))->toBeTrue();
 
-    // Exactly what revocation does before purge() removes the row.
+    // Exactly what revocation does before purge() clears what is keyed to it.
     $db->connection()->table('device_registry')
         ->where('user_id', $userId)
         ->where('device_id', 'peer-revoked')
@@ -66,7 +66,9 @@ it('stops trusting a peer the moment its confirmation is revoked', function (): 
         ->toBeFalse('an open session must see the revocation, not its connect-time snapshot');
 });
 
-it('stops trusting a peer whose row has been purged entirely', function (): void {
+// purge() keeps the registry row — it is the only surviving copy of the key that
+// verifies what the device wrote — so what has to stop is the TRUST, not the row.
+it('stops trusting a peer that has been purged', function (): void {
     $db = app(DatabaseManager::class);
     $userId = (int) revokedPeerUser('revoked-peer-purged')->id;
     $rowId = revokedPeerDevice($db, $userId, 'peer-purged', confirmed: true);
@@ -75,7 +77,8 @@ it('stops trusting a peer whose row has been purged entirely', function (): void
     $registry = app(DeviceRegistryService::class);
     $registry->purge($userId, $rowId);
 
-    expect($registry->isStillConfirmed($userId, 'peer-purged'))->toBeFalse();
+    expect($registry->isStillConfirmed($userId, 'peer-purged'))->toBeFalse()
+        ->and($registry->retainedDeviceKeys($userId))->toHaveKey('peer-purged');
 });
 
 it('never treats another user device or an empty id as trusted', function (): void {

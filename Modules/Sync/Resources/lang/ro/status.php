@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Dispozitiv eliminat',
     'dismiss_peer' => 'Ignoră acest dispozitiv',
+    'dismiss_peer_caption' => 'Ignoră',
     'dismiss_stale' => 'Șterge dispozitivele care nu mai sunt împerecheate',
     'not_synced_yet' => 'Încă nesincronizat',
     'error' => 'Eroare de sincronizare pe unul sau mai multe dispozitive',

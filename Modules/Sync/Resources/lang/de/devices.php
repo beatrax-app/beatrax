@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Deine Geräte',
 
-    'moved_help' => 'Kopplung, Gerätenamen und Verschlüsselung findest du jetzt bei deinem Sync-Status.',
-    'moved_cta' => 'Sync & Gerät öffnen',
     'device_name' => 'Gerätename',
     'save' => 'Speichern',
     'peer_default_name' => 'Gekoppeltes Gerät',
     'rename_device' => 'Gerät umbenennen',
+    'rename_device_caption' => 'Umbenennen',
     'this_device' => 'Dieses Gerät',
     'removed' => 'Entfernt',
     'confirmed' => 'Bestätigt',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relay-Endpunkt',
     'relay_endpoint_help' => 'Optional. Wenn gesetzt, synchronisieren Offline-Geräte über dieses Relay. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
+    'relay_endpoint_help_phone' => 'Optional. Wenn gesetzt, reisen Änderungen über dieses Relay, auch wenn deine Geräte nicht im selben Netz sind. Dieses Gerät holt sie ab, wenn du von diesem Bildschirm aus synchronisierst — nie im Hintergrund, denn die App-Sperre hält den einzigen Schlüssel. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
     'relay_endpoint_aria' => 'Relay-Endpunkt-URL',
     'relay_insecure_warning' => 'Dieser Relay-Endpunkt nutzt einfaches HTTP. Das Relay entschlüsselt deine Daten zwar nie, aber eine unsichere Verbindung gibt verschlüsselte Größen und Zeitpunkte gegenüber Beobachtern im Netzwerk preis. Nutze für beste Privatsphäre einen <strong>https://</strong>-Endpunkt.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Wird entfernt:',
     'remove_rotates_key' => 'Beim Entfernen dieses Geräts wird der Verschlüsselungsschlüssel rotiert, sodass es keine weiteren Updates mehr erhält.',
     'remove_cannot_erase' => 'Daten, die schon auf dem Gerät liegen, lassen sich damit nicht löschen. Wenn dieses Gerät verloren ging oder gestohlen wurde, betrachte alle Daten darauf als offengelegt.',
+    'remove_is_local' => 'Deine anderen Geräte führen ihre eigene Liste. Solange du es dort nicht ebenfalls entfernst, synchronisieren sie weiter mit ihm.',
     'remove_device' => 'Gerät entfernen',
     'keep_device' => 'Gerät behalten',
     'rotating_key' => 'Verschlüsselungsschlüssel wird rotiert…',

@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'uobičajeno :baseline → stvarno: :actual',
+    'charged' => 'zaduženo :actual',
     'detected' => 'otkriveno :date',
     'sensitivity' => 'osetljivost :percent od 100',
 

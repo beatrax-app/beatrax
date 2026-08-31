@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="mx-auto max-w-md px-4 py-12 space-y-12 sm:px-8">
+<div class="mx-auto max-w-md px-4 py-6 space-y-12 sm:px-8">
     <x-core::page-header
         :title="Lang::get('auth::manage_user.heading', ['name' => $partnerUsername])"
         :subtitle="Lang::get('auth::manage_user.subtitle')"
@@ -110,13 +110,27 @@
                     @endforeach
                 </div>
 
-                <a
-                    href="data:text/plain;charset=utf-8,{{ rawurlencode(implode("\n", $regeneratedCodes)) }}"
-                    download="beatrax-recovery-codes-{{ $partnerUsername }}.txt"
-                    class="inline-block rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                >
-                    {{ Lang::get('auth::manage_user.regenerate.download') }}
-                </a>
+                {{-- A data: URL on an <a download> is dropped by a shell whose
+                     WebView has no download listener, with no file and no
+                     error. There the same codes leave through the OS share
+                     sheet, which needs a round-trip rather than a link. --}}
+                @if ($nativeExport)
+                    <button
+                        type="button"
+                        wire:click="downloadCodes"
+                        class="inline-block rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                        {{ Lang::get('auth::manage_user.regenerate.download') }}
+                    </button>
+                @else
+                    <a
+                        href="data:text/plain;charset=utf-8,{{ rawurlencode(implode("\n", $regeneratedCodes)) }}"
+                        download="beatrax-recovery-codes-{{ $partnerUsername }}.txt"
+                        class="tap-chip inline-block rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                        {{ Lang::get('auth::manage_user.regenerate.download') }}
+                    </a>
+                @endif
             </div>
         @endif
     </section>

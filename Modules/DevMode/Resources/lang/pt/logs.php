@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Dispensar da vista (não altera o ficheiro de registo)',
     'dismiss_aria' => 'Dispensar a entrada de registo da vista',
     'totals' => [
-        'showing' => 'A mostrar',
-        'of' => 'de',
-        'received' => 'recebidas (limite do buffer 10k)',
-        'lines_today' => 'linhas hoje',
+        'showing' => 'A mostrar :shown de :count linha recebida (limite do buffer :cap)|A mostrar :shown de :count linhas recebidas (limite do buffer :cap)',
+        'lines_today' => ':count linha hoje|:count linhas hoje',
+        'lines_today_capped' => 'mais de :count linha hoje|mais de :count linhas hoje',
         'today' => 'hoje',
-        'across' => 'em',
-        'daily_files' => 'ficheiros diários',
+        'all_files' => ':size em :count ficheiro diário|:size em :count ficheiros diários',
     ],
 
     'status' => [

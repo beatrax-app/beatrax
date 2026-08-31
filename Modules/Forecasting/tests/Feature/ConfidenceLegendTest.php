@@ -6,8 +6,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Internal\Enums\SeriesConfidence;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
@@ -101,6 +104,28 @@ function clSeries(int $userId, int $accountId, string $name, int $variancePercen
     return $series;
 }
 
+function clSeedRun(DatabaseManager $db, int $userId, int $accountId): void
+{
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $userId,
+        'scenario_id' => null,
+        'horizon_days' => 30,
+        'status' => 'complete',
+        'result_json' => json_encode(['as_of' => '2026-05-01', 'horizon_days' => 30, 'accounts' => [
+            (string) $accountId => [
+                'account_id' => $accountId,
+                'account_name' => 'CL ASN',
+                'default_currency' => 'EUR',
+                'today_balance_minor' => 100000,
+                'anchor_source' => 'user_input_opening_balance',
+                'points' => [['date' => '2026-05-01', 'low_minor' => 100000, 'point_minor' => 100000, 'high_minor' => 100000, 'currency' => 'EUR']],
+            ],
+        ]]),
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+}
+
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -139,7 +164,7 @@ it('renders the high-confidence emerald chip for a var=5% series (band=10%)', fu
 
     expect($content)->toContain('data-testid="confidence-legend"');
     expect($content)->toContain('bg-emerald-50 text-emerald-700');
-    expect($content)->toContain('high');
+    expect($content)->toContain('>'.Lang::get(SeriesConfidence::High->labelKey()).'<');
 });
 
 it('renders the medium-confidence slate chip for a var=10% series (band=20%)', function (): void {
@@ -170,7 +195,7 @@ it('renders the medium-confidence slate chip for a var=10% series (band=20%)', f
     $content = (string) $response->getContent();
 
     expect($content)->toContain('bg-slate-100 text-slate-700');
-    expect($content)->toContain('medium');
+    expect($content)->toContain('>'.Lang::get(SeriesConfidence::Medium->labelKey()).'<');
 });
 
 it('renders the low-confidence amber chip for a var=45% series (band=90%)', function (): void {
@@ -201,7 +226,7 @@ it('renders the low-confidence amber chip for a var=45% series (band=90%)', func
     $content = (string) $response->getContent();
 
     expect($content)->toContain('bg-amber-50 text-amber-700');
-    expect($content)->toContain('low');
+    expect($content)->toContain('>'.Lang::get(SeriesConfidence::Low->labelKey()).'<');
 });
 
 it('hides the confidence legend on the All accounts tab', function (): void {
@@ -242,4 +267,39 @@ it('renders the empty-state body when no series contribute to the account foreca
     $content = (string) $response->getContent();
 
     expect($content)->toContain("No series contribute to this account's forecast yet.");
+});
+
+// The chip printed the enum's backing value, so a Dutch reader got an English
+// "low" inside otherwise fully Dutch copy.
+it('names the confidence bucket in the reader\'s own language', function (): void {
+    $accountId = clAccount($this->db, $this->user->id);
+    clSeries($this->user->id, $accountId, 'Electricity', variancePercent: 45, amountMinor: -14000);
+    clSeedRun($this->db, $this->user->id, $accountId);
+
+    $this->user->locale = 'nl';
+    $this->user->save();
+
+    $content = (string) $this->actingAs($this->user)->get('/forecast?account='.$accountId)->getContent();
+
+    expect($content)->toContain('>Laag<')
+        ->and($content)->not->toContain('>'.SeriesConfidence::Low->value.'<');
+});
+
+// The legend line is suffixed "/mo", and it printed the latest CHARGE beside
+// it: a EUR120.00-a-year series read "EUR120,00/mnd" on a page that also told
+// the reader their yearly bills.
+it('states the monthly equivalent, not the yearly charge, on the per-month line', function (): void {
+    $accountId = clAccount($this->db, $this->user->id);
+    $series = clSeries($this->user->id, $accountId, 'Domain renewal', variancePercent: 5, amountMinor: -12000);
+    $series->cadence = 'yearly';
+    $series->monthly_equivalent_minor = -1000;
+    $series->save();
+    clSeedRun($this->db, $this->user->id, $accountId);
+
+    $content = (string) $this->actingAs($this->user)->get('/forecast?account='.$accountId)->getContent();
+
+    $suffix = Lang::get('forecasting::forecast.per_month_suffix');
+
+    expect($content)->toContain(Money::ofMinor(1_000, 'EUR')->format().$suffix)
+        ->and($content)->not->toContain(Money::ofMinor(12_000, 'EUR')->format().$suffix);
 });

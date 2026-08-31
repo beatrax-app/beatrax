@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Gesli se ne ujemata.',
         'password_length' => 'Uporabi vsaj 12 znakov.',
         'pin_length' => 'PIN mora imeti vsaj 6 števke.',
+        'pin_digits' => 'PIN mora imeti 6 do 10 števk — samo številke.',
         'pins_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
         'session_expired' => 'Tvoja seja je potekla, preden se je nastavitev dokončala. Znova vnesi PIN in geslo.',
         'retry_failed' => 'Nastavitve te naprave še vedno ni bilo mogoče dokončati. Poskusi znova.',

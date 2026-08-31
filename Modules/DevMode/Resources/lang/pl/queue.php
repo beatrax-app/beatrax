@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Usuń :count zadanie|Usuń :count zadania|Usuń :count zadań',
     'empty_pending' => 'Kolejka jest pusta.',
     'empty_failed' => 'Brak nieudanych zadań.',
-    'empty_batches' => 'Brak aktywnych partii.',
+    'empty_batches' => 'Brak partii.',
     'select_aria' => 'Zaznacz',
     'select_row_aria' => 'Zaznacz wiersz :key',
     'col_id' => 'Id',
     'col_queue' => 'Kolejka',
     'col_attempts' => 'Próby',
+    'col_state' => 'Stan',
     'col_created' => 'Utworzono',
     'col_uuid' => 'UUID',
     'col_failed' => 'Nieudane',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Oczekujące',
     'col_actions' => 'Akcje',
     'delete_job' => 'Usuń zadanie',
+    'worker_running' => 'Wykonuje ją worker',
     'delete_pending_confirm' => 'Usunąć oczekujące zadanie #:key?',
     'retry_job' => 'Ponów zadanie',
     'forget_confirm' => 'Usunąć nieudane zadanie :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Zaznaczone nieudane zadania wrócą do kolejki, aby worker spróbował je wykonać ponownie.',
     'cancel' => 'Anuluj',
 
+    'state' => [
+        'available' => 'Gotowe',
+        'reserved' => 'Zarezerwowane',
+        'scheduled' => 'Zaplanowane',
+    ],
+
     'tab' => [
         'pending' => 'Oczekujące',
         'failed' => 'Nieudane',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Oczekujące zadanie usunięte',
+        'pending_already_gone' => 'Tego zadania już nie było',
         'failed_requeued' => 'Nieudane zadanie wróciło do kolejki',
         'failed_removed' => 'Nieudane zadanie usunięte',
         'batch_cancelled' => 'Partia anulowana',
         'batch_deleted' => 'Partia usunięta',
         'batch_failures_requeued' => 'Niepowodzenia partii wróciły do kolejki',
+        'batch_failures_none' => 'W partii nie ma już błędów do ponownego zakolejkowania',
         'failed_jobs_requeued' => 'Nieudane zadania wróciły do kolejki',
+        'failed_jobs_none' => 'Nie ma już nieudanych zadań do ponownego zakolejkowania',
         'bulk_refused' => 'Odmowa zbiorczego usunięcia — :reason',
         'rows_deleted' => 'Zaznaczone wiersze usunięte',
     ],

@@ -253,6 +253,49 @@ it('cancel() forgets the session ack flag even when a fully-registered applicati
     expect($secrets->hasApplication())->toBeTrue();
 });
 
+function obwSeedRegisteredApplication(): OpenBankingSecretsRepository
+{
+    /** @var OpenBankingSecretsRepository $secrets */
+    $secrets = app(OpenBankingSecretsRepository::class);
+    $secrets->save(new OpenBankingCredentials(
+        applicationId: 'existing-application-id',
+        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nexisting-fixture\n-----END PRIVATE KEY-----",
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: null,
+        institutionId: null,
+    ));
+
+    return $secrets;
+}
+
+it('open() honours a legal start step for an already-registered application', function (): void {
+    $user = obwUser('obw-legal-start-step');
+    obwSeedRegisteredApplication();
+
+    Livewire::actingAs($user)
+        ->test(OpenBankingWizardModal::class)
+        ->dispatch('open-banking-wizard:open', startStep: 4, bankChoice: 'asn', otherInstitutionId: '')
+        ->assertSet('step', 4)
+        ->assertSet('bankChoice', 'asn')
+        ->assertSee('Choose your bank');
+});
+
+// The start step arrives on a client-triggerable event and picks the branch the
+// modal renders. An unknown number matched no branch, so the reader got a
+// dialog with a heading, no controls, and no way out of it.
+it('open() refuses a start step that is not a real step, rather than rendering a modal with no controls', function (): void {
+    $user = obwUser('obw-out-of-range-start-step');
+    obwSeedRegisteredApplication();
+
+    Livewire::actingAs($user)
+        ->test(OpenBankingWizardModal::class)
+        ->dispatch('open-banking-wizard:open', startStep: 99, bankChoice: 'asn', otherInstitutionId: '')
+        ->assertSet('step', 1)
+        ->assertSet('bankChoice', '')
+        ->assertSee('Generate your local key pair');
+});
+
 it('has no constructor — service collaborators arrive only as action-method parameters (Livewire strict-rules requirement)', function (): void {
     $reflection = new ReflectionClass(OpenBankingWizardModal::class);
     expect($reflection->getConstructor())->toBeNull();

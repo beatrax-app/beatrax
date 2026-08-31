@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Events;
 
-final class TransactionTagged
+final readonly class TransactionTagged
 {
     public function __construct(
-        public readonly int $userId,
-        public readonly int $transactionId,
-        public readonly ?int $deductionCategoryId,
+        public int $userId,
+        public int $transactionId,
+        public ?int $deductionCategoryId,
     ) {}
 }

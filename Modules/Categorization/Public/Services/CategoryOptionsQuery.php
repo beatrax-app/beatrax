@@ -12,7 +12,7 @@ use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
-use stdClass;
+use Modules\Ledger\Public\Support\CategoryPathName;
 
 // A row is offered when its user_id is null (the seeded default tree) or
 // matches the user. Both halves of the self-join apply that, so a leaf whose
@@ -64,26 +64,27 @@ final class CategoryOptionsQuery
             ])
             ->get();
 
+        $paths = [];
+        foreach ($rows as $row) {
+            $paths[self::toInt($row->id)] = CategoryPathName::join(
+                CategoryDisplayName::fromRow($row, 'parent'),
+                CategoryDisplayName::fromRow($row, 'category') ?? '',
+            );
+        }
+
+        // Distinct labels, but the display_order the query asked for: the
+        // ordinal is assigned lowest id first and would otherwise reorder the
+        // whole picker behind it.
+        $labels = CategoryPathName::distinct($paths);
+
         $options = [];
         foreach ($rows as $row) {
-            $options[] = $this->mapOption($row);
+            $id = self::toInt($row->id);
+            $options[] = new CategoryOption(id: $id, path: $labels[$id], displayOrder: self::toInt($row->display_order));
         }
 
         $this->cache[$cacheKey] = $options;
 
         return $options;
-    }
-
-    private function mapOption(stdClass $row): CategoryOption
-    {
-        $name = CategoryDisplayName::fromRow($row, 'category') ?? '';
-        $parent = CategoryDisplayName::fromRow($row, 'parent');
-        $path = $parent === null ? $name : $parent.' / '.$name;
-
-        return new CategoryOption(
-            id: self::toInt($row->id),
-            path: $path,
-            displayOrder: self::toInt($row->display_order),
-        );
     }
 }

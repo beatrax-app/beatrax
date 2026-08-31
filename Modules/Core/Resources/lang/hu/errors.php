@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'back' => 'Vissza a Beatraxhoz',
 
+    'not_saved' => 'Semmi nem lett mentve. Az adataid változatlanok — próbáld meg újra.',
+
+    'no_longer_here' => 'Ez már nincs meg.',
+
     '404' => [
         'title' => 'Ez az oldal nem létezik',
         'body' => 'A hivatkozás lehet régi, vagy az oldal nevet kapott. Az adataiddal semmi baj.',

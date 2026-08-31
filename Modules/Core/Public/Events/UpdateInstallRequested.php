@@ -6,9 +6,9 @@ namespace Modules\Core\Public\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 
-final class UpdateInstallRequested
+final readonly class UpdateInstallRequested
 {
     use Dispatchable;
 
-    public function __construct(public readonly string $latestVersion) {}
+    public function __construct(public string $latestVersion) {}
 }

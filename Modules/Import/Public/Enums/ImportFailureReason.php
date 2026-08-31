@@ -18,11 +18,17 @@ enum ImportFailureReason: string
 
     case RowUnreadable = 'row_unreadable';
 
+    case RowBelongsToAnotherStatement = 'row_belongs_to_another_statement';
+
     case FileUnreadable = 'file_unreadable';
 
     case FileStoppedShort = 'file_stopped_short';
 
     case PdfReaderUnavailable = 'pdf_reader_unavailable';
+
+    case PdfHasNoTextLayer = 'pdf_has_no_text_layer';
+
+    case PdfPasswordProtected = 'pdf_password_protected';
 
     // The line under "This file could not be read". Only FileUnreadable names
     // the header row, and it is reached only when the format check itself

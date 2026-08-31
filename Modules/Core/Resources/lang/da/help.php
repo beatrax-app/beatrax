@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Om :subject',
+        'close' => 'Luk',
+    ],
+
     'page_title' => 'Hvor er mine data?',
     'intro' => 'Beatrax gemmer alt på denne enhed. Intet sendes til en server, intet synkroniseres til skyen, og intet forlader enheden, uden at du eksporterer det.',
 

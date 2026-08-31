@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Ezen a szakaszon túl nem található fedezeti lánc.',
 
     'covers_charges' => ':count ICS-terhelést fedez|:count ICS-terhelést fedez',
-    'no_ics_charges' => 'Ebben az elszámolásban nincs ICS-terhelés',
     'show_more_fanout' => 'További :count megjelenítése · :shown / :total',
 
     'confirm' => 'Megerősítés',
     'reject' => 'Elutasítás',
     'confirm_aria' => 'A(z) :id lánckapcsolat megerősítése',
     'reject_aria' => 'A(z) :id lánckapcsolat elutasítása',
+
+    'confidence_tier' => [
+        'deterministic' => 'Determinisztikus',
+        'confirmed' => 'Megerősítve',
+        'candidate' => 'Jelölt',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Megbízhatóság: determinisztikus egyezés',

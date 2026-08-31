@@ -51,17 +51,22 @@ output, and that output is keyed by `scenario_id` in
 `ScenarioApplier` is a pure in-memory transform with the signature
 `list<ForecastContribution> -> list<ForecastContribution>`. It sits at
 one point in the pipeline — after `ChainAwareForecastRouter` has
-resolved funder accounts, before `DailyFold` buckets contributions per
-account. `ProjectionPipeline` calls it only when `scenarioId` is
-non-null; with no scenario the transform is skipped entirely rather
-than run as a no-op, so the baseline path does not even load the
-mutation table.
+resolved funder accounts, before `CadenceJitter` smears the dates and
+`DailyFold` buckets contributions per account. `ProjectionPipeline`
+calls it only when `scenarioId` is non-null; with no scenario the
+transform is skipped entirely rather than run as a no-op, so the
+baseline path does not even load the mutation table.
 
 The position in the pipeline is not arbitrary. Running before the
 router would mean a scenario-added contribution never gets chain-routed
 onto its funder account; running after the fold would mean rewriting
 an already-summed balance curve, where individual series are no longer
-separable.
+separable. And it has to run *before* the jitter, because three of the
+five mutation kinds select contributions by series id and two of those
+act on a single occurrence: with the smearing done first the applier
+saw seven replicas where the user had named one charge, and
+`change_series_amount` charged a variable bill seven times over. See
+[Projection math — cadence jitter](projection-math.md#cadence-jitter).
 
 ### Mutations compose in creation order
 
@@ -98,10 +103,10 @@ that id belonging to the calling user. No such row has id `0`, so `0`
 never persists. The applier depends on this guarantee and does not
 re-check it.
 
-### The two reads the applier is allowed to make
+### The reads the applier is allowed to make
 
-`ScenarioApplier` touches the database in three places, and it is
-worth being explicit about all three:
+`ScenarioApplier` touches the database in four places, and it is
+worth being explicit about all of them:
 
 - `ScenarioQuery::mutationsFor` — `Forecasting`-owned tables only.
 - `RecurringSeriesQuery::forSeries` — a typed `Public` surface from
@@ -109,13 +114,30 @@ worth being explicit about all three:
   the series' variance tolerance and the sign of its latest amount so
   `change_series_amount` can rebuild a band. It never reads observed
   occurrences.
-- A direct `accounts` read to pick a landing account for a one-off
-  when the baseline is empty, and a direct `recurring_series` existence
-  check used only to decide whether to log a warning.
+- `accounts` — to pick a landing account for a one-off when the
+  baseline is empty.
+- A `recurring_series` existence check used only to decide whether to
+  log a warning.
 
-All four are reads. Nothing in the module writes to `transactions`,
+Every one is a read. Nothing in the module writes to `transactions`,
 `recurring_series`, `card_statements`, `chain_links` or `drift_alerts`
 at all.
+
+A one-off in a second currency used to take the whole projection down.
+The applier emitted it with a null rate whatever currency the form was
+given, and `DailyFold` refused to fold a cross-currency amount with no
+rate — by raising, which fails the run. The mutation persists, so every
+retry of the queued job re-crashed on it, and the reader was never told:
+a non-complete run falls through to `ForecastQuery`'s flat-line
+fallback, so the scenario chart drew a straight line forever. The
+applier now emits the contribution in the currency the form was given
+and leaves the rate to `DailyFold`, which resolves one per currency
+against the account it is folding into and names what it cannot price;
+`ForecastDto` carries `runFailed` so a failed run says so on screen
+instead of passing its fallback line off as a projection. The currency
+field itself is a select of the reader's own account currencies, and
+`ScenarioMutationPayload` folds the case and refuses a code that is not
+ISO-4217 — `usd` and `ZZZ` both used to persist unchecked.
 
 ### Cross-user references fail closed
 
@@ -162,6 +184,15 @@ Being honest about its reach matters as much as having it:
   `ProjectForecastJob`, and asserts the substrate row counts are
   byte-for-byte unchanged afterwards — including a second user's rows,
   so a missing `user_id` filter fails too.
+- Row counts are only half of it. "Absent from every other read"
+  includes reads over tables the substrate check never looks at, and
+  the notification inbox was one: a what-if dip raised a real
+  `ForecastShortfallDetected`, `Notifications` wrote an inbox row for
+  it, and the reader was warned about a shortfall they had only asked
+  a question about. `ShortfallDetector` now dispatches nothing for a
+  scenario run and `PersistForecastShortfall` refuses a scenario event
+  should one arrive from anywhere else; the contract test asserts the
+  window is written and the inbox stays empty.
 
 The grep is a tripwire against the easy mistake, not a proof. The
 proof is the runtime contract test; the design property is that

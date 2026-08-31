@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Unlock',
 
-    'digits_entered' => 'digits entered',
+    'digits_entered' => ':count digit entered|:count digits entered',
     'pin_pad' => 'PIN pad',
     'digit' => 'Digit :digit',
     'backspace' => 'Backspace',

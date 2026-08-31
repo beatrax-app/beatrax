@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'O skupnem seznamu',
     'about_body' => 'Priložena datoteka YAML, ki nerazumljive kode z bančnih izpiskov preslika v razumljiva imena trgovcev. Ko je vklopljen, Beatrax seznam prebere ob uvozu; oddaja predloga odpre GitHub v tvojem brskalniku.',
 
-    'mappings' => 'Preslikave',
-    'contributors' => 'Sodelujoči',
+    'mappings' => ':count preslikava|:count preslikavi|:count preslikave|:count preslikav',
+    // i18n-review: sl · contributors — sodelujoči is a substantivised participle,
+    // written here in the definite masculine across all four arms. Whether the
+    // indefinite sodelujoč reads better after a bare numeral is the call.
+    'contributors' => ':count sodelujoči|:count sodelujoča|:count sodelujoči|:count sodelujočih',
 
     'use_shared_list' => [
         'title' => 'Uporabi skupni seznam trgovcev',
@@ -22,6 +24,7 @@ return [
     'update_on_updates' => [
         'title' => 'Posodobi skupni seznam ob posodobitvah aplikacije',
         'help' => 'Priloženi seznam osveži vsakič, ko se Beatrax posodobi.',
+        'help_phone' => 'Priloženi seznam osveži vsakič, ko se iz App Storea ali Googla Play namesti nova različica Beatraxa.',
         'note' => 'Se vklopi s prihodnjo posodobitvijo aplikacije — trenutno različico najdeš v Nastavitve → O aplikaciji.',
     ],
 ];

@@ -28,7 +28,7 @@ final class QueueInspectorPage extends Component
 {
     use DispatchesToast;
 
-    public const TABS = ['pending', 'failed', 'batches'];
+    public const array TABS = ['pending', 'failed', 'batches'];
 
     public string $tab = 'pending';
 
@@ -55,8 +55,10 @@ final class QueueInspectorPage extends Component
 
     public function delete(int $id, QueueActions $actions): void
     {
-        $actions->deletePending($id);
-        $this->toast(Lang::get('dev::queue.toast.pending_deleted'));
+        $deleted = $actions->deletePending($id);
+        $this->toast(Lang::get($deleted > 0
+            ? 'dev::queue.toast.pending_deleted'
+            : 'dev::queue.toast.pending_already_gone'));
     }
 
     public function retry(string $uuid, QueueActions $actions): void
@@ -83,10 +85,15 @@ final class QueueInspectorPage extends Component
         $this->toast(Lang::get('dev::queue.toast.batch_deleted'));
     }
 
+    // A batch keeps its failed_job_ids after a retry, so the button re-renders
+    // on the next poll; saying "re-queued" a second time named work that did
+    // not happen.
     public function retryFailures(string $batchId, QueueActions $actions): void
     {
-        $actions->retryBatchFailures($batchId);
-        $this->toast(Lang::get('dev::queue.toast.batch_failures_requeued'));
+        $retried = $actions->retryBatchFailures($batchId);
+        $this->toast(Lang::get($retried > 0
+            ? 'dev::queue.toast.batch_failures_requeued'
+            : 'dev::queue.toast.batch_failures_none'));
     }
 
     public function bulkRetryConfirm(QueueActions $actions): void
@@ -97,9 +104,11 @@ final class QueueInspectorPage extends Component
         if ($this->tab !== 'failed') {
             return;
         }
-        $actions->bulkRetry($this->selected);
+        $retried = $actions->bulkRetry($this->selected);
         $this->selected = [];
-        $this->toast(Lang::get('dev::queue.toast.failed_jobs_requeued'));
+        $this->toast(Lang::get($retried > 0
+            ? 'dev::queue.toast.failed_jobs_requeued'
+            : 'dev::queue.toast.failed_jobs_none'));
     }
 
     // Only the tab and a count cross the wire; the selection stays in
@@ -174,10 +183,11 @@ final class QueueInspectorPage extends Component
         // trips larastan-strict staticMethod.dynamicCall.
         $pendingCount = $connection->table('jobs')->count();
         $failedCount = $connection->table('failed_jobs')->count();
-        $batchesCount = $connection->table('job_batches')
-            ->whereNull('cancelled_at')
-            ->whereNull('finished_at')
-            ->count();
+        // Every batch, because that is what the batches tab lists: filtering
+        // the tile on cancelled_at + finished_at while the tab filtered on
+        // nothing put a 0 directly above a list of two rows, and the tab still
+        // has to reach a finished batch for the reader to delete it.
+        $batchesCount = $connection->table('job_batches')->count();
 
         $rows = $rowLoader->load($this->tab);
 
@@ -217,15 +227,22 @@ final class QueueInspectorPage extends Component
                 return null;
             }
 
-            return $scrub->scrub($this->prettyJsonString($raw));
+            return $scrub->scrub($this->pretty($raw, $this->tab === 'batches'));
         }
 
         return null;
     }
 
-    private function prettyJsonString(string $raw): string
+    // job_batches.options is a PHP serialize() blob, not JSON — Laravel's
+    // DatabaseBatchRepository writes it that way — so the viewer showed the
+    // reader `a:2:{s:13:"allowFailures";b:0;…}`. allowed_classes is false
+    // because a viewer must never instantiate what it is displaying.
+    private function pretty(string $raw, bool $serialized): string
     {
-        $decoded = json_decode($raw, true);
+        $decoded = $serialized
+            ? @unserialize($raw, ['allowed_classes' => false])
+            : json_decode($raw, true);
+
         if (is_array($decoded)) {
             $pretty = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             if (is_string($pretty)) {

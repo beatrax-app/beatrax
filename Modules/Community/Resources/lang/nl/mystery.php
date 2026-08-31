@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Nog niets mysterieus. Importeer wat afschriften en Beatrax toont hier de regels die het niet kon herkennen.',
 
+    'showing_capped' => 'De bovenste :shown van :total worden getoond.',
+
     'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met Beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
 
     'card' => [

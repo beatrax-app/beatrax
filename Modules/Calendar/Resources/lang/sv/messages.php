@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Bokförd betalning',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list räknas inte med — betalningar därifrån ändrar inte saldot',
+    ],
+
     'panel' => [
         'aria' => 'Panel med dagsdetaljer',
         'close' => 'Stäng dagspanelen',
+        'close_caption' => 'Stäng',
         'start_of_day' => 'Dagens början',
         'no_payments' => 'Inga betalningar den här dagen.',
         'date_approximate' => '~ ungefärligt datum',

@@ -12,9 +12,9 @@ use Modules\Ledger\Models\Account;
 // Constructed per import run with the user bound, so an adapter can resolve
 // once per source row and the wizard can branch on unknown IBANs before the
 // user confirms.
-final class EloquentAccountResolver implements AccountResolver
+final readonly class EloquentAccountResolver implements AccountResolver
 {
-    public function __construct(private readonly User $user) {}
+    public function __construct(private User $user) {}
 
     public function resolve(string $iban): AccountResolution
     {

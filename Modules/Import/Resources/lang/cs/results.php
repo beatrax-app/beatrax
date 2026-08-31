@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Nahrát další výpis z účtu',
 
+    'chain' => [
+        'heading' => 'Řeší se řetězce…',
+        'pending' => 'Ve frontě. Řešení řetězců se brzy spustí.',
+        'running' => 'Propojují se řetězce financování a rozkládají se vyrovnání z výpisu z účtu.',
+    ],
+
     'issues' => [
         'row' => 'Řádek :row: :reason',
         'file_stopped' => 'Soubor se nepodařilo načíst dále než po řádek :row. Nic za tímto řádkem nebylo importováno.',

@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
-use Livewire\Livewire;
+use Illuminate\Support\Facades\URL;
 use Modules\Core\Models\User;
-use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
 // ?force=1 is what the Settings "re-run setup tour" link uses.
@@ -39,22 +38,41 @@ it('renders the terminal step when every wizard step is already done and no forc
     expect((string) $response->getContent())->toContain('onboarding.steps.done-step');
 });
 
-it('resets every wizard_progress row and re-enters from welcome when ?force=1 is passed', function (): void {
-    $nonPendingBefore = DB::table('wizard_progress')
-        ->where('user_id', $this->user->id)
+function reRunNonPendingRows(int $userId): int
+{
+    return DB::table('wizard_progress')
+        ->where('user_id', $userId)
         ->where('status', '!=', 'pending')
         ->count();
-    expect($nonPendingBefore)->toBe(9);
+}
 
-    Livewire::withQueryParams(['force' => '1'])
-        ->test(SetupWizard::class)
-        ->assertSet('currentStepKey', 'welcome')
-        ->assertSet('isResuming', false)
-        ->assertSee('get Beatrax to know your money');
+it('resets every wizard_progress row and re-enters from welcome from the signed Settings link', function (): void {
+    expect(reRunNonPendingRows($this->user->id))->toBe(9);
 
-    $nonPendingAfter = DB::table('wizard_progress')
-        ->where('user_id', $this->user->id)
-        ->where('status', '!=', 'pending')
-        ->count();
-    expect($nonPendingAfter)->toBe(0);
+    $response = $this->get(URL::signedRoute('setup', ['force' => 1], absolute: false));
+
+    $response->assertOk();
+    expect((string) $response->getContent())->toContain('get Beatrax to know your money');
+
+    expect(reRunNonPendingRows($this->user->id))->toBe(0);
+});
+
+// Nine rows wiped by a bookmarkable GET with no token and no confirmation: the
+// only thing standing between that and a cross-site page was one env-overridable
+// cookie attribute.
+it('ignores an unsigned ?force=1 and leaves every wizard_progress row alone', function (): void {
+    expect(reRunNonPendingRows($this->user->id))->toBe(9);
+
+    $this->get(route('setup', ['force' => 1]))->assertOk();
+
+    expect(reRunNonPendingRows($this->user->id))->toBe(9);
+});
+
+it('ignores a ?force=1 carrying a signature minted for a different URL', function (): void {
+    parse_str((string) parse_url(URL::signedRoute('setup', ['force' => 0], absolute: false), PHP_URL_QUERY), $query);
+    $signature = $query['signature'] ?? '';
+
+    $this->get(route('setup', ['force' => 1, 'signature' => is_string($signature) ? $signature : '']))->assertOk();
+
+    expect(reRunNonPendingRows($this->user->id))->toBe(9);
 });

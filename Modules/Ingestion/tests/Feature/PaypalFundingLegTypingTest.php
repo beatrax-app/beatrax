@@ -93,7 +93,6 @@ function paypalFundingLegCanonical(
         currency: $source->currency,
         settledAmountMinor: $source->settledAmountMinor ?? $source->amountMinor,
         settledCurrency: $source->settledCurrency ?? $source->currency,
-        fxRateUsed: $source->fxRateUsed,
         counterpartyName: $source->counterpartyName,
         counterpartyIban: $source->counterpartyIban,
         counterpartyNormalized: $source->counterpartyName !== null

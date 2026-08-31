@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Odebrané zařízení',
     'dismiss_peer' => 'Zamítnout toto zařízení',
+    'dismiss_peer_caption' => 'Zamítnout',
     'dismiss_stale' => 'Vymazat zařízení, která už nejsou spárovaná',
     'not_synced_yet' => 'Zatím nesynchronizováno',
     'error' => 'Chyba synchronizace na jednom nebo více zařízeních',

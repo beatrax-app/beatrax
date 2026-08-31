@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Community\Public\Events;
 
-final class MysteryMerchantSubmitted
+final readonly class MysteryMerchantSubmitted
 {
     public function __construct(
-        public readonly int $userId,
-        public readonly string $pattern,
+        public int $userId,
+        public string $pattern,
     ) {}
 }

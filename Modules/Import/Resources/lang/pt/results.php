@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Carregar outro extrato',
 
+    'chain' => [
+        'heading' => 'A resolver cadeias…',
+        'pending' => 'Em fila. O resolvedor de cadeias começa dentro de momentos.',
+        'running' => 'A ligar cadeias de financiamento e a decompor liquidações de extrato.',
+    ],
+
     'issues' => [
         'row' => 'Linha :row: :reason',
         'file_stopped' => 'O ficheiro não pôde ser lido para além da linha :row. Nada depois dessa linha foi importado.',

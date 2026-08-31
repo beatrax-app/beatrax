@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'βάση :baseline → πραγματικό: :actual',
+    'charged' => 'χρεώθηκε :actual',
     'detected' => 'εντοπίστηκε :date',
     'sensitivity' => 'ευαισθησία :percent στα 100',
 

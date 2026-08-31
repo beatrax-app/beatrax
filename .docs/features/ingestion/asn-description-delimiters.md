@@ -9,8 +9,8 @@ every screen that prints a description, and the full-text index indexed them:
 'Rentevergoeding tweede kwartaal'
 ```
 
-`AsnCsvAdapter` now strips them at parse time. The rule lives once, in
-`Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters`, because two things
+`PositionalCsvAdapter` now strips them at parse time. The rule lives once, in
+`Modules\Ingestion\Public\Csv\AsnDescriptionDelimiters`, because two things
 apply it and they must not be able to disagree.
 
 ## The rule
@@ -53,7 +53,7 @@ all, and `unwrapStored()` returns `null` to say so.
 `Modules\Ledger\Internal\Services\StripAsnDescriptionDelimiters` is the forward
 pass over rows imported before the adapter fix. It is scoped to
 `source_format = 'asn-csv'`: that is the only key `SourceAdapterRegistry` binds
-to `AsnCsvAdapter`, so no other format can have produced these delimiters. The
+to the ASN preset's positional adapter, so no other format can have produced these delimiters. The
 CSV presets, ING's among them, route through `GenericCsvAdapter` under their own
 format ids.
 

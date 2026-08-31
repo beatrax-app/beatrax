@@ -18,17 +18,17 @@ use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class OAuthConnectController
+final readonly class OAuthConnectController
 {
     public function __construct(
-        private readonly GoogleOAuthProvider $googleOAuth,
-        private readonly MicrosoftOAuthProvider $microsoftOAuth,
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly OAuthStateRepository $oauthState,
-        private readonly CurrentUser $currentUser,
-        private readonly Redirector $redirector,
-        private readonly InboxQuery $inboxQuery,
-        private readonly LoopbackRedirectUri $loopback,
+        private GoogleOAuthProvider $googleOAuth,
+        private MicrosoftOAuthProvider $microsoftOAuth,
+        private OAuthSecretsRepository $secrets,
+        private OAuthStateRepository $oauthState,
+        private CurrentUser $currentUser,
+        private Redirector $redirector,
+        private InboxQuery $inboxQuery,
+        private LoopbackRedirectUri $loopback,
     ) {}
 
     public function __invoke(Request $request, string $provider): RedirectResponse

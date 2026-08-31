@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Your bank',
     'bank_desc' => 'Drop a statement file. We read CSV, MT940, and CAMT.053 from most European banks.',
-    'card_title' => 'Your credit card (ICS)',
-    'card_desc' => 'Drop the monthly PDF statement from Mijn ICS.',
+    'card_title' => 'Your credit card',
+    'card_desc' => 'Drop your monthly card statement PDFs. ICS is the issuer we can read today.',
     'email_title' => 'Receipts from email',
     'email_desc' => 'Connect Gmail or Outlook to capture purchase confirmations automatically.',
+    'email_desc_phone' => 'Purchase confirmations are captured by the desktop app; this phone shows what it finds, over sync.',
 
     'continue' => 'Continue →',
 ];

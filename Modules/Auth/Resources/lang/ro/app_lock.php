@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Dispozitivul tău a refuzat să stocheze cheia. Deblocarea biometrică nu este disponibilă.',
     'heading' => 'Blocarea aplicației',
 
-    'moved_help' => 'Codul PIN, temporizarea blocării automate și deblocarea biometrică se află în setările de sincronizare ale acestui dispozitiv.',
-    'moved_cta' => 'Deschide Sincronizare și dispozitiv',
-
     'toggle_label' => 'Blochează aplicația cu cod PIN',
     'toggle_description' => 'Înlocuiește autentificarea zilnică cu un cod PIN. Sesiunile rămân active 30 de zile.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Păstrează codul PIN',
 
     'error_pin_too_short' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
-    'error_pin_digits' => 'Codul PIN trebuie să aibă între 6 și 10 cifre — doar cifre.',
+    'error_pin_digits' => 'Codul PIN trebuie să aibă între :min și :max cifre — doar cifre.',
     'error_pin_mismatch' => 'Codurile PIN nu coincid. Încearcă din nou.',
     'error_pin_required' => 'Introdu codul PIN.',
     'error_pin_incorrect' => 'Cod PIN incorect.',

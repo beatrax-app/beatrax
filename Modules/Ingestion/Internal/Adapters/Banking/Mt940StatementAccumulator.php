@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
+use Modules\Ingestion\Internal\Enums\StatementExtraKey;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 final class Mt940StatementAccumulator
@@ -21,6 +22,10 @@ final class Mt940StatementAccumulator
     public ?Mt940BalanceTuple $closingBalance = null;
 
     public ?string $currency = null;
+
+    // A balance tag arrived, whether or not it parsed. Without it a :61: with
+    // no currency can only be reported as a tag that never came.
+    public bool $balanceTagSeen = false;
 
     // Set at the first closing balance: later statements in a multi-statement
     // file stop overwriting header fields but keep streaming their entries.
@@ -40,9 +45,9 @@ final class Mt940StatementAccumulator
             return null;
         }
 
-        $extras = ['statementId' => $this->statementId];
+        $extras = [StatementExtraKey::StatementId->value => $this->statementId];
         if ($this->multiStatement) {
-            $extras['multiStatement'] = true;
+            $extras[StatementExtraKey::MultiStatement->value] = true;
         }
 
         return new StatementSummaryData(

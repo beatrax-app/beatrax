@@ -7,6 +7,7 @@ use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
+use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
@@ -15,7 +16,7 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 function paypalMatcher(): PaypalReceiptMatcher
 {
-    return new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
+    return new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
 }
 
 function paypalInbox(string $senderEmail, ?string $subject = null): InboxMessageDto
@@ -80,7 +81,6 @@ it('parses a current-generation Dutch PayPal receipt into a ParsedReceiptDto', f
     // bookedAt MUST be normalised to startOfDay so receipt + CSV
     // fingerprints align (FingerprintComposer v3 day-precision contract).
     expect($dto->bookedAt->format('H:i:s'))->toBe('00:00:00');
-    expect($dto->rawPayload['matcher_key'] ?? null)->toBe('paypal-receipt');
 });
 
 it('falls back to English merchant/amount anchors on a prior-generation PayPal receipt', function (): void {
@@ -160,6 +160,7 @@ it('routes a PayPal sender via MatcherRegistry to PaypalReceiptMatcher', functio
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
     expect($outcome->parsed?->merchantName)->toBe('Netflix BV');
+    expect($outcome->matcherKey)->toBe('paypal-receipt');
 });
 
 it('returns unmatched when no matcher claims the sender', function (): void {
@@ -212,6 +213,5 @@ it('ReceiptSourceAdapter::toSourceDto maps every field per the interfaces table'
     expect($source->sourceRef)->toBe('PAYPALTXN17052026');
     expect($source->settledAmountMinor)->toBe(-1299);
     expect($source->settledCurrency)->toBe('EUR');
-    expect($source->fxRateUsed)->toBeNull();
     expect($source->sourceRowIndex)->toBe(0);
 });

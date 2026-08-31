@@ -17,3 +17,4 @@ PHP, no Homebrew PHP, no Vagrant.
 | [database.md](database.md) | Where the SQLite file lives, WAL mode, recommended GUIs |
 | [troubleshooting.md](troubleshooting.md) | The recurring gotchas — PHP version, sodium, NativePHP bundle availability |
 | [dev-mode.md](dev-mode.md) | Turning on developer mode and the surfaces it exposes |
+| [rebasing-a-statement-fixture.md](rebasing-a-statement-fixture.md) | Getting a shipped statement fixture into the date windows the product reads, for hand-testing a build |

@@ -89,6 +89,27 @@ final readonly class OpLogEntry
         return [$this->signingPayload(), $this->legacySigningPayload()];
     }
 
+    // The same entry with its GDK ciphertext replaced by the plaintext a merge
+    // strategy can read. $gdkEpoch is deliberately kept: the projection
+    // write-back needs to know the source was encrypted.
+    public function withDecryptedValue(string $plain): self
+    {
+        return new self(
+            table: $this->table,
+            pk: $this->pk,
+            field: $this->field,
+            value: $plain,
+            hlcL: $this->hlcL,
+            hlcC: $this->hlcC,
+            deviceId: $this->deviceId,
+            opType: $this->opType,
+            signature: $this->signature,
+            userId: $this->userId,
+            gdkEpoch: $this->gdkEpoch,
+            originUserId: $this->originUserId,
+        );
+    }
+
     // Re-scopes an entry onto the RECEIVING device's local user. user_id is a
     // local autoincrement surrogate, not a shared identity: the same account
     // is user 3 on one device and user 1 on another. It is deliberately absent

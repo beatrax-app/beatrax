@@ -1,6 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /recurring/series/{id} drill-in page — full amount-over-time chart
     (native-currency primary + EUR shadow when distinct) over the
@@ -20,13 +19,11 @@
 
     $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
-
     $chartElementId = 'series-chart-'.$series->seriesId;
     $occurrenceCount = count($occurrences);
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     {{-- Mobile top bar: back affordance targeting /recurring parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is the series display name, truncated to one line.
@@ -43,13 +40,17 @@
                 <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
                 <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">·</span>
-                <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
+                {{-- The DTO's own conversion, not the series' minor units under the
+                     reader's sign: a $10.99 subscription read as -EUR 10.99/mo when it
+                     is worth EUR 5.50. Null rate falls back to the native figure,
+                     which at least carries the currency it is denominated in. --}}
+                <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->monthlyEquivalentInBase ?? $series->monthlyEquivalent) }}{{ Lang::get('recurring::detail.per_month_suffix') }}</span>
             </p>
             @if (! empty($counterpartyLink))
                 <p class="mt-2 text-sm">
                     <a
                         href="{{ route('counterparties.profile', ['slug' => $counterpartyLink['slug']]) }}"
-                        class="text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                        class="tap-link text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                     >{{ Lang::get('recurring::detail.view_profile', ['name' => $counterpartyLink['displayName']]) }}</a>
                 </p>
             @endif
@@ -97,7 +98,7 @@
             {{-- Back link: visible at desktop (the mobile top bar handles phone) --}}
             <a
                 href="{{ Destination::Recurring->url() }}"
-                class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
+                class="tap-link hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
             >{{ Lang::get('recurring::detail.back') }}</a>
         </div>
     </header>

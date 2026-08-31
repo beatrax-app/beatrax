@@ -200,17 +200,18 @@ it('routes ics_card to the most recent card_statements row (negated open_balance
     expect($anchor->source)->toBe('ics_card_statement');
 });
 
-// Summing a card's own history would double-count the billing events the
-// projection is about to re-emit, so a card with nothing to anchor on takes
-// zero rather than the ledger balance every other kind takes.
-it('keeps a card with no statement and no entered balance at zero', function (): void {
+// The projector emits occurrences from today forward, so a charge already
+// posted is never re-emitted and never doubled -- which is what the statement
+// arm above already relies on. Anchored at zero, the card's whole debt was
+// missing from the curve while the dashboard one click away carried it.
+it('carries a card with no statement at the ledger balance every other kind takes', function (): void {
     $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value);
     barInsertTransaction($this->db, $this->user->id, $accountId, -70400, '2026-05-04');
 
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
-    expect($anchor->openingBalanceMinor)->toBe(0);
-    expect($anchor->source)->toBe('ics_card_zero_anchor');
+    expect($anchor->openingBalanceMinor)->toBe(-70400);
+    expect($anchor->source)->toBe('sum_of_transactions');
 });
 
 it('routes a card to accounts.opening_balance_minor when the user set one', function (): void {
@@ -280,12 +281,12 @@ it('defaults to the base currency on the ledger-balance path when the account ha
     expect($anchor->currency)->toBe(Currency::Eur->value);
 });
 
-it('defaults to the base currency on the card zero anchor when the account has no default currency', function (): void {
+it('defaults to the base currency on a statement-less card when the account has no default currency', function (): void {
     $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value, ['default_currency' => '']);
 
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
-    expect($anchor->source)->toBe('ics_card_zero_anchor');
+    expect($anchor->source)->toBe('sum_of_transactions');
     expect($anchor->currency)->toBe(Currency::Eur->value);
 });
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Este teléfono no puede guardar un archivo que la aplicación le entrega, así que la copia cifrada se hace en la aplicación de escritorio. Vincula este dispositivo para mantener ambos sincronizados.',
+        'no_download_route' => 'Esta aplicación no puede entregar un archivo a tu dispositivo, así que la copia cifrada se hace en la aplicación de escritorio. Vincula este dispositivo para mantener ambos sincronizados.',
         'unavailable' => 'Las copias de seguridad cifradas están disponibles en la versión de escritorio (SQLite). Con una base de datos en un servidor, usa las herramientas de copia de seguridad de la propia base de datos.',
         'intro' => 'Descarga una copia de toda tu base de datos cifrada con una frase de contraseña — puedes guardarla sin riesgo en un disco externo o en la nube, porque es ilegible sin la frase de contraseña (XChaCha20-Poly1305 + Argon2id, resistente a la computación cuántica).',
         'passphrase' => 'Frase de contraseña',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'El archivo no terminó de subirse. Puede que sea demasiado grande para este dispositivo: restaurar en la aplicación de escritorio admite una copia más grande.',
         'enter_passphrase' => 'Introduce la frase de contraseña con la que se cifró la copia.',
         'unreadable' => 'No se ha podido leer el archivo subido. Inténtalo de nuevo.',
+        'restore_wrong_passphrase' => 'Esa frase de contraseña no ha abierto esta copia de seguridad, y no se ha cambiado nada. Vuelve a escribirla e inténtalo otra vez. Si es la correcta, el archivo se ha alterado desde que se creó: restaura otra copia.',
+        'restore_not_a_backup' => 'Este archivo no es una copia de seguridad cifrada de Beatrax, así que no hay nada que restaurar y no se ha cambiado nada. Elige el archivo .enc que escribió la app al hacer la copia.',
+        'restore_contents_unreadable' => 'La copia de seguridad se ha abierto, pero la base de datos que contiene está dañada, así que no se ha restaurado y no se ha cambiado nada. Restaura una copia anterior.',
+        'restore_could_not_read' => 'No se ha podido leer el archivo de copia de seguridad, así que la restauración no se ha ejecutado y no se ha cambiado nada. Comprueba que este dispositivo tiene espacio libre e inténtalo otra vez.',
+        'restore_not_supported' => 'La restauración funciona en la versión que guarda sus datos en un solo archivo, y esta no lo es, así que no se ha cambiado nada. En una base de datos de servidor, usa las herramientas de restauración de esa base de datos.',
+        'restore_failed' => 'La restauración no se ha ejecutado y no se ha cambiado nada. Inténtalo otra vez; si sigue fallando, el registro de la app anota qué la detuvo.',
     ],
 ];

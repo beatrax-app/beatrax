@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Waarover wil je meldingen',
+    'background_note' => 'Beatrax bereidt deze voor terwijl de app open is. Een geplande achtergrondrun kan dat niet — de app-vergrendeling heeft de enige sleutel — dus wat klaarstaat wordt opgepakt terwijl je de app verder gebruikt.',
+    'background_note_phone' => 'Beatrax bereidt deze voor terwijl de app open is. Op de achtergrond kan dat niet — de app-vergrendeling heeft de enige sleutel — dus wat klaarstaat komt binnen zodra je de app weer opent.',
 
     'reminders' => [
         'label' => 'Betalingsherinneringen',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Details in meldingen verbergen',
-        'help' => 'Toon bedragen en winkeliernamen in de melding zelf. Zet uit als je scherm zichtbaar kan zijn voor anderen.',
+        'help' => 'Verberg bedragen en winkeliernamen in de melding zelf. Zet aan als je scherm zichtbaar kan zijn voor anderen.',
     ],
 
     'save' => 'Meldingsinstellingen opslaan',

@@ -23,5 +23,6 @@ return [
         'body' => 'Les codes de récupération sont le seul moyen de revenir dans ton compte si tu oublies ton mot de passe.',
         'warning' => 'Ils sont stockés hachés et ne peuvent donc plus être affichés. Générer un nouveau jeu annule immédiatement l\'ancien.',
         'regenerate' => 'Générer de nouveaux codes',
+        'regenerate_confirm' => 'Générer un nouveau jeu de codes de récupération ? Le jeu que tu as maintenant cesse de fonctionner dès que le nouveau est créé, et il ne pourra plus être affiché — une copie imprimée ou recopiée à la main devient inutile. Enregistre les nouveaux codes avant de quitter cette page.',
     ],
 ];

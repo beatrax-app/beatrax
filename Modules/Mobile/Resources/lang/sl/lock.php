@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Odklepanje',
 
-    'digits_entered' => 'vnesenih števk',
+    'digits_entered' => 'vnesena :count števka|vneseni :count števki|vnesene :count števke|vnesenih :count števk',
     'pin_pad' => 'Tipkovnica PIN',
     'digit' => 'Števka :digit',
     'backspace' => 'Vračalka',

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Ukjente',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankgebyr',
+    ],
+
     'cp_card' => [
         'aria' => 'Motpart: :name',
         'recent_aria' => 'Siste aktivitet',

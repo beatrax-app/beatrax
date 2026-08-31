@@ -24,6 +24,7 @@ return [
     'to' => 'până la',
     'text_placeholder' => 'de ex. SPOTIFY',
     'remove_condition' => 'Elimină condiția',
+    'remove_condition_caption' => 'Elimină',
     'add_condition' => '+ Adaugă condiție',
 
     'then' => 'Atunci',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Adaugă la final',
     'deduction_category_aria' => 'Categoria de deducere pentru acțiunea :number',
     'remove_action' => 'Elimină acțiunea',
+    'remove_action_caption' => 'Elimină',
     'add_action' => '+ Adaugă acțiune',
 
     'this_year_only' => 'Doar anul acesta ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Acțiunile de etichetă fiscală se aplică la următoarea reaplicare, nu la importul curent.',
 
     'priority' => 'Prioritate',
-    'priority_help' => 'Numerele mai mici rulează primele. Regulile fără câmpuri comune nu intră niciodată în conflict.',
+    'priority_help' => 'Regulile rulează de la cel mai mic număr în sus, așa că numărul cel mai mare câștigă atunci când două setează același câmp. Regulile fără câmpuri comune nu intră niciodată în conflict.',
 
     'cancel' => 'Anulează',
     'save_changes' => 'Salvează modificările',

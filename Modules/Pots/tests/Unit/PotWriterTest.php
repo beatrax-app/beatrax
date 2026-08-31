@@ -11,8 +11,13 @@ use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
 use Modules\Pots\Models\Pot;
+use Modules\Pots\Public\Enums\PotMovementKind;
+use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
+use Modules\Pots\Public\Exceptions\PotAlreadyLinkedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotWriter;
 
@@ -104,7 +109,7 @@ function pwGoal(int $userId, int $accountId, string $name = 'Holiday'): Goal
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
     ]);
 }
@@ -232,7 +237,64 @@ it('refuses to link a goal that another active pot already holds', function (): 
     $second = pwPot($this->user->id, $this->account->id, 'Second');
 
     $this->writer->update($this->user, $second->id, 'Second', $goal->id, null);
-})->throws(InvalidArgumentException::class);
+})->throws(GoalAlreadyLinkedException::class);
+
+// Same rule, the other write path. update() is reached from the pots page and
+// linkGoal() from the goals page, and only the first was covered.
+it('refuses that goal through linkGoal as well as through update', function (): void {
+    $goal = pwGoal($this->user->id, $this->account->id);
+    pwPot($this->user->id, $this->account->id, 'First', 'active', $goal->id);
+    $second = pwPot($this->user->id, $this->account->id, 'Second');
+
+    $this->writer->linkGoal($this->user, $second->id, $goal->id);
+})->throws(GoalAlreadyLinkedException::class);
+
+// The reverse direction, which shipped unguarded: one pot, two goals. A goal
+// write handed itself a pot another goal already held, the pot moved, and the
+// goal that had been funded by it read 0% with no pot and no sign why.
+it('refuses to hand a second goal a pot the first goal is already funded by', function (): void {
+    $first = pwGoal($this->user->id, $this->account->id, 'Japan trip');
+    $second = pwGoal($this->user->id, $this->account->id, 'Winterbanden');
+    $pot = pwPot($this->user->id, $this->account->id, 'Reispot', 'active', $first->id);
+
+    try {
+        $this->writer->linkGoal($this->user, $pot->id, $second->id);
+        $this->fail('expected a PotAlreadyLinkedException');
+    } catch (PotAlreadyLinkedException) {
+        expect($pot->fresh()->goal_id)->toBe($first->id);
+    }
+});
+
+it('still lets a free pot take a goal', function (): void {
+    $goal = pwGoal($this->user->id, $this->account->id);
+    $pot = pwPot($this->user->id, $this->account->id, 'Vrij');
+
+    $this->writer->linkGoal($this->user, $pot->id, $goal->id);
+
+    expect($pot->fresh()->goal_id)->toBe($goal->id);
+});
+
+it('still lets a linked pot be unlinked', function (): void {
+    $goal = pwGoal($this->user->id, $this->account->id);
+    $pot = pwPot($this->user->id, $this->account->id, 'Gekoppeld', 'active', $goal->id);
+
+    $this->writer->linkGoal($this->user, $pot->id, null);
+
+    expect($pot->fresh()->goal_id)->toBeNull();
+});
+
+it('refuses a pot on an account that holds no allocatable balance', function (): void {
+    $card = Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'Card',
+        'slug' => 'card',
+        'kind' => AccountKind::IcsCard->value,
+        'iban' => 'NL11ICSB0000000002',
+        'default_currency' => 'EUR',
+    ]);
+
+    $this->writer->save($this->user, 'Kaartpot', null, $card->id, null, null);
+})->throws(AccountCannotHoldPotsException::class);
 
 it('refuses to fund an amount the account cannot cover', function (): void {
     pwCredit($this->user->id, $this->account->id, $this->run->id, 1000);
@@ -363,8 +425,14 @@ it('releases the balance back to the account when a pot is archived', function (
 
     $this->writer->archive($this->user, $pot->id);
 
-    $release = DB::table('pot_movements')->where('memo', 'Released on archive')->first();
-    expect($release->amount_minor)->toBe(-10000)
+    // The release is named by its own kind, not by a sentence in the memo:
+    // `memo` syncs, so English written there would have reached a peer frozen.
+    $release = DB::table('pot_movements')
+        ->where('kind', PotMovementKind::ReleasedOnArchive->value)
+        ->first();
+    expect($release)->not->toBeNull();
+    expect($release->memo)->toBeNull();
+    expect((int) $release->amount_minor)->toBe(-10000)
         ->and($pot->fresh()->status)->toBe('archived');
 });
 

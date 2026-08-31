@@ -6,12 +6,16 @@ use Carbon\CarbonImmutable;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
+use Modules\EmailScan\Internal\Clients\GmailInboxResources;
 use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
+use Modules\EmailScan\Internal\Clients\MessageUnavailableException;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
@@ -50,15 +54,39 @@ beforeEach(function (): void {
         }
     };
 
+    $this->makeRecordingClient = function (array $responses): GmailApiClient {
+        $transactions = [];
+        $stack = HandlerStack::create(new MockHandler($responses));
+        $stack->push(Middleware::history($transactions));
+
+        // The history container fills as requests flow, so it is read through
+        // a closure rather than captured by value here.
+        $this->recorded = static function () use (&$transactions): array {
+            return array_map(
+                static fn (array $tx): string => (string) $tx['request']->getUri(),
+                $transactions,
+            );
+        };
+
+        return new GmailApiClient(new GmailInboxResources(
+            $this->secrets,
+            $this->oauth,
+            $this->clock,
+            $this->createStub(EventsDispatcher::class),
+            $this->createStub(DatabaseManager::class),
+            new GuzzleClient(['handler' => $stack]),
+        ));
+    };
+
     $this->makeClient = function (array $responses): GmailApiClient {
-        return new GmailApiClient(
+        return new GmailApiClient(new GmailInboxResources(
             $this->secrets,
             $this->oauth,
             $this->clock,
             $this->createStub(EventsDispatcher::class),
             $this->createStub(DatabaseManager::class),
             new GuzzleClient(['handler' => HandlerStack::create(new MockHandler($responses))]),
-        );
+        ));
     };
 });
 
@@ -222,15 +250,219 @@ it('refuses to act on an inbox with no persisted credentials', function (): void
         }
     };
 
-    $client = new GmailApiClient(
+    $client = new GmailApiClient(new GmailInboxResources(
         $secrets,
         $this->oauth,
         $this->clock,
         $this->createStub(EventsDispatcher::class),
         $this->createStub(DatabaseManager::class),
         new GuzzleClient(['handler' => HandlerStack::create(new MockHandler([]))]),
-    );
+    ));
 
     expect(fn () => $client->getRawMessage(9, '18f9b4a2c1e5d6f7'))
         ->toThrow(RuntimeException::class, 'no OAuth credentials persisted for inbox 9');
+});
+
+// The whole incremental scan reads its message ids out of this payload. Left
+// unread it returns nothing to fetch on every tick, while the cursor still
+// advances — a Gmail inbox that silently never imports a receipt again.
+it('unpacks the messagesAdded records the incremental scan fetches from', function (): void {
+    $client = ($this->makeClient)([
+        gmailJson([
+            'historyId' => '9100',
+            'history' => [
+                [
+                    'id' => '9001',
+                    'messagesAdded' => [
+                        ['message' => ['id' => 'm-added-1', 'threadId' => 't1']],
+                        ['message' => ['id' => 'm-added-2', 'threadId' => 't2']],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $page = $client->listHistory(1, '9000');
+
+    expect($page['historyId'])->toBe('9100')
+        ->and($page['history'])->toHaveCount(1)
+        ->and($page['history'][0]['messagesAdded'][0]['message']['id'])->toBe('m-added-1')
+        ->and($page['history'][0]['messagesAdded'][1]['message']['id'])->toBe('m-added-2');
+});
+
+// The walk stops at HISTORY_PAGE_CAP pages. With records consumed, the last
+// one is the only watermark the next tick can resume from without loss.
+it('stops at the history page cap and resumes from the last record it consumed', function (): void {
+    $pages = [];
+    for ($i = 1; $i <= 26; $i++) {
+        $pages[] = gmailJson([
+            'historyId' => '9100',
+            'nextPageToken' => 'history-page-'.($i + 1),
+            'history' => [
+                ['id' => (string) (9000 + $i), 'messagesAdded' => [['message' => ['id' => 'm-'.$i, 'threadId' => 't'.$i]]]],
+            ],
+        ]);
+    }
+    $client = ($this->makeClient)($pages);
+
+    $page = $client->listHistory(1, '9000');
+
+    expect($page['history'])->toHaveCount(25)
+        ->and($page['historyId'])->toBe('9025');
+});
+
+// Gmail answers a nextPageToken with `history` absent whenever
+// historyTypes=messageAdded matched nothing on that page. Twenty-five of those
+// left no record id to resume from, so the cursor never moved and every later
+// tick burned the same twenty-five calls on the same pages.
+it('advances to the mailbox historyId when a capped walk consumed no records at all', function (): void {
+    $pages = [];
+    for ($i = 1; $i <= 26; $i++) {
+        $pages[] = gmailJson([
+            'historyId' => '9100',
+            'nextPageToken' => 'history-page-'.($i + 1),
+        ]);
+    }
+    $client = ($this->makeClient)($pages);
+
+    $page = $client->listHistory(1, '9000');
+
+    expect($page['history'])->toBe([])
+        ->and($page['historyId'])->toBe('9100');
+});
+
+it('walks every history page before reporting the mailbox historyId', function (): void {
+    $client = ($this->makeClient)([
+        gmailJson([
+            'historyId' => '9100',
+            'nextPageToken' => 'history-page-2',
+            'history' => [
+                ['id' => '9001', 'messagesAdded' => [['message' => ['id' => 'm-page-1', 'threadId' => 't1']]]],
+            ],
+        ]),
+        gmailJson([
+            'historyId' => '9100',
+            'history' => [
+                ['id' => '9002', 'messagesAdded' => [['message' => ['id' => 'm-page-2', 'threadId' => 't2']]]],
+            ],
+        ]),
+    ]);
+
+    $page = $client->listHistory(1, '9000');
+
+    expect($page['history'])->toHaveCount(2)
+        ->and($page['history'][1]['messagesAdded'][0]['message']['id'])->toBe('m-page-2')
+        ->and($page['historyId'])->toBe('9100');
+});
+
+// A record with nothing fetchable in it still moves the mailbox on, and the
+// cursor has to move with it or the next tick re-reads the same page forever.
+it('reports the advanced historyId for a history page holding no fetchable message', function (): void {
+    $client = ($this->makeClient)([
+        gmailJson([
+            'historyId' => '9200',
+            'history' => [
+                ['id' => '9001', 'labelsAdded' => [['message' => ['id' => 'm-labelled']]]],
+            ],
+        ]),
+    ]);
+
+    $page = $client->listHistory(1, '9000');
+
+    expect($page['historyId'])->toBe('9200')
+        ->and($page['history'][0]['messagesAdded'])->toBe([]);
+});
+
+// Gmail returns a 404 once the stored historyId has aged out of the mailbox's
+// ~7-day window; the caller falls back to a date-bounded walk on this sentinel.
+it('raises the cursor-expiry sentinel when the stored historyId is no longer known', function (): void {
+    $client = ($this->makeClient)([
+        new Response(404, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => ['code' => 404, 'message' => 'Requested entity was not found.'],
+        ])),
+    ]);
+
+    expect(fn () => $client->listHistory(1, '1'))
+        ->toThrow(CursorExpiredException::class);
+});
+
+// A message deleted between the history read and the fetch is permanent for
+// that id, and the scan has to tell it apart from a transport fault to skip it
+// instead of stalling the cursor behind it.
+it('raises a dedicated unavailable sentinel when the message is gone from the mailbox', function (): void {
+    $client = ($this->makeClient)([
+        new Response(404, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => ['code' => 404, 'message' => 'Requested entity was not found.'],
+        ])),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'm-gone'))
+        ->toThrow(MessageUnavailableException::class, 'no longer available on inbox 1');
+});
+
+// Google's newer error shape drops the legacy error.errors[] array entirely
+// and reports the condition under error.status. Reading only errors[0].reason
+// left a genuine 429 falling through as a transport failure, so the inbox
+// went to `error` and never rode the rate-limit backoff.
+it('maps a throttling response carrying only the newer error shape', function (): void {
+    $client = ($this->makeClient)([
+        new Response(429, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => [
+                'code' => 429,
+                'message' => 'Quota exceeded for quota metric.',
+                'status' => 'RESOURCE_EXHAUSTED',
+            ],
+        ])),
+    ]);
+
+    expect(fn () => $client->listSenderMessages(1, ['billing@shop.example'], null))
+        ->toThrow(RateLimitedException::class);
+});
+
+it('still lets an unrelated Google failure through as itself', function (): void {
+    $client = ($this->makeClient)([
+        new Response(500, ['Content-Type' => 'application/json'], (string) json_encode([
+            'error' => ['code' => 500, 'message' => 'Backend error', 'status' => 'INTERNAL'],
+        ])),
+    ]);
+
+    expect(fn () => $client->listSenderMessages(1, ['billing@shop.example'], null))
+        ->not->toThrow(RateLimitedException::class);
+});
+
+// Gmail rejects a q= past its own length limit, and the exclude list grows by
+// one entry per promoted or dismissed sender for the life of the install.
+// Unbounded, discovery eventually 400s on every call — and the excludes are
+// re-applied client-side anyway, so dropping the overflow costs nothing.
+it('bounds the discovery query however long the exclude list grows', function (): void {
+    $excludes = [];
+    for ($i = 0; $i < 500; $i++) {
+        $excludes[] = 'a-fairly-long-sender-address-'.$i.'@some-merchant-domain.example';
+    }
+
+    $client = ($this->makeRecordingClient)([
+        gmailJson(['messages' => [], 'resultSizeEstimate' => 0]),
+    ]);
+
+    $client->listDiscoveryCandidates(1, ['invoice', 'receipt'], $excludes);
+
+    $sent = ($this->recorded)()[0];
+    parse_str((string) parse_url($sent, PHP_URL_QUERY), $query);
+
+    expect(strlen((string) ($query['q'] ?? '')))->toBeLessThanOrEqual(1800)
+        ->and((string) ($query['q'] ?? ''))->toContain('subject:("invoice" OR "receipt")')
+        ->and((string) ($query['q'] ?? ''))->toContain('-from:(');
+});
+
+it('keeps the whole exclude list when it comfortably fits', function (): void {
+    $client = ($this->makeRecordingClient)([
+        gmailJson(['messages' => [], 'resultSizeEstimate' => 0]),
+    ]);
+
+    $client->listDiscoveryCandidates(1, ['invoice'], ['paypal.com', '@ics.nl']);
+
+    $sent = ($this->recorded)()[0];
+    parse_str((string) parse_url($sent, PHP_URL_QUERY), $query);
+
+    expect((string) ($query['q'] ?? ''))->toBe('subject:("invoice") -from:(paypal.com OR @ics.nl)');
 });

@@ -6,7 +6,7 @@
     Props:
       :glyph        — single emoji (already includes its own visual
                        weight — no decorative background tinting).
-      :title        — bold one-liner ("Your bank (ASN)" / etc.).
+      :title        — bold one-liner ("Your bank" / etc.).
       :description  — single-line muted explainer.
       :optional     — when true, appends a faint "— optional" suffix to
                        the title (email row only).

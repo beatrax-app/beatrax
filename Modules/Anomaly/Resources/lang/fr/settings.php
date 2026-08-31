@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'À quel point Beatrax juge vite un débit inhabituel pour ce commerçant ou cette catégorie, de 1 à 100. Plus haut signale davantage.',
 
     'min_amount_label' => 'Montant minimum du débit',
-    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en centimes (:symbol) — 1000 signifie :example.',
+    'min_amount_help' => 'Ignore les anomalies sur les débits inférieurs à ce montant. Stocké en sous-unités (:symbol) — :minor signifie :example.',
 
     'save' => 'Enregistrer les paramètres d\'anomalie',
     'saved' => 'Enregistré.',

@@ -23,13 +23,18 @@ Modules/DevMode/
 │   ├── CommandRegistry.php
 │   ├── Process/
 │   │   ├── CommandSpawner.php
+│   │   ├── CommandArgValidator.php
 │   │   ├── RunRegistry.php
+│   │   ├── RunRecord.php
+│   │   ├── RunExitCodeFile.php
+│   │   ├── ProcessLiveness.php
 │   │   └── FileTailer.php
 │   ├── Audit/
 │   │   ├── SpatieAuditWriter.php
 │   │   ├── RedactionExcerptCap.php
 │   │   └── FinalizeRunAudit.php
 │   ├── Logging/
+│   │   ├── ActiveLogFile.php
 │   │   └── RedactSecretsProcessor.php
 │   ├── Services/
 │   │   └── OAuthScrubSet.php
@@ -112,8 +117,8 @@ Modules/DevMode/
     keywords)`.
 - **Models/**
   - `Job` — read-only model over the framework's `jobs` table.
-    `failed_jobs` and `job_batches` are read through the query
-    builder; the typed models over them went unused and were removed.
+    `failed_jobs` and `job_batches` carry no model of their own; they
+    are read through the query builder.
 
 ## Internal services
 
@@ -124,7 +129,20 @@ Modules/DevMode/
 - `Internal/Process/CommandSpawner::start(string $command, array
   $args, int $callerUserId, CommandTier $tier): string` — the single
   sanctioned Symfony-`Process` constructor. Throws
-  `InvalidArgumentException` for any unrecognised command.
+  `InvalidArgumentException` for any unrecognised command. The
+  detached child runs inside a watcher subshell that waits on it and
+  writes its exit code to the `RunExitCodeFile` sidecar; the pid the
+  spawner publishes is still artisan's own.
+- `Internal/Process/CommandArgValidator::assertValid(CommandSpec
+  $spec, array $args): void` — runs the declared `ArgSpec::$rules`
+  against the args a spawn was asked for. Every spawn entry point
+  (both HTTP controllers, the arg-prompt modal, the runner page)
+  goes through it, so none of them can be the surface that skipped
+  the rules.
+- `Internal/Process/RunExitCodeFile::pathFor(string $outPath)` /
+  `read(string $outPath): ?int` — the `<run>.out.exit` sidecar. Null
+  means no answer (the watcher was killed, or the run predates the
+  sidecar), never "exited cleanly".
 - `Internal/Process/RunRegistry` — cache-backed per-run state.
 - `Internal/Process/FileTailer::tailOnce(string $path, int
   $fromOffset): array{chunk: string, newOffset: int}` — one bounded
@@ -144,15 +162,25 @@ Modules/DevMode/
 - `Internal/Audit/FinalizeRunAudit::__invoke(string $runId, ?int
   $exitCode, bool $cancelled)` — merges the closing state onto the
   spawner's eager row, falling back to an append-only write so the
-  fact of the run is never lost.
+  fact of the run is never lost. A null `$exitCode` (what both
+  callers have, since a vanished pid is all either of them saw) is
+  resolved from the `RunExitCodeFile` sidecar.
+- `Internal/Logging/ActiveLogFile::path()` — the file the configured
+  log channel writes, and the single source the tailer, the stats
+  reader and the `/dev` console pane all resolve through.
 - `Internal/Logging/RedactSecretsProcessor::__invoke($record)` —
   Monolog tap. Lazy-rebuilds the OAuth pattern from
   `OAuthScrubSet::compiledPattern()` on demand.
 - `Internal/Services/OAuthScrubSet` — singleton. Lazily decrypts
-  `oauth_secrets.client_secret` + every string in `tokens_blob` on
-  first `all()` / `compiledPattern()` call.
+  `oauth_secrets.client_secret` + the `access_token` /
+  `refresh_token` fields of `tokens_blob` on first `all()` /
+  `compiledPattern()` call. A failed load is not cached, so the set
+  recovers on the next call once the cause clears.
 - `Internal/Http/Middleware/EnsureDeveloperMode::handle($req, $next)`
-  — refuses non-developer callers with 404.
+  — refuses with 404 when the build refuses the console
+  (`DevConsoleBuildGate::permits()`) or the caller is not a
+  developer. That gate is `Modules\Core\Public\Services` — `Shell`
+  and `Desktop` ask it too, and neither may depend on this module.
 - `Internal/Http/Middleware/HorizonFrameAncestors::handle($req, $next)`
   — appends the `frame-ancestors` CSP directive so the iframe
   renders.
@@ -172,9 +200,9 @@ Modules/DevMode/
   rendering data (id, label, icon, route-name). The view gates
   `nav-disabled` on `Router::has(...)` at render time so runtime
   truth wins over the constant.
-- `Internal/Console/PruneDevAuditCommand` — `dev:prune-audit`
-  command for retention-policy enforcement on the
-  `dev_mode_audit` table.
+- `Internal/Console/PruneDevAuditCommand` —
+  `beatrax:prune-dev-audit` command for retention-policy
+  enforcement on the `dev_mode_audit` table.
 
 ## Models + migrations
 
@@ -220,4 +248,4 @@ Modules/DevMode/
   `LogQueueLifecycle::failed` to `JobProcessed` / `JobFailed`.
 - Attaches `BustOAuthScrubSetOnSecretChange` as an Eloquent
   observer on `OAuthSecret`.
-- Registers the `dev:prune-audit` console command.
+- Registers the `beatrax:prune-dev-audit` console command.

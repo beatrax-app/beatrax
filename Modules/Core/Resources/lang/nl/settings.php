@@ -79,10 +79,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valutaweergave',
+        'heading' => 'Bedragweergave',
         'label' => 'Standaardweergave in de transactielijst',
-        'eur_only' => 'Alleen :code',
-        'original' => 'Oorspronkelijke valuta',
+        'eur_only' => 'Verrekend bedrag',
+        'original' => 'Oorspronkelijk bedrag',
         'help' => 'Je kunt dit nog steeds per pagina wijzigen in de transactielijst.',
     ],
 
@@ -100,7 +100,7 @@ return [
         'online_off' => 'Er worden meegeleverde koersen gebruikt. Er verlaten geen gegevens je apparaat.',
         'fetch_aria' => 'Actuele wisselkoersen online ophalen',
         'refreshing' => 'Bezig met vernieuwen…',
-        'next_refresh' => 'Volgende automatische vernieuwing: dagelijks om 09:00',
+        'next_refresh' => 'Automatische vernieuwing: eens per dag',
         'refresh_gave_up' => 'Kon de koersen niet vernieuwen. De koersen die al op dit apparaat staan, worden nog gebruikt.',
         'refresh_now' => 'Nu vernieuwen',
     ],
@@ -109,14 +109,18 @@ return [
         'heading' => 'Periode',
         'label' => 'Periode begint op dag',
         'help' => 'Genummerd van 1 tot 28. De meeste gebruikers houden dit op 1 (kalendermaand). Gebruik 25 als je salaris op de 25e binnenkomt en je "jouw maand" dan laat beginnen.',
+
+        'move_confirm' => 'Als de periode op dag :day begint, worden alle bedragen in de enveloppen opnieuw ingedeeld en bij elkaar opgeteld waar twee maanden samenvallen. De dag terugzetten splitst ze niet opnieuw.',
+        'move_cancel' => 'Annuleren',
+        'move_apply' => 'Toepassen',
     ],
 
     'recurring' => [
         'heading' => 'Detectie van terugkerende betalingen',
         'window_label' => 'Detectievenster (maanden)',
         'window_help' => 'Hoeveel maanden geschiedenis worden gescand bij het clusteren van transacties tot terugkerende patronen.',
-        'income_label' => 'Minimuminkomen (centen)',
-        'income_help' => 'Inkomsten onder deze drempel worden niet automatisch geclusterd. Opgeslagen in centen — 200000 betekent :example. Zet op 0 om de drempel uit te schakelen.',
+        'income_label' => 'Minimuminkomen (kleinste eenheden)',
+        'income_help' => 'Inkomsten onder deze drempel worden niet automatisch geclusterd. Opgeslagen in kleinste eenheden — :minor betekent :example. Zet op 0 om de drempel uit te schakelen.',
     ],
 
     'drift' => [
@@ -150,6 +154,8 @@ return [
         'label' => 'Automatisch importeren uit de neerzetmap',
         'active_html' => 'De neerzetmap is actief. Beatrax scant <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op nieuwe bestanden.',
         'inactive_html' => 'Indien ingeschakeld scant Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- en <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-bestanden en importeert deze via dezelfde matcher-pijplijn als de wizard. Verwerkte bestanden worden verplaatst naar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> zodat ze nooit dubbel worden geïmporteerd.',
+        'active_phone_html' => 'De neerzetmap is actief. Beatrax scant <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> op de achtergrond op nieuwe bestanden. Je telefoon bepaalt wanneer een scan op de achtergrond draait, dus dat kan minuten duren of uren.',
+        'inactive_phone_html' => 'Indien ingeschakeld scant Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> op de achtergrond op <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- en <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-bestanden en importeert deze via dezelfde matcher-pijplijn als de wizard. Je telefoon bepaalt wanneer een scan op de achtergrond draait, dus dat kan minuten duren of uren. Verwerkte bestanden worden verplaatst naar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> zodat ze nooit dubbel worden geïmporteerd.',
     ],
 
     'aliases' => [
@@ -159,13 +165,12 @@ return [
     ],
 
     'tax_heading' => 'Belasting',
-    'shared_merchant_heading' => 'Gedeelde winkelierslijst',
     'data_backup_heading' => 'Gegevens & back-up',
-    'install_heading' => 'Installeren',
 
     'about_updates' => [
         'heading' => 'Over updates',
         'body' => 'Beatrax werkt zichzelf automatisch bij zodra het is geïnstalleerd. Na het installeren van de allereerste versie komen toekomstige versies binnen via een banner in de app — je hoeft GitHub niet opnieuw te bezoeken. Mocht een toekomstige update ooit niet lukken, dan kun je altijd handmatig de nieuwste installer downloaden van de releasespagina.',
+        'body_phone' => 'Hier werkt Beatrax zichzelf niet bij. Nieuwe versies van de telefoon-app komen via de App Store of Google Play, net als je andere apps. Op de releasespagina staat wat er in elke versie is veranderd.',
         'open_releases' => 'Releasespagina openen →',
     ],
 
@@ -190,6 +195,7 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'De budgetmaand kon niet worden verplaatst en is blijven staan waar hij stond.',
         'currency_required' => 'Kies een valuta.',
         'window_months' => 'Kies tussen 2 en 60 maanden.',
         'threshold' => 'Kies een drempel van 1%, 2%, 5%, 10%, 25% of 50%.',

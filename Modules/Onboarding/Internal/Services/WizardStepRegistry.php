@@ -7,7 +7,7 @@ namespace Modules\Onboarding\Internal\Services;
 final class WizardStepRegistry
 {
     /** @var list<string> */
-    private const STEPS = [
+    private const array STEPS = [
         'welcome',
         'connect-bank',
         'connect-paypal',
@@ -22,7 +22,7 @@ final class WizardStepRegistry
     // SetupWizard::skip() gates on this list, so a missing key gives a skip button
     // that dispatches and goes nowhere — how first-import shipped once.
     /** @var list<string> */
-    private const SKIPPABLE = [
+    private const array SKIPPABLE = [
         'connect-bank',
         'connect-paypal',
         'connect-card',

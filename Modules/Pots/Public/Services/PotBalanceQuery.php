@@ -7,92 +7,57 @@ namespace Modules\Pots\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
-use Modules\Ledger\Public\Services\AccountBalanceQuery;
-use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Goals\Public\Enums\GoalStatus;
+use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Pots\Internal\Services\PotAllocationLedger;
 use Modules\Pots\Internal\Services\PotRowLoader;
 use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
 use Modules\Pots\Public\Enums\PotStatus;
 use stdClass;
 
-final class PotBalanceQuery
+final readonly class PotBalanceQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly AccountBalanceQuery $accountBalance,
-        private readonly BaseCurrency $baseCurrency,
-        private readonly Clock $clock,
-        private readonly PotRowLoader $rows,
+        private DatabaseManager $db,
+        private PotAllocationLedger $allocations,
+        private PotRowLoader $rows,
     ) {}
-
-    // Only money the account already holds can be put in an envelope. Counting
-    // a future-dated row made a pot read as funded by a payment still to
-    // arrive, and left isOverAllocated false while the account could not cover
-    // what its pots claimed.
-    private function realBalance(int $accountId, User $user, string $currency): int
-    {
-        return $this->accountBalance
-            ->currentBalanceAsOf($accountId, $user, $this->clock->now()->startOfDay())
-            ->in($currency);
-    }
 
     public function balanceForPot(int $potId, User $user): int
     {
         return $this->rows->balanceForPot($potId, $user);
     }
 
-    public function reconciliationForAccount(int $accountId, User $user): ReconciliationRow
+    // One currency's line of the reconciliation. Null takes the account's own
+    // denomination; a caller holding a pot passes the pot's, because that is
+    // the only currency the pot's balance is expressed in.
+    public function reconciliationForAccount(int $accountId, User $user, ?string $currency = null): ReconciliationRow
     {
-        $accountRow = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('id', $accountId)
-            ->first(['name', 'default_currency']);
-
-        $accountName = ($accountRow !== null && is_string($accountRow->name))
-            ? $accountRow->name
-            : '';
-        $currency = ($accountRow !== null && is_string($accountRow->default_currency))
-            ? $accountRow->default_currency
-            : $this->baseCurrency->code();
-
-        $allocated = $this->allocatedForAccount($accountId, $user);
-        $real = $this->realBalance($accountId, $user, $currency);
-        $unallocated = $real - $allocated;
-
-        return new ReconciliationRow(
-            accountId: $accountId,
-            accountName: $accountName,
-            currency: $currency,
-            realBalanceMinor: $real,
-            allocatedMinor: $allocated,
-            unallocatedMinor: $unallocated,
-            isOverAllocated: $unallocated < 0,
-        );
+        return $this->allocations->row($accountId, $user, $currency);
     }
 
-    public function currentUnallocatedForAccount(int $accountId, User $user): int
+    /**
+     * @return list<ReconciliationRow>
+     */
+    public function reconciliationsForAccount(int $accountId, User $user): array
     {
-        $real = $this->realBalance($accountId, $user, $this->accountCurrency($accountId, $user));
-
-        return $real - $this->allocatedForAccount($accountId, $user);
+        return $this->allocations->rows($accountId, $user);
     }
 
-    // Pots are denominated in the account's own currency, so a multi-currency
-    // account answers "what is unallocated" in that one line and leaves the
-    // rest of what it holds out of the arithmetic entirely.
-    private function accountCurrency(int $accountId, User $user): string
+    // The currency is not optional: what is unallocated is a different figure
+    // on every line the account holds, and a caller that did not have to name
+    // one took the account's and printed it under the pot's sign.
+    public function currentUnallocatedForAccount(int $accountId, User $user, string $currency): int
     {
-        $currency = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('id', $accountId)
-            ->value('default_currency');
+        return $this->allocations->unallocated($accountId, $user, $currency);
+    }
 
-        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->code();
+    public function currencyForAccount(int $accountId, User $user): string
+    {
+        return $this->allocations->accountCurrency($accountId, $user);
     }
 
     /**
@@ -119,6 +84,7 @@ final class PotBalanceQuery
         return $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
+            ->whereIn('kind', AccountKind::spendableValues())
             ->orderBy('name')
             ->get(['id', 'name', 'default_currency'])
             ->all();
@@ -136,7 +102,7 @@ final class PotBalanceQuery
         $goalsQuery = $this->db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
-            ->where('status', PotStatus::Active->value)
+            ->where('status', GoalStatus::Active->value)
             ->orderBy('name');
 
         if ($editPotId !== 0) {
@@ -159,6 +125,20 @@ final class PotBalanceQuery
         return $goalsQuery->get(['id', 'name'])->all();
     }
 
+    // The goals a pot already funds. A goal funded by a pot takes its progress
+    // from that pot alone, so anything offering a second funding route has to
+    // know which goals are spoken for.
+    /**
+     * @return list<int>
+     */
+    public function goalIdsWithAnActivePot(User $user): array
+    {
+        return array_values(array_map(
+            static fn (mixed $id): int => self::toInt($id),
+            $this->activeLinkedGoalIds($user),
+        ));
+    }
+
     /**
      * @return array<mixed>
      */
@@ -173,8 +153,11 @@ final class PotBalanceQuery
             ->all();
     }
 
+    // `hasMovements` is not `balance !== 0`: a pot funded and then emptied has a
+    // contribution history and a zero balance, and the goal card tells the two
+    // apart -- one is asked for a first contribution, the other is not.
     /**
-     * @return array<int, array{balance: int, currency: string, potId: int}> goal_id => pot balance, currency, pot id
+     * @return array<int, array{balance: int, currency: string, potId: int, hasMovements: bool}> goal_id => pot balance, currency, pot id
      */
     public function linkedPotBalancesForUser(User $user): array
     {
@@ -185,6 +168,17 @@ final class PotBalanceQuery
             ->whereNotNull('goal_id')
             ->get(['id', 'goal_id', 'currency']);
 
+        $potIds = array_map(static fn (stdClass $row): int => self::toInt($row->id), $rows->all());
+
+        $moved = $potIds === [] ? [] : $this->db->connection()
+            ->table('pot_movements')
+            ->where('user_id', $user->id)
+            ->whereIn('pot_id', $potIds)
+            ->distinct()
+            ->pluck('pot_id')
+            ->map(static fn (mixed $id): int => self::toInt($id))
+            ->all();
+
         $result = [];
         foreach ($rows as $row) {
             $potId = self::toInt($row->id);
@@ -192,6 +186,7 @@ final class PotBalanceQuery
                 'balance' => $this->balanceForPot($potId, $user),
                 'currency' => self::toString($row->currency),
                 'potId' => $potId,
+                'hasMovements' => in_array($potId, $moved, true),
             ];
         }
 
@@ -244,26 +239,5 @@ final class PotBalanceQuery
         $currency = $row->currency ?? null;
 
         return is_string($currency) ? $currency : null;
-    }
-
-    private function allocatedForAccount(int $accountId, User $user): int
-    {
-        $activePotIds = $this->db->connection()
-            ->table('pots')
-            ->where('account_id', $accountId)
-            ->where('user_id', $user->id)
-            ->where('status', PotStatus::Active->value)
-            ->pluck('id')
-            ->toArray();
-
-        if ($activePotIds === []) {
-            return 0;
-        }
-
-        return (int) $this->db->connection()
-            ->table('pot_movements')
-            ->where('user_id', $user->id)
-            ->whereIn('pot_id', $activePotIds)
-            ->sum('amount_minor');
     }
 }

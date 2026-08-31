@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Kurallar bu cihazda kalır. Diğer cihazlarınızla paylaşılmaz.',
 
     'reapply' => 'Kuralları geçmişe yeniden uygula',
+    'reapply_confirm' => 'Tüm kurallar geçmişinin tamamına yeniden uygulansın mı? Bir kuralın koyduğu her kategori, karşı taraf, not ve vergi etiketi yeniden yazılır. Elle ayarladıkların olduğu gibi kalır, mutabakatlı bir ekstredeki her şey de öyle. Eski değerleri hiçbir şey geri getirmez.',
     'reapplying' => 'Yeniden uygulanıyor…',
     'new_rule' => 'Yeni kural',
 
-    'reapply_progress_lead' => 'Kurallar yeniden uygulanıyor…',
-    'reapply_progress_of' => '/',
-    'reapply_progress_trail' => 'işlem kontrol edildi',
+    'reapply_progress' => 'Kurallar yeniden uygulanıyor… :checked / :count işlem kontrol edildi',
 
     'empty_heading' => 'Henüz kural yok',
     'empty_body' => 'Kurallar işlemleri birden fazla koşula göre eşleştirir ve kategori, karşı taraf, not ve vergi etiketi değişikliklerini otomatik olarak uygular — içe aktarma sırasında ve mevcut geçmişine her yeniden uyguladığında.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Oluşturuldu',
     'col_row_actions' => 'Eylemler',
     'inactive_badge' => 'Kapalı',
+    'combinator_all' => 'TÜMÜ',
+    'combinator_any' => 'HERHANGİ',
     'inactive_title' => 'Bu kural çalışmıyor. İşaret ettiği kategori veya karşı taraf silindiğinde kural kapanır.',
 
     'more_conditions' => '+:count daha',

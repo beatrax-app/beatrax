@@ -12,11 +12,11 @@ use TheNetworg\OAuth2\Client\Provider\Azure;
 
 // $httpClient is why this class exists: it is the seam a test uses to drive
 // the whole token exchange through a mock handler without a socket.
-final class OAuthProviderFactory
+final readonly class OAuthProviderFactory
 {
     public function __construct(
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly ?ClientInterface $httpClient = null,
+        private OAuthSecretsRepository $secrets,
+        private ?ClientInterface $httpClient = null,
     ) {}
 
     /**

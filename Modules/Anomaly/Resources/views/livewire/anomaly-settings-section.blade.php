@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Anomaly\Internal\Support\AnomalySensitivity')
 {{--
     Settings "Anomaly detection" section. Three sub-sections:
     Sensitivity, Minimum charge amount, and the user-visible + removable
@@ -27,8 +28,8 @@
         <x-core::form-field
             name="anomalySensitivityPercent"
             type="number"
-            min="1"
-            max="100"
+            min="{{ AnomalySensitivity::MIN_PERCENT }}"
+            max="{{ AnomalySensitivity::MAX_PERCENT }}"
             :label="Lang::get('anomaly::settings.sensitivity_label')"
             :hint="Lang::get('anomaly::settings.sensitivity_help', ['percent' => $anomalySensitivityPercent])"
             wire:model="anomalySensitivityPercent"
@@ -42,7 +43,7 @@
             min="0"
             step="1"
             :label="Lang::get('anomaly::settings.min_amount_label')"
-            :hint="Lang::get('anomaly::settings.min_amount_help', ['symbol' => Money::symbolFor(BaseCurrency::value()), 'example' => Money::ofMinor(1000, BaseCurrency::value())->format()])"
+            :hint="Lang::get('anomaly::settings.min_amount_help', ['symbol' => Money::symbolFor(BaseCurrency::value()), 'minor' => AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR, 'example' => Money::ofMinor(AnomalySensitivity::DEFAULT_MIN_AMOUNT_MINOR, BaseCurrency::value())->format()])"
             wire:model="anomalyMinAmountMinor"
             style="font-variant-numeric: tabular-nums;"
         />
@@ -79,7 +80,7 @@
                     <li class="flex items-center justify-between gap-3 py-2" data-testid="suppression-rule-{{ $rule->id }}">
                         <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">
                             {{ $rule->displayName !== '' ? $rule->displayName : Lang::get('anomaly::settings.unknown_merchant') }}
-                            <span class="mx-1 text-slate-600 dark:text-slate-400">·</span>{{ Lang::get('anomaly::settings.detectors.'.$rule->detector) }}
+                            <span class="mx-1 text-slate-600 dark:text-slate-400">·</span>{{ Lang::get($rule->detector->labelKey('anomaly::settings.detectors')) }}
                             <span class="mx-1 text-slate-600 dark:text-slate-400">·</span>{{ $ruleFmt($rule->bandLow) }} – {{ $ruleFmt($rule->bandHigh) }}
                         </span>
                         <button

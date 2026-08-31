@@ -8,12 +8,12 @@ namespace Modules\DevMode\Internal\System;
 // key matches none of the markers below renders in the clear on /dev/system.
 final class ConfigFlattener
 {
-    private const SENSITIVE_SUBSTRINGS = ['password', 'passphrase', 'secret', 'token', 'credential'];
+    private const array SENSITIVE_SUBSTRINGS = ['password', 'passphrase', 'secret', 'token', 'credential'];
 
     // `keys` is not decoration on `key`: str_ends_with('app.previous_keys',
     // 'key') is false, so dropping it would expose Laravel's retired-APP_KEY
     // list, which still decrypts data at rest.
-    private const SENSITIVE_SUFFIXES = ['key', 'keys'];
+    private const array SENSITIVE_SUFFIXES = ['key', 'keys'];
 
     public const string REDACTED_MARKER = '[REDACTED]';
 
@@ -76,13 +76,7 @@ final class ConfigFlattener
 
         // Suffix, not substring, so benign names like app.kind survive. No
         // separate '_key' clause: anything ending '_key' already ends 'key'.
-        foreach (self::SENSITIVE_SUFFIXES as $suffix) {
-            if (str_ends_with($needle, $suffix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::SENSITIVE_SUFFIXES, fn (string $suffix): bool => str_ends_with($needle, $suffix));
     }
 
     /**
@@ -93,13 +87,8 @@ final class ConfigFlattener
         if ($value === [] || ! array_is_list($value)) {
             return false;
         }
-        foreach ($value as $entry) {
-            if (is_array($entry)) {
-                return false;
-            }
-        }
 
-        return true;
+        return array_all($value, fn ($entry): bool => ! is_array($entry));
     }
 
     private function stringifyKey(mixed $key): string

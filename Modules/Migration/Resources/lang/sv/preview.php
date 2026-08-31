@@ -16,7 +16,9 @@ return [
         'budget' => 'Budgetmånader',
     ],
 
-    'all_clean' => 'Allt kopplades rent — inget behöver din uppmärksamhet innan du bekräftar.',
+    'all_clean' => 'Allt kopplades rent — det finns inget här för dig att ta ställning till.',
+
+    'nothing_staged' => 'Den här exporten innehöll inget att importera — det finns inget att bekräfta här.',
 
     'groups' => [
         'conflict' => 'Kräver ditt beslut',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Det här skapar eller uppdaterar antalen ovan bland dina kategorier, budgetar och transaktioner.',
     'discard_button' => 'Kasta importen',
+    'discard_confirm' => 'Vill du kasta den här importen? Allt som lästs ur din exportfil raderas här, och för att få tillbaka det måste du ladda upp och tolka hela filen igen. Ingenting har hamnat bland dina transaktioner än.',
     'confirm_button' => 'Bekräfta importen',
 ];

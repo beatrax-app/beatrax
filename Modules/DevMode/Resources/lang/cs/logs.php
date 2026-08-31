@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Zamítnout ze zobrazení (soubor logu se nemění)',
     'dismiss_aria' => 'Zamítnout záznam logu ze zobrazení',
     'totals' => [
-        'showing' => 'Zobrazeno',
-        'of' => 'z',
-        'received' => 'přijatých (limit bufferu 10k)',
-        'lines_today' => 'řádků dnes',
+        'showing' => 'Zobrazeno :shown z :count přijatého řádku (limit bufferu :cap)|Zobrazeno :shown z :count přijatých řádků (limit bufferu :cap)|Zobrazeno :shown z :count přijatých řádků (limit bufferu :cap)',
+        'lines_today' => ':count řádek dnes|:count řádky dnes|:count řádků dnes',
+        'lines_today_capped' => 'přes :count řádek dnes|přes :count řádky dnes|přes :count řádků dnes',
         'today' => 'dnes',
-        'across' => 'v',
-        'daily_files' => 'denních souborech',
+        'all_files' => ':size v :count denním souboru|:size ve :count denních souborech|:size v :count denních souborech',
     ],
 
     'status' => [

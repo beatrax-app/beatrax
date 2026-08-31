@@ -10,6 +10,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Pots\Models\Pot;
+use Modules\Pots\Public\Enums\PotMovementKind;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
 uses(RefreshDatabase::class);
@@ -188,7 +189,7 @@ it('reports the balance and currency of every goal-linked pot', function (): voi
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
         'created_at' => CarbonImmutable::now(),
         'updated_at' => CarbonImmutable::now(),
@@ -230,7 +231,7 @@ it('finds the pot linked to a goal, and reports none when the link is gone', fun
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
         'created_at' => CarbonImmutable::now(),
         'updated_at' => CarbonImmutable::now(),
@@ -260,7 +261,7 @@ it('treats an archived pot as no longer holding its goal', function (): void {
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->toDateString(),
-        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYearNoOverflow()->toDateString(),
         'status' => 'active',
         'created_at' => CarbonImmutable::now(),
         'updated_at' => CarbonImmutable::now(),
@@ -355,7 +356,7 @@ it('builds pot rows with recent movements, counterpart names, and category spend
     expect($bufferRow->categorySpentMinor)->toBe(2500);
     expect($bufferRow->recentMovements)->toHaveCount(2);
 
-    $transfer = collect($bufferRow->recentMovements)->firstWhere('kind', 'transfer_out');
+    $transfer = collect($bufferRow->recentMovements)->firstWhere('kind', PotMovementKind::TransferOut);
     expect($transfer)->not->toBeNull();
     expect($transfer->counterpartPotName)->toBe('Holiday');
     expect($transfer->createdAt)->not->toBe('');

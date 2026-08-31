@@ -8,8 +8,9 @@
 --}}
 
 @use('Modules\Core\Public\Navigation\Destination')
+@use('Modules\Goals\Public\Dto\GoalProgressRow')
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\Goals\Internal\Enums\GoalProgressState')
+@use('Modules\Goals\Public\Enums\GoalProgressState')
 
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
     {{-- Card header --}}
@@ -45,7 +46,6 @@
             @foreach ($goals as $row)
                 @php
                     $pct = $row->percentComplete();
-                    $barWidth = $pct === 0 ? 0 : max(2, $pct);
                 @endphp
                 {{-- Wraps below sm: the 80px bar, the percentage and the status
                      badge do not shrink, so on a phone the goal name was left
@@ -57,7 +57,7 @@
                          on one element resolve by stylesheet order, not by the
                          order the call site wrote them. --}}
                     <x-core::progress-bar
-                        :value="$barWidth"
+                        :value="$row->barWidth()"
                         :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
                         :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
                         width="w-20"
@@ -68,7 +68,13 @@
                         @if ($row->progressState === GoalProgressState::Overdue->value)
                             <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
                         @elseif ($row->projectedFinishDate !== null)
-                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->translatedFormat('d M \'y') }}
+                            {{-- Same date, same words as /goals. The tile printed a
+                                 beyond-horizon estimate as a bare hard date, so one
+                                 fact read as two different confidences. --}}
+                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat(GoalProgressRow::DATE_FORMAT) }}
+                            @if ($row->projectionBeyondHorizon)
+                                {{ Lang::get('goals::messages.projection.projection_note') }}
+                            @endif
                         @endif
                     </span>
                 </li>

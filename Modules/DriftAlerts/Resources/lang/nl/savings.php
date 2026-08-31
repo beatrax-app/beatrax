@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Abonnementen →',
     'disclaimer' => 'Officiële links uit het ondersteuningscorpus — Beatrax zegt of wisselt nooit iets voor je op.',
     'dismiss_aria' => 'Suggestie negeren',
+    'dismiss_caption' => 'Negeren',
 
     'insight' => [
         'cheaper_message' => ':name heeft mogelijk een goedkoper abonnement — je betaalt :monthly/mnd.',

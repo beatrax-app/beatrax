@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Uncategorized',
+    'unavailable_category' => 'Category not on this device',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Cleared',
         'uncleared' => 'Uncleared',

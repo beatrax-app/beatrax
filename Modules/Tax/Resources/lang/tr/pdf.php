@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Tutar',
 
     'subtotal' => 'Ara toplam',
+    'subtotal_income' => 'Ara toplam gelir',
 
     'footer' => 'Beatrax tarafından oluşturuldu — yalnızca yerel kişisel finans — :year',
 ];

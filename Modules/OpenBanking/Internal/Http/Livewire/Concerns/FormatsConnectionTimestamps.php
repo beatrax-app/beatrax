@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Http\Livewire\Concerns;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\SafeDate;
+use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
 
 // Behaviour, not state: every method reads the component's own iso properties
-// rather than declaring any of its own.
+// rather than declaring any of its own. Each one is a string the panel shows
+// only when it can be read, because a bare parse throws on anything else and
+// the caller has no answer for that but a stack trace.
 trait FormatsConnectionTimestamps
 {
     public function lastSuccessfulSyncRelative(): ?string
     {
-        if ($this->lastSuccessfulSyncAtIso === null) {
-            return null;
-        }
-
-        return CarbonImmutable::parse($this->lastSuccessfulSyncAtIso)->diffForHumans();
+        return SafeDate::parseOrNull($this->lastSuccessfulSyncAtIso ?? '')?->diffForHumans();
     }
 
     public function lastSuccessfulSyncDisplay(): ?string
@@ -29,20 +29,18 @@ trait FormatsConnectionTimestamps
         return self::relativeAndAbsolute($this->lastAttemptAtIso);
     }
 
-    // last_attempt_status is 'ok' on success and never null once an attempt
-    // has run, so anything else is a failure.
     public function lastAttemptFailed(): bool
     {
-        return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';
+        return SyncAttemptStatus::failedIn($this->lastAttemptStatus);
     }
 
     private static function relativeAndAbsolute(?string $iso): ?string
     {
-        if ($iso === null) {
+        $dt = SafeDate::parseOrNull($iso ?? '');
+
+        if (! $dt instanceof CarbonImmutable) {
             return null;
         }
-
-        $dt = CarbonImmutable::parse($iso);
 
         return $dt->diffForHumans().' · '.$dt->translatedFormat('d M Y, H:i');
     }

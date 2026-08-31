@@ -17,7 +17,7 @@ it('returns a user whose defaulted columns match the row that was written', func
     $row = DB::table('users')->where('id', $result['user']->id)->first();
 
     expect($row->default_currency_view)->not->toBeNull()
-        ->and($result['user']->default_currency_view)->toBe($row->default_currency_view)
+        ->and($result['user']->default_currency_view->value)->toBe($row->default_currency_view)
         ->and($result['user']->period_start_day)->toBe((int) $row->period_start_day);
 });
 

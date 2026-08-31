@@ -6,7 +6,7 @@ return [
     'eyebrow' => 'Tavo PayPal paskyra',
     'h1' => 'Prijunk savo PayPal paskyrą',
 
-    'lede_html' => 'Įkelk savo PayPal operacijų duomenų eksportą — olandiškoje PayPal paskyroje jis vadinamas <em lang="nl">Rapport Transactiegegevens</em>. Likučio ataskaita (<span lang="nl">Saldorapport</span>) netiks — mums reikia duomenų apie kiekvieną įvykį.',
+    'lede_html' => 'Įkelk savo PayPal operacijų eksportą — po vieną eilutę kiekvienai operacijai, o ne likučio suvestinę. PayPal savo ataskaitas pavadina tavo paskyros kalba, o kol kas skaitome olandišką porą: <em lang="nl">Rapport Transactiegegevens</em>, o ne <span lang="nl">Saldorapport</span>. Jei tavoji išeina kita kalba, prieš atsisiųsdamas perjunk PayPal į olandų kalbą.',
 
     'format_group_aria' => 'PayPal eksportuoja tik CSV',
     'got_it_as' => 'Turiu kaip:',
@@ -20,7 +20,7 @@ return [
         'download_label' => 'Atsisiųsk CSV formatu',
     ],
 
-    'drop_lead' => 'Vilk operacijų duomenų CSV čia',
+    'drop_lead' => 'Įkelk čia savo operacijų eksportą',
     'browse_file' => 'arba pasirink failą',
 
     'file_ready' => '· ✓ paruošta',
@@ -29,9 +29,9 @@ return [
     'continue' => 'Tęsti →',
 
     'errors' => [
-        'required' => 'Pirmiausia įkelk savo PayPal Rapport Transactiegegevens CSV į laukelį.',
-        'max' => 'Šis failas per didelis. PayPal Rapport Transactiegegevens eksportai paprastai būna gerokai mažesni nei 10 MB.',
-        'extensions' => 'Šis failas nepanašus į PayPal CSV. Iš PayPal atsisiųsk Rapport Transactiegegevens (ne Saldorapport likučio ataskaitą) CSV formatu.',
+        'required' => 'Pirmiausia įkelk į laukelį savo PayPal operacijų eksportą.',
+        'max' => 'Šis failas per didelis. PayPal operacijų eksportas paprastai būna gerokai mažesnis nei 10 MB.',
+        'extensions' => 'Šis failas nepanašus į PayPal CSV. Atsisiųsk operacijų eksportą — po vieną eilutę kiekvienai operacijai, o ne likučio suvestinę — CSV formatu.',
         'unreadable' => 'Šio failo perskaityti nepavyko. Visą klaidą rasi /dev/logs.',
     ],
 ];

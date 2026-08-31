@@ -7,10 +7,10 @@ namespace Modules\Sync\Internal\Transport;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
-use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
@@ -27,7 +27,11 @@ final class SyncSession
 
     // A peer reconnects every couple of seconds; without this it would mean
     // a database write every couple of seconds, purely for bookkeeping.
-    private const LAST_SEEN_THROTTLE_SECONDS = 60;
+    // How often a live session bothers to write its last-seen stamp.
+    private static function lastSeenThrottleSeconds(): int
+    {
+        return Duration::Minute->seconds();
+    }
 
     private ?string $peerDeviceId = null;
 
@@ -62,16 +66,9 @@ final class SyncSession
     ): bool {
         $peerKeyHex = sodium_bin2hex($noiseSession->peerStaticPublicKey());
         $confirmedKeys = $this->registryService->deviceX25519Keys($userId);
+        $matchedDeviceId = array_find_key($confirmedKeys, fn ($keyHex): bool => hash_equals($keyHex, $peerKeyHex));
 
-        $matchedDeviceId = null;
-        foreach ($confirmedKeys as $deviceId => $keyHex) {
-            if (hash_equals($keyHex, $peerKeyHex)) {
-                $matchedDeviceId = $deviceId;
-                break;
-            }
-        }
-
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         if ($matchedDeviceId === null) {
             $this->status = 'failed';
@@ -127,7 +124,7 @@ final class SyncSession
             if (is_string($lastSeen) && $lastSeen !== '') {
                 $age = $this->clock->now()->diffInSeconds(CarbonImmutable::parse($lastSeen), absolute: true);
 
-                if ($age < self::LAST_SEEN_THROTTLE_SECONDS) {
+                if ($age < self::lastSeenThrottleSeconds()) {
                     return;
                 }
             }
@@ -167,21 +164,6 @@ final class SyncSession
         return $this->noiseSession->decrypt($ciphertext);
     }
 
-    /**
-     * @param  list<OpLogEntry>  $entries
-     * @return string Noise ciphertext ready to send over WebSocket.
-     */
-    public function sendOps(array $entries): string
-    {
-        if ($this->noiseSession === null) {
-            throw SessionNotAuthenticatedException::forOperation('sendOps');
-        }
-
-        $frame = $this->framer->encode($entries);
-
-        return $this->noiseSession->encrypt($frame);
-    }
-
     // Noise authenticates the socket; Ed25519 additionally authenticates
     // who originally signed each op, since entries can be forwarded via
     // relay/replayed from disk — the transport channel is not the signing
@@ -200,6 +182,12 @@ final class SyncSession
 
         $frame = $this->noiseSession->decrypt($ciphertext);
         $entries = $this->framer->decode($frame);
+
+        // The caller's map admits peers; this one reads history. A device the
+        // user removed keeps its registry row and its public key, so the ops
+        // it wrote while trusted still verify — dropping them here is what
+        // made a replacement phone arrive without the old phone's ledger.
+        $deviceKeys = [...$this->registryService->retainedDeviceKeys($userId), ...$deviceKeys];
 
         $verified = [];
 
@@ -251,6 +239,23 @@ final class SyncSession
         // MAX_CATCHUP_FRAMES cap, so a malicious peer cannot pin the fiber
         // or grow the op_log unboundedly via this call.
         $this->replayer->replay($verified, $userId);
+
+        // After the replay, never before: a cursor advanced over ops that
+        // failed to apply would ask the peer to skip them next time, and
+        // nothing else would ever send them again.
+        $this->watermarks()->advance(
+            $userId,
+            $this->peerDeviceId ?? '',
+            $verified,
+            Instant::zulu($this->clock->now()),
+        );
+    }
+
+    // Built per call rather than injected: this class is constructed by hand in
+    // three places, one of them outside this module.
+    private function watermarks(): PeerCatchUpWatermarks
+    {
+        return new PeerCatchUpWatermarks($this->db);
     }
 
     public function close(): void
@@ -259,7 +264,7 @@ final class SyncSession
         $this->noiseSession = null;
 
         if ($this->sessionRowId !== null) {
-            $now = ZuluTimestamp::stamp($this->clock->now());
+            $now = Instant::zulu($this->clock->now());
             $this->db->connection()
                 ->table('sync_sessions')
                 ->where('id', $this->sessionRowId)
@@ -294,7 +299,7 @@ final class SyncSession
         ?string $connectedAt,
         string $lastSeenAt,
     ): void {
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         if ($this->sessionRowId !== null) {
             $this->db->connection()

@@ -12,6 +12,7 @@ return [
         'locked' => "Sblocca l'app per continuare la configurazione.",
         'revoked' => 'Questo dispositivo è stato rimosso dall\'altro dispositivo. Associalo di nuovo per riprendere la sincronizzazione.',
     ],
+    'unlock_cta' => "Sblocca l'app",
     'step' => [
         'connect' => 'Connessione al tuo altro dispositivo',
         'keys' => 'Ricezione delle chiavi di crittografia',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Ricostruzione della tua cronologia',
     ],
     'step_current' => 'passaggio attuale',
-    'working' => [
-        'connect' => 'Contatto con il tuo altro dispositivo…',
-        'keys' => 'Sblocco dei tuoi dati…',
-        'transfer' => 'Richiesta della tua cronologia…',
-        'rebuild' => 'Ricostruzione della tua cronologia — può richiedere un minuto.',
-    ],
     'page_title' => 'Configurazione…',
     'resuming' => 'Ripresa della configurazione…',
     'setting_up' => 'Configurazione di questo dispositivo…',
     'progress_aria' => 'Avanzamento della configurazione',
     'records' => ':count record|:count record',
-    'records_preparing' => "In attesa dell'altro dispositivo…",
 ];

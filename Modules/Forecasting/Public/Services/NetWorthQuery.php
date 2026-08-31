@@ -27,25 +27,26 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/reports/architecture.md
  */
-final class NetWorthQuery
+final readonly class NetWorthQuery
 {
     use CoercesScalars;
 
-    private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
-
     public function __construct(
-        private readonly AccountBalanceQuery $balances,
-        private readonly Clock $clock,
-        private readonly DatabaseManager $db,
-        private readonly ExchangeRateService $fx,
-        private readonly BaseCurrency $baseCurrency,
+        private AccountBalanceQuery $balances,
+        private Clock $clock,
+        private DatabaseManager $db,
+        private ExchangeRateService $fx,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function forUser(User $user): NetWorth
     {
+        // Not an inclusion list: a kind this build has never heard of is far
+        // likelier to be an account the reader holds than a mirror of one, and
+        // dropping it would take a real balance off the roll-up in silence.
         $accounts = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->whereNotIn('kind', self::EXCLUDED_KINDS)
+            ->whereNotIn('kind', AccountKind::mirrorValues())
             ->orderBy('id')
             ->get(['id', 'name', 'kind', 'default_currency']);
 
@@ -124,7 +125,7 @@ final class NetWorthQuery
                 kind: $kind,
                 balanceMinor: $balanceMinor,
                 currency: $currency,
-                isLiability: $kind === AccountKind::IcsCard->value,
+                isLiability: AccountKind::tryFrom($kind)?->isLiability() === true,
                 baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
                     ? $result->converted->toMinor()
                     : null,

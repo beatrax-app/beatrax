@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Lås op',
 
-    'digits_entered' => 'cifre indtastet',
+    'digits_entered' => ':count ciffer indtastet|:count cifre indtastet',
     'pin_pad' => 'PIN-tastatur',
     'digit' => 'Ciffer :digit',
     'backspace' => 'Slet',

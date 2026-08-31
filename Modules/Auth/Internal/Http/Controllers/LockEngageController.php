@@ -15,7 +15,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 // headers, so VerifyCsrfToken would 419 it every time.
 final readonly class LockEngageController
 {
-    private const UNLOCK_GRACE_SECONDS = 10;
+    private const int UNLOCK_GRACE_SECONDS = 10;
 
     public function __construct(
         private AppLockKeyService $keyService,

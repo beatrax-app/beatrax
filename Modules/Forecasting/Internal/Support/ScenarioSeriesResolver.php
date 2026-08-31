@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\Support;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Internal\Enums\ScenarioTemplate;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
@@ -14,9 +15,31 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class ScenarioSeriesResolver
+final readonly class ScenarioSeriesResolver
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
+
+    // What a launchpad's second click looks the scenario back up by. The name
+    // cannot serve: it is translated, so a Dutch reader's row is invisible to a
+    // lookup spelling the English one. The mutation the template wrote is the
+    // same row on every device in every language.
+    public function existingScenarioIdForTemplate(User $user, ScenarioTemplate $template, int $seriesId): ?int
+    {
+        $value = $this->db->connection()->table('forecast_scenarios')
+            ->join(
+                'forecast_scenario_mutations',
+                'forecast_scenario_mutations.forecast_scenario_id',
+                '=',
+                'forecast_scenarios.id',
+            )
+            ->where('forecast_scenarios.user_id', $user->id)
+            ->where('forecast_scenario_mutations.kind', $template->mutationKind()->value)
+            ->where('forecast_scenario_mutations.target_series_id', $seriesId)
+            ->orderBy('forecast_scenarios.id')
+            ->value('forecast_scenarios.id');
+
+        return is_numeric($value) ? (int) $value : null;
+    }
 
     public function existingScenarioIdByName(User $user, string $name): ?int
     {

@@ -18,7 +18,7 @@ use SodiumException;
 /**
  * @link ../../../../.docs/features/sync/gdk-epoch-wrap-delivery.md
  */
-final class GdkEpochControlHandler
+final readonly class GdkEpochControlHandler
 {
     // The wrapped epoch key is an anonymous sodium_crypto_box_seal — confidential
     // but not sender-authenticated. handle() therefore verifies a detached
@@ -28,14 +28,14 @@ final class GdkEpochControlHandler
     public const string MSG_GDK_EPOCH_WRAP = 'GDK_EPOCH_WRAP';
 
     public function __construct(
-        private readonly PeerCatchUpExchanger $catchUp,
-        private readonly DeviceIdentityLoader $identityLoader,
-        private readonly GdkKeyringService $keyringService,
-        private readonly GdkEpochUsageProbe $usageProbe,
-        private readonly LoggerInterface $logger,
-        private readonly DeviceRegistryService $deviceRegistry,
-        private readonly DeviceKeySigner $signer,
-        private readonly LocallyKeyedRowsProbe $keyedRows,
+        private PeerCatchUpExchanger $catchUp,
+        private DeviceIdentityLoader $identityLoader,
+        private GdkKeyringService $keyringService,
+        private GdkEpochUsageProbe $usageProbe,
+        private LoggerInterface $logger,
+        private DeviceRegistryService $deviceRegistry,
+        private DeviceKeySigner $signer,
+        private LocallyKeyedRowsProbe $keyedRows,
     ) {}
 
     // Never throws on a malformed/tampered/foreign message — every rejection

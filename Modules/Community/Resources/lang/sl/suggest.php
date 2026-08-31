@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Vzorec je obvezen.',
         'name_required' => 'Ime je obvezno.',
+        'browser_refused' => 'Brskalnika ni bilo mogoče odpreti, zato ni bilo nič poslano in nič ni zapustilo te naprave. Poskusi znova ali zgornji predogled YAML sam prilepi v pull request.',
     ],
 ];

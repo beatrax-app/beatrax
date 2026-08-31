@@ -1,3 +1,4 @@
+@use('Modules\Anomaly\Internal\Enums\AnomalyDetector')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
 {{--
@@ -24,43 +25,46 @@
 
 @php
     $tint = $tintFor($alert);
-    $isExpense = $alert->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value;
     // Whether the charge moved "up" (more spend / more income) relative
-    // to the baseline — drives the arrow glyph + large-charge chip tint.
-    $latestMinor = $alert->latestAmount->toMinor();
-    $baselineMinor = $alert->baselineAmount->toMinor();
-    $upArrow = abs($latestMinor) >= abs($baselineMinor);
+    // to the baseline — drives the arrow glyph. A duplicate-only or
+    // first-time-only alert has no baseline, so it states no movement:
+    // no arrow, and the amount line names the charge instead.
+    $hasBaseline = $alert->baselineAmount !== null;
+    $upArrow = $hasBaseline
+        && abs($alert->latestAmount->toMinor()) >= abs($alert->baselineAmount->toMinor());
 @endphp
 
 <x-core::card padding="tight">
     <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
-                @if ($upArrow)
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-                    </svg>
-                @else
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
-                    </svg>
+                @if ($hasBaseline)
+                    @if ($upArrow)
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+                        </svg>
+                    @else
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
+                        </svg>
+                    @endif
                 @endif
                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.unknown_merchant') }}</span>
                 @foreach ($alert->reasons as $reason)
-                    @php $label = Lang::get('anomaly::alerts.reasons.'.$reason); @endphp
-                    @if ($reason === 'first_time')
+                    @php $label = Lang::get($reason->labelKey('anomaly::alerts.reasons')); @endphp
+                    @if ($reason === AnomalyDetector::FirstTime)
                         <span
                             role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-blue-bg); color: var(--color-blue);"
-                            aria-label="{{ Lang::get('anomaly::alerts.reason_aria.first_time') }}"
+                            aria-label="{{ Lang::get($reason->labelKey('anomaly::alerts.reason_aria')) }}"
                         >{{ $label }}</span>
-                    @elseif ($reason === 'duplicate')
+                    @elseif ($reason === AnomalyDetector::Duplicate)
                         <span
                             role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-amber-bg); color: var(--color-amber);"
-                            aria-label="{{ Lang::get('anomaly::alerts.reason_aria.duplicate') }}"
+                            aria-label="{{ Lang::get($reason->labelKey('anomaly::alerts.reason_aria')) }}"
                         >{{ $label }}</span>
                     @else
                         {{-- large (or any future detector): direction-aware tint --}}
@@ -73,7 +77,13 @@
                 @endforeach
             </p>
             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.baseline_to_actual', ['baseline' => $fmt($alert->baselineAmount), 'actual' => $fmt($alert->latestAmount)]) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">
+                    @if ($hasBaseline)
+                        {{ Lang::get('anomaly::alerts.baseline_to_actual', ['baseline' => $fmt($alert->baselineAmount), 'actual' => $fmt($alert->latestAmount)]) }}
+                    @else
+                        {{ Lang::get('anomaly::alerts.charged', ['actual' => $fmt($alert->latestAmount)]) }}
+                    @endif
+                </span>
                 <span class="mx-1">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.detected', ['date' => $alert->detectedAt->translatedFormat('d M')]) }}</span>
                 <span class="mx-1">·</span>

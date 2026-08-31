@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Belege aus E-Mails (optional)',
     'h1' => 'Lass Beatrax nach Kauf-E-Mails Ausschau halten',
     'lede' => 'Verbinde Gmail oder Outlook, damit Bestellbestätigungen und Abo-Belege automatisch an deine Transaktionen angehängt werden. Du kannst das überspringen und später ergänzen.',
+    'h1_phone' => 'Kauf-E-Mails werden auf dem Desktop beobachtet',
+    'lede_phone' => 'Bestellbestätigungen und Abo-Belege werden in der Desktop-App automatisch an deine Transaktionen angehängt und erreichen dieses Telefon per Synchronisierung. Auf diesem Telefon liest nichts deine Mails — überspring diesen Schritt hier und verbinde am Desktop.',
 
     'mini' => [
         'signin_label' => 'Anmelden',

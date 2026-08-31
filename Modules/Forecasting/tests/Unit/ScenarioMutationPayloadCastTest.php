@@ -104,7 +104,7 @@ it('round-trips AddRecurringPayload through the cast', function (): void {
 
 it('round-trips ChangeSeriesAmountPayload through the cast', function (): void {
     $mutation = ForecastScenarioMutation::factory()
-        ->changeSeriesAmount(seriesId: 17, newAmountMinor: -2500)
+        ->changeSeriesAmount(seriesId: 17, newAmountMinor: 2500)
         ->create([
             'user_id' => $this->user->id,
             'forecast_scenario_id' => $this->scenario->id,
@@ -116,7 +116,7 @@ it('round-trips ChangeSeriesAmountPayload through the cast', function (): void {
     /** @var ChangeSeriesAmountPayload $payload */
     $payload = $fresh->payload;
     expect($payload->seriesId)->toBe(17);
-    expect($payload->newAmountMinor)->toBe(-2500);
+    expect($payload->newAmountMinor)->toBe(2500);
     expect($payload->kind())->toBe('change_series_amount');
 });
 
@@ -227,7 +227,7 @@ it('every factory state method produces a row whose payload round-trips through 
         ),
         'change_series_amount' => ForecastScenarioMutation::factory()->changeSeriesAmount(
             seriesId: 1,
-            newAmountMinor: -100,
+            newAmountMinor: 100,
         ),
         'shift_series_date' => ForecastScenarioMutation::factory()->shiftSeriesDate(
             seriesId: 1,

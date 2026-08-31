@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/mån',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Variationstolerans',
     'tolerance' => 'Tolerans',
@@ -25,5 +26,5 @@ return [
     'settled_equivalent' => 'Reglerat i :code',
     'chart_requires_js' => 'Diagrammet kräver JavaScript.',
 
-    'tolerance_toast' => 'Tolerans: :percent%',
+    'tolerance_toast' => 'Tolerans: :percent %',
 ];

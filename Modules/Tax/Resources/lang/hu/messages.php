@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'A kategória neve nem lehet üres.',
         'name_duplicate' => 'Ilyen nevű kategória már létezik.',
+        'category_not_saved' => 'Ezt a kategóriát nem sikerült menteni. Próbáld újra.',
+        'tag_refused' => 'Ezt a címkét nem sikerült menteni. Zárd be a választót, és próbáld újra.',
     ],
 ];

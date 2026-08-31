@@ -13,12 +13,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class AcknowledgeAnomalyAlert
+final readonly class AcknowledgeAnomalyAlert
 {
     public function __construct(
-        private readonly AnomalyAlertStateMachine $stateMachine,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
+        private AnomalyAlertStateMachine $stateMachine,
+        private Dispatcher $events,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $alertId, User $user): void
@@ -33,7 +33,10 @@ final class AcknowledgeAnomalyAlert
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        if ($alert->state === AnomalyAlertState::Acknowledged->value) {
+        // A second tab, or the paired device, acting on a row this one still
+        // shows as open is a no-op, not a 500: acknowledged is terminal and
+        // dismissed leads only back to open.
+        if (! AnomalyAlertState::from($alert->state)->allows(AnomalyAlertState::Acknowledged)) {
             return;
         }
 

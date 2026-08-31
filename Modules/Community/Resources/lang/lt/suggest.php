@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Šablonas privalomas.',
         'name_required' => 'Pavadinimas privalomas.',
+        'browser_refused' => 'Naršyklės nepavyko atidaryti, todėl niekas nebuvo išsiųsta ir niekas nepaliko šio įrenginio. Bandyk dar kartą arba pats įklijuok viršuje esančią YAML peržiūrą į pull request.',
     ],
 ];

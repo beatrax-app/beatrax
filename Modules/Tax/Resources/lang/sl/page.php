@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Izvozi PDF',
     'export_pdf_aria' => 'Izvozi PDF',
     'export_pdf_title' => 'Prenesi beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Opusti',
 
     'country_prompt_heading' => 'V kateri državi oddajaš davčno napoved?',
     'country_prompt_body' => 'To lahko kadar koli spremeniš v Nastavitve → :section.',

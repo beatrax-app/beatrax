@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importer noen kontoutskrifter (bank, PayPal, kort), så viser kjedeløseren automatisk kjeder på tvers av kontoer her.',
 
     'no_counterparty' => '(ingen motpart)',
-    'open_from_row' => 'Åpne fra-raden',
-    'open_to_row' => 'Åpne til-raden',
     'leg_count' => ':count betaling|:count betalinger',
+    'legs_more' => '+ :count til',
     'state_aria' => 'Status: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Bekreftet',
+        'rejected' => 'Avvist',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal-finansiering',

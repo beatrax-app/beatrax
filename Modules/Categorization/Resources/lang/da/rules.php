@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Regler bliver på denne enhed. De deles ikke med dine andre enheder.',
 
     'reapply' => 'Anvend regler på historikken igen',
+    'reapply_confirm' => 'Vil du anvende alle regler på hele din historik igen? Hver kategori, modpart, note og skattemærke, som en regel har sat, bliver skrevet om. Det, du selv har sat manuelt, bliver stående, og det samme gør alt på et afstemt kontoudtog. Intet sætter de gamle værdier tilbage.',
     'reapplying' => 'Anvender igen…',
     'new_rule' => 'Ny regel',
 
-    'reapply_progress_lead' => 'Anvender regler igen…',
-    'reapply_progress_of' => 'af',
-    'reapply_progress_trail' => 'transaktioner kontrolleret',
+    'reapply_progress' => 'Anvender regler igen… :checked af :count transaktion kontrolleret|Anvender regler igen… :checked af :count transaktioner kontrolleret',
 
     'empty_heading' => 'Ingen regler endnu',
     'empty_body' => 'Regler matcher transaktioner på flere betingelser og anvender automatisk ændringer af kategori, modpart, note og skattemærke — ved import og hver gang du anvender dem på din eksisterende historik igen.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Oprettet',
     'col_row_actions' => 'Handlinger',
     'inactive_badge' => 'Fra',
+    'combinator_all' => 'ALLE',
+    'combinator_any' => 'VILKÅRLIG',
     'inactive_title' => 'Denne regel kører ikke. En regel slås fra, når den kategori eller modpart, den peger på, slettes.',
 
     'more_conditions' => '+:count flere',

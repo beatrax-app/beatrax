@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Kui kergesti peab Beatrax tehingut selle kaupmehe või kategooria puhul ebatavaliseks, vahemikus 1 kuni 100. Kõrgem märgib rohkem.',
 
     'min_amount_label' => 'Makse minimaalne summa',
-    'min_amount_help' => 'Eira kõrvalekaldeid maksetel, mis jäävad sellest summast väiksemaks. Salvestatakse sentides (:symbol) — 1000 tähendab :example.',
+    'min_amount_help' => 'Eira kõrvalekaldeid maksetel, mis jäävad sellest summast väiksemaks. Salvestatakse väikseimates ühikutes (:symbol) — :minor tähendab :example.',
 
     'save' => 'Salvesta kõrvalekallete seaded',
     'saved' => 'Salvestatud.',

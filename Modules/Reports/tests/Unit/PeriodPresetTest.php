@@ -104,14 +104,18 @@ it('resolves ytd to startOfYear through tomorrow (today inclusive)', function ()
     expect($period->label)->toBe('Year to date');
 });
 
-it('resolves this_year to the same window as ytd with a different label', function (): void {
+// A window headed "2026" that stops in May is not 2026. The two presets share
+// a start and nothing else: `ytd` stops at today by definition, `this_year`
+// runs to the year's own end, which is where a booked-ahead row sits.
+it('resolves this_year to the whole calendar year, not to ytd', function (): void {
     $resolver = pprtResolver('2026-05-15T10:00:00Z');
     $ytd = $resolver->resolve('ytd');
     $thisYear = $resolver->resolve('this_year');
 
     expect($thisYear->start->toDateString())->toBe($ytd->start->toDateString());
-    expect($thisYear->endExclusive->toDateString())->toBe($ytd->endExclusive->toDateString());
+    expect($thisYear->endExclusive->toDateString())->toBe('2027-01-01');
     expect($thisYear->label)->toBe('2026');
+    expect($ytd->endExclusive->lessThan($thisYear->endExclusive))->toBeTrue();
 });
 
 it('resolves custom with an inclusive user-picked end date converted to endExclusive = end+1day', function (): void {

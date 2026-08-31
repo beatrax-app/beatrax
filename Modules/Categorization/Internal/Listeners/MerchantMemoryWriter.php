@@ -14,14 +14,14 @@ use Modules\Core\Public\Support\QueryFailure;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
 
-final class MerchantMemoryWriter
+final readonly class MerchantMemoryWriter
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function handle(TransactionCategorized $event): void
@@ -118,11 +118,13 @@ final class MerchantMemoryWriter
     {
         $connection = $this->db->connection();
 
-        $normalized = self::toString($connection
+        $row = $connection
             ->table('transactions')
             ->where('user_id', $event->userId)
             ->where('id', $event->transactionId)
-            ->value('counterparty_normalized'));
+            ->first(['counterparty_normalized', 'counterparty_name']);
+
+        $normalized = self::toString($row->counterparty_normalized ?? null);
 
         if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
             return null;
@@ -134,7 +136,58 @@ final class MerchantMemoryWriter
             ->where('normalized_name', $normalized)
             ->value('id'));
 
+        if ($merchantId === 0) {
+            $merchantId = $this->createMerchant($event, $row, $normalized);
+        }
+
         return $merchantId === 0 ? null : $merchantId;
+    }
+
+    // Nothing in production ever wrote this table -- only the demo seeder
+    // does, despite the doc naming NormalizeStage as its owner. Never creating
+    // one meant merchant_memories could never grow on a real install, so the
+    // classifier's documented second layer was dead code.
+    private function createMerchant(TransactionCategorized $event, ?\stdClass $row, string $normalized): int
+    {
+        $connection = $this->db->connection();
+        $now = $this->clock->now()->toDateTimeString();
+        $counterparty = self::toString($row->counterparty_name ?? null);
+        $name = $counterparty === '' ? $normalized : $counterparty;
+
+        // insertOrIgnore against the (user_id, normalized_name) UNIQUE, then
+        // re-read: two categorizations of the same merchant in one burst must
+        // not race into two rows, and the loser needs the winner's id.
+        $inserted = $connection->table('merchants')->insertOrIgnore([
+            'user_id' => $event->userId,
+            'name' => $name,
+            'normalized_name' => $normalized,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $merchantId = self::toInt($connection
+            ->table('merchants')
+            ->where('user_id', $event->userId)
+            ->where('normalized_name', $normalized)
+            ->value('id'));
+
+        // merchant_memories carries a NOT NULL FK to this row, so the peer
+        // needs the merchant before the memory that points at it.
+        if ($merchantId !== 0 && $inserted > 0) {
+            $this->events->dispatch(new EntityMutated(
+                table: 'merchants',
+                pk: $merchantId,
+                userId: $event->userId,
+                mutationType: 'create',
+                dirtyFields: [
+                    'user_id' => $event->userId,
+                    'name' => $name,
+                    'normalized_name' => $normalized,
+                ],
+            ));
+        }
+
+        return $merchantId;
     }
 
     private function captureMerchant(int $merchantId, int $userId): void

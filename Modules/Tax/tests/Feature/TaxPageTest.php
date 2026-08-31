@@ -8,7 +8,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
+use Modules\Tax\Internal\Support\TaxYearBounds;
 
 uses(RefreshDatabase::class);
 
@@ -43,6 +45,7 @@ function taxPageTaggedTransaction(
     int $amountMinor = -5000,
     ?string $note = null,
     ?int $overrideYear = null,
+    string $type = 'expense',
 ): int {
     $suffix = bin2hex(random_bytes(4));
 
@@ -95,7 +98,7 @@ function taxPageTaggedTransaction(
         'counterparty_id' => $cpId,
         'normalization_version' => 1,
         'description' => 'Test transaction '.$suffix,
-        'type' => 'expense',
+        'type' => $type,
         'source_format' => 'asn-csv',
         'source_row_index' => 1,
         'fingerprint_version' => 3,
@@ -304,4 +307,103 @@ it('asks for the tax country above the figures rather than instead of them', fun
         // The prompt used to replace the whole page, so a dashboard card
         // promising tagged items led to a screen showing none of them.
         ->assertSee('Total deductions');
+});
+
+// The strip above the sections is headed "Total deductions", and the section
+// subtotal beside each category name folded a tagged income row into it, so
+// the sections added up to more than the headline they sit under.
+it('keeps an income row out of the section subtotal the deductions headline counts', function (): void {
+    $user = taxPageUser(username: 'mixed-section-user');
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
+    app()->instance(Clock::class, $clock);
+
+    taxPageTaggedTransaction($db, $user->id, 'Apotheek BV', 2026, 'Healthcare', -135_544);
+    taxPageTaggedTransaction($db, $user->id, 'Zorgtoeslag', 2026, 'Healthcare', 20_000, type: 'income');
+
+    $data = Livewire::actingAs($user)->test(TaxPage::class)->viewData('data');
+
+    expect($data->deductionsTotalMinor)->toBe(135_544)
+        ->and($data->incomeTotalMinor)->toBe(20_000)
+        ->and($data->categories[0]['subtotalMinor'])->toBe(135_544)
+        ->and($data->categories[0]['incomeSubtotalMinor'])->toBe(20_000);
+});
+
+it('prints the section income beside its deductions subtotal rather than inside it', function (): void {
+    $user = taxPageUser(username: 'mixed-section-render-user');
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
+    app()->instance(Clock::class, $clock);
+
+    taxPageTaggedTransaction($db, $user->id, 'Apotheek BV', 2026, 'Healthcare', -135_544);
+    taxPageTaggedTransaction($db, $user->id, 'Zorgtoeslag', 2026, 'Healthcare', 20_000, type: 'income');
+
+    $html = Livewire::actingAs($user)->test(TaxPage::class)
+        ->assertDontSee(Money::ofMinor(155_544, 'EUR')->format())
+        ->html();
+
+    // The section header alone, not the whole page: both figures also appear in
+    // the year strip above it and in the rows below it, so asserting either is
+    // merely present proves nothing about the header that names this category.
+    preg_match('#<summary[^>]*class="tax-section-header.*?</summary>#s', $html, $header);
+
+    expect($header)->not->toBeEmpty()
+        ->and($header[0])->toContain(e(Money::ofMinor(135_544, 'EUR')->format()))
+        ->and($header[0])->toContain(e(Money::ofMinor(20_000, 'EUR')->format()));
+});
+
+// ?year= is the same figure tax_year_override is, arriving by a different door.
+// Tax -1 and Tax 100000 both rendered a heading, a year switcher and an empty
+// cockpit for a year no tag can be filed under.
+it('clamps a ?year= outside the window a tag could ever name', function (): void {
+    $user = taxPageUser(username: 'year-clamp-user');
+
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
+    app()->instance(Clock::class, $clock);
+
+    expect(Livewire::actingAs($user)->test(TaxPage::class, ['year' => -1])->get('year'))
+        ->toBe(2026 - TaxYearBounds::SPAN_YEARS);
+
+    expect(Livewire::actingAs($user)->test(TaxPage::class, ['year' => 100_000])->get('year'))
+        ->toBe(2026 + TaxYearBounds::SPAN_YEARS);
+});
+
+it('clamps a year the client set after mount, not only the one in the URL', function (): void {
+    $user = taxPageUser(username: 'year-clamp-set-user');
+
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
+    app()->instance(Clock::class, $clock);
+
+    $component = Livewire::actingAs($user)->test(TaxPage::class)->set('year', 100_000);
+
+    expect($component->get('year'))->toBe(2026 + TaxYearBounds::SPAN_YEARS);
+    $component->assertSee('Tax '.(2026 + TaxYearBounds::SPAN_YEARS));
+});
+
+// The layout writes <title> once, on the full page load. The in-page switcher
+// is a Livewire update, so the browser tab and the desktop app's OS window
+// both kept naming the year the reader had just left.
+it('renames the window when the in-page year switcher moves the year', function (): void {
+    $user = taxPageUser(username: 'year-title-user');
+
+    $clock = Mockery::mock(Clock::class);
+    $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
+    app()->instance(Clock::class, $clock);
+
+    $component = Livewire::actingAs($user)->test(TaxPage::class);
+
+    expect($component->html())->toContain('Tax 2026 · Beatrax');
+
+    $component->set('year', 2024);
+
+    expect($component->html())->toContain('Tax 2024 · Beatrax')
+        ->and($component->html())->not->toContain('Tax 2026 · Beatrax');
 });

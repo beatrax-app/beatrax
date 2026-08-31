@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transazione',
     'heading' => 'Transazione',
+    'booked_on' => 'Contabilizzato il :date',
 
     'counterparty' => 'Controparte',
     'description' => 'Descrizione',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Nota (facoltativa)',
         'tax_deductible' => 'Detraibile',
         'remove_leg_aria' => 'Rimuovi questa categoria',
+        'remove_leg_caption' => 'Rimuovi',
         'add_category' => '+ Aggiungi categoria',
         'soft_cap' => ':count di ~20 categorie — valuta di raggruppare gli importi piccoli.',
         'remaining_zero' => 'Rimanente :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Elimina la transazione',
         'help' => "Rimuove definitivamente questa transazione. L'operazione non può essere annullata.",
         'button' => 'Elimina',
-        'confirm_prompt' => 'Sei sicuro?',
+        'confirm_prompt' => 'Eliminare questa transazione? Nota, suddivisione ed etichette fiscali spariscono con lei.',
         'confirm' => 'Sì, elimina',
         'cancel' => 'Annulla',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Vedi la catena',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Riconciliata e bloccata',
+        'help' => 'Una riconciliazione completata ha bloccato questa transazione. Categoria, nota, suddivisione ed etichette fiscali restano come sono finché non la sblocchi.',
+        'button' => 'Sblocca per modificare',
+        'confirm_question' => 'Sbloccare questa transazione per modificarla? Nulla cambia su di essa, e la prossima riconciliazione completata la blocca di nuovo.',
+        'cancel' => 'Lasciala bloccata',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Questa transazione è riconciliata. Annulla la riconciliazione per modificarla.',
         'reclassified_pair_removed' => 'Riclassificata come :type — abbinamento rimosso',
         'reclassified' => 'Riclassificata come :type',
         'note_saved' => 'Nota salvata',
         'unreconciled' => 'Riconciliazione annullata — puoi modificare di nuovo questa transazione.',
+        'note_too_long' => 'Una nota è al massimo di :max carattere.|Una nota è al massimo di :max caratteri.',
         'counterparty_updated' => 'Controparte aggiornata',
         'goal_attributed' => 'Conteggiato in questo obiettivo',
         'goal_attribution_removed' => 'Non è più conteggiato in questo obiettivo',

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Kategorisiz',
+    'unavailable_category' => 'Kategori bu cihazda yok',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Onaylandı',
         'uncleared' => 'Onaylanmadı',

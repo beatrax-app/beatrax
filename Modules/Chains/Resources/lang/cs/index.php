@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Naimportuj pár výpisů z účtu (banka, PayPal, karta) a řetězce napříč účty se tu objeví samy.',
 
     'no_counterparty' => '(bez protistrany)',
-    'open_from_row' => 'Otevřít zdrojový řádek',
-    'open_to_row' => 'Otevřít cílový řádek',
     'leg_count' => ':count platba|:count platby|:count plateb',
+    'legs_more' => '+ dalších :count',
     'state_aria' => 'Stav: :state',
+
+    'state' => [
+        'candidate' => 'Kandidát',
+        'confirmed' => 'Potvrzeno',
+        'rejected' => 'Odmítnuto',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Financování z PayPalu',

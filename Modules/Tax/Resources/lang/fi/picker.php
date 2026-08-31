@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Merkitäänkö myös :count muuta vastapuolelta',
     'batch_after' => '?',
+    'batch_confirm' => 'Merkitäänkö kaikki jäljellä olevat tapahtumat vastapuolelta :name verovähennyskelpoisiksi? Jokainen niistä saa tämän kategorian ja tämän muistiinpanon. Merkinnän poistaminen käy vain tapahtuma kerrallaan.',
     'batch_tag_all' => 'Merkitse kaikki',
     'batch_dismiss' => 'Ohita',
 ];

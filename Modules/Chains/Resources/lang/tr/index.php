@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Birkaç hesap ekstresi (banka, PayPal, kart) içe aktar; çözümleyici hesaplar arası zincirleri burada otomatik olarak gösterir.',
 
     'no_counterparty' => '(karşı taraf yok)',
-    'open_from_row' => 'Kaynak satırı aç',
-    'open_to_row' => 'Hedef satırı aç',
     'leg_count' => ':count ödeme',
+    'legs_more' => '+ :count daha',
     'state_aria' => 'Durum: :state',
+
+    'state' => [
+        'candidate' => 'Aday',
+        'confirmed' => 'Onaylandı',
+        'rejected' => 'Reddedildi',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal finansmanı',

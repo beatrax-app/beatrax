@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Driftsflate for den innebygde utviklerkonsollen.',
     'worker_heartbeat' => 'Heartbeat for arbeider',
     'not_running' => 'KJØRER IKKE',
+    'heartbeat_age' => 'for :count s siden · ttl :ttl s|for :count s siden · ttl :ttl s',
     'queue' => 'Kø',
     'pending' => 'ventende',
     'failed' => 'feilede',

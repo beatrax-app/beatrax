@@ -7,7 +7,7 @@ namespace Modules\Ledger\Internal\Services;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
@@ -47,9 +47,13 @@ final readonly class TransactionRowDecorator
             return [];
         }
 
-        $rows = $this->db->connection()
+        // The leg's own picker offers the qualified name, so a leg row showing
+        // the bare leaf named one category two ways in one panel.
+        $legs = $this->db->connection()
             ->table('transaction_splits')
-            ->leftJoin('categories', 'transaction_splits.category_id', '=', 'categories.id')
+            ->leftJoin('categories', 'transaction_splits.category_id', '=', 'categories.id');
+
+        $rows = CategoryPathName::joinParent($legs, $userId, 'categories', 'parent_categories')
             ->whereIn('transaction_splits.transaction_id', $transactionIds)
             ->orderBy('transaction_splits.transaction_id')
             ->orderBy('transaction_splits.sort_order')
@@ -59,7 +63,7 @@ final readonly class TransactionRowDecorator
                 'transaction_splits.settled_amount_minor',
                 'transaction_splits.settled_currency',
                 'transaction_splits.note',
-                ...CategoryDisplayName::columns('categories'),
+                ...CategoryPathName::columns('categories', 'parent_categories'),
             ]);
 
         // Leg-scoped tax state — one batched query, keyed by
@@ -79,7 +83,7 @@ final readonly class TransactionRowDecorator
             $map[$txId] ??= [];
             $map[$txId][] = [
                 'id' => $legId,
-                'categoryName' => CategoryDisplayName::fromRow($row, 'category') ?? '—',
+                'categoryName' => CategoryPathName::fromRow($row) ?? '—',
                 'amountMinor' => is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0,
                 'amountCurrency' => is_string($row->settled_currency) ? $row->settled_currency : $readerCurrency,
                 'note' => $legNote,

@@ -4,18 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
+use Modules\Recurring\Internal\Queries\SeriesPageSort;
 use Modules\Recurring\Internal\Support\SeriesIds;
 use Modules\Recurring\Internal\Support\SeriesTables;
-use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
-use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use stdClass;
@@ -28,7 +24,6 @@ final readonly class RecurringSeriesQuery
         private DatabaseManager $db,
         private SeriesAccountResolver $accounts,
         private RecurringSeriesProjector $projector,
-        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -37,7 +32,7 @@ final readonly class RecurringSeriesQuery
      */
     public function pendingForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->projector->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, 'id');
+        return $this->projector->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, SeriesPageSort::NewestFirst);
     }
 
     // The same two states allApprovedForUser walks, asked as a bare existence
@@ -64,23 +59,25 @@ final readonly class RecurringSeriesQuery
      */
     public function rejectedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->projector->scoped($user, [RecurringSeriesState::Rejected->value], $cursorId, $limit, 'id');
+        return $this->projector->scoped($user, [RecurringSeriesState::Rejected->value], $cursorId, $limit, SeriesPageSort::NewestFirst);
     }
 
     /**
-     * @return list<RecurringSeriesDto>
+     * @return list<RecurringSeriesDto> strictly `approved`, biggest monthly
+     *                                  equivalent first by magnitude — a plain DESC on the signed column
+     *                                  reads as smallest-expense-first
      */
     public function approvedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->projector->scoped($user, [RecurringSeriesState::Approved->value], $cursorId, $limit, 'monthly_equivalent_minor');
+        return $this->projector->scoped($user, [RecurringSeriesState::Approved->value], $cursorId, $limit, SeriesPageSort::LargestMonthlyEquivalentFirst);
     }
 
     /**
      * @return list<RecurringSeriesDto>
      */
-    public function cadenceChangedForUser(User $user): array
+    public function cadenceChangedForUser(User $user, int $limit = 100): array
     {
-        return $this->projector->scoped($user, [RecurringSeriesState::CadenceChanged->value], null, 100, 'id');
+        return $this->projector->scoped($user, [RecurringSeriesState::CadenceChanged->value], null, $limit, SeriesPageSort::NewestFirst);
     }
 
     public function forSeries(int $seriesId, User $user): ?RecurringSeriesDto
@@ -198,43 +195,31 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * @return list<RecurringOccurrenceDto> every observation row that contributed to the
-     *                                      cluster, ordered by observed_at DESC. Cross-user lookups return an empty list
+     * @param  array<int|string, mixed>  $seriesIds
+     * @return array<int, int|null> batched driftThresholdForSeries() — one SELECT instead of
+     *                              N; missing or cross-user ids are silently absent, a present id with no
+     *                              override maps to null
      */
-    public function occurrencesForSeries(int $seriesId, User $user): array
+    public function driftThresholdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $owns = $this->db->connection()->table('recurring_series')
-            ->where('id', $seriesId)
-            ->where('user_id', $user->id)
-            ->exists();
-        if (! $owns) {
+        $unique = SeriesIds::normalise($seriesIds);
+        if ($unique === []) {
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences')
-            ->where('recurring_series_id', $seriesId)
+        $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->orderByDesc('observed_at')
-            ->orderByDesc('id')
-            ->get();
+            ->whereIn('id', $unique)
+            ->get(['id', 'drift_threshold_percent']);
 
-        $result = [];
+        $map = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $observedCurrency = self::toString($row->observed_currency);
-            $observedAmount = Money::ofMinor(self::toInt($row->observed_amount_minor), $observedCurrency);
-
-            $result[] = new RecurringOccurrenceDto(
-                occurrenceId: self::toInt($row->id),
-                recurringSeriesId: self::toInt($row->recurring_series_id),
-                transactionId: self::toInt($row->transaction_id),
-                observedAt: CarbonImmutable::parse(self::toString($row->observed_at)),
-                observedAmount: $observedAmount,
-                observedCurrency: $observedCurrency,
-            );
+            $value = $row->drift_threshold_percent ?? null;
+            $map[self::toInt($row->id)] = is_numeric($value) ? (int) $value : null;
         }
 
-        return $result;
+        return $map;
     }
 
     /**
@@ -324,90 +309,6 @@ final readonly class RecurringSeriesQuery
         }
 
         return $this->forSeriesIds($ids, $user);
-    }
-
-    /**
-     * @return RecurringSeriesAmountTrendDto up to $maxPoints points, oldest first. Each
-     *                                       carries the native amount plus the settled shadow; settled_amount_minor
-     *                                       is null when the account was debited in the currency quoted
-     */
-    public function amountTrendForSeries(int $seriesId, User $user, int $maxPoints = 24): RecurringSeriesAmountTrendDto
-    {
-        $seriesRow = $this->db->connection()->table('recurring_series')
-            ->where('id', $seriesId)
-            ->where('user_id', $user->id)
-            ->first();
-        if ($seriesRow === null) {
-            return new RecurringSeriesAmountTrendDto(
-                seriesId: $seriesId,
-                currency: $this->baseCurrency->code(),
-                points: [],
-                maxPoints: $maxPoints,
-            );
-        }
-
-        /** @var stdClass $seriesRow */
-        $currency = self::toString($seriesRow->latest_currency);
-        if ($currency === '') {
-            // Schema guarantees latest_currency is non-null + 3 chars, so an
-            // empty value means a corrupt row. Fabricating an EUR label here
-            // would mislabel the chart axis, so return nothing instead.
-            return new RecurringSeriesAmountTrendDto(
-                seriesId: $seriesId,
-                currency: '',
-                points: [],
-                maxPoints: $maxPoints,
-            );
-        }
-
-        $effectiveLimit = max(1, $maxPoints);
-        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
-            ->where('rso.recurring_series_id', $seriesId)
-            ->where('rso.user_id', $user->id)
-            ->orderByDesc('rso.observed_at')
-            ->orderByDesc('rso.id')
-            ->limit($effectiveLimit)
-            ->get([
-                'rso.observed_at',
-                'rso.observed_amount_minor',
-                'rso.observed_currency',
-                't.settled_amount_minor as settled_amount_minor',
-                't.settled_currency as settled_currency',
-            ]);
-
-        // DESC + LIMIT is how the newest N are fetched; reverse so the chart's
-        // time axis runs left-to-right.
-        $ordered = $rows->reverse()->values();
-
-        $points = [];
-        foreach ($ordered as $row) {
-            /** @var stdClass $row */
-            $observedAt = CarbonImmutable::parse(self::toString($row->observed_at))->toDateString();
-            $amountMinor = self::toInt($row->observed_amount_minor);
-            $observedCurrency = self::toString($row->observed_currency);
-            // Whatever the account was actually debited, whenever that is not
-            // what the charge was quoted in. Pinned to the euro, the shadow
-            // line never appeared for an account denominated in anything else.
-            $settledCurrency = self::toString($row->settled_currency ?? null);
-            $settledMinor = null;
-            if ($settledCurrency !== '' && $settledCurrency !== $observedCurrency) {
-                $settledMinor = self::toInt($row->settled_amount_minor ?? null);
-            }
-            $points[] = [
-                'date' => $observedAt,
-                'amount_minor' => $amountMinor,
-                'settled_amount_minor' => $settledMinor,
-                'settled_currency' => $settledMinor === null ? null : $settledCurrency,
-            ];
-        }
-
-        return new RecurringSeriesAmountTrendDto(
-            seriesId: $seriesId,
-            currency: $currency,
-            points: $points,
-            maxPoints: $maxPoints,
-        );
     }
 
     /**

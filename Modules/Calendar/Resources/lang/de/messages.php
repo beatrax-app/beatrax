@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Gebuchte Zahlung',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list nicht mitgezählt — Zahlungen dort ändern den Saldo nicht',
+    ],
+
     'panel' => [
         'aria' => 'Detailbereich Tag',
         'close' => 'Tagesbereich schließen',
+        'close_caption' => 'Schließen',
         'start_of_day' => 'Tagesbeginn',
         'no_payments' => 'Keine Zahlungen an diesem Tag.',
         'date_approximate' => '~ Datum ungefähr',

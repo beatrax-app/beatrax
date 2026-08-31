@@ -16,7 +16,9 @@ return [
         'budget' => 'Meses de orçamento',
     ],
 
-    'all_clean' => 'Está tudo mapeado sem problemas — não há nada a rever antes de confirmares.',
+    'all_clean' => 'Está tudo mapeado sem problemas — não há aqui nada para decidires.',
+
+    'nothing_staged' => 'Esta exportação não continha nada para importar — não há nada a confirmar aqui.',
 
     'groups' => [
         'conflict' => 'Precisa da tua decisão',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Isto vai criar ou atualizar as quantidades indicadas acima nas tuas categorias, orçamentos e livro-razão.',
     'discard_button' => 'Descartar a importação',
+    'discard_confirm' => 'Descartar esta importação? Tudo o que foi lido do teu ficheiro de exportação é apagado aqui, e recuperá-lo implica carregar e processar o ficheiro inteiro outra vez. Ainda não chegou nada ao teu livro-razão.',
     'confirm_button' => 'Confirmar a importação',
 ];

@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Je apparaat wilde de sleutel niet opslaan. Biometrisch ontgrendelen is niet beschikbaar.',
     'heading' => 'App-vergrendeling',
 
-    'moved_help' => 'Je pincode, automatische vergrendeling en biometrisch ontgrendelen staan bij de synchronisatie-instellingen van dit apparaat.',
-    'moved_cta' => 'Synchronisatie & apparaat openen',
-
     'toggle_label' => 'App vergrendelen met pincode',
     'toggle_description' => 'Vervangt het dagelijkse inloggen door een pincode. Sessies blijven 30 dagen actief.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Pincode behouden',
 
     'error_pin_too_short' => 'Pincode moet minstens 6 cijfers bevatten.',
-    'error_pin_digits' => 'Pincode moet 6 tot 10 cijfers zijn — alleen cijfers.',
+    'error_pin_digits' => 'Pincode moet :min tot :max cijfers zijn — alleen cijfers.',
     'error_pin_mismatch' => 'Pincodes komen niet overeen. Probeer het opnieuw.',
     'error_pin_required' => 'Voer je pincode in.',
     'error_pin_incorrect' => 'Onjuiste pincode.',

@@ -6,100 +6,34 @@ namespace Modules\Budgets\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Modules\Budgets\Public\Dto\BudgetProgressRow;
-use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Ledger\Public\Enums\CategoryKind;
-use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Ledger\Public\Services\CategoryAncestry;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
+use stdClass;
 
-final class BudgetProgressQuery
+final readonly class BudgetProgressQuery
 {
     use CoercesScalars;
 
-    private const NEAR_THRESHOLD = 0.8;
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly PeriodQuery $periods,
-        private readonly SpendByCategoryQuery $spendByCategory,
+        private DatabaseManager $db,
+        private CategoryAncestry $ancestry,
     ) {}
 
+    // The path, not the leaf: two groups can each hold a "Groceries", and a
+    // picker offering both of them the same label picks for the reader.
     /**
-     * @return list<BudgetProgressRow>
-     */
-    public function forCurrentPeriod(User $user): array
-    {
-        $period = $this->periods->current();
-        $connection = $this->db->connection();
-
-        $budgets = $connection->table('category_budgets as b')
-            ->join('categories as c', 'c.id', '=', 'b.category_id')
-            ->where('b.user_id', $user->id)
-            // A budget row can key a category the user does not own; joining that
-            // row unfiltered would put a foreign category's name on the page.
-            ->where(static function (QueryBuilder $query) use ($user): void {
-                $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
-            })
-            ->get(['b.category_id', ...CategoryDisplayName::columns('c'), 'b.budget_minor', 'b.currency']);
-
-        if ($budgets->isEmpty()) {
-            return [];
-        }
-
-        // The shared legs ∪ unsplit-parents read model, so a split
-        // transaction's legs — not its parent row — count toward spend.
-        $spendByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
-
-        $rows = [];
-        foreach ($budgets as $budget) {
-            $categoryId = self::toInt($budget->category_id);
-            $currency = self::toString($budget->currency);
-            $budgetMinor = self::toInt($budget->budget_minor);
-            // Keyed on the budget's own currency, so spend settled in any
-            // other currency is not counted — a known limitation.
-            $spentMinor = max(0, $spendByKey[$categoryId.'|'.$currency] ?? 0);
-
-            $fraction = $budgetMinor > 0 ? $spentMinor / $budgetMinor : 0.0;
-            $status = match (true) {
-                $fraction > 1.0 => BudgetProgressStatus::Over,
-                $fraction >= self::NEAR_THRESHOLD => BudgetProgressStatus::Near,
-                default => BudgetProgressStatus::Under,
-            };
-
-            $rows[] = new BudgetProgressRow(
-                categoryId: $categoryId,
-                name: CategoryDisplayName::fromRow($budget, 'category') ?? '',
-                budgetMinor: $budgetMinor,
-                spentMinor: $spentMinor,
-                currency: $currency,
-                fractionUsed: $fraction,
-                status: $status,
-            );
-        }
-
-        // Alphabetical by what the reader sees, not by what is stored — the
-        // stored English orders a Dutch budget screen by the wrong word.
-        usort($rows, static function (BudgetProgressRow $a, BudgetProgressRow $b): int {
-            $byName = LocaleCollator::compare($a->name, $b->name);
-
-            return $byName !== 0 ? $byName : $a->categoryId <=> $b->categoryId;
-        });
-
-        return $rows;
-    }
-
-    /**
-     * @return array<int, string> category id => name
+     * @return array<int, string> category id => qualified name
      */
     public function expenseCategories(User $user): array
     {
         $options = [];
         foreach ($this->expenseCategoryNaming($user) as $categoryId => $naming) {
-            $options[$categoryId] = $naming['name'];
+            $options[$categoryId] = $naming['path'];
         }
 
         return $options;
@@ -107,34 +41,55 @@ final class BudgetProgressQuery
 
     // Name AND the provenance behind it. A nudge fires from an hourly job with
     // no reader in sight, so the category has to travel as what it is rather
-    // than as a name already resolved into the worker's language.
+    // than as a name already resolved into the worker's language — which is why
+    // `name` stays the leaf even though every screen renders `path`.
     /**
-     * @return array<int, array{name: string, slug: string, isDefault: bool}>
+     * @return array<int, array{name: string, path: string, slug: string, isDefault: bool}>
      */
     public function expenseCategoryNaming(User $user): array
     {
         $rows = $this->db->connection()->table('categories')
-            ->where('kind', CategoryKind::Expense->value)
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
-            ->get(['id', ...CategoryDisplayName::bareColumns()]);
+            ->get(['id', 'kind', ...CategoryDisplayName::bareColumns()]);
+
+        $ids = array_values(array_map(static fn (stdClass $row): int => self::toInt($row->id), $rows->all()));
+        $ancestors = $this->ancestry->load($ids, $user->id);
+
+        // The whole visible tree walks in, not just the expense half: the
+        // ordinal separating two identical paths counts from the lowest id of
+        // ALL of them, so an income category sharing an expense one's path
+        // would otherwise number this grid differently from every picker.
+        $paths = [];
+        foreach ($rows as $row) {
+            $paths[self::toInt($row->id)] = $this->ancestry->fullPath(self::toInt($row->id), $ancestors);
+        }
+        $paths = CategoryPathName::distinct($paths);
 
         $naming = [];
         foreach ($rows as $row) {
-            $naming[self::toInt($row->id)] = [
+            if (self::toString($row->kind) !== CategoryKind::Expense->value) {
+                continue;
+            }
+
+            $id = self::toInt($row->id);
+            $naming[$id] = [
                 'name' => CategoryDisplayName::fromRow($row) ?? '',
+                'path' => $paths[$id],
                 'slug' => self::toString($row->slug),
                 'isDefault' => CategoryDisplayName::isDefaultRow($row),
             ];
         }
 
-        // Alphabetical by the resolved name, which is the order every caller
-        // of this and of expenseCategories() renders in.
+        // Alphabetical by the path, not the leaf, which is the order every
+        // caller of this and of expenseCategories() renders in. On the leaf,
+        // "Other" sorted between "Music" and "Personal care" with nothing on
+        // the row saying it was the insurance one.
         uksort($naming, static function (int $a, int $b) use ($naming): int {
-            $byName = LocaleCollator::compare($naming[$a]['name'], $naming[$b]['name']);
+            $byPath = LocaleCollator::compare($naming[$a]['path'], $naming[$b]['path']);
 
-            return $byName !== 0 ? $byName : $a <=> $b;
+            return $byPath !== 0 ? $byPath : $a <=> $b;
         });
 
         return $naming;
@@ -142,8 +97,16 @@ final class BudgetProgressQuery
 
     // The Livewire category id is client-supplied, so every write path has to
     // call this — rendering the picker's allow-list is not itself a boundary.
+    // One scoped exists(), not a membership test against the whole read model:
+    // "copy last month" asks this per row and paid for a full load each time.
     public function canBudget(User $user, int $categoryId): bool
     {
-        return array_key_exists($categoryId, $this->expenseCategories($user));
+        return $this->db->connection()->table('categories')
+            ->where('id', $categoryId)
+            ->where('kind', CategoryKind::Expense->value)
+            ->where(static function (QueryBuilder $query) use ($user): void {
+                $query->whereNull('user_id')->orWhere('user_id', $user->id);
+            })
+            ->exists();
     }
 }

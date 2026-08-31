@@ -23,5 +23,6 @@ return [
         'body' => 'Kode za obnovitev so edina pot nazaj v tvoj račun, če pozabiš geslo.',
         'warning' => 'Shranjene so zgoščene, zato jih ni mogoče znova prikazati. Nov nabor takoj razveljavi starega.',
         'regenerate' => 'Ustvari nove kode',
+        'regenerate_confirm' => 'Ustvarim nov nabor kod za obnovitev? Nabor, ki ga imaš zdaj, neha delovati v trenutku, ko nastane novi, in ga ni več mogoče prikazati — natisnjen ali prepisan izvod postane neuporaben. Shrani nove kode, preden zapustiš to stran.',
     ],
 ];

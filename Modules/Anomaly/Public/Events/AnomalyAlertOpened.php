@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Anomaly\Public\Events;
 
-/**
- * @phpstan-type AnomalyReason 'large'|'first_time'|'duplicate'
- */
 final readonly class AnomalyAlertOpened
 {
     /**
-     * @param  list<string>  $reasons
+     * @param  list<string>  $reasons  AnomalyDetector values, canonically ordered
      */
     public function __construct(
         public int $userId,

@@ -16,7 +16,9 @@ return [
         'budget' => 'Mois budgétaires',
     ],
 
-    'all_clean' => 'Tout est associé proprement — rien ne demande ton attention avant de confirmer.',
+    'all_clean' => 'Tout est associé proprement — il n\'y a rien à décider ici.',
+
+    'nothing_staged' => "Cet export ne contenait rien à importer — il n'y a rien à confirmer ici.",
 
     'groups' => [
         'conflict' => 'Demande ta décision',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Cela va créer ou mettre à jour les quantités indiquées ci-dessus dans tes catégories, tes budgets et ton registre.',
     'discard_button' => 'Abandonner l\'import',
+    'discard_confirm' => 'Abandonner cet import ? Tout ce qui a été lu dans ton fichier d\'export est supprimé ici, et le récupérer suppose de téléverser et d\'analyser à nouveau le fichier entier. Rien n\'est encore arrivé dans ton registre.',
     'confirm_button' => 'Confirmer l\'import',
 ];

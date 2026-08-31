@@ -286,9 +286,21 @@ it('does not let a console command or an event listener freeze a per-resolve ser
     // Each entry is one constructor parameter of one registration point, with
     // the path from it to the class the container builds fresh every time.
     $pinned = [
-        // PeriodQuery is per-resolve because it reads the per-REQUEST current
-        // user. A dev-only seeder command is one process with one user context,
-        // so there is no second user for a frozen instance to be wrong about.
+        // These seeders reach PeriodQuery, which is per-resolve because it reads
+        // the per-REQUEST current user. A dev-only seeder command is one process
+        // with one user context, so there is no second user for a frozen
+        // instance to be wrong about. Three now reach it through DemoPeriodWindow,
+        // the one window the demo grid and the demo rows are cut from.
+        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Budgets\\Database\\Seeders\\Demo\\DemoEnvelopeBudgetsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
+
+        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Goals\\Database\\Seeders\\Demo\\DemoGoalsSeeder -> Modules\\Goals\\Public\\Services\\GoalContributionWriter -> Modules\\Pots\\Public\\Services\\PotBalanceQuery -> Modules\\Pots\\Internal\\Services\\PotRowLoader -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
+
+        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoTransactionsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
+
+        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoTransferPairsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
+
+        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Notifications\\Database\\Seeders\\Demo\\DemoNotificationsSeeder -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
+
         'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Pots\\Database\\Seeders\\Demo\\DemoPotsSeeder -> Modules\\Pots\\Public\\Services\\PotWriter -> Modules\\Pots\\Public\\Services\\PotBalanceQuery -> Modules\\Pots\\Internal\\Services\\PotRowLoader -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
 
         // FingerprintRederiveService is per-resolve by habit rather than by

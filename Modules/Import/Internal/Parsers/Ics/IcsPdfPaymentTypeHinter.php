@@ -6,10 +6,11 @@ namespace Modules\Import\Internal\Parsers\Ics;
 
 use Modules\Import\Internal\Parsers\DescriptionKeywordHinter;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 
 final class IcsPdfPaymentTypeHinter extends DescriptionKeywordHinter
 {
-    protected const SOURCE_FORMAT = 'ics-pdf';
+    protected const SOURCE_FORMAT = SourceFormat::IcsPdf->value;
 
     // `kosten kasopname` precedes the bare `geldmaat` so the per-withdrawal
     // fee row classifies as Fee, not Pin; both lexemes sit near each other

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Dto;
 
+use Modules\Import\Internal\Enums\ConfirmRefusal;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Receipts\Public\Dto\CapturedReceipt;
 use Spatie\LaravelData\Data;
 
 // Everything about a preview whose size does not grow with the file: counts,
@@ -23,6 +25,8 @@ final class PreviewHead extends Data
      * @param  list<PreviewRowDto>  $sampleRows  The head of the run's showable rows, error rows excluded, in the order the file yielded them.
      * @param  list<array{kind: string, row: int|null, reason: string|null, detail: string|null}>  $rowIssues  Stored-shape issues, capped per kind as they are counted, so confirming never reads the rows back to find them.
      * @param  ImportFailureReason|null  $firstRowErrorReason  The reason carried by the first failed row that names one, which is the reason a section reports.
+     * @param  list<CapturedReceipt>  $receiptCaptures  The head of the messages a receipt drop filed, capped the way the sample is. A message that yielded no transaction yields no row either, so this is the only record on the preview that it arrived at all.
+     * @param  int  $receiptCaptureCount  How many messages the drop filed, which $receiptCaptures is a window onto.
      */
     public function __construct(
         public readonly int $importRunId,
@@ -42,11 +46,25 @@ final class PreviewHead extends Data
         public readonly ?ImportFailureReason $fileFailureReason = null,
         public readonly ?string $fileFailureDetail = null,
         public readonly ?int $fileFailureRowIndex = null,
+        public readonly array $receiptCaptures = [],
+        public readonly int $receiptCaptureCount = 0,
     ) {}
 
     public function importableRowCount(): int
     {
         return $this->rowCount - $this->errorCount;
+    }
+
+    // The one confirmable rule, read by the wizard's guard and enforced by
+    // ConfirmImport. Held in the wizard alone it was a rule only the reader
+    // clicking Confirm ever met; a scheduled bank sync went straight past it.
+    public function confirmRefusal(): ?ConfirmRefusal
+    {
+        if ($this->accountsToName !== []) {
+            return ConfirmRefusal::AccountsToName;
+        }
+
+        return $this->importableRowCount() === 0 ? ConfirmRefusal::NothingImportable : null;
     }
 
     public function toSectionSummary(): PreviewSectionSummary

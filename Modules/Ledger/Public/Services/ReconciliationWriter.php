@@ -17,14 +17,14 @@ use Modules\Sync\Public\Events\TransactionMutated;
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#reconciliationwriter--the-terminal-reconcile-write-path
  */
-final class ReconciliationWriter
+final readonly class ReconciliationWriter
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     /**
@@ -111,7 +111,7 @@ final class ReconciliationWriter
             ->where('user_id', $user->id)
             ->first(['id', 'status']);
 
-        if ($row === null || $row->status !== ClearedStatus::Reconciled->value) {
+        if ($row === null || ! TransactionStatusQuery::locksEdits($row->status)) {
             return;
         }
 

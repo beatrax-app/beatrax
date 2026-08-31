@@ -16,7 +16,9 @@ return [
         'budget' => 'Budgetmåneder',
     ],
 
-    'all_clean' => 'Alt blev tilknyttet rent — intet kræver din opmærksomhed, før du bekræfter.',
+    'all_clean' => 'Alt blev tilknyttet rent — der er ikke noget her, du skal tage stilling til.',
+
+    'nothing_staged' => 'Denne eksport indeholdt intet at importere — der er ikke noget at bekræfte her.',
 
     'groups' => [
         'conflict' => 'Kræver din beslutning',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Dette opretter eller opdaterer de viste antal ovenfor i dine kategorier, budgetter og transaktioner.',
     'discard_button' => 'Kassér importen',
+    'discard_confirm' => 'Vil du kassere denne import? Alt, der er læst ud af din eksportfil, bliver slettet her, og for at få det tilbage skal du uploade og gennemgå hele filen igen. Der er endnu ikke havnet noget blandt dine transaktioner.',
     'confirm_button' => 'Bekræft importen',
 ];

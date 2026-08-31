@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Database\Factories;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Forecasting\Models\ForecastRun;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 
 /**
  * @extends Factory<ForecastRun>
@@ -22,7 +23,7 @@ final class ForecastRunFactory extends Factory
         return [
             'user_id' => 1,
             'scenario_id' => null,
-            'horizon_days' => 30,
+            'horizon_days' => ForecastHorizon::OneMonth->value,
             'started_at' => null,
             'completed_at' => null,
             'status' => 'pending',

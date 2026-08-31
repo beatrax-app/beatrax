@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Vergeleken met de basislijn hierboven',
 
+    'run_failed' => 'Deze prognose kon niet worden berekend. De lijn hieronder toont alleen wat al is geboekt.',
+
     'scenario_editor_aria' => 'Scenario-editor',
     'series_confidence' => 'Betrouwbaarheid reeks',
     'no_series_contribute' => 'Nog geen reeksen dragen bij aan de prognose van deze rekening.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Bijwerken',
     'chart_noscript' => 'Grafiek vereist JavaScript. Bereik beslaat :days dag.|Grafiek vereist JavaScript. Bereik beslaat :days dagen.',
     'total_balance' => 'Totaalsaldo',
+    'projection_range' => 'Projectiebereik',
+    'point_estimate' => 'Puntschatting',
 
     'per_month_suffix' => '/mnd',
     'confidence_chip_aria' => ':name, betrouwbaarheid :confidence — projectiebereik is :percent procent van de puntschatting',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Laagste in 30 dagen',
     'next_ics' => 'Volgende ICS-afwikkeling: :amount op :date',
     'ics_overdue' => 'ICS-afwikkeling is verlopen: :amount, verviel op :date',
+
+    'stale_run' => 'Geprojecteerd vanaf :date — sindsdien niet ververst.',
+
+    'confidence' => [
+        'high' => 'Hoog',
+        'medium' => 'Gemiddeld',
+        'low' => 'Laag',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Bedrag is verplicht.',
+        'amount_decimals' => 'Bedrag moet een getal met maximaal :decimals decimaal zijn.|Bedrag moet een getal met maximaal :decimals decimalen zijn.',
+        'amount_whole' => 'Bedrag moet een geheel getal zijn — deze valuta heeft geen kleinere eenheid.',
+        'amount_non_negative' => 'Bedrag moet nul of positief zijn.',
+        'amount_non_zero' => 'Bedrag mag niet nul zijn.',
+        'field_required' => 'Veld :field is verplicht.',
+    ],
 ];

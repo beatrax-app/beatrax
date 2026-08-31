@@ -17,9 +17,9 @@ Practical recipes for exercising the `Chains` module in isolation.
   in-memory SQLite, and a `LoggerInterface` spy. No HTTP layer is
   involved.
 - **Fixture policy:** every resolver fixture mirrors a real-world
-  shape; manually-injected unrealistic rows are forbidden (a lesson
-  from an earlier wave where a synthetic fixture passed in isolation
-  and failed in production).
+  shape; manually-injected unrealistic rows are forbidden, because a
+  synthetic fixture can pass in isolation and still fail against the
+  shapes a real statement carries.
 
 ## Feature tests
 
@@ -42,8 +42,9 @@ Practical recipes for exercising the `Chains` module in isolation.
     (`IcsSettlementResolverAliasBridgeTest`).
   - The interleaved-account healing scenario
     (`InterleavedAccountChainHealingTest`).
-  - The wizard's resolver-status polling
-    (`WizardChainResolutionStatusTest`).
+  - The import results page's resolver-status polling, which lives in
+    `Import` because that is the screen the confirm lands on
+    (`TheProgressPollLivedOnAScreenTheReaderHadLeftTest`).
   - The review queue + drawer Livewire pages (`ChainReviewQueueTest`,
     `ChainDrawerTest`).
   - The promotion + reject + dismiss actions
@@ -56,6 +57,17 @@ Practical recipes for exercising the `Chains` module in isolation.
     `ChainLinkQueryTest`).
   - The JSON1 `whereJsonContains` contract
     (`ChainLinksJsonContainsSmokeTest`).
+  - The whole scenario-1 statement reaching its documented settled
+    contract — 23 charges covered, `unaccounted_delta_minor = 0`,
+    `state = 'settled'`, no credit carried
+    (`TheSettlementArrivedWithoutTheAccountItSettledTest`).
+  - The period-repair migration and the second read of a statement it
+    lets match instead of mint, both halves driven from the real ICS
+    PDF (`AReimportMustNotMintTheStatementItAlreadyHasTest`).
+  - `/chains` and the drawer naming the same day for the same
+    transaction, over the one fixture whose `posted_at` and `booked_at`
+    genuinely disagree
+    (`TheDrawerNamedADifferentDayThanTheIndexTest`).
 - **Setup:** every test uses `RefreshDatabase`. Tests that drive the
   queue do so with `Queue::fake()` or the in-memory worker for the
   uniqueness contract.
@@ -144,10 +156,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Chains` module.
-
-## Behavioral contracts
-
 - **The resolver pass is read-mostly over `transactions`.** The
   resolver expresses its conclusions as `chain_links` rows; the single
   exception, `RetypeByAliasResolver` retyping `transactions.type`, is
@@ -221,12 +229,15 @@ The behavioural contract for the `Chains` module.
   permits a NULL endpoint only in `state='candidate'` for this kind +
   tolerance combination.
 - **Concurrent job dispatches for the same user** — the second
-  dispatch's unique-lock prevents enqueueing; the audit row inserted
-  by the dispatcher remains `pending` and is reaped by the periodic
-  cleanup job (see `Modules\Chains\Internal\Jobs` future work).
+  dispatch's unique-lock prevents enqueueing, leaving its reserved
+  `pending` row behind. `ResolveChainLinksJob::handle()` claims every
+  pending row for the user at the start of a pass and completes them
+  all with it: the pass covers the work each reservation stood for, so
+  the pass is what closes them. There is no separate cleanup job.
 - **Worker hard-crashes mid-run** — the audit row stays `running`
-  with no `completed_at`. The wizard's `wire:poll` surfaces the
-  orphan with an "in progress" message; a manual retry re-dispatches.
+  with no `completed_at`. The import results page's `wire:poll`
+  surfaces the orphan with an "in progress" message; a manual retry
+  re-dispatches.
 - **A candidate's `to_transaction_id` has been deleted** — the FK is
   `cascadeOnDelete`, so the `chain_link` is dropped along with the
   transaction. The user never sees a dangling link.
@@ -241,8 +252,9 @@ The behavioural contract for the `Chains` module.
   after `RecordReceipt` persists the canonical transaction, so the
   FK on `chain_links.from_transaction_id` always binds.
 - **A user runs `/import` and the chain pass right after a previous
-  pass failed** — the dispatcher inserts a fresh `pending` row; the
-  prior `failed` row remains as an audit trail.
+  pass failed** — `ConfirmImport` inserts a fresh `pending` row, which
+  the job then claims; the prior `failed` row remains as an audit
+  trail.
 
 ## Cross-module collaborators
 
@@ -279,10 +291,12 @@ The behavioural contract for the `Chains` module.
 - The chain-link `kind`, `state`, `resolver`, and `confidence`
   semantics are documented in the
   [chain-resolution architecture topic](../../architecture/chain-resolution.md).
-- The `AUTO_PROMOTE_THRESHOLD = 3` constant in `ConfirmChainLink` is
-  the only tunable; lowering it would auto-promote on the first or
-  second observation, which the project explicitly rejected (the user
-  must teach the loop three times before it acts on its own).
+- `AutoPromotion::THRESHOLD = 3` is the only tunable, and it is one
+  figure for both readers of it — `ConfirmChainLink`, which promotes,
+  and `ChainLinkQuery`, which counts down to it. Lowering it would
+  auto-promote on the first or second observation, which the project
+  explicitly rejected (the user must teach the loop three times before
+  it acts on its own).
 - The job's retry budget (`tries = 3`, `backoff = [60, 300, 900]`) is
   fixed in the job class — increasing it without bound would let a
   resolver bug run indefinitely.

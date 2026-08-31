@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Sumă',
 
     'subtotal' => 'Subtotal',
+    'subtotal_income' => 'Subtotal venituri',
 
     'footer' => 'Generat de Beatrax — finanțe personale exclusiv locale — :year',
 ];

@@ -12,11 +12,11 @@ use stdClass;
 final class CommunityCorpusQuery
 {
     /** @var list<string> */
-    private const CONTACT_COLUMNS = ['website', 'cancel_url', 'support_url', 'support_phone', 'support_email'];
+    private const array CONTACT_COLUMNS = ['website', 'cancel_url', 'support_url', 'support_phone', 'support_email'];
 
     // The key a null or empty region memoises under: every region at once, for
     // a reader who has named no country.
-    private const ALL_REGIONS = '*';
+    private const string ALL_REGIONS = '*';
 
     // The `LIMIT 1000` / `LIMIT 500` these scans once carried, ordered by id,
     // truncated the corpus in bundled-file order rather than sampling it: once
@@ -186,6 +186,12 @@ final class CommunityCorpusQuery
         return $rows;
     }
 
+    // The pan-European file, whose own header says a row there is answered to
+    // every country at once. CorpusLoader stamps its 196 rows with a region
+    // code matching no country, so naming your country deleted the whole
+    // cross-border brand list while the national file still worked.
+    private const string GLOBAL_REGION = 'EU';
+
     // A row claiming no region belongs to every reader: the column is nullable
     // and CorpusLoader leaves it empty for a file it could not read a code from,
     // so excluding those would drop mappings nobody meant to scope.
@@ -198,6 +204,7 @@ final class CommunityCorpusQuery
         }
 
         return $query->where('region', $wanted)
+            ->orWhere('region', self::GLOBAL_REGION)
             ->orWhereNull('region')
             ->orWhere('region', '');
     }

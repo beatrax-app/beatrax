@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Tiparul este obligatoriu.',
         'name_required' => 'Numele este obligatoriu.',
+        'browser_refused' => 'Navigatorul nu a putut fi deschis, așa că nu s-a trimis nimic și nimic nu a părăsit acest dispozitiv. Încearcă din nou sau copiază singur previzualizarea YAML de mai sus într-un pull request.',
     ],
 ];

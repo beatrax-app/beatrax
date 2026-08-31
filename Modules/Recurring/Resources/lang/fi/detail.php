@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'per_month_suffix' => '/kk',
     'page_title' => ':name · Beatrax',
     'variance_tolerance_aria' => 'Vaihtelun toleranssi',
     'tolerance' => 'Toleranssi',

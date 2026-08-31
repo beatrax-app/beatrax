@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Listeners;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Database\Query\Builder;
@@ -12,17 +11,20 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\StoredCopy;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class HealthCheckListener
+final readonly class HealthCheckListener
 {
     public function __construct(
-        private readonly BootProbeState $state,
-        private readonly Clock $clock,
-        private readonly LoggerInterface $logger,
-        private readonly DatabaseManager $db,
+        private BootProbeState $state,
+        private Clock $clock,
+        private LoggerInterface $logger,
+        private DatabaseManager $db,
     ) {}
 
     public function __invoke(ConnectionEstablished $event): void
@@ -54,16 +56,17 @@ final class HealthCheckListener
             return;
         }
 
-        // SQLite's `useCurrent()` / CURRENT_TIMESTAMP writes the column in
-        // UTC, while CarbonImmutable::now() returns the app's configured
-        // timezone. Convert the cutoff to UTC before serialising into the
-        // recency query so the comparison uses the same wall-clock frame.
-        $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
+        // Every writer of system_alerts.created_at goes through SystemAlert,
+        // whose $timestamps stamp it off the app clock rather than letting the
+        // schema's CURRENT_TIMESTAMP default write UTC. The dedup cutoff is
+        // built in that same frame.
+        $cutoff = Instant::appLocal($this->clock->now()->subHour());
 
         if ($journalMode !== 'wal') {
             $this->recordDriftAlert(
                 kind: 'wal_mode_missing',
-                message: sprintf("SQLite is not in WAL mode (currently '%s').", $journalMode),
+                line: CopyLine::of('core::alerts.messages.wal_mode_missing', ['mode' => $journalMode]),
+                logMessage: sprintf("SQLite is not in WAL mode (currently '%s').", $journalMode),
                 metadata: ['current_mode' => $journalMode],
                 cutoff: $cutoff,
             );
@@ -72,7 +75,8 @@ final class HealthCheckListener
         if ($synchronousLevel !== 1) {
             $this->recordDriftAlert(
                 kind: 'synchronous_misconfigured',
-                message: sprintf('SQLite synchronous level is %d (expected NORMAL/1).', $synchronousLevel),
+                line: CopyLine::of('core::alerts.messages.synchronous_misconfigured', ['level' => $synchronousLevel]),
+                logMessage: sprintf('SQLite synchronous level is %d (expected NORMAL/1).', $synchronousLevel),
                 metadata: ['current_level' => $synchronousLevel],
                 cutoff: $cutoff,
             );
@@ -81,14 +85,18 @@ final class HealthCheckListener
         $this->state->booted = true;
     }
 
+    // Two sentences for one fault, because they are read in two places: the
+    // log line is English for whoever greps it, and the stored line follows
+    // whichever household member opens the banner months later.
     /**
      * @param  array<string, scalar|null>  $metadata
      */
     private function recordDriftAlert(
         string $kind,
-        string $message,
+        CopyLine $line,
+        string $logMessage,
         array $metadata,
-        CarbonImmutable $cutoff,
+        string $cutoff,
     ): void {
         try {
             $recentExists = $this->db->connection()->table('system_alerts')
@@ -107,11 +115,11 @@ final class HealthCheckListener
                 'user_id' => null,
                 'kind' => $kind,
                 'severity' => SystemAlertSeverity::Warning->value,
-                'message' => $message,
-                'metadata' => $metadata,
+                'message' => $line->sentence(),
+                'metadata' => StoredCopy::inParams($line) + $metadata,
             ]);
 
-            $this->logger->warning('HealthCheckListener: '.$message, $metadata);
+            $this->logger->warning('HealthCheckListener: '.$logMessage, $metadata);
         } catch (Throwable $e) {
             $this->logger->warning(
                 'HealthCheckListener: failed to write '.$kind.' alert; continuing.',

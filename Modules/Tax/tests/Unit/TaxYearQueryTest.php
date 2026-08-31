@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Tax\Internal\Services\TaxYearQuery;
 use Modules\Tax\Public\Dto\TaxYearData;
-use Modules\Tax\Public\Services\TaxYearQuery;
 
 uses(RefreshDatabase::class);
 
@@ -76,9 +76,18 @@ function taqTransaction(
         'updated_at' => now(),
     ];
 
-    return $db->connection()->table('transactions')->insertGetId(
-        array_merge($defaults, $overrides),
-    );
+    $row = array_merge($defaults, $overrides);
+
+    // Every adapter but the card one writes the two columns as one day, and a
+    // fixture that moves only `booked_at` names a transaction the ingestion
+    // pipeline cannot produce. Both dates move together unless a test means
+    // them to differ and says so.
+    if (isset($overrides['booked_at']) && ! isset($overrides['posted_at'])) {
+        $row['posted_at'] = substr((string) $overrides['booked_at'], 0, 10);
+        $row['value_date'] = $row['posted_at'];
+    }
+
+    return $db->connection()->table('transactions')->insertGetId($row);
 }
 
 function taqCategory(DatabaseManager $db, int $userId, string $name = 'Zorgkosten', int $sortOrder = 0): int
@@ -156,6 +165,12 @@ it('counts an income-tagged transaction in incomeTotalMinor', function (): void 
 
     expect($result->incomeTotalMinor)->toBe(5000)
         ->and($result->deductionsTotalMinor)->toBe(0);
+
+    // The section this row is filed under is headed by a deductions figure, so
+    // the row's own magnitude belongs in the income subtotal beside it.
+    $group = $result->categories[0];
+    expect($group['subtotalMinor'])->toBe(0)
+        ->and($group['incomeSubtotalMinor'])->toBe(5000);
 });
 
 it('applies COALESCE tax_year_override when determining the tax year', function (): void {
@@ -196,29 +211,43 @@ it('groups rows by category with per-group subtotals', function (): void {
     $tx1 = taqTransaction($db, $userId, ['settled_amount_minor' => -1000, 'type' => 'expense', 'booked_at' => '2025-02-01 00:00:00']);
     $tx2 = taqTransaction($db, $userId, ['settled_amount_minor' => -2000, 'type' => 'expense', 'booked_at' => '2025-03-01 00:00:00']);
     $tx3 = taqTransaction($db, $userId, ['settled_amount_minor' => -500, 'type' => 'expense', 'booked_at' => '2025-04-01 00:00:00']);
+    // An income row filed under a deduction category, which the picker allows
+    // on any tagged row: the section subtotal folded it in, so the sections
+    // added up to more than the "Total deductions" headline above them.
+    $tx4 = taqTransaction($db, $userId, ['settled_amount_minor' => 20000, 'type' => 'income', 'booked_at' => '2025-05-01 00:00:00']);
 
     taqTag($db, $userId, $tx1, $cat1);
     taqTag($db, $userId, $tx2, $cat1);
     taqTag($db, $userId, $tx3, $cat2);
+    taqTag($db, $userId, $tx4, $cat1);
 
     /** @var TaxYearQuery $query */
     $query = app(TaxYearQuery::class);
     $result = $query->forUser($userId, 2025);
 
-    expect($result->itemCount)->toBe(3)
-        ->and($result->deductionsTotalMinor)->toBe(3500);
+    expect($result->itemCount)->toBe(4)
+        ->and($result->deductionsTotalMinor)->toBe(3500)
+        ->and($result->incomeTotalMinor)->toBe(20000);
 
     expect(count($result->categories))->toBe(2);
 
     $alpha = collect($result->categories)->firstWhere('name', 'Cat Alpha');
     expect($alpha)->not->toBeNull()
         ->and($alpha['subtotalMinor'])->toBe(3000)
-        ->and(count($alpha['rows']))->toBe(2);
+        ->and($alpha['incomeSubtotalMinor'])->toBe(20000)
+        ->and(count($alpha['rows']))->toBe(3);
 
     $beta = collect($result->categories)->firstWhere('name', 'Cat Beta');
     expect($beta)->not->toBeNull()
         ->and($beta['subtotalMinor'])->toBe(500)
+        ->and($beta['incomeSubtotalMinor'])->toBe(0)
         ->and(count($beta['rows']))->toBe(1);
+
+    // The sections have to add up to the headline they sit under.
+    expect(array_sum(array_map(
+        static fn (array $category): int => $category['subtotalMinor'],
+        $result->categories,
+    )))->toBe($result->deductionsTotalMinor);
 });
 
 it('places rows with no deduction_category in a trailing no-category group', function (): void {

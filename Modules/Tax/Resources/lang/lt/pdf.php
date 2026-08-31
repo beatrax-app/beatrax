@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Suma',
 
     'subtotal' => 'Tarpinė suma',
+    'subtotal_income' => 'Pajamų tarpinė suma',
 
     'footer' => 'Parengta su Beatrax — asmeniniai finansai tik tavo įrenginyje — :year',
 ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Dispositivo removido',
     'dismiss_peer' => 'Dispensar este dispositivo',
+    'dismiss_peer_caption' => 'Dispensar',
     'dismiss_stale' => 'Limpar os dispositivos que já não estão emparelhados',
     'not_synced_yet' => 'Ainda não sincronizado',
     'error' => 'Erro de sincronização num ou mais dispositivos',

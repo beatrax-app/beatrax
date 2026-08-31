@@ -8,16 +8,15 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\OAuthStateWindow;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Throwable;
 
-final class OAuthStateRepository
+final readonly class OAuthStateRepository
 {
-    private const MAX_AGE_SECONDS = 600;
-
     public function __construct(
-        private readonly SessionFactory $session,
-        private readonly Clock $clock,
+        private SessionFactory $session,
+        private Clock $clock,
     ) {}
 
     public function issueState(string $provider, int $userId, ?int $existingInboxId = null): string
@@ -88,7 +87,7 @@ final class OAuthStateRepository
         }
         $ageSeconds = $this->clock->now()->getTimestamp() - $issuedAt->getTimestamp();
 
-        return $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
+        return $ageSeconds >= 0 && $ageSeconds <= OAuthStateWindow::MAX_AGE_SECONDS;
     }
 
     public function storePkceVerifier(string $provider, string $verifier): void

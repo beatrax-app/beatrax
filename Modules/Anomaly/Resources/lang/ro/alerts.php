@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'referință :baseline → real: :actual',
+    'charged' => 'debitat :actual',
     'detected' => 'detectat :date',
     'sensitivity' => 'sensibilitate :percent din 100',
 

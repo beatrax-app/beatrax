@@ -20,12 +20,12 @@ use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
-final class GenericCsvAdapter implements SourceAdapter
+final readonly class GenericCsvAdapter implements SourceAdapter
 {
     public function __construct(
-        private readonly CsvPreset $preset,
-        private readonly GenericCsvAmountParser $amounts,
-        private readonly HeaderSniffer $sniffer,
+        private CsvPreset $preset,
+        private GenericCsvAmountParser $amounts,
+        private HeaderSniffer $sniffer,
     ) {}
 
     public function format(): string
@@ -72,19 +72,22 @@ final class GenericCsvAdapter implements SourceAdapter
                 continue;
             }
 
+            // Resolved before the amount, not after: the row's own currency is
+            // what says how many minor units one major unit holds.
+            $currency = $this->currency($record, $normMap);
+
             try {
                 $postedAt = $this->parseDate($dateCell);
                 $valueDate = $this->preset->valueDateHeader !== null
                     ? $this->parseDateOrFallback($record, $normMap, $this->preset->valueDateHeader, $postedAt)
                     : $postedAt;
-                $amountMinor = $this->amountMinor($record, $normMap);
-                $feeMinor = $this->feeMinor($record, $normMap);
+                $amountMinor = $this->amountMinor($record, $normMap, $currency);
+                $feeMinor = $this->feeMinor($record, $normMap, $currency);
             } catch (Throwable $e) {
                 throw new InvalidAmountException(sprintf('Row %d: %s', $index, $e->getMessage()), 0, $e);
             }
 
             $ownIban = $this->ownIban($record, $normMap);
-            $currency = $this->currency($record, $normMap);
 
             yield new SourceTransactionDto(
                 bookedAt: $postedAt->startOfDay(),
@@ -145,14 +148,14 @@ final class GenericCsvAdapter implements SourceAdapter
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
      */
-    private function amountMinor(array $record, array $normMap): int
+    private function amountMinor(array $record, array $normMap, string $currency): int
     {
         $sep = $this->preset->decimalSeparator;
 
         return match ($this->preset->amountStrategy) {
-            CsvPreset::DEBIT_CREDIT => $this->debitCreditAmount($record, $normMap, $sep),
-            CsvPreset::INDICATOR => $this->indicatorAmount($record, $normMap, $sep),
-            default => $this->amounts->parseMinor($this->cell($record, $normMap, (string) $this->preset->amountHeader), $sep),
+            CsvPreset::DEBIT_CREDIT => $this->debitCreditAmount($record, $normMap, $sep, $currency),
+            CsvPreset::INDICATOR => $this->indicatorAmount($record, $normMap, $sep, $currency),
+            default => $this->amounts->parseMinor($this->cell($record, $normMap, (string) $this->preset->amountHeader), $sep, $currency),
         };
     }
 
@@ -164,7 +167,7 @@ final class GenericCsvAdapter implements SourceAdapter
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
      */
-    private function feeMinor(array $record, array $normMap): int
+    private function feeMinor(array $record, array $normMap, string $currency): int
     {
         if ($this->preset->feeHeader === null) {
             return 0;
@@ -172,23 +175,23 @@ final class GenericCsvAdapter implements SourceAdapter
 
         $cell = $this->optionalCell($record, $normMap, $this->preset->feeHeader);
 
-        return $cell === null ? 0 : $this->amounts->parseMinor($cell, $this->preset->decimalSeparator);
+        return $cell === null ? 0 : $this->amounts->parseMinor($cell, $this->preset->decimalSeparator, $currency);
     }
 
     /**
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
      */
-    private function debitCreditAmount(array $record, array $normMap, string $sep): int
+    private function debitCreditAmount(array $record, array $normMap, string $sep, string $currency): int
     {
         $debit = trim($this->cell($record, $normMap, (string) $this->preset->debitHeader));
         $credit = trim($this->cell($record, $normMap, (string) $this->preset->creditHeader));
 
         if ($debit !== '') {
-            return -abs($this->amounts->parseMinor($debit, $sep));
+            return -abs($this->amounts->parseMinor($debit, $sep, $currency));
         }
         if ($credit !== '') {
-            return abs($this->amounts->parseMinor($credit, $sep));
+            return abs($this->amounts->parseMinor($credit, $sep, $currency));
         }
 
         throw new InvalidAmountException('Both debit and credit columns are empty.');
@@ -198,9 +201,9 @@ final class GenericCsvAdapter implements SourceAdapter
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
      */
-    private function indicatorAmount(array $record, array $normMap, string $sep): int
+    private function indicatorAmount(array $record, array $normMap, string $sep, string $currency): int
     {
-        $magnitude = abs($this->amounts->parseMinor($this->cell($record, $normMap, (string) $this->preset->amountHeader), $sep));
+        $magnitude = abs($this->amounts->parseMinor($this->cell($record, $normMap, (string) $this->preset->amountHeader), $sep, $currency));
         $indicator = trim($this->cell($record, $normMap, (string) $this->preset->indicatorHeader));
 
         if (strcasecmp($indicator, (string) $this->preset->debitIndicator) === 0) {

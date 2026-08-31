@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Összeg',
 
     'subtotal' => 'Részösszeg',
+    'subtotal_income' => 'Bevételek részösszege',
 
     'footer' => 'A Beatrax készítette — kizárólag helyben futó személyes pénzügyek — :year',
 ];

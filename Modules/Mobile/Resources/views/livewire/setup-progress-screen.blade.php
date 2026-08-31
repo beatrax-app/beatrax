@@ -10,8 +10,10 @@
     aria-live="polite" sits on the HEADING only — never on the ticking
     N-of-M number — to avoid AT spam (UI-SPEC Copywriting).
 
-    This screen is genuinely blocking: it offers exactly one path
-    forward — waiting for parity — and no other interactive control.
+    This screen is genuinely blocking: waiting for parity is the only path
+    forward. The two links it can render are not that path — they are the
+    exits from the states waiting cannot resolve, a revoked pairing and an
+    engaged app-lock.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Mobile\Internal\Http\PairingEntryUrl')
@@ -64,13 +66,24 @@
             </p>
         @endif
 
+        {{-- Locked cannot clear itself either: this route is on the app-lock
+             allow-list, so no middleware sends a locked reader to the PIN
+             screen and the poll returns Locked forever. --}}
+        @if ($blocked === \Modules\Mobile\Internal\Sync\SyncBlockedReason::Locked)
+            <a
+                href="{{ $lockUrl }}"
+                class="tap-link inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
+                data-testid="setup-unlock-link"
+            >{{ Lang::get('mobile::setup.unlock_cta') }}</a>
+        @endif
+
         {{-- Revoked is terminal: the other device no longer knows this one, so
-             polling can never clear it. This is the only way out of a screen
-             that otherwise holds the app hostage. --}}
+             polling can never clear it. Both this and the unlock link above
+             exist because the screen otherwise holds the app hostage. --}}
         @if ($blocked === \Modules\Mobile\Internal\Sync\SyncBlockedReason::Revoked)
             <a
                 href="{{ PairingEntryUrl::importing() }}"
-                class="inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
+                class="tap-link inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
                 data-testid="setup-repair-link"
             >{{ Lang::get('mobile::setup.step.connect') }}</a>
         @endif

@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Dein Gerät hat das Speichern des Schlüssels abgelehnt. Biometrisches Entsperren ist nicht verfügbar.',
     'heading' => 'App-Sperre',
 
-    'moved_help' => 'Deine PIN, die automatische Sperre und das biometrische Entsperren findest du bei den Synchronisierungseinstellungen dieses Geräts.',
-    'moved_cta' => 'Sync & Gerät öffnen',
-
     'toggle_label' => 'App mit PIN sperren',
     'toggle_description' => 'Ersetzt die tägliche Anmeldung durch eine PIN. Sitzungen bleiben 30 Tage aktiv.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'PIN behalten',
 
     'error_pin_too_short' => 'Die PIN muss mindestens 6 Ziffern haben.',
-    'error_pin_digits' => 'Die PIN muss 6 bis 10 Ziffern haben — nur Zahlen.',
+    'error_pin_digits' => 'Die PIN muss :min bis :max Ziffern haben — nur Zahlen.',
     'error_pin_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
     'error_pin_required' => 'Gib deine PIN ein.',
     'error_pin_incorrect' => 'Falsche PIN.',

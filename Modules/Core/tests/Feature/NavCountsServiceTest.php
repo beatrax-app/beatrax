@@ -36,17 +36,18 @@ it('counts items per nav section, scoped to the user', function (): void {
     expect($counts)->toHaveKeys(['transactions', 'recurring', 'counterparties', 'drift', 'budgets', 'subscriptions', 'imports']);
 });
 
-it('caches the counts and refreshes only after forget()', function (): void {
+it('caches the counts but follows a write to a counted table', function (): void {
     navCp($this->user->id, 'a');
     $service = app(NavCountsService::class);
 
     expect($service->forUser($this->user->id)['counterparties'])->toBe(1);
 
-    // A new row is NOT reflected while the cached payload is warm…
+    // The write itself retires the cached payload — the writing module is
+    // not asked to remember, because seven out of eight never did.
     navCp($this->user->id, 'b');
-    expect($service->forUser($this->user->id)['counterparties'])->toBe(1);
+    expect($service->forUser($this->user->id)['counterparties'])->toBe(2);
 
-    // …until the cache is invalidated.
+    // forget() survives as the per-user drop for a caller that wants one.
     $service->forget($this->user->id);
     expect($service->forUser($this->user->id)['counterparties'])->toBe(2);
 });

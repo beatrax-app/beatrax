@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Despre ce să te anunțăm',
+    'background_note' => 'Beatrax le pregătește cât timp aplicația este deschisă. O rulare programată în fundal nu poate — blocarea aplicației păstrează singura cheie — așa că cele în așteptare sunt preluate în timp ce continui să folosești aplicația.',
+    'background_note_phone' => 'Beatrax le pregătește cât timp aplicația este deschisă. În fundal nu poate — blocarea aplicației păstrează singura cheie — așa că cele în așteptare ajung data viitoare când deschizi aplicația.',
 
     'reminders' => [
         'label' => 'Memento-uri de plată',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Ascunde detaliile în notificări',
-        'help' => 'Arată sumele și numele comercianților chiar în bannerul notificării. Oprește dacă ecranul tău poate fi văzut de alții.',
+        'help' => 'Ascunde sumele și numele comercianților chiar în bannerul notificării. Pornește dacă ecranul tău poate fi văzut de alții.',
     ],
 
     'save' => 'Salvează setările de notificare',

@@ -24,6 +24,7 @@ return [
     'to' => 'hasta',
     'text_placeholder' => 'p. ej. SPOTIFY',
     'remove_condition' => 'Quitar condición',
+    'remove_condition_caption' => 'Quitar',
     'add_condition' => '+ Añadir condición',
 
     'then' => 'Entonces',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Añadir al final',
     'deduction_category_aria' => 'Categoría de deducción para la acción :number',
     'remove_action' => 'Quitar acción',
+    'remove_action_caption' => 'Quitar',
     'add_action' => '+ Añadir acción',
 
     'this_year_only' => 'Solo este año ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Las acciones de etiqueta fiscal se aplican en la próxima reaplicación, no en la importación actual.',
 
     'priority' => 'Prioridad',
-    'priority_help' => 'Los números más bajos se ejecutan primero. Las reglas sin campos en común nunca entran en conflicto.',
+    'priority_help' => 'Las reglas se ejecutan desde el número más bajo hacia arriba, así que gana el número más alto cuando dos definen el mismo campo. Las reglas sin campos en común nunca entran en conflicto.',
 
     'cancel' => 'Cancelar',
     'save_changes' => 'Guardar cambios',

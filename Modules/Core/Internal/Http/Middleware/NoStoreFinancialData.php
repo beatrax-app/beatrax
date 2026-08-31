@@ -10,19 +10,19 @@ use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-final class NoStoreFinancialData
+final readonly class NoStoreFinancialData
 {
     // NativePHP injects its Livewire bridge as a static inline module on the
     // RequestHandled event — after this middleware runs, so it cannot carry
     // the nonce. It is allow-listed by the hash of its exact bytes instead,
     // recomputed from the shipped file so a package bump can never strand it.
-    private const NATIVE_BRIDGE_JS = 'vendor/nativephp/desktop/resources/electron/electron-plugin/src/preload/livewire-dispatcher.js';
+    private const string NATIVE_BRIDGE_JS = 'vendor/nativephp/desktop/resources/electron/electron-plugin/src/preload/livewire-dispatcher.js';
 
     // The app renders text it did not write — counterparty names, payment
     // references, receipt bodies from bank exports and mailboxes — so these
     // are what stands between a missed escape and a working attack.
     /** @var array<string, string> */
-    private const SECURITY_HEADERS = [
+    private const array SECURITY_HEADERS = [
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'DENY',
         'Referrer-Policy' => 'no-referrer',
@@ -34,7 +34,7 @@ final class NoStoreFinancialData
     // policy made every lock screen and setup screen re-read a 91 KB PNG
     // through PHP, on a device with no web server in front of it.
     /** @var list<string> */
-    private const PUBLIC_ARTEFACT_ROUTES = [
+    private const array PUBLIC_ARTEFACT_ROUTES = [
         'app.icon',
         'app.splash',
         'pwa.icon',
@@ -42,8 +42,8 @@ final class NoStoreFinancialData
     ];
 
     public function __construct(
-        private readonly Vite $vite,
-        private readonly Application $app,
+        private Vite $vite,
+        private Application $app,
     ) {}
 
     public function handle(Request $request, Closure $next): Response

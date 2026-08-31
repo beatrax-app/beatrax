@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'базовий рівень :baseline → фактично: :actual',
+    'charged' => 'списано :actual',
     'detected' => 'виявлено :date',
     'sensitivity' => 'чутливість :percent зі 100',
 

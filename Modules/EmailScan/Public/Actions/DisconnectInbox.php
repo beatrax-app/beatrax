@@ -11,12 +11,12 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DisconnectInbox
+final readonly class DisconnectInbox
 {
     public function __construct(
-        private readonly OAuthSecretsRepository $secrets,
-        private readonly GoogleTokenRevoker $revoker,
-        private readonly DatabaseManager $db,
+        private OAuthSecretsRepository $secrets,
+        private GoogleTokenRevoker $revoker,
+        private DatabaseManager $db,
     ) {}
 
     public function __invoke(int $inboxId, User $user): void

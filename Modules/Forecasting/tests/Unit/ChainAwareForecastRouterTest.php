@@ -116,7 +116,6 @@ it('passes contributions through unchanged when no chain links + no next settlem
         lowMinor: -12600,
         highMinor: -11400,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: 101,
         accountId: $asn->id,
     );
@@ -172,7 +171,10 @@ it('rewrites a PayPal series contribution onto the ASN funder via confirmed chai
         'kind' => 'paypal_funding',
         'state' => 'confirmed',
         'confidence' => 1.0,
-        'resolver' => 'user',
+        // 'auto' is what the resolvers write and the only value
+        // ChainLinkQuery::confirmedFundersForSeries routes on; nothing
+        // in the app ever writes 'user'.
+        'resolver' => 'auto',
         'evidence' => json_encode(['signature_hash' => 'paypal-netflix']),
     ]);
 
@@ -182,7 +184,6 @@ it('rewrites a PayPal series contribution onto the ASN funder via confirmed chai
         lowMinor: -12600,
         highMinor: -11400,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: $series->id,
         accountId: $paypal->id,
     );
@@ -216,7 +217,6 @@ it('leaves a PayPal series contribution unchanged when there is no chain link', 
         lowMinor: -3150,
         highMinor: -2850,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: $series->id,
         accountId: $paypal->id,
     );
@@ -308,7 +308,10 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
         'kind' => 'ics_bulk_settle',
         'state' => 'confirmed',
         'confidence' => 1.0,
-        'resolver' => 'user',
+        // 'auto' is what the resolvers write and the only value
+        // ChainLinkQuery::confirmedFundersForSeries routes on; nothing
+        // in the app ever writes 'user'.
+        'resolver' => 'auto',
         'evidence' => json_encode(['signature_hash' => 'ics-bulk']),
     ]);
 
@@ -318,7 +321,6 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
         lowMinor: -55000,
         highMinor: -45000,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: $series->id,
         accountId: $ics->id,
     );
@@ -370,7 +372,6 @@ it('preserves an unrelated ASN recurring series whose occurrence lands on the IC
         lowMinor: 247500,
         highMinor: 252500,
         currency: 'EUR',
-        fxRateUsed: null,
         seriesId: $salarySeries->id,
         accountId: $asn->id,
     );

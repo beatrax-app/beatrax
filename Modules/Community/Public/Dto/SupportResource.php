@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Community\Public\Dto;
 
+use Modules\Community\Internal\Support\RecipientAddress;
 use Spatie\LaravelData\Data;
 
 final class SupportResource extends Data
@@ -42,9 +43,9 @@ final class SupportResource extends Data
             return null;
         }
 
-        // A `to` carrying ?, &, whitespace or CR/LF could inject extra
-        // recipients or headers into the pre-filled email.
-        if (preg_match('/[?&\s]/', $this->cancelEmailTo) === 1) {
+        // The last gate before a mailto: href: a comma is RFC 6068's recipient
+        // separator, and `%2C` reaches the mail client as one.
+        if (! RecipientAddress::isSingle($this->cancelEmailTo)) {
             return null;
         }
 

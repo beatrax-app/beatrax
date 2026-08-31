@@ -7,32 +7,29 @@ namespace Modules\Chains\Internal;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Chains\Internal\Enums\ChainLinkResolver;
+use Modules\Chains\Internal\Presentation\CounterpartyDisplay;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class ChainTreeWalker
+final readonly class ChainTreeWalker
 {
     use CoercesScalars;
 
-    private const MAX_DEPTH = 5;
-
-    private const COUNTERPARTY_SLUG = 'counterparties.slug as counterparty_slug';
+    private const int MAX_DEPTH = 5;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly BaseCurrency $baseCurrency,
+        private DatabaseManager $db,
+        private CounterpartyDisplay $counterparty,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function walk(int $transactionId, User $user): ChainTree
@@ -156,7 +153,7 @@ final class ChainTreeWalker
 
     private function confidenceTier(string $state, string $resolver, float $confidence): ConfidenceTier
     {
-        if ($state === ChainLinkState::Confirmed->value && $resolver === 'auto' && $confidence === 1.0) {
+        if ($state === ChainLinkState::Confirmed->value && $resolver === ChainLinkResolver::Auto->value && $confidence === 1.0) {
             return ConfidenceTier::Deterministic;
         }
         if ($state === ChainLinkState::Confirmed->value) {
@@ -184,14 +181,14 @@ final class ChainTreeWalker
         return new ChainTreeNode(
             transactionId: self::toInt($row->id),
             chainLinkId: $chainLinkId,
-            counterpartyName: $this->decryptCounterpartyName(self::toString($row->counterparty_name ?? null), $user->id),
+            counterpartyName: $this->counterparty->name(self::toString($row->counterparty_name ?? null), $user->id),
             amount: Money::ofMinor($amountMinor, $currency),
-            bookedAt: CarbonImmutable::parse(self::toString($row->booked_at ?? null)),
+            postedAt: CarbonImmutable::parse(self::toString($row->posted_at ?? null)),
             accountName: $accountName,
             kind: $kind,
             confidenceTier: $tier,
             children: [],
-            counterpartySlug: self::extractCounterpartySlug($row),
+            counterpartySlug: $this->counterparty->slug($row),
         );
     }
 
@@ -240,9 +237,9 @@ final class ChainTreeWalker
                 'transactions.currency',
                 'transactions.settled_amount_minor',
                 'transactions.settled_currency',
-                'transactions.booked_at',
+                'transactions.posted_at',
                 'transactions.account_id',
-                self::COUNTERPARTY_SLUG,
+                CounterpartyDisplay::SLUG_SELECT,
             ]);
     }
 
@@ -262,30 +259,5 @@ final class ChainTreeWalker
         }
 
         return $names;
-    }
-
-    private function decryptCounterpartyName(?string $raw, int $userId): string
-    {
-        $stored = $raw ?? '';
-        if ($stored === '') {
-            return '';
-        }
-
-        return $this->codec->decryptValue('transactions', 'counterparty_name', $stored, $userId, ($this->session)())['value'];
-    }
-
-    private static function extractCounterpartySlug(stdClass $row): ?string
-    {
-        if (! property_exists($row, 'counterparty_slug') || $row->counterparty_slug === null) {
-            return null;
-        }
-        $slug = self::toString($row->counterparty_slug);
-
-        return $slug === '' ? null : $slug;
-    }
-
-    private static function toFloat(mixed $value): float
-    {
-        return is_numeric($value) ? (float) $value : 0.0;
     }
 }

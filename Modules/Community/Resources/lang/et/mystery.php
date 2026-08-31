@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Midagi tundmatut veel pole. Impordi mõni kontoväljavõte ja Beatrax toob siia read, mida ta ei suutnud tuvastada.',
 
+    'showing_capped' => 'Kuvatud on esimesed :shown / :total.',
+
     'footer' => 'Jagatud nimekiri on Beatraxiga kaasas olev YAML-fail. Ettepaneku saatmine avab brauseris GitHubi; muud sellest seadmest ei välju.',
 
     'card' => [

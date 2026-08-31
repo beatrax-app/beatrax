@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Anomaly\Public\Http\Livewire\AnomalySettingsSection;
@@ -59,12 +60,21 @@ it('renders a known detector in the readers language', function (): void {
         ->assertSee('Grote afschrijving');
 });
 
-it('shows a detector with no translation as its key, never as titleised English', function (): void {
+it('refuses to store a detector the enum does not name, so no screen can render a raw lang key', function (): void {
     $user = dlfUser('dlf-unknown', 'nl');
-    dlfRule($user, 'seasonal_spike');
+
+    $caught = null;
+    try {
+        dlfRule($user, 'seasonal_spike');
+    } catch (QueryException $e) {
+        $caught = $e;
+    }
+
+    expect($caught?->getMessage())->toContain('Invalid anomaly_suppression_rules.detector value');
+
     app()->setLocale('nl');
 
     Livewire::actingAs($user)->test(AnomalySettingsSection::class)
-        ->assertSee('anomaly::settings.detectors.seasonal_spike')
+        ->assertDontSee('anomaly::settings.detectors.seasonal_spike')
         ->assertDontSee('Seasonal Spike');
 });

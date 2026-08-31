@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorijas',
+    'no_counterparty' => 'Nav darījuma partnera',
+    'unavailable_counterparty' => 'Darījuma partnera šajā ierīcē nav',
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
     'subtitle' => 'Izveidojiet atskaiti no savas virsgrāmatas.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Pielāgots periods',
         'from' => 'No',
         'to' => 'Līdz',
+        'error' => [
+            'incomplete' => 'Izvēlies gan sākuma, gan beigu datumu.',
+            'malformed' => 'Izmanto derīgu datumu formātā GGGG-MM-DD.',
+            'inverted' => 'Beigu datums ir pirms sākuma datuma.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtri',
+        'net_worth_note' => 'Neto vērtība ir atlikums: darbojas tikai konta filtrs.',
     ],
 
     'compare' => 'Salīdzināt ar iepriekšējo periodu',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagramma valūtā :currency — :list netiek attēlots',
+        'undrawn' => 'Nav gredzenā — :amount virzās pretējā virzienā',
         'bar_title' => 'Noklikšķiniet uz stabiņa, lai redzētu tā darījumus',
         'line_title' => 'Noklikšķiniet uz punkta, lai redzētu tā darījumus',
         'donut_title' => 'Noklikšķiniet uz segmenta, lai redzētu tā darījumus',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Maksas un korekcijas (nav ieskaitītas)',
+    'other_movement_with_refunds' => 'Maksas, atmaksas un korekcijas (nav ieskaitītas)',
 ];

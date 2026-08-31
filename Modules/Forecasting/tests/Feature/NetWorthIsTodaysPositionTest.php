@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
@@ -128,7 +129,10 @@ it('counts what has landed since the last statement, not the statement alone', f
 });
 
 // A card with no statement anchored at zero while owing real money, so the
-// liability simply left the roll-up.
+// liability simply left the roll-up. Asserting the roll-up alone proved
+// nothing: the zero anchor lived in BalanceAnchorResolver, which this never
+// called, so /forecast read EUR0.00 for the card that the dashboard one click
+// away carried in full -- EUR6,681.85 against EUR6,127.85 on the same seed.
 it('carries a card debt into the total instead of anchoring it at zero', function (): void {
     $accountId = nwtAccount($this->db, $this->user->id, [
         'name' => 'NWT Card',
@@ -138,8 +142,31 @@ it('carries a card debt into the total instead of anchoring it at zero', functio
     nwtTransaction($this->db, $this->user->id, $accountId, '2026-07-04', -70_400);
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+    $anchor = app(BalanceAnchorResolver::class)->forAccount($accountId, $this->user);
 
-    expect($netWorth->totalMinor)->toBe(-70_400);
+    expect($netWorth->totalMinor)->toBe(-70_400)
+        ->and($anchor->openingBalanceMinor)->toBe(-70_400)
+        ->and($anchor->openingBalanceMinor)->toBe($netWorth->totalMinor);
+});
+
+// The two surfaces one click apart, on the shape that split them: a card whose
+// only anchor is the rows themselves.
+it('opens the forecast on the same card balance the dashboard rolls up', function (): void {
+    $bankId = nwtAccount($this->db, $this->user->id, ['starting_balance_minor' => 612_785]);
+    $cardId = nwtAccount($this->db, $this->user->id, [
+        'name' => 'NWT Card',
+        'kind' => AccountKind::IcsCard->value,
+    ]);
+
+    nwtTransaction($this->db, $this->user->id, $cardId, '2026-07-04', -55_400);
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+    $resolver = app(BalanceAnchorResolver::class);
+    $anchorSum = $resolver->forAccount($bankId, $this->user)->openingBalanceMinor
+        + $resolver->forAccount($cardId, $this->user)->openingBalanceMinor;
+
+    expect($netWorth->totalMinor)->toBe(557_385)
+        ->and($anchorSum)->toBe($netWorth->totalMinor);
 });
 
 it('leaves a transaction dated after today out of the position', function (): void {

@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Підписки →',
     'disclaimer' => 'Офіційні посилання з довідкового корпусу — Beatrax ніколи нічого не скасовує і не змінює за тебе.',
     'dismiss_aria' => 'Відхилити пропозицію',
+    'dismiss_caption' => 'Відхилити',
 
     'insight' => [
         'cheaper_message' => ':name — можливо, є дешевший тариф. Ти платиш :monthly/міс.',

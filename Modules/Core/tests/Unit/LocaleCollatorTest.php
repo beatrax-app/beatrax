@@ -25,16 +25,21 @@ it('sorts a Polish name by the Polish alphabet', function (): void {
 
 // Ä is an A with a diaeresis to a German reader and a letter of its own, after
 // Z, to a Swedish one. One memoised collator shared across locales would answer
-// whichever reader asked first.
+// whichever reader asked first — and the phone, which has no collator at all,
+// has to reach the same two answers through its own alphabet tables.
 it('answers each reader in their own alphabet', function (): void {
     app()->make(Translator::class)->setLocale('de');
     $german = LocaleCollator::compare('Äpfel', 'Zebra');
+    $germanPhone = LocaleCollator::compareWithoutIcu('Äpfel', 'Zebra');
 
     app()->make(Translator::class)->setLocale('sv');
     $swedish = LocaleCollator::compare('Äpfel', 'Zebra');
+    $swedishPhone = LocaleCollator::compareWithoutIcu('Äpfel', 'Zebra');
 
     expect($german)->toBeLessThan(0)
-        ->and($swedish)->toBeGreaterThan(0);
+        ->and($germanPhone)->toBeLessThan(0)
+        ->and($swedish)->toBeGreaterThan(0)
+        ->and($swedishPhone)->toBeGreaterThan(0);
 });
 
 // Every call site spells the tiebreak `compare(...) ?: $a->id <=> $b->id`, so

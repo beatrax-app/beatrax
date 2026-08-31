@@ -3,7 +3,10 @@
     Structurally identical to
     Modules/Auth/Resources/views/livewire/lock-screen.blade.php — both take
     their full-screen seam from .safe-screen and their app mark from
-    x-core::app-mark. The PIN-pad markup below is still duplicated from
+    x-core::app-mark, and both announce the digit count off the eleven
+    announcements Lang::choice renders server-side: the pad holds at most ten
+    digits, and a locale with more than two plural forms cannot be served by a
+    suffix glued onto a number in the browser. The PIN-pad markup below is still duplicated from
     Modules/Auth/Resources/views/livewire/partials/pin-pad.blade.php (a
     cross-module Blade @include was deliberately avoided).
 
@@ -21,6 +24,12 @@
     the biometric button retries the prompt manually.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@php
+    $digitAnnouncements = array_map(
+        static fn (int $count): string => Lang::choice('mobile::lock.digits_entered', $count, ['count' => $count]),
+        range(0, 10),
+    );
+@endphp
 <div
     class="safe-screen beatrax-shell min-h-screen flex items-center justify-center
             motion-reduce:transition-none"
@@ -70,7 +79,7 @@
             class="flex justify-center gap-2 py-3"
             role="status"
             aria-live="polite"
-            x-bind:aria-label="pin.length + ' {{ Lang::get('mobile::lock.digits_entered') }}'"
+            x-bind:aria-label="@js($digitAnnouncements)[pin.length]"
         >
             <template x-for="i in 10" :key="i">
                 <span

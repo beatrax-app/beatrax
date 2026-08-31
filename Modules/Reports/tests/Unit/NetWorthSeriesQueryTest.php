@@ -117,7 +117,7 @@ it('renders one point per monthly bucket over a 12-month span — a time series,
 
     foreach ($points as $point) {
         expect($point->currency)->toBe('EUR');
-        expect($point->excludedCount)->toBe(0);
+        expect($point->excludedCount())->toBe(0);
     }
 });
 
@@ -141,4 +141,32 @@ it('excludes paypal_funding accounts from every point, matching NetWorthQuery pa
 
     expect($points)->toHaveCount(1);
     expect($points[0]->totalMinor)->toBe(20_000);
+});
+
+// The series is the dashboard card plotted over time, so a kind one of them
+// counts alone is a step in the line with no cause behind it. Both now ask
+// AccountKind which kinds mirror another account rather than each keeping a
+// list, which is how the calendar's list came to hold paypal_funding alone.
+it('excludes a Google Play receipt account from every point, as the dashboard card does', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = nwsUser();
+    $account = nwsAccount($user, 'bank');
+    $card = nwsAccount($user, 'ics_card');
+    $play = nwsAccount($user, 'google_play');
+
+    nwsTransaction($db, $user, $account, ['amount_minor' => 20_000]);
+    nwsTransaction($db, $user, $card, ['amount_minor' => -599, 'type' => 'expense']);
+    nwsTransaction($db, $user, $play, ['amount_minor' => -599, 'type' => 'expense']);
+
+    $period = new Period(
+        start: CarbonImmutable::parse('2025-07-01'),
+        endExclusive: CarbonImmutable::parse('2025-08-01'),
+        label: 'Jul 2025',
+    );
+
+    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, ReportGranularity::Monthly);
+
+    expect($points)->toHaveCount(1);
+    expect($points[0]->totalMinor)->toBe(19_401);
 });

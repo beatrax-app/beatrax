@@ -8,11 +8,11 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
-use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
-final class ReassignCounterparty implements ReassignsCounterparty
+final readonly class ReassignCounterparty implements ReassignsCounterparty
 {
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     public function __invoke(int $transactionId, int $counterpartyId, User $user): int
     {
@@ -24,7 +24,7 @@ final class ReassignCounterparty implements ReassignsCounterparty
 
         // No-op returning 0 for a missing/foreign row or a reconciled one —
         // a reconcile freezes the counterparty along with the rest of the row.
-        if ($row === null || $row->status === ClearedStatus::Reconciled->value) {
+        if ($row === null || TransactionStatusQuery::locksEdits($row->status)) {
             return 0;
         }
 

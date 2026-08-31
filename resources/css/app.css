@@ -136,8 +136,21 @@
     --color-blue-bg: #dbeafe;
 
     /* Typography */
-    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
+    /*
+     * System faces only. The stack opened with 'Inter' and the mono one with
+     * 'JetBrains Mono', and the repo ships neither -- no @font-face, no font
+     * file, no package -- so both resolved on a developer's machine and
+     * nowhere else, and the two phones drew the product in two system faces.
+     */
+    --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /*
+     * Named per platform rather than left to the OS: Core Text falls through
+     * to Apple Color Emoji on its own, and an Android WebView has no such
+     * face to fall through to, so the same mark was a picture on one phone
+     * and nothing on the other.
+     */
+    --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Menlo', monospace;
     --text-xs: 0.75rem;
     --text-sm: 0.8125rem;
     --text-base: 0.9375rem;
@@ -260,7 +273,7 @@
      * through to the platform UI font. No webfont is fetched — the app is
      * local-only and must not issue any outbound HTTP traffic.
      */
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, sans-serif;
 }
 
 /*
@@ -718,8 +731,58 @@ td.date,
         height: 20px;
         font-size: 17px;
         line-height: 1;
-        /* Ask for the colour picture, not the monochrome text fallback. */
+        /*
+         * Ask for the colour picture, not the monochrome text fallback — and
+         * name a face that has one. The body stack ends at a text font, so on
+         * Android this asked for a presentation nothing in the stack could
+         * draw.
+         */
+        font-family: var(--font-emoji);
         font-variant-emoji: emoji;
+    }
+
+    /*
+     * display:contents so the wrapper that carries the press-and-hold handlers
+     * generates no box of its own and the button stays the flex item its row
+     * measured.
+     */
+    .emoji-action-hold {
+        display: contents;
+    }
+
+    /*
+     * Teleported to <body>, so it is placed against the viewport: the calendar
+     * day panel is transformed and scroll-clipped and the pots list is
+     * overflow-hidden, and a tip rendered in place is cut off by both. JS
+     * writes the transform; everything here is its appearance.
+     */
+    .emoji-action__tip {
+        position: fixed;
+        top: 0;
+        left: 0;
+
+        /*
+         * Above the modal layer, below the privacy veil. The tip teleports to
+         * <body> to escape the pots list's overflow and the calendar panel's
+         * transform, which also drops it out of the modal's stacking context:
+         * at the app scale's top of 80 it rendered BEHIND the z-[9999] command
+         * palette, present in the DOM with real geometry and painting nothing.
+         * It stays under the veil, which must cover everything.
+         */
+        z-index: 10001;
+        max-width: 60vw;
+        padding: 8px 12px;
+        border-radius: var(--radius-md);
+        background: var(--color-text);
+        color: var(--color-surface);
+        /* Only a touch hold ever raises this, and it is read past the edge of
+           a thumb, so it is sized for that rather than for a hover tooltip. */
+        font-size: var(--text-base);
+        font-weight: 500;
+        line-height: 1.25;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: var(--shadow-lg);
     }
 
     .emoji-action:hover {
@@ -3045,11 +3108,49 @@ td.date,
         }
     }
 
-    .triage-actions {
+    /* Every control in the triage card is a full-width block in this column,
+       so the card's content box is the only left and right edge on the screen.
+       The row this replaced was `display: flex; flex-wrap: wrap`, which set the
+       left edge of each button from wherever the one before it ended: measured
+       at 411px in English, five distinct left edges and seven right edges, and
+       in German, Greek, Spanish, French, Hungarian, Dutch and Ukrainian two of
+       the buttons broke to three lines inside their 44px box. */
+    .triage-stack {
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: var(--space-2);
-        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    /* A fieldset carries min-width: min-content from the browser, and its own
+       border and padding would inset everything inside it off the card's grid.
+       Neither is load-bearing: the legend groups the two fields, and the gap
+       rhythm separates the section. */
+    .triage-decide {
+        display: block;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .triage-legend {
+        padding: 0;
+        margin-bottom: var(--space-2);
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 600;
+        color: var(--color-text-muted);
+    }
+
+    /* The line under a group of controls that says what they do to what the
+       reader typed, and what the way back is. */
+    .triage-note {
+        margin: var(--space-1) 0 0;
+        font-size: var(--text-xs);
+        line-height: 1.45;
+        color: var(--color-text-muted);
     }
 
     /* ─── Suggestion banner (confidence-based) ───────────────────── */
@@ -3419,6 +3520,128 @@ td.date,
     margin-top: var(--space-2);
     color: var(--color-amber);
     line-height: 1.4;
+}
+
+/*
+ * Help tip (Modules/Core .../components/help-tip.blade.php).
+ *
+ * The mark is drawn, not typed: a bordered circle in the same family as
+ * .fx-icon, with an ASCII question mark inside it. Nothing here can fall
+ * through to a colour-emoji font the way a bare ⓘ or ℹ does on iOS, so both
+ * phones draw the same mark.
+ *
+ * It is also a circle rather than a letter, so it reads as centred on the word
+ * beside it and not as standing on that word's baseline. `middle` centres it on
+ * the x-height, which is as far as that keyword reaches and still 2.7px low
+ * against a 28px heading; the transform carries it the rest of the way, to the
+ * middle of the cap height. Both metrics come from the mark's own inherited
+ * font, so one rule holds for a 28px page heading and for a 12px column header
+ * -- and it is why the mark has to be written inside the label's type rather
+ * than beside it in a row, where it would inherit the row's.
+ *
+ * Measured headless against the built stylesheet at 375px and 411px, in five
+ * locales and at three root sizes: the mark's centre sat 5.98px below the
+ * cap-height centre of a page heading and now sits within 0.01px of it. An
+ * engine with no `cap` unit drops the transform and keeps `middle`, which is
+ * 2.7px rather than 5.98.
+ */
+.help-tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-full);
+    color: var(--color-text-faint);
+    cursor: pointer;
+    transition: var(--tx-quick);
+    vertical-align: middle;
+    transform: translateY(calc((1ex - 1cap) / 2));
+}
+
+.help-tip:hover,
+.help-tip:focus-visible {
+    color: var(--color-text-muted);
+    outline: none;
+}
+
+.help-tip:focus-visible {
+    outline: 2px solid var(--color-emerald);
+    outline-offset: 2px;
+}
+
+.help-tip__mark {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/*
+ * The panel is a native [popover], so it renders in the top layer and cannot
+ * be clipped by the `overflow-x: auto` scroll containers the grids sit in.
+ *
+ * Anchor positioning is deliberately absent. The UA default for a popover is
+ * `inset: 0; margin: auto` — centred — which is what a 375px screen wants
+ * anyway, and a panel hanging off an 18px trigger would need the anchor
+ * properties the Lightning CSS build strips from compiled stylesheets. One
+ * centred panel reads the same on the phone and on the desktop.
+ *
+ * display: none is restated here with its :popover-open partner because the
+ * author rule would otherwise beat the UA rule that reveals an open popover.
+ * The pair also decides what an engine without popover support does: the
+ * invalid :popover-open rule is dropped, the panel stays hidden, and the page
+ * around it is unaffected — rather than the help text printing inline.
+ *
+ * The backdrop is a literal rather than a token: custom-property inheritance
+ * into ::backdrop is recent, and a token that does not resolve there leaves the
+ * scrim transparent on the older of the two shipped engines.
+ *
+ * The top layer is a paint decision and not an inheritance one: the panel still
+ * inherits from the element it is written inside, which for three of the five
+ * tips is the block that lays out a page heading. Balanced lines and automatic
+ * hyphens are a decision about a two-word title, so both are put back to their
+ * initial values here rather than reaching three sentences of prose in 26
+ * languages.
+ */
+.help-tip-panel {
+    display: none;
+    width: min(24rem, calc(100vw - 2rem));
+    margin: auto;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-md);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    text-wrap: wrap;
+    hyphens: manual;
+}
+
+.help-tip-panel:popover-open {
+    display: block;
+}
+
+.help-tip-panel::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.help-tip-panel__title {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.help-tip-panel__body {
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+}
+
+.help-tip-panel__close {
+    margin-top: var(--space-4);
 }
 
 /*
@@ -4188,12 +4411,29 @@ td.date,
         /* Slightly dimmed day number handled via inline style on .cal-day-num */
     }
 
+    /* §6.3 Day-cell head: the day number and the balance corner.
+       A zero-decimal currency writes the whole figure in digits — ¥1,039,075,
+       ten characters with no decimals to drop — and at the sm band the cell is
+       87px wide. The pair sat on one line with no gap and no way to shrink, so
+       the day number and the amount touched ("31¥1,039,075") and the amount
+       crossed the cell's right padding. Wrapping hands the figure the cell's
+       full width on a second line instead of overprinting the border, and the
+       gap keeps the two readable as two things on the line where both fit. */
+    .cal-day-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0 var(--space-1, 4px);
+        min-width: 0;
+    }
+
     /* §6.3 Day number (top-left) */
     .cal-day-num {
         font-size: var(--text-sm, 0.8125rem);
         font-weight: 600;
         line-height: 1.2;
         color: var(--color-text);
+        flex: 0 0 auto;
     }
 
     /* §6.3 Day-end balance corner (top-right) */
@@ -4204,6 +4444,12 @@ td.date,
         color: var(--color-text-muted);
         text-align: right;
         line-height: 1.2;
+        /* Last resort under the wrap above: a figure wider than the whole cell
+           is clipped inside it rather than drawn over the neighbouring day. */
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* §6.3 Entry row */
@@ -4522,6 +4768,39 @@ td.date,
     padding: var(--space-3, 12px) 0 var(--space-2, 8px);
     border-bottom: 1px solid var(--color-border, oklch(93% 0 0));
     margin-bottom: var(--space-3, 12px);
+}
+
+/*
+ * The line the phone's search box and its Filters button share. The button
+ * used to sit in a band of its own underneath, which read as a control that
+ * had come loose from the field it filters.
+ *
+ * flex-wrap plus a rem basis on the field is what keeps that from becoming the
+ * squeeze the touch floor turns into a one-glyph-per-line label: the floor
+ * writes min-width: 44px over min-width: auto, so a shrinkable button in a row
+ * with nothing left to give lands at exactly 44px wide with its word broken up
+ * the middle. Here the button never shrinks and the field carries the basis, so
+ * once the reader's text no longer leaves the field 11rem the group wraps to a
+ * second line instead — which is the old layout, arrived at only when there is
+ * genuinely no room for the new one.
+ */
+.srch-input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    flex-wrap: wrap;
+}
+
+/* min-width: 0, not 11rem: a floor in rems is a floor that outgrows a 320px
+   viewport and takes the page sideways. The basis alone decides the wrap, and
+   after it the field is alone on its line and cannot be squeezed anyway. */
+.srch-input-row > .srch-input-wrap {
+    flex: 1 1 11rem;
+    min-width: 0;
+}
+
+.srch-input-row > .srch-phone-filters {
+    flex-shrink: 0;
 }
 
 /* ── Search input wrapper ─────────────────────────────────────────────────── */
@@ -4899,7 +5178,7 @@ mark {
     flex: 1;
     height: 40px;
     background: var(--color-blue);
-    color: oklch(99% 0 0);
+    color: var(--color-text-inverse);
     border: none;
     border-radius: 6px;
     font-size: 0.875rem;
@@ -4930,6 +5209,12 @@ mark {
     font-size: 0.875rem;
     color: var(--color-text-muted);
     cursor: pointer;
+
+    /* The two halves of the squeeze the touch floor makes: `min-width: 44px`
+       replaces `min-width: auto`, so a shrinkable button in a full row lands at
+       exactly 44px and breaks its own label into one glyph per line. */
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .srch-filter-badge {
@@ -4940,7 +5225,7 @@ mark {
     height: 18px;
     padding: 0 4px;
     background: var(--color-blue);
-    color: oklch(99% 0 0);
+    color: var(--color-text-inverse);
     border-radius: 9999px;
     font-size: 0.6875rem;
     font-weight: 600;
@@ -4979,7 +5264,7 @@ mark {
     font-size: var(--text-sm, 0.8125rem);
     color: var(--color-text, #0f172a);
     cursor: pointer;
-    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-family: var(--font-mono, ui-monospace, monospace);
 }
 
 .srch-token-suggest-row:hover,
@@ -5665,13 +5950,46 @@ mark {
 }
 
 /*
- * Dynamic Type.
+ * The phone root, and it is 17px on both engines.
  *
- * Every --text-* token is a rem, so the whole scale already follows the root —
- * but nothing ever moved the root, and a reader who had set Larger Text got the
- * same 16px as everyone else. WebKit exposes that choice through one shorthand
- * and nothing else, so the root takes it and puts back the family and the line
- * height the shorthand also carries.
+ * The Dynamic Type rule below reaches WebKit alone — an Android WebView does not
+ * recognise the body-text keyword, so the feature query it is wrapped in is
+ * false there — and the keyword resolves to 17px at the default setting on an
+ * iPhone. Every --text-* token is a rem and so is every Tailwind spacing
+ * utility, so one build drew itself 6.25% larger on an iPhone than on an
+ * Android phone: measured side by side on /settings, the three theme
+ * buttons were 56.2 / 53.9 / 71.3px wide against 52.9 / 50.6 / 67.1, and the
+ * page heading 34px against 32.
+ *
+ * The iPhone is the size the product is drawn at, so that size is stated here
+ * for the engine the rule below cannot reach, and the rule below then layers
+ * the reader's own text-size choice on top of it where it can.
+ *
+ * Coarse pointers only, like the rule below: on a desktop the design specifies
+ * its own density and 16px is it.
+ */
+@media (pointer: coarse) {
+    :root {
+        font-size: 17px;
+    }
+}
+
+/*
+ * Dynamic Type, on top of that root.
+ *
+ * Every --text-* token is a rem, and so are Tailwind's own spacing and
+ * container utilities, so the whole product follows the root. Nothing ever
+ * moved the root, and a reader who had set Larger Text got the same 16px as
+ * everyone else. WebKit exposes that choice through one shorthand and nothing
+ * else, so the root takes it and puts back the family and the line height the
+ * shorthand also carries — without those two lines the app silently switches
+ * to the system face at Apple's leading.
+ *
+ * An Android reader's own font-size choice does not arrive this way. The
+ * WebView carries it as a text-zoom factor applied outside the cascade, so
+ * there is nothing for a stylesheet to read and nothing for it to restate; the
+ * 17px above is scaled by whatever the reader set, exactly as the 16px it
+ * replaced was.
  *
  * Coarse pointers only: -apple-system-body is 13px on macOS, so an unscoped
  * rule would shrink the whole app in desktop Safari to fix a phone.
@@ -5728,6 +6046,22 @@ mark {
     }
 
     /*
+     * `title` is a hover tooltip and a finger never hovers, so on a phone every
+     * emoji-action was an unlabelled picture — the goals row offered ✏️ ✅ 🗄️
+     * with no way to learn which was which short of pressing one. Holding one
+     * now names it, which is the gesture Android's own toolbars use.
+     *
+     * iOS answers the same press with its selection callout, and it would come
+     * up over the tip. Both properties are needed: the callout and the
+     * magnifier are refused separately.
+     */
+    .emoji-action {
+        -webkit-touch-callout: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    /*
      * A control revealed on hover does not exist on a phone. .tax-badge--untagged
      * already took this exemption one class at a time; every other site kept
      * the pattern and lost the control. Measured: 50 rows on /uncategorized
@@ -5759,6 +6093,7 @@ mark {
     .tax-badge--untagged,
     .cleared-badge-toggle,
     .fx-disclosure-trigger,
+    .help-tip,
     .srch-chip-close,
     .srch-sheet-apply,
     .srch-sheet-clear {
@@ -5788,6 +6123,7 @@ mark {
     .tax-badge--untagged::after,
     .cleared-badge-toggle::after,
     .fx-disclosure-trigger::after,
+    .help-tip::after,
     .srch-chip-close::after,
     .srch-sheet-apply::after,
     .srch-sheet-clear::after {
@@ -5828,6 +6164,27 @@ mark {
     .filter-chips,
     .srch-chips {
         row-gap: var(--space-4);
+    }
+
+    /*
+     * Series rows stack flush at an 8px gap, so a 44px halo here would reach
+     * into its neighbour and the lower one would paint over the upper - the
+     * same overlap that made a tap beside a chain date open the wrong row.
+     * Real height instead: the row grows, the pitch grows with it.
+     */
+    .merchant-series-link {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+    }
+
+    /*
+     * Support chips carry their size in an inline style the sheet cannot
+     * reach, and 6px padding on --text-sm leaves them near 35px. Real height
+     * rather than a halo: they wrap, and a band would reach into the row below.
+     */
+    .support-chip {
+        min-height: 44px;
     }
 
     td:has(> a:only-child) {
@@ -5879,10 +6236,38 @@ mark {
      * leave no slack, so each row's halo would only take from its neighbour's.
      * Real height on touch is the only honest 44px here, and the desktop
      * density the design specifies is a fine pointer away.
+     *
+     * The dev console's own rows are the same shape and were left out of it:
+     * the log tail sits at a 28px pitch and the recent-run rows at 28, and the
+     * back link out of the console -- the one way a phone leaves /dev without
+     * the address bar -- is 28px alone under a column of 44px items.
      */
     .side-item,
-    .side-search {
+    .side-search,
+    .dev-back-link {
         min-height: 44px;
+    }
+
+    /*
+     * `center`, because the rows are drawn with `items-baseline` and a flex line
+     * aligns a baseline group at its cross-start: given the extra height the row
+     * would keep its text at the top with 24px of nothing under it.
+     */
+    .dev-list-row {
+        min-height: 44px;
+        align-items: center;
+    }
+
+    /*
+     * A settlement card names its counterparty on one line and links the date of
+     * the charge on the next, and both go somewhere. The halo is 44px centred on
+     * the link, so two of them need 44px between the lines they centre on; these
+     * had 20, and the date's band -- painted later, being later in the markup --
+     * covered the name's. 62px of header cannot hold two 44px bands, so the pitch
+     * is what gives, on touch only, and the desktop card is unchanged.
+     */
+    .chain-settlement-meta {
+        margin-top: calc(var(--space-6) + var(--space-1));
     }
 
     /*
@@ -5995,13 +6380,19 @@ mark {
      * space break gives 165 + 142. Balanced it takes the space; a word with no
      * space in it still hyphenates, and without hyphens that one is back to a
      * 16px "n".
+     *
+     * The last selector is the block a page heading shares with its help mark.
+     * The h1 in there is inline, so it cannot carry a block-level decision like
+     * `balance` itself: measured at 411px, the Czech recurring title filled its
+     * first line greedily and left the mark alone on a second.
      */
     h1,
     h2,
     h3,
     h4,
     h5,
-    h6 {
+    h6,
+    .heading-with-tip {
         -webkit-hyphens: auto;
         hyphens: auto;
         text-wrap: balance;

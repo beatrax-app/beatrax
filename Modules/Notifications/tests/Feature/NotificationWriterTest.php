@@ -14,6 +14,7 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\NotificationMutated;
 
@@ -49,23 +50,23 @@ it('yields exactly one row and one deliverable+mutated event when writing the sa
 
     $id1 = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        triggerType: NotificationTrigger::ImportFinished,
         subjectKey: 'import-batch-1',
         occurrence: '2026-07-18',
         title: 'Import finished',
         body: '37 transactions imported.',
         deepLinkRoute: '/imports/new',
-    ));
+    ))->id;
 
     $id2 = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        triggerType: NotificationTrigger::ImportFinished,
         subjectKey: 'import-batch-1',
         occurrence: '2026-07-18',
         title: 'Import finished',
         body: '37 transactions imported.',
         deepLinkRoute: '/imports/new',
-    ));
+    ))->id;
 
     expect($id1)->toBe($id2);
     expect($this->db->connection()->table('notifications')->count())->toBe(1);
@@ -81,7 +82,7 @@ it('yields a second row for a different occurrence', function (): void {
 
     $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
+        triggerType: NotificationTrigger::PaymentReminder,
         subjectKey: 'series-1',
         occurrence: '2026-07-01',
         title: 'Payment due Friday',
@@ -90,7 +91,7 @@ it('yields a second row for a different occurrence', function (): void {
 
     $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
+        triggerType: NotificationTrigger::PaymentReminder,
         subjectKey: 'series-1',
         occurrence: '2026-08-01',
         title: 'Payment due Friday',
@@ -109,14 +110,14 @@ it('returns an id equal to DeterministicKeyDeriver::derive() for the same inputs
 
     $id = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
+        triggerType: NotificationTrigger::BudgetNudge,
         subjectKey: 'envelope-42',
         occurrence: '2026-07',
         title: 'Budget nearly spent',
         body: 'Groceries is at 92%.',
-    ));
+    ))->id;
 
-    $expected = $deriver->derive($user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, 'envelope-42', '2026-07');
+    $expected = $deriver->derive($user->id, NotificationTrigger::BudgetNudge, 'envelope-42', '2026-07');
 
     expect($id)->toBe($expected);
 });
@@ -128,7 +129,7 @@ it('dispatches no events at all on a duplicate write', function (): void {
 
     $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
+        triggerType: NotificationTrigger::DriftChanged,
         subjectKey: 'series-9',
         occurrence: '2026-07-18',
         title: 'A recurring charge changed',
@@ -139,7 +140,7 @@ it('dispatches no events at all on a duplicate write', function (): void {
 
     $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
+        triggerType: NotificationTrigger::DriftChanged,
         subjectKey: 'series-9',
         occurrence: '2026-07-18',
         title: 'A recurring charge changed',
@@ -159,7 +160,7 @@ it('dispatches exactly one NotificationMutated with mutationType create on write
 
     $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT,
+        triggerType: NotificationTrigger::SavingsPrompt,
         subjectKey: 'counterparty-7',
         occurrence: '2026-07-18',
         title: 'A cheaper plan exists',
@@ -178,12 +179,12 @@ it('leaves the first read_at timestamp intact when MarkNotificationRead runs twi
     $writer = $this->app->make(NotificationWriter::class);
     $id = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
+        triggerType: NotificationTrigger::ForecastShortfall,
         subjectKey: 'forecast-period-2026-08',
         occurrence: '2026-08',
         title: 'Cash-flow shortfall ahead',
         body: 'Your projected balance dips below zero.',
-    ));
+    ))->id;
 
     /** @var MarkNotificationRead $markRead */
     $markRead = $this->app->make(MarkNotificationRead::class);
@@ -211,12 +212,12 @@ it('round-trips dismissed_at to null via Dismiss then UndoDismiss', function ():
     $writer = $this->app->make(NotificationWriter::class);
     $id = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
+        triggerType: NotificationTrigger::ReceiptsFound,
         subjectKey: 'receipt-batch-3',
         occurrence: '2026-07-18',
         title: 'New receipts found',
         body: '1 receipt matched from your email.',
-    ));
+    ))->id;
 
     /** @var DismissNotification $dismiss */
     $dismiss = $this->app->make(DismissNotification::class);
@@ -237,12 +238,12 @@ it('never changes state via any of the three lifecycle actions', function (): vo
     $writer = $this->app->make(NotificationWriter::class);
     $id = $writer->write(new NotificationDraft(
         userId: $user->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
+        triggerType: NotificationTrigger::PositionDigest,
         subjectKey: 'digest-2026-w29',
         occurrence: '2026-W29',
         title: 'Your weekly position',
         body: 'Your projected balance next week is 1,204.50 EUR.',
-    ));
+    ))->id;
 
     /** @var MarkNotificationRead $markRead */
     $markRead = $this->app->make(MarkNotificationRead::class);
@@ -266,12 +267,12 @@ it('does not let a cross-user MarkNotificationRead mutate the row', function ():
     $writer = $this->app->make(NotificationWriter::class);
     $id = $writer->write(new NotificationDraft(
         userId: $owner->id,
-        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        triggerType: NotificationTrigger::ImportFinished,
         subjectKey: 'cross-user-batch',
         occurrence: '2026-07-18',
         title: 'Import finished',
         body: '5 transactions imported.',
-    ));
+    ))->id;
 
     /** @var MarkNotificationRead $markRead */
     $markRead = $this->app->make(MarkNotificationRead::class);

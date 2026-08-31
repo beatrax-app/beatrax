@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importuok kelis sąskaitų išrašus (banko, PayPal, kortelės) ir sprendiklis čia automatiškai parodys tarp sąskaitų einančias grandines.',
 
     'no_counterparty' => '(kitos šalies nėra)',
-    'open_from_row' => 'Atverti kilmės eilutę',
-    'open_to_row' => 'Atverti paskirties eilutę',
     'leg_count' => ':count mokėjimas|:count mokėjimai|:count mokėjimų',
+    'legs_more' => '+ dar :count',
     'state_aria' => 'Būsena: :state',
+
+    'state' => [
+        'candidate' => 'Kandidatas',
+        'confirmed' => 'Patvirtinta',
+        'rejected' => 'Atmesta',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal finansavimas',

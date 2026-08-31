@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Абонаменти →',
     'disclaimer' => 'Официални връзки от корпуса за поддръжка — Beatrax никога не прекратява и не сменя нищо вместо теб.',
     'dismiss_aria' => 'Отхвърли предложението',
+    'dismiss_caption' => 'Отхвърли',
 
     'insight' => [
         'cheaper_message' => ':name може да предлага по-евтин план — плащаш :monthly/мес.',

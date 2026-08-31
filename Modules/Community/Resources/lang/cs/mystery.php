@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Zatím nic záhadného. Naimportuj pár výpisů z účtu a Beatrax tu ukáže řádky, které nerozpoznal.',
 
+    'showing_capped' => 'Zobrazeno prvních :shown z :total.',
+
     'footer' => 'Sdílený seznam je soubor YAML dodávaný přímo s Beatraxem. Odeslání návrhu otevře GitHub v prohlížeči; nic dalšího toto zařízení neopustí.',
 
     'card' => [

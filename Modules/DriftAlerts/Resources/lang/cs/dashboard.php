@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Upozornění na odchylky',
-    'aria' => 'Upozornění na odchylky — otevřených: :count, roční dopad: :amount',
+    'aria' => 'Upozornění na odchylky — otevřených: :count, :impact',
     'open' => 'otevřených',
-    'annualized_impact' => 'roční dopad',
+    'impact_rising' => 'roční dopad: :amount',
+    'impact_flat' => 'žádné dodatečné roční náklady',
 ];

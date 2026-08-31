@@ -24,4 +24,13 @@ enum Duration: string
             self::Day => 86400,
         };
     }
+
+    // The idle-lock window is carried to the browser in milliseconds, and the
+    // minute-to-millisecond step was written out three times in three
+    // spellings — `* 60_000`, `* 60 * 1000`, `* 60_000` — none of which
+    // reached this enum. The conversion belongs here with the other one.
+    public function milliseconds(): int
+    {
+        return $this->seconds() * 1000;
+    }
 }

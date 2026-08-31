@@ -33,20 +33,20 @@ use Webauthn\TrustPath\EmptyTrustPath;
 
 // rpId is the host portion of APP_URL, and the full origin is validated
 // separately: both must be, or a same-rpId attacker page passes.
-final class WebAuthnBiometricService
+final readonly class WebAuthnBiometricService
 {
-    private const LOCALHOST_ORIGIN = 'http://localhost';
+    private const string LOCALHOST_ORIGIN = 'http://localhost';
 
-    public const CREATION_CHALLENGE_SESSION = 'beatrax_webauthn_creation_challenge';
+    public const string CREATION_CHALLENGE_SESSION = 'beatrax_webauthn_creation_challenge';
 
-    public const REQUEST_CHALLENGE_SESSION = 'beatrax_webauthn_request_challenge';
+    public const string REQUEST_CHALLENGE_SESSION = 'beatrax_webauthn_request_challenge';
 
     public function __construct(
-        private readonly BiometricDeviceStore $store,
-        private readonly AppLockKeyWrap $keyWrap,
-        private readonly LockStateManager $lockState,
-        private readonly ConfigRepository $config,
-        private readonly SecretShield $shield,
+        private BiometricDeviceStore $store,
+        private AppLockKeyWrap $keyWrap,
+        private LockStateManager $lockState,
+        private ConfigRepository $config,
+        private SecretShield $shield,
     ) {}
 
     /**
@@ -499,11 +499,11 @@ final class WebAuthnBiometricService
     // allow both ->normalize() and ->deserialize() without @var casts.
     private function buildSerializer(): Serializer
     {
-        $serializer = (new WebauthnSerializerFactory(
+        $serializer = new WebauthnSerializerFactory(
             new AttestationStatementSupportManager([
                 new NoneAttestationStatementSupport,
             ])
-        ))->create();
+        )->create();
 
         if (! $serializer instanceof Serializer) {
             throw WebAuthnSerializerException::unexpectedType();

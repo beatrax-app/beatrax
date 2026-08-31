@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Trin :current af :total',
 
-    'step_dot_aria' => 'Trin :number af :total',
-
     'back' => 'Tilbage',
     'back_aria' => 'Tilbage — vender tilbage til det forrige opsætningstrin',
 

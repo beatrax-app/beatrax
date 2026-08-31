@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Informazioni sulla lista condivisa',
     'about_body' => "Un file YAML incluso che associa i codici criptici degli estratti conto a nomi di esercenti leggibili. Attivandola, Beatrax può leggere la lista durante l'importazione; inviare una proposta apre GitHub nel tuo browser.",
 
-    'mappings' => 'Corrispondenze',
-    'contributors' => 'Collaboratori',
+    'mappings' => ':count corrispondenza|:count corrispondenze',
+    'contributors' => ':count collaboratore|:count collaboratori',
 
     'use_shared_list' => [
         'title' => 'Usa la lista condivisa degli esercenti',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => "Aggiorna la lista condivisa agli aggiornamenti dell'app",
         'help' => 'Aggiorna la lista inclusa ogni volta che Beatrax si aggiorna.',
+        'help_phone' => 'Aggiorna la lista inclusa ogni volta che viene installata una nuova versione di Beatrax dall\'App Store o da Google Play.',
         'note' => "Si attiva con un futuro aggiornamento dell'app — vedi Impostazioni → Informazioni per la versione attuale.",
     ],
 ];

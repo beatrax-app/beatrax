@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Įkelk el. laišką (.eml) arba pašto dėžutės archyvą (.mbox). Atitikčių ieškiklis atpažįsta PayPal kvitus ir parodo juos kaip pagrindines operacijas; neatpažinti siuntėjai lieka audito žurnale rūšiavimui.',
-    ],
-
     'conflict' => [
 
         'field' => [

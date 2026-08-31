@@ -3,7 +3,7 @@
      inset the "Create the first account" button sits under the Android
      navigation bar and the back link under the status bar. --}}
 <div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6">
+    <div class="w-full max-w-md mx-auto px-4 sm:px-6 space-y-6">
         @if ($backUrl !== null)
             <p class="text-sm">
                 <a

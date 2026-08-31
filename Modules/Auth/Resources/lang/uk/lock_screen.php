@@ -16,7 +16,7 @@ return [
     'ok_aria' => 'OK — підтвердити PIN',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN має містити щонайменше 6 цифри.',
+    'error_pin_shape' => 'PIN має містити від :min до :max цифр — лише цифри.',
 
     'error_backoff' => 'Забагато спроб — повтори через :wait.',
 

@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Ocultar de la vista (no modifica el archivo de log)',
     'dismiss_aria' => 'Ocultar la entrada de log de la vista',
     'totals' => [
-        'showing' => 'Mostrando',
-        'of' => 'de',
-        'received' => 'recibidas (búfer máx. 10k)',
-        'lines_today' => 'líneas hoy',
+        'showing' => 'Mostrando :shown de :count línea recibida (búfer máx. :cap)|Mostrando :shown de :count líneas recibidas (búfer máx. :cap)',
+        'lines_today' => ':count línea hoy|:count líneas hoy',
+        'lines_today_capped' => 'más de :count línea hoy|más de :count líneas hoy',
         'today' => 'hoy',
-        'across' => 'repartidas en',
-        'daily_files' => 'archivos diarios',
+        'all_files' => ':size repartidos en :count archivo diario|:size repartidos en :count archivos diarios',
     ],
 
     'status' => [

@@ -1,14 +1,14 @@
 @use('Modules\Core\Public\Enums\SnoozeWindow')
 @use('Modules\Recurring\Internal\Enums\ReviewTab')
+@use('Modules\Recurring\Public\Enums\RecurringSeriesState')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     /recurring/review page — Pending / Rejected / Cadence-changed
-    tabs over recurring_series rows. Each pending or cadence-changed
-    row carries Approve / Reject / Snooze / Edit-name actions;
-    rejected rows carry an Un-reject action. Approve / Reject /
-    Snooze / Edit-name each dispatch a 10-second Undo toast via
-    `$this->dispatch('toast', ...)` (the layout binds `x-on:toast` on
-    the window).
+    tabs over recurring_series rows. A row renders only the actions
+    its own state has an edge to, so the Cadence-changed tab carries
+    no Snooze; rejected rows carry Un-reject. Each action raises a
+    toast via `$this->dispatch('toast', ...)` (the layout binds
+    `x-on:toast` on the window).
 
     Blade default `{{ }}` escaping for every interpolation. No raw
     HTML output anywhere.
@@ -32,9 +32,21 @@
     $rowPopoverClass = 'absolute inset-x-0 z-10 mt-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:bg-slate-950 dark:border-slate-700';
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-8">
-        <x-core::page-heading>{{ Lang::get('recurring::review.title') }}</x-core::page-heading>
+        <x-core::page-heading>
+            {{ Lang::get('recurring::review.title') }}
+            {{-- The window the detector reads is a setting, and naming it by
+                 the label the settings page actually draws is what keeps the
+                 two from drifting apart. --}}
+            <x-slot:tip>
+                <x-core::help-tip
+                    topic="recurring-review"
+                    :label="Lang::get('recurring::review.title')"
+                    :body="Lang::get('recurring::help.review', ['setting' => Lang::get('core::settings.recurring.window_label')])"
+                />
+            </x-slot:tip>
+        </x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('recurring::review.subtitle') }}
         </p>
@@ -112,7 +124,7 @@
                                 @if ($row->nextExpectedAt)
                                     · {{ Lang::get($row->expectedChargeIsLate($today) ? 'recurring::review.overdue' : 'recurring::review.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                 @endif
-                                @if ($row->state === \Modules\Recurring\Public\Enums\RecurringSeriesState::CadenceChanged->value)
+                                @if ($row->state === RecurringSeriesState::CadenceChanged->value)
                                     · {{ Lang::get('recurring::review.cadence_changed_note') }}
                                 @endif
                             </p>
@@ -125,18 +137,23 @@
                                     class="{{ $rowActionClass }}"
                                 >{{ Lang::get('recurring::review.un_reject') }}</button>
                             @else
+                                @if ($row->allows(RecurringSeriesState::Approved))
                                 <button
                                     type="button"
                                     wire:click="approve({{ $row->seriesId }})"
                                     aria-label="{{ Lang::get('recurring::review.approve_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                                 >{{ Lang::get('recurring::review.approve') }}</button>
+                                @endif
+                                @if ($row->allows(RecurringSeriesState::Rejected))
                                 <button
                                     type="button"
                                     wire:click="reject({{ $row->seriesId }})"
                                     aria-label="{{ Lang::get('recurring::review.reject_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                                 >{{ Lang::get('recurring::review.reject') }}</button>
+                                @endif
+                                @if ($row->allows(RecurringSeriesState::Snoozed))
                                 <div x-data="{ open: false }" class="sm:relative">
                                     <button
                                         type="button"
@@ -163,6 +180,7 @@
                                         @endforeach
                                     </div>
                                 </div>
+                                @endif
                                 <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="sm:relative">
                                     <button
                                         type="button"
@@ -196,5 +214,14 @@
                 </li>
             @endforeach
         </ul>
+        @if ($hasMore)
+            {{-- Reveals the next page below the ones already on screen rather
+                 than replacing them: the bulk bar holds ids from every row the
+                 reader can see, and a forward cursor would leave a selection
+                 pointing at rows that had scrolled out of existence. --}}
+            <div class="mt-6 flex justify-center">
+                <x-core::secondary-button wire:click="loadMore">{{ Lang::get('recurring::review.load_more') }}</x-core::secondary-button>
+            </div>
+        @endif
     @endif
 </div>

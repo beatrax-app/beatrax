@@ -9,13 +9,14 @@ return [
     'step_3_of_3' => 'Step 3 of 3',
 
     'show_my_code' => 'Show my code',
-    'show_my_code_help' => "Display this device's QR and word-code for the other device.",
+    'show_my_code_help' => "Show this device's code for the other device to read.",
     'enter_a_code' => 'Enter a code',
     'safety_number_changed' => 'The other device changed while you were comparing. Check the words below against it again before confirming.',
     'enter_a_code_help' => 'Type the code shown on the other device.',
 
     'show_this_code' => 'Show this code',
     'enter_on_other' => 'Enter this code on the other device, or let it scan the QR.',
+    'scan_on_other' => "Scan this code with the other device's camera. A computer has no camera — show its code and enter that here instead.",
     'expires_in' => 'Expires in',
     'code_expired' => 'Code expired.',
     'generate_new_code' => 'Generate new code',
@@ -37,4 +38,9 @@ return [
 
     'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
     'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
+    'code_incomplete' => 'That is not a complete code. Check it against the other device and type all of it.',
+    'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
+    'no_peer_answered' => 'Nothing on this network answered that code. Check that sync is running on the other device.',
+    'no_peer_search' => "This device could not search the network, so it could not check that code. Show this device's code instead and enter it on the other one.",
+    'rate_limited' => 'Too many attempts. Wait a minute and try again.',
 ];

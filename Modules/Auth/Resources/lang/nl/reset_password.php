@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Gebruik minimaal 12 tekens.',
     'error_wrong_code' => 'Deze gebruikersnaam en herstelcode komen niet overeen. Controleer de code zorgvuldig — hoofdletters, geen nul, geen o, geen één, geen L.',
+    'error_throttled' => 'Te veel pogingen — probeer het over :wait opnieuw.',
 ];

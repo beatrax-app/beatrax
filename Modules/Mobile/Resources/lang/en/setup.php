@@ -12,6 +12,7 @@ return [
         'locked' => 'Unlock the app to continue setting up.',
         'revoked' => 'This device was removed from your other device. Pair again to resume syncing.',
     ],
+    'unlock_cta' => 'Unlock the app',
     'step' => [
         'connect' => 'Connecting to your other device',
         'keys' => 'Receiving encryption keys',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Rebuilding your history',
     ],
     'step_current' => 'current step',
-    'working' => [
-        'connect' => 'Reaching your other device…',
-        'keys' => 'Unlocking your data…',
-        'transfer' => 'Asking for your history…',
-        'rebuild' => 'Rebuilding your history — this can take a minute.',
-    ],
     'page_title' => 'Setting up…',
     'resuming' => 'Resuming setup…',
     'setting_up' => 'Setting up this device…',
     'progress_aria' => 'Setup progress',
     'records' => ':count record|:count records',
-    'records_preparing' => 'Waiting for the other device…',
 ];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Ikke kategoriseret',
+    'unavailable_category' => 'Kategori findes ikke på denne enhed',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Bogført',
         'uncleared' => 'Ikke bogført',

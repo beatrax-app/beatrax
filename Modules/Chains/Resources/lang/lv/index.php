@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importējiet dažus konta izrakstus (banka, PayPal, karte), un atrisinātājs šeit automātiski parādīs starpkontu ķēdes.',
 
     'no_counterparty' => '(nav darījuma partnera)',
-    'open_from_row' => 'Atvērt sākuma rindu',
-    'open_to_row' => 'Atvērt mērķa rindu',
     'leg_count' => ':count maksājumu|:count maksājums|:count maksājumi',
+    'legs_more' => '+ vēl :count',
     'state_aria' => 'Statuss: :state',
+
+    'state' => [
+        'candidate' => 'Kandidāts',
+        'confirmed' => 'Apstiprināts',
+        'rejected' => 'Noraidīts',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal finansējums',

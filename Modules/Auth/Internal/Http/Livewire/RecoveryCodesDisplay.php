@@ -10,26 +10,31 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Router;
 use Livewire\Component;
+use Modules\Auth\Public\Recovery\PendingRecoveryCodes;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Read fresh from the session every time, never held on a public property, so
 // the plaintext never reaches the wire snapshot.
 final class RecoveryCodesDisplay extends Component
 {
-    public const SESSION_KEY = 'auth.signup.recovery_codes_plain';
+    public const string SESSION_KEY = PendingRecoveryCodes::SESSION_KEY;
 
     // Signup and Settings both reach this ceremony, and finishing it must
     // return to whichever asked.
-    public const SESSION_RETURN_KEY = 'auth.recovery_codes.return_to';
+    public const string SESSION_RETURN_KEY = 'auth.recovery_codes.return_to';
 
     // A token, never a URL: a session value used as a redirect target is an
     // open redirect the moment anything can write it.
-    public const RETURN_TO_SETTINGS = 'settings';
+    public const string RETURN_TO_SETTINGS = 'settings';
+
+    // A partner reaching this from their forced first password change has no
+    // wizard waiting and no settings screen they came from.
+    public const string RETURN_TO_DASHBOARD = 'dashboard';
 
     public bool $confirmed = false;
 
@@ -66,18 +71,19 @@ final class RecoveryCodesDisplay extends Component
         RecoveryCodeFormatter $formatter,
         Router $router,
         UrlGenerator $urls,
+        ShareSheetExport $shareSheet,
     ): View {
         $codes = $this->codesFromSession($session);
         $username = $currentUser->user()->username;
+
+        PendingRecoveryCodes::renew($session);
 
         // The endpoint keeps a copy inside the app's private container, which
         // is the best a shell that drops WebView downloads can do. A shell that
         // saves them hands the file to the reader instead, so it must not be
         // diverted here. An unmodelled platform keeps the copy.
         $exportRoute = 'mobile.recovery-codes.export';
-        $nativeExport = UserDataPathService::isMobileRuntime()
-            && $router->has($exportRoute)
-            && UserDataPathService::platform()?->savesWebViewDownloads() !== true;
+        $nativeExport = $router->has($exportRoute) && $shareSheet->replacesWebViewDownload();
 
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,
@@ -97,9 +103,11 @@ final class RecoveryCodesDisplay extends Component
     // between signup and setup, and onboarding has not run yet.
     private function onwardFrom(Session $session, UrlGenerator $urls): string
     {
-        return $session->pull(self::SESSION_RETURN_KEY) === self::RETURN_TO_SETTINGS
-            ? Destination::Settings->urlFrom($urls)
-            : $urls->route('setup');
+        return match ($session->pull(self::SESSION_RETURN_KEY)) {
+            self::RETURN_TO_SETTINGS => Destination::Settings->urlFrom($urls),
+            self::RETURN_TO_DASHBOARD => Destination::Dashboard->urlFrom($urls),
+            default => $urls->route('setup'),
+        };
     }
 
     /**

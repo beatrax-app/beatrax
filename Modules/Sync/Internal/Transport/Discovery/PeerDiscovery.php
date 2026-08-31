@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Discovery;
 
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 
 // The seam in front of multicast. A browse reaches a real network and always
 // burns its whole timeout, so the callers need something they can cache behind
@@ -16,7 +17,7 @@ interface PeerDiscovery
      * @param  float  $timeoutSeconds  How long to keep collecting answers for.
      * @return list<DiscoveredPeer>
      */
-    public function browse(string $serviceType, float $timeoutSeconds = 2.0): array;
+    public function browse(string $serviceType, float $timeoutSeconds = ProtocolTimings::BROWSE_SECONDS): array;
 
     // Whether the last browse got its question onto the network, or — before
     // any browse — whether this runtime can ask at all. An empty list is

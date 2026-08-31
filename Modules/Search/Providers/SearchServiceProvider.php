@@ -14,10 +14,11 @@ use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\EntityNameSearch;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
+use Modules\Search\Internal\Services\PaletteSectionComposer;
 use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Internal\Services\SearchIndexWriter;
-use Modules\Search\Internal\Services\SearchResultsProviderImpl;
 use Modules\Search\Internal\Services\SearchRowMapper;
+use Modules\Search\Internal\Services\SearchTokenFilters;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
@@ -39,12 +40,14 @@ final class SearchServiceProvider extends ServiceProvider
 
         $this->app->singleton(
             SearchResultsProvider::class,
-            SearchResultsProviderImpl::class,
+            PaletteSectionComposer::class,
         );
 
         $this->app->singleton(FtsCandidateResolver::class);
 
         $this->app->singleton(SearchRowMapper::class);
+
+        $this->app->singleton(SearchTokenFilters::class);
 
         $this->app->singleton(SearchQuery::class);
 

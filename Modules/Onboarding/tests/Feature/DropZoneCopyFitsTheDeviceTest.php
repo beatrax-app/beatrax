@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 
-// "Drop your ASN CSV here" on a phone names a gesture the device does not
+// "Drop your CSV here" on a phone names a gesture the device does not
 // have. The whole dashed area is the file picker, so the action was always
 // there — but the only line describing a reachable one was the small grey
 // sublink under a lead that described drag-and-drop.
@@ -26,10 +26,10 @@ function dropZoneHtmlOnPhone(callable $render): string
 it('does not tell a touch device to drop a file on itself', function (): void {
     $html = dropZoneHtmlOnPhone(fn (): string => Blade::render(
         '<x-onboarding::drop-zone :lead="$lead" accept=".csv" />',
-        ['lead' => 'Drop your ASN CSV here'],
+        ['lead' => 'Drop your CSV here'],
     ));
 
-    expect($html)->not->toContain('Drop your ASN CSV here')
+    expect($html)->not->toContain('Drop your CSV here')
         ->and($html)->toContain('Tap to choose a file');
 
     // The sublink was the fallback affordance; with the lead now describing
@@ -40,10 +40,10 @@ it('does not tell a touch device to drop a file on itself', function (): void {
 it('keeps the drag-and-drop copy where dragging works', function (): void {
     $html = Blade::render(
         '<x-onboarding::drop-zone :lead="$lead" accept=".csv" />',
-        ['lead' => 'Drop your ASN CSV here'],
+        ['lead' => 'Drop your CSV here'],
     );
 
-    expect($html)->toContain('Drop your ASN CSV here')
+    expect($html)->toContain('Drop your CSV here')
         ->and($html)->toContain('or browse for a file');
 });
 
@@ -52,12 +52,12 @@ it('keeps the drag-and-drop copy where dragging works', function (): void {
 // which is real information the reader has no other source for.
 it('keeps the caller s format in the touch copy', function (): void {
     $html = dropZoneHtmlOnPhone(fn (): string => Blade::render(
-        '<x-onboarding::drop-zone :lead="$lead" accept=".csv" file-label="ASN CSV" />',
-        ['lead' => 'Drop your ASN CSV here'],
+        '<x-onboarding::drop-zone :lead="$lead" accept=".csv" file-label="CSV" />',
+        ['lead' => 'Drop your CSV here'],
     ));
 
-    expect($html)->toContain('Tap to choose your ASN CSV file')
-        ->and($html)->not->toContain('Drop your ASN CSV here');
+    expect($html)->toContain('Tap to choose your CSV file')
+        ->and($html)->not->toContain('Drop your CSV here');
 });
 
 it('falls back to the unnamed touch copy when the caller has no one format to name', function (): void {

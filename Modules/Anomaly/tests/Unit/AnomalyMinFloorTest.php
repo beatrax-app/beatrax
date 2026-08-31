@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
+use Modules\Anomaly\Internal\Support\AnomalySensitivity;
 use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
@@ -34,7 +35,7 @@ it('gates the large-vs-typical detector below the floor', function (): void {
     $detector = $this->app->make(LargeVsTypicalDetector::class);
     $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
-    expect($detector->fires($txn, $user, $user->anomaly_sensitivity_percent, $user->anomaly_min_amount_minor))->toBeNull();
+    expect($detector->fires($txn, $user, AnomalySensitivity::fromStored($user->anomaly_sensitivity_percent), $user->anomaly_min_amount_minor))->toBeNull();
 });
 
 it('gates the first-time-merchant detector below the floor', function (): void {

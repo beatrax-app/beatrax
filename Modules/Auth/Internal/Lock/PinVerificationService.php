@@ -11,20 +11,21 @@ use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 
 final class PinVerificationService
 {
-    private const BACKOFF_THRESHOLD = 5;
+    private const int BACKOFF_THRESHOLD = 5;
 
     // Total failures before a permanent sign-out. Public so the lock screen's
     // attempts-remaining copy reads it rather than duplicating the number.
-    public const HARD_CAP = 10;
+    public const int HARD_CAP = 10;
 
     // What the reader can act on. Both branches that raise this kind mean the
     // same thing to them -- the PIN cannot open the lock on this device -- and
     // which blob failed is a log's question, so it rides in metadata.
-    public const CORRUPTED_KEY_MESSAGE = 'Your PIN cannot open the app lock on this device: the stored key is unreadable. '
-        .'Sign in with your account password to set a new PIN.';
+    private const string CORRUPTED_KEY_LINE = 'core::alerts.messages.auth_lock_corrupted_key';
 
     // The unlock reads the row and then writes it, and the desktop runs four
     // processes against one SQLite file. A commit landing in between refuses
@@ -37,7 +38,7 @@ final class PinVerificationService
     /**
      * @var array<int, int>
      */
-    private const BACKOFF_SECONDS = [
+    private const array BACKOFF_SECONDS = [
         0 => 30,
         1 => 60,
         2 => 300,
@@ -133,7 +134,7 @@ final class PinVerificationService
     private function unwrapDataKey(int $userId, string $pin, \stdClass $row): ?string
     {
         if (! is_string($row->kdf_salt) || ! is_string($row->pin_wrapped_key)) {
-            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', self::CORRUPTED_KEY_MESSAGE, ['detail' => 'PIN wrap key blob is missing or not a string.']);
+            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', CopyLine::of(self::CORRUPTED_KEY_LINE), ['detail' => 'PIN wrap key blob is missing or not a string.']);
 
             return null;
         }
@@ -143,7 +144,7 @@ final class PinVerificationService
         sodium_memzero($wrapKey);
 
         if ($dataKey === false) {
-            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', self::CORRUPTED_KEY_MESSAGE, ['detail' => 'PIN-wrapped key unwrap failed (corrupted blob or wrong key).']);
+            $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', CopyLine::of(self::CORRUPTED_KEY_LINE), ['detail' => 'PIN-wrapped key unwrap failed (corrupted blob or wrong key).']);
 
             return null;
         }
@@ -210,7 +211,7 @@ final class PinVerificationService
                     'locked_until' => null,
                 ]);
 
-            $this->emitAlert($userId, 'auth.lock.hard_cap_reached', 'critical', 'Signed out after too many failed PIN attempts.', ['attempts' => self::HARD_CAP]);
+            $this->emitAlert($userId, 'auth.lock.hard_cap_reached', 'critical', CopyLine::of('core::alerts.messages.auth_lock_hard_cap_reached'), ['attempts' => self::HARD_CAP]);
             ($this->logout)();
 
             return;
@@ -248,14 +249,14 @@ final class PinVerificationService
     /**
      * @param  array<string, mixed>  $metadata
      */
-    private function emitAlert(int $userId, string $kind, string $severity, string $message, array $metadata = []): void
+    private function emitAlert(int $userId, string $kind, string $severity, CopyLine $line, array $metadata = []): void
     {
         $this->pendingAlerts[] = [
             'userId' => $userId,
             'kind' => $kind,
             'severity' => $severity,
-            'message' => $message,
-            'metadata' => $metadata,
+            'message' => $line->sentence(),
+            'metadata' => StoredCopy::inParams($line) + $metadata,
         ];
     }
 }

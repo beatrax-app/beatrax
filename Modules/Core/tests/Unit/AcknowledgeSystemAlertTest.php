@@ -61,7 +61,10 @@ it('stamps acknowledged_at = clock.now() on a successful acknowledge', function 
     expect($row?->acknowledged_at)->toBe('2026-05-20 09:00:00');
 });
 
-it('lets a user acknowledge a system-wide (user_id NULL) alert', function (): void {
+// A system-wide row is one row the whole household sees, so it is dismissed
+// per reader and never stamped -- see
+// AWholeHouseholdAlertNeedsAWholeHouseholdToDismissItTest.
+it('lets a user dismiss a system-wide (user_id NULL) alert without stamping the shared row', function (): void {
     $id = $this->db->connection()->table('system_alerts')->insertGetId([
         'user_id' => null,
         'kind' => 'wal_mode_missing',
@@ -78,7 +81,13 @@ it('lets a user acknowledge a system-wide (user_id NULL) alert', function (): vo
 
     expect($result->id)->toBe($id);
     $row = $this->db->connection()->table('system_alerts')->where('id', $id)->first();
-    expect($row?->acknowledged_at)->toBe('2026-05-20 09:00:00');
+    expect($row?->acknowledged_at)->toBeNull();
+
+    $ack = $this->db->connection()->table('system_alert_acknowledgements')
+        ->where('system_alert_id', $id)
+        ->where('user_id', $this->userA->id)
+        ->first();
+    expect($ack?->acknowledged_at)->toBe('2026-05-20 09:00:00');
 });
 
 it('refuses cross-user acknowledge with NotFoundHttpException and leaves the row untouched', function (): void {

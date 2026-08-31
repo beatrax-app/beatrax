@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Jak łatwo Beatrax uznaje obciążenie za nietypowe dla tego sprzedawcy lub kategorii, od 1 do 100. Wyższa wartość oznacza więcej alertów.',
 
     'min_amount_label' => 'Minimalna kwota obciążenia',
-    'min_amount_help' => 'Pomijaj anomalie przy obciążeniach poniżej tej kwoty. Zapisywane w centach (:symbol) — 1000 oznacza :example.',
+    'min_amount_help' => 'Pomijaj anomalie przy obciążeniach poniżej tej kwoty. Zapisywane w najmniejszych jednostkach (:symbol) — :minor oznacza :example.',
 
     'save' => 'Zapisz ustawienia anomalii',
     'saved' => 'Zapisano.',

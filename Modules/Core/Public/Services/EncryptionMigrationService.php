@@ -15,6 +15,7 @@ use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
+use Modules\Core\Public\Support\JobProgressCache;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Services\CounterpartyKeyBackfill;
 use Modules\Sync\Public\Services\BlindIndexCodec;
@@ -23,11 +24,9 @@ use Throwable;
 
 class EncryptionMigrationService
 {
-    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
-    private const PROGRESS_CACHE_PREFIX = 'encryption-migration-progress:';
-
-    private const PROGRESS_TTL_SECONDS = 3600;
+    private const string PROGRESS_CACHE_PREFIX = 'encryption-migration-progress:';
 
     public function __construct(
         protected readonly DatabaseManager $db,
@@ -113,7 +112,7 @@ class EncryptionMigrationService
 
     private function runMigration(int $userId, Session $session, string $kek, ConnectionInterface $connection): void
     {
-        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
+        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, JobProgressCache::ttlSeconds());
 
         // Snapshot the plaintext before the transaction opens — before the GDK
         // epoch exists and before any row is touched.
@@ -158,7 +157,7 @@ class EncryptionMigrationService
             // restoring plaintext after a commit would corrupt the epoch.
             $support->discardStagedEpoch();
             $this->snapshot->restoreFromSnapshot($snapshotPath, $kek, $connection);
-            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
+            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, JobProgressCache::ttlSeconds());
 
             throw $e;
         }
@@ -169,7 +168,7 @@ class EncryptionMigrationService
         try {
             $support->finalizeStagedEpoch();
         } catch (Throwable $e) {
-            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
+            $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, JobProgressCache::ttlSeconds());
 
             throw new StrandedEncryptionEpochException(
                 "Keyring finalize failed after commit for user {$userId}: `current_epoch` is "
@@ -186,7 +185,7 @@ class EncryptionMigrationService
         // survive on disk past a successful migration.
         @unlink($snapshotPath);
 
-        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
+        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, JobProgressCache::ttlSeconds());
     }
 
     // Extension seam: a test subclass throws here after N rows to prove the
@@ -333,7 +332,7 @@ class EncryptionMigrationService
     private function reportProgress(int $userId, int $processed, int $total): void
     {
         $percent = (int) min(99, floor(($processed / max(1, $total)) * 100));
-        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, $percent, self::PROGRESS_TTL_SECONDS);
+        $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, $percent, JobProgressCache::ttlSeconds());
     }
 
     private function setMigrationInProgress(ConnectionInterface $connection, int $userId, bool $inProgress): void

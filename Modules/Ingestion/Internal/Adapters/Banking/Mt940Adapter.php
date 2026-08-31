@@ -43,8 +43,12 @@ final class Mt940Adapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        $this->sniffer->sniff($localPath, Mt940HeaderProfile::FORMAT);
+        // Cleared before the sniff, not after: this adapter is a singleton, so
+        // a run refused at the door would otherwise answer statementMetadata()
+        // with the previous file's statement.
         $this->lastStatementMetadata = null;
+
+        $this->sniffer->sniff($localPath, Mt940HeaderProfile::FORMAT);
 
         $state = new Mt940StatementAccumulator;
 
@@ -79,19 +83,25 @@ final class Mt940Adapter implements SourceAdapter
             '25' => $this->applyOwnIban($state, $content),
             '28C' => $this->applyStatementNumber($state, $content),
             '60F', '60M' => $this->applyOpeningBalance($state, $content),
-            '62F', '62M' => $this->applyClosingBalance($state, $content),
+            '62M' => $this->applyClosingBalance($state, $content, endsStatement: false),
+            '62F' => $this->applyClosingBalance($state, $content, endsStatement: true),
             default => null,
         };
     }
 
+    // A second statement is one that opens after the first has been closed by
+    // its FINAL balance. A repeated :20: on its own only means the statement
+    // continues on another page, and counting that as a second statement
+    // published the reader a multiStatement flag for one statement.
     private function applyStatementId(Mt940StatementAccumulator $state, string $content): void
     {
-        if ($state->statementId !== null) {
+        if ($state->firstStatementFrozen) {
             $state->multiStatement = true;
+
+            return;
         }
-        if (! $state->firstStatementFrozen) {
-            $state->statementId = trim($content);
-        }
+
+        $state->statementId ??= trim($content);
     }
 
     private function applyOwnIban(Mt940StatementAccumulator $state, string $content): void
@@ -100,13 +110,15 @@ final class Mt940Adapter implements SourceAdapter
             return;
         }
 
-        $state->ownIban = trim($content);
+        $state->ownIban ??= trim($content);
     }
 
+    // The first page's :28C: is the statement's own; a continuation page repeats
+    // the statement number with the next sequence after the slash.
     private function applyStatementNumber(Mt940StatementAccumulator $state, string $content): void
     {
         if (! $state->firstStatementFrozen) {
-            $state->statementNumber = trim($content);
+            $state->statementNumber ??= trim($content);
         }
     }
 
@@ -116,18 +128,32 @@ final class Mt940Adapter implements SourceAdapter
             return;
         }
 
-        $state->openingBalance = $this->parseBalance($content);
-        if ($state->openingBalance !== null) {
-            $state->currency = $state->openingBalance->currency;
+        $state->balanceTagSeen = true;
+        $balance = $this->parseBalance($content);
+        if ($balance === null) {
+            return;
         }
+
+        // :60M: reopens a paged statement at the balance :62M: closed the last
+        // page on, so the first opening read is the statement's own; a later
+        // one would move the period start onto page two.
+        $state->openingBalance ??= $balance;
+        $state->currency = $balance->currency;
     }
 
-    private function applyClosingBalance(Mt940StatementAccumulator $state, string $content): void
+    // :62M: hands one statement from one page to the next and :62F: ends it, so
+    // only the final form freezes the header fields. Ending on the intermediate
+    // balance published page one's closing figure and row count as the whole
+    // statement's, which /reconcile then offered as a target no row could reach.
+    private function applyClosingBalance(Mt940StatementAccumulator $state, string $content, bool $endsStatement): void
     {
-        if (! $state->firstStatementFrozen) {
-            $state->closingBalance = $this->parseBalance($content);
-            $state->firstStatementFrozen = true;
+        if ($state->firstStatementFrozen) {
+            return;
         }
+
+        $state->balanceTagSeen = true;
+        $state->closingBalance = $this->parseBalance($content) ?? $state->closingBalance;
+        $state->firstStatementFrozen = $endsStatement;
     }
 
     /**
@@ -141,9 +167,11 @@ final class Mt940Adapter implements SourceAdapter
             );
         }
         if ($state->currency === null) {
-            throw new InvalidAmountException(
-                'MT940 :61: encountered before any balance tag set a currency.',
-            );
+            // Never "no balance tag" when one was read and refused: the reader
+            // then hunts for a tag that is present, in a file that has one.
+            throw new InvalidAmountException($state->balanceTagSeen
+                ? 'MT940 :61: encountered before a currency was set; the balance tag present could not be read.'
+                : 'MT940 :61: encountered before any balance tag set a currency.');
         }
 
         if ($state->pendingTag61 !== null) {
@@ -151,7 +179,7 @@ final class Mt940Adapter implements SourceAdapter
             $state->rowIndex++;
         }
 
-        $state->pendingTag61 = $this->tag61->parse($content);
+        $state->pendingTag61 = $this->tag61->parse($content, $state->currency);
         if (! $state->firstStatementFrozen) {
             $state->entryCount++;
         }
@@ -227,7 +255,7 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $date = SafeDate::fromFormatOrNull('!ymd', $m[2]);
-        $magnitude = $this->tryParseBalanceAmount($m[4]);
+        $magnitude = $this->tryParseBalanceAmount($m[4], $m[3]);
         if (! $date instanceof CarbonImmutable || $magnitude === null) {
             return null;
         }
@@ -239,19 +267,19 @@ final class Mt940Adapter implements SourceAdapter
         );
     }
 
-    private function tryParseBalanceAmount(string $raw): ?int
+    private function tryParseBalanceAmount(string $raw, string $currency): ?int
     {
         try {
-            return $this->parseBalanceAmount($raw);
+            return $this->parseBalanceAmount($raw, $currency);
         } catch (InvalidAmountException) {
             return null;
         }
     }
 
-    private function parseBalanceAmount(string $raw): int
+    private function parseBalanceAmount(string $raw, string $currency): int
     {
         try {
-            return $this->amounts->parseMt940Minor($raw);
+            return $this->amounts->parseMt940Minor($raw, $currency);
         } catch (Throwable $e) {
             throw new InvalidAmountException(sprintf('Bad MT940 balance amount %s: %s', $raw, $e->getMessage()), 0, $e);
         }

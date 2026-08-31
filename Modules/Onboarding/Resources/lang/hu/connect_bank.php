@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Húzd ide a CAMT.053 fájlt',
     'drop_lead_mt940' => 'Húzd ide az MT940 fájlt',
-    'drop_lead_asn' => 'Húzd ide az ASN CSV-t',
-    'drop_lead_ing' => 'Húzd ide az ING CSV-t',
+    'drop_lead_csv_layout' => 'Húzd ide az :layout CSV-t',
     'drop_lead_pick_bank' => 'Válaszd ki, melyik bank exportálta a CSV-t — enélkül nem tudjuk helyesen beolvasni.',
     'drop_lead_default' => 'Húzd ide a számlakivonat fájlt',
     'browse_file' => 'vagy tallózz egy fájlt',
 
-    'banks_mt940' => 'Támogatott: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Támogatott: ASN, ING — további formátumok érkeznek, ahogy a felhasználók mintákat küldenek.',
-    'banks_default' => 'Támogatott: ASN, ING',
+    'format_help_camt053' => 'A CAMT.053 XML formátumú kivonat — keresd a netbankban a kivonatok vagy a letöltések között.',
+    'format_help_mt940' => 'Az MT940 egyszerű szöveges kivonat, .sta vagy .940 kiterjesztéssel, az XML és a CSV mellett.',
+    'format_help_csv' => 'A CSV a táblázatos export. Minden bank máshogy rendezi az oszlopokat, ezért válaszd ki az illeszkedő elrendezést. Ha a tiéd nincs a listán, kérj a bankodtól inkább CAMT.053 vagy MT940 fájlt.',
+
+    'account_name_default' => 'Bankszámla',
+    'account_name_layout' => ':layout számla',
 
     'file_ready' => '· ✓ kész',
 

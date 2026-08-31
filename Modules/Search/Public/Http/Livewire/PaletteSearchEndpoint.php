@@ -8,31 +8,33 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Search\Internal\Services\EntityNameSearch;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
-use Modules\Search\Public\Services\SearchQuery;
 
 // Server-backed ⌘K palette search action, mounted in both the main and
 // dev-shell layouts. Every result is scoped to the authenticated user
-// via CurrentUser feeding SearchQuery/EntityNameSearch's user_id
-// predicates, so a cross-user query is structurally impossible.
+// through CurrentUser, whose id reaches every user_id predicate behind the
+// provider, so a cross-user query is structurally impossible.
+/**
+ * @phpstan-import-type PaletteTransaction from SearchResultsProvider
+ * @phpstan-import-type PaletteEntity from SearchResultsProvider
+ */
 final class PaletteSearchEndpoint extends Component
 {
     public string $query = '';
 
     /**
-     * @var list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
+     * @var list<PaletteTransaction>
      */
     public array $transactionHits = [];
 
     /**
-     * @var list<array{id: int, type: string, label: string, url: string}>
+     * @var list<PaletteEntity>
      */
     public array $entityHits = [];
 
     public int $totalCount = 0;
 
-    private const MIN_QUERY_LENGTH = 2;
+    private const int MIN_QUERY_LENGTH = 2;
 
     public function search(
         string $q,
@@ -49,8 +51,8 @@ final class PaletteSearchEndpoint extends Component
 
         $sections = $provider->paletteSections($currentUser->user(), $q);
 
-        $this->transactionHits = $this->normalizeTransactionHits($sections['transactions']);
-        $this->entityHits = $this->normalizeEntityHits($sections['entities']);
+        $this->transactionHits = $sections['transactions'];
+        $this->entityHits = $sections['entities'];
         $this->totalCount = $sections['totalCount'];
     }
 
@@ -59,76 +61,6 @@ final class PaletteSearchEndpoint extends Component
         $this->transactionHits = [];
         $this->entityHits = [];
         $this->totalCount = 0;
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $rows
-     * @return list<array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}>
-     */
-    private function normalizeTransactionHits(array $rows): array
-    {
-        $hits = [];
-        foreach ($rows as $row) {
-            $hits[] = [
-                'id' => $this->intField($row, 'id'),
-                'counterpartyName' => $this->nullableString($row, 'counterpartyName'),
-                'date' => $this->stringOrEmpty($row, 'date'),
-                'amount' => $this->stringOrEmpty($row, 'amount'),
-                'snippet' => $this->nullableString($row, 'snippet'),
-                'url' => $this->stringOrEmpty($row, 'url'),
-            ];
-        }
-
-        return $hits;
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $rows
-     * @return list<array{id: int, type: string, label: string, url: string}>
-     */
-    private function normalizeEntityHits(array $rows): array
-    {
-        $hits = [];
-        foreach ($rows as $row) {
-            $hits[] = [
-                'id' => $this->intField($row, 'id'),
-                'type' => $this->stringOrEmpty($row, 'type'),
-                'label' => $this->stringOrEmpty($row, 'label'),
-                'url' => $this->stringOrEmpty($row, 'url'),
-            ];
-        }
-
-        return $hits;
-    }
-
-    /**
-     * @param  array<string, mixed>  $row
-     */
-    private function intField(array $row, string $key): int
-    {
-        $value = $row[$key] ?? null;
-
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    /**
-     * @param  array<string, mixed>  $row
-     */
-    private function stringOrEmpty(array $row, string $key): string
-    {
-        $value = $row[$key] ?? null;
-
-        return is_string($value) ? $value : '';
-    }
-
-    /**
-     * @param  array<string, mixed>  $row
-     */
-    private function nullableString(array $row, string $key): ?string
-    {
-        $value = $row[$key] ?? null;
-
-        return is_string($value) ? $value : null;
     }
 
     public function render(ViewFactory $views): View

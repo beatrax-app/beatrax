@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
 it('projects every seeded expense as a fall in the balance', function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
 
-    $user = User::query()->where('username', 'demo-1@beatrax.local')->firstOrFail();
+    $user = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($user);
 
     $expenses = array_values(array_filter(

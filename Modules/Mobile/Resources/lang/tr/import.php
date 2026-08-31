@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Parolalar eşleşmiyor.',
         'password_length' => 'En az 12 karakter kullan.',
         'pin_length' => 'PIN en az 6 haneli olmalıdır.',
+        'pin_digits' => 'PIN 6 ila 10 haneli olmalı — yalnızca rakam.',
         'pins_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
         'session_expired' => 'Kurulum tamamlanmadan oturumunun süresi doldu. Lütfen PIN kodunu ve parolanı yeniden gir.',
         'retry_failed' => 'Bu cihazın kurulumu yine tamamlanamadı. Lütfen yeniden dene.',

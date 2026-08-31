@@ -13,9 +13,14 @@ use Illuminate\Database\Query\Builder;
 // one place because the answer must never differ between call sites.
 final class RowOwnership
 {
+    // A covered table whose own primary key IS the owner. The wire pk is the
+    // origin device's autoincrement for the same reader, so it is ignored and
+    // the session's own id is the whole scope.
+    private const array SELF_SCOPED = ['users'];
+
     // Covered tables that carry no user_id of their own; each reaches its
     // owner through the parent named here. Mirrors OpLogBackfiller.
-    private const PARENT_SCOPE = [
+    private const array PARENT_SCOPE = [
         'rule_conditions' => ['rule_id', 'categorization_rules'],
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
@@ -24,7 +29,7 @@ final class RowOwnership
     // to them and this list is the only thing checking them. Everything with a
     // real FK is derived — the hand-written list of those had drifted twelve
     // tables behind the schema. ReferenceCoverageArchTest catches a new one.
-    private const UNENFORCED_REFERENCES = [
+    private const array UNENFORCED_REFERENCES = [
         'transactions' => ['counterparty_id' => 'counterparties'],
         'forecast_scenario_mutations' => ['target_series_id' => 'recurring_series'],
     ];
@@ -33,7 +38,7 @@ final class RowOwnership
     // row, so no foreign key can express it and no static map can either.
     // migration_source_map holds one row per migrated entity and beatrax_id
     // means whatever beatrax_entity_type says it means.
-    private const POLYMORPHIC_REFERENCES = [
+    private const array POLYMORPHIC_REFERENCES = [
         'migration_source_map' => ['beatrax_id' => 'beatrax_entity_type'],
     ];
 
@@ -41,7 +46,7 @@ final class RowOwnership
     // mapped to the table it resolves against. A value outside this set is
     // refused rather than waved through — an unknown type is precisely the
     // shape an op would take to slip a reference past a partial vocabulary.
-    private const POLYMORPHIC_TABLES = [
+    private const array POLYMORPHIC_TABLES = [
         'transaction' => 'transactions',
         'account' => 'accounts',
         'category' => 'categories',
@@ -69,8 +74,17 @@ final class RowOwnership
     // process cannot attribute is not a row it may touch.
     public function scopeToUser(Builder $query, string $table, int $userId): Builder
     {
-        if ($this->hasUserIdColumn($table)) {
-            return $query->where('user_id', $userId);
+        // The column this table carries its owner in, where it carries one at
+        // all: the users table answers for itself by primary key, everything
+        // else that owns its rows directly does so by user_id.
+        $ownColumn = match (true) {
+            $this->isSelfScoped($table) => 'id',
+            $this->hasUserIdColumn($table) => 'user_id',
+            default => null,
+        };
+
+        if ($ownColumn !== null) {
+            return $query->where($ownColumn, $userId);
         }
 
         $parent = self::PARENT_SCOPE[$table] ?? null;
@@ -85,6 +99,14 @@ final class RowOwnership
             $foreignKey,
             $this->db->connection()->table($parentTable)->select('id')->where('user_id', $userId),
         );
+    }
+
+    // A peer may edit the reader's settings; it may never mint or remove the
+    // reader. Both are refused on this answer: a create because the row cannot
+    // be attributed to a parent, a tombstone because the applier skips it.
+    public function isSelfScoped(string $table): bool
+    {
+        return in_array($table, self::SELF_SCOPED, true);
     }
 
     // Memoised per instance rather than per process: OpLogReplayer builds one
@@ -188,13 +210,7 @@ final class RowOwnership
             return false;
         }
 
-        foreach ($this->ownedReferences($table) as $column => $referencedTable) {
-            if (! $this->referenceAdmits($referencedTable, $payload[$column] ?? null, $userId)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->ownedReferences($table), fn (string $referencedTable, $column): bool => $this->referenceAdmits($referencedTable, $payload[$column] ?? null, $userId));
     }
 
     // A null reference is the column being unset rather than a bad id, so it is

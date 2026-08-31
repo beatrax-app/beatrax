@@ -155,6 +155,8 @@ it('renders the tile with the open count when openCount > 0', function (): void 
     $component->assertSee(route('drift.index'), false);
 });
 
+// The tile's headline is what the rises cost, so the roll-up is their
+// magnitude — a signed sum let a drop cancel a rise out of it.
 it('sums annualized impact across open alerts and renders an EUR-roll-up helper line', function (): void {
     ddbAlert($this->user, ['annualized_impact_minor' => -1800]);
     ddbAlert($this->user, ['annualized_impact_minor' => -600]);
@@ -162,7 +164,7 @@ it('sums annualized impact across open alerts and renders an EUR-roll-up helper 
     $component = Livewire::actingAs($this->user)->test(DashboardDriftBadge::class);
 
     $total = $component->viewData('totalAnnualizedImpact');
-    expect((int) $total)->toBe(-2400);
+    expect((int) $total)->toBe(2400);
 
     // Asserted in halves: the symbol and the amount are separated by a space
     // whose bytes survive Blade escaping, so the two are matched apart. The

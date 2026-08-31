@@ -96,7 +96,7 @@ $sscLedger = static function (User $user, int $counterparties): void {
         // Three months apart and rising, so the twelve buckets carry different
         // heights and a wrong scale shows up as a wrong percentage.
         foreach ([1, 4, 7] as $offset) {
-            $day = now()->subMonths($offset)->startOfMonth()->addDay();
+            $day = now()->subMonthsNoOverflow($offset)->startOfMonth()->addDay();
             DB::table('transactions')->insert([
                 'user_id' => $user->id,
                 'account_id' => $accountId,
@@ -187,7 +187,7 @@ it('scales each card against its own maximum, never against the grid s', functio
     ]);
     $accountId = DB::table('accounts')->where('user_id', $user->id)->value('id');
     $runId = DB::table('import_runs')->where('user_id', $user->id)->value('id');
-    $day = now()->subMonths(2)->startOfMonth()->addDay();
+    $day = now()->subMonthsNoOverflow(2)->startOfMonth()->addDay();
     DB::table('transactions')->insert([
         'user_id' => $user->id,
         'account_id' => $accountId,

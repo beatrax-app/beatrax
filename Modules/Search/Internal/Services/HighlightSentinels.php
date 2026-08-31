@@ -10,7 +10,7 @@ namespace Modules\Search\Internal\Services;
 // tags, so both sides share one source of truth for the sentinel pair.
 final class HighlightSentinels
 {
-    public const START = "\x02";
+    public const string START = "\x02";
 
-    public const END = "\x03";
+    public const string END = "\x03";
 }

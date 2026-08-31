@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Σχετικά με την κοινή λίστα',
     'about_body' => 'Ένα ενσωματωμένο αρχείο YAML που αντιστοιχίζει κρυπτικούς κωδικούς καταστάσεων κινήσεων σε φιλικά ονόματα εμπόρων. Με την ενεργοποίηση, το Beatrax διαβάζει τη λίστα όταν κάνεις εισαγωγή· η υποβολή πρότασης ανοίγει το GitHub στο πρόγραμμα περιήγησής σου.',
 
-    'mappings' => 'Αντιστοιχίσεις',
-    'contributors' => 'Συνεισφέροντες',
+    'mappings' => ':count αντιστοίχιση|:count αντιστοιχίσεις',
+    // i18n-review: el · contributors — the singular is the present participle
+    // συνεισφέρων, which is the form the plural συνεισφέροντες implies but reads
+    // formal standing beside a numeral in a caption.
+    'contributors' => ':count συνεισφέρων|:count συνεισφέροντες',
 
     'use_shared_list' => [
         'title' => 'Χρήση της κοινής λίστας εμπόρων',
@@ -22,6 +24,7 @@ return [
     'update_on_updates' => [
         'title' => 'Ενημέρωση της κοινής λίστας με τις ενημερώσεις της εφαρμογής',
         'help' => 'Ανανέωσε την ενσωματωμένη λίστα κάθε φορά που το Beatrax ενημερώνεται.',
+        'help_phone' => 'Ανανέωσε την ενσωματωμένη λίστα κάθε φορά που εγκαθίσταται νέα έκδοση του Beatrax από το App Store ή το Google Play.',
         'note' => 'Ενεργοποιείται με μελλοντική ενημέρωση της εφαρμογής — δες Ρυθμίσεις → Σχετικά για την τρέχουσα έκδοση.',
     ],
 ];

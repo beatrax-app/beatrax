@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Weiteren Kontoauszug hochladen',
 
+    'chain' => [
+        'heading' => 'Ketten werden aufgelöst…',
+        'pending' => 'In der Warteschlange. Der Ketten-Resolver startet gleich.',
+        'running' => 'Finanzierungsketten werden verknüpft und Kontoauszugsabrechnungen zerlegt.',
+    ],
+
     'issues' => [
         'row' => 'Zeile :row: :reason',
         'file_stopped' => 'Die Datei konnte nicht über Zeile :row hinaus gelesen werden. Alles danach wurde nicht importiert.',

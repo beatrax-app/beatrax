@@ -7,12 +7,15 @@ namespace Modules\Forecasting\Internal\Support;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\FX\Public\Dto\ConvertedTotal;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -20,21 +23,27 @@ use stdClass;
 // or every account's balances summed into the reader's own currency. It reads
 // nothing off the component — the horizon and the scenario the reader chose
 // arrive as arguments — so the page is left holding only its URL state.
-final class ForecastChartView
+final readonly class ForecastChartView
 {
     use CoercesScalars;
 
-    private const NEUTRAL_INK = '#0F172A';
+    // The scenario panel tints on the nearest checkpoint, the one horizon every
+    // loaded run reaches. Named off the enum because $netDiff is keyed by
+    // ForecastHorizon::days(): a literal outlives the case it spells, and then
+    // indexes nothing.
+    private const int PANEL_TINT_HORIZON = ForecastHorizon::OneMonth->value;
 
-    private const BETTER_OFF_INK = '#047857';
+    private const string NEUTRAL_INK = '#0F172A';
 
-    private const WORSE_OFF_INK = '#BE123C';
+    private const string BETTER_OFF_INK = '#047857';
+
+    private const string WORSE_OFF_INK = '#BE123C';
 
     public function __construct(
-        private readonly ForecastQuery $forecastQuery,
-        private readonly DatabaseManager $db,
-        private readonly ForecastDtoMapper $mapper,
-        private readonly CrossCurrencyTotal $fx,
+        private ForecastQuery $forecastQuery,
+        private DatabaseManager $db,
+        private ForecastDtoMapper $mapper,
+        private CrossCurrencyTotal $fx,
     ) {}
 
     /**
@@ -71,10 +80,11 @@ final class ForecastChartView
         ?int $scenarioId,
         User $user,
         string $baseCurrency,
+        bool $viewByFunder = false,
     ): array {
         /** @var array<int, int|null> $netDiff */
         $netDiff = [];
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+        foreach (ForecastHorizon::days() as $horizonKey) {
             $netDiff[$horizonKey] = null;
         }
 
@@ -95,12 +105,14 @@ final class ForecastChartView
             'defaultCurrency' => $baseCurrency,
             'effectiveBufferMinor' => null,
             'shortfallWindows' => [],
+            'baselineRunFailed' => false,
+            'scenarioRunFailed' => false,
         ];
         if ($selectedAccountId === null) {
             return $defaults;
         }
 
-        $baseline = $this->forecastQuery->forUser($selectedAccountId, $horizon, null, $user);
+        $baseline = $this->forecastQuery->forUser($selectedAccountId, $horizon, null, $user, $viewByFunder);
         $lastPoint = $baseline->points === [] ? null : $baseline->points[count($baseline->points) - 1];
         $horizonLowMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->lowMinor : 0;
         $horizonHighMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->highMinor : 0;
@@ -108,15 +120,26 @@ final class ForecastChartView
         $accountRow = $this->db->connection()->table('accounts')
             ->where('id', $selectedAccountId)
             ->where('user_id', $user->id)
-            ->first(['forecast_min_buffer_minor']);
+            ->first(['forecast_min_buffer_minor', 'kind']);
         $effectiveBufferMinor = $accountRow !== null && isset($accountRow->forecast_min_buffer_minor) && is_numeric($accountRow->forecast_min_buffer_minor)
             ? (int) $accountRow->forecast_min_buffer_minor
             : null;
+
+        // The chip says whether the READER set one; the band draws the floor
+        // actually in force. Drawn only when a buffer was set, the zero-crossing
+        // default raised captions under a chart that never showed the line.
+        $floorMinor = BufferFloor::forKind(
+            AccountKind::tryFrom($accountRow === null ? '' : self::toString($accountRow->kind ?? null)),
+            $effectiveBufferMinor,
+        );
 
         $windowRows = $this->db->connection()->table('forecast_shortfall_windows')
             ->where('user_id', $user->id)
             ->where('account_id', $selectedAccountId)
             ->whereNull('scenario_id')
+            // Without the horizon the 365-day run's windows shaded the 30-day
+            // chart, because whichever run finished last owned the table.
+            ->where('horizon_days', $horizon)
             ->orderBy('starts_at')
             ->get();
         $shortfallWindows = [];
@@ -128,17 +151,17 @@ final class ForecastChartView
         $scenario = null;
         $scenarioPanelColor = self::NEUTRAL_INK;
         if ($scenarioId !== null) {
-            $scenario = $this->forecastQuery->forUser($selectedAccountId, $horizon, $scenarioId, $user);
+            $scenario = $this->forecastQuery->forUser($selectedAccountId, $horizon, $scenarioId, $user, $viewByFunder);
             $netDiff = $this->computeNetDiff($baseline, $scenario);
-            $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
+            $scenarioPanelColor = $this->panelColorFor($netDiff[self::PANEL_TINT_HORIZON]);
         }
 
-        [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
+        [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $floorMinor);
 
         $scenarioApexOptions = null;
         $scenarioChartElementId = null;
         if ($scenario !== null) {
-            $scenarioApexOptions = $this->buildApexOptions($scenario, $effectiveBufferMinor, $yMin, $yMax, $scenarioPanelColor);
+            $scenarioApexOptions = $this->buildApexOptions($scenario, $floorMinor, $yMin, $yMax, $scenarioPanelColor);
             $scenarioChartElementId = 'forecast-chart-scenario-'.$selectedAccountId.'-'.$scenarioId;
         }
 
@@ -146,7 +169,7 @@ final class ForecastChartView
             'selectedAccountName' => $baseline->accountName,
             'selectedAccountCurrency' => $baseline->defaultCurrency,
             'baseline' => $baseline,
-            'apexOptions' => $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, self::NEUTRAL_INK),
+            'apexOptions' => $this->buildApexOptions($baseline, $floorMinor, $yMin, $yMax, self::NEUTRAL_INK),
             'chartElementId' => 'forecast-chart-baseline-'.$selectedAccountId,
             'scenario' => $scenario,
             'scenarioApexOptions' => $scenarioApexOptions,
@@ -159,6 +182,8 @@ final class ForecastChartView
             'defaultCurrency' => $baseline->defaultCurrency,
             'effectiveBufferMinor' => $effectiveBufferMinor,
             'shortfallWindows' => $shortfallWindows,
+            'baselineRunFailed' => $baseline->runFailed,
+            'scenarioRunFailed' => $scenario->runFailed ?? false,
         ];
     }
 
@@ -172,9 +197,14 @@ final class ForecastChartView
     {
         return [
             'aggregatePoints' => [],
+            'aggregateScenarioPoints' => [],
             'aggregateBufferFloor' => 0,
             'aggregateChartElementId' => null,
+            'aggregateScenarioChartElementId' => null,
             'aggregateCurrency' => $baseCurrency,
+            'aggregateRunFailed' => false,
+            'aggregateScenarioRunFailed' => false,
+            'aggregateUnconverted' => [],
         ];
     }
 
@@ -187,36 +217,83 @@ final class ForecastChartView
         int $horizon,
         User $user,
         string $baseCurrency,
+        ?int $scenarioId = null,
+        bool $viewByFunder = false,
     ): array {
-        [$aggregatePoints, $aggregateBufferFloor] = $this->computeAllAccountsAggregate(
+        [$aggregatePoints, $aggregateBufferFloor, $aggregateRunFailed, $unconverted] = $this->computeAllAccountsAggregate(
             accountList: $accountList,
             horizon: $horizon,
             user: $user,
             baseCurrency: $baseCurrency,
+            scenarioId: null,
+            viewByFunder: $viewByFunder,
         );
+
+        // The aggregate tab is where a reader lands, so it is where a scenario
+        // has to be answerable. Drawn only when one is chosen: an all-accounts
+        // roll-up of the baseline against itself says nothing.
+        $scenarioPoints = [];
+        $scenarioRunFailed = false;
+        if ($scenarioId !== null) {
+            [$scenarioPoints, , $scenarioRunFailed] = $this->computeAllAccountsAggregate(
+                accountList: $accountList,
+                horizon: $horizon,
+                user: $user,
+                baseCurrency: $baseCurrency,
+                scenarioId: $scenarioId,
+                viewByFunder: $viewByFunder,
+            );
+        }
 
         return [
             'aggregatePoints' => $aggregatePoints,
+            'aggregateScenarioPoints' => $scenarioPoints,
             'aggregateBufferFloor' => $aggregateBufferFloor,
             'aggregateChartElementId' => 'forecast-chart-aggregate-'.$horizon,
+            'aggregateScenarioChartElementId' => $scenarioId === null
+                ? null
+                : 'forecast-chart-aggregate-scenario-'.$horizon.'-'.$scenarioId,
             'aggregateCurrency' => $baseCurrency,
+            'aggregateRunFailed' => $aggregateRunFailed,
+            'aggregateScenarioRunFailed' => $scenarioRunFailed,
+            'aggregateUnconverted' => $unconverted,
         ];
     }
 
     /**
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
-     * @return array{0: list<array{date: string, point_minor: int}>, 1: int}
+     * @return array{0: list<array{date: string, point_minor: int}>, 1: int, 2: bool, 3: list<string>}
      */
     private function computeAllAccountsAggregate(
         array $accountList,
         int $horizon,
         User $user,
         string $baseCurrency,
+        ?int $scenarioId,
+        bool $viewByFunder,
     ): array {
         /** @var array<string, array<string, int>> $byDateCurrency */
         $byDateCurrency = [];
+        $runFailed = false;
+        /** @var array<string, true> $unconverted */
+        $unconverted = [];
         foreach ($accountList as $account) {
-            $dto = $this->forecastQuery->forUser($account['id'], $horizon, null, $user);
+            // This curve is net worth over time, so it counts what net worth
+            // counts. The tab list beside it stays whole: a mirror account
+            // still has a projection of its own worth reading, it just may not
+            // be added to one that already carries the movement it restates.
+            if (AccountKind::tryFrom($account['kind'])?->mirrorsAnotherAccount() === true) {
+                continue;
+            }
+
+            $dto = $this->forecastQuery->forUser($account['id'], $horizon, $scenarioId, $user, $viewByFunder);
+            $runFailed = $runFailed || $dto->runFailed;
+            // A series the fold could not price is already missing from this
+            // account's own curve, so the roll-up inherits the hole and has to
+            // inherit the caption with it.
+            foreach ($dto->unconvertedCurrencies as $code) {
+                $unconverted[$code] = true;
+            }
             foreach ($dto->points as $p) {
                 $currency = self::denominationOf($p->currency, $dto->defaultCurrency, $account['default_currency'], $baseCurrency);
                 $byDateCurrency[$p->date][$currency] = ($byDateCurrency[$p->date][$currency] ?? 0) + $p->pointMinor;
@@ -229,15 +306,40 @@ final class ForecastChartView
         // read EUR2,000.00 for EUR1,000.00 next to USD1,000.00.
         $rates = $this->fx->ratesTo($this->currenciesIn($byDateCurrency), $baseCurrency);
 
+        // A currency no rate reaches is left out of the total, and the caption
+        // above the chart said "across every account" regardless. Every other
+        // money surface here carries the codes through to core::money.not_converted.
         $aggregatePoints = [];
         foreach ($byDateCurrency as $date => $byCurrency) {
-            $aggregatePoints[] = ['date' => $date, 'point_minor' => $this->fx->withRates($byCurrency, $baseCurrency, $rates)->minor];
+            $total = $this->fx->withRates($byCurrency, $baseCurrency, $rates);
+            foreach ($total->unconverted as $code) {
+                $unconverted[$code] = true;
+            }
+            $aggregatePoints[] = ['date' => $date, 'point_minor' => $total->minor];
         }
 
+        $bufferTotal = $this->bufferFloorTotal($user, $baseCurrency);
+        foreach ($bufferTotal->unconverted as $code) {
+            $unconverted[$code] = true;
+        }
+
+        $codes = array_keys($unconverted);
+        sort($codes);
+
+        return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes];
+    }
+
+    // The floor is judged against the curve above, so it is summed over the
+    // same accounts. A floor carrying a buffer the curve never plotted is a
+    // line the reader cannot reach by any amount of saving.
+    private function bufferFloorTotal(User $user, string $baseCurrency): ConvertedTotal
+    {
         $bufferRows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
+            ->whereNotIn('kind', AccountKind::mirrorValues())
             ->whereNotNull('forecast_min_buffer_minor')
             ->get(['forecast_min_buffer_minor', 'default_currency']);
+
         /** @var array<string, int> $bufferByCurrency */
         $bufferByCurrency = [];
         foreach ($bufferRows as $row) {
@@ -250,9 +352,11 @@ final class ForecastChartView
             $bufferByCurrency[$currency] = ($bufferByCurrency[$currency] ?? 0) + (int) $row->forecast_min_buffer_minor;
         }
 
-        $bufferRates = $this->fx->ratesTo(array_keys($bufferByCurrency), $baseCurrency);
-
-        return [$aggregatePoints, $this->fx->withRates($bufferByCurrency, $baseCurrency, $bufferRates)->minor];
+        return $this->fx->withRates(
+            $bufferByCurrency,
+            $baseCurrency,
+            $this->fx->ratesTo(array_keys($bufferByCurrency), $baseCurrency),
+        );
     }
 
     /**
@@ -290,7 +394,7 @@ final class ForecastChartView
     /**
      * @return array{0: float, 1: float}
      */
-    private function computeSharedYAxisRange(ForecastDto $baseline, ?ForecastDto $scenario, ?int $effectiveBufferMinor): array
+    private function computeSharedYAxisRange(ForecastDto $baseline, ?ForecastDto $scenario, ?int $floorMinor): array
     {
         $lows = [];
         $highs = [];
@@ -304,13 +408,14 @@ final class ForecastChartView
                 $highs[] = $p->highMinor;
             }
         }
-        if ($effectiveBufferMinor !== null) {
-            $lows[] = $effectiveBufferMinor;
-            $highs[] = $effectiveBufferMinor;
+        if ($floorMinor !== null) {
+            $lows[] = $floorMinor;
+            $highs[] = $floorMinor;
         }
 
-        $yMin = ($lows === [] ? 0 : min($lows)) / Money::MINOR_UNITS_PER_MAJOR - 1;
-        $yMax = ($highs === [] ? 0 : max($highs)) / Money::MINOR_UNITS_PER_MAJOR + 1;
+        $currency = $baseline->defaultCurrency;
+        $yMin = Money::majorUnits($lows === [] ? 0 : min($lows), $currency) - 1;
+        $yMax = Money::majorUnits($highs === [] ? 0 : max($highs), $currency) + 1;
 
         return [$yMin, $yMax];
     }
@@ -337,10 +442,10 @@ final class ForecastChartView
         // far out. At horizon 90 the strip printed "EUR0.00 at day 365" while
         // this app's own completed 365-day run held +EUR500.00.
         $result = [];
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+        foreach (ForecastHorizon::days() as $horizonKey) {
             $result[$horizonKey] = null;
         }
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+        foreach (ForecastHorizon::days() as $horizonKey) {
             if ($horizonKey > $baseline->horizonDays || $horizonKey > $scenario->horizonDays) {
                 continue;
             }
@@ -375,7 +480,7 @@ final class ForecastChartView
      */
     private function buildApexOptions(
         ForecastDto $forecast,
-        ?int $effectiveBufferMinor = null,
+        ?int $floorMinor = null,
         ?float $yMinOverride = null,
         ?float $yMaxOverride = null,
         string $panelColor = self::NEUTRAL_INK,
@@ -385,24 +490,28 @@ final class ForecastChartView
         $lows = [];
         $highs = [];
 
+        // The same currency the axis formatter is handed below, so the number
+        // and the symbol beside it are the same figure.
+        $currency = $forecast->defaultCurrency;
+
         foreach ($forecast->points as $point) {
             $rangeData[] = [
                 'x' => $point->date,
-                'y' => [$point->lowMinor / Money::MINOR_UNITS_PER_MAJOR, $point->highMinor / Money::MINOR_UNITS_PER_MAJOR],
+                'y' => [Money::majorUnits($point->lowMinor, $currency), Money::majorUnits($point->highMinor, $currency)],
             ];
-            $lineData[] = ['x' => $point->date, 'y' => $point->pointMinor / Money::MINOR_UNITS_PER_MAJOR];
+            $lineData[] = ['x' => $point->date, 'y' => Money::majorUnits($point->pointMinor, $currency)];
             $lows[] = $point->lowMinor;
             $highs[] = $point->highMinor;
         }
 
-        $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / Money::MINOR_UNITS_PER_MAJOR - 1);
-        $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / Money::MINOR_UNITS_PER_MAJOR + 1);
+        $yMin = $yMinOverride ?? (Money::majorUnits($lows === [] ? 0 : min($lows), $currency) - 1);
+        $yMax = $yMaxOverride ?? (Money::majorUnits($highs === [] ? 0 : max($highs), $currency) + 1);
 
         // ApexCharts v5 needs the full annotations object: a bare [] serializes
         // to a JSON array and crashes drawImageAnnos.
         $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
-        if ($effectiveBufferMinor !== null) {
-            $bufferValue = $effectiveBufferMinor / Money::MINOR_UNITS_PER_MAJOR;
+        if ($floorMinor !== null) {
+            $bufferValue = Money::majorUnits($floorMinor, $currency);
             $annotations['yaxis'] = [
                 [
                     'y' => $yMin - 10,
@@ -427,9 +536,13 @@ final class ForecastChartView
                 'zoom' => ['enabled' => false],
                 'fontFamily' => 'inherit',
             ],
+            // The legend is off and the tooltip is shared, so these names are
+            // read only inside the tooltip — and they are read there in every
+            // language. Resolved on each build, not held on the instance: the
+            // reader whose locale is current is the one being drawn for.
             'series' => [
-                ['name' => 'Range', 'type' => 'rangeArea', 'data' => $rangeData],
-                ['name' => 'Point estimate', 'type' => 'line', 'data' => $lineData],
+                ['name' => Lang::get('forecasting::forecast.projection_range'), 'type' => 'rangeArea', 'data' => $rangeData],
+                ['name' => Lang::get('forecasting::forecast.point_estimate'), 'type' => 'line', 'data' => $lineData],
             ],
             'dataLabels' => ['enabled' => false],
             'fill' => ['opacity' => [0.2, 1.0]],

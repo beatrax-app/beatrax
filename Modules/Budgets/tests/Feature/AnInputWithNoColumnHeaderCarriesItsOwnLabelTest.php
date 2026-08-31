@@ -110,7 +110,7 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 
     DB::table('users')->where('id', $this->user->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
     ]);
 
     $this->groceries = Category::create([

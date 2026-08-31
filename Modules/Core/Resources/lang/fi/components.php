@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Näytetään :shown uusinta kaikkiaan :count kohteesta.',
+
     'drawer_nav' => 'Navigointi',
 
     'search_placeholder' => 'Hae…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Haluatko nähdä tietosi myös puhelimessa?',
         'body' => 'Asenna Beatrax puhelimeesi, niin pääset talouteesi nopeasti käsiksi.',
         'dismiss_aria' => 'Ohita asennusvihje',
+        'dismiss_caption' => 'Ohita',
         'install_app' => 'Asenna sovellus',
 
         'desktop_html' => 'Avaa Beatrax puhelimesi selaimessa ja valitse ”Lisää Koti-valikkoon” — tai napauta <strong style="color: var(--color-text);">⚡</strong>-kuvaketta Safarin jakovalikossa.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Valittuja tiedostoja: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Valitse päivä',
         'prev_month' => 'Edellinen kuukausi',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minuutti',
         'empty' => 'kellonaikaa ei valittu',
     ],
+
+    'toast_undo' => 'Kumoa',
 
     'veil_locked' => 'Sovellus lukittu',
 

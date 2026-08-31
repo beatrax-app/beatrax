@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Poista :count työ|Poista :count työtä',
     'empty_pending' => 'Jono on tyhjä.',
     'empty_failed' => 'Ei epäonnistuneita töitä.',
-    'empty_batches' => 'Ei aktiivisia eriä.',
+    'empty_batches' => 'Ei eriä.',
     'select_aria' => 'Valitse',
     'select_row_aria' => 'Valitse rivi :key',
     'col_id' => 'Id',
     'col_queue' => 'Jono',
     'col_attempts' => 'Yritykset',
+    'col_state' => 'Tila',
     'col_created' => 'Luotu',
     'col_uuid' => 'UUID',
     'col_failed' => 'Epäonnistui',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Odottaa',
     'col_actions' => 'Toiminnot',
     'delete_job' => 'Poista työ',
+    'worker_running' => 'Worker suorittaa',
     'delete_pending_confirm' => 'Poistetaanko odottava työ #:key?',
     'retry_job' => 'Yritä työtä uudelleen',
     'forget_confirm' => 'Poistetaanko epäonnistunut työ :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Valitut epäonnistuneet työt palautetaan jonoon työntekijän uudelleenyritettäväksi.',
     'cancel' => 'Peruuta',
 
+    'state' => [
+        'available' => 'Valmis',
+        'reserved' => 'Varattu',
+        'scheduled' => 'Ajastettu',
+    ],
+
     'tab' => [
         'pending' => 'Odottavat',
         'failed' => 'Epäonnistuneet',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Odottava työ poistettu',
+        'pending_already_gone' => 'Työ oli jo poissa',
         'failed_requeued' => 'Epäonnistunut työ palautettu jonoon',
         'failed_removed' => 'Epäonnistunut työ poistettu',
         'batch_cancelled' => 'Erä peruutettu',
         'batch_deleted' => 'Erä poistettu',
         'batch_failures_requeued' => 'Erän epäonnistumiset palautettu jonoon',
+        'batch_failures_none' => 'Erässä ei ole enää epäonnistumisia jonotettavaksi',
         'failed_jobs_requeued' => 'Epäonnistuneet työt palautettu jonoon',
+        'failed_jobs_none' => 'Epäonnistuneita töitä ei ole enää jonotettavaksi',
         'bulk_refused' => 'Joukkopoisto evätty — :reason',
         'rows_deleted' => 'Valitut rivit poistettu',
     ],

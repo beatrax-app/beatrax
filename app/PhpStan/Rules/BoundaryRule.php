@@ -20,7 +20,7 @@ final class BoundaryRule implements Rule
 {
     // Prefixes under Modules\<Y>\ that are part of module Y's public
     // surface; any import whose tail begins with one of these is allowed.
-    private const PUBLIC_PREFIXES = [
+    private const array PUBLIC_PREFIXES = [
         'Public',
         'Models',
     ];
@@ -101,12 +101,6 @@ final class BoundaryRule implements Rule
         $prefix = 'Modules\\'.$targetModule.'\\';
         $tail = substr($fqn, strlen($prefix));
 
-        foreach (self::PUBLIC_PREFIXES as $segment) {
-            if ($tail === $segment || str_starts_with($tail, $segment.'\\')) {
-                return false;
-            }
-        }
-
-        return true;
+        return ! array_any(self::PUBLIC_PREFIXES, fn (string $segment): bool => $tail === $segment || str_starts_with($tail, $segment.'\\'));
     }
 }

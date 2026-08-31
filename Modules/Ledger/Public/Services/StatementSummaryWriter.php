@@ -12,11 +12,11 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 // CSV imports never reach this writer: their adapter returns null from
 // SourceAdapter::statementMetadata().
-final class StatementSummaryWriter implements RecordsStatementSummary
+final readonly class StatementSummaryWriter implements RecordsStatementSummary
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function __invoke(User $user, StatementSummaryData $data): void
@@ -43,6 +43,7 @@ final class StatementSummaryWriter implements RecordsStatementSummary
                     'closing_balance_minor' => $data->closingBalanceMinor,
                     'closing_balance_currency' => $data->closingBalanceCurrency,
                     'closing_balance_date' => $data->closingBalanceDate?->toDateTimeString(),
+                    'payment_due_date' => $data->paymentDueDate?->toDateTimeString(),
                     'entry_count' => $data->entryCount,
                     'extras' => $extras,
                     'created_at' => $now,
@@ -61,6 +62,7 @@ final class StatementSummaryWriter implements RecordsStatementSummary
                     'closing_balance_minor',
                     'closing_balance_currency',
                     'closing_balance_date',
+                    'payment_due_date',
                     'entry_count',
                     'extras',
                     'updated_at',

@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Ricevute dalle email (facoltativo)',
     'h1' => 'Lascia che Beatrax controlli le email di acquisto',
     'lede' => "Collega Gmail o Outlook così le conferme d'ordine e le ricevute degli abbonamenti si allegano da sole alle tue transazioni. Puoi saltare questo passaggio e aggiungerlo più tardi.",
+    'h1_phone' => 'Le email di acquisto si controllano sul desktop',
+    'lede_phone' => "Le conferme d'ordine e le ricevute degli abbonamenti si allegano da sole alle tue transazioni nell'app desktop e arrivano su questo telefono tramite sincronizzazione. Su questo telefono nulla legge la posta: salta questo passaggio qui e collega dal desktop.",
 
     'mini' => [
         'signin_label' => 'Accedi',

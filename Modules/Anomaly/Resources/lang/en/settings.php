@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'How readily Beatrax calls a charge unusual for that merchant or category, from 1 to 100. Higher flags more.',
 
     'min_amount_label' => 'Minimum charge amount',
-    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in cents (:symbol) — 1000 means :example.',
+    'min_amount_help' => 'Ignore anomalies on charges under this amount. Stored in minor units (:symbol) — :minor means :example.',
 
     'save' => 'Save anomaly settings',
     'saved' => 'Saved.',

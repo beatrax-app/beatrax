@@ -246,6 +246,7 @@
                                                  focused. Only the bespoke chrome is dropped. --}}
                                             <x-core::emoji-action
                                                 :label="Lang::get('sync::devices.rename_device')"
+                                                :caption="Lang::get('sync::devices.rename_device_caption')"
                                                 class="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
                                                 wire:click="startRename({{ $device['id'] }})"
                                             >✏️</x-core::emoji-action>
@@ -348,8 +349,9 @@
                     >
                         {{ Lang::get('sync::devices.relay_endpoint') }}
                     </label>
+                    {{-- App-static copy carrying one non-breaking hyphen entity. --}}
                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {!! Lang::get('sync::devices.relay_endpoint_help') !!}
+                        {!! Lang::get($onPhone ? 'sync::devices.relay_endpoint_help_phone' : 'sync::devices.relay_endpoint_help') !!}
                     </p>
                 </div>
 
@@ -502,7 +504,8 @@
 
     {{-- ===== Surface D: device revocation modal.
          Honest warning: rotation stops FUTURE updates only; it cannot erase
-         data already on the removed device. No "remote wipe" language. ===== --}}
+         data already on the removed device, and the revoke half is local to
+         this device. No "remote wipe" language. ===== --}}
     @if ($showRemoveModal && $removingDeviceId !== null)
         <flux:modal wire:model="showRemoveModal" class="md:max-w-sm" data-testid="revoke-device-modal">
             <div class="space-y-4 p-6">
@@ -514,6 +517,9 @@
                 <x-core::alert tone="warning" role="note">
                     <p>{{ Lang::get('sync::devices.remove_rotates_key') }}</p>
                     <p class="mt-1">{{ Lang::get('sync::devices.remove_cannot_erase') }}</p>
+                    @if ($this->removalLeavesAnotherDeviceHolding())
+                        <p class="mt-1">{{ Lang::get('sync::devices.remove_is_local') }}</p>
+                    @endif
                 </x-core::alert>
 
                 <div class="flex gap-3" wire:loading.remove wire:target="removeDevice">

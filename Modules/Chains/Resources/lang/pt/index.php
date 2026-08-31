@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importa alguns extratos (banco, PayPal, cartão) e o resolvedor mostra aqui automaticamente as cadeias entre contas.',
 
     'no_counterparty' => '(sem contraparte)',
-    'open_from_row' => 'Abrir a linha de origem',
-    'open_to_row' => 'Abrir a linha de destino',
     'leg_count' => ':count pagamento|:count pagamentos',
+    'legs_more' => '+ mais :count',
     'state_aria' => 'Estado: :state',
+
+    'state' => [
+        'candidate' => 'Candidata',
+        'confirmed' => 'Confirmada',
+        'rejected' => 'Rejeitada',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Financiamento por PayPal',

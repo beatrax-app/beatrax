@@ -25,20 +25,39 @@ final readonly class LanPairingFrameCourier
     // relay and the holding space to try.
     /**
      * @param  array<string, mixed>  $frame
+     * @param  ?DiscoveredPeer  $known  An address learned out of band — from
+     *                                  the scanned QR — tried before any
+     *                                  browse, because a device that cannot
+     *                                  search the network has only this one.
      */
-    public function deliver(string $peerDeviceId, array $frame): bool
+    public function deliver(string $peerDeviceId, array $frame, ?DiscoveredPeer $known = null): bool
     {
         if ($peerDeviceId === '') {
             return false;
         }
 
-        foreach ($this->peers->eachConnectablePeer(deviceId: $peerDeviceId) as $peer) {
+        foreach ($this->candidates($peerDeviceId, $known) as $peer) {
             if ($this->deliverTo($peer, $frame)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    // The scanned address first, then whatever a browse turns up. A device
+    // that cannot search the network holds the first and nothing else, and a
+    // browse it cannot run must not be the only road tried.
+    /**
+     * @return iterable<int, DiscoveredPeer>
+     */
+    private function candidates(string $peerDeviceId, ?DiscoveredPeer $known): iterable
+    {
+        if ($known !== null && $known->isConnectable()) {
+            yield $known;
+        }
+
+        yield from $this->peers->eachConnectablePeer(deviceId: $peerDeviceId);
     }
 
     // Public because the browse above reaches a real network: this is the seam

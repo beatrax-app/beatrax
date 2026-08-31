@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Celá historie.',
     'subtitle_recent' => 'Nedávné transakce (posledních 90 dní).',
 
-    'currency_aria' => 'Zobrazení měny',
-    'currency_eur' => 'Pouze :code',
-    'currency_original' => 'Původní měna',
+    'currency_aria' => 'Zobrazená částka',
+    'currency_eur' => 'Vypořádaná částka',
+    'currency_original' => 'Původní částka',
 
     'show_recent' => 'Zobrazit jen nedávné',
     'show_full' => 'Zobrazit celou historii',
 
     'empty_period' => 'Za toto období tu nic není.',
 
+    'empty_recent_has_older' => 'Za posledních 90 dní nic. Vaše starší transakce tu stále jsou.',
+
+    'empty_history' => 'Zatím žádné transakce.',
     'loading_more' => 'Načítají se další transakce',
     'load_more' => 'Načíst další',
 

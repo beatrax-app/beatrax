@@ -26,7 +26,7 @@ function pinnedSeriesOptions(string $viz): array
     $method = new ReflectionMethod(PinnedReportsRow::class, 'seriesOptions');
 
     /** @var array<string, mixed> $options */
-    $options = $method->invoke(app(PinnedReportsRow::class), $viz, pinnedSeriesRows());
+    $options = $method->invoke(app(PinnedReportsRow::class), $viz, pinnedSeriesRows(), 'EUR');
 
     return $options;
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaksjon',
     'heading' => 'Transaksjon',
+    'booked_on' => 'Bokført :date',
 
     'counterparty' => 'Motpart',
     'description' => 'Beskrivelse',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Notat (valgfritt)',
         'tax_deductible' => 'Fradragsberettiget',
         'remove_leg_aria' => 'Fjern denne kategorien',
+        'remove_leg_caption' => 'Fjern',
         'add_category' => '+ Legg til kategori',
         'soft_cap' => ':count av ~20 kategorier — vurder å gruppere små beløp.',
         'remaining_zero' => 'Gjenstår :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Slett transaksjonen',
         'help' => 'Fjerner denne transaksjonen permanent. Handlingen kan ikke angres.',
         'button' => 'Slett',
-        'confirm_prompt' => 'Er du sikker?',
+        'confirm_prompt' => 'Slette denne transaksjonen? Notat, fordeling og skattemerker forsvinner med den.',
         'confirm' => 'Ja, slett',
         'cancel' => 'Avbryt',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Vis kjeden',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Avstemt og låst',
+        'help' => 'En fullført avstemming låste denne transaksjonen. Kategori, notat, fordeling og skattemerker blir stående til du låser den opp.',
+        'button' => 'Lås opp for redigering',
+        'confirm_question' => 'Låse opp denne transaksjonen for redigering? Ingenting på den endres, og neste fullførte avstemming låser den igjen.',
+        'cancel' => 'La den være låst',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Denne transaksjonen er avstemt. Opphev avstemmingen for å gjøre endringer.',
         'reclassified_pair_removed' => 'Omklassifisert til :type — paringen er fjernet',
         'reclassified' => 'Omklassifisert til :type',
         'note_saved' => 'Notatet er lagret',
         'unreconciled' => 'Avstemmingen er opphevet — du kan redigere transaksjonen igjen.',
+        'note_too_long' => 'Et notat er høyst :max tegn.|Et notat er høyst :max tegn.',
         'counterparty_updated' => 'Motparten er oppdatert',
         'goal_attributed' => 'Telles med i dette målet',
         'goal_attribution_removed' => 'Telles ikke lenger med i dette målet',

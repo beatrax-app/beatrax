@@ -81,14 +81,14 @@ function seedSearchableTransaction(int $userId, int $accountId, int $runId, arra
 
 it('isSearchActive is false by default', function (): void {
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur');
+        ->set('currency', 'eur_only');
 
     expect($component->instance()->isSearchActive())->toBeFalse();
 })->group('phase-8');
 
 it('isSearchActive is true when query is set', function (): void {
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'albert');
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -96,7 +96,7 @@ it('isSearchActive is true when query is set', function (): void {
 
 it('isSearchActive is true when account filter is set', function (): void {
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('filterAccounts', [1]);
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -104,7 +104,7 @@ it('isSearchActive is true when account filter is set', function (): void {
 
 it('isSearchActive is true when date filter is set', function (): void {
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('filterAfter', '2026-01-01');
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -112,7 +112,7 @@ it('isSearchActive is true when date filter is set', function (): void {
 
 it('clearSearch resets all search props and cursor', function (): void {
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'albert')
         ->set('filterAccounts', [1])
         ->set('filterAfter', '2026-01-01')
@@ -149,7 +149,7 @@ it('renders search results when query is set matching a transaction', function (
     );
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'Jumbo');
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -170,7 +170,7 @@ it('renders no results for a query that matches nothing', function (): void {
     );
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'zzz-no-match-xyz');
 
     expect($component->instance()->isSearchActive())->toBeTrue();
@@ -206,7 +206,7 @@ it('search with filter-only (no query) returns filtered results', function (): v
     );
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('filterAfter', '2026-01-01')
         ->set('filterBefore', '2026-01-31');
 
@@ -245,7 +245,7 @@ it('clears search and returns to default view', function (): void {
     );
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'Old Vendor');
 
     $component->assertSee('Old Vendor');
@@ -273,7 +273,7 @@ it('summary strip fields are available in view when search is active', function 
     );
 
     $component = Livewire::test(TransactionsList::class)
-        ->set('currency', 'eur')
+        ->set('currency', 'eur_only')
         ->set('searchQuery', 'Strip');
 
     $viewData = $component->viewData('searchTotalCount');

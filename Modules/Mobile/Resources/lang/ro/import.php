@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Parolele nu se potrivesc.',
         'password_length' => 'Folosește cel puțin 12 caractere.',
         'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
+        'pin_digits' => 'Codul PIN trebuie să aibă între 6 și 10 cifre — doar cifre.',
         'pins_mismatch' => 'Codurile PIN nu se potrivesc. Încearcă din nou.',
         'session_expired' => 'Sesiunea ta a expirat înainte de finalizarea configurării. Introdu din nou codul PIN și parola.',
         'retry_failed' => 'Tot nu am putut finaliza configurarea acestui dispozitiv. Încearcă din nou.',

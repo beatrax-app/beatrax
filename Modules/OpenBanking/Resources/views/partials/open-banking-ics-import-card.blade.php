@@ -1,24 +1,16 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Surface B7: guided ICS file-import affordance (UI-SPEC Surface B7).
-     Visually and functionally SEPARATE from the live OB cards
-     above — this path stores NO credentials and routes a dropped statement
-     directly through the EXISTING ICS SourceAdapter (`ics-pdf`) via
-     RunsImports::runFromUpload, skipping the generic import wizard's
-     source-picker entirely. Always visible (State Display Matrix: every
-     OB state renders this card). Carries the `#ics-import` anchor the
-     Notifications "statement ready" nudge deep-links to (Surface C) — the
-     browser's native fragment scroll handles the scroll-on-load, same as
-     the existing `#app-lock` / `#anomaly-detection` anchors elsewhere in
-     Settings; no extra JS is needed since this is a full page load, not a
-     Livewire SPA navigation.
+{{-- Separate from the connector cards above, and always visible: this path
+     stores no credentials and needs no consent, so no open-banking state
+     hides it. A dropped statement goes straight through the existing
+     `ics-pdf` adapter, skipping the generic wizard's source picker.
 
-     ICS Cards's consumer portal only ever exports monthly PDF statements —
-     there is no CAMT.053/CSV ICS adapter in this codebase (confirmed
-     against `Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter`) — so
-     the mini-step row and format chip below say "PDF statement", matching
-     what the existing adapter actually accepts (a correction to the
-     UI-SPEC's generic "CAMT.053 or CSV" placeholder copy, which described
-     the ASN bank-statement shape, not ICS). --}}
+     The `#ics-import` anchor is what the "statement ready" notification
+     deep-links to; a full page load makes the browser's own fragment scroll
+     enough, with no JS.
+
+     "PDF statement" rather than the CAMT.053/CSV wording used elsewhere:
+     ICS Cards' consumer portal exports monthly PDFs and nothing else, which
+     is all `Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter` accepts. --}}
 <section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">
     <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
         {{ Lang::get('openbanking::messages.ics.section_label') }}

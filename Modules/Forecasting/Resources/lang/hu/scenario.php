@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'sorozat',
 
+    'template' => [
+        'cancel' => 'A(z) :name lemondása',
+        'change_amount' => 'A(z) :name összegének módosítása',
+    ],
+
     'summary' => [
         'cancel' => 'A(z) :name lemondása',
         'series_fallback' => ':id. sorozat',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Forgatókönyv átnevezve.',
         'mutation_added' => 'Módosítás hozzáadva.',
         'mutation_updated' => 'Módosítás frissítve.',
-        'mutation_removed' => 'Módosítás eltávolítva. Visszavonás',
+        'mutation_removed' => 'Módosítás eltávolítva.',
     ],
 
     'errors' => [
         'name_empty' => 'A forgatókönyv neve nem lehet üres.',
         'name_too_long' => 'A forgatókönyv neve legfeljebb :max karakter lehet.|A forgatókönyv neve legfeljebb :max karakter lehet.',
         'name_taken' => 'Ilyen nevű forgatókönyv már létezik.',
+        'date_out_of_range' => 'Ez a dátum minden előrejelzési horizonton kívül esik — mától :days nappal előre —, így a forgatókönyv semmit sem változtatna.|Ez a dátum minden előrejelzési horizonton kívül esik — mától :days nappal előre —, így a forgatókönyv semmit sem változtatna.',
         'pick_kind_first' => 'Előbb válassz módosítástípust.',
         'amount_positive' => 'Az összegnek pozitív számnak kell lennie.',
+        'scenario_gone' => 'Ez a forgatókönyv már nincs meg — máshol törölték. Válassz másikat, vagy hozz létre újat.',
+        'mutation_gone' => 'Ez a módosítás már nincs meg — máshol eltávolították. Zárd be a szerkesztőt, és add hozzá újra, ha még kell.',
     ],
 ];

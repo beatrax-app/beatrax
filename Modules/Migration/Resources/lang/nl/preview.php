@@ -16,7 +16,9 @@ return [
         'budget' => 'Budgetmaanden',
     ],
 
-    'all_clean' => 'Alles is netjes gekoppeld — er is niets dat je aandacht vereist voordat je bevestigt.',
+    'all_clean' => 'Alles is netjes gekoppeld — er is hier niets waarover je hoeft te beslissen.',
+
+    'nothing_staged' => 'Deze export bevatte niets om te importeren — er valt hier niets te bevestigen.',
 
     'groups' => [
         'conflict' => 'Vereist jouw beslissing',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Hiermee worden de hierboven getoonde aantallen aangemaakt of bijgewerkt in je categorieën, budgetten en grootboek.',
     'discard_button' => 'Import verwerpen',
+    'discard_confirm' => 'Deze import verwerpen? Alles wat uit je exportbestand is gelezen wordt hier verwijderd, en terughalen betekent het hele bestand opnieuw uploaden en inlezen. Er is nog niets in je grootboek terechtgekomen.',
     'confirm_button' => 'Import bevestigen',
 ];

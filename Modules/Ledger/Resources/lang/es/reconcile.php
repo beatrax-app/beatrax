@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'elige una cuenta',
+        'choose_date' => 'elige la fecha del extracto',
         'enter_balance' => 'introduce el saldo del extracto',
         'matched' => 'coincide — :amount',
         'discrepancy' => 'discrepancia — :amount',
+        'reconciled_through' => 'conciliada hasta :date',
     ],
 
     'mismatch_html' => 'El saldo del extracto aún no coincide con tu saldo compensado. Marca o desmarca filas como compensadas en la <a href=":url" class="underline">lista de transacciones</a> o ajusta el saldo introducido hasta que la diferencia llegue a cero — este flujo nunca crea un apunte de ajuste.',
+    'unreachable_no_baseline_html' => 'Ninguna combinación de filas puede llevar esta diferencia a cero. Esta cuenta no tiene saldo de apertura registrado, así que su saldo se mide desde cero. Importa el extracto con el que abre la cuenta, o define el saldo de apertura en <a href=":url" class="underline">Ajustes</a>.',
+    'unreachable' => 'Ninguna combinación de filas puede llevar esta diferencia a cero: queda fuera del rango de todas las filas de esta cuenta hasta la fecha indicada. Revisa la fecha del extracto y el saldo introducido.',
 
     'check' => 'Comprobar',
     'complete' => 'Completar la conciliación',
+    'complete_unavailable' => 'Ya no queda nada que bloquear hasta esta fecha — marca más filas como compensadas o elige una fecha del extracto posterior.',
 
     'errors' => [
         'choose_account' => 'Elige primero una cuenta.',

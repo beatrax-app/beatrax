@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Summa',
 
     'subtotal' => 'Starpsumma',
+    'subtotal_income' => 'Ieņēmumu starpsumma',
 
     'footer' => 'Izveidojis Beatrax — tikai lokāla personīgo finanšu lietotne — :year',
 ];

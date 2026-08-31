@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Importe',
 
     'subtotal' => 'Subtotal',
+    'subtotal_income' => 'Subtotal de ingresos',
 
     'footer' => 'Generado por Beatrax — finanzas personales solo en local — :year',
 ];

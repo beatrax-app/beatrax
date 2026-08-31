@@ -57,6 +57,9 @@
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ Money::ofMinor(abs($profile->total12mMinor), $profile->currency)->format() }}
                 </div>
+                @if ($profile->isPartial())
+                    <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $profile->unconvertedList()]) }}</div>
+                @endif
             </div>
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
@@ -112,7 +115,9 @@
             $tabs = $tabBars[$profile->type] ?? $tabBars[CounterpartyType::Unknown->value];
             $tabNote = match ($profile->type) {
                 CounterpartyType::Personal->value => Lang::get('counterparties::profile.tab_note_personal'),
-                CounterpartyType::Bank->value => Lang::get('counterparties::profile.tab_note_bank'),
+                CounterpartyType::Bank->value => $profile->isBankFee
+                    ? Lang::get('counterparties::profile.tab_note_bank')
+                    : Lang::get('counterparties::profile.tab_note_bank_institution'),
                 CounterpartyType::Government->value => Lang::get('counterparties::profile.tab_note_government'),
                 default => null,
             };

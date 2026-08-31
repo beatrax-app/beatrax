@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Edit tax tag: :label',
     'tag' => 'Tag',
     'tag_aria' => 'Tag as tax-relevant',
+    'tag_caption' => 'Tag',
 ];

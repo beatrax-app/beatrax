@@ -16,7 +16,9 @@ return [
         'budget' => 'Budgetmonate',
     ],
 
-    'all_clean' => 'Alles sauber zugeordnet — vor dem Bestätigen braucht nichts deine Aufmerksamkeit.',
+    'all_clean' => 'Alles sauber zugeordnet — hier gibt es nichts zu entscheiden.',
+
+    'nothing_staged' => 'Dieser Export enthielt nichts zum Importieren — hier gibt es nichts zu bestätigen.',
 
     'groups' => [
         'conflict' => 'Braucht deine Entscheidung',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'Damit werden die oben gezeigten Anzahlen in deinen Kategorien, Budgets und in deinem Hauptbuch angelegt oder aktualisiert.',
     'discard_button' => 'Import verwerfen',
+    'discard_confirm' => 'Diesen Import verwerfen? Alles, was aus deiner Exportdatei gelesen wurde, wird hier gelöscht, und zurückholen heißt, die ganze Datei erneut hochzuladen und einzulesen. In dein Hauptbuch ist noch nichts gelangt.',
     'confirm_button' => 'Import bestätigen',
 ];

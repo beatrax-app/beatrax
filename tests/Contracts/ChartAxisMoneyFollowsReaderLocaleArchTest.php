@@ -81,9 +81,9 @@ it('formats a chart axis exactly as Money formats the same amount, in every ship
         $formatter = new NumberFormatter($locale->value, NumberFormatter::CURRENCY);
         $formatter->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
 
-        // Seven locales sign with U+2212; every ICU-less path in the repo,
-        // Fmt::number() included, signs with the ASCII hyphen.
-        $formatter->setSymbol(NumberFormatter::MINUS_SIGN_SYMBOL, '-');
+        // The sign is compared rather than normalised away: seven locales sign
+        // with U+2212, and both ICU-less paths (Money, Fmt) now carry exactly
+        // ICU's list, so forcing a hyphen here would hide the two diverging.
 
         foreach ($ours as $currency => $glyph) {
             foreach ([492800, -492800] as $minor) {

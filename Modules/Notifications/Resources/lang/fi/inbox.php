@@ -31,7 +31,7 @@ return [
     ],
 
     'toast' => [
-        'dismissed' => 'Ohitettu — Kumoa',
+        'dismissed' => 'Ohitettu',
         'restored' => 'Palautettu',
     ],
 ];

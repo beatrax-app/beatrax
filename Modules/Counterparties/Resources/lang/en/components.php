@@ -24,6 +24,10 @@ return [
         'unknown' => 'Unknown',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bank fee',
+    ],
+
     'cp_card' => [
         'aria' => 'Counterparty: :name',
         'recent_aria' => 'Recent activity',

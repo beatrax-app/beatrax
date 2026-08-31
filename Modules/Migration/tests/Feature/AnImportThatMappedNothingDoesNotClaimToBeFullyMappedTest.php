@@ -6,16 +6,18 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Http\Livewire\PreviewMigration;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-// The badge was decided by counting unmapped rows of type 'category' and
-// 'payee'. No production path writes either word, so both counts were always 0
-// and the micro-label printed on every preview -- including one that staged
-// nothing at all, which is the case it most obviously must not claim.
+// The line is decided by counting unmapped rows, which is zero for a run that
+// staged nothing at all — the one case it most obviously must not claim.
+// The assertion that was meant to catch that named a key nobody defines, so
+// Lang::get returned the key path and the page could never contain it.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -37,5 +39,25 @@ it('does not tell an import that mapped nothing that it is fully mapped', functi
     Livewire::test(PreviewMigration::class, ['id' => $this->run->id])
         ->assertOk()
         ->assertSee(Lang::get('migration::preview.heading'))
-        ->assertDontSee(Lang::get('migration::preview.fully_mapped'));
+        ->assertDontSee(Lang::get('migration::preview.all_clean'));
+});
+
+it('says the export held nothing rather than leaving the reader an empty page', function (): void {
+    Livewire::test(PreviewMigration::class, ['id' => $this->run->id])
+        ->assertOk()
+        ->assertSee(Lang::get('migration::preview.nothing_staged'));
+});
+
+it('still says everything mapped cleanly for a run that actually staged rows', function (): void {
+    $run = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+
+    Livewire::test(PreviewMigration::class, ['id' => $run->id])
+        ->assertOk()
+        ->assertSee(Lang::get('migration::preview.all_clean'))
+        ->assertDontSee(Lang::get('migration::preview.nothing_staged'));
 });

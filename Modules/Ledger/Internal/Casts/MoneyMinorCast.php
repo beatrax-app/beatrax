@@ -13,11 +13,11 @@ use Modules\Ledger\Public\ValueObjects\Money;
 /**
  * @implements CastsAttributes<Money, Money>
  */
-final class MoneyMinorCast implements CastsAttributes
+final readonly class MoneyMinorCast implements CastsAttributes
 {
     public function __construct(
-        private readonly string $minorColumn = 'amount_minor',
-        private readonly string $currencyColumn = 'currency',
+        private string $minorColumn = 'amount_minor',
+        private string $currencyColumn = 'currency',
     ) {}
 
     /**

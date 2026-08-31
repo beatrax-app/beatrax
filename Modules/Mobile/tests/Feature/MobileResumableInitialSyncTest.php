@@ -44,8 +44,10 @@ function mobileResumeUser(string $username): User
 // watermark-delta count — that gate belongs to OpLogReplayer::replay().
 function seedResumeOpLogRows(DatabaseManager $db, int $userId, string $deviceId, int $count, int $startHlcL): void
 {
+    $batch = [];
+
     for ($i = 0; $i < $count; $i++) {
-        $db->connection()->table('op_log_entries')->insert([
+        $batch[] = [
             'user_id' => $userId,
             'device_id' => $deviceId,
             'table_name' => 'categories',
@@ -57,7 +59,16 @@ function seedResumeOpLogRows(DatabaseManager $db, int $userId, string $deviceId,
             'hlc_c' => 0,
             'signature' => 'fixture-signature-'.($startHlcL + $i),
             'recorded_at' => '2026-07-10 00:00:00',
-        ]);
+        ];
+
+        if (count($batch) === 250) {
+            $db->connection()->table('op_log_entries')->insert($batch);
+            $batch = [];
+        }
+    }
+
+    if ($batch !== []) {
+        $db->connection()->table('op_log_entries')->insert($batch);
     }
 }
 
@@ -164,7 +175,88 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(100);
 });
 
-it('skips a pull entirely — no cursor mutation, data stays encrypted — when the app-lock KEK is unavailable', function (): void {
+// Every other test here fixes the fixture at a hundred rows, which is the one
+// axis this step ever failed on: the count used to be taken by framing and
+// decoding the peer's whole delta, so it grew with the delta and exhausted a
+// phone's 128 MB ceiling before the cursor it would have advanced was written.
+it('counts a large peer delta without holding it — a first sync well past a phone\'s memory ceiling still advances its cursor', function (): void {
+    $user = mobileResumeUser('mobile-resume-scale-'.bin2hex(random_bytes(4)));
+    $userId = (int) $user->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    @unlink(UserDataPathService::appPath('sync/identity/'.$userId.'.enc'));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist($userId, $session);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $peerDeviceId = 'desktop-fixture-scale-'.bin2hex(random_bytes(4));
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $peerDeviceId,
+        'name' => 'Fixture Desktop',
+        'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'x25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 0,
+        'paired_at' => '2026-07-01 00:00:00',
+        'confirmed_at' => '2026-07-01 00:00:00',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
+    // MergeRulesRegistry lists sixteen create-required fields for transactions
+    // and writeCreateRow() emits one op per field, so this is roughly 1,250
+    // transactions of arriving history — small for a real ledger.
+    $entries = 20_000;
+    seedResumeOpLogRows($db, $userId, $peerDeviceId, $entries, 1);
+
+    // No keyring on purpose: the step must reach the count and stop there,
+    // so what this measures is the count and not the re-projection behind it.
+    /** @var RelayConfig $relayConfig */
+    $relayConfig = app(RelayConfig::class);
+    $relayConfig->setEndpointUrl('https://relay.fixture.test');
+    $relayConfig->setAuthToken('fixture-relay-token');
+    Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
+
+    /** @var InitialSyncPuller $puller */
+    $puller = app(InitialSyncPuller::class);
+
+    memory_reset_peak_usage();
+    $before = memory_get_usage(true);
+
+    $progress = $puller->pull($userId, $session);
+
+    $peakDelta = memory_get_peak_usage(true) - $before;
+
+    expect($progress['records_applied'])->toBe($entries)
+        ->and($progress['blocked'])->toBe(SyncBlockedReason::NoKeys);
+
+    // The durable cursor is the point: the old count fatalled before
+    // persistCursor(), so every tick redid the whole delta from zero forever.
+    $row = $db->connection()->table('mobile_sync_progress')
+        ->where('user_id', $userId)
+        ->where('peer_device_id', $peerDeviceId)
+        ->first();
+    expect((int) $row->records_applied)->toBe($entries);
+    expect((int) $row->last_hlc_l)->toBe($entries, 'the watermark must reach the highest entry the peer authored');
+
+    // Framing this delta cost ~37 MB; asking the database for a count and a
+    // watermark costs nothing that scales with it. The bound is generous on
+    // purpose — it is the growth being pinned, not an allocation budget.
+    expect($peakDelta)->toBeLessThan(
+        12 * 1024 * 1024,
+        'the count must not grow with the size of the delta it counts',
+    );
+});
+
+it('skips a pull entirely — no cursor mutation, data stays encrypted — when sync was never enabled on this device', function (): void {
     $user = mobileResumeUser('mobile-resume-nokek-'.bin2hex(random_bytes(4)));
 
     /** @var Session $session */
@@ -173,7 +265,9 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // No identity file at all, so the loader returns null before any KEK check.
+    // No identity file at all, so the loader answers Absent, not Locked: this
+    // device never paired, which is the one state "waiting for the other
+    // device" is the honest thing to say.
     /** @var InitialSyncPuller $puller */
     $puller = app(InitialSyncPuller::class);
 
@@ -190,6 +284,82 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
     ]);
     expect($db->connection()->table('mobile_sync_progress')->where('user_id', $user->id)->count())->toBe(0);
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(0);
+});
+
+// The device the previous test never was: provisioned, paired, holding a
+// key-file it cannot open because the screen is locked. That is a state of
+// THIS phone, and naming the peer for it is a terminal instruction to re-pair
+// a device that is working.
+it('reports a locked app-lock as locked on a provisioned, confirmed-peer install — never as a peer that is missing or has removed this device', function (): void {
+    $user = mobileResumeUser('mobile-resume-locked-'.bin2hex(random_bytes(4)));
+    $userId = (int) $user->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    @unlink(UserDataPathService::appPath('sync/identity/'.$userId.'.enc'));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist($userId, $session);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $peerDeviceId = 'desktop-fixture-locked-'.bin2hex(random_bytes(4));
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $peerDeviceId,
+        'name' => 'Fixture Desktop',
+        'ed25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'x25519_public_key_hex' => bin2hex(random_bytes(32)),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 0,
+        'paired_at' => '2026-07-01 00:00:00',
+        'confirmed_at' => '2026-07-01 00:00:00',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
+    seedResumeOpLogRows($db, $userId, $peerDeviceId, 10, 1);
+
+    AppLockTestHarness::lock($session);
+
+    /** @var InitialSyncPuller $puller */
+    $puller = app(InitialSyncPuller::class);
+
+    $progress = $puller->pull($userId, $session);
+
+    expect($progress['blocked'])->toBe(
+        SyncBlockedReason::Locked,
+        'a locked screen is this phone\'s own state — reporting the peer sends the reader to re-pair a healthy device',
+    );
+    expect($progress['phase'])->toBe(SyncPhase::Pending);
+    expect($db->connection()->table('mobile_sync_progress')->where('user_id', $userId)->count())
+        ->toBe(0, 'a locked tick must mutate no cursor');
+
+    // Mid-pairing — paired, not yet confirmed — is the shape peerRevokedUs()
+    // reads as a revocation, so the same lock must not turn into the terminal
+    // "pair again" copy either.
+    $db->connection()->table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', $peerDeviceId)
+        ->update(['confirmed_at' => null]);
+
+    expect($puller->pull($userId, $session)['blocked'])->toBe(
+        SyncBlockedReason::Locked,
+        'a lock over a half-confirmed peer must not read as a revocation',
+    );
+
+    // Unlocking is the whole recovery: the same install, same registry row.
+    $db->connection()->table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', $peerDeviceId)
+        ->update(['confirmed_at' => '2026-07-01 00:00:00']);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    expect($puller->pull($userId, $session)['blocked'])->not->toBe(SyncBlockedReason::Locked);
 });
 
 it('runs the history re-projection AT MOST ONCE per cursor once the keyring becomes non-empty; percent never regresses', function (): void {

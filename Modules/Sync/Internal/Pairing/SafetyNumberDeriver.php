@@ -6,12 +6,12 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 
-final class SafetyNumberDeriver
+final readonly class SafetyNumberDeriver
 {
     /**
      * @param  list<string>  $wordList  2048-word BIP39 English list (Bip39WordList::WORDS).
      */
-    public function __construct(private readonly array $wordList) {}
+    public function __construct(private array $wordList) {}
 
     /**
      * @param  string  $pubKeyA  Raw 32-byte Ed25519 public key.
@@ -23,7 +23,8 @@ final class SafetyNumberDeriver
         // A safety-number derived from a short/over-long key is meaningless:
         // assert the raw 32-byte Ed25519 length up front rather than
         // silently hashing junk.
-        if (strlen($pubKeyA) !== 32 || strlen($pubKeyB) !== 32) {
+        if (strlen($pubKeyA) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES
+            || strlen($pubKeyB) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
             throw new InvalidPublicKeyException('SafetyNumberDeriver: public keys must be exactly 32 raw bytes.');
         }
 
@@ -87,7 +88,9 @@ final class SafetyNumberDeriver
     // "invalid code" flash rather than a 500.
     public static function hexToRawKey(string $hex): string
     {
-        if (strlen($hex) !== 64 || ! ctype_xdigit($hex) || strtolower($hex) !== $hex) {
+        if (strlen($hex) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES * 2
+            || ! ctype_xdigit($hex)
+            || strtolower($hex) !== $hex) {
             throw new InvalidPublicKeyException('Public key must be exactly 64 lowercase hex characters.');
         }
 

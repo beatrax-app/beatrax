@@ -31,6 +31,7 @@ Modules/Receipts/
 │   │   ├── EmlHeaderProfile.php
 │   │   ├── MboxIterator.php
 │   │   ├── MboxHeaderProfile.php
+│   │   ├── ReceiptFileShape.php
 │   │   ├── ParsedMimeMessage.php
 │   │   ├── FileDropEmlBlobStore.php
 │   │   └── ReceiptSourceAdapter.php
@@ -38,10 +39,12 @@ Modules/Receipts/
 │       └── ReceiptConflictQuery.php
 ├── Internal/
 │   ├── MatcherRegistry.php
+│   ├── ReceiptLedgerBridge.php
 │   ├── Matchers/
 │   │   ├── PaypalReceiptMatcher.php
 │   │   ├── IcsReceiptMatcher.php
-│   │   └── GooglePlayReceiptMatcher.php
+│   │   ├── GooglePlayReceiptMatcher.php
+│   │   └── ReceiptBodyText.php
 │   ├── Listeners/
 │   │   ├── HandleFileOpenedFromOs.php
 │   │   └── DispatchChainHintsFromReceipt.php
@@ -84,24 +87,35 @@ Modules/Receipts/
   - `RecordReceipt::__invoke(string $emlBytes, User $user,
     ?string $sourceFilename = null): MatchOutcomeDto` — sole
     entry point.
-  - `ApplyReceiptConflictResolution::__invoke(User $user, string
-    $choice): int` — returns how many conflicts the chosen policy
-    resolved.
+  - `ApplyReceiptConflictResolution::__invoke(User $user,
+    ReceiptConflictChoice $choice): int` — returns how many
+    conflicts the chosen policy resolved. The parameter is the
+    enum, not its value: every producer already held one, and the
+    string signature made each of them unwrap it so the receiver
+    could re-parse it and throw on a value none of them could have
+    produced.
 - **DTOs/**
   - `MatcherInputDto` — `(id, userId, source, providerMessageId,
     senderEmail, senderName, subject, internalDate, emlPath)`,
     plus `MatcherInputDto::toInboxMessageDto()`, which is how the
     registry hands a matcher the shape `canHandle()` expects.
   - `MatchOutcomeDto` — `(kind, parsed, skipReason,
-    unmatchedReason)`, a sum type built through
+    unmatchedReason, matcherKey)`, a sum type built through
     `MatchOutcomeDto::parsed()`, `MatchOutcomeDto::skipped()` and
     `MatchOutcomeDto::unmatched()`. `skipped` is "I own this
     sender and this message is not a transaction"; `unmatched` is
-    "no matcher claimed it".
+    "no matcher claimed it". `matcherKey` is stamped by the
+    registry via `fromMatcher($key)` and is null only for the
+    no-matcher-claimed case.
   - `ParsedReceiptDto` — typed receipt structure.
   - `ChainHintPayload/*` — `FundedByCardPayload(cardLast4,
     cardKind)`, `RefundOfPayload(originalChargeRef)`.
 - **Enums/**
+  - `MatchOutcomeKind` — `parsed` / `skipped` / `unmatched`, plus
+    `toInboxStatus(): InboxMessageStatus`. The map used to be
+    prose in this enum's own comment and hand-rolled three times
+    over: an if/elseif chain in `RecordReceipt`, another in
+    `ProcessFetchedInboxMessagesJob`, and a ternary beside it.
   - `ChainHintType` — `funded_by_card` / `refund_of` /
     `unknown`; the vocabulary of
     `raw_payload['chain_hints'][]['hint_type']`, distinct from
@@ -121,6 +135,12 @@ Modules/Receipts/
 - **Pipeline/** — pre-parse layer: MIME reader, header
   profiles, mbox iterator, drop-in blob store, source
   adapter.
+  - `ReceiptFileShape::of(string $localPath): ?SourceFormat` — which of the
+    two transports a file is, read off its own head against the two header
+    profiles. The upload screen sets the format from it and `ParseStage`
+    refuses a file that contradicts the declared one; neither trusts the pick,
+    because reading an archive as a single message keeps only its first
+    message.
 - **Services/**
   - `ReceiptConflictQuery::latestForUser(User $user):
     ?array{transactionId, field, storedValue, incomingValue,
@@ -143,6 +163,11 @@ Modules/Receipts/
   when none does. There is no lookup method that hands the matcher
   back to the caller: the registry dispatches, so no caller can
   hold a matcher and call it on a message it did not claim.
+  It stamps the answering matcher's own `key()` onto the outcome
+  it returns, which is where `inbox_messages.matcher_key` and
+  `file_imports.matcher_key` come from; each matcher used to write
+  that same string a second time into an untyped `raw_payload` and
+  both callers `is_string()`-guessed it back out of a `mixed`.
   `MatcherRegistry::supportedKeys()` is the audit list.
 - `Internal/Matchers/PaypalReceiptMatcher` — parses PayPal
   receipt HTML / text; extracts the merchant, the per-line
@@ -152,7 +177,33 @@ Modules/Receipts/
   summary + per-line items.
 - `Internal/Matchers/GooglePlayReceiptMatcher` — parses Google
   Play purchase receipts; emits the per-item rollup
-  (subscription rebill, in-app purchase, etc.).
+  (subscription rebill, in-app purchase, etc.). Its synthetic
+  own-IBAN resolves to the `kind='google_play'` Account
+  `Import::EnsureGooglePlayAccountAction` mints; before that
+  action existed nothing could create one, so a Play receipt
+  parsed, stamped its audit row `parsed`, and reached the ledger
+  on neither path.
+- `Internal/Matchers/ReceiptBodyText` — the injected collaborator
+  the three matchers share: `plainText()` (entity-decode, strip
+  tags, collapse whitespace), `amountMinor()` (a currency validity
+  gate over `MoneyInput::tryToMinor`, which is told no currency at
+  all), and the pair that keeps an anchor and its parse naming one
+  currency — `currencyMarkers()` (the regex alternation of every
+  glyph `Money::SYMBOLS` writes plus every `Currency` case) and
+  `currencyMarked()` (that capture back as an ISO code). See
+  [reading a receipt at the currency it names](architecture.md#reading-a-receipt-at-the-currency-it-names).
+  Deliberately an object, not a trait: a trait reading the using
+  class's promoted private properties makes them read as unused to
+  this repo's static analysis.
+- `Internal/ReceiptLedgerBridge::bridge(ParsedReceiptDto $parsed,
+  User $user, ?int $importRunId, SourceFormat $sourceFormat): ?int`
+  — the canonical write `RecordReceipt` deliberately leaves to its
+  caller. Resolves the synthetic own-IBAN to an Account (no Account,
+  no write — the reader is asked to name it in the preview wizard),
+  adopts or opens the hourly `inbox-handoff` `ImportRun`, and returns
+  the run id so a walk shares one. `ProcessFetchedInboxMessagesJob`
+  and `ScanInboxDropFolderJob` are its two callers; the second used
+  to discard the outcome and import nothing.
 - `Internal/Listeners/HandleFileOpenedFromOs::handle($event)`
   — filters by `.eml` / `.mbox` extension; persists path into
   `Desktop::PendingFileIntent`.

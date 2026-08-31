@@ -14,12 +14,13 @@ return [
     'bulk_delete' => ':count feladat törlése|:count feladat törlése',
     'empty_pending' => 'A várólista üres.',
     'empty_failed' => 'Nincs sikertelen feladat.',
-    'empty_batches' => 'Nincs aktív köteg.',
+    'empty_batches' => 'Nincsenek kötegek.',
     'select_aria' => 'Kijelölés',
     'select_row_aria' => 'A(z) :key sor kijelölése',
     'col_id' => 'Id',
     'col_queue' => 'Várólista',
     'col_attempts' => 'Próbálkozások',
+    'col_state' => 'Állapot',
     'col_created' => 'Létrehozva',
     'col_uuid' => 'UUID',
     'col_failed' => 'Sikertelen',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Függőben',
     'col_actions' => 'Műveletek',
     'delete_job' => 'Feladat törlése',
+    'worker_running' => 'Worker futtatja',
     'delete_pending_confirm' => 'Törlöd a(z) #:key függőben lévő feladatot?',
     'retry_job' => 'Feladat újrapróbálása',
     'forget_confirm' => 'Eltávolítod a(z) :uuid sikertelen feladatot?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'A kijelölt sikertelen feladatok visszakerülnek a várólistára, hogy a worker újrapróbálja őket.',
     'cancel' => 'Mégse',
 
+    'state' => [
+        'available' => 'Elérhető',
+        'reserved' => 'Lefoglalva',
+        'scheduled' => 'Ütemezve',
+    ],
+
     'tab' => [
         'pending' => 'Függőben',
         'failed' => 'Sikertelen',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Függőben lévő feladat törölve',
+        'pending_already_gone' => 'Ez a feladat már nem volt meg',
         'failed_requeued' => 'Sikertelen feladat visszasorolva',
         'failed_removed' => 'Sikertelen feladat eltávolítva',
         'batch_cancelled' => 'Köteg megszakítva',
         'batch_deleted' => 'Köteg törölve',
         'batch_failures_requeued' => 'A köteg hibái visszasorolva',
+        'batch_failures_none' => 'Nincs több hibás elem a kötegben újrasorba állításhoz',
         'failed_jobs_requeued' => 'Sikertelen feladatok visszasorolva',
+        'failed_jobs_none' => 'Nincs több hibás feladat újrasorba állításhoz',
         'bulk_refused' => 'Tömeges törlés elutasítva — :reason',
         'rows_deleted' => 'A kijelölt sorok törölve',
     ],

@@ -8,12 +8,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Public\Services\UserDataPathService;
 
-final class MobileFirstLaunchBootstrap
+final readonly class MobileFirstLaunchBootstrap
 {
     public function __construct(
-        private readonly Migrator $migrator,
-        private readonly UserDataPathService $paths,
-        private readonly DatabaseManager $db,
+        private Migrator $migrator,
+        private UserDataPathService $paths,
+        private DatabaseManager $db,
     ) {}
 
     // Routed through UserDataPathService so this stays the single
@@ -47,7 +47,7 @@ final class MobileFirstLaunchBootstrap
 
     // Every path a NativePHP plugin hands to loadViewsFrom(). The bundler
     // strips their whole `resources/` tree, so each one has to be recreated.
-    private const PLUGIN_VIEW_PATHS = ['resources/views', 'resources/jump/views'];
+    private const array PLUGIN_VIEW_PATHS = ['resources/views', 'resources/jump/views'];
 
     // The bundler strips every plugin's `resources/` directory, but their
     // service providers still call loadViewsFrom() on those paths.
@@ -77,7 +77,17 @@ final class MobileFirstLaunchBootstrap
             $this->migrator->getRepository()->createRepository();
         }
 
-        $this->migrator->run($this->migrationPaths());
+        try {
+            $this->migrator->run($this->migrationPaths());
+        } finally {
+            // SQLite reports supportsSchemaTransactions() false, so a run that
+            // throws leaves what it applied behind and no retry undoes it.
+            // Recorded, because a half-built schema otherwise opens the app
+            // and looks healthy until the first tap answers 500.
+            $this->hasPendingMigrations()
+                ? SchemaCompletionMarker::raise()
+                : SchemaCompletionMarker::clear();
+        }
     }
 
     // After migrations have run, an empty `users` table marks the first

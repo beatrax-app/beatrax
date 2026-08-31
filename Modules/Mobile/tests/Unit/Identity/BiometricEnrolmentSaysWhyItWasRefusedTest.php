@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use Beatrax\BiometricVault\BiometricVault;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -68,43 +65,19 @@ it('clears the reason once a call succeeds', function (): void {
  */
 function refusingKeyVault(?string $nativeError, bool $stored, array &$logged): BiometricKeyVault
 {
-    $currentUser = new class implements CurrentUser
-    {
-        public function id(): int
-        {
-            return 1;
-        }
-
-        public function user(): User
-        {
-            throw new NotAuthenticatedException('The vault only ever asks for the id.');
-        }
-
-        public function periodStartDay(): int
-        {
-            return 1;
-        }
-
-        public function isAuthenticated(): bool
-        {
-            return true;
-        }
-    };
-
-    return new class(app(BiometricKeyBlobCodec::class), $currentUser, new NullLogger, $nativeError, $stored, $logged) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), new NullLogger, $nativeError, $stored, $logged) extends BiometricKeyVault
     {
         /**
          * @param  list<?string>  $logged
          */
         public function __construct(
             BiometricKeyBlobCodec $codec,
-            CurrentUser $currentUser,
             LoggerInterface $log,
             private readonly ?string $nativeError,
             private readonly bool $stored,
             private array &$logged,
         ) {
-            parent::__construct($codec, $currentUser, $log);
+            parent::__construct($codec, $log);
         }
 
         protected function runtimeAvailable(): bool
@@ -140,7 +113,7 @@ function refusingKeyVault(?string $nativeError, bool $stored, array &$logged): B
 it('writes the reason down when enrolment is refused', function (?string $reason): void {
     $logged = [];
 
-    expect(refusingKeyVault($reason, false, $logged)->enroll('a-data-key'))->toBeFalse()
+    expect(refusingKeyVault($reason, false, $logged)->enroll(1, 'a-data-key'))->toBeFalse()
         ->and($logged)->toBe([$reason]);
 })->with([
     'the native side named a reason' => ['Keychain save failed (-25293)'],
@@ -150,7 +123,7 @@ it('writes the reason down when enrolment is refused', function (?string $reason
 it('says nothing on the happy path', function (): void {
     $logged = [];
 
-    expect(refusingKeyVault(null, true, $logged)->enroll('a-data-key'))->toBeTrue()
+    expect(refusingKeyVault(null, true, $logged)->enroll(1, 'a-data-key'))->toBeTrue()
         ->and($logged)->toBe([]);
 });
 

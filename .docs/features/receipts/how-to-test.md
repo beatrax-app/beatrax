@@ -97,7 +97,7 @@ composer test
   receipt, the conflict-detection threshold is too tight or
   the existing categorisation source is wrong.
 - **`Phase7MigrationsTest` failing after a schema change** —
-  the test asserts the three Phase 7 migrations land cleanly
+  the test asserts the three migrations it covers land cleanly
   on a fresh SQLite. A failure usually means a later
   migration depends on a column added here that the test
   doesn't seed; the fix is usually to extend the test's
@@ -109,10 +109,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Receipts` module.
-
-## Behavioral contracts
 
 - **`RecordReceipt` is the SOLE sanctioned entry point for
   receipt processing.** Every inbox-fetched message and every

@@ -14,11 +14,11 @@ use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use stdClass;
 
-final class InboxQuery
+final readonly class InboxQuery
 {
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     /**
      * @return list<InboxHealthDto>

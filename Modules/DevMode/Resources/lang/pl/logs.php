@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Odrzuć z widoku (nie zmienia pliku logów)',
     'dismiss_aria' => 'Odrzuć wpis logu z widoku',
     'totals' => [
-        'showing' => 'Pokazano',
-        'of' => 'z',
-        'received' => 'odebranych (limit bufora 10k)',
-        'lines_today' => 'wierszy dzisiaj',
+        'showing' => 'Pokazano :shown z :count odebranego wiersza (limit bufora :cap)|Pokazano :shown z :count odebranych wierszy (limit bufora :cap)|Pokazano :shown z :count odebranych wierszy (limit bufora :cap)',
+        'lines_today' => ':count wiersz dzisiaj|:count wiersze dzisiaj|:count wierszy dzisiaj',
+        'lines_today_capped' => 'ponad :count wiersz dzisiaj|ponad :count wiersze dzisiaj|ponad :count wierszy dzisiaj',
         'today' => 'dzisiaj',
-        'across' => 'w',
-        'daily_files' => 'plikach dziennych',
+        'all_files' => ':size w :count pliku dziennym|:size w :count plikach dziennych|:size w :count plikach dziennych',
     ],
 
     'status' => [

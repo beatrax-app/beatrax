@@ -22,7 +22,7 @@ beforeEach(function (): void {
 
     // Envelope-activation genesis so CarryoverQuery folds real rows.
     DB::table('users')->where('id', $this->user->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
     ]);
 
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'thresh-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
@@ -101,7 +101,7 @@ it('does not leak one user\'s threshold to another user', function (): void {
         'period_start_day' => 1,
     ]);
     DB::table('users')->where('id', $userB->id)->update([
-        'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
+        'envelope_activated_at' => CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth(),
     ]);
 
     expect(thresholdRowFor($this->user, $this->groceries->id)->notifyThresholdPercent)->toBe(60);

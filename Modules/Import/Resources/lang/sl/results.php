@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Naloži še en izpisek',
 
+    'chain' => [
+        'heading' => 'Razreševanje verig…',
+        'pending' => 'V čakalni vrsti. Razreševanje verig se bo kmalu začelo.',
+        'running' => 'Povezovanje verig financiranja in razstavljanje poravnav z izpiska.',
+    ],
+
     'issues' => [
         'row' => 'Vrstica :row: :reason',
         'file_stopped' => 'Datoteke ni bilo mogoče prebrati dlje kot do vrstice :row. Nič za to vrstico ni bilo uvoženo.',

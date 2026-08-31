@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Installationsförlopp',
     'step_progress' => 'Steg :current av :total',
-    'step_dot_aria' => 'Steg :number av :total',
 
     'eyebrow_step' => 'Steg :number — ',
 ];

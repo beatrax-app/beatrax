@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Migration\Internal\Enums\ActualBudgetType;
 use Modules\Migration\Internal\Services\ActualSqliteReader;
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
@@ -54,7 +55,20 @@ it('transactions() excludes the tombstoned row via v_transactions', function ():
 });
 
 it('budgetType() resolves envelope mode from preferences.budgetType', function (): void {
-    expect($this->reader->budgetType())->toBe('envelope');
+    expect($this->reader->budgetType())->toBe(ActualBudgetType::Envelope)
+        ->and($this->reader->declaredBudgetType())->toBe(ActualBudgetType::Envelope);
+});
+
+it('budgetType() defaults an export that names no mode rather than refusing the file', function (): void {
+    $zipPath = sys_get_temp_dir().'/actual-reader-no-budget-type-'.uniqid('', true).'.zip';
+    ActualFixtureBuilder::build($zipPath, ActualFixtureBuilder::NO_BUDGET_TYPE);
+    $reader = new ActualSqliteReader(MigrationFixturePaths::extractZip($zipPath).'/db.sqlite');
+
+    expect($reader->declaredBudgetType())->toBeNull()
+        ->and($reader->budgetType())->toBe(ActualSqliteReader::DEFAULT_BUDGET_TYPE)
+        ->and($reader->budgetAssignments())->toHaveCount(4);
+
+    @unlink($zipPath);
 });
 
 it('budgetAssignments() reads zero_budgets when budgetType is envelope, not "no budget"', function (): void {

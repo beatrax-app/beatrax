@@ -11,12 +11,12 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
 {
-    private const SOURCE_FORMAT = 'paypal-csv';
+    private const string SOURCE_FORMAT = 'paypal-csv';
 
     /**
      * @var array<string, array{type: PaymentType, confidence: int}>
      */
-    private const EVENT_TYPES = [
+    private const array EVENT_TYPES = [
         'vooraf goedgekeurde betaling – rekening betaald door gebruiker' => ['type' => PaymentType::Online, 'confidence' => 95],
         'express checkout-betaling' => ['type' => PaymentType::Online, 'confidence' => 95],
         'algemene valutaomrekening' => ['type' => PaymentType::Fee, 'confidence' => 95],
@@ -73,7 +73,7 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
             return null;
         }
 
-        $first = $events[array_key_first($events)];
+        $first = array_first($events);
         if (! is_array($first)) {
             return null;
         }

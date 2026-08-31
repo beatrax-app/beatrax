@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategorie',
         'assigned' => 'Přiděleno',
+        'carried_in' => 'Převedeno',
+        'moved' => 'Přesunuto',
         'spent' => 'Utraceno',
         'available' => 'Dostupné',
         'if_overspent' => 'Při přečerpání',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Skrýt historii ↑',
         'moved_from' => 'Přesunuto z: :category',
         'moved_to' => 'Přesunuto do: :category',
+        'moved_unreadable' => 'Přesunuto s kategorií :category novější verzí aplikace Beatrax',
         'undo' => 'Vrátit zpět',
     ],
 
     'phone' => [
         'spent' => 'Utraceno :amount',
+        'carried_in' => 'Převedeno :amount',
+        'moved' => 'Přesunuto :amount',
         'available' => 'Dostupné :amount',
         'notify_at' => 'Upozornit při',
     ],

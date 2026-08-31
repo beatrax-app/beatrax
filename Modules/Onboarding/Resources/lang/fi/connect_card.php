@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Luottokorttisi (ICS)',
+    'eyebrow' => 'Luottokorttisi',
     'h1' => 'Hae kuukausittaiset PDF-tiliotteesi',
-    'lede' => 'Pudota kaikki kuukausittaiset ICS-PDF-tiliotteesi — yhdistämme ne yhdeksi esikatseluksi.',
+    'lede' => 'Pudota kaikki kuukausittaiset PDF-tiliotteesi — yhdistämme ne yhdeksi esikatseluksi.',
 
     'format_group_aria' => 'ICS vie vain PDF-muodossa',
+    'issuer_note' => 'ICS on toistaiseksi ainoa kortin myöntäjä, jonka osaamme lukea, ja vain sen hollanninkielisen tiliotteen. Jos korttisi on muulta myöntäjältä, ohita tämä vaihe.',
     'got_it_as' => 'Sain sen muodossa:',
     'badge_only_format' => 'ainoa muoto',
 

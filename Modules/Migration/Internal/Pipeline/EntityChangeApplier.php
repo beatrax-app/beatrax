@@ -13,6 +13,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
@@ -20,17 +21,17 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-final class EntityChangeApplier
+final readonly class EntityChangeApplier
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SourceMapWriter $sourceMapWriter,
-        private readonly FingerprintComposer $fingerprints,
-        private readonly LoggerInterface $logger,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
+        private DatabaseManager $db,
+        private SourceMapWriter $sourceMapWriter,
+        private FingerprintComposer $fingerprints,
+        private LoggerInterface $logger,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     /**
@@ -105,7 +106,9 @@ final class EntityChangeApplier
     public function applyTransactionAmount(User $user, int $transactionId, int $newAmountMinor): bool
     {
         // amount_minor is part of the fingerprint tuple, so the recomputed
-        // fingerprint must land in the same UPDATE as the amount itself.
+        // fingerprint must land in the same UPDATE as the amount itself. The
+        // settled pair and its rate travel with it too: they are the figure
+        // every balance, budget, forecast and report sums.
         $connection = $this->db->connection();
 
         /** @var stdClass|null $row */
@@ -118,6 +121,14 @@ final class EntityChangeApplier
             return false;
         }
 
+        $amount = (new TransactionAmount(
+            self::toInt($row->amount_minor),
+            self::toString($row->currency),
+            self::toInt($row->settled_amount_minor),
+            self::toString($row->settled_currency),
+            self::toStringOrNull($row->fx_rate_used),
+        ))->withAmountMinor($newAmountMinor);
+
         $canonical = new CanonicalTransaction(
             userId: $user->id,
             accountId: self::toInt($row->account_id),
@@ -125,11 +136,10 @@ final class EntityChangeApplier
             postedAt: CarbonImmutable::parse(self::toString($row->posted_at)),
             bookedAt: CarbonImmutable::parse(self::toString($row->booked_at)),
             valueDate: CarbonImmutable::parse(self::toString($row->value_date)),
-            amountMinor: $newAmountMinor,
-            currency: self::toString($row->currency),
-            settledAmountMinor: self::toInt($row->settled_amount_minor),
-            settledCurrency: self::toString($row->settled_currency),
-            fxRateUsed: $row->fx_rate_used !== null ? self::toString($row->fx_rate_used) : null,
+            amountMinor: $amount->amountMinor,
+            currency: $amount->currency,
+            settledAmountMinor: $amount->settledAmountMinor,
+            settledCurrency: $amount->settledCurrency,
             counterpartyName: $row->counterparty_name !== null ? self::toString($row->counterparty_name) : null,
             counterpartyIban: $row->counterparty_iban !== null ? self::toString($row->counterparty_iban) : null,
             counterpartyNormalized: self::toString($row->counterparty_normalized),
@@ -148,10 +158,7 @@ final class EntityChangeApplier
             $connection->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
-                ->update([
-                    'amount_minor' => $newAmountMinor,
-                    'fingerprint' => $fingerprint,
-                ]);
+                ->update($amount->toColumns() + ['fingerprint' => $fingerprint]);
         } catch (QueryException $e) {
             // Only a fingerprint-uniqueness violation is a benign collision;
             // reclassifying any other QueryException would mask a real failure.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transakcja',
     'heading' => 'Transakcja',
+    'booked_on' => 'Zaksięgowano :date',
 
     'counterparty' => 'Kontrahent',
     'description' => 'Opis',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Notatka (opcjonalnie)',
         'tax_deductible' => 'Odliczane od podatku',
         'remove_leg_aria' => 'Usuń tę kategorię',
+        'remove_leg_caption' => 'Usuń',
         'add_category' => '+ Dodaj kategorię',
         'soft_cap' => ':count z ~20 kategorii — rozważ zgrupowanie drobnych kwot.',
         'remaining_zero' => 'Pozostało :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Usuń transakcję',
         'help' => 'Trwale usuwa tę transakcję. Tej operacji nie można cofnąć.',
         'button' => 'Usuń',
-        'confirm_prompt' => 'Na pewno?',
+        'confirm_prompt' => 'Usunąć tę transakcję? Znikną z nią notatka, podział i znaczniki podatkowe.',
         'confirm' => 'Tak, usuń',
         'cancel' => 'Anuluj',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Zobacz łańcuch',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Uzgodniona i zablokowana',
+        'help' => 'Zakończone uzgodnienie zablokowało tę transakcję. Jej kategoria, notatka, podział i znaczniki podatkowe pozostają bez zmian, dopóki jej nie odblokujesz.',
+        'button' => 'Odblokuj do edycji',
+        'confirm_question' => 'Odblokować tę transakcję do edycji? Nic się w niej nie zmienia, a kolejne zakończone uzgodnienie zablokuje ją ponownie.',
+        'cancel' => 'Zostaw zablokowaną',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Ta transakcja jest uzgodniona. Cofnij uzgodnienie, aby wprowadzić zmiany.',
         'reclassified_pair_removed' => 'Nowa klasyfikacja: :type — parowanie usunięte',
         'reclassified' => 'Nowa klasyfikacja: :type',
         'note_saved' => 'Notatka zapisana',
         'unreconciled' => 'Uzgodnienie cofnięte — możesz znowu edytować tę transakcję.',
+        'note_too_long' => 'Notatka ma najwyżej :max znak.|Notatka ma najwyżej :max znaki.|Notatka ma najwyżej :max znaków.',
         'counterparty_updated' => 'Kontrahent zaktualizowany',
         'goal_attributed' => 'Zaliczono do tego celu',
         'goal_attribution_removed' => 'Nie jest już zaliczana do tego celu',

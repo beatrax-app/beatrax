@@ -11,21 +11,24 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @see SetAccountForecastBuffer
  */
-final class SetAccountOpeningBalance
+final readonly class SetAccountOpeningBalance
 {
-    public const DIVERGENCE_WARNING_THRESHOLD_MINOR = 50_000;
+    public const int DIVERGENCE_WARNING_THRESHOLD_MINOR = 50_000;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly BusDispatcher $bus,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private BusDispatcher $bus,
     ) {}
 
     public function __invoke(
@@ -59,7 +62,7 @@ final class SetAccountOpeningBalance
                 ]);
         });
 
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $user->id,
                 scenarioId: null,
@@ -78,12 +81,11 @@ final class SetAccountOpeningBalance
         if ($openingBalanceAsOfDate === null || trim($openingBalanceAsOfDate) === '') {
             throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_required'));
         }
-        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $openingBalanceAsOfDate);
-        if ($parsed === false || $parsed->format('Y-m-d') !== $openingBalanceAsOfDate) {
+        $asOf = SafeDate::dayOrNull($openingBalanceAsOfDate);
+        if ($asOf === null) {
             throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_invalid'));
         }
         $today = $this->clock->now()->startOfDay();
-        $asOf = CarbonImmutable::parse($openingBalanceAsOfDate)->startOfDay();
         if ($asOf->greaterThan($today)) {
             throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_future'));
         }
@@ -92,11 +94,13 @@ final class SetAccountOpeningBalance
             return;
         }
 
-        $sum = (int) $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('account_id', $accountId)
-            ->where('booked_at', '<=', $asOf->endOfDay()->toDateTimeString())
-            ->sum('amount_minor');
+        // No figure to compare against means no divergence to warn about. The
+        // sum that used to stand in for one was not this account's position.
+        $sum = $this->positionOn($accountId, $user, $asOf);
+        if ($sum === null) {
+            return;
+        }
+
         $diff = $openingBalanceMinor - $sum;
         if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
             throw new OpeningBalanceDivergenceWarning(
@@ -107,14 +111,51 @@ final class SetAccountOpeningBalance
         }
     }
 
-    // Public so OpeningBalanceEditor can fill its suggestion chip without
-    // re-invoking the whole Action.
-    public function sumOfTransactionsForAccount(int $accountId, User $user, string $asOfDate): int
+    // Derived WITHOUT the override being validated, so the check cannot agree
+    // with whatever was last saved. Null where the account names no currency:
+    // the column is denominated in the account's own, and a one-click button
+    // must withhold a figure rather than offer a guessed one.
+    /**
+     * @link ../../../../.docs/features/forecasting/opening-balance-suggestion.md
+     */
+    public function positionOn(int $accountId, User $user, CarbonImmutable $asOf): ?int
     {
-        return (int) $this->db->connection()->table('transactions')
+        $account = $this->db->connection()->table('accounts')
+            ->where('id', $accountId)
+            ->where('user_id', $user->id)
+            ->first(['default_currency', 'starting_balance_minor', 'starting_balance_date']);
+
+        if ($account === null) {
+            return null;
+        }
+
+        /** @var stdClass $account */
+        $currency = is_string($account->default_currency ?? null) ? $account->default_currency : '';
+        if ($currency === '') {
+            return null;
+        }
+
+        $baselineMinor = is_numeric($account->starting_balance_minor ?? null)
+            ? (int) $account->starting_balance_minor
+            : 0;
+        $baselineDate = is_string($account->starting_balance_date ?? null) && $account->starting_balance_date !== ''
+            ? SafeDate::normalisedDayOrNull($account->starting_balance_date)
+            : null;
+
+        // settled_amount_minor in the account's own denomination and bounded on
+        // posted_at, the same pair every balance in this app sums. amount_minor
+        // is the NATIVE figure and summing it across currencies added dollars
+        // to euros: EUR6,604.64 was offered back as EUR3,612.14.
+        $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->where('booked_at', '<=', CarbonImmutable::parse($asOfDate)->endOfDay()->toDateTimeString())
-            ->sum('amount_minor');
+            ->where('settled_currency', $currency)
+            ->where('posted_at', '<=', $asOf->toDateString());
+
+        if ($baselineDate instanceof CarbonImmutable) {
+            $rows->where('posted_at', '>=', $baselineDate->toDateString());
+        }
+
+        return $baselineMinor + (int) $rows->sum('settled_amount_minor');
     }
 }

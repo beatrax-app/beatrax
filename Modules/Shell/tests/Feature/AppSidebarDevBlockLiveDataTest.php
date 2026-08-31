@@ -50,7 +50,7 @@ it('renders the worker delta when the heartbeat cache key is present and fresh',
 
     // Allow a 0..7s window — the test runtime can drift a couple of
     // seconds between the cache write and the render.
-    $matched = (bool) preg_match('/Worker (\d|[1-9]\d)s ago/', $html);
+    $matched = (bool) preg_match('/Worker (\d|[1-9]\d)\s*s ago/', $html);
     expect($matched)->toBeTrue('Sidebar Dev block must render "Worker Ns ago" with a numeric delta when the heartbeat cache key is fresh.');
 });
 

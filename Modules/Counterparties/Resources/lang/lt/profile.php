@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— asmeniniams kontaktams finansavimo grandinių nėra',
     'tab_note_bank' => '— banko mokesčių kita šalis finansavimo grandinių nesukuria',
+    'tab_note_bank_institution' => '— institucinėms kitoms šalims finansavimo grandinių nėra',
     'tab_note_government' => '— valstybės institucijoms finansavimo grandinių nėra',
 
     'recent_activity' => 'Naujausia veikla',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Banko mokesčiai pagal kategoriją',
+        'activity_heading' => 'Veikla pagal kategoriją',
         'no_fees' => 'Šiai kitai šaliai mokesčių dar neužfiksuota.',
     ],
 

@@ -205,8 +205,8 @@ it('falls back to plain text on /chains when a leg has no resolved counterparty'
 
     $response->assertOk();
     $response->assertSee('Unresolved Spotify');
-    $response->assertSee('data-testid="chains-index-from-counterparty-text-', false);
-    $response->assertDontSee('data-testid="chains-index-from-counterparty-link-', false);
+    $response->assertSee('data-testid="chains-index-leg-counterparty-text-', false);
+    $response->assertDontSee('data-testid="chains-index-leg-counterparty-link-', false);
 });
 
 it('ChainTreeNode carries the resolved counterparty slug for the chain drawer', function (): void {

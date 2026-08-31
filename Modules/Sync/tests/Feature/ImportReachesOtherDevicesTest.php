@@ -17,6 +17,7 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 // desktop was told an import had happened and given none of it.
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 

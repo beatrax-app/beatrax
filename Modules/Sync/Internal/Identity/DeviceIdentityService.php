@@ -12,7 +12,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
@@ -20,18 +20,24 @@ use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Ramsey\Uuid\Uuid;
 use SodiumException;
 
-final class DeviceIdentityService
+final readonly class DeviceIdentityService
 {
+    private const string STAGING_PREFIX = 'beatrax_identity_';
+
+    private SealedJsonFile $sealedFile;
+
     public function __construct(
-        private readonly AppLockKeyService $appLockKeyService,
-        private readonly FileEncryptor $backupEncryptor,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly DeviceNameDetector $nameDetector,
-        private readonly DeviceIdentityLoader $loader,
-        private readonly SodiumPrimitives $sodium,
-        private readonly Dispatcher $events,
-    ) {}
+        private AppLockKeyService $appLockKeyService,
+        FileEncryptor $backupEncryptor,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private DeviceNameDetector $nameDetector,
+        private DeviceIdentityLoader $loader,
+        private SodiumPrimitives $sodium,
+        private Dispatcher $events,
+    ) {
+        $this->sealedFile = new SealedJsonFile($backupEncryptor);
+    }
 
     // Puts back the self-row for an identity whose key-file is still on disk.
     // Keyed on device_id so a surviving row is refreshed, not duplicated.
@@ -39,11 +45,11 @@ final class DeviceIdentityService
     // devices, and an unconfirmed self-row hides this device's own entries.
     private function restoreSelfRow(int $userId, DeviceIdentityDto $identity): void
     {
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         // A key-file minted before the column was Zulu holds a local offset,
         // and this is the one path that copies it back onto a migrated row.
-        $mintedAt = ZuluTimestamp::stamp(CarbonImmutable::parse($identity->createdAt));
+        $mintedAt = Instant::zulu(CarbonImmutable::parse($identity->createdAt));
 
         $row = [
             'name' => $this->nameDetector->detect(),
@@ -146,7 +152,7 @@ final class DeviceIdentityService
 
         try {
             $deviceId = Uuid::uuid4()->toString();
-            $createdAt = ZuluTimestamp::stamp($this->clock->now());
+            $createdAt = Instant::zulu($this->clock->now());
 
             $signKp = sodium_crypto_sign_keypair();
             // SEPARATE X25519 keypair — do NOT derive from the signing key,
@@ -176,24 +182,12 @@ final class DeviceIdentityService
 
             $payload = json_encode($dto->toArray(), JSON_THROW_ON_ERROR);
 
-            $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
-            $identityDir = dirname($encPath);
-            @mkdir($identityDir, 0700, true);
-
-            // Stage the plaintext key-file inside the 0700 identity directory
-            // created above — NEVER sys_get_temp_dir() — and lock it to 0600
-            // immediately, so a crash before the finally-unlink below can
-            // never leave the secret keys world-readable.
-            $tmpPath = $identityDir.DIRECTORY_SEPARATOR.'beatrax_identity_'.bin2hex(random_bytes(8)).'.tmp';
-            SecureTempFile::write($tmpPath, $payload);
-
-            try {
-                // The KEK is a random key, not a passphrase, so password
-                // hardening buys nothing — see FileEncryptor::encryptWithKey.
-                $this->backupEncryptor->encryptWithKey($tmpPath, $encPath, $kek);
-            } finally {
-                @unlink($tmpPath);
-            }
+            $this->sealedFile->writeSealed(
+                UserDataPathService::appPath("sync/identity/{$userId}.enc"),
+                $payload,
+                $kek,
+                self::STAGING_PREFIX,
+            );
 
             $this->db->connection()->table('device_registry')->insert([
                 'user_id' => $userId,

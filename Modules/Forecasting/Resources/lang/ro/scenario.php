@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'seria',
 
+    'template' => [
+        'cancel' => 'Anulează :name',
+        'change_amount' => 'Schimbă suma pentru :name',
+    ],
+
     'summary' => [
         'cancel' => 'Anulează :name',
         'series_fallback' => 'seria #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenariu redenumit.',
         'mutation_added' => 'Modificare adăugată.',
         'mutation_updated' => 'Modificare actualizată.',
-        'mutation_removed' => 'Modificare eliminată. Anulează',
+        'mutation_removed' => 'Modificare eliminată.',
     ],
 
     'errors' => [
         'name_empty' => 'Numele scenariului nu poate fi gol.',
         'name_too_long' => 'Numele scenariului trebuie să aibă cel mult :max caracter.|Numele scenariului trebuie să aibă cel mult :max caractere.|Numele scenariului trebuie să aibă cel mult :max de caractere.',
         'name_taken' => 'Există deja un scenariu cu acest nume.',
+        'date_out_of_range' => 'Acea dată este în afara oricărui orizont de prognoză — de azi până la :days zi înainte — deci scenariul nu ar schimba nimic.|Acea dată este în afara oricărui orizont de prognoză — de azi până la :days zile înainte — deci scenariul nu ar schimba nimic.|Acea dată este în afara oricărui orizont de prognoză — de azi până la :days de zile înainte — deci scenariul nu ar schimba nimic.',
         'pick_kind_first' => 'Alege întâi tipul modificării.',
         'amount_positive' => 'Suma trebuie să fie un număr pozitiv.',
+        'scenario_gone' => 'Acest scenariu nu mai există — a fost șters în altă parte. Alege alt scenariu sau creează unul nou.',
+        'mutation_gone' => 'Această modificare nu mai există — a fost eliminată în altă parte. Închide editorul și adaug-o din nou dacă o mai vrei.',
     ],
 ];

@@ -8,6 +8,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
+use Modules\DriftAlerts\Internal\Console\ReviveDriftSnoozesCommand;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Internal\Http\Livewire\SubscriptionDriftWatchPage;
@@ -28,6 +30,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 final class DriftAlertsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -45,6 +48,8 @@ final class DriftAlertsServiceProvider extends ServiceProvider
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         $this->loadModuleResources('drift-alerts');
+
+        $this->registerScheduledCommands([ReviveDriftSnoozesCommand::class]);
 
         $livewire->component('drift-alerts.drift-page', DriftPage::class);
         $livewire->component('drift-alerts.subscription-drift-watch-page', SubscriptionDriftWatchPage::class);

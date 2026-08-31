@@ -163,7 +163,6 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
         $nextExpected = isset($series['next_expected_date']) && is_string($series['next_expected_date']) && $series['next_expected_date'] !== ''
             ? $series['next_expected_date']
             : null;
-        $latestFxRate = $series['latest_fx_rate_used'] ?? null;
 
         $clusterKey = 'fpct-cluster-'.$fixtureName.'-'.bin2hex(random_bytes(4));
 
@@ -175,7 +174,6 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             'cadence' => $cadence,
             'latest_amount_minor' => $latestAmount,
             'latest_currency' => $latestCurrency,
-            'latest_fx_rate_used' => $latestFxRate,
             'monthly_equivalent_minor' => $latestAmount,
             'variance_tolerance_percent' => $variance,
             'next_expected_at' => $nextExpected,

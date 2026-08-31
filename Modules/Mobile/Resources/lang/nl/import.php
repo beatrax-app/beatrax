@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Wachtwoorden komen niet overeen.',
         'password_length' => 'Gebruik minimaal 12 tekens.',
         'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',
+        'pin_digits' => 'Pincode moet 6 tot 10 cijfers zijn — alleen cijfers.',
         'pins_mismatch' => 'De pincodes komen niet overeen. Probeer het opnieuw.',
         'session_expired' => 'Je sessie is verlopen voordat het instellen was voltooid. Voer je pincode en wachtwoord opnieuw in.',
         'retry_failed' => 'Kon dit apparaat nog steeds niet volledig instellen. Probeer het opnieuw.',

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'PayPal-Exporte enthalten keine Saldozeilen, lege das also manuell fest.',
-    'help_asn' => 'Automatisch anhand deines letzten Kontoauszugs verankert. Überschreibe das nur, wenn du weißt, dass der tatsächliche Saldo abweicht.',
     'help_default' => 'Überschreibe das nur, wenn du weißt, dass der tatsächliche aktuelle Saldo von dem abweicht, was Beatrax berechnet.',
 
     'legend' => 'Anfangssaldo der Prognose für :name',
     'opening_label' => 'Anfangssaldo',
-    'opening_placeholder' => 'z. B. 1.250,00',
+    'opening_placeholder' => 'z. B. :amount',
     'as_of_label' => 'Anfangssaldo per',
     'as_of_help' => 'Das Datum, für das der Betrag oben gilt.',
 
     'divergence' => 'Das weicht um mehr als :threshold von dem Saldo ab, den Beatrax aus deinen importierten Transaktionen berechnet. Bist du sicher?',
+    'computed_is' => 'Beatrax berechnet :amount.',
     'use_beatrax' => 'Zahl von Beatrax verwenden',
     'use_mine' => 'Meine Zahl verwenden',
 

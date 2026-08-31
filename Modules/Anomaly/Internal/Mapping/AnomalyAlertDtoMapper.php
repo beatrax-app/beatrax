@@ -6,14 +6,16 @@ namespace Modules\Anomaly\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-// A null baseline/latest amount hydrates to a zero-amount Money rather than
-// null (a first-time-only alert carries no per-merchant baseline), so call
-// sites never branch on null.
+// A null baseline stays null: a duplicate-only or first-time-only alert has no
+// comparison amount, and hydrating one to zero is how the row came to state a
+// EUR 0.00 baseline against a real charge.
 final class AnomalyAlertDtoMapper
 {
     use CoercesScalars;
@@ -28,7 +30,8 @@ final class AnomalyAlertDtoMapper
     public static function hydrate(stdClass $row, ?string $displayName, string $baseCurrency): AnomalyAlertDto
     {
         $currency = self::toCurrency($row->currency ?? null, $baseCurrency);
-        $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor ?? null), $currency);
+        $rawBaseline = $row->baseline_amount_minor ?? null;
+        $baselineAmount = $rawBaseline === null ? null : Money::ofMinor(self::toInt($rawBaseline), $currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor ?? null), $currency);
 
         // The schema marks `detected_at` non-null; a corrupted row that is not
@@ -54,7 +57,7 @@ final class AnomalyAlertDtoMapper
             latestAmount: $latestAmount,
             currency: $currency,
             sensitivityPercentUsed: self::toInt($row->sensitivity_percent_used ?? null),
-            dismissedAs: self::toNonEmptyStringOrNull($row->dismissed_as ?? null),
+            dismissedAs: self::toDismissedAsOrNull($row->dismissed_as ?? null),
             detectedAt: $detectedAt,
             actionedAt: self::toDateOrNull($row->actioned_at ?? null),
             snoozedUntil: self::toDateOrNull($row->snoozed_until ?? null),
@@ -62,7 +65,7 @@ final class AnomalyAlertDtoMapper
     }
 
     /**
-     * @return list<string>
+     * @return list<AnomalyDetector>
      */
     private static function decodeReasons(mixed $value): array
     {
@@ -70,15 +73,7 @@ final class AnomalyAlertDtoMapper
             return [];
         }
 
-        $decoded = json_decode($value, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map(static fn (mixed $r): string => is_string($r) ? $r : '', $decoded),
-            static fn (string $r): bool => $r !== '',
-        ));
+        return AnomalyDetector::listFrom(json_decode($value, true));
     }
 
     private static function toDateOrNull(mixed $value): ?CarbonImmutable
@@ -95,14 +90,11 @@ final class AnomalyAlertDtoMapper
         return is_string($value) && $value !== '' ? $value : $baseCurrency;
     }
 
-    // Not CoercesScalars::toStringOrNull(): an empty `dismissed_as` means the
-    // alert was never dismissed, so it has to read as null rather than ''.
-    private static function toNonEmptyStringOrNull(mixed $value): ?string
+    // An empty or unrecognised `dismissed_as` means the alert was never
+    // dismissed by a build that knows this vocabulary, so it reads as null
+    // rather than as a word the caller would have to re-check.
+    private static function toDismissedAsOrNull(mixed $value): ?DismissedAs
     {
-        if (is_string($value) && $value !== '') {
-            return $value;
-        }
-
-        return null;
+        return is_string($value) ? DismissedAs::tryFrom($value) : null;
     }
 }

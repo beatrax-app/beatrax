@@ -7,6 +7,7 @@ namespace Modules\Desktop\Internal\Http\Livewire;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
@@ -18,12 +19,14 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
 // never forks on extension.
 final class FileStagingPage extends Component
 {
-    // Captured at mount time so refreshing the page mid-flow doesn't
-    // lose the file binding — the session-scoped store has already
-    // been cleared by mount().
+    // Captured at mount time so refreshing the page mid-flow doesn't lose the
+    // file binding — the session-scoped store has already been cleared. Its one
+    // writer realpath()s the file and allow-lists the extension; `?array` alone
+    // accepts an empty one, which reaches basename() with no path at all.
     /**
      * @var array{path: string, extension: string}|null
      */
+    #[Locked]
     public ?array $pending = null;
 
     public function mount(PendingFileIntent $intent): void

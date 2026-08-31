@@ -94,6 +94,10 @@ return [
         'heading' => 'Dezvoltator',
         'open_console' => 'Deschide consola de dezvoltare',
         'pulse' => 'Coadă :queue · Worker :worker',
+        // i18n-review: ro · dev.worker_ago — the 20-and-up arm writes «de» before
+        // the unit symbol, matching `dev::overview.heartbeat_age`. Whether an
+        // abbreviation keeps «de» is a native reader's call.
+        'worker_ago' => 'acum :count s|acum :count s|acum :count de s',
     ],
 
     'account' => [

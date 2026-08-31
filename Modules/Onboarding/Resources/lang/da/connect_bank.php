@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Slip din CAMT.053-fil her',
     'drop_lead_mt940' => 'Slip din MT940-fil her',
-    'drop_lead_asn' => 'Slip din ASN-CSV her',
-    'drop_lead_ing' => 'Slip din ING-CSV her',
+    'drop_lead_csv_layout' => 'Slip din :layout-CSV her',
     'drop_lead_pick_bank' => 'Vælg, hvilken bank der eksporterede din CSV — det skal vi vide for at læse den korrekt.',
     'drop_lead_default' => 'Slip din kontoudtogsfil her',
     'browse_file' => 'eller vælg en fil',
 
-    'banks_mt940' => 'Understøttet: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Understøttet: ASN, ING — flere formater kommer, efterhånden som brugere bidrager med eksempelfiler.',
-    'banks_default' => 'Understøttet: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 er et kontoudtog i XML — find det i netbanken under kontoudtog eller downloads.',
+    'format_help_mt940' => 'MT940 er et kontoudtog i ren tekst, som ligger som .sta eller .940 ved siden af XML og CSV.',
+    'format_help_csv' => 'CSV er regnearkseksporten. Hver bank ordner kolonnerne forskelligt, så vælg det layout, din fil passer til. Er dit ikke på listen, så bed banken om CAMT.053 eller MT940 i stedet.',
+
+    'account_name_default' => 'Bankkonto',
+    'account_name_layout' => ':layout-konto',
 
     'file_ready' => '· ✓ klar',
 

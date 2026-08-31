@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Ukloni iz prikaza (ne menja log datoteku)',
     'dismiss_aria' => 'Ukloni unos loga iz prikaza',
     'totals' => [
-        'showing' => 'Prikazano',
-        'of' => 'od',
-        'received' => 'primljeno (bafer do 10 hilj.)',
-        'lines_today' => 'redova danas',
+        'showing' => 'Prikazano :shown od :count primljenog reda (bafer do :cap)|Prikazano :shown od :count primljena reda (bafer do :cap)|Prikazano :shown od :count primljenih redova (bafer do :cap)',
+        'lines_today' => ':count red danas|:count reda danas|:count redova danas',
+        'lines_today_capped' => 'više od :count reda danas|više od :count reda danas|više od :count redova danas',
         'today' => 'danas',
-        'across' => 'u',
-        'daily_files' => 'dnevnih datoteka',
+        'all_files' => ':size u :count dnevnoj datoteci|:size u :count dnevne datoteke|:size u :count dnevnih datoteka',
     ],
 
     'status' => [

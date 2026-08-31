@@ -1,37 +1,62 @@
 # Which tax year a tagged transaction counts toward
 
-The obvious answer is "the year it was booked", and it is wrong often
-enough that the module never asks the question that way. A December
-invoice paid on 3 January belongs to the prior fiscal year. A refund
-lands two years after the expense it reverses. Somebody filing in
+The obvious answer is "the year it was booked", and it is wrong twice
+over. It is wrong about which day — the issuer's booking day is not the
+day anyone paid — and it is wrong to be automatic at all: a December
+invoice paid on 3 January belongs to the prior fiscal year, a refund
+lands two years after the expense it reverses, and somebody filing in
 February is working on last year's numbers, not this year's.
 
-So a tag carries its own year, the cockpit defaults to a year that is not
-necessarily the current one, and a leg-scoped tag reports the leg's
-amount rather than its parent's. This page is the three of those and the
-one deliberate non-error they share.
+So the year comes off the day the reader paid, a tag can carry its own
+year anyway, the cockpit defaults to a year that is not necessarily the
+current one, and a leg-scoped tag reports the leg's amount rather than
+its parent's. This page is those four and the one deliberate non-error
+they share.
 
-## The effective year is one SQL expression, repeated verbatim
+## Three rules, written down once
 
 Every read resolves the year the same way:
 
 ```sql
-COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.booked_at) AS INTEGER))
+COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.posted_at) AS INTEGER))
 ```
 
 An explicit `tax_year_override` on the tag always wins; otherwise the
-booked date's year is used. The override lives on the tag, not on the
-transaction, so reassigning a payment to another tax year never rewrites
-the ledger — the transaction keeps the date it actually has, and only the
-tax view moves.
+posted date's year is used — [which day that is, and why it is not the
+booked one](#which-day-the-year-is-taken-from), below. The override lives
+on the tag, not on the transaction, so reassigning a payment to another
+tax year never rewrites the ledger — the transaction keeps the date it
+actually has, and only the tax view moves.
 
-The expression appears in `TaxYearQuery::forUser()` (the cockpit, the CSV
-and the PDF all read through it), `TaxYearQuery::availableYears()` (the
+`TaggedRowScope::TRANSACTION_YEAR` holds the inner expression on its own,
+because two reads need it without a tag to coalesce against: the
+batch-tag suggestion counts the *untagged* rows on a counterparty in a
+year, and the batch apply lists them. Both spelled the year out by hand,
+and both spelled it out over the other column.
+
+Three surfaces read tagged rows: `TaxYearQuery::forUser()` (the cockpit,
+and the CSV and PDF through it), `TaxYearQuery::availableYears()` (the
 year switcher) and `TaxTagQuery::summaryForUser()` (the dashboard card).
-Keeping it identical in all three is what stops the year switcher from
-offering a year the cockpit then renders empty, or the dashboard card
-from disagreeing with the page it links to. A new query that resolves the
-year any other way will drift from the rest on its first override.
+Each of them must apply that year expression, [the leg-aware
+amount](#amounts-follow-the-tags-scope-not-the-transactions-total) and
+[the supersession filter](tag-write-contract.md#supersession) — and all
+three now come from `Internal\Support\TaggedRowScope`, the only place
+this module writes any of them. `Core`'s `NavCountsService` keeps a
+fourth copy of the supersession filter for the sidebar badge: it counts
+the same rows from outside the module, where `Internal` cannot be
+reached.
+
+They were written out per query before, and keeping the copies identical
+did not stop them drifting. The
+dashboard card was missing two of the three rules outright: it counted a
+whole-tx tag the cockpit had superseded, and it summed the parent's
+`settled_amount_minor` for a leg-scoped tag. The card read €1,362.39 over
+19 items beside a cockpit reading €1,137.89 over 18 — the same €124.50
+parent counted twice where the cockpit counted its €24.50 leg once. The
+year switcher was missing the supersession filter too, so it offered a
+year the cockpit then rendered as "€ 0,00 · 0 items". Three copies
+agreeing is not the same as one rule, and a query that reaches for the
+tag table without going through `TaggedRowScope` is the next one to drift.
 
 `TagTransaction` bounds the override to ±10 years of
 `Clock::now()->year` and throws `InvalidArgumentException` outside it —
@@ -40,6 +65,62 @@ cannot create a phantom entry in the year switcher a decade out. Time
 arrives through the injected `Clock` so the boundary is testable with the
 standard clock fake.
 
+## Which day the year is taken from
+
+`transactions` carries two days. `posted_at` is the day the transaction
+happened — for a card, the day it was swiped. `booked_at` is the day the
+issuer booked it, which on a real ICS statement is a different day on
+every row, and across the new year is a different *tax year*: a card used
+on 31 December books on 1 January. Everywhere else `booked_at` is just
+`posted_at` plus a synthetic time-of-day that keeps two same-day
+fingerprints apart. [The full model](../ledger/architecture.md) and [what
+it cost when a list ordered on one and printed the
+other](../../conventions/invariants-from-shipped-failures.md#a-list-sorted-by-a-column-it-does-not-show).
+
+The year is taken from `posted_at`, because that is the day the reader
+**paid**.
+
+Every deduction corpus in `resources/corpus/tax` is a private
+individual's return — the Dutch Box 1 `aangifte`, the US Schedule A and
+Schedule C, and thirty-one siblings. A private individual is a cash-basis
+taxpayer in all of them, and a cash-basis deduction falls in the year of
+payment:
+
+- **NL** — `Wet IB 2001` art. 6.40: aftrekbare uitgaven count when they
+  are *betaald, verrekend, ter beschikking gesteld of rentedragend
+  geworden*. The swipe is that moment: the debt to the merchant is
+  discharged there and replaced by a debt to the issuer.
+- **US** — Rev. Rul. 78-38 and 78-39: a cash-basis taxpayer who charges a
+  deductible expense to a **third-party** card deducts it in the year of
+  the *charge*, not the year the card bill is paid. This is the closest
+  thing to an explicit ruling on the question in the supported set, and
+  it names the charge.
+- **DE / AT / BE and the rest of the EU set** — the same `Abflussprinzip`
+  shape (`§11 EStG` and its siblings): the year the money left the
+  taxpayer's control.
+
+Not one of the thirty-three files anything on the *issuer's* booking
+date. That date is not a tax concept in any jurisdiction — it is an
+artefact of the acquirer-to-issuer clearing cycle, and its position
+relative to the swipe depends on weekends and bank holidays.
+
+There is a second reason, independent of the law. The transactions list,
+the triage inbox, search, the command palette and the transaction detail
+page all call `posted_at` this row's date. A tax page that filed the same
+row under another year would disagree with every screen the reader tagged
+it from, and `tax_year_override` — the deliberate escape hatch for the
+December-invoice-paid-in-January case — cannot do its job if the default
+it overrides is itself surprising. The reader has to be able to see what
+they are moving the row *off*.
+
+`TaxYearQuery` also orders and prints `posted_at` for the same reason:
+[the column a list orders on and the column it prints have to be the same
+column](../../conventions/invariants-from-shipped-failures.md#a-list-sorted-by-a-column-it-does-not-show).
+The CSV's date column is named `posted_date`, and the order breaks ties
+on `t.id` — `posted_at` is a DATE and leaves far more ties than the
+DATETIME the query used to sort on, and an export an accountant diffs
+must not reorder itself between two runs.
+
 ## The default year is seasonal
 
 With no `?year=` in the URL, the default year resolves January–April to
@@ -47,7 +128,7 @@ the *previous* year and May–December to the current one, matching the
 Dutch `aangifte` filing season: someone opening `/tax` in February is
 almost certainly working on last year's return.
 
-Unlike the SQL expression above, this rule is written down once, in
+This rule is written down once too, in
 `FilingSeason::defaultYear()`. `TaxPage::mount()` (the cockpit),
 `TaxSummaryCard::render()` (the dashboard card) and
 `HandlesTaxTagging::resolveCurrentTaxYear()` (the tag picker's fallback)
@@ -81,6 +162,17 @@ which loses the deduction entirely. See
 [`Ledger` architecture](../ledger/architecture.md) for the split model
 these legs come from.
 
+The CSV's `original_amount` obeys the same rule, and needs its own
+arithmetic to do so. `transaction_splits` records only the settled slice
+— there is no native amount on a leg — so `TaxYearQuery::mapRow()`
+derives one: the leg's native amount is the share of the parent's
+`amount_minor` that its `settled_amount_minor` is of the parent's,
+rounded half away from zero in integer arithmetic. For the common
+single-currency row that reproduces the leg exactly; for a $100 charge
+that settled at €90, a €30 leg reports $33.33. Reading `t.amount_minor`
+straight through instead put the whole parent's `124.50` beside a
+leg-sized `24.50` — on the one row shape an accountant opens directly.
+
 Two more rules govern the totals:
 
 - Every amount is summed from `settled_amount_minor`, an integer count of
@@ -101,22 +193,25 @@ conflating them puts a grocery category on a tax return.
 `TaxYearSummary::$totalMinor` sums non-income rows and nothing else:
 
 ```sql
-SUM(CASE WHEN t.type = 'income' THEN 0 ELSE ABS(t.settled_amount_minor) END)
+SUM(CASE WHEN t.type = 'income' THEN 0
+         ELSE ABS(COALESCE(ts.settled_amount_minor, t.settled_amount_minor)) END)
 ```
 
 Reading it as "all tagged money in the year" is the miscomputation to
-avoid. It matches the cockpit's "Total deductions" KPI by construction;
-folding income and deductions into one absolute sum produced a figure
-that matched neither number on the page, which is what the `CASE` exists
-to prevent. `TaxYearSummary::$count`, by contrast, does cover every
-tagged item regardless of type — so the total and the count deliberately
-do not describe the same set of rows.
+avoid. It matches the cockpit's "Total deductions" KPI — the `CASE`,
+the leg-aware `COALESCE` and the supersession filter are the three
+reasons it does, and the card lost that agreement each time one of them
+was missing. Folding income and deductions into one absolute sum produced
+a figure that matched neither number on the page, which is what the
+`CASE` exists to prevent. `TaxYearSummary::$count`, by contrast, does
+cover every tagged item regardless of type — so the total and the count
+deliberately do not describe the same set of rows.
 
 ## A year with no tags is not an error
 
 `TaxYearQuery::forUser()` returns a `TaxYearData` with zeroed totals and
 `categories: []` before it builds anything. `TaxCsvExporter::export()`
-writes its 16-column header first and only then iterates, so an empty
+writes its 17-column header first and only then iterates, so an empty
 year produces a valid header-only CSV rather than an empty file or an
 exception. The PDF renders its empty table the same way.
 

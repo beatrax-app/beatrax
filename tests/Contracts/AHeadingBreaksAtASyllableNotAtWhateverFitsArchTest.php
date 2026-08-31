@@ -12,9 +12,13 @@ use Tests\Helpers\CssRule;
 /** @return array{0: string, 1: string} the reflow selector, then the heading-only one */
 function headingWrapSelectors(): array
 {
+    // Neither is pinned to its closing brace. The heading list now ends in the
+    // block a page heading shares with its help mark -- an inline h1 cannot
+    // hold `balance` itself -- and a brace pinned after h6 read that addition
+    // as the whole rule having been deleted.
     return [
         "h1,\n    h2,\n    h3,\n    h4,\n    h5,\n    h6,\n    p,",
-        "h1,\n    h2,\n    h3,\n    h4,\n    h5,\n    h6 {",
+        "h1,\n    h2,\n    h3,\n    h4,\n    h5,\n    h6,\n    .heading-with-tip",
     ];
 }
 
@@ -52,4 +56,9 @@ it('does not hyphenate anything that prints a value', function (): void {
         ->and($headingAt)->not->toBeFalse()
         ->and($headingAt)->toBeGreaterThan($reflowAt, 'The hyphenation rule has to come after the reflow '
             .'rule it narrows, or the cascade drops it.');
+
+    // The heading list is matched by its opening selectors, so a `code`
+    // appended to the end of it would take hyphenation with it and leave this
+    // file green. toContain() takes needles, not a message, so the why is here.
+    expect(CssRule::selectorListFor($css, $headingSelector))->not->toContain('code');
 });

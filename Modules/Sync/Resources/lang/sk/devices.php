@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Tvoje zariadenia',
 
-    'moved_help' => 'Párovanie, názvy zariadení a šifrovanie nájdeš teraz pri stave synchronizácie.',
-    'moved_cta' => 'Otvoriť Synchronizáciu a zariadenie',
     'device_name' => 'Názov zariadenia',
     'save' => 'Uložiť',
     'peer_default_name' => 'Spárované zariadenie',
     'rename_device' => 'Premenovať zariadenie',
+    'rename_device_caption' => 'Premenovať',
     'this_device' => 'Toto zariadenie',
     'removed' => 'Odstránené',
     'confirmed' => 'Potvrdené',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Adresa relé',
     'relay_endpoint_help' => 'Voliteľné. Keď je nastavená, zariadenia offline sa synchronizujú cez toto relé. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
+    'relay_endpoint_help_phone' => 'Voliteľné. Keď je nastavená, zmeny putujú cez toto relé aj vtedy, keď tvoje zariadenia nie sú v rovnakej sieti. Toto zariadenie si ich prevezme, keď synchronizuješ z tejto obrazovky — nikdy na pozadí, pretože zámok aplikácie drží jediný kľúč. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
     'relay_endpoint_aria' => 'URL adresa relé',
     'relay_insecure_warning' => 'Táto adresa relé používa obyčajné HTTP. Relé tvoje údaje nikdy nedešifruje, no nezabezpečené spojenie prezradí pozorovateľom siete veľkosti a časovanie zašifrovaných prenosov. Pre najlepšie súkromie použi adresu <strong>https://</strong>.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Odstraňuje sa:',
     'remove_rotates_key' => 'Odstránenie tohto zariadenia vymení šifrovací kľúč, takže zariadenie už nedostane žiadne ďalšie aktualizácie.',
     'remove_cannot_erase' => 'Údaje, ktoré na tom zariadení už sú, sa vymazať nedajú. Ak sa zariadenie stratilo alebo ho niekto ukradol, ber všetky údaje na ňom ako vyzradené.',
+    'remove_is_local' => 'Tvoje ostatné zariadenia majú vlastný zoznam. Kým ho neodstrániš aj tam, budú sa s ním ďalej synchronizovať.',
     'remove_device' => 'Odstrániť zariadenie',
     'keep_device' => 'Ponechať zariadenie',
     'rotating_key' => 'Vymieňa sa šifrovací kľúč…',

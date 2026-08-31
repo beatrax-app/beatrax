@@ -8,12 +8,17 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Sync\Public\Events\EntityMutated;
 
-final class DeactivateRulesOnReferentDelete
+final readonly class DeactivateRulesOnReferentDelete
 {
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    private const string COUNTERPARTIES_TABLE = 'counterparties';
+
+    private const string DELETE_MUTATION = 'delete';
+
+    public function __construct(private DatabaseManager $db) {}
 
     public function handleCategoryDeleting(Model $category): void
     {
@@ -32,6 +37,27 @@ final class DeactivateRulesOnReferentDelete
             actionType: ActionType::Counterparty->value,
             payloadKey: 'counterparty_id',
             referentId: self::toInt($counterparty->getAttribute('id')),
+        );
+    }
+
+    // The garbage collector is the only thing in production that deletes a
+    // counterparty, and it deletes through the query builder, which fires no
+    // model event: the arm above never ran on a real install. This reads the
+    // row-level announcement that same write already makes.
+    /**
+     * @link ../../../../.docs/features/categorization/architecture.md#app-level-referential-integrity
+     */
+    public function handleCounterpartyPruned(EntityMutated $event): void
+    {
+        if ($event->table !== self::COUNTERPARTIES_TABLE || $event->mutationType !== self::DELETE_MUTATION) {
+            return;
+        }
+
+        $this->deactivate(
+            userId: $event->userId,
+            actionType: ActionType::Counterparty->value,
+            payloadKey: 'counterparty_id',
+            referentId: self::toInt($event->pk),
         );
     }
 

@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Passwords do not match.',
         'password_length' => 'Use at least 12 characters.',
         'pin_length' => 'PIN must be at least 6 digits.',
+        'pin_digits' => 'PIN must be 6 to 10 digits — numbers only.',
         'pins_mismatch' => "PINs don't match. Try again.",
         'session_expired' => 'Your session expired before setup finished. Please re-enter your PIN and password.',
         'retry_failed' => 'Still could not finish setting up this device. Please try again.',

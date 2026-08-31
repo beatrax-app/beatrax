@@ -10,12 +10,12 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 
-final class LogoutAction
+final readonly class LogoutAction
 {
     public function __construct(
-        private readonly AuthManager $auth,
-        private readonly SessionFactory $session,
-        private readonly LockStateManager $lockState,
+        private AuthManager $auth,
+        private SessionFactory $session,
+        private LockStateManager $lockState,
     ) {}
 
     public function __invoke(): void

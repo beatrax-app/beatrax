@@ -1,3 +1,4 @@
+@use('Modules\Calendar\Internal\Services\CalendarGrid')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Ledger\Public\Enums\Direction')
 {{--
@@ -15,7 +16,7 @@
     See UI-SPEC.md §2–§12 for the full binding visual contract.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
-<div class="mx-auto max-w-7xl px-1 sm:px-4 py-12" x-data="{ panelOpen: false }">
+<div class="mx-auto max-w-7xl px-1 sm:px-4 py-6" x-data="{ panelOpen: false }">
     <header class="mb-6">
         <x-core::page-heading style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</x-core::page-heading>
         <p class="mt-1 max-w-prose text-sm" style="color: var(--color-text-muted);">
@@ -32,6 +33,29 @@
         $riskDayList = array_values($riskDays);
         $riskCount = count($riskDayList);
     @endphp
+    {{-- Said once, above the grid: a currency with no rate is missing on every
+         day it appears on, and a cell that printed the converted figure anyway
+         drew a whole-looking balance off a partial one. --}}
+    @if ($unconvertedCurrencies !== [])
+        <div class="cal-summary-strip" data-not-converted="true">
+            <span style="color: var(--color-text-faint);">
+                {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $unconvertedCurrencies)]) }}
+            </span>
+        </div>
+    @endif
+
+    {{-- Said once here for the same reason: an account the balance line leaves
+         out is left out of every corner it appears on. Which cell it sits on
+         is the day panel's answer — the grid corner is a magnitude, the panel
+         is where the arithmetic is claimed. --}}
+    @if ($uncountedAccounts !== [])
+        <div class="cal-summary-strip" data-not-counted="true">
+            <span style="color: var(--color-text-faint);">
+                {{ Lang::get('calendar::messages.balance.not_counted', ['list' => implode(', ', $uncountedAccounts)]) }}
+            </span>
+        </div>
+    @endif
+
     @if ($isComputingAny || $riskCount > 0)
         <div class="cal-summary-strip" aria-live="polite" id="summary-strip">
             @if ($isComputingAny)
@@ -52,9 +76,10 @@
         <div class="flex flex-wrap items-center gap-2">
             <button
                 wire:click="prevMonth"
-                class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
                 aria-label="{{ Lang::get('calendar::messages.toolbar.prev_month') }}"
                 style="min-width: 44px; min-height: 44px;"
+                @if ($atFloor) disabled aria-disabled="true" @endif
             >←</button>
             <span class="text-base font-semibold" style="color: var(--color-text);">
                 {{ \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->translatedFormat('M Y') }}
@@ -181,13 +206,13 @@
             {{-- Day-of-week headers --}}
             <thead>
                 <tr>
-                    @foreach ([Lang::get('calendar::messages.weekdays.mon'), Lang::get('calendar::messages.weekdays.tue'), Lang::get('calendar::messages.weekdays.wed'), Lang::get('calendar::messages.weekdays.thu'), Lang::get('calendar::messages.weekdays.fri'), Lang::get('calendar::messages.weekdays.sat'), Lang::get('calendar::messages.weekdays.sun')] as $heading)
+                    @foreach (CalendarGrid::weekdayLabelKeys() as $headingKey)
                         <th
                             scope="col"
                             class="px-2 py-1 text-center text-xs font-semibold"
                             style="background: var(--color-bg-subtle); color: var(--color-text-faint); border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);"
                         >
-                            {{ $heading }}
+                            {{ Lang::get($headingKey) }}
                         </th>
                     @endforeach
                 </tr>
@@ -222,10 +247,11 @@
                             // panel shows two decimals. The panel is the precise surface; the
                             // grid corner is a glanceable magnitude, and the rose risk tint
                             // (driven by the exact minor-unit sign, not this string) stays correct.
-                            $balanceStr = $day->isComputing
-                                ? '—'
-                                : Money::ofMinor($day->eodBalanceMinor, $day->currency)->formatWholeUnits();
-                            $balanceColor = ($day->isComputing || $day->eodBalanceMinor >= 0)
+                            $hasFigure = $day->showsBalance();
+                            $balanceStr = $hasFigure
+                                ? Money::ofMinor($day->eodBalanceMinor, $day->currency)->formatWholeUnits()
+                                : '—';
+                            $balanceColor = (! $hasFigure || $day->eodBalanceMinor >= 0)
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
 
@@ -235,7 +261,7 @@
                                 'count' => $entryCount,
                                 'entries' => $entriesWord,
                             ]);
-                            if (!$day->isComputing) {
+                            if ($hasFigure) {
                                 // Announce the sign — a screen reader on a −€450 risk day must not hear "€450"
                                 $balanceAmount = Money::ofMinor(abs($day->eodBalanceMinor), $day->currency)->formatWholeUnits();
                                 $ariaLabel .= $day->eodBalanceMinor < 0
@@ -256,7 +282,7 @@
                         >
                             {{-- Day number (centred on phone, top-left beside the
                                  balance corner once the entry rows appear) --}}
-                            <div class="flex items-center justify-center sm:justify-between">
+                            <div class="cal-day-head justify-center sm:justify-between">
                                 <span class="cal-day-num
                                     {{ $day->isToday ? 'inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-600' : '' }}"
                                     style="{{ $day->isToday ? '' : ($day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : 'color: var(--color-text);') }}"

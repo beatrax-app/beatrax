@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
@@ -245,7 +246,7 @@ it('new-inbox callback without a refresh token rejects with flash and inserts no
     $response->assertRedirect(route('inboxes.index'));
     $response->assertSessionHas('oauth_failed');
     $flashed = session('oauth_failed');
-    expect($flashed)->toContain('refresh token');
+    expect($flashed)->toBe(Lang::get('email-scan::inboxes.oauth_no_offline_access_google'));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -353,7 +354,8 @@ it('compensating rollback: secret-write failure deletes the just-inserted inbox 
     $response->assertRedirect(route('inboxes.index'));
     $response->assertSessionHas('oauth_failed');
     $flashed = session('oauth_failed');
-    expect($flashed)->toContain('simulated write failure');
+    expect($flashed)->toBe(Lang::get('email-scan::inboxes.oauth_not_saved'))
+        ->and($flashed)->not->toContain('simulated write failure');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

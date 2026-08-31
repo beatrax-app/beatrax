@@ -18,10 +18,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
@@ -40,7 +42,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
     /** @var list<string> */
-    private const DISCOVERY_KEYWORDS = [
+    private const array DISCOVERY_KEYWORDS = [
         'receipt',
         'factuur',
         'betaling',
@@ -49,7 +51,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         'bevestiging',
     ];
 
-    private const DISCOVERY_MAX_PAGES = 10;
+    private const int DISCOVERY_MAX_PAGES = 10;
 
     public function __construct(public readonly int $userId) {}
 
@@ -82,11 +84,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
         $connection = $db->connection();
 
-        // Discovery (per-user lock) runs concurrently with the hourly
-        // incremental scan (per-inbox lock); without this pragma one
-        // contended write throws mid-loop and silently aborts the pass.
-        $connection->statement('PRAGMA busy_timeout = 5000');
-
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 
@@ -112,7 +109,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     private function buildExcludeList(Connection $connection, User $user, KnownSenderQuery $senderQuery): array
     {
         $knownPatterns = array_map(
-            static fn ($s) => $s->emailPattern,
+            static fn (KnownSenderDto $s): string => $s->emailPattern,
             $senderQuery->all($user),
         );
         $rawDismissed = $connection->table('discovered_senders')
@@ -347,7 +344,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
             ->first();
 
         $now = $clock->now()->toDateTimeString();
-        $internalDateStr = $msg['internalDate']->format('Y-m-d H:i:s');
+        $internalDateStr = Instant::appLocal($msg['internalDate']);
 
         if ($existing === null) {
             $connection->table('discovered_senders')->insert([
@@ -373,11 +370,17 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         $existingCount = self::toInt($existing->occurrence_count ?? 0);
         $existingName = is_string($existing->sender_name ?? null) ? $existing->sender_name : null;
 
+        // Graph rejects $orderby alongside $search, so an older message can
+        // arrive after a newer one. Stamping it verbatim walks last_seen_at
+        // backwards, out of DiscoveredSenderQuery's window, and the sender
+        // vanishes on the very pass that qualified it.
+        $existingSeen = is_string($existing->last_seen_at ?? null) ? $existing->last_seen_at : '';
+
         $connection->table('discovered_senders')
             ->where('id', $existing->id)
             ->update([
                 'occurrence_count' => $existingCount + 1,
-                'last_seen_at' => $internalDateStr,
+                'last_seen_at' => max($existingSeen, $internalDateStr),
                 'sender_name' => $senderName ?? $existingName,
                 'updated_at' => $now,
             ]);

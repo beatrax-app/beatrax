@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\DevConsoleBuildGate;
 use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
@@ -75,6 +76,7 @@ function paletteMatchDeveloperRegistry(): array
         app(NavigationRegistry::class),
         app(DevCommandRegistry::class),
         app(AppActionRegistry::class),
+        app(DevConsoleBuildGate::class),
     );
 }
 

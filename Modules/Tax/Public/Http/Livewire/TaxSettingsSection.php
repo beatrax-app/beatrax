@@ -11,7 +11,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
+use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxSettingsSection extends Component
@@ -41,8 +42,13 @@ final class TaxSettingsSection extends Component
             $writer->add($currentUser->user()->id, $name);
             $this->newCategoryName = '';
             $this->addSuccess = true;
-        } catch (\RuntimeException $e) {
-            $this->addError = $e->getMessage();
+        } catch (DuplicateTaxCategoryNameException $duplicate) {
+            $this->addError = $duplicate->getMessage();
+        } catch (\RuntimeException) {
+            // Its sibling carries a developer's sentence in one language — the
+            // row went in and its id could not be read back — and printing that
+            // under the name box would also blame a name that is fine.
+            $this->addError = Lang::get('tax::messages.errors.category_not_saved');
         }
     }
 
@@ -58,8 +64,13 @@ final class TaxSettingsSection extends Component
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
             $this->reportCategoryGone();
-        } catch (\InvalidArgumentException|\RuntimeException $e) {
+        } catch (DuplicateTaxCategoryNameException|\InvalidArgumentException $e) {
             $this->renameError = $e->getMessage();
+        } catch (\RuntimeException) {
+            // The siblings of those two are a driver's sentence and a
+            // developer's, both in one language and one of them carrying the
+            // statement it failed on. Neither belongs under a name box.
+            $this->renameError = Lang::get('tax::messages.errors.category_not_saved');
         }
     }
 

@@ -16,7 +16,6 @@ return [
 
     'progress_aria' => 'Voortgang van het instellen',
     'step_progress' => 'Stap :current van :total',
-    'step_dot_aria' => 'Stap :number van :total',
 
     'eyebrow_step' => 'Stap :number — ',
 ];

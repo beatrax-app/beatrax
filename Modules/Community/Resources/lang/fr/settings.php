@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'À propos de la liste partagée',
     'about_body' => 'Un fichier YAML intégré qui associe les codes cryptiques des relevés bancaires à des noms de commerçants lisibles. Activer l\'option autorise Beatrax à lire la liste à l\'import ; envoyer une suggestion ouvre GitHub dans ton navigateur.',
 
-    'mappings' => 'Correspondances',
-    'contributors' => 'Contributeurs',
+    'mappings' => ':count correspondance|:count correspondances',
+    'contributors' => ':count contributeur|:count contributeurs',
 
     'use_shared_list' => [
         'title' => 'Utiliser la liste partagée des commerçants',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Mettre à jour la liste partagée lors des mises à jour de l\'app',
         'help' => 'Actualise la liste intégrée chaque fois que Beatrax se met à jour.',
+        'help_phone' => 'Actualise la liste intégrée chaque fois qu\'une nouvelle version de Beatrax est installée depuis l\'App Store ou Google Play.',
         'note' => 'S\'active avec une future mise à jour de l\'app — voir Paramètres → À propos pour la version actuelle.',
     ],
 ];

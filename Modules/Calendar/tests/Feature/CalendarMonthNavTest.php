@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
+use Modules\Calendar\Internal\Services\CalendarMonthWindow;
 use Modules\Core\Models\User;
 
 function cmnUser(string $suffix = 'cmn'): User
@@ -55,25 +56,32 @@ it('nextMonth advances the display month forward by one', function (): void {
         ->assertSet('year', 2026);
 });
 
-it('nextMonth is a no-op when the next month exceeds the 12-month forecast horizon', function (): void {
+// The ceiling is derived from the projection the balance line is drawn from,
+// never counted off in months, so the test reads it from the same place the
+// page does rather than restating a number that moves with the day.
+it('nextMonth is a no-op at the ceiling month the projection reaches', function (): void {
     $user = cmnUser('cmn-ceiling');
+    $ceiling = app(CalendarMonthWindow::class)->ceilingMonth();
 
-    // today = 2026-06-12 → ceiling month = 2027-06.
     Livewire::actingAs($user)
-        ->test(CalendarPage::class, ['month' => 6, 'year' => 2027])
+        ->test(CalendarPage::class, ['month' => $ceiling->month, 'year' => $ceiling->year])
         ->call('nextMonth')
-        ->assertSet('month', 6)
-        ->assertSet('year', 2027);
+        ->assertSet('month', $ceiling->month)
+        ->assertSet('year', $ceiling->year);
 });
 
-it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month', function (): void {
+it('clamps a tampered ?year=&month= beyond the horizon to the ceiling month', function (): void {
     $user = cmnUser('cmn-url-ceiling');
 
-    // today = 2026-06-12 → ceiling month = 2027-06. A direct URL for 2099-12
-    // must render that, not a far-future grid of phantom data.
+    // A direct URL for 2099-12 must render the ceiling month, not a far-future
+    // grid of phantom data. today = 2026-06-12 puts that at May 2027: June's
+    // strip runs to 4 July 2027, three weeks past the projection behind it.
+    $ceiling = app(CalendarMonthWindow::class)->ceilingMonth();
+    expect($ceiling->format('M Y'))->toBe('May 2027');
+
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 12, 'year' => 2099])
-        ->assertSee('Jun 2027');
+        ->assertSee($ceiling->format('M Y'));
 });
 
 it('clamps an invalid #[Url] month value (0) to the current month', function (): void {

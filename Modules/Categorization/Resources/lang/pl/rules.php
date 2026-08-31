@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Reguły pozostają na tym urządzeniu. Nie są udostępniane innym Twoim urządzeniom.',
 
     'reapply' => 'Zastosuj reguły ponownie do historii',
+    'reapply_confirm' => 'Zastosować ponownie wszystkie reguły do całej Twojej historii? Każda kategoria, kontrahent, notatka i znacznik podatkowy ustawione przez regułę zostaną nadpisane. To, co ustawiono ręcznie, zostaje, tak samo jak wszystko na uzgodnionym wyciągu. Nic nie przywróci starych wartości.',
     'reapplying' => 'Ponowne stosowanie…',
     'new_rule' => 'Nowa reguła',
 
-    'reapply_progress_lead' => 'Ponowne stosowanie reguł…',
-    'reapply_progress_of' => 'z',
-    'reapply_progress_trail' => 'sprawdzonych transakcji',
+    'reapply_progress' => 'Ponowne stosowanie reguł… :checked z :count sprawdzonej transakcji|Ponowne stosowanie reguł… :checked z :count sprawdzonych transakcji|Ponowne stosowanie reguł… :checked z :count sprawdzonych transakcji',
 
     'empty_heading' => 'Brak reguł',
     'empty_body' => 'Reguły dopasowują transakcje na podstawie wielu warunków i automatycznie zmieniają kategorię, kontrahenta, notatkę oraz znacznik podatkowy — podczas importu i przy każdym ponownym zastosowaniu do istniejącej historii.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Utworzono',
     'col_row_actions' => 'Akcje',
     'inactive_badge' => 'Wyłączona',
+    'combinator_all' => 'WSZYSTKIE',
+    'combinator_any' => 'DOWOLNY',
     'inactive_title' => 'Ta reguła nie działa. Reguła wyłącza się, gdy kategoria lub kontrahent, na które wskazuje, zostaną usunięte.',
 
     'more_conditions' => '+:count więcej',

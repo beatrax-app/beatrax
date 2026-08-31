@@ -47,45 +47,45 @@ it('drop zone is interactive when MT940 is selected', function (): void {
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
-it('drop zone is disabled when CSV is selected without a bank chip', function (): void {
+it('drop zone is disabled when CSV is selected without a layout chip', function (): void {
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
         ->assertSeeHtml('aria-disabled="true"');
 });
 
-it('drop zone becomes interactive when CSV is paired with the ASN bank chip', function (): void {
+it('drop zone becomes interactive when CSV is paired with a layout chip', function (): void {
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
-        ->call('setCsvBank', 'asn-csv')
+        ->call('setCsvLayout', 'asn-csv')
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
-it('makes the ING bank chip select the preset format the import runs as', function (): void {
+it('makes a layout chip select the preset format the import runs as', function (): void {
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
-        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->call('setCsvLayout', CsvPresetRegistry::ING_NL)
         ->assertSet('selectedFormat', CsvPresetRegistry::ING_NL)
-        ->assertSet('csvBankPicked', true)
+        ->assertSet('csvLayoutPicked', true)
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
-it('re-gates the drop zone when the format chip moves back off the picked bank', function (): void {
+it('re-gates the drop zone when the format chip moves back off the picked layout', function (): void {
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
-        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->call('setCsvLayout', CsvPresetRegistry::ING_NL)
         ->call('setFormat', 'asn-csv')
-        ->assertSet('csvBankPicked', false)
+        ->assertSet('csvLayoutPicked', false)
         ->assertSeeHtml('aria-disabled="true"');
 });
 
-it('refuses a submit made from the CSV landing default before a bank is named', function (): void {
+it('refuses a submit made from the CSV landing default before a layout is named', function (): void {
     $upload = UploadedFile::fake()->createWithContent('statement.csv', "Datum\n20260501\n");
 
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
         ->set('file', $upload)
         ->call('submit')
-        ->assertHasErrors('csvBankPicked')
+        ->assertHasErrors('csvLayoutPicked')
         ->assertNotDispatched('wizard.step.completed');
 });
 
@@ -142,7 +142,7 @@ it('imports an ING CSV picked in onboarding through to a previewed run', functio
 
     Livewire::test(ConnectBankStep::class)
         ->call('setFormat', 'asn-csv')
-        ->call('setCsvBank', CsvPresetRegistry::ING_NL)
+        ->call('setCsvLayout', CsvPresetRegistry::ING_NL)
         ->set('file', $upload)
         ->call('submit')
         ->assertSet('uploadError', null)

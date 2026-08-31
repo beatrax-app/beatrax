@@ -118,10 +118,6 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-The behavioural contract for the `Ledger` module.
-
-## Behavioral contracts
-
 - **`RecordsTransactions` is the SOLE sanctioned writer for
   `transactions`.** No other module / no other class issues
   INSERTs / UPDATEs against the table. The arch invariant
@@ -172,6 +168,15 @@ The behavioural contract for the `Ledger` module.
 - **`PeriodQuery` honours `users.period_start_day`.** A user
   with `period_start_day = 25` sees their "month" run from
   the 25th of one month to the 24th of the next. Default 1.
+- **`PopulatedPeriodQuery::latestWithRecords` answers null
+  twice for different reasons.** Null when the period in view
+  already holds records, and null again when the reader has
+  imported nothing at all — the second reader is offered the
+  import path, never a jump to nothing. It honours
+  `period_start_day` the same way `PeriodQuery` does, and both
+  of its reads filter `user_id`: the offer's absence dates
+  another household member's transactions just as loudly as
+  its presence would.
 - **The fingerprint rederive command is idempotent.** Running
   `beatrax:rederive-fingerprints` twice produces no change
   on the second run (the v3 algorithm is deterministic).

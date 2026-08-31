@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'seeria',
 
+    'template' => [
+        'cancel' => 'Tühista :name',
+        'change_amount' => 'Muuda :name summat',
+    ],
+
     'summary' => [
         'cancel' => 'Tühista :name',
         'series_fallback' => 'seeria #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Stsenaarium on ümber nimetatud.',
         'mutation_added' => 'Muudatus lisatud.',
         'mutation_updated' => 'Muudatus uuendatud.',
-        'mutation_removed' => 'Muudatus eemaldatud. Võta tagasi',
+        'mutation_removed' => 'Muudatus eemaldatud.',
     ],
 
     'errors' => [
         'name_empty' => 'Stsenaariumi nimi ei saa olla tühi.',
         'name_too_long' => 'Stsenaariumi nimi tohib olla kuni :max märk.|Stsenaariumi nimi tohib olla kuni :max märki.',
         'name_taken' => 'Sellise nimega stsenaarium on juba olemas.',
+        'date_out_of_range' => 'See kuupäev jääb väljapoole iga prognoosihorisonti — tänasest kuni :days päev ette —, nii et stsenaarium ei muudaks midagi.|See kuupäev jääb väljapoole iga prognoosihorisonti — tänasest kuni :days päeva ette —, nii et stsenaarium ei muudaks midagi.',
         'pick_kind_first' => 'Vali kõigepealt muudatuse liik.',
         'amount_positive' => 'Summa peab olema positiivne arv.',
+        'scenario_gone' => 'Seda stsenaariumi enam ei ole — see kustutati mujal. Vali mõni teine stsenaarium või loo uus.',
+        'mutation_gone' => 'Seda muudatust enam ei ole — see eemaldati mujal. Sulge redaktor ja lisa see uuesti, kui soovid seda veel.',
     ],
 ];

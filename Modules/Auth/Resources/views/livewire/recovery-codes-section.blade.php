@@ -19,6 +19,7 @@
         size="sm"
         class="mt-3"
         wire:click="regenerate"
+        wire:confirm="{{ Lang::get('auth::recovery_codes.settings.regenerate_confirm') }}"
         wire:loading.attr="disabled"
     >{{ Lang::get('auth::recovery_codes.settings.regenerate') }}</x-core::secondary-button>
 </div>

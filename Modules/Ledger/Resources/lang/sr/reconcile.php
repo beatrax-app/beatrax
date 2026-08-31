@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'izaberi račun',
+        'choose_date' => 'izaberi datum izvoda',
         'enter_balance' => 'unesi stanje sa izvoda',
         'matched' => 'poklapa se — :amount',
         'discrepancy' => 'odstupanje — :amount',
+        'reconciled_through' => 'usaglašeno do :date',
     ],
 
     'mismatch_html' => 'Stanje sa izvoda se još ne poklapa sa tvojim proknjiženim stanjem. Uključi ili isključi proknjižene redove na <a href=":url" class="underline">listi transakcija</a> ili prilagodi uneseno stanje dok razlika ne dođe do nule — ovaj tok nikada ne pravi stavku za izravnanje.',
+    'unreachable_no_baseline_html' => 'Nijedna kombinacija redova ne može ovu razliku svesti na nulu. Ovaj račun nema zabeleženo početno stanje, pa se njegovo stanje meri od nule. Uvezi izvod sa kojim se račun otvara ili postavi početno stanje u <a href=":url" class="underline">Podešavanjima</a>.',
+    'unreachable' => 'Nijedna kombinacija redova ne može ovu razliku svesti na nulu: nalazi se izvan raspona svih redova na ovom računu do zadatog datuma. Proveri datum izvoda i uneseno stanje.',
 
     'check' => 'Proveri',
     'complete' => 'Dovrši usaglašavanje',
+    'complete_unavailable' => 'Do ovog datuma više nema ništa za zaključavanje — označi još redova kao proknjižene ili izaberi kasniji datum izvoda.',
 
     'errors' => [
         'choose_account' => 'Prvo izaberi račun.',

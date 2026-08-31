@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
@@ -19,6 +20,11 @@ use Modules\Migration\Models\MigrationRun;
 
 final class PreviewMigration extends Component
 {
+    // Locked because a Livewire property is client-mutable between requests,
+    // and this one names the run confirm() and discard() act on. A foreign
+    // id 404s on the guard below, so nothing is disclosed -- but it would
+    // still be the client choosing which of its own runs is committed.
+    #[Locked]
     public int $runId = 0;
 
     public function mount(int $id): void

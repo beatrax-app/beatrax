@@ -9,6 +9,10 @@ use Illuminate\Filesystem\Filesystem;
 
 final class FakeGraphApiClient implements GraphApiClientContract
 {
+    // The one sentence this fake gives a throttled caller, so a test asserting
+    // on it is asserting on the client's whole rate-limit story.
+    private const string RATE_LIMIT_MESSAGE = 'Microsoft Graph rate limit exceeded.';
+
     /** @var list<array{method: string, args: array<int|string, mixed>}> */
     private array $calls = [];
 
@@ -23,6 +27,12 @@ final class FakeGraphApiClient implements GraphApiClientContract
 
     /** @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}> */
     private array $queuedDiscoveryResponses = [];
+
+    /** @var list<array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}> */
+    private array $queuedDeltaResponses = [];
+
+    /** @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}|int> */
+    private array $queuedSenderPages = [];
 
     public function __construct(
         private readonly Filesystem $files,
@@ -47,6 +57,15 @@ final class FakeGraphApiClient implements GraphApiClientContract
         ]];
 
         $this->maybeThrowRateLimit($inboxId);
+
+        if ($this->queuedSenderPages !== []) {
+            $queued = array_shift($this->queuedSenderPages);
+            if (is_int($queued)) {
+                throw new RateLimitedException($queued, self::RATE_LIMIT_MESSAGE);
+            }
+
+            return $queued;
+        }
 
         $fixture = $nextLink === null
             ? 'messages-page-1.json'
@@ -98,7 +117,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
             $error = $payload['error'] ?? null;
             $message = is_array($error) && isset($error['message']) && is_string($error['message'])
                 ? $error['message']
-                : 'Microsoft Graph rate limit exceeded.';
+                : self::RATE_LIMIT_MESSAGE;
             throw new RateLimitedException($retryAfter, $message);
         }
 
@@ -112,7 +131,13 @@ final class FakeGraphApiClient implements GraphApiClientContract
             throw CursorExpiredException::graph($message);
         }
 
-        $payload = $this->readJson('delta-baseline.json');
+        if ($this->queuedDeltaResponses !== []) {
+            return array_shift($this->queuedDeltaResponses);
+        }
+
+        // A baseline call carries no stored link and legitimately answers an
+        // empty page; a walk from a stored cursor answers a real delta page.
+        $payload = $this->readJson($deltaLink === null ? 'delta-baseline.json' : 'delta-page-1.json');
         /** @var list<array<string, mixed>> $messages */
         $messages = is_array($payload['value'] ?? null) ? $payload['value'] : [];
         $rawDelta = $payload['@odata.deltaLink'] ?? null;
@@ -172,6 +197,41 @@ final class FakeGraphApiClient implements GraphApiClientContract
         ];
     }
 
+    // Graph splits a delta across pages exactly as it splits a message list:
+    // only the final page carries @odata.deltaLink. Queue the pages a scenario
+    // needs; the fixture default stands in for the single-page case.
+    /**
+     * @param  list<array<string, mixed>>  $messages
+     */
+    public function queueDeltaResponse(array $messages, ?string $deltaLink, ?string $nextLink = null): void
+    {
+        $this->queuedDeltaResponses[] = [
+            'messages' => $messages,
+            'deltaLink' => $deltaLink,
+            'nextLink' => $nextLink,
+        ];
+    }
+
+    // An empty page mid-walk is legal for both providers, and the page-1 /
+    // page-2-empty fixture pair cannot express one.
+    /**
+     * @param  list<array<string, mixed>>  $messages
+     */
+    public function queueSenderPage(array $messages, ?string $nextLink = null): void
+    {
+        $this->queuedSenderPages[] = [
+            'messages' => $messages,
+            'nextLink' => $nextLink,
+        ];
+    }
+
+    // Interrupts the walk at a chosen page rather than at its first call, so a
+    // test can prove the retry resumes from the page cursor it stopped on.
+    public function queueSenderPageRateLimit(int $retryAfterSeconds = 60): void
+    {
+        $this->queuedSenderPages[] = $retryAfterSeconds;
+    }
+
     public function simulateRateLimit(int $inboxId, int $retryAfterSeconds = 2): void
     {
         $this->rateLimitedInboxes[$inboxId] = $retryAfterSeconds;
@@ -208,7 +268,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
         $error = $payload['error'] ?? null;
         $message = is_array($error) && isset($error['message']) && is_string($error['message'])
             ? $error['message']
-            : 'Microsoft Graph rate limit exceeded.';
+            : self::RATE_LIMIT_MESSAGE;
         throw new RateLimitedException($retryAfter, $message);
     }
 
@@ -233,6 +293,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
             throw new FixtureUnusableException('EmailScan fixture eml root not found.');
         }
         $map = [
+            'private' => $emlRoot.'/private/sample-private-mail.eml',
             'paypal' => $emlRoot.'/paypal/sample-receipt.eml',
             'ics' => $emlRoot.'/ics/sample-statement-notice.eml',
             'googleplay' => $emlRoot.'/googleplay/sample-purchase.eml',

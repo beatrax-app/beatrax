@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
-use Modules\Goals\Internal\Enums\GoalProgressState;
+use Modules\Goals\Public\Enums\GoalProgressState;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
@@ -113,8 +113,12 @@ it('leaves an attribution it cannot price out of the bar rather than counting it
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
+    // "Out of the bar" is only half of it: the row also has to be able to SAY
+    // what it left out, or the bar is short with nothing explaining why.
     expect($rows[0]->contributedMinor)->toBe(0)
-        ->and($rows[0]->progressState)->toBe(GoalProgressState::InProgress->value);
+        ->and($rows[0]->progressState)->toBe(GoalProgressState::InProgress->value)
+        ->and($rows[0]->unconverted)->toBe(['AED'])
+        ->and($rows[0]->isPartial())->toBeTrue();
 });
 
 it('prices an attribution in a currency it can reach', function (): void {

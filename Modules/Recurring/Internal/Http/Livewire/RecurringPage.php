@@ -41,7 +41,7 @@ final class RecurringPage extends Component
             return;
         }
         $bus->dispatchSync(new DetectRecurringSeriesJob($currentUser->user()->id));
-        $this->toastWithUndo(Lang::get('recurring::index.detecting_toast'), undoAction: '', undoPayload: null);
+        $this->toast(Lang::get('recurring::index.detecting_toast'));
     }
 
     public function render(

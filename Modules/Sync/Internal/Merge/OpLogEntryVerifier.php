@@ -33,6 +33,7 @@ final readonly class OpLogEntryVerifier
         private ?GdkKeyringService $keyringService,
         private ?Session $session,
         private OpLogQuarantine $quarantine,
+        private PriorAuthorship $priorAuthorship,
     ) {}
 
     // Filters to the scoped $userId (defense in depth) and the Ed25519 gate,
@@ -77,6 +78,40 @@ final readonly class OpLogEntryVerifier
         return $verified;
     }
 
+    /**
+     * @param  list<OpLogEntry>  $stored  Read back OUT of op_log_entries, so already gated.
+     * @return list<OpLogEntry>
+     *
+     * @link ../../../../.docs/features/sync/op-log-merge-rules.md#a-batch-is-not-the-set-a-strategy-resolves-over
+     */
+    public function prepareStored(array $stored, int $userId): array
+    {
+        $prepared = [];
+        $keyring = null;
+        $keyringLoaded = false;
+
+        foreach ($stored as $entry) {
+            if ($entry->gdkEpoch === null || ! $this->sensitiveFields->isSensitive($entry->table, $entry->field)) {
+                $prepared[] = $entry;
+
+                continue;
+            }
+
+            if (! $keyringLoaded) {
+                $keyring = $this->tryLoadKeyring($userId);
+                $keyringLoaded = true;
+            }
+
+            $plain = $this->decryptEntryValue($entry, $keyring);
+
+            if ($plain !== null) {
+                $prepared[] = $entry->withDecryptedValue($plain);
+            }
+        }
+
+        return $prepared;
+    }
+
     // A rejected entry goes to quarantine ONLY, never to op_log_entries, and
     // a passing one is persisted BEFORE any decrypt so the durable log keeps
     // the original ciphertext. Authorization judges the entry as the peer sent
@@ -112,8 +147,8 @@ final readonly class OpLogEntryVerifier
             $this->isSystemDevice($entry->deviceId) => $entry->userId === $userId
                 ? null
                 : QuarantineReason::CrossUser,
-            ($this->deviceKeys[$entry->deviceId] ?? null) === null => QuarantineReason::MissingDeviceKey,
-            ! $this->verifySignature($entry) => QuarantineReason::ForgedSignature,
+            $this->publicKeyFor($entry, $userId) === null => $this->unverifiableAuthor($entry, $userId),
+            ! $this->verifySignature($entry, $userId) => QuarantineReason::ForgedSignature,
             default => null,
         };
 
@@ -143,9 +178,30 @@ final readonly class OpLogEntryVerifier
         return $deviceId === OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID;
     }
 
-    private function verifySignature(OpLogEntry $entry): bool
+    // The confirmed map first, then the key the registry retains for a device
+    // that has since been removed. Retention adds no admission: removal closes
+    // the Noise transport, so a revoked device can no longer deliver anything,
+    // and the ops it wrote while trusted are ordinary history.
+    private function publicKeyFor(OpLogEntry $entry, int $userId): ?string
     {
-        $pubKeyHex = $this->deviceKeys[$entry->deviceId] ?? null;
+        return $this->deviceKeys[$entry->deviceId]
+            ?? $this->priorAuthorship->retainedKeyFor($userId, $entry->deviceId);
+    }
+
+    // An entry this device already accepted stays accepted even when nothing
+    // left can verify it — a device removed before the registry retained its
+    // key leaves exactly that state, and a rebuild that refused it would drop
+    // every row it created and never put one back.
+    private function unverifiableAuthor(OpLogEntry $entry, int $userId): ?QuarantineReason
+    {
+        return $this->priorAuthorship->alreadyAccepted($entry, $userId)
+            ? null
+            : QuarantineReason::MissingDeviceKey;
+    }
+
+    private function verifySignature(OpLogEntry $entry, int $userId): bool
+    {
+        $pubKeyHex = $this->publicKeyFor($entry, $userId);
 
         if ($pubKeyHex === null) {
             return false;
@@ -201,19 +257,7 @@ final readonly class OpLogEntryVerifier
             return null;
         }
 
-        return new OpLogEntry(
-            table: $entry->table,
-            pk: $entry->pk,
-            field: $entry->field,
-            value: $plain,
-            hlcL: $entry->hlcL,
-            hlcC: $entry->hlcC,
-            deviceId: $entry->deviceId,
-            opType: $entry->opType,
-            signature: $entry->signature,
-            userId: $entry->userId,
-            gdkEpoch: $entry->gdkEpoch,
-        );
+        return $entry->withDecryptedValue($plain);
     }
 
     // Returns the decrypted plaintext, or null for ANY fail-closed condition

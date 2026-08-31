@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Dispozitivele tale',
 
-    'moved_help' => 'Împerecherea, numele dispozitivelor și criptarea se află acum lângă starea sincronizării.',
-    'moved_cta' => 'Deschide Sincronizare și dispozitiv',
     'device_name' => 'Numele dispozitivului',
     'save' => 'Salvează',
     'peer_default_name' => 'Dispozitiv împerecheat',
     'rename_device' => 'Redenumește dispozitivul',
+    'rename_device_caption' => 'Redenumește',
     'this_device' => 'Acest dispozitiv',
     'removed' => 'Eliminat',
     'confirmed' => 'Confirmat',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Punctul final al releului',
     'relay_endpoint_help' => 'Opțional. Când este setat, dispozitivele offline se sincronizează prin acest releu. Lasă gol pentru doar LAN&#8209;direct.',
+    'relay_endpoint_help_phone' => 'Opțional. Când este setat, modificările călătoresc prin acest releu chiar și când dispozitivele tale nu sunt în aceeași rețea. Acest dispozitiv le preia când sincronizezi din acest ecran — niciodată în fundal, fiindcă blocarea aplicației păstrează singura cheie. Lasă gol pentru doar LAN&#8209;direct.',
     'relay_endpoint_aria' => 'URL-ul punctului final al releului',
     'relay_insecure_warning' => 'Acest punct final al releului folosește HTTP simplu. Deși releul nu îți decriptează niciodată datele, o conexiune nesecurizată expune dimensiunile criptate și momentele transferurilor celor care observă rețeaua. Folosește un punct final <strong>https://</strong> pentru cea mai bună confidențialitate.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Se elimină:',
     'remove_rotates_key' => 'Eliminarea acestui dispozitiv rotește cheia de criptare, astfel încât el nu mai primește actualizări viitoare.',
     'remove_cannot_erase' => 'Nu poate șterge datele aflate deja pe acel dispozitiv. Dacă acest dispozitiv a fost pierdut sau furat, tratează toate datele pe care le-a avut ca fiind expuse.',
+    'remove_is_local' => 'Celelalte dispozitive ale tale au propria listă. Până nu îl elimini și acolo, vor continua să se sincronizeze cu el.',
     'remove_device' => 'Elimină dispozitivul',
     'keep_device' => 'Păstrează dispozitivul',
     'rotating_key' => 'Se rotește cheia de criptare…',

@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'séria',
 
+    'template' => [
+        'cancel' => 'Zrušiť: :name',
+        'change_amount' => 'Zmena sumy: :name',
+    ],
+
     'summary' => [
         'cancel' => 'Zrušiť: :name',
         'series_fallback' => 'séria č. :id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Scenár premenovaný.',
         'mutation_added' => 'Zmena pridaná.',
         'mutation_updated' => 'Zmena upravená.',
-        'mutation_removed' => 'Zmena odstránená. Späť',
+        'mutation_removed' => 'Zmena odstránená.',
     ],
 
     'errors' => [
         'name_empty' => 'Názov scenára nemôže byť prázdny.',
         'name_too_long' => 'Názov scenára môže mať najviac :max znak.|Názov scenára môže mať najviac :max znaky.|Názov scenára môže mať najviac :max znakov.',
         'name_taken' => 'Scenár s takým názvom už existuje.',
+        'date_out_of_range' => 'Tento dátum je mimo každého horizontu prognózy — od dnes do :days dňa dopredu — takže scenár by nič nezmenil.|Tento dátum je mimo každého horizontu prognózy — od dnes do :days dní dopredu — takže scenár by nič nezmenil.|Tento dátum je mimo každého horizontu prognózy — od dnes do :days dní dopredu — takže scenár by nič nezmenil.',
         'pick_kind_first' => 'Najprv vyber druh zmeny.',
         'amount_positive' => 'Suma musí byť kladné číslo.',
+        'scenario_gone' => 'Tento scenár už neexistuje — bol odstránený inde. Vyber iný scenár, alebo vytvor nový.',
+        'mutation_gone' => 'Táto zmena už neexistuje — bola odstránená inde. Zavri editor a pridaj ju znova, ak ju stále chceš.',
     ],
 ];

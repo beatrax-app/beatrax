@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Geen financieringsketen gevonden voorbij deze schakel.',
 
     'covers_charges' => 'Dekt :count ICS-afschrijving|Dekt :count ICS-afschrijvingen',
-    'no_ics_charges' => 'Geen ICS-afschrijvingen in deze afwikkeling',
     'show_more_fanout' => ':count meer tonen · :shown van :total',
 
     'confirm' => 'Bevestigen',
     'reject' => 'Afwijzen',
     'confirm_aria' => 'Ketenkoppeling :id bevestigen',
     'reject_aria' => 'Ketenkoppeling :id afwijzen',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministisch',
+        'confirmed' => 'Bevestigd',
+        'candidate' => 'Kandidaat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Betrouwbaarheid: deterministische match',

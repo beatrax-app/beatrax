@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Nimic misterios deocamdată. Importă câteva extrase și Beatrax va afișa aici rândurile pe care nu le-a putut identifica.',
 
+    'showing_capped' => 'Se afișează primele :shown din :total.',
+
     'footer' => 'Lista comună este un fișier YAML livrat împreună cu Beatrax. Trimiterea unei sugestii deschide GitHub în browser; nimic altceva nu părăsește acest dispozitiv.',
 
     'card' => [

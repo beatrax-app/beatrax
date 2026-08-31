@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
@@ -59,7 +60,7 @@ function pskbHandshakeUntilResponderBound(
     // touch, and binds its own real identity to sign its confirm with.
     $on('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
-        $service->seedFromInitiator(PSKB_PHONE_USER_ID, $desktop->deviceId, $desktop->ed25519PublicKeyHex, $desktop->x25519PublicKeyHex, $issuedToken);
+        $service->seedFromInitiator(PSKB_PHONE_USER_ID, new PairingPeerIdentity($desktop->deviceId, $desktop->ed25519PublicKeyHex, $desktop->x25519PublicKeyHex), $issuedToken);
         $service->accept($issuedToken, PSKB_PHONE_USER_ID, $phone->deviceId, $phone->ed25519PublicKeyHex, $phone->x25519PublicKeyHex);
     });
 

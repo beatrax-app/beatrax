@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Om :subject',
+        'close' => 'Stäng',
+    ],
+
     'page_title' => 'Var finns mina data?',
     'intro' => 'Beatrax lagrar allt på den här enheten. Ingenting skickas till en server, ingenting synkas till molnet, ingenting lämnar enheten utan att du exporterar det.',
 

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Calendar\Internal\Dto\CalendarDayDto;
+use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
@@ -101,6 +103,9 @@ function cqplOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
     ]);
 }
 
+// Over the whole Mon–Sun strip the month renders as, so the lists below carry
+// the lead-in and lead-out days too — those cells draw a balance and take a
+// click, and the entries on them have to agree with that.
 /**
  * @return list<string> entry dates (Y-m-d) for entries matching $name
  */
@@ -116,6 +121,22 @@ function cqplEntryDates(array $days, string $name): array
     }
 
     return $dates;
+}
+
+/**
+ * @param  list<CalendarDayDto>  $days
+ */
+function cqplEntryOn(array $days, string $date, string $name): CalendarEntryDto
+{
+    foreach ($days as $day) {
+        foreach ($day->entries as $entry) {
+            if ($day->date->toDateString() === $date && $entry->name === $name) {
+                return $entry;
+            }
+        }
+    }
+
+    throw new RuntimeException($name.' is not on '.$date);
 }
 
 uses(RefreshDatabase::class);
@@ -171,17 +192,18 @@ it('preserves an end-of-month anchor across short months', function (): void {
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
 
-    // February has no 31st → no-overflow clamps to Feb 28…
+    // February has no 31st → no-overflow clamps to Feb 28; the grid opens on
+    // 26 January, so January's own occurrence leads it in.
     $february = $calendarQuery->forMonth($user, 2026, 2);
-    expect(cqplEntryDates($february, 'EndOfMonth-Bill'))->toBe(['2026-02-28']);
+    expect(cqplEntryDates($february, 'EndOfMonth-Bill'))->toBe(['2026-01-31', '2026-02-28']);
 
     // …but March must return to the 31st; chained stepping drifted to Mar 28
     // and never recovered.
     $march = $calendarQuery->forMonth($user, 2026, 3);
-    expect(cqplEntryDates($march, 'EndOfMonth-Bill'))->toBe(['2026-03-31']);
+    expect(cqplEntryDates($march, 'EndOfMonth-Bill'))->toBe(['2026-02-28', '2026-03-31']);
 
     $may = $calendarQuery->forMonth($user, 2026, 5);
-    expect(cqplEntryDates($may, 'EndOfMonth-Bill'))->toBe(['2026-05-31']);
+    expect(cqplEntryDates($may, 'EndOfMonth-Bill'))->toBe(['2026-04-30', '2026-05-31']);
 });
 
 it('places the anchor month itself on the anchor day', function (): void {
@@ -242,9 +264,16 @@ it('keeps an entry expected slightly before its first observed payment', functio
 
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
+    // June's grid runs to 5 July, so the anchor itself leads the strip out.
     $days = $calendarQuery->forMonth($user, 2026, 6);
 
-    expect(cqplEntryDates($days, 'Paid-Late'))->toBe(['2026-06-01']);
+    // Drawn on the day the money moved, not the day it was due: June 3 is the
+    // day the balance line steps, and June 1 held a paid ✓ over a flat one.
+    // The series it is still named by is the June 1 estimate the slack kept
+    // alive to be retired — without the floor slack there is no estimate for
+    // the ledger row to supersede, and it falls back to its counterparty.
+    expect(cqplEntryDates($days, 'Paid-Late'))->toBe(['2026-06-03', '2026-07-01'])
+        ->and(cqplEntryOn($days, '2026-06-03', 'Paid-Late')->seriesId)->toBe($series->id);
 });
 
 it('does not back-project an occurrence onto a day that has not happened yet', function (): void {

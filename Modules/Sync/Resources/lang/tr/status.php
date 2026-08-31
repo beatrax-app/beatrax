@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Kaldırılmış cihaz',
     'dismiss_peer' => 'Bu cihazı yoksay',
+    'dismiss_peer_caption' => 'Yoksay',
     'dismiss_stale' => 'Artık eşleştirilmemiş cihazları temizle',
     'not_synced_yet' => 'Henüz eşitlenmedi',
     'error' => 'Bir veya daha fazla cihazda senkronizasyon hatası',

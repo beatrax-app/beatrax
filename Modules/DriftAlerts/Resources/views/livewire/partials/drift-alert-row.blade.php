@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Enums\SnoozeWindow')
 @use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Enums\Direction')
 {{--
     A single drift alert row. Renders the direction-aware icon + delta
     + annualized impact + (Open-tab only) Acknowledge / Snooze / "I
@@ -13,7 +14,7 @@
     Variables in scope:
       - $alert : DriftAlertDto
       - $tab : DriftPageTab
-      - $tintFor($alert) : Tailwind text-color class
+      - $tintFor($money) : Tailwind text-color class for one signed amount
       - $signedFmt($alert) : formatted delta string with leading sign
       - $annualizedFmt($alert) : formatted yearly impact with leading sign
       - $fmt($money) : currency-aware Money formatter
@@ -30,11 +31,16 @@
 @endphp
 
 @php
-    $tint = $tintFor($alert);
+    $deltaTint = $tintFor($alert->delta);
+    $annualTint = $tintFor($alert->annualizedImpact);
     $deltaText = $signedFmt($alert);
     $annualizedText = $annualizedFmt($alert);
-    $isExpense = $alert->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value;
-    $upArrow = ! $alert->delta->isNegative();
+    // The arrow tracks the YEARLY figure, the one the dashboard tile counts.
+    // Read off the two amounts' magnitudes it pointed up at a cadence
+    // restructure that made the year cheaper, and the tile — which excludes
+    // that alert from its total — said the opposite of the row.
+    $isExpense = $alert->direction === Direction::Expense->value;
+    $upArrow = $alert->annualizedImpact->isNegative() === $isExpense;
     $seriesState = $seriesStates[$alert->recurringSeriesId] ?? null;
 @endphp
 
@@ -43,18 +49,18 @@
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
                 @if ($upArrow)
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $annualTint }}" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
                     </svg>
                 @else
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $tint }}" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4 shrink-0 {{ $annualTint }}" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
                     </svg>
                 @endif
                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName }}</span>
-                <span class="{{ $tint }}" style="font-variant-numeric: tabular-nums;">{{ $deltaText }}</span>
+                <span class="{{ $deltaTint }}" style="font-variant-numeric: tabular-nums;">{{ $deltaText }}</span>
                 <span class="text-slate-500 dark:text-slate-400">→</span>
-                <span class="{{ $tint }}" style="font-variant-numeric: tabular-nums;">{{ $annualizedText }}{{ Lang::get('drift-alerts::alerts.row.per_year') }}</span>
+                <span class="{{ $annualTint }}" style="font-variant-numeric: tabular-nums;">{{ $annualizedText }}{{ Lang::get('drift-alerts::alerts.row.per_year') }}</span>
             </p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_prior_now', ['prior' => $fmt($alert->baselineAmount), 'now' => $fmt($alert->latestAmount)]) }}</span>
@@ -66,7 +72,9 @@
                     <span class="mx-1">·</span>
                     <span class="text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_eur_equiv', ['amount' => $fmt($alert->eurEquivalent)]) }}</span>
                 @endif
-                @if ($cancellationImpact !== null)
+                {{-- Income is not a subscription: the row offered a salary
+                     "Cancel this → save EUR 43,200.00/yr". --}}
+                @if ($cancellationImpact !== null && $isExpense)
                     <span class="mx-1">·</span>
                     <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.cancel_impact', ['amount' => $fmt($cancellationImpact->annualSavings)]) }}</span>
                 @endif
@@ -125,19 +133,21 @@
                         @endforeach
                     </div>
                 </div>
-                <button
-                    type="button"
-                    wire:click="modelCancelInForecast({{ $alert->driftAlertId }})"
-                    aria-label="{{ Lang::get('drift-alerts::alerts.row.model_cancel_aria', ['id' => $alert->driftAlertId]) }}"
-                    class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-                    style="font-variant-numeric: tabular-nums;"
-                >{{ Lang::get('drift-alerts::alerts.row.model_cancel') }}</button>
-                <button
-                    type="button"
-                    wire:click="dismissAsCancelled({{ $alert->driftAlertId }})"
-                    aria-label="{{ Lang::get('drift-alerts::alerts.row.cancelled_aria', ['id' => $alert->driftAlertId]) }}"
-                    class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                >{{ Lang::get('drift-alerts::alerts.row.cancelled') }}</button>
+                @if ($isExpense)
+                    <button
+                        type="button"
+                        wire:click="modelCancelInForecast({{ $alert->driftAlertId }})"
+                        aria-label="{{ Lang::get('drift-alerts::alerts.row.model_cancel_aria', ['id' => $alert->driftAlertId]) }}"
+                        class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                        style="font-variant-numeric: tabular-nums;"
+                    >{{ Lang::get('drift-alerts::alerts.row.model_cancel') }}</button>
+                    <button
+                        type="button"
+                        wire:click="dismissAsCancelled({{ $alert->driftAlertId }})"
+                        aria-label="{{ Lang::get('drift-alerts::alerts.row.cancelled_aria', ['id' => $alert->driftAlertId]) }}"
+                        class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    >{{ Lang::get('drift-alerts::alerts.row.cancelled') }}</button>
+                @endif
             </div>
         @endif
     </div>

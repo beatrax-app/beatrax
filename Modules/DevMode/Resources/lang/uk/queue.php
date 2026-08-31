@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Видалити :count завдання|Видалити :count завдання|Видалити :count завдань',
     'empty_pending' => 'Черга порожня.',
     'empty_failed' => 'Невдалих завдань немає.',
-    'empty_batches' => 'Активних пакетів немає.',
+    'empty_batches' => 'Немає пакетів.',
     'select_aria' => 'Вибрати',
     'select_row_aria' => 'Вибрати рядок :key',
     'col_id' => 'Id',
     'col_queue' => 'Черга',
     'col_attempts' => 'Спроби',
+    'col_state' => 'Стан',
     'col_created' => 'Створено',
     'col_uuid' => 'UUID',
     'col_failed' => 'Невдалі',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'В очікуванні',
     'col_actions' => 'Дії',
     'delete_job' => 'Видалити завдання',
+    'worker_running' => 'Виконує worker',
     'delete_pending_confirm' => 'Видалити завдання в очікуванні #:key?',
     'retry_job' => 'Повторити завдання',
     'forget_confirm' => 'Прибрати невдале завдання :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Вибрані невдалі завдання повернуться в чергу, щоб обробник спробував їх ще раз.',
     'cancel' => 'Скасувати',
 
+    'state' => [
+        'available' => 'Готова',
+        'reserved' => 'Зарезервована',
+        'scheduled' => 'Заплановано',
+    ],
+
     'tab' => [
         'pending' => 'В очікуванні',
         'failed' => 'Невдалі',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Завдання в очікуванні видалено',
+        'pending_already_gone' => 'Цього завдання вже не було',
         'failed_requeued' => 'Невдале завдання повернуто в чергу',
         'failed_removed' => 'Невдале завдання прибрано',
         'batch_cancelled' => 'Пакет скасовано',
         'batch_deleted' => 'Пакет видалено',
         'batch_failures_requeued' => 'Невдачі пакета повернуто в чергу',
+        'batch_failures_none' => 'У пакеті не лишилося помилок для повернення в чергу',
         'failed_jobs_requeued' => 'Невдалі завдання повернуто в чергу',
+        'failed_jobs_none' => 'Не лишилося невдалих завдань для повернення в чергу',
         'bulk_refused' => 'Масове видалення відхилено — :reason',
         'rows_deleted' => 'Вибрані рядки видалено',
     ],

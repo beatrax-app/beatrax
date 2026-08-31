@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Apie :subject',
+        'close' => 'Uždaryti',
+    ],
+
     'page_title' => 'Kur yra mano duomenys?',
     'intro' => 'Beatrax viską saugo šiame įrenginyje. Niekas nesiunčiama į serverį, niekas nesinchronizuojama su debesija, niekas neišeina iš šio įrenginio, kol pats to neeksportuoji.',
 

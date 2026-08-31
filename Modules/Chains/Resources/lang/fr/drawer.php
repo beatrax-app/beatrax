@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Aucune chaîne de financement trouvée au-delà de ce maillon.',
 
     'covers_charges' => 'Couvre :count débit ICS|Couvre :count débits ICS',
-    'no_ics_charges' => 'Aucun débit ICS dans ce règlement',
     'show_more_fanout' => 'Afficher :count de plus · :shown sur :total',
 
     'confirm' => 'Confirmer',
     'reject' => 'Rejeter',
     'confirm_aria' => 'Confirmer le maillon de chaîne :id',
     'reject_aria' => 'Rejeter le maillon de chaîne :id',
+
+    'confidence_tier' => [
+        'deterministic' => 'Déterministe',
+        'confirmed' => 'Confirmée',
+        'candidate' => 'Candidat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Confiance : correspondance déterministe',

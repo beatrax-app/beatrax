@@ -10,10 +10,11 @@ return [
 
     'bank_title' => 'Pankkisi',
     'bank_desc' => 'Pudota tiliotetiedosto. Luemme CSV-, MT940- ja CAMT.053-muodot useimmista eurooppalaisista pankeista.',
-    'card_title' => 'Luottokorttisi (ICS)',
-    'card_desc' => 'Pudota kuukausittainen PDF-tiliote Mijn ICS -palvelusta.',
+    'card_title' => 'Luottokorttisi',
+    'card_desc' => 'Pudota kuukausittaiset korttitiliotteesi PDF-muodossa. Toistaiseksi osaamme lukea myöntäjän ICS.',
     'email_title' => 'Kuitit sähköpostista',
     'email_desc' => 'Yhdistä Gmail tai Outlook, niin ostovahvistukset tallentuvat automaattisesti.',
+    'email_desc_phone' => 'Ostovahvistukset tallentaa työpöytäsovellus; tämä puhelin näyttää synkronoinnin kautta, mitä se löytää.',
 
     'continue' => 'Jatka →',
 ];

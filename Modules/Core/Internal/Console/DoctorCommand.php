@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console;
 
 use Illuminate\Console\Command;
+use Modules\Core\Internal\Console\Probes\BackgroundScheduleProbe;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
 use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
@@ -19,7 +20,7 @@ use Modules\Search\Public\Services\FtsHealthCheck;
 
 final class DoctorCommand extends Command
 {
-    private const ROW_FORMAT = '%-24s %-8s %s';
+    private const string ROW_FORMAT = '%-24s %-8s %s';
 
     /** @var string */
     protected $signature = 'beatrax:doctor';
@@ -35,6 +36,7 @@ final class DoctorCommand extends Command
         private readonly WalModeProbe $walProbe,
         private readonly SynchronousModeProbe $synchronousProbe,
         private readonly BackupFreshnessProbe $backupFreshnessProbe,
+        private readonly BackgroundScheduleProbe $backgroundScheduleProbe,
         private readonly ?FtsHealthCheck $ftsHealth = null,
     ) {
         parent::__construct();
@@ -61,6 +63,7 @@ final class DoctorCommand extends Command
             $this->walProbe,
             $this->synchronousProbe,
             $this->backupFreshnessProbe,
+            $this->backgroundScheduleProbe,
         ];
 
         foreach ($probes as $probe) {

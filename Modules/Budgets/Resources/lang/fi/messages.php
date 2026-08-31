@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategoria',
         'assigned' => 'Jaettu',
+        'carried_in' => 'Siirtosaldo',
+        'moved' => 'Siirretty',
         'spent' => 'Käytetty',
         'available' => 'Käytettävissä',
         'if_overspent' => 'Jos ylitetään',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Piilota historia ↑',
         'moved_from' => 'Siirretty kategoriasta :category',
         'moved_to' => 'Siirretty kategoriaan :category',
+        'moved_unreadable' => 'Siirretty kategorian :category kanssa Beatraxin uudemmalla versiolla',
         'undo' => 'Kumoa',
     ],
 
     'phone' => [
         'spent' => 'Käytetty :amount',
+        'carried_in' => 'Siirtosaldo :amount',
+        'moved' => 'Siirretty :amount',
         'available' => 'Käytettävissä :amount',
         'notify_at' => 'Ilmoita rajalla',
     ],

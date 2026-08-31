@@ -1,0 +1,5 @@
+Datum,Tijd,Tijdzone,Omschrijving,Valuta,"Bruto ","Kosten ",Netto,Saldo,Transactiereferentie,"Van e-mailadres",Naam,"Naam bank",Bankrekening,Verzendkosten,Btw,Factuurreferentie,"Reference Txn ID"
+5/1/2026,00:12:03,Europe/Berlin,"Algemene valutaomrekening",EUR,"-9,27","0,00","-9,27","0,00",O-00000000000000203,,,,,"0,00","0,00",,O-00000000000000201
+5/1/2026,00:12:03,Europe/Berlin,"Algemene valutaomrekening",USD,"10,46","0,00","10,46","0,00",O-00000000000000204,,,,,"0,00","0,00",,O-00000000000000201
+5/2/2026,09:30:00,Europe/Berlin,"Express Checkout-betaling",EUR,"-24,18","0,00","-24,18","-24,18",O-00000000000000205,kaarthouder@example.test,"Example Merchant",,,"0,00","0,00",,
+5/2/2026,09:30:01,Europe/Berlin,"Bankstorting naar PP-rekening",EUR,"24,18","0,00","24,18","0,00",O-00000000000000206,,,,,"0,00","0,00",,O-00000000000000205

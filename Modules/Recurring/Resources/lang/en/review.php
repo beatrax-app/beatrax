@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Edit name',
     'edit_name_aria' => 'Rename recurring series :id',
     'new_name_label' => 'New name for this series',
+    'load_more' => 'Load more',
     'save' => 'Save',
 
     'toast' => [

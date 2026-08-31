@@ -7,10 +7,11 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 // The lead time is a constructor argument because Recurring never reads
@@ -56,6 +57,7 @@ function prtRunJob(User $user, int $leadDays): void
         $job = new EmitPaymentRemindersJob($user->id, $leadDays);
         $job->handle(
             app(RecurringSeriesQuery::class),
+            app(RecurringOccurrenceQuery::class),
             app(Dispatcher::class),
             app(Clock::class),
         );
@@ -69,7 +71,7 @@ function prtNotificationCount(int $userId): int
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER)
+        ->where('trigger_type', NotificationTrigger::PaymentReminder)
         ->count();
 }
 
@@ -137,12 +139,12 @@ it('stores a hedged title for a low-confidence series, distinct from the confide
 
     $confidentTitle = $db->connection()->table('notifications')
         ->where('user_id', $confidentUser->id)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER)
+        ->where('trigger_type', NotificationTrigger::PaymentReminder)
         ->value('title');
 
     $hedgedTitle = $db->connection()->table('notifications')
         ->where('user_id', $hedgedUser->id)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER)
+        ->where('trigger_type', NotificationTrigger::PaymentReminder)
         ->value('title');
 
     expect($confidentTitle)->not->toBe($hedgedTitle);

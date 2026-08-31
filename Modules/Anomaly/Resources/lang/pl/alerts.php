@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'poziom bazowy :baseline → faktycznie: :actual',
+    'charged' => 'obciążenie :actual',
     'detected' => 'wykryto :date',
     'sensitivity' => 'czułość :percent na 100',
 

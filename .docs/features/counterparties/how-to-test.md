@@ -28,6 +28,12 @@ isolation.
     - DELETE ordering (`CounterpartyGarbageCollectorJobTest`).
   - The three Livewire pages (`CounterpartyIndexTest`,
     `CounterpartyProfileTest`, `CounterpartyTriageTest`).
+  - What a triage decision owes the rest of the app — the op-log
+    announcement, the re-derived slug, and the ignore predicate that
+    outlives the session
+    (`TriageDecisionsSurviveTheDeviceAndTheNextImportTest`).
+  - The bank profile telling a fee row from an institution row
+    (`ABankFeeIsNotTheSamePageAsABankTest`).
   - The per-user view preference (`UserPreferencesCounterpartyViewTest`).
 - **Setup:** every test uses `RefreshDatabase`. Tests that resolve
   against an institution IBAN seed the
@@ -98,9 +104,10 @@ composer test
   invariant is "no recent activity AND no explicit anchor".
 - **A counterparty page returns 404 for the owner** — the `slug` in
   the URL does not match any row for the current user. Check the
-  `user_id` filter on the underlying query; a recent rename via
-  display-name change keeps the OLD slug live until the next import
-  re-resolves the row.
+  `user_id` filter on the underlying query. A rename in triage moves
+  the slug with the name, so a link captured before the rename is the
+  expected miss; a rename that did *not* move the slug is a bug, and
+  the next import will fork the row rather than find it.
 - **The triage queue shows a row the resolver should have matched** —
   the resolver returned `type='unknown'` because none of steps 1-6
   fired. Read the row's `description` + `counterparty_name` +
@@ -114,10 +121,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Counterparties` module.
-
-## Behavioral contracts
 
 - **The resolver walks the 7-step precedence chain in order, first
   match wins.** The order is load-bearing: known-IBAN bridge before
@@ -142,6 +145,63 @@ The behavioural contract for the `Counterparties` module.
 - **The resolver is idempotent.** Re-resolving the same canonical
   transaction returns the same `counterpartyId`; no second INSERT is
   issued. (`tests/Feature/ResolveCounterpartyStageTest.php`)
+- **A rename in triage moves the slug with the name.** Accept and
+  manual-label both re-derive the slug, so the next import's
+  `firstOrCreate` on `(user_id, slug)` finds the renamed row instead of
+  minting a second one. Collisions still walk the numeric suffix.
+  (`tests/Feature/TriageDecisionsSurviveTheDeviceAndTheNextImportTest.php`)
+- **Every triage write is announced to the op-log.** Accept,
+  manual-label and ignore each dispatch one `EntityMutated` edit with
+  plaintext values, so the reader's other device sees the decision.
+  (`tests/Feature/TriageDecisionsSurviveTheDeviceAndTheNextImportTest.php`)
+- **An ignored row stays hidden across visits.** `metadata.ignored`
+  is excluded by both `CounterpartyTriageQueue::forUser()` and
+  `unknownCountForUser()`; the row itself keeps `type='unknown'` and
+  all of its history. An explicit `?queue_first={id}` naming it opens
+  it anyway — the index card and the unknown profile's label CTA both
+  still link there.
+  (`tests/Feature/TriageDecisionsSurviveTheDeviceAndTheNextImportTest.php`)
+- **What the reader typed survives the queue.** The display name and
+  the type are `wire:model` bindings kept per counterparty id in
+  `$drafts`, so moving forward and back returns the draft to the card
+  it belongs to and a decided row's draft is dropped. They were an
+  Alpine `x-model` before, which a Livewire re-render silently threw
+  away.
+  (`tests/Feature/TypedInputSurvivesMovingThroughTheTriageQueueTest.php`)
+- **A decision does not move the cursor.** `sessionDoneIds` already
+  takes the decided row out of `remaining`, so incrementing as well
+  stepped past the row behind it — labelling the first of three
+  offered the third.
+  (`tests/Feature/LabellingOneUnknownOffersTheNextOneNotTheOneAfterItTest.php`)
+- **The card draws one primary, on one edge.** Exactly one solid
+  button per card — the accept when a suggestion is on screen, the
+  save otherwise — and every control is a full-width block on the
+  card's own content box. Measured in headless Chromium at 375px and
+  411px in all 26 locales.
+  (`tests/Feature/TheTriageCardDrawsOnePrimaryOnOneEdgeTest.php`,
+  `tests/Feature/CounterpartyPhoneLayoutTest.php`)
+- **A bank-fee row and an institution row are different pages.**
+  `metadata.subcategory='fee'` is what the profile body branches on;
+  without it the panel would call a PayPal settlement a bank fee.
+  (`tests/Feature/ABankFeeIsNotTheSamePageAsABankTest.php`)
+- **A name the app invented follows the reader, not the importer.**
+  `metadata.default_name` marks it and `CounterpartyDefaultName::resolve()`
+  re-resolves it, so a Dutch reader gets "Onbekend" where a phone once
+  showed "Unknown" beside four correct ones. Assert in a NON-English
+  locale: an English assertion passes before and after and proves
+  nothing. The same test covers the backfill for rows already stored in
+  English, and that a counterparty the reader named "Unknown" themselves
+  is left alone.
+  (`tests/Feature/APlaceholderNameIsReadInTheReadersLanguageTest.php`)
+- **The readers outside this module need their own cases.** The tax
+  cockpit, its exports, the batch-tag banner and the ⌘K palette all read
+  `display_name` themselves, so the seam being green here says nothing
+  about them. The palette's case is a round trip — a Dutch reader types
+  "Onbekend", gets the row, and gets it labelled "Onbekend" — beside an
+  assertion that resolving the token added no statement and no row to a
+  read that was already whole-set.
+  (`Modules/Tax/tests/Feature/ATaxRowNamesItsCounterpartyInTheReadersLanguageTest.php`,
+  `Modules/Search/tests/Feature/APlaceholderCounterpartyIsFoundByTheReadersOwnWordTest.php`)
 - **Every resolution dispatches `CounterpartyResolved` exactly once.**
   v1.0.0 ships zero listeners; the event exists for future
   subscribers.

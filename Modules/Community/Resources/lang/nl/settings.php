@@ -3,11 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'about_heading' => 'Over de gedeelde lijst',
     'about_body' => 'Een meegeleverd YAML-bestand dat cryptische bankafschriftcodes koppelt aan herkenbare winkeliersnamen. Inschakelen laat Beatrax de lijst lezen bij het importeren; een suggestie insturen opent GitHub in je browser.',
 
-    'mappings' => 'Koppelingen',
-    'contributors' => 'Bijdragers',
+    'mappings' => ':count koppeling|:count koppelingen',
+    'contributors' => ':count bijdrager|:count bijdragers',
 
     'use_shared_list' => [
         'title' => 'Gebruik de gedeelde winkelierslijst',
@@ -22,6 +21,7 @@ return [
     'update_on_updates' => [
         'title' => 'Gedeelde lijst bijwerken bij app-updates',
         'help' => 'Ververs de meegeleverde lijst telkens wanneer Beatrax zichzelf bijwerkt.',
+        'help_phone' => 'Ververs de meegeleverde lijst telkens wanneer er een nieuwe versie van Beatrax uit de App Store of Google Play wordt geïnstalleerd.',
         'note' => 'Wordt geactiveerd bij een toekomstige app-update — zie Instellingen → Over voor de huidige versie.',
     ],
 ];

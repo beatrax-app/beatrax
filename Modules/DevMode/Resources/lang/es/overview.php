@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Panel operativo de la Dev Console integrada.',
     'worker_heartbeat' => 'Latido del worker',
     'not_running' => 'NO EN EJECUCIÓN',
+    'heartbeat_age' => 'hace :count s · ttl :ttl s|hace :count s · ttl :ttl s',
     'queue' => 'Cola',
     'pending' => 'pendientes',
     'failed' => 'fallidos',

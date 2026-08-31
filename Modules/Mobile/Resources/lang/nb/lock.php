@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Lås opp',
 
-    'digits_entered' => 'sifre angitt',
+    'digits_entered' => ':count siffer angitt|:count sifre angitt',
     'pin_pad' => 'PIN-tastatur',
     'digit' => 'Siffer :digit',
     'backspace' => 'Slett',

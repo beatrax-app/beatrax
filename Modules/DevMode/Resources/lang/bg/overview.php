@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Работна повърхност на вградената Developer Console.',
     'worker_heartbeat' => 'Пулс на работния процес',
     'not_running' => 'НЕ РАБОТИ',
+    'heartbeat_age' => 'преди :count с · ttl :ttl с|преди :count с · ttl :ttl с',
     'queue' => 'Опашка',
     'pending' => 'изчакващи',
     'failed' => 'неуспешни',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Ce téléphone ne peut pas enregistrer un fichier que l’application lui remet ; la sauvegarde chiffrée se fait donc dans l’application de bureau. Associe cet appareil pour garder les deux synchronisés.',
+        'no_download_route' => 'Cette application ne peut pas remettre de fichier à ton appareil ; la sauvegarde chiffrée se fait donc dans l’application de bureau. Associe cet appareil pour garder les deux synchronisés.',
         'unavailable' => 'Les sauvegardes chiffrées sont disponibles sur la version bureau (SQLite). Sur une base de données serveur, utilise les outils de sauvegarde de la base elle-même.',
         'intro' => 'Télécharge une copie chiffrée par phrase secrète de toute ta base de données — tu peux la garder sans risque sur un disque externe ou dans le cloud, car elle est illisible sans la phrase secrète (XChaCha20-Poly1305 résistant au quantique + Argon2id).',
         'passphrase' => 'Phrase secrète',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Le fichier n’a pas fini d’être téléversé. Il est peut-être trop volumineux pour cet appareil — la restauration dans l’application de bureau accepte une sauvegarde plus grande.',
         'enter_passphrase' => 'Saisis la phrase secrète avec laquelle la sauvegarde a été chiffrée.',
         'unreadable' => 'Le fichier envoyé n\'a pas pu être lu. Réessaie.',
+        'restore_wrong_passphrase' => "Cette phrase secrète n'a pas ouvert cette sauvegarde, et rien n'a été modifié. Retape-la et réessaie. Si elle est bien la bonne, le fichier a été altéré depuis sa création : restaure alors une autre copie.",
+        'restore_not_a_backup' => "Ce fichier n'est pas une sauvegarde chiffrée Beatrax, il n'y a donc rien à restaurer et rien n'a été modifié. Choisis le fichier .enc écrit par l'app au moment de la sauvegarde.",
+        'restore_contents_unreadable' => "La sauvegarde s'est ouverte, mais la base de données qu'elle contient est endommagée : elle n'a pas été restaurée et rien n'a été modifié. Restaure une sauvegarde plus ancienne.",
+        'restore_could_not_read' => "Le fichier de sauvegarde n'a pas pu être lu, la restauration n'a donc pas eu lieu et rien n'a été modifié. Vérifie qu'il reste de l'espace libre sur cet appareil, puis réessaie.",
+        'restore_not_supported' => "La restauration fonctionne sur la version qui garde ses données dans un seul fichier, ce qui n'est pas le cas ici, et rien n'a été modifié. Sur une base de données serveur, utilise les outils de restauration de cette base.",
+        'restore_failed' => "La restauration n'a pas eu lieu et rien n'a été modifié. Réessaie — si l'échec persiste, le journal de l'app note ce qui l'a arrêtée.",
     ],
 ];

@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Noch nichts Rätselhaftes. Importiere ein paar Kontoauszüge und Beatrax zeigt hier die Zeilen, die es nicht zuordnen konnte.',
 
+    'showing_capped' => 'Angezeigt werden die obersten :shown von :total.',
+
     'footer' => 'Die gemeinsame Liste ist eine YAML-Datei, die Beatrax mitliefert. Beim Abschicken eines Vorschlags öffnet sich GitHub in deinem Browser; sonst verlässt nichts dieses Gerät.',
 
     'card' => [

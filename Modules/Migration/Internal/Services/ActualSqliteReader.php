@@ -6,19 +6,25 @@ namespace Modules\Migration\Internal\Services;
 
 use Generator;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Migration\Internal\Enums\ActualBudgetType;
 use Modules\Migration\Internal\Exceptions\ActualSqliteReadException;
 use Modules\Migration\Internal\Exceptions\UnrecognizedActualBudgetTypeException;
+use Modules\Migration\Internal\Parsers\Support\BoundedJson;
 use Modules\Migration\Internal\Services\Concerns\SummarizesRuleConditions;
 use PDO;
 use Pdo\Sqlite as PdoSqlite;
 use PDOStatement;
 
-final class ActualSqliteReader
+final readonly class ActualSqliteReader
 {
     use CoercesScalars;
     use SummarizesRuleConditions;
 
-    private readonly PdoSqlite $pdo;
+    // Actual's own out-of-the-box mode, and what an export that names none is
+    // read as. The parser surfaces the assumption rather than burying it.
+    public const DEFAULT_BUDGET_TYPE = ActualBudgetType::Envelope;
+
+    private PdoSqlite $pdo;
 
     public function __construct(string $dbPath)
     {
@@ -162,21 +168,22 @@ final class ActualSqliteReader
         }
     }
 
-    /**
-     * @return 'envelope'|'tracking'
-     */
-    public function budgetType(): string
+    // The mode the file states, or null when it states none — real exports
+    // routinely omit the row, and refusing those rejected the whole file.
+    public function declaredBudgetType(): ?ActualBudgetType
     {
         $value = $this->preference('budgetType');
         if ($value === null) {
-            throw new ActualSqliteReadException("Actual export has no 'preferences.budgetType' row — cannot determine envelope vs tracking mode");
+            return null;
         }
 
-        return match ($value) {
-            'envelope', 'rollover' => 'envelope',
-            'tracking', 'report' => 'tracking',
-            default => throw new UnrecognizedActualBudgetTypeException("unrecognized Actual preferences.budgetType value '{$value}'"),
-        };
+        return ActualBudgetType::fromPreference($value)
+            ?? throw new UnrecognizedActualBudgetTypeException("unrecognized Actual preferences.budgetType value '{$value}'");
+    }
+
+    public function budgetType(): ActualBudgetType
+    {
+        return $this->declaredBudgetType() ?? self::DEFAULT_BUDGET_TYPE;
     }
 
     /**
@@ -184,7 +191,7 @@ final class ActualSqliteReader
      */
     public function budgetAssignments(): array
     {
-        $table = $this->budgetType() === 'envelope' ? 'zero_budgets' : 'reflect_budgets';
+        $table = $this->budgetType()->budgetTable();
 
         if (! $this->tableExists($table)) {
             // The ACTIVE mode's own table is missing, so this export genuinely
@@ -237,7 +244,7 @@ final class ActualSqliteReader
             $rows[] = [
                 'id' => self::toString($row['id']),
                 'name' => self::toNullableStr($row['name']),
-                'conditionsSummary' => $this->summarizeConditions($this->boundedJsonDecode($conditionsJson)),
+                'conditionsSummary' => $this->summarizeConditions(BoundedJson::decode($conditionsJson)),
             ];
         }
 

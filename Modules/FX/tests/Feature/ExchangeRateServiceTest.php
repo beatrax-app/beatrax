@@ -106,19 +106,7 @@ describe('ExchangeRateService', function (): void {
         expect($result->isStale)->toBeFalse();
     });
 
-    it('convertAtDate uses the supplied knownRate string for the conversion', function (): void {
-        // No exchange_rates rows seeded: knownRate has to be used directly.
-        $money = Money::ofMinor(10000, 'EUR');
-
-        $result = $this->service->convertAtDate($money, 'USD', '2026-01-15', '1.20000000');
-
-        expect($result->isPassthrough)->toBeFalse()
-            ->and($result->converted->currency())->toBe('USD')
-            ->and($result->source)->toBe('transaction')
-            ->and($result->converted->toMinor())->toBe(12000); // EUR 100 × 1.2 = USD 120
-    });
-
-    it('convertAtDate falls back to dated exchange_rates row when knownRate is null', function (): void {
+    it('convertAtDate reads the rate off the dated exchange_rates row', function (): void {
         seedRates('2026-01-15', ['USD' => '1.1500']);
 
         $money = Money::ofMinor(10000, 'EUR');

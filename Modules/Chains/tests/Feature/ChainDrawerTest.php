@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Http\Livewire\ChainDrawer;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -166,6 +167,36 @@ it('renders the three-tier confidence chips (Deterministic / Confirmed / Candida
         ->assertSee('Candidate');
 });
 
+// The chip printed the tier enum's backing value while the aria-label three
+// lines above it went through Lang, so in 25 of the 26 locales the badge and
+// the screen reader disagreed about the same chip.
+it('renders the confidence chip in the reader s language', function (): void {
+    $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'l0', 1);
+    $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'l1', 2);
+    $tx2 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', '2026-05-11', 'l2', 3);
+    $tx3 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'B', '2026-05-12', 'l3', 4);
+
+    cdrLink($this->db, $this->user, (int) $tx0->id, (int) $tx1->id,
+        'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'l1']);
+    cdrLink($this->db, $this->user, (int) $tx1->id, (int) $tx2->id,
+        'paypal_funding', 'confirmed', '0.850', 'rule', ['signature_hash' => 'l2']);
+    cdrLink($this->db, $this->user, (int) $tx2->id, (int) $tx3->id,
+        'paypal_funding', 'candidate', '0.750', 'auto', ['signature_hash' => 'l3']);
+
+    app()->setLocale(Locale::Nl->value);
+
+    Livewire::actingAs($this->user)
+        ->test(ChainDrawer::class)
+        ->call('open', (int) $tx0->id)
+        ->assertSee('Deterministisch')
+        ->assertSee('Bevestigd')
+        ->assertSee('Kandidaat')
+        ->assertDontSee('Deterministic')
+        ->assertDontSee('Candidate');
+
+    app()->setLocale('en');
+});
+
 it('Confirm chip from the drawer promotes a candidate to confirmed', function (): void {
     $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'd0', 1);
     $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'd1', 2);
@@ -233,16 +264,21 @@ it('fan-out paginates ICS bulk-settle children at 10 rows per click', function (
         ->assertDontSee('Show 3 more');
 });
 
-it('renders the empty-fan-out edge-case copy when an ICS bulk-settle leg covers zero ICS charges', function (): void {
-    $rootCharge = cdrTx($this->user, $this->ics, $this->run, -1500, 'expense', 'Empty', '2026-05-10', 'g0', 1);
-    $asnSettle = cdrTx($this->user, $this->asn, $this->run, -500, 'transfer_out', 'Empty bulk settle', '2026-05-20', 'g1', 2);
-    cdrLink($this->db, $this->user, (int) $rootCharge->id, (int) $asnSettle->id,
+// The box this used to assert claimed a node reached along an ics_bulk_settle
+// link covered no ICS charges. The link runs settlement -> charge, so such a
+// node is the charge; see ACoveredChargeIsNotItselfAnEmptySettlementTest.
+it('renders the settlement and the one charge it covered without a fan-out container', function (): void {
+    $asnSettle = cdrTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'ICS Cards', '2026-05-20', 'g0', 1);
+    $charge = cdrTx($this->user, $this->ics, $this->run, -1500, 'expense', 'Single charge', '2026-05-10', 'g1', 2);
+    cdrLink($this->db, $this->user, (int) $asnSettle->id, (int) $charge->id,
         'ics_bulk_settle', 'confirmed', '1.000', 'auto', ['signature_hash' => 'g-sig']);
 
     Livewire::actingAs($this->user)
         ->test(ChainDrawer::class)
-        ->call('open', (int) $rootCharge->id)
-        ->assertSee('No ICS charges in this settlement');
+        ->call('open', (int) $charge->id)
+        ->assertSee('Single charge')
+        ->assertSee('ICS Cards')
+        ->assertDontSee('Covers');
 });
 
 it('renders the Flux modal flyout markup (first project use)', function (): void {

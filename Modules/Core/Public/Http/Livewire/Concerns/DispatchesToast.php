@@ -20,8 +20,18 @@ trait DispatchesToast
         $this->dispatch('toast', message: $message);
     }
 
+    // The host is mounted by the layout, so the id is the only thing telling
+    // it which component holds the method the button calls back into. Named
+    // `componentId`, never `component`: Livewire's Event object uses that key
+    // for ->to() targeting and would hunt for a component by this id.
     protected function toastWithUndo(string $message, string $undoAction, mixed $undoPayload): void
     {
-        $this->dispatch('toast', message: $message, undoAction: $undoAction, undoPayload: $undoPayload);
+        $this->dispatch(
+            'toast',
+            message: $message,
+            undoAction: $undoAction,
+            undoPayload: $undoPayload,
+            componentId: $this->getId(),
+        );
     }
 }

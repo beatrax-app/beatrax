@@ -165,7 +165,7 @@ function sarFixture(DatabaseManager $db): array
     for ($i = 1; $i <= 40; $i++) {
         $account = $i === 40 ? $savings : $current;
         $tx = seriesAccountTransaction($user, $account, $run, 'long-'.$i);
-        sarOccurrence($user, $long, $tx, CarbonImmutable::parse('2023-01-01')->addMonths($i)->toDateString());
+        sarOccurrence($user, $long, $tx, CarbonImmutable::parse('2023-01-01')->addMonthsNoOverflow($i)->toDateString());
     }
 
     // Two occurrences share an observed_at. The ordering's secondary key is

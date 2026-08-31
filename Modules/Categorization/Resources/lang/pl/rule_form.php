@@ -24,6 +24,7 @@ return [
     'to' => 'do',
     'text_placeholder' => 'np. SPOTIFY',
     'remove_condition' => 'Usuń warunek',
+    'remove_condition_caption' => 'Usuń',
     'add_condition' => '+ Dodaj warunek',
 
     'then' => 'Wtedy',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Dopisz',
     'deduction_category_aria' => 'Kategoria odliczenia dla akcji :number',
     'remove_action' => 'Usuń akcję',
+    'remove_action_caption' => 'Usuń',
     'add_action' => '+ Dodaj akcję',
 
     'this_year_only' => 'Tylko ten rok ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Akcje znacznika podatkowego działają przy następnym ponownym zastosowaniu, a nie przy bieżącym imporcie.',
 
     'priority' => 'Priorytet',
-    'priority_help' => 'Niższe liczby wykonują się pierwsze. Reguły bez wspólnych pól nigdy nie kolidują.',
+    'priority_help' => 'Reguły są wykonywane od najniższego numeru w górę, więc gdy dwie ustawiają to samo pole, wygrywa najwyższy numer. Reguły bez wspólnych pól nigdy nie kolidują.',
 
     'cancel' => 'Anuluj',
     'save_changes' => 'Zapisz zmiany',

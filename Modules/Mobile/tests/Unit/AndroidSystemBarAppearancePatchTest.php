@@ -164,11 +164,15 @@ it('is in the one list every build runs', function (): void {
 });
 
 // Absent on every platform but this one, so the page must not assume it: the
-// desktop and iOS shells install no AndroidBridge at all.
+// desktop shell installs no bridge at all and the iOS one answers on a channel
+// of its own, which the same reporter calls beside this.
 it('is called from the page without assuming the bridge exists', function (): void {
     $app = (string) file_get_contents(dirname(__DIR__, 4).'/resources/js/app.js');
 
-    expect($app)->toContain('window.AndroidBridge?.setSystemBarAppearance?.(pageIsPaintedDark())');
+    expect($app)->toContain('window.AndroidBridge?.setSystemBarAppearance?.(dark)')
+        // Still the painted answer; it is read once now because two shells ask
+        // the same question and a second read could drift from the first.
+        ->and($app)->toContain('const dark = pageIsPaintedDark();');
 });
 
 // The class is not the answer: measured on the device, after an OS night-mode

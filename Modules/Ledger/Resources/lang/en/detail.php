@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transaction',
     'heading' => 'Transaction',
+    'booked_on' => 'Booked :date',
 
     'counterparty' => 'Counterparty',
     'description' => 'Description',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Note (optional)',
         'tax_deductible' => 'Tax-deductible',
         'remove_leg_aria' => 'Remove this category',
+        'remove_leg_caption' => 'Remove',
         'add_category' => '+ Add category',
         'soft_cap' => ':count of ~20 categories — consider grouping small amounts.',
         'remaining_zero' => 'Remaining :amount ✓',
@@ -97,7 +99,7 @@ return [
         'heading' => 'Delete transaction',
         'help' => 'Permanently removes this transaction. This action cannot be undone.',
         'button' => 'Delete',
-        'confirm_prompt' => 'Are you sure?',
+        'confirm_prompt' => 'Delete this transaction? Its note, split and tax tags go with it.',
         'confirm' => 'Yes, delete',
         'cancel' => 'Cancel',
     ],
@@ -106,12 +108,21 @@ return [
         'view' => 'View chain',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Reconciled and locked',
+        'help' => 'A completed reconcile locked this transaction. Its category, note, split and tax tags stay as they are until you unlock it.',
+        'button' => 'Unlock for editing',
+        'confirm_question' => 'Unlock this transaction for editing? Nothing on it changes, and completing the reconcile again locks it back.',
+        'cancel' => 'Leave it locked',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'This transaction is reconciled. Un-reconcile it to make changes.',
         'reclassified_pair_removed' => 'Reclassified to :type — pair removed',
         'reclassified' => 'Reclassified to :type',
         'note_saved' => 'Note saved',
         'unreconciled' => 'Un-reconciled — you can edit this transaction again.',
+        'note_too_long' => 'A note is at most :max character.|A note is at most :max characters.',
         'counterparty_updated' => 'Counterparty updated',
         'goal_attributed' => 'Counted toward this goal',
         'goal_attribution_removed' => 'No longer counted toward this goal',

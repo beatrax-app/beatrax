@@ -19,7 +19,6 @@ function preparedBatchCanonical(int $accountId): CanonicalTransaction
         currency: 'EUR',
         settledAmountMinor: -500,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: null,
         counterpartyIban: null,
         counterpartyNormalized: 'no_counterparty',

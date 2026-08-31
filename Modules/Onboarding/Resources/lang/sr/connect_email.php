@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Potvrde iz e-pošte (opciono)',
     'h1' => 'Dozvoli Beatraxu da prati e-poruke o kupovinama',
     'lede' => 'Poveži Gmail ili Outlook da bi se potvrde porudžbina i potvrde o pretplatama automatski priložile tvojim transakcijama. Ovo možeš da preskočiš i dodaš kasnije.',
+    'h1_phone' => 'E-poruke o kupovinama prate se na računaru',
+    'lede_phone' => 'Potvrde porudžbina i potvrde o pretplatama automatski se prilažu tvojim transakcijama u aplikaciji za računar i stižu na ovaj telefon sinhronizacijom. Ništa na ovom telefonu ne čita tvoju poštu, pa preskoči ovaj korak ovde i poveži se na računaru.',
 
     'mini' => [
         'signin_label' => 'Prijava',

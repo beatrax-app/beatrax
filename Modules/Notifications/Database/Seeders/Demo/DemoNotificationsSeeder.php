@@ -8,23 +8,26 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Carbon as SupportCarbon;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Dto\TopCategories;
 use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
+use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
-use Modules\Notifications\Public\Enums\NotificationState;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Position\Public\Events\PositionDigestDue;
@@ -42,6 +45,8 @@ final class DemoNotificationsSeeder
         private readonly MarkNotificationRead $markReadAction,
         private readonly DismissNotification $dismissAction,
         private readonly UrlGenerator $urls,
+        private readonly PeriodQuery $periods,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -51,13 +56,13 @@ final class DemoNotificationsSeeder
      */
     public function run(array $users, int $extraFiller = 0): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
 
         if ($primary !== null) {
             // Captured before any setTestNow(): every business date below
             // derives from this one snapshot, so two runs on the same
             // calendar day produce the same rows.
-            $realToday = CarbonImmutable::today();
+            $realToday = $this->clock->now()->startOfDay();
             $previousTestNow = CarbonImmutable::hasTestNow() ? CarbonImmutable::getTestNow() : null;
 
             try {
@@ -100,7 +105,7 @@ final class DemoNotificationsSeeder
                     displayName: 'KPN',
                 ));
             });
-            $this->markRead($user, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $kpnSeriesId, $due->toDateString());
+            $this->markRead($user, NotificationTrigger::PaymentReminder, (string) $kpnSeriesId, $due->toDateString());
         }
 
         $sportCitySeriesId = $this->seriesId($user, 'demo:sport-city:monthly:2500');
@@ -140,7 +145,7 @@ final class DemoNotificationsSeeder
                     dueDate: $due,
                 ));
             });
-            $this->markRead($user, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $spotifySeriesId, $due->toDateString());
+            $this->markRead($user, NotificationTrigger::PaymentReminder, (string) $spotifySeriesId, $due->toDateString());
         }
 
         // Never seeded, so DeepLinkResolver::resolveSeries() finds nothing
@@ -161,7 +166,7 @@ final class DemoNotificationsSeeder
 
     private function seedBudgetSavingsAndDigestEntries(User $user, CarbonImmutable $realToday): void
     {
-        $period = $this->currentPeriodStart($realToday, (int) $user->period_start_day);
+        $period = $this->periods->containingForUser($user, $realToday)->start->toDateString();
 
         $groceries = $this->category('groceries');
         if ($groceries !== null) {
@@ -179,7 +184,7 @@ final class DemoNotificationsSeeder
                     currency: Currency::Eur->value,
                 ));
             });
-            $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $groceries['id'], $period);
+            $this->markRead($user, NotificationTrigger::BudgetNudge, (string) $groceries['id'], $period);
         }
 
         $eatingOut = $this->category('eating-out');
@@ -198,7 +203,7 @@ final class DemoNotificationsSeeder
                     currency: Currency::Eur->value,
                 ));
             });
-            $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $eatingOut['id'], $period);
+            $this->markRead($user, NotificationTrigger::BudgetNudge, (string) $eatingOut['id'], $period);
         }
 
         $netflixSeriesId = $this->seriesId($user, 'demo:netflix:monthly:1499');
@@ -212,23 +217,23 @@ final class DemoNotificationsSeeder
                     name: 'Netflix',
                     monthlyMinor: 1499,
                     currency: Currency::Eur->value,
-                    message: 'A cheaper Netflix plan could save you money.',
+                    messageKey: 'drift-alerts::savings.insight.cheaper_message',
                     actionUrl: $this->urls->route('recurring.series.show', ['seriesId' => $netflixSeriesId]),
                 ));
             });
-            $this->dismiss($user, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, (string) $netflixSeriesId, $insightKey);
+            $this->dismiss($user, NotificationTrigger::SavingsPrompt, (string) $netflixSeriesId, $insightKey);
         }
 
         $weeklyOccurrence = $realToday->isoWeekYear.'-W'.str_pad((string) $realToday->isoWeek, 2, '0', STR_PAD_LEFT);
         $this->frozen($realToday->subDays(1)->setTime(8, 0), function () use ($user, $weeklyOccurrence, $realToday): void {
             $this->events->dispatch(new PositionDigestDue(
                 userId: $user->id,
-                cadence: 'weekly',
+                cadence: DigestCadence::Weekly,
                 occurrence: $weeklyOccurrence,
                 position: $this->buildPosition($realToday, 320000, 265000, 55000),
             ));
         });
-        $this->markRead($user, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, 'position', $weeklyOccurrence);
+        $this->markRead($user, NotificationTrigger::PositionDigest, 'position', $weeklyOccurrence);
     }
 
     private function seedDriftForecastAndImportEntries(User $user, CarbonImmutable $realToday): void
@@ -237,7 +242,7 @@ final class DemoNotificationsSeeder
         $sportCitySeriesId = $this->seriesId($user, 'demo:sport-city:monthly:2500');
 
         if ($spotifySeriesId !== null) {
-            $alert = $this->openDriftAlert($user, $spotifySeriesId);
+            $alert = $this->driftAlertFor($user, $spotifySeriesId);
             if ($alert !== null) {
                 $this->frozen($realToday->subDays(2)->setTime(7, 45), function () use ($user, $spotifySeriesId, $alert): void {
                     $this->events->dispatch(new DriftAlertOpened(
@@ -250,12 +255,12 @@ final class DemoNotificationsSeeder
                         currency: $alert['currency'],
                     ));
                 });
-                $this->markRead($user, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED, (string) $spotifySeriesId, (string) $alert['id']);
+                $this->markRead($user, NotificationTrigger::DriftChanged, (string) $spotifySeriesId, (string) $alert['id']);
             }
         }
 
         if ($sportCitySeriesId !== null) {
-            $alert = $this->openDriftAlert($user, $sportCitySeriesId);
+            $alert = $this->driftAlertFor($user, $sportCitySeriesId);
             if ($alert !== null) {
                 $this->frozen($realToday->subDays(5)->setTime(7, 45), function () use ($user, $sportCitySeriesId, $alert): void {
                     $this->events->dispatch(new DriftAlertOpened(
@@ -268,17 +273,14 @@ final class DemoNotificationsSeeder
                         currency: $alert['currency'],
                     ));
                 });
-                $this->markRead($user, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED, (string) $sportCitySeriesId, (string) $alert['id']);
+                $this->markRead($user, NotificationTrigger::DriftChanged, (string) $sportCitySeriesId, (string) $alert['id']);
             }
         }
 
         $asnAccountId = $this->accountId($user, 'asn-demo-1');
         if ($asnAccountId !== null) {
-            // ForecastShortfallDetected is the one event here carrying
-            // Illuminate\Support\Carbon; instance() converts it without
-            // disturbing the CarbonImmutable-only test-now freeze.
-            $startsAt = SupportCarbon::instance($realToday->addDays(18));
-            $endsAt = SupportCarbon::instance($realToday->addDays(22));
+            $startsAt = $realToday->addDays(18);
+            $endsAt = $realToday->addDays(22);
             $this->frozen($realToday->subDays(1)->setTime(6, 0), function () use ($user, $asnAccountId, $startsAt, $endsAt): void {
                 $this->events->dispatch(new ForecastShortfallDetected(
                     userId: $user->id,
@@ -302,7 +304,7 @@ final class DemoNotificationsSeeder
         });
         $this->markRead(
             $user,
-            DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+            NotificationTrigger::ImportFinished,
             'import',
             $this->importOccurrence($realToday->subDays(3)->setTime(20, 0), 24),
         );
@@ -316,7 +318,7 @@ final class DemoNotificationsSeeder
         });
         $this->dismiss(
             $user,
-            DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
+            NotificationTrigger::ReceiptsFound,
             'import',
             $this->importOccurrence($realToday->subDays(7)->setTime(21, 0), 3),
         );
@@ -334,12 +336,12 @@ final class DemoNotificationsSeeder
             $this->frozen($day->setTime(8, 0), function () use ($user, $occurrence, $realToday): void {
                 $this->events->dispatch(new PositionDigestDue(
                     userId: $user->id,
-                    cadence: 'daily',
+                    cadence: DigestCadence::Daily,
                     occurrence: $occurrence,
                     position: $this->buildPosition($realToday, 0, 0, 0),
                 ));
             });
-            $this->markRead($user, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, 'position', $occurrence);
+            $this->markRead($user, NotificationTrigger::PositionDigest, 'position', $occurrence);
         }
     }
 
@@ -351,13 +353,13 @@ final class DemoNotificationsSeeder
         $callback();
     }
 
-    private function markRead(User $user, string $triggerType, string $subjectKey, string $occurrence): void
+    private function markRead(User $user, NotificationTrigger $triggerType, string $subjectKey, string $occurrence): void
     {
         $id = $this->keys->derive($user->id, $triggerType, $subjectKey, $occurrence);
         ($this->markReadAction)($id, $user);
     }
 
-    private function dismiss(User $user, string $triggerType, string $subjectKey, string $occurrence): void
+    private function dismiss(User $user, NotificationTrigger $triggerType, string $subjectKey, string $occurrence): void
     {
         $id = $this->keys->derive($user->id, $triggerType, $subjectKey, $occurrence);
         ($this->dismissAction)($id, $user);
@@ -383,7 +385,7 @@ final class DemoNotificationsSeeder
             inflow: Money::ofMinor($inflowMinor, Currency::Eur->value),
             outflow: Money::ofMinor($outflowMinor, Currency::Eur->value),
             net: Money::ofMinor($netMinor, Currency::Eur->value),
-            topCategories: [],
+            topCategories: TopCategories::none(Currency::Eur->value),
             recentTransactions: [],
             uncategorizedCount: 0,
             isFirstRun: false,
@@ -443,16 +445,19 @@ final class DemoNotificationsSeeder
         return is_numeric($id) ? (int) $id : null;
     }
 
+    // Any state, not only open: the entry records that the alert opened, which
+    // happened before the reader could acknowledge or dismiss it. Scoped to
+    // open, the demo's dismissed series seeded no notification at all.
     /**
      * @return array{id: int, direction: string, deltaMinor: int, annualizedImpactMinor: int, currency: string}|null
      */
-    private function openDriftAlert(User $user, int $seriesId): ?array
+    private function driftAlertFor(User $user, int $seriesId): ?array
     {
         /** @var stdClass|null $row */
         $row = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->where('recurring_series_id', $seriesId)
-            ->where('state', NotificationState::Open->value)
+            ->orderByDesc('id')
             ->first(['id', 'direction', 'delta_minor', 'annualized_impact_minor', 'currency']);
 
         if (! $row instanceof stdClass
@@ -472,17 +477,5 @@ final class DemoNotificationsSeeder
             'annualizedImpactMinor' => (int) $row->annualized_impact_minor,
             'currency' => $row->currency,
         ];
-    }
-
-    // Duplicated from DemoEnvelopeBudgetsSeeder because PeriodQuery cannot
-    // be called per-user from a seeder; the two must stay in lock-step or
-    // the occurrence key stops matching the live envelope grid.
-    private function currentPeriodStart(CarbonImmutable $now, int $periodStartDay): string
-    {
-        $startDay = max(1, min(28, $periodStartDay));
-        $candidate = $now->setDay($startDay)->startOfDay();
-        $start = $now->day >= $startDay ? $candidate : $candidate->subMonthNoOverflow();
-
-        return $start->toDateString();
     }
 }

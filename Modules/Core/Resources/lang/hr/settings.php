@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Prikaz valute',
+        'heading' => 'Prikaz iznosa',
         'label' => 'Zadani prikaz na popisu transakcija',
-        'eur_only' => 'Samo :code',
-        'original' => 'Izvorna valuta',
+        'eur_only' => 'Podmireni iznos',
+        'original' => 'Izvorni iznos',
         'help' => 'Prikaz i dalje možeš promijeniti za svaku stranicu s popisa transakcija.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Koriste se ugrađeni tečajevi. Nijedan podatak ne napušta ovaj uređaj.',
         'fetch_aria' => 'Dohvati aktualne tečajeve s interneta',
         'refreshing' => 'Osvježavanje…',
-        'next_refresh' => 'Sljedeće automatsko osvježavanje: svaki dan u 09:00',
+        'next_refresh' => 'Automatsko osvježavanje: jednom dnevno',
         'refresh_gave_up' => 'Tečajeve nije bilo moguće osvježiti. I dalje se koriste tečajevi na ovom uređaju.',
         'refresh_now' => 'Osvježi sada',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Razdoblje',
         'label' => 'Razdoblje počinje na dan',
         'help' => 'Broj od 1 do 28. Većina korisnika ostavlja 1 (kalendarski mjesec). Odaberi 25 ako ti plaća stiže 25. u mjesecu i ako tada za tebe počinje „tvoj mjesec”.',
+
+        'move_confirm' => 'Ako razdoblje počinje na dan :day, svi iznosi u omotnicama premještaju se i zbrajaju ondje gdje se dva mjeseca stapaju u jedan. Vraćanje dana natrag više ih ne razdvaja.',
+        'move_cancel' => 'Odustani',
+        'move_apply' => 'Primijeni',
     ],
 
     'recurring' => [
         'heading' => 'Otkrivanje ponavljajućih plaćanja',
         'window_label' => 'Prozor otkrivanja (mjeseci)',
         'window_help' => 'Koliko mjeseci povijesti pretražiti pri grupiranju transakcija u ponavljajuće obrasce.',
-        'income_label' => 'Najmanji prihod (centi)',
-        'income_help' => 'Prihodi ispod ovog praga ne grupiraju se automatski. Sprema se u centima — 200000 znači :example. Postavi 0 za isključivanje praga.',
+        'income_label' => 'Najmanji prihod (najmanje jedinice)',
+        'income_help' => 'Prihodi ispod ovog praga ne grupiraju se automatski. Sprema se u najmanjim jedinicama — :minor znači :example. Postavi 0 za isključivanje praga.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Zadani prag upozorenja o odstupanju',
         'help' => 'Upozorenja se javljaju kad se najnoviji iznos ponavljajućeg terećenja razlikuje od prethodnog za više od ovog postotka. Postavke pojedinačne serije imaju prednost.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (zadano)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (zadano)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Mapa za odlaganje je aktivna. Beatrax svakih 5 minuta pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za novim datotekama.',
         'inactive_html' => 'Kad je uključeno, Beatrax svakih 5 minuta pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za datotekama <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> te ih uvozi kroz isti matcher kao i čarobnjak. Obrađene datoteke premještaju se u <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pa se nikad ne uvoze dvaput.',
+        'active_phone_html' => 'Mapa za odlaganje je aktivna. Beatrax u pozadini pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za novim datotekama. Kad će se pozadinsko pretraživanje pokrenuti, odlučuje tvoj telefon — može proći nekoliko minuta ili nekoliko sati.',
+        'inactive_phone_html' => 'Kad je uključeno, Beatrax u pozadini pretražuje <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> u potrazi za datotekama <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> i <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> te ih uvozi kroz isti matcher kao i čarobnjak. Kad će se pozadinsko pretraživanje pokrenuti, odlučuje tvoj telefon — može proći nekoliko minuta ili nekoliko sati. Obrađene datoteke premještaju se u <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> pa se nikad ne uvoze dvaput.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Porez',
-    'shared_merchant_heading' => 'Zajednički popis trgovaca',
     'data_backup_heading' => 'Podaci i sigurnosna kopija',
-    'install_heading' => 'Instalacija',
 
     'about_updates' => [
         'heading' => 'O ažuriranjima',
         'body' => 'Nakon instalacije Beatrax se ažurira automatski. Kad instaliraš prvu verziju, buduće verzije stižu putem trake u aplikaciji — ne moraš se vraćati na GitHub. Ako se neko buduće ažuriranje ne uspije primijeniti, uvijek možeš ručno preuzeti najnoviji instalacijski program sa stranice izdanja.',
+        'body_phone' => 'Ovdje se Beatrax ne ažurira sam. Nove verzije mobilne aplikacije stižu preko App Storea ili Google Playa, kao i ostale tvoje aplikacije. Na stranici izdanja piše što je u svakoj promijenjeno.',
         'open_releases' => 'Otvori stranicu izdanja →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Proračunski mjesec nije se mogao pomaknuti, pa je ostao gdje je bio.',
         'currency_required' => 'Odaberi valutu.',
         'window_months' => 'Odaberi između 2 i 60 mjeseci.',
-        'threshold' => 'Odaberi prag: 1%, 2%, 5%, 10%, 25% ili 50%.',
+        'threshold' => 'Odaberi prag: 1 %, 2 %, 5 %, 10 %, 25 % ili 50 %.',
         'amount' => 'Unesi iznos od :zero naviše.',
         'period_day' => 'Odaberi dan od 1 do 28.',
         'currency_view' => 'Odaberi jednu od dostupnih opcija.',

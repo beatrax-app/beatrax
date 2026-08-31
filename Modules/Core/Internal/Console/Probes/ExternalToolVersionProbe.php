@@ -9,7 +9,7 @@ use Throwable;
 
 abstract class ExternalToolVersionProbe implements Probe
 {
-    private const TIMEOUT_SECONDS = 5.0;
+    private const float TIMEOUT_SECONDS = 5.0;
 
     public function __construct(
         private readonly string $label,

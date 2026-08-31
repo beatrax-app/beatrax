@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'El nombre de la categoría no puede estar vacío.',
         'name_duplicate' => 'Ya existe una categoría con este nombre.',
+        'category_not_saved' => 'No se pudo guardar esta categoría. Inténtalo de nuevo.',
+        'tag_refused' => 'No se pudo guardar esta etiqueta. Cierra el selector e inténtalo de nuevo.',
     ],
 ];

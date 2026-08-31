@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triagem de contrapartes',
     'heading' => 'Triar as contrapartes desconhecidas',
 
-    'progress' => ':seen de :total · :percent % · faltam ~:minutes min',
+    'progress' => ':seen de :total · :percent% · faltam ~:minutes min',
     'progress_aria' => 'Progresso da triagem',
 
     'all_caught_aria' => 'Todas as contrapartes estão identificadas',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Ainda não há transações registadas.',
 
     'label_manually' => 'Ou identifica manualmente',
+    'label_question' => 'O que é esta contraparte?',
     'display_name_label' => 'Nome apresentado',
-    'display_name_placeholder' => 'Nome apresentado…',
     'type_label' => 'Tipo',
     'type_merchant' => 'Comerciante',
     'type_personal' => 'Pessoal',
     'type_bank' => 'Banco',
     'type_government' => 'Estado',
     'save_label' => 'Guardar identificação',
+    'name_required' => 'Dá primeiro um nome a esta contraparte.',
+    'draft_kept' => 'O que escreves fica guardado enquanto percorres a fila.',
 
     'skip' => 'Ignorar por agora',
-    'mark_ignored' => 'Marcar como ignorada',
+    'mark_ignored' => 'Não perguntar mais por esta',
+    'not_now_note' => 'Nenhuma das duas altera a contraparte — ainda a podes identificar mais tarde na página Contrapartes.',
     'previous' => 'Desconhecida anterior',
-    'next' => 'Seguinte',
 
     'kbd_yes' => 'sim',
     'kbd_no' => 'não',

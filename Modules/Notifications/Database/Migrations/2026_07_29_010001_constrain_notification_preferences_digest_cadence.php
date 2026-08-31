@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Database\Support\ModuleMigration;
-use Modules\Notifications\Public\Enums\DigestCadence;
+use Modules\Core\Public\Enums\DigestCadence;
 
 // digest_cadence was created as a bare string, so only application code
 // stopped a hand-written UPDATE from storing a value no enum case can

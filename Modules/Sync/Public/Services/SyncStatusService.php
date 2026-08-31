@@ -133,13 +133,16 @@ final readonly class SyncStatusService
             return false;
         }
 
-        $latestLocalOp = $this->latestInstant(
+        // MAX in SQL, not in PHP: op_log_entries has one row per field of every
+        // write this device ever made, and plucking them all to parse each into
+        // a Carbon exhausted a phone's 128 MB at 200,000 entries — on a screen
+        // that mounts this component unconditionally.
+        $latestLocalOp = self::instantOf(
             $this->db->connection()
                 ->table('op_log_entries')
                 ->where('user_id', $userId)
                 ->where('device_id', $selfDeviceId)
-                ->pluck('recorded_at')
-                ->all(),
+                ->max('recorded_at'),
         );
 
         return $latestLocalOp instanceof CarbonImmutable
@@ -158,22 +161,29 @@ final readonly class SyncStatusService
         $latest = null;
 
         foreach ($values as $value) {
-            if (! is_string($value) || $value === '') {
-                continue;
-            }
+            $parsed = self::instantOf($value);
 
-            try {
-                $parsed = CarbonImmutable::parse($value);
-            } catch (\Throwable) {
-                continue;
-            }
-
-            if ($latest === null || $parsed->greaterThan($latest)) {
+            if ($parsed !== null && ($latest === null || $parsed->greaterThan($latest))) {
                 $latest = $parsed;
             }
         }
 
         return $latest;
+    }
+
+    // A stored stamp read as an instant, or null when it is absent or
+    // unparseable — an unreadable timestamp must not decide a status.
+    private static function instantOf(mixed $value): ?CarbonImmutable
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     // Returns null when no session has recorded a last_seen_at. The caller

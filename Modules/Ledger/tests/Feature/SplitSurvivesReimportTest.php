@@ -55,7 +55,6 @@ it('leaves a split transaction leg count, amounts, and leg ids unchanged after r
         currency: 'EUR',
         settledAmountMinor: -8000,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Albert Heijn',
         counterpartyIban: null,
         counterpartyNormalized: 'albert heijn',

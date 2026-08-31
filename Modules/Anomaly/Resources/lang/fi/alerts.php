@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'perustaso :baseline → toteuma: :actual',
+    'charged' => 'veloitettu :actual',
     'detected' => 'havaittu :date',
     'sensitivity' => 'herkkyys :percent 100:sta',
 

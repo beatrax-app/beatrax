@@ -7,7 +7,6 @@ return [
     'quarantined_ops' => 'Operace v karanténě — posledních 7 dní',
     'skipped' => ':count přeskočená operace|:count přeskočené operace|:count přeskočených operací',
     'empty' => 'Za posledních 7 dní žádné přeskočené operace.',
-
     'col_reason' => 'Důvod',
     'col_table' => 'Tabulka',
     'col_device' => 'Zařízení',

@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+// Two pages draw their rows twice — once for the phone, once for the desktop —
+// and a media query hides whichever list the viewport is not. A row action that
+// arms a state ($archivingPotId, $archivingGoalId) therefore has to have its
+// answer drawn in BOTH: a confirm strip written into the desktop list alone is
+// markup the phone never paints, so the button that armed it reads as dead. The
+// reader taps archive, the id is set, and the screen does not move.
+//
+// Goals hit this and was fixed; Pots kept the same defect for the same reason,
+// which is why this is derived from the CSS rule rather than a list of files —
+// a third page adopting the idiom is covered the day it is written.
+const BREAKPOINT_SPLIT_STYLE = '~\.([a-z][a-z0-9]*)-desktop-list \{ display: none !important; \}~';
+
+/**
+ * @return list<string>
+ */
+function armedRowGatesIn(string $blade, int $from, int $to): array
+{
+    $found = preg_match_all('~@if \(\$(\w+) === \$\w+->id\)~', $blade, $m, PREG_OFFSET_CAPTURE);
+
+    // preg_match_all returns false on a backtrack or JIT stack limit, and a
+    // guard that stopped reading must say so rather than report an empty set.
+    if ($found === false) {
+        throw new RuntimeException('the gate scan failed: '.preg_last_error_msg());
+    }
+
+    $gates = [];
+
+    foreach ($m[1] as $i => $capture) {
+        $offset = $m[0][$i][1];
+
+        if ($offset >= $from && $offset < $to) {
+            $gates[] = (string) $capture[0];
+        }
+    }
+
+    return array_values(array_unique($gates));
+}
+
+it('draws a row action\'s answer in whichever of the two lists the viewport shows', function (): void {
+    $blades = [];
+
+    foreach ((array) glob(base_path('Modules/*/Resources/views/livewire/*.blade.php')) as $path) {
+        $source = (string) file_get_contents((string) $path);
+
+        if (preg_match(BREAKPOINT_SPLIT_STYLE, $source, $m) === 1) {
+            $blades[(string) $path] = $m[1];
+        }
+    }
+
+    // The idiom is spelled in CSS, so a rename would leave this scanning
+    // nothing and passing. Both known pages have to be found for it to mean
+    // anything, and the count is the assertion that it read a real tree.
+    expect($blades)->toHaveCount(2);
+
+    $unanswered = [];
+
+    foreach ($blades as $path => $prefix) {
+        $blade = (string) file_get_contents($path);
+        $relative = str_replace(base_path().'/', '', $path);
+
+        $phoneAt = preg_match('~class="[^"]*'.$prefix.'-phone-list~', $blade, $pm, PREG_OFFSET_CAPTURE) === 1
+            ? $pm[0][1] : null;
+        $desktopAt = preg_match('~class="[^"]*'.$prefix.'-desktop-list~', $blade, $dm, PREG_OFFSET_CAPTURE) === 1
+            ? $dm[0][1] : null;
+        $desktopEnd = strpos($blade, 'end .'.$prefix.'-desktop-list');
+
+        // The regions are read off three landmarks in document order. If a page
+        // ever puts the desktop list first, or drops the end marker, the ranges
+        // below would silently cover the wrong text — so refuse instead.
+        if ($phoneAt === null || $desktopAt === null || $desktopEnd === false
+            || ! ($phoneAt < $desktopAt && $desktopAt < $desktopEnd)) {
+            $unanswered[] = $relative.' — the phone list, the desktop list and the end marker are not in document order';
+
+            continue;
+        }
+
+        $phoneGates = armedRowGatesIn($blade, $phoneAt, $desktopAt);
+        $desktopGates = armedRowGatesIn($blade, $desktopAt, (int) $desktopEnd);
+
+        foreach (array_diff($desktopGates, $phoneGates) as $gate) {
+            $unanswered[] = $relative.' — $'.$gate.' is answered in the desktop list only, and the phone hides it';
+        }
+
+        foreach (array_diff($phoneGates, $desktopGates) as $gate) {
+            $unanswered[] = $relative.' — $'.$gate.' is answered in the phone list only, and the desktop hides it';
+        }
+    }
+
+    expect($unanswered)->toBe([], "A row action arms a state whose answer the viewport cannot paint:\n  ".implode("\n  ", $unanswered));
+});

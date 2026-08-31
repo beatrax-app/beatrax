@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Ta telefon ne more shraniti datoteke, ki mu jo aplikacija izroči, zato šifrirano varnostno kopijo naredite v namizni aplikaciji. Seznanite to napravo, da ostaneta usklajeni.',
+        'no_download_route' => 'Ta aplikacija ne more predati datoteke tvoji napravi, zato šifrirano varnostno kopijo ustvariš v namizni aplikaciji. Seznanite to napravo, da ostaneta usklajeni.',
         'unavailable' => 'Šifrirane varnostne kopije so na voljo v namizni različici (SQLite). Pri strežniški bazi podatkov uporabi orodja za varnostno kopiranje same baze.',
         'intro' => 'Prenesi z geslom šifrirano kopijo celotne baze podatkov — varno jo je hraniti na zunanjem disku ali v oblaku, ker je brez gesla neberljiva (kvantno odporen XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Geslo',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Datoteka ni bila naložena do konca. Morda je prevelika za to napravo — obnovitev v namizni aplikaciji sprejme večjo varnostno kopijo.',
         'enter_passphrase' => 'Vnesi geslo, s katerim je bila varnostna kopija šifrirana.',
         'unreadable' => 'Naložene datoteke ni bilo mogoče prebrati. Poskusi znova.',
+        'restore_wrong_passphrase' => 'To geslo ni odprlo te varnostne kopije in nič ni bilo spremenjeno. Vnesi ga znova in poskusi še enkrat. Če je zagotovo pravilno, je bila datoteka po nastanku spremenjena — takrat obnovi iz druge kopije.',
+        'restore_not_a_backup' => 'Ta datoteka ni šifrirana varnostna kopija Beatraxa, zato ni česa obnoviti in nič ni bilo spremenjeno. Izberi datoteko .enc, ki jo je aplikacija zapisala ob izdelavi kopije.',
+        'restore_contents_unreadable' => 'Varnostna kopija se je odprla, a je zbirka podatkov v njej poškodovana, zato ni bila obnovljena in nič ni bilo spremenjeno. Obnovi iz starejše varnostne kopije.',
+        'restore_could_not_read' => 'Datoteke varnostne kopije ni bilo mogoče prebrati, zato obnovitev ni tekla in nič ni bilo spremenjeno. Preveri, ali ima naprava prosti prostor, in poskusi znova.',
+        'restore_not_supported' => 'Obnovitev deluje v izdaji, ki hrani podatke v eni sami datoteki, ta pa to ni, zato nič ni bilo spremenjeno. Pri strežniški zbirki podatkov uporabi njena lastna orodja za obnovitev.',
+        'restore_failed' => 'Obnovitev ni tekla in nič ni bilo spremenjeno. Poskusi znova — če še naprej spodleti, dnevnik aplikacije zabeleži, kaj jo je ustavilo.',
     ],
 ];

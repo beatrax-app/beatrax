@@ -7,7 +7,6 @@ return [
     'quarantined_ops' => 'Karanteeniin asetetut operaatiot — viimeiset 7 päivää',
     'skipped' => ':count ohitettu operaatio|:count ohitettua operaatiota',
     'empty' => 'Ei ohitettuja operaatioita viimeisten 7 päivän aikana.',
-
     'col_reason' => 'Syy',
     'col_table' => 'Taulu',
     'col_device' => 'Laite',

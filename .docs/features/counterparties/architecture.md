@@ -50,10 +50,29 @@ UPDATE OF type triggers on the `counterparties` table, so a typo in the
 application layer fails loud at the DB boundary rather than landing a
 silently-broken row. `self_account` is part of the trigger set even
 though the resolver never actually writes a row of that type. The
-`metadata` JSON cast carries per-type opaque payload (e.g. the
-`subcategory => 'fee'` flag on bank-fee rows, bridge provenance on
-known-counterparty-IBAN rows) so type-aware profile pages render
-without a second lookup.
+`metadata` JSON cast carries per-type payload (bridge provenance on
+known-counterparty-IBAN rows, the matched pattern on corpus hits) so a
+type-aware profile page renders without a second lookup.
+
+Two of those keys are read back rather than merely stored, and
+`Internal/Enums/CounterpartyMetadataKey` is where both are spelled:
+`Subcategory`, whose only value is `CounterpartySubcategory::Fee`, and
+`Ignored`, the triage-queue exclusion. `metadata` is not a
+`SensitiveFieldRegistry` column, so both are readable in SQL —
+`CounterpartyMetadataKey::column()` gives the JSON path, which is how
+the queue's predicate and the profile's branch stay one spelling.
+
+A third, `default_name`, marks a `display_name` the resolver had to invent
+rather than read off the file, so the word follows the reader's language
+instead of the importer's — see
+[the app's own words](resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name).
+
+`type='bank'` is the one type two chain steps write for two different
+things: step 2's bridge lands an institution the reader transacts
+*through*, step 6's corpus lands a charge the bank levies. The fee flag
+is what tells them apart, and the profile body needs it — a PayPal
+settlement under a heading reading "Bank fees by category" tells the
+reader their own bank charged them for a purchase they made.
 
 Two vocabularies describe those six values, and they are not the same
 one. `Public/Enums/CounterpartyType` spells what the column stores.
@@ -86,11 +105,19 @@ must carry its own explicit filter regardless of the trait.
 - **Pipeline/**
   - `ResolvesCounterparties::run($tx, $user)` — the pipeline-stage
     contract `ImportPipeline` consumes. Bound to
-    `Internal\Pipeline\ResolveCounterpartyStage`.
+    `Internal\Pipeline\ResolveCounterpartyStage`. `Migration`'s
+    `PromoteStagingToDomain` and `CashBook`'s `RecordManualTransaction`
+    consume the same seam, so a promoted row and a hand-typed one carry
+    a `counterparty_id` on the same terms an imported one does.
 - **DTOs/**
   - `CounterpartyResolutionDto` — `(counterpartyId, slug, type)`
     returned by the resolver. `counterpartyId = null` when
     `type='self_account'`.
+- **Support/**
+  - `CounterpartyDefaultName::resolve($storedName, $metadata)` — the one
+    read seam that turns a name the app supplied into the reader's own
+    language. Every surface that renders a counterparty name goes through
+    it; `CounterpartySlugResolver` deliberately does not.
 - **Events/**
   - `CounterpartyResolved` — `(counterpartyId, userId, type)` fired on
     every successful upsert. v1.0.0 ships zero listeners; reserved
@@ -102,6 +129,11 @@ must carry its own explicit filter regardless of the trait.
 
 `Internal/` houses the implementation:
 
+- **Internal/Actions/LabelCounterparty** — the write seam behind every
+  triage decision: accept, hand-label, ignore. It re-derives the slug
+  from the new display name, announces the write with `EntityMutated`
+  so the reader's other device sees it, and owns the ignore predicate
+  `CounterpartyTriageQueue` filters on.
 - **Internal/Resolver/CounterpartyResolverService** — the 7-step
   precedence chain.
 - **Internal/Pipeline/ResolveCounterpartyStage** — the `ImportPipeline`
@@ -144,7 +176,8 @@ bindings resolve against.
      `type='government'`.
   6. **Bank-fee corpus fallback** — descriptions matching a rule from
      `resources/corpus/bank-fees/<cc>.yaml` resolve to `type='bank'`
-     with `metadata.subcategory='fee'`.
+     with `metadata.subcategory='fee'`, which is what separates them
+     from step 2's institution rows on the profile page.
   7. **Unresolved** — `type='unknown'`; IBAN preserved for triage.
 
   Step 2's bridge contract returns the user's own `Account` (it was
@@ -210,7 +243,13 @@ user's explicit Show-IBAN click before echoing it.
 `CounterpartyIndexQuery::forUser()` computes each card/list-row's
 12-month total, per-month average, and 12-bar sparkline via SQL
 `GROUP BY`/`SUM` so per-render cost stays bounded regardless of import
-history depth. Rows are read via the raw query builder rather than
+history depth. All three — and the profile's own total and category
+breakdown — take their window from
+`Internal\Support\RollingTwelveMonths`: twelve whole calendar months
+ending with the one in progress. The totals used to take a rolling
+year while the bars took calendar months, so spend inside the headline
+figure, and inside the average it is divided by, had no bar to appear
+in — on the 1st of a month, a whole month of it. Rows are read via the raw query builder rather than
 Eloquent, so the explicit `where('user_id', ...)` filter is the
 load-bearing scope (`BelongsToUser` only fires under HTTP-bound
 Eloquent surfaces). `CounterpartyIndexRow` carries no `iban` field at
@@ -227,15 +266,24 @@ the same three fields.
 ## Triage keyboard shortcuts
 
 `CounterpartyTriage` (`/counterparties/triage`) is a focused single-card
-queue with keyboard-first ergonomics:
+queue with keyboard-first ergonomics. It is the app's second writer of
+`counterparties` and behaves like one: every decision goes through
+`LabelCounterparty`, which announces it to the op-log exactly as the
+resolver and the garbage collector do.
 
 | Key | Action |
 |---|---|
 | `Y` | Accept current suggestion + advance |
 | `N` | Reject suggestion + focus manual-label section |
-| `S` | Skip for now (re-queues at end of session) |
-| `→` | Next unknown |
+| `S` | Skip for now — advance without writing |
+| `→` | The same movement; `skipForNow()` is a call to `nextItem()` |
 | `Esc` | Close triage (return to `/counterparties`) |
+
+`S` and `→` are one behaviour, and the card used to draw both of them:
+`↷ Skip for now` as a ghost and `Next ▸` as the only solid button on the
+screen. The louder of the two did none of the work, so the button is
+gone and `Skip for now` is the single forward control. `nextItem()`
+stays public because the `→` binding calls it.
 
 `CounterpartyTriageQueue::suggestionFor()` walks up to 20 recent
 transaction descriptions through `MerchantNameResolver` and tallies
@@ -255,6 +303,25 @@ The bindings respect the input carve-out in
 not the handler — the view layer attaches listeners on the wire root
 with Alpine focus-state tracking. Progress copy renders as
 `{seen} of {total} · {percent} % · ~{minutes} min remaining`.
+
+## The triage card's action area
+
+Every control in the card — the two suggestion answers, the name box,
+the type picker, the save, the skip, the ignore and the previous — is a
+full-width block in a `.triage-stack` column, so the card's own content
+box is the only left and right edge on the screen. The section was
+hand-styled before, with seven inline `flex:` / `padding:` / `border:`
+declarations of its own, and measured in headless Chromium with a coarse
+pointer against the built stylesheet it drew **five distinct left edges
+and seven right edges** at 411px in English; in German, Greek, Spanish,
+French, Hungarian, Dutch and Ukrainian two of its buttons broke to three
+lines inside a 44px box. It uses `x-core::form-field`,
+`x-core::neutral-button` and `x-core::secondary-button` now, so across
+all 26 locales at 375px and 411px, with and without a suggestion banner,
+every control shares one left edge and one right edge, clears 44px,
+clips nothing, and the page never scrolls sideways.
+`Modules/Counterparties/tests/Feature/TheTriageCardDrawsOnePrimaryOnOneEdgeTest.php`
+holds the structure that measurement depends on.
 
 ## Garbage collector — encryption-aware orphan predicate
 

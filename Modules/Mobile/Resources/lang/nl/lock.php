@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ontgrendelen',
 
-    'digits_entered' => 'cijfers ingevoerd',
+    'digits_entered' => ':count cijfer ingevoerd|:count cijfers ingevoerd',
     'pin_pad' => 'Pincodepaneel',
     'digit' => 'Cijfer :digit',
     'backspace' => 'Wissen',

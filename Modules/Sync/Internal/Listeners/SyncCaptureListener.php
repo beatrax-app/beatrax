@@ -8,6 +8,7 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesEnvelopeMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesGoalMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesReportAndNotificationMutations;
@@ -25,18 +26,19 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
 
-final class SyncCaptureListener
+final readonly class SyncCaptureListener
 {
     use CapturesEnvelopeMutations;
     use CapturesGoalMutations;
     use CapturesReportAndNotificationMutations;
     use CapturesTransactionMutations;
 
-    private const UNKNOWN_MUTATION_TYPE = 'SyncCaptureListener: unknown mutationType';
+    private const string UNKNOWN_MUTATION_TYPE = 'SyncCaptureListener: unknown mutationType';
 
     public function __construct(
-        private readonly Container $container,
-        private readonly LoggerInterface $log,
+        private Container $container,
+        private LoggerInterface $log,
+        private MergeRulesRegistry $rules,
     ) {}
 
     // Sync off, an app-lock engaged, and a mutation raised outside a request
@@ -227,7 +229,16 @@ final class SyncCaptureListener
     // already published, because a g_counter op must carry a per-device total.
     private function writeEntityEdit(EntityMutated $event, OpLogWriter $writer): void
     {
+        // `users` mixes the reader's settings with this device's password,
+        // theme and developer gate. Only the settings go on the wire, and the
+        // registry is where which-is-which is written down.
+        $offTheWire = $this->rules->columnsNeverOnTheWire($event->table);
+
         foreach ($event->dirtyFields as $field => $value) {
+            if (in_array($field, $offTheWire, true)) {
+                continue;
+            }
+
             if (in_array($field, $event->incrementFields, true) && is_int($value)) {
                 $writer->writeIncrement($event->table, $event->pk, $field, $value);
 

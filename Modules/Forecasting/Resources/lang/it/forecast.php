@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Confrontato con il riferimento qui sopra',
 
+    'run_failed' => 'Non è stato possibile calcolare questa proiezione. La linea qui sotto mostra solo ciò che è già registrato.',
+
     'scenario_editor_aria' => 'Editor degli scenari',
     'series_confidence' => 'Affidabilità delle serie',
     'no_series_contribute' => 'Nessuna serie contribuisce ancora alla previsione di questo conto.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Aggiornamento',
     'chart_noscript' => "Il grafico richiede JavaScript. L'intervallo copre :days giorno.|Il grafico richiede JavaScript. L'intervallo copre :days giorni.",
     'total_balance' => 'Saldo totale',
+    'projection_range' => 'Intervallo di proiezione',
+    'point_estimate' => 'Stima puntuale',
 
     'per_month_suffix' => '/mese',
     'confidence_chip_aria' => ":name, affidabilità :confidence — l'intervallo di proiezione è il :percent per cento della stima puntuale",
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Minimo in 30 giorni',
     'next_ics' => 'Prossimo regolamento ICS: :amount il :date',
     'ics_overdue' => 'Regolamento ICS scaduto: :amount, scaduto il :date',
+
+    'stale_run' => 'Proiettato dal :date — non aggiornato da allora.',
+
+    'confidence' => [
+        'high' => 'Alta',
+        'medium' => 'Media',
+        'low' => 'Bassa',
+    ],
+
+    'errors' => [
+        'amount_required' => 'L’importo è obbligatorio.',
+        'amount_decimals' => 'L’importo deve essere un numero con al massimo :decimals decimale.|L’importo deve essere un numero con al massimo :decimals decimali.',
+        'amount_whole' => 'L’importo deve essere un numero intero: questa valuta non ha unità minori.',
+        'amount_non_negative' => 'L’importo deve essere zero o positivo.',
+        'amount_non_zero' => 'L’importo non può essere zero.',
+        'field_required' => 'Il campo :field è obbligatorio.',
+    ],
 ];

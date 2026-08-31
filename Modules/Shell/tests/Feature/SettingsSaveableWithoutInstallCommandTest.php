@@ -39,6 +39,7 @@ it('saves the period start day, which the currency validator used to block', fun
     Livewire::test(SettingsPage::class)
         ->set('periodStartDay', 25)
         ->call('save')
+        ->call('save')
         ->assertHasNoErrors();
 
     expect((int) DB::table('users')->where('id', $this->settingsUser->id)->value('period_start_day'))

@@ -10,8 +10,6 @@ return [
 
     'step_progress' => 'Trinn :current av :total',
 
-    'step_dot_aria' => 'Trinn :number av :total',
-
     'back' => 'Tilbake',
     'back_aria' => 'Tilbake — går tilbake til forrige oppsettstrinn',
 

@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Le regole restano su questo dispositivo. Non vengono condivise con gli altri tuoi dispositivi.',
 
     'reapply' => 'Riapplica le regole alla cronologia',
+    'reapply_confirm' => 'Riapplicare tutte le regole a tutta la tua cronologia? Ogni categoria, controparte, nota ed etichetta fiscale messa da una regola viene riscritta. Quello che hai impostato a mano resta, e così tutto ciò che si trova su un estratto conto riconciliato. Nulla rimette i valori precedenti.',
     'reapplying' => 'Riapplicazione…',
     'new_rule' => 'Nuova regola',
 
-    'reapply_progress_lead' => 'Riapplicazione delle regole…',
-    'reapply_progress_of' => 'di',
-    'reapply_progress_trail' => 'transazioni controllate',
+    'reapply_progress' => 'Riapplicazione delle regole… :checked di :count transazione controllata|Riapplicazione delle regole… :checked di :count transazioni controllate',
 
     'empty_heading' => 'Ancora nessuna regola',
     'empty_body' => "Le regole confrontano le transazioni su più condizioni e applicano automaticamente modifiche a categoria, controparte, nota ed etichetta fiscale — durante l'importazione e ogni volta che le riapplichi alla cronologia esistente.",
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Creata',
     'col_row_actions' => 'Azioni',
     'inactive_badge' => 'Inattiva',
+    'combinator_all' => 'TUTTE',
+    'combinator_any' => 'ALMENO UNA',
     'inactive_title' => 'Questa regola non viene applicata. Una regola si disattiva quando la categoria o la controparte a cui punta viene eliminata.',
 
     'more_conditions' => '+:count altre',

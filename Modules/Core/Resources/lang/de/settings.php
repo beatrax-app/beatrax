@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Währungsanzeige',
+        'heading' => 'Betragsanzeige',
         'label' => 'Standardansicht in der Transaktionsliste',
-        'eur_only' => 'Nur :code',
-        'original' => 'Originalwährung',
+        'eur_only' => 'Abgerechneter Betrag',
+        'original' => 'Originalbetrag',
         'help' => 'Du kannst weiterhin pro Seite aus der Transaktionsliste heraus umschalten.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Es werden die mitgelieferten Kurse verwendet. Keine Daten verlassen dieses Gerät.',
         'fetch_aria' => 'Aktuelle Wechselkurse online abrufen',
         'refreshing' => 'Wird aktualisiert…',
-        'next_refresh' => 'Nächste automatische Aktualisierung: täglich um 09:00',
+        'next_refresh' => 'Automatische Aktualisierung: einmal täglich',
         'refresh_gave_up' => 'Die Kurse konnten nicht aktualisiert werden. Es gelten weiterhin die Kurse auf diesem Gerät.',
         'refresh_now' => 'Jetzt aktualisieren',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Zeitraum',
         'label' => 'Zeitraum beginnt am Tag',
         'help' => 'Nummeriert von 1 bis 28. Die meisten lassen das auf 1 (Kalendermonat). Nimm 25, wenn dein Gehalt am 25. eingeht und „dein Monat“ für dich dann beginnt.',
+
+        'move_confirm' => 'Beginnt der Zeitraum am Tag :day, werden alle Umschlagbeträge neu einsortiert und dort zusammengezählt, wo zwei Monate zu einem verschmelzen. Den Tag zurückzusetzen trennt sie nicht wieder.',
+        'move_cancel' => 'Abbrechen',
+        'move_apply' => 'Anwenden',
     ],
 
     'recurring' => [
         'heading' => 'Erkennung wiederkehrender Zahlungen',
         'window_label' => 'Erkennungsfenster (Monate)',
         'window_help' => 'Wie viele Monate Verlauf durchsucht werden, wenn Transaktionen zu wiederkehrenden Mustern gruppiert werden.',
-        'income_label' => 'Mindesteinkommen (Cent)',
-        'income_help' => 'Einnahmen unter diesem Schwellenwert werden nicht automatisch gruppiert. Gespeichert in Cent — 200000 bedeutet :example. Setze den Wert auf 0, um den Schwellenwert abzuschalten.',
+        'income_label' => 'Mindesteinkommen (kleinste Einheiten)',
+        'income_help' => 'Einnahmen unter diesem Schwellenwert werden nicht automatisch gruppiert. Gespeichert in kleinsten Einheiten — :minor bedeutet :example. Setze den Wert auf 0, um den Schwellenwert abzuschalten.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Standardschwelle für Abweichungswarnungen',
         'help' => 'Warnungen werden ausgelöst, wenn der letzte Betrag einer wiederkehrenden Abbuchung um mehr als diesen Prozentsatz vom vorherigen Betrag abweicht. Einstellungen pro Reihe haben Vorrang.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (Standard)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (Standard)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Der Ablageordner ist aktiv. Beatrax durchsucht <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> alle 5 Minuten nach neuen Dateien.',
         'inactive_html' => 'Wenn aktiviert, durchsucht Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> alle 5 Minuten nach <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- und <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-Dateien und importiert sie über dieselbe Matcher-Pipeline wie der Assistent. Verarbeitete Dateien wandern nach <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, damit sie nie doppelt importiert werden.',
+        'active_phone_html' => 'Der Ablageordner ist aktiv. Beatrax durchsucht <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> im Hintergrund nach neuen Dateien. Wann ein Hintergrunddurchlauf startet, entscheidet dein Telefon — das können Minuten sein oder Stunden.',
+        'inactive_phone_html' => 'Wenn aktiviert, durchsucht Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> im Hintergrund nach <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- und <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-Dateien und importiert sie über dieselbe Matcher-Pipeline wie der Assistent. Wann ein Hintergrunddurchlauf startet, entscheidet dein Telefon — das können Minuten sein oder Stunden. Verarbeitete Dateien wandern nach <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, damit sie nie doppelt importiert werden.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Steuern',
-    'shared_merchant_heading' => 'Gemeinsame Händlerliste',
     'data_backup_heading' => 'Daten & Backup',
-    'install_heading' => 'Installation',
 
     'about_updates' => [
         'heading' => 'Über Updates',
         'body' => 'Beatrax aktualisiert sich nach der Installation automatisch. Nach der Installation der allerersten Version kommen künftige Versionen über ein Banner in der App — du musst GitHub nicht erneut aufsuchen. Sollte ein künftiges Update einmal nicht durchlaufen, kannst du dir den neuesten Installer jederzeit manuell von der Releases-Seite herunterladen.',
+        'body_phone' => 'Hier aktualisiert sich Beatrax nicht selbst. Neue Versionen der Telefon-App kommen über den App Store oder Google Play, genau wie bei deinen anderen Apps. Die Releases-Seite listet auf, was sich in jeder geändert hat.',
         'open_releases' => 'Releases-Seite öffnen →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Der Budgetmonat konnte nicht verschoben werden und bleibt daher, wo er war.',
         'currency_required' => 'Wähle eine Währung.',
         'window_months' => 'Wähle zwischen 2 und 60 Monaten.',
-        'threshold' => 'Wähle einen Schwellenwert von 1%, 2%, 5%, 10%, 25% oder 50%.',
+        'threshold' => 'Wähle einen Schwellenwert von 1 %, 2 %, 5 %, 10 %, 25 % oder 50 %.',
         'amount' => 'Gib einen Betrag ab :zero ein.',
         'period_day' => 'Wähle einen Tag von 1 bis 28.',
         'currency_view' => 'Wähle eine der verfügbaren Optionen.',

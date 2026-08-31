@@ -103,9 +103,9 @@ final class CounterpartyProfile extends Component
             'supportResource' => $supportResource,
             'recurringSeries' => $recurringSeries,
             'recentActivity' => $recentActivity,
-            'categoryBreakdown' => $query->categoryBreakdown($cpModel),
+            'categoryBreakdown' => $query->categoryBreakdown($cpModel, $user),
             'fundingChain' => $query->fundingChainSummary($cpModel),
-            'taxYears' => $query->taxYearBreakdown($cpModel),
+            'taxYears' => $query->taxYearBreakdown($cpModel, $user),
             'activeTab' => $this->tab,
             'taxState' => $taxState,
         ]);

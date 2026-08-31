@@ -9,11 +9,11 @@ use Throwable;
 
 final class BackupRetentionPolicy
 {
-    private const FILENAME_PATTERN = '/^beatrax-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.sqlite$/';
+    private const string FILENAME_PATTERN = '/^beatrax-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.sqlite$/';
 
-    private const DAILY_KEEP_COUNT = 7;
+    private const int DAILY_KEEP_COUNT = 7;
 
-    private const SUNDAY_KEEP_COUNT = 4;
+    private const int SUNDAY_KEEP_COUNT = 4;
 
     /**
      * @param  list<string>  $candidateFilenames

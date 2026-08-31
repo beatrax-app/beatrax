@@ -7,8 +7,8 @@ namespace Modules\Receipts\Internal\Matchers;
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
@@ -20,25 +20,37 @@ use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 // (exact equality, not str_contains, so a look-alike domain cannot
 // spoof this matcher). Amounts are NEGATED and normalised to
 // startOfDay() for cross-format fingerprint parity with the ICS PDF.
-final class IcsReceiptMatcher implements SenderMatcher
+final readonly class IcsReceiptMatcher implements SenderMatcher
 {
-    private const ICS_DOMAINS = ['ics.nl', 'icscards.nl'];
+    private const string MATCHER_KEY = 'ics-receipt';
 
-    private const MERCHANT_REGEX = '/(?:Verkoper|Merchant):\s*(.+)/i';
+    private const array ICS_DOMAINS = ['ics.nl', 'icscards.nl'];
 
-    private const AMOUNT_REGEX = '/(?:€|EUR)\s*([0-9][0-9.,]*)/i';
+    private const string MERCHANT_REGEX = '/(?:Verkoper|Merchant):\s*(.+)/i';
 
     // Matches both the current-generation Dutch "eindigend op 1234"
     // form and the prior-generation "kaart **** 1234" form.
-    private const CARD_LAST4_REGEX = '/(?:eindigend op|kaart\s*\*{4})\s*([0-9]{4})/i';
+    private const string CARD_LAST4_REGEX = '/(?:eindigend op|kaart\s*\*{4})\s*([0-9]{4})/i';
 
-    private const REFERENCE_REGEX = '/(?:Referentienummer|Autorisatiecode):\s*([A-Z0-9]+)/i';
+    private const string REFERENCE_REGEX = '/(?:Referentienummer|Autorisatiecode):\s*([A-Z0-9]+)/i';
 
-    public function __construct(private readonly EmlMimeReader $reader) {}
+    public function __construct(
+        private EmlMimeReader $reader,
+        private ReceiptBodyText $text,
+    ) {}
+
+    // The anchor captures the mark it found instead of naming the euro twice —
+    // once in this pattern and once as the code the digits were then read at.
+    // A card billed abroad quotes the foreign figure, and at the euro's scale
+    // a yen line read as a hundredth of itself.
+    private static function amountRegex(): string
+    {
+        return '/('.ReceiptBodyText::currencyMarkers().')\s*([0-9][0-9.,]*)/i';
+    }
 
     public function key(): string
     {
-        return 'ics-receipt';
+        return self::MATCHER_KEY;
     }
 
     public function priority(): int
@@ -80,7 +92,7 @@ final class IcsReceiptMatcher implements SenderMatcher
     {
         $body = $parsed->textBody;
         if ($body === null || $body === '') {
-            $body = $this->stripHtml($parsed->htmlBody ?? '');
+            return $this->text->plainText($parsed->htmlBody ?? '');
         }
 
         return $body;
@@ -91,15 +103,9 @@ final class IcsReceiptMatcher implements SenderMatcher
     // rather than mis-parsing it.
     private function isStatementShape(ParsedMimeMessage $parsed, string $body): bool
     {
-        $hasPdfAttachment = false;
-        foreach ($parsed->attachmentFilenames as $filename) {
-            if (str_ends_with(strtolower($filename), '.pdf')) {
-                $hasPdfAttachment = true;
-                break;
-            }
-        }
+        $hasPdfAttachment = array_any($parsed->attachmentFilenames, fn (string $filename): bool => str_ends_with(strtolower($filename), '.pdf'));
 
-        return $hasPdfAttachment && preg_match(self::AMOUNT_REGEX, $body) !== 1;
+        return $hasPdfAttachment && preg_match(self::amountRegex(), $body) !== 1;
     }
 
     private function parseReceipt(ParsedMimeMessage $parsed, string $body): MatchOutcomeDto
@@ -108,12 +114,12 @@ final class IcsReceiptMatcher implements SenderMatcher
         if ($merchant === null || $merchant === '') {
             return MatchOutcomeDto::unmatched();
         }
-        $amountMinor = $this->negatedAmountMinor($body);
-        if ($amountMinor === null) {
+        $charge = $this->negatedCharge($body);
+        if ($charge === null) {
             return MatchOutcomeDto::unmatched();
         }
 
-        return $this->buildOutcome($parsed, $body, $merchant, $amountMinor);
+        return $this->buildOutcome($parsed, $body, $merchant, $charge);
     }
 
     // Merchant: labelled form preferred; loose <td> fallback parses the
@@ -130,38 +136,50 @@ final class IcsReceiptMatcher implements SenderMatcher
         return null;
     }
 
-    private function negatedAmountMinor(string $body): ?int
+    /**
+     * @return array{int, string}|null
+     */
+    private function negatedCharge(string $body): ?array
     {
-        if (preg_match(self::AMOUNT_REGEX, $body, $amountMatches) !== 1) {
+        if (preg_match(self::amountRegex(), $body, $amountMatches) !== 1) {
             return null;
         }
-        $amountMinor = $this->toMinorOrNull($amountMatches[1], Currency::Eur->value);
+        $currency = $this->text->currencyMarked($amountMatches[1], Currency::Eur->value);
+        $amountMinor = $this->text->amountMinor($amountMatches[2], $currency);
         if ($amountMinor === null) {
             return null;
         }
 
-        return -$amountMinor;
+        return [-$amountMinor, $currency];
     }
 
-    private function buildOutcome(ParsedMimeMessage $parsed, string $body, string $merchant, int $amountMinor): MatchOutcomeDto
+    /**
+     * @param  array{int, string}  $charge
+     */
+    private function buildOutcome(ParsedMimeMessage $parsed, string $body, string $merchant, array $charge): MatchOutcomeDto
     {
-        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
 
-        $dto = $this->buildDto($parsed, $body, $merchant, $amountMinor, $bookedAt);
+        $dto = $this->buildDto($parsed, $body, $merchant, $charge, $bookedAt);
 
         return MatchOutcomeDto::parsed($dto);
     }
 
+    /**
+     * @param  array{int, string}  $charge
+     */
     private function buildDto(
         ParsedMimeMessage $parsed,
         string $body,
         string $merchant,
-        int $amountMinor,
+        array $charge,
         CarbonImmutable $bookedAt,
     ): ParsedReceiptDto {
+        [$amountMinor, $currency] = $charge;
+
         $reference = null;
         if (preg_match(self::REFERENCE_REGEX, $body, $referenceMatches) === 1) {
             $reference = $referenceMatches[1];
@@ -179,7 +197,6 @@ final class IcsReceiptMatcher implements SenderMatcher
         }
 
         $rawPayload = [
-            'matcher_key' => 'ics-receipt',
             'reference' => $reference,
             'card_last4' => $cardLast4,
             'subject' => $parsed->headers['subject'] ?? '',
@@ -193,25 +210,16 @@ final class IcsReceiptMatcher implements SenderMatcher
         return new ParsedReceiptDto(
             merchantName: $merchant,
             amountMinor: $amountMinor,
-            currency: Currency::Eur->value,
+            currency: $currency,
             settledAmountMinor: $amountMinor,
-            settledCurrency: Currency::Eur->value,
+            settledCurrency: $currency,
             referenceId: $reference,
             bookedAt: $bookedAt,
-            ownIban: 'ICS-CARD',
+            ownIban: SyntheticIban::IcsCard->value,
             description: $merchant,
             rawPayload: $rawPayload,
             chainHints: $chainHints,
         );
-    }
-
-    private function stripHtml(string $html): string
-    {
-        $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
-        $stripped = strip_tags($decoded);
-        $collapsed = (string) preg_replace('/[ \t]+/', ' ', $stripped);
-
-        return trim($collapsed);
     }
 
     private function firstTableCell(string $html): ?string
@@ -227,13 +235,5 @@ final class IcsReceiptMatcher implements SenderMatcher
         }
 
         return null;
-    }
-
-    private function toMinorOrNull(string $raw, string $currency): ?int
-    {
-        // The rightmost of '.' or ',' is the decimal. Assuming the comma always
-        // was misread US grouping: "1,234.56" normalised to "1.23456", so a
-        // $1,234.56 receipt matched as $1.23 — a thousandfold understatement.
-        return Currency::tryFrom($currency) === null ? null : MoneyInput::tryToMinor($raw);
     }
 }

@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategorija',
         'assigned' => 'Raspoređeno',
+        'carried_in' => 'Preneseno',
+        'moved' => 'Premješteno',
         'spent' => 'Potrošeno',
         'available' => 'Dostupno',
         'if_overspent' => 'Ako se prekorači',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Sakrij povijest ↑',
         'moved_from' => 'Premješteno iz :category',
         'moved_to' => 'Premješteno u :category',
+        'moved_unreadable' => 'Premješteno s :category novijom verzijom Beatraxa',
         'undo' => 'Poništi',
     ],
 
     'phone' => [
         'spent' => 'Potrošeno :amount',
+        'carried_in' => 'Preneseno :amount',
+        'moved' => 'Premješteno :amount',
         'available' => 'Dostupno :amount',
         'notify_at' => 'Obavijesti pri',
     ],

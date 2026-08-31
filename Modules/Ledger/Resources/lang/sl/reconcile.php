@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'izberi račun',
+        'choose_date' => 'izberi datum izpiska',
         'enter_balance' => 'vnesi stanje z izpiska',
         'matched' => 'ujema se — :amount',
         'discrepancy' => 'odstopanje — :amount',
+        'reconciled_through' => 'usklajeno do :date',
     ],
 
     'mismatch_html' => 'Stanje z izpiska se še ne ujema s tvojim knjiženim stanjem. Preklopi knjižene vrstice na <a href=":url" class="underline">seznamu transakcij</a> ali prilagodi vneseno stanje, dokler razlika ne doseže nič — ta potek nikoli ne ustvari izravnalne postavke.',
+    'unreachable_no_baseline_html' => 'Nobena kombinacija vrstic ne more te razlike spraviti na nič. Ta račun nima zabeleženega začetnega stanja, zato se njegovo stanje meri od nič. Uvozi izpisek, s katerim se račun odpre, ali nastavi začetno stanje v <a href=":url" class="underline">Nastavitvah</a>.',
+    'unreachable' => 'Nobena kombinacija vrstic ne more te razlike spraviti na nič: leži zunaj obsega vseh vrstic na tem računu do navedenega datuma. Preveri datum izpiska in vneseno stanje.',
 
     'check' => 'Preveri',
     'complete' => 'Dokončaj uskladitev',
+    'complete_unavailable' => 'Do tega datuma ni več ničesar za zakleniti — označi več vrstic kot knjižene ali izberi poznejši datum izpiska.',
 
     'errors' => [
         'choose_account' => 'Najprej izberi račun.',

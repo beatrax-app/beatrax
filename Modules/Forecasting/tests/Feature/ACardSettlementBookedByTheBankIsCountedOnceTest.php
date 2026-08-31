@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Chains\Public\Enums\CardStatementState;
-use Modules\Chains\Public\Services\CardStatementQuery;
+use Modules\Chains\Public\Support\StatementDueDate;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
@@ -132,9 +132,7 @@ function csbTransaction(
 
 function csbDueDate(): string
 {
-    return CarbonImmutable::parse(CSB_PERIOD_END)
-        ->addDays(CardStatementQuery::STATEMENT_DUE_GRACE_DAYS)
-        ->toDateString();
+    return StatementDueDate::of(null, CSB_PERIOD_END)->toDateString();
 }
 
 /**

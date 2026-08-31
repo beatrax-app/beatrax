@@ -23,5 +23,6 @@ return [
         'body' => 'I codici di recupero sono l\'unico modo per rientrare nel tuo account se dimentichi la password.',
         'warning' => 'Sono salvati con hash, quindi non possono essere mostrati di nuovo. Generare un nuovo set annulla subito quello precedente.',
         'regenerate' => 'Genera nuovi codici',
+        'regenerate_confirm' => 'Generare un nuovo set di codici di recupero? Il set che hai ora smette di funzionare nel momento in cui viene creato quello nuovo e non può essere mostrato di nuovo — una copia stampata o trascritta diventa inutile. Salva i nuovi codici prima di lasciare questa pagina.',
     ],
 ];

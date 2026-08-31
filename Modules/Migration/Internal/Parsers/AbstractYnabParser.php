@@ -10,8 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\CategoryKind;
-use Modules\Ledger\Public\Enums\ClearedStatus;
-use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
@@ -23,6 +22,7 @@ use Modules\Migration\Internal\Dto\MigrationPayeeDto;
 use Modules\Migration\Internal\Dto\MigrationScheduleDto;
 use Modules\Migration\Internal\Dto\MigrationTransactionDto;
 use Modules\Migration\Internal\Dto\UnmappedItemDto;
+use Modules\Migration\Internal\Enums\YnabClearedFlag;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Concerns\ReadsYnabCsvFiles;
 use Modules\Migration\Internal\Parsers\Support\AmountStringParser;
@@ -34,18 +34,23 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 {
     use ReadsYnabCsvFiles;
 
-    private const BUDGET_CURRENCY = Currency::Eur->value;
-
-    private const CLEARED_FLAG = 'C';
-
     /** @var list<string> */
-    private const BUDGET_MONTH_FORMATS = ['!Y-m', '!M Y', '!m/Y'];
+    private const array BUDGET_MONTH_FORMATS = ['!Y-m', '!M Y', '!m/Y'];
+
+    // Neither CSV export carries a per-transaction id, and the file position is
+    // not one: inserting a single older row renumbers every row below it, so a
+    // re-import mapped each of them onto the PREVIOUS row's ledger entry and
+    // rewrote its amount. The identity is the row's own content instead.
+    private const string IDENTITY_PREFIX = 'ynab-';
+
+    private const string IDENTITY_SEPARATOR = "\x1f";
 
     public function __construct(
         private readonly AmountStringParser $amounts,
         private readonly YnabCsvColumnMap $columnMap,
         private readonly YnabSplitReconstructor $splitReconstructor,
         private readonly YnabTransferMatcher $transferMatcher,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function parse(string $extractedPath, User $user, int $migrationRunId): MigrationBatch
@@ -56,10 +61,15 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $rows = $this->readRegisterRows($registerPath, $format);
         $budgetRows = $this->readBudgetRows($budgetPath);
 
+        // Neither export states a currency anywhere, and stamping a fixed EUR
+        // booked a dollar ledger in euros and then refused every budget month
+        // for disagreeing with the reader's own envelopes.
+        $currency = $this->baseCurrency->forUser($user);
+
         $categories = $this->collectCategories($rows, $budgetRows, $format);
-        $accounts = $this->collectAccounts($rows);
+        $accounts = $this->collectAccounts($rows, $currency);
         $payees = $this->collectPayees($rows);
-        $budgetAssignments = $this->buildBudgetAssignments($budgetRows);
+        $budgetAssignments = $this->buildBudgetAssignments($budgetRows, $currency);
 
         $splitGroups = $this->splitReconstructor->groupSplitRows($rows);
         $rowIndexToSplitGroup = [];
@@ -69,7 +79,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             }
         }
 
-        $transferPairs = $this->transferMatcher->pair($this->collectTransferLegs($rows));
+        $transferPairs = $this->transferMatcher->pair($this->collectTransferLegs($rows, $currency));
+        $rowIdentities = $this->buildRowIdentities($rows, $format);
 
         /** @var Collection<int, MigrationGoalDto> $goals */
         $goals = new Collection;
@@ -80,7 +91,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
         return new MigrationBatch(
             sourceProduct: $format,
-            budgetCurrency: self::BUDGET_CURRENCY,
+            budgetCurrency: $currency,
             categories: $categories,
             accounts: $accounts,
             payees: $payees,
@@ -88,8 +99,37 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             goals: $goals,
             schedules: $schedules,
             unmapped: $unmapped,
-            transactions: $this->buildTransactionsGenerator($rows, $format, $splitGroups, $rowIndexToSplitGroup, $transferPairs),
+            transactions: $this->buildTransactionsGenerator($rows, $format, $splitGroups, $rowIndexToSplitGroup, $transferPairs, $rowIdentities, $currency),
         );
+    }
+
+    /**
+     * @param  array<int, array<string, string>>  $rows
+     * @return array<int, string>
+     */
+    private function buildRowIdentities(array $rows, string $format): array
+    {
+        /** @var array<string, int> $ordinals */
+        $ordinals = [];
+        /** @var array<int, string> $identities */
+        $identities = [];
+
+        foreach ($rows as $index => $row) {
+            [$group, $name] = $this->columnMap->categoryGroupAndName($row, $format);
+
+            $tuple = implode(self::IDENTITY_SEPARATOR, [
+                trim($row['Account'] ?? ''),
+                trim($row['Date'] ?? ''),
+                trim($row['Payee'] ?? ''),
+                $group ?? '',
+                $name,
+            ]);
+
+            $ordinals[$tuple] = ($ordinals[$tuple] ?? -1) + 1;
+            $identities[$index] = self::IDENTITY_PREFIX.substr(hash('sha256', $tuple), 0, 32).'-'.$ordinals[$tuple];
+        }
+
+        return $identities;
     }
 
     /**
@@ -185,7 +225,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      * @param  array<int, array<string, string>>  $rows
      * @return Collection<int, MigrationAccountDto>
      */
-    private function collectAccounts(array $rows): Collection
+    private function collectAccounts(array $rows, string $currency): Collection
     {
         $seen = [];
         /** @var Collection<int, MigrationAccountDto> $accounts */
@@ -201,7 +241,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             $accounts->push(new MigrationAccountDto(
                 sourceExternalId: $name,
                 name: $name,
-                currency: self::BUDGET_CURRENCY,
+                currency: $currency,
             ));
         }
 
@@ -238,7 +278,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      * @param  array<int, array<string, string>>  $budgetRows
      * @return Collection<int, MigrationBudgetAssignmentDto>
      */
-    private function buildBudgetAssignments(array $budgetRows): Collection
+    private function buildBudgetAssignments(array $budgetRows, string $currency): Collection
     {
         /** @var Collection<int, MigrationBudgetAssignmentDto> $assignments */
         $assignments = new Collection;
@@ -249,32 +289,30 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
                 continue;
             }
             $group = trim($row['Category Group'] ?? '');
-            $minor = $this->parseBudgetedMinor($row['Budgeted'] ?? '');
+            $minor = $this->parseBudgetedMinor($row['Budgeted'] ?? '', $currency);
+
+            // No cell means the export says nothing about this category-month,
+            // which is not the instruction an explicit zero is: staging it as a
+            // zero deletes a budget the reader typed in themselves.
+            if ($minor === null) {
+                continue;
+            }
 
             $assignments->push(new MigrationBudgetAssignmentDto(
                 sourceCategoryExternalId: $this->naturalCategoryKey($group !== '' ? $group : null, $name),
                 periodStart: $this->parseBudgetMonth(trim($row['Month'] ?? '')),
-                budgeted: Money::ofMinor($minor, self::BUDGET_CURRENCY),
+                budgeted: Money::ofMinor($minor, $currency),
             ));
         }
 
         return $assignments;
     }
 
-    private function parseBudgetedMinor(string $raw): int
+    // Null is "the export has no figure here" — a blank cell, or one this
+    // parser cannot read. Zero is a figure, and stays one.
+    private function parseBudgetedMinor(string $raw, string $currency): ?int
     {
-        // AmountStringParser::parse() nulls a non-positive result, so a negative
-        // Budgeted cell would read as the 0 a blank cell gives.
-        $trimmed = trim($raw);
-        $isNegative = str_starts_with($trimmed, '-');
-        $magnitude = $isNegative ? ltrim(substr($trimmed, 1)) : $trimmed;
-
-        $minor = $this->amounts->parse($magnitude);
-        if ($minor === null) {
-            return 0;
-        }
-
-        return $isNegative ? -$minor : $minor;
+        return $this->amounts->parseSigned($raw, $currency);
     }
 
     private function parseBudgetMonth(string $value): CarbonImmutable
@@ -303,7 +341,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      * @param  array<int, array<string, string>>  $rows
      * @return list<array{rowIndex: int, account: string, date: string, amountMinor: int, counterpartAccount: string}>
      */
-    private function collectTransferLegs(array $rows): array
+    private function collectTransferLegs(array $rows, string $currency): array
     {
         $legs = [];
 
@@ -317,7 +355,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
                 'rowIndex' => $index,
                 'account' => trim($row['Account'] ?? ''),
                 'date' => trim($row['Date'] ?? ''),
-                'amountMinor' => $this->signedMinor($row),
+                'amountMinor' => $this->signedMinor($row, $currency),
                 'counterpartAccount' => (string) $this->transferMatcher->counterpartAccountName($payee),
             ];
         }
@@ -328,10 +366,10 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     /**
      * @param  array<string, string>  $row
      */
-    private function signedMinor(array $row): int
+    private function signedMinor(array $row, string $currency): int
     {
-        $outflow = $this->amounts->parse($row['Outflow'] ?? '') ?? 0;
-        $inflow = $this->amounts->parse($row['Inflow'] ?? '') ?? 0;
+        $outflow = $this->amounts->parse($row['Outflow'] ?? '', $currency) ?? 0;
+        $inflow = $this->amounts->parse($row['Inflow'] ?? '', $currency) ?? 0;
 
         return $inflow > 0 ? $inflow : -$outflow;
     }
@@ -341,6 +379,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      * @param  list<list<int>>  $splitGroups
      * @param  array<int, int>  $rowIndexToSplitGroup
      * @param  array<int, int>  $transferPairs
+     * @param  array<int, string>  $rowIdentities
      */
     private function buildTransactionsGenerator(
         array $rows,
@@ -348,6 +387,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         array $splitGroups,
         array $rowIndexToSplitGroup,
         array $transferPairs,
+        array $rowIdentities,
+        string $currency,
     ): Generator {
         $emittedGroups = [];
 
@@ -359,20 +400,21 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
                 }
                 $emittedGroups[$groupId] = true;
 
-                yield $this->buildSplitParentDto($rows, $splitGroups[$groupId], $format);
+                yield $this->buildSplitParentDto($rows, $splitGroups[$groupId], $format, $rowIdentities, $currency);
 
                 continue;
             }
 
             $counterpartIndex = $transferPairs[$index] ?? null;
-            yield $this->buildPlainTransactionDto($row, $index, $format, $counterpartIndex);
+            yield $this->buildPlainTransactionDto($row, $index, $format, $counterpartIndex, $rowIdentities, $currency);
         }
     }
 
     /**
      * @param  array<string, string>  $row
+     * @param  array<int, string>  $rowIdentities
      */
-    private function buildPlainTransactionDto(array $row, int $index, string $format, ?int $counterpartIndex): MigrationTransactionDto
+    private function buildPlainTransactionDto(array $row, int $index, string $format, ?int $counterpartIndex, array $rowIdentities, string $currency): MigrationTransactionDto
     {
         $payee = trim($row['Payee'] ?? '');
         $isTransfer = $this->transferMatcher->isTransferPayee($payee);
@@ -382,17 +424,17 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $payeeSourceExternalId = ($isTransfer || $payee === '') ? null : $payee;
 
         return new MigrationTransactionDto(
-            sourceExternalId: 'row-'.$index,
+            sourceExternalId: $rowIdentities[$index],
             accountSourceExternalId: trim($row['Account'] ?? ''),
             postedAt: $this->parseRegisterDate(trim($row['Date'] ?? '')),
-            amount: Money::ofMinor($this->signedMinor($row), self::BUDGET_CURRENCY),
+            amount: Money::ofMinor($this->signedMinor($row, $currency), $currency),
             payeeSourceExternalId: $payeeSourceExternalId,
             categorySourceExternalId: $categorySourceExternalId,
             description: null,
             clearedStatus: $this->mapClearedStatus(trim($row['Cleared'] ?? '')),
             sourceRowIndex: $index,
             rawPayload: $row,
-            transferCounterpartSourceExternalId: $counterpartIndex !== null ? 'row-'.$counterpartIndex : null,
+            transferCounterpartSourceExternalId: $counterpartIndex !== null ? $rowIdentities[$counterpartIndex] : null,
             splits: [],
         );
     }
@@ -400,8 +442,9 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     /**
      * @param  array<int, array<string, string>>  $rows
      * @param  list<int>  $groupRowIndexes
+     * @param  array<int, string>  $rowIdentities
      */
-    private function buildSplitParentDto(array $rows, array $groupRowIndexes, string $format): MigrationTransactionDto
+    private function buildSplitParentDto(array $rows, array $groupRowIndexes, string $format, array $rowIdentities, string $currency): MigrationTransactionDto
     {
         $legs = [];
         $legAmounts = [];
@@ -409,7 +452,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
         foreach ($groupRowIndexes as $rowIndex) {
             $row = $rows[$rowIndex];
-            $signed = $this->signedMinor($row);
+            $signed = $this->signedMinor($row, $currency);
             $legAmounts[] = $signed;
             $sumMinor += $signed;
 
@@ -417,21 +460,21 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
             $legs[] = [
                 'category_source_external_id' => $name !== '' ? $this->naturalCategoryKey($group, $name) : null,
-                'amount' => Money::ofMinor($signed, self::BUDGET_CURRENCY),
+                'amount' => Money::ofMinor($signed, $currency),
                 'note' => null,
             ];
         }
 
-        $this->splitReconstructor->assertSumSane($legAmounts);
+        $this->splitReconstructor->assertLegsPresent($legAmounts);
 
         $firstIndex = $groupRowIndexes[0];
         $firstRow = $rows[$firstIndex];
 
         return new MigrationTransactionDto(
-            sourceExternalId: 'split-'.$firstIndex,
+            sourceExternalId: $rowIdentities[$firstIndex],
             accountSourceExternalId: trim($firstRow['Account'] ?? ''),
             postedAt: $this->parseRegisterDate(trim($firstRow['Date'] ?? '')),
-            amount: Money::ofMinor($sumMinor, self::BUDGET_CURRENCY),
+            amount: Money::ofMinor($sumMinor, $currency),
             payeeSourceExternalId: trim($firstRow['Payee'] ?? '') !== '' ? trim($firstRow['Payee']) : null,
             categorySourceExternalId: null,
             description: null,
@@ -455,8 +498,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function mapClearedStatus(string $flag): string
     {
-        return mb_strtoupper($flag) === self::CLEARED_FLAG
-            ? ClearedStatus::Cleared->value
-            : ClearedStatus::Uncleared->value;
+        return YnabClearedFlag::statusFor($flag)->value;
     }
 }

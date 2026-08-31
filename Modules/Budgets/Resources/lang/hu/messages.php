@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategória',
         'assigned' => 'Kiosztva',
+        'carried_in' => 'Áthozva',
+        'moved' => 'Átmozgatva',
         'spent' => 'Elköltve',
         'available' => 'Elérhető',
         'if_overspent' => 'Túlköltés esetén',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Előzmények elrejtése ↑',
         'moved_from' => 'Áthelyezve innen: :category',
         'moved_to' => 'Áthelyezve ide: :category',
+        'moved_unreadable' => 'Áthelyezve ezzel: :category — a Beatrax egy újabb verziójával',
         'undo' => 'Visszavonás',
     ],
 
     'phone' => [
         'spent' => 'Elköltve: :amount',
+        'carried_in' => 'Áthozva :amount',
+        'moved' => 'Átmozgatva :amount',
         'available' => 'Elérhető: :amount',
         'notify_at' => 'Értesítés ekkor',
     ],

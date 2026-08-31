@@ -6,7 +6,7 @@ return [
     'page_title' => 'Smistamento controparti',
     'heading' => 'Smista le controparti sconosciute',
 
-    'progress' => ':seen di :total · :percent % · ~:minutes min rimanenti',
+    'progress' => ':seen di :total · :percent% · ~:minutes min rimanenti',
     'progress_aria' => 'Avanzamento dello smistamento',
 
     'all_caught_aria' => 'Tutte le controparti etichettate',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Ancora nessuna transazione registrata.',
 
     'label_manually' => 'Oppure etichetta manualmente',
+    'label_question' => 'Che cos\'è questa controparte?',
     'display_name_label' => 'Nome visualizzato',
-    'display_name_placeholder' => 'Nome visualizzato…',
     'type_label' => 'Tipo',
     'type_merchant' => 'Esercente',
     'type_personal' => 'Personale',
     'type_bank' => 'Banca',
     'type_government' => 'Ente pubblico',
     'save_label' => 'Salva etichetta',
+    'name_required' => 'Dai prima un nome a questa controparte.',
+    'draft_kept' => 'Quello che scrivi resta mentre scorri la coda.',
 
     'skip' => 'Salta per ora',
-    'mark_ignored' => 'Segna come ignorata',
+    'mark_ignored' => 'Non chiedermelo più',
+    'not_now_note' => 'Nessuna delle due modifica la controparte: puoi ancora etichettarla più tardi dalla pagina Controparti.',
     'previous' => 'Sconosciuta precedente',
-    'next' => 'Avanti',
 
     'kbd_yes' => 'sì',
     'kbd_no' => 'no',

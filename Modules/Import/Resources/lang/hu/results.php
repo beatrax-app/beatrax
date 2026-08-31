@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Másik számlakivonat feltöltése',
 
+    'chain' => [
+        'heading' => 'Láncok feloldása…',
+        'pending' => 'Várólistán. A láncfeloldó hamarosan elindul.',
+        'running' => 'Finanszírozási láncok összekapcsolása és a kivonatelszámolások felbontása.',
+    ],
+
     'issues' => [
         'row' => ':row. sor: :reason',
         'file_stopped' => 'A fájlt nem sikerült a(z) :row. soron túl beolvasni. Az azutáni sorokból semmi nem került importálásra.',

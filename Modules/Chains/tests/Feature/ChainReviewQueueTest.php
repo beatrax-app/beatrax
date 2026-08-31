@@ -147,7 +147,7 @@ it('renders the empty-state copy when no candidates exist', function (): void {
         ->get(route('chains.review'))
         ->assertOk()
         ->assertSeeText('Nothing to review')
-        ->assertSeeText('Every chain link is either confirmed or rejected. New candidates will appear here as imports land.');
+        ->assertSeeText('Every link the resolver could pair is confirmed or rejected. New candidates appear here as imports land.');
 });
 
 it('renders each candidate row with the from/to counterparties + kind label + Confirm/Reject buttons', function (): void {

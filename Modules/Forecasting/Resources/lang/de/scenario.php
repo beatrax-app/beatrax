@@ -85,6 +85,11 @@ return [
 
     'series_name_fallback' => 'Reihe',
 
+    'template' => [
+        'cancel' => ':name kündigen',
+        'change_amount' => 'Betrag von :name ändern',
+    ],
+
     'summary' => [
         'cancel' => ':name kündigen',
         'series_fallback' => 'Reihe #:id',
@@ -102,14 +107,17 @@ return [
         'renamed' => 'Szenario umbenannt.',
         'mutation_added' => 'Anpassung hinzugefügt.',
         'mutation_updated' => 'Anpassung aktualisiert.',
-        'mutation_removed' => 'Anpassung entfernt. Rückgängig',
+        'mutation_removed' => 'Anpassung entfernt.',
     ],
 
     'errors' => [
         'name_empty' => 'Der Szenarioname darf nicht leer sein.',
         'name_too_long' => 'Der Szenarioname darf höchstens :max Zeichen lang sein.|Der Szenarioname darf höchstens :max Zeichen lang sein.',
         'name_taken' => 'Ein Szenario mit diesem Namen gibt es bereits.',
+        'date_out_of_range' => 'Dieses Datum liegt außerhalb jedes Prognosehorizonts — von heute bis :days Tag voraus — das Szenario würde also nichts ändern.|Dieses Datum liegt außerhalb jedes Prognosehorizonts — von heute bis :days Tage voraus — das Szenario würde also nichts ändern.',
         'pick_kind_first' => 'Wähle zuerst eine Art von Anpassung.',
         'amount_positive' => 'Der Betrag muss eine positive Zahl sein.',
+        'scenario_gone' => 'Dieses Szenario gibt es nicht mehr — es wurde anderswo gelöscht. Wähle ein anderes Szenario oder lege ein neues an.',
+        'mutation_gone' => 'Diese Änderung gibt es nicht mehr — sie wurde anderswo entfernt. Schließe den Editor und füge sie erneut hinzu, wenn du sie noch willst.',
     ],
 ];

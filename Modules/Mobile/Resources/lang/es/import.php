@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Las contraseñas no coinciden.',
         'password_length' => 'Usa al menos 12 caracteres.',
         'pin_length' => 'El PIN debe tener al menos 6 dígitos.',
+        'pin_digits' => 'El PIN debe tener de 6 a 10 dígitos — solo números.',
         'pins_mismatch' => 'Los PIN no coinciden. Inténtalo de nuevo.',
         'session_expired' => 'Tu sesión caducó antes de terminar la configuración. Vuelve a introducir tu PIN y tu contraseña.',
         'retry_failed' => 'Sigue sin poder terminarse la configuración de este dispositivo. Inténtalo de nuevo.',

@@ -101,19 +101,19 @@ it('counts split legs, not the parent, for a split transaction', function (): vo
     spendCatLeg($tx, $this->groceries->id, -6000);
     spendCatLeg($tx, $this->household->id, -2000);
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 
-    expect($result[$this->groceries->id])->toBe(6000);
-    expect($result[$this->household->id])->toBe(2000);
+    expect($result[$this->groceries->id.'|EUR'])->toBe(6000);
+    expect($result[$this->household->id.'|EUR'])->toBe(2000);
     expect(array_sum($result))->toBe(8000); // exactly the parent's total, never 16000
 });
 
 it('rolls up a plain unsplit transaction via its own category as before', function (): void {
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 
-    expect($result[$this->groceries->id])->toBe(5000);
+    expect($result[$this->groceries->id.'|EUR'])->toBe(5000);
 });
 
 it('combines legs and unsplit parents in the same category without double-counting', function (): void {
@@ -123,10 +123,10 @@ it('combines legs and unsplit parents in the same category without double-counti
 
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 
-    expect($result[$this->groceries->id])->toBe(11000);
-    expect($result[$this->household->id])->toBe(2000);
+    expect($result[$this->groceries->id.'|EUR'])->toBe(11000);
+    expect($result[$this->household->id.'|EUR'])->toBe(2000);
     expect(array_sum($result))->toBe(13000); // = 8000 + 5000, never doubled
 });
 
@@ -135,10 +135,10 @@ it('ignores a split parent vestigial category_id entirely — leg presence is th
     spendCatLeg($tx, $this->groceries->id, -3000);
     spendCatLeg($tx, $this->household->id, -5000);
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 
-    expect($result[$this->groceries->id])->toBe(3000); // only the leg, not leg + parent
-    expect($result[$this->household->id])->toBe(5000);
+    expect($result[$this->groceries->id.'|EUR'])->toBe(3000); // only the leg, not leg + parent
+    expect($result[$this->household->id.'|EUR'])->toBe(5000);
     expect(array_sum($result))->toBe(8000);
 });
 
@@ -162,11 +162,11 @@ it('falls back to the parent category when legs do not sum to the parent', funct
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
     spendCatLeg($tx, $this->household->id, -6000);
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 
     // Fail safe to pre-split behaviour: the parent's own amount, leg ignored.
-    expect($result[$this->groceries->id])->toBe(8000);
-    expect($result)->not->toHaveKey($this->household->id);
+    expect($result[$this->groceries->id.'|EUR'])->toBe(8000);
+    expect($result)->not->toHaveKey($this->household->id.'|EUR');
     expect(array_sum($result))->toBe(8000);
 });
 
@@ -183,11 +183,11 @@ it('falls back to the parent category for a non-summing split in forUserAndPerio
 it('surfaces uncategorized unsplit spend under id 0 only when includeUncategorized is true', function (): void {
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -1000, null);
 
-    $excluded = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
-    expect($excluded)->not->toHaveKey(0);
+    $excluded = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
+    expect($excluded)->not->toHaveKey('0|EUR');
 
-    $included = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
-    expect($included[0])->toBe(1000);
+    $included = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period, includeUncategorized: true);
+    expect($included['0|EUR'])->toBe(1000);
 });
 
 // Spend is `type = expense`, the definition Reports and the dashboard's OUT
@@ -200,9 +200,9 @@ it('leaves an internal transfer out of category spend', function (): void {
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -5000, $this->groceries->id);
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -22500, $transfers->id, 'EUR', 'transfer_out');
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period, includeUncategorized: true);
 
-    expect($result)->not->toHaveKey($transfers->id)
+    expect($result)->not->toHaveKey($transfers->id.'|EUR')
         ->and(array_sum($result))->toBe(5000);
 });
 
@@ -211,7 +211,7 @@ it('leaves a fee and an adjustment out of category spend', function (): void {
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -150, null, 'EUR', 'fee');
     spendCatTx($this->user->id, $this->account->id, $this->run->id, -750, null, 'EUR', 'adjustment');
 
-    $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR', includeUncategorized: true);
+    $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period, includeUncategorized: true);
 
     expect(array_sum($result))->toBe(5000);
 });

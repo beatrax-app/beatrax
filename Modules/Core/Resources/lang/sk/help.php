@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'O :subject',
+        'close' => 'Zavrieť',
+    ],
+
     'page_title' => 'Kde sú moje údaje?',
     'intro' => 'Beatrax ukladá všetko na tomto zariadení. Nič sa neposiela na server, nič sa nesynchronizuje do cloudu, nič toto zariadenie neopustí, kým to sám neexportuješ.',
 

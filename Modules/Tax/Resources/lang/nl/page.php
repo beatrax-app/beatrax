@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'PDF exporteren',
     'export_pdf_aria' => 'PDF exporteren',
     'export_pdf_title' => 'Download beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Negeren',
 
     'country_prompt_heading' => 'In welk land doe je belastingaangifte?',
     'country_prompt_body' => 'Je kunt dit altijd wijzigen bij Instellingen → :section.',

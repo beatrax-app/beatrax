@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Trage aici fișierul CAMT.053',
     'drop_lead_mt940' => 'Trage aici fișierul MT940',
-    'drop_lead_asn' => 'Trage aici CSV-ul ASN',
-    'drop_lead_ing' => 'Trage aici CSV-ul ING',
+    'drop_lead_csv_layout' => 'Trage aici CSV-ul :layout',
     'drop_lead_pick_bank' => 'Alege ce bancă a exportat CSV-ul — trebuie să știm ca să îl citim corect.',
     'drop_lead_default' => 'Trage aici fișierul cu extrasul de cont',
     'browse_file' => 'sau caută un fișier',
 
-    'banks_mt940' => 'Compatibile: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Compatibile: ASN, ING — urmează mai multe formate, pe măsură ce utilizatorii trimit mostre.',
-    'banks_default' => 'Compatibile: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 este un extras în format XML — caută-l în internet banking, la extrase sau descărcări.',
+    'format_help_mt940' => 'MT940 este un extras în text simplu, oferit ca .sta sau .940 lângă descărcările XML și CSV.',
+    'format_help_csv' => 'CSV este exportul pentru foi de calcul. Fiecare bancă își ordonează coloanele altfel, așa că alege aranjarea potrivită. Dacă a ta nu e în listă, cere băncii tale CAMT.053 sau MT940.',
+
+    'account_name_default' => 'Cont bancar',
+    'account_name_layout' => 'Cont :layout',
 
     'file_ready' => '· ✓ gata',
 

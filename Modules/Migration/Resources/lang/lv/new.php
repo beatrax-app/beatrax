@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Šis neizskatās pēc YNAB4, nYNAB vai Actual eksporta, ko varam nolasīt. Pārbaudiet failu un mēģiniet vēlreiz.',
         'file_too_large' => 'Šis fails ir pārāk liels datu pārneses eksportam.',
+        'archive_reader_unavailable' => 'Šai lietotnes versijai nav ZIP lasītāja, kas varētu atvērt šo eksportu, tāpēc to šeit nevar izlasīt. Importē to datora lietotnē vai iepako eksportu no jauna ar parastu saspiešanu.',
+        'internal_detail' => 'Lietotne nevarēja nolasīt šo eksportu (:code). Pilnas ziņas ir lietotnes žurnālā; ziņojot par problēmu, norādi šo kodu.',
     ],
 ];

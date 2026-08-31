@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Public\Support\Iban;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });
@@ -51,11 +51,13 @@ it('renders the counterparty IBAN in the Funding source cell', function (): void
     }
 
     expect($rowWithIban)->not->toBeNull();
+    expect($rowWithIban->counterpartyIban)->toBe('NL68BANK0000000001');
 
-    // Grouped in fours, which is the only form the cell draws: unbroken, a
-    // 126px column split it at whatever character ran out of room.
+    // The literal the cell has to draw, not Iban::grouped() run twice: reading
+    // the expectation out of the function under test passes for any grouping
+    // it happens to produce, including one that breaks in the wrong place.
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
-        ->assertSee(Iban::grouped($rowWithIban->counterpartyIban))
+        ->assertSee('NL68 BANK 0000 0000 01')
         ->assertDontSee($rowWithIban->counterpartyIban);
 });
 

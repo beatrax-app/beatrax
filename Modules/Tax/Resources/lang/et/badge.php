@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Muuda maksumärgendit: :label',
     'tag' => 'Märgista',
     'tag_aria' => 'Märgista maksuga seotuks',
+    'tag_caption' => 'Märgista',
 ];

@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'O teu dispositivo recusou guardar a chave. O desbloqueio biométrico não está disponível.',
     'heading' => 'Bloqueio da aplicação',
 
-    'moved_help' => 'O teu PIN, o tempo de bloqueio automático e o desbloqueio biométrico estão nas definições de sincronização deste dispositivo.',
-    'moved_cta' => 'Abrir Sincronização e dispositivo',
-
     'toggle_label' => 'Bloquear a aplicação com PIN',
     'toggle_description' => 'Substitui o início de sessão diário por um PIN. As sessões mantêm-se ativas durante 30 dias.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Manter PIN',
 
     'error_pin_too_short' => 'O PIN tem de ter pelo menos 6 dígitos.',
-    'error_pin_digits' => 'O PIN tem de ter de 6 a 10 dígitos — apenas números.',
+    'error_pin_digits' => 'O PIN tem de ter de :min a :max dígitos — apenas números.',
     'error_pin_mismatch' => 'Os PIN não coincidem. Tenta novamente.',
     'error_pin_required' => 'Introduz o teu PIN.',
     'error_pin_incorrect' => 'PIN incorreto.',

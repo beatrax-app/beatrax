@@ -34,9 +34,9 @@ state).
 | Class | Action |
 |-------|--------|
 | `Transactiereferentie` (Transaction ID) | Mapped via a deterministic two-pass counter to `O-<17-digit-counter>` (e.g. `O-00000000000000001`). The same real ID always maps to the same synthetic — parent / child rollup links survive. |
-| `Reference Txn ID` | Resolved through the SAME counter map. References that point at a Transaction ID inside this file stay grouped; references that point at IDs outside this file (billing-agreement IDs, prior-period parents) get their own synthetic but become "orphan" children (per D-61). |
+| `Reference Txn ID` | Resolved through the SAME counter map. References that point at a Transaction ID inside this file stay grouped; references that point at IDs outside this file (billing-agreement IDs, prior-period parents) get their own synthetic but become "orphan" children. |
 | `Van e-mailadres` | Cells with a non-empty email become `kaarthouder@example.test`. PayPal's NL export carries the MERCHANT's contact email in this column, not the cardholder's; redacting it defensively avoids leaking which functional addresses the user pays. |
-| `Bankrekening` (counterparty IBAN) | Non-empty cells become `NL00ASNB0000000000` (the project-wide mod-97-valid synthetic IBAN; same form Phase 2's CAMT fixture uses). The user's funding-source columns happened to be empty in this export — no IBANs were actually redacted, but the regex is in place for the next export. |
+| `Bankrekening` (counterparty IBAN) | Non-empty cells become `NL00ASNB0000000000` (the project-wide mod-97-valid synthetic IBAN; the same form the CAMT fixture uses). The user's funding-source columns happened to be empty in this export — no IBANs were actually redacted, but the regex is in place for the next export. |
 | Free-text cells | Defensive scrub for stray emails / IBAN-shaped tokens. Skips the two Transaction ID columns to avoid mangling the deterministic counter map. |
 
 **Preserved verbatim** (load-bearing for the parser's empirical tests):
@@ -53,7 +53,7 @@ state).
 - `Naam` — the MERCHANT name on the parent payment rows. PayPal's NL
   export does NOT carry the cardholder name in this column; the
   cardholder is the implicit account-holder. Preserving the merchant
-  string honours D-58's "merchant strings preserved verbatim" rule.
+  string honours the "merchant strings preserved verbatim" rule.
 - `Naam bank` (empty for every row in this export — funding-source
   rows do not name a bank in PayPal's NL output)
 - `Factuurreferentie` — the merchant's invoice-side reference token
@@ -94,17 +94,17 @@ PayPal's NL export uses Dutch event-type strings (the user's PayPal
 account locale is NL). Five distinct values are present in this
 export:
 
-| Count | `Omschrijving` (NL) | Canonical action (D-62) | Notes |
+| Count | `Omschrijving` (NL) | Canonical action | Notes |
 |------:|--------------------|-------------------------|-------|
 | 39 | `Vooraf goedgekeurde betaling – rekening betaald door gebruiker` | `parent` → `expense` | Pre-approved billing-agreement payment (subscription / recurring charge). The most common row in a recurring-subscription-heavy account. |
-| 37 | `Bankstorting naar PP-rekening` | `child-fee` (funding-source) | Per-payment funding-source movement — the offsetting credit into the PayPal balance that settles the matched debit. NOT a separate transaction — folds into the parent's rawPayload manifest. |
-| 4 | `Algemene kaartstorting` | `child-fee` (funding-source) | Card-funded payment — same as above but funded by a credit card on file instead of a bank account. Same canonical action: child funding-source. |
-| 4 | `Algemene valutaomrekening` | `child-fx` | Currency conversion leg (D-63). USD payments produce a pair: one Algemene valutaomrekening EUR leg and one Algemene valutaomrekening USD leg, both sharing the Reference Txn ID of the USD parent. |
+| 37 | `Bankstorting naar PP-rekening` | `parent` → `transfer_in` | Per-payment funding-source movement — the reader's own money entering PayPal to settle the matched debit. It moves money, so it owns a row: folded into the parent instead, the leg vanished and the bank-side debit was left unpaired. |
+| 4 | `Algemene kaartstorting` | `parent` → `transfer_in` | Card-funded payment — same as above but funded by a credit card on file instead of a bank account. Same canonical action. |
+| 4 | `Algemene valutaomrekening` | `child-fx` | Currency conversion leg. USD payments produce a pair: one Algemene valutaomrekening EUR leg and one Algemene valutaomrekening USD leg, both sharing the Reference Txn ID of the USD parent. |
 | 2 | `Express Checkout-betaling` | `parent` → `expense` | One-off Express Checkout payment (no billing agreement). |
 
 **No Holds, Authorizations, Reserves, or Reversals** are present in
-this export. The skipped-event-type set (D-62) is therefore
-EMPTY for the Wave 0 fixture. If a future export surfaces any of
+this export. The skipped-event-type set is therefore
+EMPTY for this fixture. If a future export surfaces any of
 those, `PaypalCsvEventTypeMap::MAP['nl']` gets an entry mapping them
 to `'skip'`.
 
@@ -121,7 +121,7 @@ to `'skip'`.
 
 ## Parent-child chain shapes
 
-The rollup walker (D-61) keys on `Transactiereferentie`; children
+The rollup walker keys on `Transactiereferentie`; children
 walk via `Reference Txn ID`.
 
 | Property | Value |
@@ -139,7 +139,7 @@ billing-agreement ID — PayPal's `B-` prefix). Billing-agreement IDs
 are external references that never appear as a Transaction ID inside
 any single Activity Download — they identify the long-running
 billing agreement that authorised the parent payment, not a row in
-this report. Per D-61 the adapter treats orphan-child rows as
+this report. The adapter treats orphan-child rows as
 standalone canonical rows under their own Transaction ID and bumps
 `import_runs.extras.orphanChildCount`.
 
@@ -172,8 +172,7 @@ The parent's `Reference Txn ID` points OUTSIDE the file (an orphan
 billing-agreement-like ID); the three child rows all reference the
 parent's Transaction ID.
 
-Per D-63 the canonical `SourceTransactionDto` for this group folds
-into:
+The canonical `SourceTransactionDto` for this group folds into:
 
 - `amountMinor = -1046`, `currency = 'USD'` (from the parent — the
   non-EUR leg is the native leg)
@@ -182,13 +181,13 @@ into:
   EUR)
 - The Bankstorting child rides in `rawPayload.events` as the funding-
   source manifest entry; the USD `Algemene valutaomrekening` child
-  rides in `rawPayload.events` as the FX-leg sibling. Phase 3 D-39
+  rides in `rawPayload.events` as the FX-leg sibling. The importer
   derives `fxRateUsed` from `settled / native` at BigDecimal scale 8.
 
 Two USD chains are present (Cloudflare-betweenstacks and
 Cloudflare-happetite); both follow the same 4-row shape.
 
-## Reconciliation gate (D-60 g)
+## Reconciliation gate
 
 This export has **no explicit opening / closing balance rows**. The
 `Saldo` column shows a per-parent-group running balance that resets
@@ -206,15 +205,15 @@ an instant funding credit).
 Both currencies net to zero across the full export — which is exactly
 what we expect for a personal account that funds every payment from
 an external source rather than holding a PayPal balance. The
-reconciliation gate (D-60 g) therefore reports CLEAN (zero gap, since
+reconciliation gate therefore reports CLEAN (zero gap, since
 the inferred opening + closing balances are both zero).
 
-The Wave 1 adapter computes `opening = closing − sum(net)`. For this
+The adapter computes `opening = closing − sum(net)`. For this
 export both halves are zero. If a future export surfaces an
 accumulated balance (e.g. an incoming PayPal payment from another
 PayPal user that wasn't immediately swept), the rollup walker MUST
-NOT misclassify the unbalanced flow — Pitfall 3's reconciliation
-check is the canary.
+NOT misclassify the unbalanced flow — the reconciliation check is
+the canary.
 
 ## source_ref availability
 
@@ -222,22 +221,23 @@ Every row has a unique `Transactiereferentie` value. The redacted
 fixture replaces each real value with a deterministic synthetic
 (`O-<17-digit-counter>`); the parent / child links survive because the
 two-pass counter map applies to both the Transaction ID column and
-the Reference Txn ID column. Per D-64 the canonical row's `source_ref`
-is the parent's `Transactiereferentie`.
+the Reference Txn ID column. The canonical row's `source_ref` is the
+parent's `Transactiereferentie`.
 
-## Funding-source column (D-60 d)
+## Funding-source column
 
 No explicit "Funding Source" column. PayPal's NL Activity Download
 expresses the funding source as a CHILD row (`Bankstorting naar
 PP-rekening` for bank-funded payments / `Algemene kaartstorting` for
 card-funded payments) whose `Reference Txn ID` points back at the
-parent. The adapter must derive funding-source identity by walking
-the parent's children for a `child-fee` of either funding-source
-event type — D-65's rawPayload manifest carries the full child set
-forward so Phase 5's chain resolver can use it without re-reading
-the source CSV.
+parent. Both are classified `parent`, not child: each is a movement of
+the reader's own money and carries its own canonical row, and the
+`Reference Txn ID` is what pairs it with the purchase it funded.
+`ChildFx` is the only child action left. The rawPayload manifest
+carries the full child set forward so the chain resolver can use it
+without re-reading the source CSV.
 
-## Transfer-to-bank row shape (D-60 f)
+## Transfer-to-bank row shape
 
 This export contains **no `Transfer to bank` / PayPal → ASN sweep
 rows**. The user's funding model in this period was pull-only
@@ -251,10 +251,10 @@ IBAN?).
 ## Anti-patterns the fixture defends against
 
 - **Naive single-pass ID replacement** would lose the parent/child
-  link (Pitfall 5). The two-pass counter map prevents that.
+  link. The two-pass counter map prevents that.
 - **Currency-direction guesswork** in the FX rollup would misclassify
-  whichever USD leg ships "first" in the file as the native leg
-  (Pitfall 2). The fixture has both USD chains present so the
+  whichever USD leg ships "first" in the file as the native leg.
+  The fixture has both USD chains present so the
   rollup walker's "EUR leg → settled, non-EUR leg → native"
   invariant is testable.
 - **Filtering by event-type substring** instead of exact match would

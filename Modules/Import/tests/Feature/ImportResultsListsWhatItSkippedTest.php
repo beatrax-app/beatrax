@@ -16,6 +16,7 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });
@@ -39,11 +40,10 @@ it('lists the rows it skipped instead of defining the word for them', function (
             rowIndex: 0,
             status: PreviewRowStatus::Duplicate,
             accountId: 1,
-            bookedAt: '01-08-2026',
+            postedAt: '01-08-2026',
             counterpartyName: 'Albert Heijn',
             counterpartyIban: null,
             description: 'groceries',
-            categoryName: null,
             amountMinor: -1234,
             currency: 'EUR',
             error: null,
@@ -52,11 +52,10 @@ it('lists the rows it skipped instead of defining the word for them', function (
             rowIndex: 4,
             status: PreviewRowStatus::Error,
             accountId: 1,
-            bookedAt: null,
+            postedAt: null,
             counterpartyName: null,
             counterpartyIban: null,
             description: null,
-            categoryName: null,
             amountMinor: null,
             currency: 'EUR',
             error: 'This row could not be read.',
@@ -133,15 +132,29 @@ it('gives a row that failed without a recorded reason the same sentence the prev
         new ImportPreviewResult(
             importRunId: $run->id,
             rows: [
+                // A run of nothing but failed rows cannot be confirmed at all,
+                // so the reasonless row needs a landed one beside it for the
+                // results screen to exist to be read.
+                new PreviewRowDto(
+                    rowIndex: 0,
+                    status: PreviewRowStatus::Duplicate,
+                    accountId: 1,
+                    postedAt: '01-08-2026',
+                    counterpartyName: 'Albert Heijn',
+                    counterpartyIban: null,
+                    description: 'groceries',
+                    amountMinor: -1234,
+                    currency: 'EUR',
+                    error: null,
+                ),
                 new PreviewRowDto(
                     rowIndex: 4,
                     status: PreviewRowStatus::Error,
                     accountId: 1,
-                    bookedAt: null,
+                    postedAt: null,
                     counterpartyName: null,
                     counterpartyIban: null,
                     description: null,
-                    categoryName: null,
                     amountMinor: null,
                     currency: 'EUR',
                     error: null,

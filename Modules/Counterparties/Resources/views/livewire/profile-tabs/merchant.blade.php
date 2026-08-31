@@ -12,7 +12,6 @@
       $categoryBreakdown Collection<\stdClass>
       $fundingChain      ChainSummary|null
 --}}
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
@@ -29,9 +28,12 @@
             @else
                 <ul style="margin: 0; padding: 0; list-style: none;">
                     @foreach ($categoryBreakdown as $cat)
-                        <li style="display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
+                        <li style="display: flex; flex-wrap: wrap; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                             <span>{{ $cat->category_name ?? Lang::get('counterparties::profile.uncategorized') }}</span>
-                            <span>{{ Money::ofMinor(abs((int) $cat->total_minor), BaseCurrency::value())->format() }}</span>
+                            <span>{{ Money::ofMinor(abs((int) $cat->total_minor), $cat->currency)->format() }}</span>
+                            @if ($cat->unconverted !== [])
+                                <span style="flex-basis: 100%; font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $cat->unconverted)]) }}</span>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
@@ -52,6 +54,7 @@
                     @foreach ($recurringSeries as $series)
                         <li style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);">
                             <a
+                                class="merchant-series-link"
                                 href="{{ route('recurring.series.show', ['seriesId' => $series->seriesId]) }}"
                                 style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline; text-underline-offset: 2px;"
                             >{{ $series->displayName() }}</a>
@@ -75,7 +78,7 @@
                 {{ Lang::get('counterparties::profile.merchant.no_funding_chain') }}
             </p>
             <p style="margin: var(--space-2) 0 0;">
-                <a href="/chains/review" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::profile.merchant.open_chains') }}</a>
+                <a class="tap-link" href="/chains/review" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::profile.merchant.open_chains') }}</a>
             </p>
         @else
             <x-counterparties::chain-flow :nodes="$fundingChain->nodes" />

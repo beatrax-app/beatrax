@@ -24,6 +24,7 @@ Modules/Recurring/
 │   │   └── FixedPaymentsCard.php
 │   └── Services/
 │       ├── RecurringSeriesQuery.php
+│       ├── RecurringOccurrenceQuery.php
 │       └── FixedPaymentsViewQuery.php
 ├── Internal/
 │   ├── CadenceInferrer.php
@@ -52,7 +53,9 @@ Modules/Recurring/
 │   │   ├── RecurringSeriesStateMachine.php
 │   │   └── SeriesRowVanishedException.php
 │   ├── Support/
-│   │   └── SeriesIds.php
+│   │   ├── DerivedSeriesId.php
+│   │   ├── SeriesIds.php
+│   │   └── SeriesTables.php
 │   └── Http/Livewire/
 │       ├── RecurringPage.php
 │       ├── RecurringReviewPage.php
@@ -78,15 +81,12 @@ Modules/Recurring/
     `recurring.detector`. It returns NOTHING — the detector
     reads its own window from
     `users.recurring_detection_window_months`, and writes the
-    `recurring_series` rows and raises the events itself. The
-    returning shape this page used to describe — a
-    `detect(User, Period)` handing a list of DTOs back for the
-    job to persist — was never in the code; the contract has
-    had this signature since it landed. Detection cannot hand
-    its results out and stay correct: two merchant keys can
-    normalise onto one `cluster_key`, so a later cluster in the
-    same sweep has to find the row the earlier one just wrote,
-    and only the detector holds that in-sweep index.
+    `recurring_series` rows and raises the events itself.
+    Detection cannot hand its results out and stay correct: two
+    merchant keys can normalise onto one `cluster_key`, so a
+    later cluster in the same sweep has to find the row the
+    earlier one just wrote, and only the detector holds that
+    in-sweep index.
   - `DispatchesRecurringDetection::dispatchForUser(int $userId):
     void` — takes the id, not the `User`. Idempotent at the
     contract layer: `ShouldBeUniqueUntilProcessing` inside the
@@ -103,7 +103,11 @@ Modules/Recurring/
     displayNameOverride, state, cadence, latestAmount,
     eurEquivalent, monthlyEquivalent, latestFundingChainLinkId,
     nextExpectedAt, nextExpectedConfidenceLow,
-    varianceTolerancePercent, snoozedUntil, latestFxRateUsed)`.
+    varianceTolerancePercent, snoozedUntil)`.
+    Note there is no `latestFxRateUsed` either: the column of
+    that name exists but no writer has ever filled it, so the
+    forecast now resolves a rate through `ExchangeRateService`
+    instead of reading one off the series.
     Note there is no `baselineAmount`: the amount the series
     carries is the LATEST one observed, and drift is judged
     against the previous occurrence rather than against a
@@ -117,8 +121,8 @@ Modules/Recurring/
   `next_expected_confidence_low`, written by the detector and
   carried out on `RecurringSeriesDto`.
 - **Enums/** — `RecurringSeriesState`, `SeriesCadence`.
-- **Events/** — seven, not the five this page used to list, and
-  they do not share one payload shape:
+- **Events/** — seven, and they do not share one payload
+  shape:
   - `RecurringSeriesApproved`, `RecurringSeriesRejected` —
     `(seriesId, userId)`.
   - `RecurringSeriesDetected` — `(seriesId, userId, direction,
@@ -144,21 +148,28 @@ Modules/Recurring/
     `allApprovedForUser`.
   - `RecurringSeriesQuery::forSeries(int $seriesId, User
     $user): ?RecurringSeriesDto`.
-  - `RecurringSeriesQuery::occurrencesForSeries(int $seriesId,
+  - `RecurringOccurrenceQuery::occurrencesForSeries(int $seriesId,
     User $user): array` — every occurrence row for the series,
-    ordered `observed_at` DESC. This is the read
-    `DriftAlerts::DriftEvaluator` consumes; it takes the first
-    two entries itself, so the query has no "last two" of its
-    own to name.
+    ordered `observed_at` DESC. What the detail page's
+    occurrence table renders.
+  - `RecurringOccurrenceQuery::latestOccurrencesForSeries(int
+    $seriesId, User $user, int $limit): array` — the same rows
+    with an `ORDER BY … LIMIT`. `DriftAlerts::DriftEvaluator`
+    reads two; on the unlimited call above it hydrated the
+    whole history to reach them.
   - `RecurringSeriesQuery::pendingCountForUser($user): int`
     — pending-review count.
   - The rest of `RecurringSeriesQuery` is bulk reads the
     detail and review pages batch through:
-    `driftThresholdForSeries`, `statesForSeriesIds`,
+    `driftThresholdForSeries`,
+    `driftThresholdsForSeriesIds`, `statesForSeriesIds`,
     `displayNamesForSeriesIds`, `forSeriesIds`,
     `counterpartyIdForSeries`, `counterpartyIdsForSeriesIds`,
-    `approvedSeriesForCounterparty`, `amountTrendForSeries`,
-    `accountIdsForSeriesIds`.
+    `approvedSeriesForCounterparty`, `accountIdsForSeriesIds`.
+  - The rest of `RecurringOccurrenceQuery` reads the same log by
+    amount rather than by row: `amountTrendForSeries` for the
+    detail chart and the drift watch, `latestObservedAtForSeriesIds`
+    for the reminder sweep's settlement check.
   - `TransactionSeriesMembershipQuery` answers the other
     direction — given transaction ids, which series do they
     belong to: `seriesMembershipForTransactionIds` (is it a
@@ -170,14 +181,21 @@ Modules/Recurring/
 
 ## Internal services
 
-- `Internal/CadenceInferrer::infer($occurrences): string` —
-  classifies as `monthly` / `weekly` / `quarterly` /
-  `yearly` / `irregular`. The `irregular` verdict makes a
-  series ineligible for drift detection.
-- `Internal/Detection/ClusterKeyComposer::compose($tx):
-  string` — produces the cluster key
-  (`{counterparty_normalized}|{amount_minor}|{cadence}` or
-  similar) that groups occurrences into one series.
+- `Internal/CadenceInferrer::infer($sortedTimestamps):
+  InferredCadence` — classifies as `monthly` / `weekly` /
+  `quarterly` / `yearly` / `irregular` and carries the median
+  interval, the projected `next_expected_at`, the
+  low-confidence flag and the missed-period count. The
+  `irregular` verdict makes a series ineligible for drift
+  detection.
+- `Internal/Detectors/ClusterAmountFilter::keep($rows,
+  $tolerancePercent)` — the sign guard and the variance band,
+  shared by both detectors.
+- `Internal/Detection/ClusterKeyComposer::compose($direction,
+  $counterpartyKey, $currency, $cadenceBand): string` —
+  produces `{direction}::{counterparty}::{currency}::{cadence}`,
+  each part lower-cased and reduced to `\p{L}\p{N}&` runs, which
+  groups occurrences into one series.
 - `Internal/Detectors/ExpenseSeriesDetector::detectForUser($user)`
   — finds repeating expense clusters in the user's recent
   transactions, and writes them: per cluster it either calls
@@ -198,11 +216,22 @@ Modules/Recurring/
   — the update half of detection: rewrites the series columns,
   writes the occurrences, raises
   `RecurringSeriesCadenceFlipped` when the cadence moved and
-  `RecurringSeriesMetricsRefreshed` always.
+  `RecurringSeriesMetricsRefreshed` always. It also emits the
+  `EntityMutated` edit that puts the refreshed metrics on the
+  wire, minus `updated_at` — the applying device stamps its own.
 - `Internal/Detectors/OccurrenceWriter::write($userId,
   $seriesId, $rows, $currency)` — the `insertOrIgnore` into
   `recurring_series_occurrences`, called by both the insert and
-  the refresh arm.
+  the refresh arm. Each row carries the id
+  `OccurrenceWriter::idFor()` derives from
+  `(recurring_series_id, transaction_id)`, and the rows this
+  device did not already hold are captured as creates. Which
+  ones those are is asked BEFORE the write: `insertOrIgnore`
+  reports nothing per row.
+- `Internal/Support/DerivedSeriesId::for($userId, $direction,
+  $counterpartyKey, $currency)` — the `recurring_series` id both
+  devices compute. Not the table's UNIQUE; see
+  [How a series is detected](series-detection.md#the-cluster-key).
 - `Internal/Jobs/DetectRecurringSeriesJob::handle(DatabaseManager,
   Clock, iterable $detectors, RecurringSeriesStateMachine,
   ?Session, ?AppLockKeyService, ?EncryptionMigrationService,
@@ -217,7 +246,10 @@ Modules/Recurring/
   concrete `DispatchesRecurringDetection` impl.
 - `Internal/StateMachines/RecurringSeriesStateMachine::transition($series,
   $next, $reason)` — SOLE sanctioned mutator of
-  `recurring_series.state`. Writes the audit row.
+  `recurring_series.state`. Writes the audit row, and emits the
+  `EntityMutated` edit afterwards — never inside the transition,
+  because a rejected edge throws and an op for a flip the row
+  never made would tell the peer something untrue.
 - `Internal/Http/Livewire/RecurringPage` — `/recurring`
   main list.
 - `Internal/Http/Livewire/RecurringReviewPage` —

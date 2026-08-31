@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'Las exportaciones de PayPal no incluyen líneas de saldo, así que ponlo a mano.',
-    'help_asn' => 'Se ancla automáticamente a tu último extracto. Sobrescríbelo solo si sabes que el saldo real es distinto.',
     'help_default' => 'Sobrescríbelo solo si sabes que el saldo real actual es distinto del que calcula Beatrax.',
 
     'legend' => 'Saldo de apertura de la previsión de :name',
     'opening_label' => 'Saldo de apertura',
-    'opening_placeholder' => 'p. ej. 1.250,00',
+    'opening_placeholder' => 'p. ej. :amount',
     'as_of_label' => 'Saldo de apertura a fecha de',
     'as_of_help' => 'La fecha en la que la cifra de arriba es correcta.',
 
     'divergence' => 'Esto se aleja más de :threshold del saldo que Beatrax calcula a partir de las transacciones importadas. ¿Seguro que es correcto?',
+    'computed_is' => 'Beatrax calcula :amount.',
     'use_beatrax' => 'Usar la cifra de Beatrax',
     'use_mine' => 'Usar mi cifra',
 

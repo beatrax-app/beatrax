@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Denne telefonen kan ikke lagre en fil appen gir den, så den krypterte sikkerhetskopien lages i skrivebordsappen. Par denne enheten for å holde dem synkronisert.',
+        'no_download_route' => 'Denne appen kan ikke levere en fil til enheten din, så den krypterte sikkerhetskopien lages i skrivebordsappen i stedet. Par denne enheten for å holde dem synkronisert.',
         'unavailable' => 'Krypterte sikkerhetskopier er tilgjengelige i skrivebordsversjonen (SQLite). På en serverdatabase bruker du databasens egne verktøy for sikkerhetskopiering.',
         'intro' => 'Last ned en kopi av hele databasen din kryptert med en passordfrase — trygg å oppbevare på en ekstern disk eller i skylagring, fordi den ikke kan leses uten passordfrasen (kvantesikker XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Passordfrase',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Filen ble ikke lastet opp ferdig. Den er kanskje for stor for denne enheten — gjenoppretting i skrivebordsappen godtar en større sikkerhetskopi.',
         'enter_passphrase' => 'Skriv inn passordfrasen sikkerhetskopien ble kryptert med.',
         'unreadable' => 'Den opplastede filen kunne ikke leses. Prøv igjen.',
+        'restore_wrong_passphrase' => 'Den passordfrasen åpnet ikke denne sikkerhetskopien, og ingenting er endret. Skriv den inn på nytt og prøv igjen. Er den helt sikkert riktig, er filen endret etter at den ble laget — gjenopprett da fra en annen kopi.',
+        'restore_not_a_backup' => 'Denne filen er ikke en kryptert Beatrax-sikkerhetskopi, så det er ingenting å gjenopprette, og ingenting er endret. Velg .enc-filen appen skrev da du laget sikkerhetskopien.',
+        'restore_contents_unreadable' => 'Sikkerhetskopien ble åpnet, men databasen i den er skadet, så den ble ikke gjenopprettet, og ingenting er endret. Gjenopprett fra en eldre sikkerhetskopi.',
+        'restore_could_not_read' => 'Sikkerhetskopifilen kunne ikke leses, så gjenopprettingen ble ikke kjørt, og ingenting er endret. Sjekk at enheten har ledig plass, og prøv igjen.',
+        'restore_not_supported' => 'Gjenoppretting virker i utgaven som holder dataene sine i én fil, og det er ikke denne, så ingenting er endret. Bruk databasens egne gjenopprettingsverktøy ved en serverdatabase.',
+        'restore_failed' => 'Gjenopprettingen ble ikke kjørt, og ingenting er endret. Prøv igjen — fortsetter den å feile, noterer apploggen hva som stoppet den.',
     ],
 ];

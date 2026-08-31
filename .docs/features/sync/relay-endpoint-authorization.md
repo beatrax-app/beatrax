@@ -82,8 +82,7 @@ leading characters matched.
 > token as `HMAC(relay auth token, did)`. The relay auth token travels in the
 > pairing QR, so every peer that had ever paired could recompute *any* device's
 > drain token and pull or delete that device's blobs. The registry above is
-> what the code does, and [architecture.md](architecture.md) now describes the
-> same mechanism.
+> what replaced it.
 
 The residual weakness of trust-on-first-use is worth naming: an attacker who
 registers a victim's device id **before** the victim ever drains wins the slot.
@@ -122,7 +121,7 @@ The two lifetimes are:
 Garbage collection compares `expires_at` as a plain string, which is only
 correct while every timestamp is zero-padded UTC Zulu — an offset form such as
 `+02:00` sorts wrongly and would either collect live blobs early or never
-collect them at all. `ZuluTimestamp::stamp()` is the only way any write site
+collect them at all. `Instant::zulu()` is the only way any write site
 produces one, and both halves of it are load-bearing: it converts to UTC *and*
 asserts the shape, throwing rather than writing a value the comparison cannot
 order. An inlined `->toIso8601String()` looks like the same call and is not —

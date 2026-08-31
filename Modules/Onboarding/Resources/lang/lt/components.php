@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Sąrankos eiga',
     'step_progress' => ':current žingsnis iš :total',
-    'step_dot_aria' => ':number žingsnis iš :total',
 
     'eyebrow_step' => ':number žingsnis — ',
 ];

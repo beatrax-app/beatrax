@@ -68,6 +68,10 @@ function thirdPartySeams(): array
         // long-running daemon schedules on, and DaemonTicker is the one place
         // that has to know it.
         'Revolt' => ['Modules/Sync/Internal/Transport'],
+        // Two PDF readers in one seam, not one too many: Spatie\PdfToText
+        // shells out to poppler's pdftotext, which the phone does not ship, so
+        // the pure-PHP parser is the only path a device has to a statement.
+        'Smalot\PdfParser' => ['Modules/Ingestion/Internal/Adapters/Ics'],
         'Spatie\Activitylog' => ['Modules/DevMode/Internal/Audit'],
         'Spatie\PdfToText' => ['Modules/Ingestion/Internal/Adapters/Ics'],
         'TheNetworg' => ['Modules/EmailScan/Internal/OAuth'],
@@ -173,8 +177,12 @@ function thirdPartyPrefixesIn(string $relativePath, array $installed): array
     $source = (string) file_get_contents(base_path($relativePath));
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
 
+    // A separator is only a separator when an identifier follows it. Without
+    // that, the escape in a "NativePHP\'s own transport" test title reads as a
+    // namespace, and a class name escaped for JavaScript splits into one bogus
+    // prefix per segment.
     $found = [];
-    if (preg_match_all('/\\\\?\b([A-Z][A-Za-z0-9_]*(?:\\\\[A-Z][A-Za-z0-9_]*)*)\\\\/', $stripped, $matches) === false) {
+    if (preg_match_all('/\\\\?\b([A-Z][A-Za-z0-9_]*(?:\\\\[A-Z][A-Za-z0-9_]*)*)\\\\(?=[A-Za-z_])/', $stripped, $matches) === false) {
         return [];
     }
 

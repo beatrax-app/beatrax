@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Desen zorunludur.',
         'name_required' => 'Ad zorunludur.',
+        'browser_refused' => 'Tarayıcın açılamadı, bu yüzden hiçbir şey gönderilmedi ve hiçbir şey bu cihazdan çıkmadı. Tekrar dene ya da yukarıdaki YAML önizlemesini kendin bir pull request içine yapıştır.',
     ],
 ];

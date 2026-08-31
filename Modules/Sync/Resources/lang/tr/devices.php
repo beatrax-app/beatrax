@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Cihazların',
 
-    'moved_help' => 'Eşleştirme, cihaz adları ve şifreleme artık senkronizasyon durumunun yanında yer alıyor.',
-    'moved_cta' => 'Senkronizasyon ve cihazı aç',
     'device_name' => 'Cihaz adı',
     'save' => 'Kaydet',
     'peer_default_name' => 'Eşleştirilmiş cihaz',
     'rename_device' => 'Cihazı yeniden adlandır',
+    'rename_device_caption' => 'Adlandır',
     'this_device' => 'Bu cihaz',
     'removed' => 'Kaldırıldı',
     'confirmed' => 'Onaylandı',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relay uç noktası',
     'relay_endpoint_help' => 'İsteğe bağlı. Ayarlandığında çevrimdışı cihazlar bu relay üzerinden senkronize olur. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
+    'relay_endpoint_help_phone' => 'İsteğe bağlı. Ayarlandığında değişiklikler, cihazların aynı ağda olmadığı zamanlarda da bu relay üzerinden gider. Bu cihaz, bu ekrandan senkronize ettiğinde onları alır — asla arka planda değil, çünkü uygulama kilidi tek anahtarı tutuyor. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
     'relay_endpoint_aria' => 'Relay uç noktası URL adresi',
     'relay_insecure_warning' => 'Bu relay uç noktası düz HTTP kullanıyor. Relay verilerinin şifresini hiçbir zaman çözmese de güvenli olmayan bir bağlantı, şifreli veri boyutlarını ve zamanlamayı ağı izleyenlere açık eder. En iyi gizlilik için <strong>https://</strong> uç noktası kullan.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Kaldırılıyor:',
     'remove_rotates_key' => 'Bu cihazı kaldırmak şifreleme anahtarını değiştirir, böylece cihaz sonraki güncellemeleri almaz.',
     'remove_cannot_erase' => 'Bu işlem, o cihazda hâlihazırda bulunan verileri silemez. Cihaz kaybolduysa ya da çalındıysa içindeki tüm verileri açığa çıkmış say.',
+    'remove_is_local' => 'Diğer cihazların kendi listesini tutar. Oradan da kaldırmadığın sürece onunla eşitlenmeye devam ederler.',
     'remove_device' => 'Cihazı kaldır',
     'keep_device' => 'Cihazı tut',
     'rotating_key' => 'Şifreleme anahtarı değiştiriliyor…',

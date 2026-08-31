@@ -56,6 +56,7 @@
          on the same row. The desktop branch below keeps the word. --}}
     <x-core::emoji-action
         :label="Lang::get('tax::badge.tag_aria')"
+        :caption="Lang::get('tax::badge.tag_caption')"
         wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
         data-testid="tax-badge-untagged-{{ $txId }}"
     >🏷️</x-core::emoji-action>

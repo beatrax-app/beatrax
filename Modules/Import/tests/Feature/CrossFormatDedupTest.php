@@ -8,6 +8,7 @@ use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     $this->importer = $this->app->make(RunsImports::class);

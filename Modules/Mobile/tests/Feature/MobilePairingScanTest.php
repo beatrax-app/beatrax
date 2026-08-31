@@ -26,6 +26,7 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -269,9 +270,10 @@ it('a typed word-code that cannot decode stays on enter_code and blames the code
         ->set('wordCode', 'ZZZZ-ZZZZ-ZZZZ-ZZZZ')
         ->call('submitCode', null)
         ->assertSet('step', 'enter_code')
-        // Not code_not_accepted: that sentence says no device on this network
-        // took the code, and this one never reached the network to be refused.
-        ->assertSee(Lang::get('mobile::pairing.errors.invalid_code'));
+        // Neither code_not_accepted nor invalid_code: one says no device on this
+        // network took the code and the other that it expired, and this one never
+        // reached the network at all — it has letters missing.
+        ->assertSee(Lang::get('mobile::pairing.errors.code_incomplete'));
 });
 
 it('BOTH the QR path and the word-code path resolve to the identical PairingGateway::confirm() trust gate', function (): void {
@@ -472,7 +474,7 @@ it('a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once 
 
     /** @var PairingGateway $seedGateway */
     $seedGateway = app(PairingGateway::class);
-    $seedGateway->seedResponderToken($token, $initiatorDeviceId, $initiatorEd, $initiatorKx, (int) $user->id);
+    $seedGateway->seedResponderToken($token, new PairingPeerIdentity($initiatorDeviceId, $initiatorEd, $initiatorKx), (int) $user->id);
 
     /** @var QrPayloadBuilder $qrBuilder */
     $qrBuilder = app(QrPayloadBuilder::class);

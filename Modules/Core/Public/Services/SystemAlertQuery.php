@@ -18,7 +18,7 @@ final readonly class SystemAlertQuery
     // The severity spellings arrive as bindings, not spliced into the statement:
     // the sort the reader actually sees then follows the enum wherever a case
     // value goes, and orderByRaw still receives a literal it can check.
-    private const SEVERITY_RANK_SQL = 'CASE severity WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END';
+    private const string SEVERITY_RANK_SQL = 'CASE severity WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END';
 
     public function __construct(
         private DatabaseManager $db,
@@ -72,15 +72,38 @@ final readonly class SystemAlertQuery
         return $this->scopedActiveQuery($user)->count();
     }
 
+    // Whether THIS reader has dismissed a system-wide row, which is a
+    // different question from whether the row itself is acknowledged. The
+    // column answers the second; only an owned row ever carries it.
+    public function acknowledgedBy(int $alertId, int $userId): bool
+    {
+        return $this->db->connection()->table('system_alert_acknowledgements')
+            ->where('system_alert_id', $alertId)
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
     private function scopedActiveQuery(?User $user): Builder
     {
-        $query = $this->db->connection()->table('system_alerts')
+        $connection = $this->db->connection();
+
+        $query = $connection->table('system_alerts')
             ->whereNull('acknowledged_at');
 
         if ($user !== null) {
             $userId = $user->id;
             $query->where(function (Builder $q) use ($userId): void {
                 $q->where('user_id', $userId)->orWhereNull('user_id');
+            });
+
+            // The per-reader half of the same question. A background probe
+            // passes no user and asks only whether the fault is still open,
+            // which nobody's dismissal answers.
+            $query->whereNotExists(static function (Builder $ack) use ($connection, $userId): void {
+                $ack->select($connection->raw(1))
+                    ->from('system_alert_acknowledgements')
+                    ->whereColumn('system_alert_acknowledgements.system_alert_id', 'system_alerts.id')
+                    ->where('system_alert_acknowledgements.user_id', $userId);
             });
         } else {
             $query->whereNull('user_id');

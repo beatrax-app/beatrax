@@ -150,6 +150,64 @@ it('renders Cancel this → save €X/yr inline on each open alert row', functio
     $response->assertSeeText('/yr');
 });
 
+// Income is not a subscription. A salary drift alert offered "Cancel this →
+// save EUR 43,200.00/yr", "Model cancel" and "I cancelled this".
+it('offers no cancellation affordances on an income alert', function (): void {
+    cidAlert($this->user, 'MijnWerkgever BV', seriesOverrides: [
+        'direction' => 'income',
+        'latest_amount_minor' => 360000,
+        'monthly_equivalent_minor' => 360000,
+    ], alertOverrides: [
+        'direction' => 'income',
+        'baseline_amount_minor' => 385000,
+        'latest_amount_minor' => 360000,
+        'delta_minor' => -25000,
+        'annualized_impact_minor' => -300000,
+    ]);
+
+    $response = $this->actingAs($this->user)->get('/drift');
+
+    $response->assertOk()
+        ->assertSeeText('MijnWerkgever BV')
+        ->assertDontSeeText('Cancel this')
+        ->assertDontSeeText('Model cancel')
+        ->assertDontSeeText('I cancelled this');
+});
+
+it('keeps the cancellation affordances on an expense alert', function (): void {
+    cidAlert($this->user, 'Spotify');
+
+    $response = $this->actingAs($this->user)->get('/drift');
+
+    $response->assertOk()
+        ->assertSeeText('Cancel this')
+        ->assertSeeText('Model cancel')
+        ->assertSeeText('I cancelled this');
+});
+
+// A monthly-to-yearly restructure moves the two figures the row prints in
+// opposite directions: the charge is EUR 90 bigger, the year EUR 20 cheaper.
+// The row painted the saving rose under a red UP arrow while the dashboard
+// tile excluded the same alert from its total.
+it('points the arrow at the yearly figure the dashboard tile agrees with', function (): void {
+    cidAlert($this->user, 'Restructured Plan', seriesOverrides: [
+        'cadence' => 'yearly',
+        'latest_amount_minor' => -10000,
+        'monthly_equivalent_minor' => -833,
+    ], alertOverrides: [
+        'baseline_amount_minor' => -1000,
+        'latest_amount_minor' => -10000,
+        'delta_minor' => -9000,
+        'annualized_impact_minor' => 2000,
+    ]);
+
+    $content = (string) $this->actingAs($this->user)->get('/drift')->getContent();
+
+    expect($content)->toContain('M2.25 6 9 12.75')
+        ->and($content)->not->toContain('M2.25 18 9 11.25')
+        ->and($content)->toContain('text-emerald-700 dark:text-emerald-300" style="font-variant-numeric: tabular-nums;">+');
+});
+
 it('renders USD-primary cancellation projection when the series is denominated in USD', function (): void {
     // monthly_equivalent_minor -1199 × 12 = 14388 cents.
     cidAlert($this->user, 'Google Play', seriesOverrides: [

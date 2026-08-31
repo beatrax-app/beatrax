@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'alapérték :baseline → tényleges: :actual',
+    'charged' => 'terhelés :actual',
     'detected' => 'észlelve: :date',
     'sensitivity' => 'érzékenység :percent a 100-ból',
 

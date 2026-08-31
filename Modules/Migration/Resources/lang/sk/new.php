@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Toto nevyzerá ako export z YNAB4, nYNAB ani Actual, ktorý vieme prečítať. Skontroluj súbor a skús to znova.',
         'file_too_large' => 'Tento súbor je na migračný export príliš veľký.',
+        'archive_reader_unavailable' => 'Táto verzia aplikácie nemá žiadnu čítačku ZIP, ktorá by tento export otvorila, takže sa tu nedá prečítať. Naimportuj ho v aplikácii pre počítač alebo export znova zabaľ bežnou kompresiou.',
+        'internal_detail' => 'Aplikácia nedokázala načítať tento export (:code). Úplné podrobnosti sú v protokole aplikácie; pri hlásení problému uveď tento kód.',
     ],
 ];

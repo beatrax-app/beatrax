@@ -13,12 +13,12 @@ use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class RemoveScenarioMutation
+final readonly class RemoveScenarioMutation
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $mutationId, User $user): void

@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Beállítás folyamata',
     'step_progress' => ':current. lépés :total közül',
-    'step_dot_aria' => ':number. lépés :total közül',
 
     'eyebrow_step' => ':number. lépés — ',
 ];

@@ -12,20 +12,23 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Core\Public\Support\StoredCopy;
 use Throwable;
 
-final class BackupFreshnessProbe implements Probe
+final readonly class BackupFreshnessProbe implements Probe
 {
-    private const BACKUP_AGE_MESSAGE = 'Most recent verified backup is %dh old.';
+    private const string BACKUP_AGE_MESSAGE = 'Most recent verified backup is %dh old.';
 
     private const int STALE_AFTER_HOURS = 48;
 
     public function __construct(
-        private readonly Filesystem $files,
-        private readonly Clock $clock,
-        private readonly DatabaseManager $db,
-        private readonly UserDataPathService $paths,
+        private Filesystem $files,
+        private Clock $clock,
+        private DatabaseManager $db,
+        private UserDataPathService $paths,
     ) {}
 
     public function label(): string
@@ -137,9 +140,9 @@ final class BackupFreshnessProbe implements Probe
         try {
             // Recency check uses the raw Query Builder (not Eloquent) since
             // larastan-strict-rules rejects chained Eloquent\Builder calls
-            // after Model::query(). The cutoff is normalised to UTC because
-            // SQLite's CURRENT_TIMESTAMP default writes in UTC, not app-local.
-            $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
+            // after Model::query(). SystemAlert stamps created_at off the app
+            // clock, so the cutoff is built in that frame, not in UTC.
+            $cutoff = Instant::appLocal($this->clock->now()->subHour());
             $recentExists = $this->db->connection()->table('system_alerts')
                 ->where('kind', BackupAlertKind::Overdue->value)
                 ->whereNull('acknowledged_at')
@@ -149,14 +152,20 @@ final class BackupFreshnessProbe implements Probe
                 return;
             }
 
+            // The ProbeResult above keeps its English: that one is read in a
+            // console by whoever ran the doctor. This row is read later, on
+            // whichever device and in whichever language, so the line rides in
+            // metadata and the column keeps the sentence a peer can still show.
+            $line = $hoursOld === null
+                ? CopyLine::of('core::alerts.messages.backup_none_found')
+                : CopyLine::of('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]);
+
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => BackupAlertKind::Overdue->value,
                 'severity' => SystemAlertSeverity::Warning->value,
-                'message' => $hoursOld === null
-                    ? 'No verified backups found under the backups directory.'
-                    : sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
-                'metadata' => [
+                'message' => $line->sentence(),
+                'metadata' => StoredCopy::inParams($line) + [
                     'hours_old' => $hoursOld,
                     'backups_path' => $this->paths->backups(),
                 ],

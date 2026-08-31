@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
@@ -128,18 +129,26 @@ function abrSeries(
 }
 
 /**
- * @return list<string>
+ * @return list<CalendarEntryDto>
  */
-function abrEntryNamesOn(User $user, string $date): array
+function abrEntriesOn(User $user, string $date): array
 {
     $parsed = CarbonImmutable::parse($date);
     foreach (app(CalendarQuery::class)->forMonth($user, $parsed->year, $parsed->month) as $day) {
         if ($day->date->toDateString() === $date) {
-            return array_map(static fn ($entry): string => $entry->name, $day->entries);
+            return $day->entries;
         }
     }
 
     return [];
+}
+
+/**
+ * @return list<string>
+ */
+function abrEntryNamesOn(User $user, string $date): array
+{
+    return array_map(static fn (CalendarEntryDto $entry): string => $entry->name, abrEntriesOn($user, $date));
 }
 
 // A reader whose ledger holds a dated rent was told to go connect an account:
@@ -183,13 +192,26 @@ it('lists one entry where a series and a booked row mean the same payment', func
     expect(abrEntryNamesOn($this->user, ABR_RENT_DATE))->toBe(['Woonstichting Delta']);
 });
 
-// Behind today the ledger row is already in the past-day balance and the entry
-// carries a paid-or-missed verdict, so a second copy of it is not an entry.
-it('leaves days behind today to the paid-or-missed pass', function (): void {
+// Behind today the ledger row IS the past-day balance step, and the paid/missed
+// pass reaches series occurrences only — so a plain imported row belonging to no
+// series was listed by neither pass, under a balance line it had just moved.
+it('lists a row behind today, which no verdict pass reaches', function (): void {
     $accountId = abrAccount($this->db, $this->user->id);
     abrRent($this->db, $this->user->id, $accountId, '2026-08-03');
 
-    expect(abrEntryNamesOn($this->user, '2026-08-03'))->toBe([]);
+    expect(abrEntryNamesOn($this->user, '2026-08-03'))->toBe(['Woonstichting Delta']);
+});
+
+// It is the payment, not a prediction of one, so it carries no amber "!".
+it('never reads a booked row behind today as missed', function (): void {
+    $accountId = abrAccount($this->db, $this->user->id);
+    abrRent($this->db, $this->user->id, $accountId, '2026-08-03');
+
+    $entry = abrEntriesOn($this->user, '2026-08-03')[0];
+
+    expect($entry->isMissed)->toBeFalse()
+        ->and($entry->isPaid)->toBeTrue()
+        ->and($entry->transactionId)->not->toBeNull();
 });
 
 // Not selected for entries means not shown, for a booked row exactly as for a

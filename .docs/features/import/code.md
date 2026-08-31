@@ -22,6 +22,7 @@ Modules/Import/
 │   │   ├── ApplyEnrichments.php
 │   │   ├── DiscardImport.php
 │   │   ├── EnsurePaypalAccountAction.php
+│   │   ├── EnsureGooglePlayAccountAction.php
 │   │   ├── CreateMerchantAlias.php
 │   │   └── MergeMerchantAliases.php
 │   ├── Dto/                  (ImportPreviewResult, ImportConfirmResult,
@@ -29,12 +30,14 @@ Modules/Import/
 │   │                          StartingBalanceCandidate, dispositions)
 │   ├── Enums/                (PaymentType, BankCsvFormatHint,
 │   │                          ImportFailureReason, PreviewRowStatus,
-│   │                          PreviewSectionStatus)
+│   │                          PreviewSectionStatus,
+│   │                          EnrichmentConflictField)
 │   ├── Events/
 │   │   └── TransactionImported.php
 │   ├── Pipeline/
 │   │   └── NormalizeStage.php   (Receipts uses it without the chain)
 │   └── Services/
+│       ├── AccountDenomination.php
 │       ├── AccountNamer.php
 │       ├── AliasMatchPreviewQuery.php
 │       ├── BuildConsolidatedPreviewQuery.php
@@ -55,12 +58,14 @@ Modules/Import/
 │   │       └── FingerprintStage.php
 │   ├── Parsers/               (PaymentTypeHinter classes only —
 │   │                           the readers live in Ingestion)
-│   │   ├── Asn/AsnCsvPaymentTypeHinter.php
+│   │   ├── Csv/PositionalCsvPaymentTypeHinter.php
 │   │   ├── Banking/Camt053PaymentTypeHinter.php
 │   │   ├── Banking/Mt940PaymentTypeHinter.php
 │   │   ├── Ics/IcsPdfPaymentTypeHinter.php
 │   │   ├── Paypal/PaypalCsvPaymentTypeHinter.php
 │   │   ├── DescriptionKeywordHinter.php
+│   │   ├── DutchNarrativeHinter.php
+│   │   ├── DutchNarrativeKeywords.php
 │   │   └── DescriptionKeywordFallbackHinter.php
 │   ├── Detectors/             (4 tagged starting-balance detectors
 │   │                           over a shared base class)
@@ -141,9 +146,19 @@ Modules/Import/
   - `DiscardImport::__invoke($importRunId, $user)` drops a run's
     cached preview; `EnsurePaypalAccountAction` creates the
     synthetic PayPal account the Onboarding connector step needs
-    before it can stage a run.
+    before it can stage a run, and
+    `EnsureGooglePlayAccountAction::__invoke($user, ?$nameOverride,
+    ?$statementCurrency)`
+    is its Google Play twin — the only thing in the app that mints
+    an account on the `'GOOGLE-PLAY'` sentinel, which is what a
+    parsed Play receipt resolves against. Both hold their sentinel
+    as a constant reading `Ingestion`'s `SyntheticIban` enum.
   - `CreateMerchantAlias::__invoke($pattern, $friendlyName, $user)`,
     `MergeMerchantAliases::__invoke($sourceId, $targetId, $user)`.
+  - `AccountDenomination::forStatement(?$statementCurrency)` is the one
+    place an account's denomination is decided: the file's own currency,
+    and the reader's reporting currency only when the file names none —
+    [an account is denominated by its statement](an-account-is-denominated-by-its-statement.md).
 - **Dto/** — `ImportPreviewResult`, `ImportConfirmResult`,
   `PreviewRowDto`, `PaymentTypeHint`, `StartingBalanceCandidate`,
   `PendingEnrichment`, `UnknownIban`, `AliasMatchPreviewResultDto`,
@@ -153,16 +168,24 @@ Modules/Import/
   `DirectDebit`, `Cash`, `Fee`, `Refund`, `Unknown`) covering
   the documented payment-type taxonomy; `BankCsvFormatHint`,
   `ImportFailureReason`, `PreviewRowStatus`,
-  `PreviewSectionStatus`.
+  `PreviewSectionStatus`; `EnrichmentConflictField`
+  (`counterparty_name` / `description` / `currency` /
+  `amount_minor`), the closed set of `transactions` columns a
+  receipt may disagree with a statement about, plus
+  `isFingerprintInput()` naming the subset the dedup tuple is
+  composed over. `FingerprintStage` emits its conflict keys from
+  it, `ApplyEnrichments` accepts them through it, and
+  `Receipts\Public\Actions\ApplyReceiptConflictResolution`
+  resolves them through it.
   `ImportRunStatus` is not one of them either: the `import_runs`
   table is `Ledger`'s, so the enum naming its states lives at
   `Modules\Ledger\Public\Enums\ImportRunStatus`.
   `SourceFormat` is NOT one of them, and never was. It belongs
   to `Ingestion` (`Modules\Ingestion\Public\Enums\SourceFormat`)
-  — the module that owns the adapters the value selects — where
-  it was introduced by #195 to replace bare strings at the
-  adapter registry, the header profiles, the payment-type
-  hinters and the starting-balance detectors. Its cases are
+  — the module that owns the adapters the value selects — and
+  stands in for the bare strings the adapter registry, the
+  header profiles, the payment-type hinters and the
+  starting-balance detectors would otherwise key on. Its cases are
   `AsnCsv`, `Camt053`, `Mt940`, `IcsPdf`, `PaypalCsv`, `Eml`,
   `Mbox` — every one of which keys either the adapter registry
   or `ParseStage`'s receipt arm, an invariant
@@ -213,8 +236,8 @@ Modules/Import/
 - `Internal/Parsers/*` — per-source `PaymentTypeHinter`
   implementations **only**. The readers themselves are
   `Ingestion`'s `SourceAdapter` implementations
-  (`Camt053Adapter`, `Mt940Adapter`, `AsnCsvAdapter`,
-  `GenericCsvAdapter`, `IcsPdfAdapter`, `PaypalCsvAdapter`); the
+  (`Camt053Adapter`, `Mt940Adapter`, `GenericCsvAdapter`,
+  `PositionalCsvAdapter`, `IcsPdfAdapter`, `PaypalCsvAdapter`); the
   directory kept its name from when this module owned both.
 - `Internal/Detectors/*` — four tagged starting-balance detectors
   (CAMT.053 / MT940 / ICS PDF / PayPal CSV) over the shared
@@ -238,6 +261,12 @@ Modules/Import/
   intent store.
 - `Internal/Listeners/SeedDefaultKnownCounterpartyIbans::handle($event)`
   — seeds two rows on `UserInstalled`.
+- `Internal/Http/Livewire/ImportResults` — the screen the confirm
+  redirects to. Besides the skipped/error lists it carries the
+  chain-resolution progress surface, read from
+  `chain_resolution_runs` by exact `user_id` inside `render()` and
+  polled while the run is `pending` or `running`. See
+  [chain resolution progress on the results page](architecture.md#chain-resolution-progress-on-the-results-page).
 
 ## Models + migrations
 

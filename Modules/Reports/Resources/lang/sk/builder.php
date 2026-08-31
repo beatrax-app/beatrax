@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategórie',
+    'no_counterparty' => 'Bez protistrany',
+    'unavailable_counterparty' => 'Protistrana nie je v tomto zariadení',
     'title' => 'Zostavy',
     'page_title' => 'Zostavy · Beatrax',
     'subtitle' => 'Zlož si zostavu zo svojej knihy.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Vlastný rozsah',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Vyber počiatočný aj koncový dátum.',
+            'malformed' => 'Zadaj platný dátum v tvare RRRR-MM-DD.',
+            'inverted' => 'Koncový dátum je skôr ako počiatočný.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtre',
+        'net_worth_note' => 'Čisté imanie je zostatok: platí len filter účtu.',
     ],
 
     'compare' => 'Porovnať s predchádzajúcim obdobím',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Graf v mene :currency — :list sa nezobrazuje',
+        'undrawn' => 'Nie je v prstenci — :amount ide opačným smerom',
         'bar_title' => 'Kliknutím na stĺpec zobrazíš jeho transakcie',
         'line_title' => 'Kliknutím na bod zobrazíš jeho transakcie',
         'donut_title' => 'Kliknutím na segment zobrazíš jeho transakcie',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Poplatky a úpravy (nezapočítané vyššie)',
+    'other_movement_with_refunds' => 'Poplatky, vratky a úpravy (nezapočítané vyššie)',
 ];

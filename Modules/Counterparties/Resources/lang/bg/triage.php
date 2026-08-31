@@ -6,7 +6,7 @@ return [
     'page_title' => 'Сортиране на контрагенти',
     'heading' => 'Сортирай неизвестните контрагенти',
 
-    'progress' => ':seen от :total · :percent % · остават ~:minutes мин',
+    'progress' => ':seen от :total · :percent% · остават ~:minutes мин',
     'progress_aria' => 'Напредък на сортирането',
 
     'all_caught_aria' => 'Всички контрагенти са етикетирани',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Още няма записани транзакции.',
 
     'label_manually' => 'Или етикетирай ръчно',
+    'label_question' => 'Какъв е този контрагент?',
     'display_name_label' => 'Показвано име',
-    'display_name_placeholder' => 'Показвано име…',
     'type_label' => 'Вид',
     'type_merchant' => 'Търговец',
     'type_personal' => 'Личен',
     'type_bank' => 'Банка',
     'type_government' => 'Държавна институция',
     'save_label' => 'Запази етикета',
+    'name_required' => 'Първо дай име на този контрагент.',
+    'draft_kept' => 'Написаното се запазва, докато преминаваш през опашката.',
 
     'skip' => 'Пропусни засега',
-    'mark_ignored' => 'Отбележи като пренебрегнат',
+    'mark_ignored' => 'Не питай повече за този',
+    'not_now_note' => 'Нито едното не променя контрагента — още можеш да го етикетираш по-късно на страницата Контрагенти.',
     'previous' => 'Предишен неизвестен',
-    'next' => 'Следващ',
 
     'kbd_yes' => 'да',
     'kbd_no' => 'не',

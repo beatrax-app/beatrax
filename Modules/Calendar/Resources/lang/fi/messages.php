@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Kirjattu maksu',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list ei lasketa mukaan — siellä olevat maksut eivät muuta saldoa',
+    ],
+
     'panel' => [
         'aria' => 'Päivän tietopaneeli',
         'close' => 'Sulje päivänäkymä',
+        'close_caption' => 'Sulje',
         'start_of_day' => 'Päivän alku',
         'no_payments' => 'Ei maksuja tänä päivänä.',
         'date_approximate' => '~ päivä on arvio',

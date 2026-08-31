@@ -21,8 +21,9 @@ final readonly class CounterLegMatch
         public array $types,
         public ?string $currency,
         public bool $unpairedOnly,
-        // A row whose counterparty IBAN is its own account's would otherwise
-        // answer its own search, which a zero-amount leg makes reachable.
+        // The chain resolver names the row it is asking on behalf of, which
+        // sits on the very account it searches; the pairer, whose partner
+        // account is never its own, names itself anyway rather than say null.
         public ?int $excludeTransactionId,
     ) {}
 }

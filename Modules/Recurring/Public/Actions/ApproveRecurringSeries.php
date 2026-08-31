@@ -12,11 +12,11 @@ use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class ApproveRecurringSeries
+final readonly class ApproveRecurringSeries
 {
     public function __construct(
-        private readonly RecurringSeriesStateMachine $stateMachine,
-        private readonly Dispatcher $events,
+        private RecurringSeriesStateMachine $stateMachine,
+        private Dispatcher $events,
     ) {}
 
     public function __invoke(int $seriesId, User $user): void

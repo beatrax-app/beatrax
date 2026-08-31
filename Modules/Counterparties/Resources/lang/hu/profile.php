@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— magánszemély kapcsolatoknál nincs fedezeti lánc',
     'tab_note_bank' => '— a banki díjpartner nem hoz létre fedezeti láncot',
+    'tab_note_bank_institution' => '— intézményi partnereknél nincs fedezeti lánc',
     'tab_note_government' => '— állami partnereknél nincs fedezeti lánc',
 
     'recent_activity' => 'Legutóbbi tevékenység',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Banki díjak kategóriánként',
+        'activity_heading' => 'Tevékenység kategóriánként',
         'no_fees' => 'Ehhez a partnerhez még nincs rögzített díj.',
     ],
 

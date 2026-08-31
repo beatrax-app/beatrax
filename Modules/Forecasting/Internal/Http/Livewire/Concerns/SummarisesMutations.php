@@ -29,6 +29,21 @@ trait SummarisesMutations
         };
     }
 
+    // The figure was typed at the series' own scale, so it has to read back at
+    // that one: a ¥135,000 new amount rendered as "1.350,00" under a hundredth
+    // this series has never had. Null where the series is gone, which leaves
+    // MoneyInput on the repo-wide assumption rather than a guessed denomination.
+    private function seriesCurrency(int $seriesId): ?string
+    {
+        foreach ($this->availableSeries as $entry) {
+            if ($entry['id'] === $seriesId && $entry['currency'] !== '') {
+                return $entry['currency'];
+            }
+        }
+
+        return null;
+    }
+
     private function resolveSeriesName(int $seriesId): string
     {
         foreach ($this->availableSeries as $entry) {
@@ -43,7 +58,7 @@ trait SummarisesMutations
     private function summariseOneOff(AddOneOffPayload $payload): string
     {
         $sign = $payload->direction === Direction::Income->value ? '+' : '−';
-        $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
+        $amount = MoneyInput::formatAbsMinor($payload->amountMinor, $payload->currency);
 
         return Lang::get('forecasting::scenario.summary.one_off', [
             'amount' => $sign.$amount,
@@ -55,7 +70,7 @@ trait SummarisesMutations
     private function summariseRecurring(AddRecurringPayload $payload): string
     {
         $sign = $payload->direction === Direction::Income->value ? '+' : '−';
-        $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
+        $amount = MoneyInput::formatAbsMinor($payload->amountMinor, $payload->currency);
 
         return Lang::get('forecasting::scenario.summary.recurring', [
             'amount' => $sign.$amount,
@@ -67,7 +82,7 @@ trait SummarisesMutations
 
     private function summariseChangeAmount(ChangeSeriesAmountPayload $payload): string
     {
-        $amount = MoneyInput::formatMinor($payload->newAmountMinor);
+        $amount = MoneyInput::formatMinor($payload->newAmountMinor, $this->seriesCurrency($payload->seriesId));
 
         return Lang::get('forecasting::scenario.summary.change_amount', [
             'name' => $this->resolveSeriesName($payload->seriesId),

@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
-use DateTimeZone;
+use Error;
 use Generator;
 use Genkgo\Camt\Camt053\DTO\Statement;
 use Genkgo\Camt\Config;
 use Genkgo\Camt\DTO\Balance;
 use Genkgo\Camt\DTO\Creditor;
 use Genkgo\Camt\DTO\Debtor;
+use Genkgo\Camt\DTO\DomainBankTransactionCode;
+use Genkgo\Camt\DTO\DomainFamilyBankTransactionCode;
 use Genkgo\Camt\DTO\Entry;
 use Genkgo\Camt\DTO\EntryTransactionDetail;
 use Genkgo\Camt\DTO\IbanAccount;
@@ -20,6 +22,8 @@ use Genkgo\Camt\DTO\RelatedParty;
 use Genkgo\Camt\DTO\UltimateCreditor;
 use Genkgo\Camt\DTO\UltimateDebtor;
 use Genkgo\Camt\Reader;
+use Modules\Core\Public\Support\Instant;
+use Modules\Ingestion\Internal\Enums\StatementExtraKey;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
@@ -54,20 +58,37 @@ final class Camt053Adapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
+        // Cleared before the sniff, not after: this adapter is a singleton, so
+        // a run refused at the door would otherwise answer statementMetadata()
+        // with the previous file's statement.
+        $this->lastStatementMetadata = null;
+
         $this->sniffer->sniff($localPath, Camt053HeaderProfile::FORMAT);
 
         $message = $this->readMessage($localPath);
         $msgId = $message->getGroupHeader()->getMessageId();
         $index = 0;
-        $this->lastStatementMetadata = null;
-        $entryCount = 0;
+
+        // The FIRST <Stmt>, and the flag beside it, because MT940 answers this
+        // same question that way (Mt940Adapter::applyStatementId). Keeping the
+        // last one instead put a multi-statement export's earlier statements
+        // out of the summary with nothing recording that they had been there.
+        $first = null;
+        $firstOwnIban = '';
+        $firstEntryCount = 0;
+        $statementCount = 0;
 
         foreach ($message->getRecords() as $record) {
             if (! $record instanceof Statement) {
                 continue;
             }
 
-            $ownIban = $this->extractOwnIban($record);
+            $statementCount++;
+            $ownIban = $this->extractOwnAccountIdentifier($record);
+            // Per statement, because the metadata published describes ONE of
+            // them: a message carrying April and May would otherwise report
+            // April's period holding every entry in the file.
+            $entryCount = 0;
 
             foreach ($record->getEntries() as $entry) {
                 $txDtlsList = $entry->getTransactionDetails();
@@ -88,14 +109,39 @@ final class Camt053Adapter implements SourceAdapter
                 $entryCount++;
             }
 
-            $this->lastStatementMetadata = $this->buildStatementMetadata($record, $ownIban, $entryCount);
+            if ($first === null) {
+                $first = $record;
+                $firstOwnIban = $ownIban;
+                $firstEntryCount = $entryCount;
+            }
+        }
+
+        if ($first !== null) {
+            $this->lastStatementMetadata = $this->buildStatementMetadata(
+                $first,
+                $firstOwnIban,
+                $firstEntryCount,
+                multiStatement: $statementCount > 1,
+            );
         }
     }
 
-    private function buildStatementMetadata(Statement $stmt, string $ownIban, int $entryCount): StatementSummaryData
-    {
+    private function buildStatementMetadata(
+        Statement $stmt,
+        string $ownIban,
+        int $entryCount,
+        bool $multiStatement,
+    ): StatementSummaryData {
         $opening = $this->findBalance($stmt, Balance::TYPE_OPENING);
         $closing = $this->findBalance($stmt, Balance::TYPE_CLOSING);
+
+        $extras = [
+            StatementExtraKey::StatementId->value => $stmt->getId(),
+            StatementExtraKey::CreatedOn->value => Instant::zulu($stmt->getCreatedOn()),
+        ];
+        if ($multiStatement) {
+            $extras[StatementExtraKey::MultiStatement->value] = true;
+        }
 
         return new StatementSummaryData(
             importRunId: 0,
@@ -111,12 +157,7 @@ final class Camt053Adapter implements SourceAdapter
             closingBalanceCurrency: $closing?->getAmount()->getCurrency()->getCode(),
             closingBalanceDate: $closing === null ? null : CarbonImmutable::instance($closing->getDate()),
             entryCount: $entryCount,
-            extras: [
-                'statementId' => $stmt->getId(),
-                'createdOn' => $stmt->getCreatedOn()
-                    ->setTimezone(new DateTimeZone('UTC'))
-                    ->format('Y-m-d\TH:i:s\Z'),
-            ],
+            extras: $extras,
         );
     }
 
@@ -232,7 +273,7 @@ final class Camt053Adapter implements SourceAdapter
         return (int) $money->getAmount();
     }
 
-    private function extractOwnIban(Statement $stmt): string
+    private function extractOwnAccountIdentifier(Statement $stmt): string
     {
         $account = $stmt->getAccount();
         if ($account instanceof IbanAccount) {
@@ -243,7 +284,7 @@ final class Camt053Adapter implements SourceAdapter
     }
 
     /**
-     * @return array{0: ?string, 1: ?string} [counterparty name, counterparty IBAN]
+     * @return array{0: ?string, 1: ?string} [counterparty name, counterparty account identifier]
      */
     private function extractCounterparty(?EntryTransactionDetail $txDtls, ?string $cdi): array
     {
@@ -259,14 +300,14 @@ final class Camt053Adapter implements SourceAdapter
         foreach ($preferred as $cls) {
             foreach ($parties as $party) {
                 if ($party->getRelatedPartyType() instanceof $cls) {
-                    return [$this->relatedPartyName($party), $this->relatedPartyIban($party)];
+                    return [$this->relatedPartyName($party), $this->relatedPartyAccountIdentifier($party)];
                 }
             }
         }
 
         $first = $parties[0];
 
-        return [$this->relatedPartyName($first), $this->relatedPartyIban($first)];
+        return [$this->relatedPartyName($first), $this->relatedPartyAccountIdentifier($first)];
     }
 
     private function relatedPartyName(RelatedParty $party): ?string
@@ -282,14 +323,22 @@ final class Camt053Adapter implements SourceAdapter
         return $trimmed === '' ? null : $trimmed;
     }
 
-    private function relatedPartyIban(RelatedParty $party): ?string
+    // CdtrAcct/Id is an ISO 20022 CHOICE of IBAN or Othr, and genkgo answers
+    // the second branch with a sibling of IbanAccount. Narrowing on IbanAccount
+    // alone reported "no counterparty account" for every card settlement and
+    // non-IBAN domestic account, which is a dropped identifier, not an absent one.
+    private function relatedPartyAccountIdentifier(RelatedParty $party): ?string
     {
         $account = $party->getAccount();
-        if ($account instanceof IbanAccount) {
-            return $account->getIban()->getIban();
+        if ($account === null) {
+            return null;
         }
 
-        return null;
+        $identifier = $account instanceof IbanAccount
+            ? $account->getIban()->getIban()
+            : trim($account->getIdentification());
+
+        return $identifier === '' ? null : $identifier;
     }
 
     // Deliberately not the deprecated getMessage() fallback: that stringifies structured
@@ -309,6 +358,47 @@ final class Camt053Adapter implements SourceAdapter
         return $messages === [] ? null : $this->collapseWhitespace(implode(' ', $messages));
     }
 
+    // <Strd> is the other half of the RmtInf choice, and extractRemittance()
+    // reads only <Ustrd> on purpose. Without this the entire remittance of a
+    // structured-only entry — the creditor reference an e-invoice is paid
+    // against — reached nothing downstream at all.
+    /**
+     * @return list<array{ref: ?string, additional: ?string}>
+     */
+    private function extractStructuredRemittance(?EntryTransactionDetail $txDtls): array
+    {
+        $rmt = $txDtls?->getRemittanceInformation();
+        if ($rmt === null) {
+            return [];
+        }
+
+        $blocks = [];
+        foreach ($rmt->getStructuredBlocks() as $block) {
+            $ref = $block->getCreditorReferenceInformation()?->getRef();
+            $additional = $block->getAdditionalRemittanceInformation();
+            if ($ref === null && $additional === null) {
+                continue;
+            }
+
+            $blocks[] = ['ref' => $ref, 'additional' => $additional];
+        }
+
+        return $blocks;
+    }
+
+    // genkgo leaves DomainBankTransactionCode::$family uninitialised when a
+    // <Domn> carries no <Fmly>, and reading an uninitialised typed property
+    // raises Error rather than answering null. XSD validation is off here, so
+    // one non-conformant statement would otherwise abort the whole import.
+    private static function domainFamily(?DomainBankTransactionCode $domain): ?DomainFamilyBankTransactionCode
+    {
+        try {
+            return $domain?->getFamily();
+        } catch (Error) {
+            return null;
+        }
+    }
+
     private function collapseWhitespace(string $s): string
     {
         $normalised = preg_replace('/\s+/u', ' ', $s);
@@ -322,6 +412,7 @@ final class Camt053Adapter implements SourceAdapter
     private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId): array
     {
         $btc = $entry->getBankTransactionCode();
+        $family = self::domainFamily($btc?->getDomain());
         $ref = $txDtls?->getReference();
         $addtl = $txDtls?->getAdditionalTransactionInformation();
 
@@ -333,8 +424,8 @@ final class Camt053Adapter implements SourceAdapter
                 'batchPaymentId' => $entry->getBatchPaymentId(),
                 'btc' => [
                     'domain' => $btc?->getDomain()?->getCode(),
-                    'family' => $btc?->getDomain()?->getFamily()->getCode(),
-                    'subFamily' => $btc?->getDomain()?->getFamily()->getSubFamilyCode(),
+                    'family' => $family?->getCode(),
+                    'subFamily' => $family?->getSubFamilyCode(),
                     'proprietary' => $btc?->getProprietary()?->getCode(),
                 ],
                 'endToEndId' => $ref?->getEndToEndId(),
@@ -344,6 +435,7 @@ final class Camt053Adapter implements SourceAdapter
                 'pmtInfId' => $ref?->getPaymentInformationId(),
                 'creditDebitIndicator' => $txDtls?->getCreditDebitIndicator(),
                 'remittanceUnstructured' => $this->extractRemittance($txDtls),
+                'remittanceStructured' => $this->extractStructuredRemittance($txDtls),
                 'addtlTxInf' => $addtl === null ? null : (string) $addtl,
             ],
         ];

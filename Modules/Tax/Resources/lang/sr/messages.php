@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Naziv kategorije ne može biti prazan.',
         'name_duplicate' => 'Kategorija sa ovim nazivom već postoji.',
+        'category_not_saved' => 'Ovu kategoriju nije bilo moguće sačuvati. Pokušajte ponovo.',
+        'tag_refused' => 'Ovu oznaku nije bilo moguće sačuvati. Zatvorite izbornik i pokušajte ponovo.',
     ],
 ];

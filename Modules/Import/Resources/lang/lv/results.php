@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Augšupielādēt citu konta izrakstu',
 
+    'chain' => [
+        'heading' => 'Nosaka ķēdes…',
+        'pending' => 'Rindā. Ķēžu atrisinātājs sāks darbu drīzumā.',
+        'running' => 'Saista finansējuma ķēdes un sadala konta izraksta norēķinus.',
+    ],
+
     'issues' => [
         'row' => 'Rinda :row: :reason',
         'file_stopped' => 'Failu neizdevās nolasīt tālāk par rindu :row. Nekas pēc šīs rindas netika importēts.',

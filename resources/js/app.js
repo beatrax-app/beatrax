@@ -35,6 +35,8 @@ import { palette } from './palette.js';
 import { datePicker } from './date-picker.js';
 import { timePicker } from './time-picker.js';
 import { tabStrip } from './tab-strip.js';
+import { emojiActionHold } from './emoji-action-hold.js';
+import { choosePlural, fillLine } from './lang.js';
 import './lock.js';
 import './mobile-upload.js';
 
@@ -564,6 +566,7 @@ window.beatraxCopy = async function beatraxCopy(text) {
     }
 };
 
+
 /**
  * The live requirement checklist under a new-password pair.
  *
@@ -711,19 +714,35 @@ function pageIsPaintedDark() {
 }
 
 /**
- * Tell the Android window which way the page is painted.
+ * Tell the native window which way the page is painted.
  *
- * The window is edge-to-edge, so the app draws the pixels behind the status and
- * navigation bars but Android draws the clock and the nav glyphs on top of
- * them, taking their colour from the OS night-mode setting. A reader whose app
- * theme disagrees with their phone's got white glyphs on the app's own #f8fafc
- * — 1.05:1, an invisible clock on every screen. `theme-color` cannot reach
- * this: it applies to a browser's chrome, and a WebView has none.
+ * The window is edge-to-edge on both phones, so the app draws the pixels behind
+ * the status and navigation bars while the OS draws the clock and the nav
+ * glyphs on top of them, taking their colour from its own night-mode setting. A
+ * reader whose app theme disagrees with their phone's got white glyphs on the
+ * app's own #f8fafc — 1.05:1, an invisible clock on every screen.
+ * `theme-color` cannot reach this: it applies to a browser's chrome, and a
+ * WebView has none.
  *
- * Absent everywhere but the Android app, hence the optional call.
+ * One function for both shells rather than one each: they answer the same
+ * question and two of them would drift. Neither channel exists on the desktop,
+ * and each exists only on its own phone, hence the optional calls.
+ *
+ * iOS is told the reader's CHOICE as well as the resolved theme. It reaches the
+ * status bar by overriding the window's interface style, and a WKWebView inside
+ * an overridden window reports that override to prefers-color-scheme — which is
+ * where a reader on `system` reads their theme from. So the shell overrides
+ * nothing while they follow the phone, and the flag is what tells it.
  */
 function reportThemeToSystemBars() {
-    window.AndroidBridge?.setSystemBarAppearance?.(pageIsPaintedDark());
+    const dark = pageIsPaintedDark();
+
+    window.AndroidBridge?.setSystemBarAppearance?.(dark);
+
+    window.webkit?.messageHandlers?.beatraxShellAppearance?.postMessage({
+        dark,
+        followsSystem: (document.documentElement.dataset.themeChoice ?? 'system') === 'system',
+    });
 }
 
 reportThemeToSystemBars();
@@ -811,8 +830,16 @@ document.addEventListener('alpine:init', () => {
         window.Alpine.data('beatraxDatePicker', datePicker);
         window.Alpine.data('beatraxTimePicker', timePicker);
         window.Alpine.data('tabStrip', tabStrip);
+        window.Alpine.data('emojiActionHold', emojiActionHold);
         window.Alpine.data('passwordStrength', passwordStrength);
         window.Alpine.data('copyToClipboard', copyToClipboard);
+
+        // A count that only exists in the browser still owes the reader their
+        // language's plural arm, and a line whose value arrives client-side
+        // still owes them their own word order. Both read a whole translated
+        // line and fill it; neither concatenates a fragment onto a value.
+        window.Alpine.magic('plural', () => (arms, key, number, replace) => choosePlural(arms, key, number, replace));
+        window.Alpine.magic('line', () => (line, replace) => fillLine(line, replace));
 
         // Mobile navigation drawer state
         // Which overlays are covering the page, by name. The layout marks

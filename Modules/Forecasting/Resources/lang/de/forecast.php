@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Verglichen mit der Basislinie oben',
 
+    'run_failed' => 'Diese Prognose konnte nicht berechnet werden. Die Linie unten zeigt nur, was bereits gebucht ist.',
+
     'scenario_editor_aria' => 'Szenario-Editor',
     'series_confidence' => 'Konfidenz der Reihe',
     'no_series_contribute' => 'Noch tragen keine Reihen zur Prognose dieses Kontos bei.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Wird aktualisiert',
     'chart_noscript' => 'Das Diagramm benötigt JavaScript. Der Bereich umfasst :days Tag.|Das Diagramm benötigt JavaScript. Der Bereich umfasst :days Tage.',
     'total_balance' => 'Gesamtsaldo',
+    'projection_range' => 'Projektionsbereich',
+    'point_estimate' => 'Punktschätzung',
 
     'per_month_suffix' => '/Mon.',
     'confidence_chip_aria' => ':name, Konfidenz :confidence — der Projektionsbereich beträgt :percent Prozent der Punktschätzung',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Tiefstand in 30 Tagen',
     'next_ics' => 'Nächste ICS-Abrechnung: :amount am :date',
     'ics_overdue' => 'ICS-Abrechnung überfällig: :amount, fällig am :date',
+
+    'stale_run' => 'Hochgerechnet ab :date — seitdem nicht aktualisiert.',
+
+    'confidence' => [
+        'high' => 'Hoch',
+        'medium' => 'Mittel',
+        'low' => 'Niedrig',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Betrag ist erforderlich.',
+        'amount_decimals' => 'Betrag muss eine Zahl mit höchstens :decimals Dezimalstelle sein.|Betrag muss eine Zahl mit höchstens :decimals Dezimalstellen sein.',
+        'amount_whole' => 'Betrag muss eine ganze Zahl sein — diese Währung hat keine kleinere Einheit.',
+        'amount_non_negative' => 'Betrag muss null oder positiv sein.',
+        'amount_non_zero' => 'Betrag darf nicht null sein.',
+        'field_required' => 'Feld :field ist erforderlich.',
+    ],
 ];

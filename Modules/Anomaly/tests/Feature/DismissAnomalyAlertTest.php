@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Models\AnomalyAlertTransition;
 use Modules\Anomaly\Public\Actions\DismissAnomalyAlert;
@@ -87,7 +88,7 @@ it('plain-dismisses an open alert with dismissed_as=dismissed and NO suppression
 
     Event::assertDispatched(
         AnomalyAlertDismissed::class,
-        fn (AnomalyAlertDismissed $e): bool => $e->dismissedAs === 'dismissed',
+        fn (AnomalyAlertDismissed $e): bool => $e->dismissedAs === DismissedAs::Dismissed,
     );
 });
 

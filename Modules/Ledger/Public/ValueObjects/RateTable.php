@@ -20,12 +20,12 @@ use Throwable;
 // outside Money, so an FX service composes rates and Money without meeting
 // the library. Every failure returns null: an unconvertible amount falls
 // back to the caller's passthrough rather than aborting the page.
-final class RateTable
+final readonly class RateTable
 {
     /** @param array<string, string> $rates "FROM>TO" => decimal rate */
     private function __construct(
-        private readonly ?string $baseCurrency,
-        private readonly array $rates,
+        private ?string $baseCurrency,
+        private array $rates,
     ) {}
 
     // Uses only the pairs it was given, in the direction they were given —

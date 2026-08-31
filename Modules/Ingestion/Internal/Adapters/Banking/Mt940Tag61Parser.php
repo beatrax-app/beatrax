@@ -8,18 +8,17 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Public\Banking\SwiftDate;
 use Throwable;
 
-final class Mt940Tag61Parser
+final readonly class Mt940Tag61Parser
 {
-    private const int YEARS_BEFORE_CENTURY_ROLL = 50;
-
-    private const REGEX = '/^'
+    private const string REGEX = '/^'
         .'(?P<year>\d{2})(?P<month>\d{2})(?P<day>\d{2})'
         .'(?:(?P<entry_month>\d{2})(?P<entry_day>\d{2}))?'
         .'(?P<status>R?[CD])'
         .'(?P<funds_code>[A-Z])?'
-        .'(?P<amount>\d+(?:,\d{1,2})?)'
+        .'(?P<amount>\d+(?:,\d{0,2})?)'
         .'(?P<id>[A-Z][A-Z0-9 ]{3})?'
         .'(?P<customer_reference>[^\/\n]{0,34})'
         .'(?:\/\/(?P<bank_reference>[^\n]{0,16}))?'
@@ -27,10 +26,10 @@ final class Mt940Tag61Parser
         .'$/';
 
     public function __construct(
-        private readonly BankAmountParser $amounts,
+        private BankAmountParser $amounts,
     ) {}
 
-    public function parse(string $content): Mt940StatementLine
+    public function parse(string $content, ?string $currencyCode = null): Mt940StatementLine
     {
         $body = trim($content);
 
@@ -38,20 +37,18 @@ final class Mt940Tag61Parser
             throw new InvalidAmountException(sprintf('Unparseable :61: line: %s', $content));
         }
 
-        $valueYear = $this->resolveSwiftYear((int) $m['year']);
+        $valueYear = SwiftDate::yearFor((int) $m['year']);
         $valueMonth = (int) $m['month'];
         $valueDate = $this->parseDate(sprintf('%04d-%02d-%02d', $valueYear, $valueMonth, (int) $m['day']));
 
         $entryDate = null;
         if ($m['entry_month'] !== '' && $m['entry_day'] !== '') {
             $entryMonth = (int) $m['entry_month'];
-            // SWIFT rollover: an entry month later than the value month means
-            // the previous year — value 2026-01-02, entry 12-31 is 2025-12-31.
-            $entryYear = $entryMonth > $valueMonth ? $valueYear - 1 : $valueYear;
+            $entryYear = $valueYear + SwiftDate::entryYearOffset($entryMonth, $valueMonth);
             $entryDate = $this->parseDate(sprintf('%04d-%02d-%02d', $entryYear, $entryMonth, (int) $m['entry_day']));
         }
 
-        $amountInteger = $this->parseAmountToMinor($m['amount']);
+        $amountInteger = $this->parseAmountToMinor($m['amount'], $currencyCode);
 
         $status = $m['status'];
         // The regex admits only C, D, RC and RD. RD is a reversed debit and so
@@ -73,10 +70,10 @@ final class Mt940Tag61Parser
         );
     }
 
-    private function parseAmountToMinor(string $raw): int
+    private function parseAmountToMinor(string $raw, ?string $currencyCode): int
     {
         try {
-            return $this->amounts->parseMt940Minor($raw);
+            return $this->amounts->parseMt940Minor($raw, $currencyCode);
         } catch (Throwable $e) {
             throw new InvalidAmountException(
                 sprintf('Unparseable :61: amount %s: %s', $raw, $e->getMessage()),
@@ -94,22 +91,6 @@ final class Mt940Tag61Parser
         }
 
         return $parsed;
-    }
-
-    private function resolveSwiftYear(int $yy): int
-    {
-        $today = CarbonImmutable::now();
-        $century = ((int) ($today->year / 100)) * 100;
-        $candidate = $century + $yy;
-
-        if ($candidate - $today->year > self::YEARS_BEFORE_CENTURY_ROLL) {
-            return $candidate - 100;
-        }
-        if ($today->year - $candidate > self::YEARS_BEFORE_CENTURY_ROLL) {
-            return $candidate + 100;
-        }
-
-        return $candidate;
     }
 
     private function nullIfEmpty(?string $value): ?string

@@ -12,17 +12,18 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @see AcknowledgeDriftAlert
  */
-final class SetAccountForecastBuffer
+final readonly class SetAccountForecastBuffer
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly BusDispatcher $bus,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private BusDispatcher $bus,
     ) {}
 
     public function __invoke(int $accountId, User $user, ?int $bufferMinor): void
@@ -50,7 +51,7 @@ final class SetAccountForecastBuffer
                 ]);
         });
 
-        foreach ([30, 60, 90] as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $user->id,
                 scenarioId: null,

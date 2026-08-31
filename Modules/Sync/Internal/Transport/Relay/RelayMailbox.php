@@ -7,7 +7,7 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 
 final readonly class RelayMailbox
 {
@@ -16,9 +16,9 @@ final readonly class RelayMailbox
     // blob, read/write any user_id column, or inspect blob content.
     // Authorization is enforced by the relay:serve endpoint, NOT here.
 
-    private const UNDELIVERED_TTL_DAYS = 30;
+    private const int UNDELIVERED_TTL_DAYS = 30;
 
-    private const DELIVERED_TTL_DAYS = 7;
+    private const int DELIVERED_TTL_DAYS = 7;
 
     public function __construct(
         private DatabaseManager $db,
@@ -32,8 +32,8 @@ final readonly class RelayMailbox
      */
     public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
-        $now = ZuluTimestamp::stamp($this->clock->now());
-        $expiresAt = ZuluTimestamp::stamp($this->clock->now()->addDays(self::UNDELIVERED_TTL_DAYS));
+        $now = Instant::zulu($this->clock->now());
+        $expiresAt = Instant::zulu($this->clock->now()->addDays(self::UNDELIVERED_TTL_DAYS));
 
         $this->db->connection()->table('relay_mailbox')->insert([
             'sender_did' => $senderDid,
@@ -52,9 +52,19 @@ final readonly class RelayMailbox
     /**
      * @return bool true if the blob was stored, false if the quota was full (nothing written)
      */
-    public function deliverIfUnderQuota(string $senderDid, string $recipientDid, string $blob, int $maxPending): bool
+    /**
+     * @param  bool  $foldIdentical  Whether an identical frame already waiting
+     *                               for this recipient counts as stored. A
+     *                               pairing re-emit is byte-identical by
+     *                               design; see {@see self::alreadyPending()}.
+     */
+    public function deliverIfUnderQuota(string $senderDid, string $recipientDid, string $blob, int $maxPending, bool $foldIdentical = false): bool
     {
-        return $this->db->connection()->transaction(function () use ($senderDid, $recipientDid, $blob, $maxPending): bool {
+        return $this->db->connection()->transaction(function () use ($senderDid, $recipientDid, $blob, $maxPending, $foldIdentical): bool {
+            if ($foldIdentical && $this->alreadyPending($recipientDid, $blob)) {
+                return true;
+            }
+
             $pending = $this->db->connection()
                 ->table('relay_mailbox')
                 ->where('recipient_did', $recipientDid)
@@ -69,6 +79,20 @@ final readonly class RelayMailbox
 
             return true;
         });
+    }
+
+    // A frame that is already waiting is already stored, so re-queueing it
+    // adds a duplicate and nothing else. Sixteen identical pairing accepts
+    // once spent a peer's whole quota on one frame, and every later frame to
+    // that peer — including the confirm — was refused for a month.
+    private function alreadyPending(string $recipientDid, string $blob): bool
+    {
+        return $this->db->connection()
+            ->table('relay_mailbox')
+            ->where('recipient_did', $recipientDid)
+            ->whereNull('delivered_at')
+            ->where('blob', $blob)
+            ->exists();
     }
 
     // Bounded (resource-exhaustion guard): an unbounded drain would hand the
@@ -132,8 +156,8 @@ final readonly class RelayMailbox
      */
     public function confirm(int $id): void
     {
-        $now = ZuluTimestamp::stamp($this->clock->now());
-        $newExpiresAt = ZuluTimestamp::stamp($this->clock->now()->addDays(self::DELIVERED_TTL_DAYS));
+        $now = Instant::zulu($this->clock->now());
+        $newExpiresAt = Instant::zulu($this->clock->now()->addDays(self::DELIVERED_TTL_DAYS));
 
         $this->db->connection()
             ->table('relay_mailbox')
@@ -148,7 +172,7 @@ final readonly class RelayMailbox
     // zero-padded and lexicographic order matches chronological order.
     public function garbageCollect(): int
     {
-        $now = ZuluTimestamp::stamp($this->clock->now());
+        $now = Instant::zulu($this->clock->now());
 
         return $this->db->connection()
             ->table('relay_mailbox')

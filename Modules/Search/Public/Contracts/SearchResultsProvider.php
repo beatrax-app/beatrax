@@ -10,13 +10,13 @@ use Modules\Core\Models\User;
 // the palette's two mixed-type sections without importing any Search
 // Internal class.
 /**
- * @phpstan-type PaletteTransaction array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}
+ * @phpstan-type PaletteTransaction array{id: int, counterpartyName: ?string, date: string, amount: string, snippet: ?string, url: string}
  * @phpstan-type PaletteEntity array{id: int, type: string, label: string, url: string}
  */
 interface SearchResultsProvider
 {
     /**
-     * @return array{transactions: list<array<string,mixed>>, entities: list<array<string,mixed>>, totalCount: int}
+     * @return array{transactions: list<PaletteTransaction>, entities: list<PaletteEntity>, totalCount: int}
      */
     public function paletteSections(User $user, string $query): array;
 }

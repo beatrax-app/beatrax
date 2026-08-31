@@ -6,6 +6,8 @@ namespace Modules\Anomaly\Database\Factories;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Ledger\Public\Enums\Currency;
@@ -27,7 +29,7 @@ final class AnomalyAlertFactory extends Factory
             'transaction_id' => null,
             'state' => AnomalyAlertState::Open->value,
             'direction' => Direction::Expense->value,
-            'reasons' => ['large'],
+            'reasons' => [AnomalyDetector::Large->value],
             'dismissed_as' => null,
             'baseline_amount_minor' => -999,
             'latest_amount_minor' => -2349,
@@ -71,7 +73,7 @@ final class AnomalyAlertFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'state' => AnomalyAlertState::Dismissed->value,
-            'dismissed_as' => 'not_unusual',
+            'dismissed_as' => DismissedAs::Dismissed->value,
             'actioned_at' => CarbonImmutable::now(),
             'snoozed_until' => null,
         ]);

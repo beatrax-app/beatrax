@@ -9,9 +9,6 @@ return [
     'error_enroll_failed' => 'Tvoje zariadenie odmietlo uložiť kľúč. Biometrické odomknutie nie je dostupné.',
     'heading' => 'Zámok aplikácie',
 
-    'moved_help' => 'PIN, čas automatického zamknutia aj biometrické odomknutie nájdeš v nastaveniach synchronizácie tohto zariadenia.',
-    'moved_cta' => 'Otvoriť Synchronizáciu a zariadenie',
-
     'toggle_label' => 'Zamykať aplikáciu PIN-om',
     'toggle_description' => 'Nahradí každodenné prihlasovanie PIN-om. Relácie zostanú aktívne 30 dní.',
 
@@ -59,7 +56,7 @@ return [
     'keep_pin' => 'Ponechať PIN',
 
     'error_pin_too_short' => 'PIN musí mať aspoň 6 číslice.',
-    'error_pin_digits' => 'PIN musí mať 6 až 10 číslic — iba číslice.',
+    'error_pin_digits' => 'PIN musí mať :min až :max číslic — iba číslice.',
     'error_pin_mismatch' => 'PIN-y sa nezhodujú. Skús to znova.',
     'error_pin_required' => 'Zadaj svoj PIN.',
     'error_pin_incorrect' => 'Nesprávny PIN.',

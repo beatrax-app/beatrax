@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Your devices',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Pairing, device names and encryption now live with your sync status.',
-    'moved_cta' => 'Open Sync & Device',
     'device_name' => 'Device name',
     'save' => 'Save',
     'peer_default_name' => 'Paired device',
     'rename_device' => 'Rename device',
+    'rename_device_caption' => 'Rename',
     'this_device' => 'This device',
     'removed' => 'Removed',
     'confirmed' => 'Confirmed',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relay endpoint',
     'relay_endpoint_help' => 'Optional. When set, offline devices sync via this relay. Leave empty for LAN&#8209;direct only.',
+    'relay_endpoint_help_phone' => 'Optional. When set, changes travel through this relay even when your devices are not on the same network. This device picks them up when you sync from this screen — never in the background, because the app lock holds the only key. Leave empty for LAN&#8209;direct only.',
     'relay_endpoint_aria' => 'Relay endpoint URL',
     'relay_insecure_warning' => 'This relay endpoint uses plain HTTP. While the relay never decrypts your data, an insecure connection exposes encrypted sizes and timing to network observers. Use an <strong>https://</strong> endpoint for best privacy.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Removing:',
     'remove_rotates_key' => 'Removing this device rotates the encryption key so it receives no future updates.',
     'remove_cannot_erase' => 'It cannot erase data already on that device. If this device was lost or stolen, treat any data it held as exposed.',
+    'remove_is_local' => 'Your other devices keep their own list. Until you remove it there too, they will go on syncing with it.',
     'remove_device' => 'Remove device',
     'keep_device' => 'Keep device',
     'rotating_key' => 'Rotating encryption key…',

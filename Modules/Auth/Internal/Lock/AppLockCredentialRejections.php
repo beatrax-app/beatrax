@@ -31,7 +31,10 @@ final readonly class AppLockCredentialRejections
     {
         return match (true) {
             AppLockPinShape::isTooShort($newPin) => Lang::get('auth::app_lock.error_pin_too_short'),
-            ! AppLockPinShape::isWellFormed($newPin) => Lang::get('auth::app_lock.error_pin_digits'),
+            ! AppLockPinShape::isWellFormed($newPin) => Lang::get('auth::app_lock.error_pin_digits', [
+                'min' => AppLockPinShape::MINIMUM_LENGTH,
+                'max' => AppLockPinShape::MAXIMUM_LENGTH,
+            ]),
             $newPin !== $confirmPin => Lang::get('auth::app_lock.error_pin_mismatch'),
             default => null,
         };

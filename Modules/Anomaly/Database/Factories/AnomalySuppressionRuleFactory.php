@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\Anomaly\Internal\Enums\AnomalyDetector;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
@@ -23,7 +24,7 @@ final class AnomalySuppressionRuleFactory extends Factory
         return [
             'user_id' => null,
             'counterparty_id' => null,
-            'detector' => 'large',
+            'detector' => AnomalyDetector::Large->value,
             'direction' => Direction::Expense->value,
             'amount_band_low_minor' => -2819,
             'amount_band_high_minor' => -1879,

@@ -29,6 +29,14 @@ trait CoercesScalars
         return $int > 0 ? $int : null;
     }
 
+    // The DECIMAL columns come back as strings for the same reason, and a
+    // non-numeric one is as absent as a null: 0.0 keeps the caller comparing
+    // numbers rather than guarding every read.
+    private static function toFloat(mixed $value): float
+    {
+        return is_numeric($value) ? (float) $value : 0.0;
+    }
+
     // Objects and arrays have no useful string form here, so they collapse
     // to the empty string instead of tripping a conversion error. A string
     // returns unchanged rather than round-tripping through a cast.

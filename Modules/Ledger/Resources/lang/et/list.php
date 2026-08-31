@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Kogu ajalugu.',
     'subtitle_recent' => 'Hiljutised tehingud (viimased 90 päeva).',
 
-    'currency_aria' => 'Valuutavaade',
-    'currency_eur' => 'Ainult :code',
-    'currency_original' => 'Algne valuuta',
+    'currency_aria' => 'Kuvatav summa',
+    'currency_eur' => 'Arveldatud summa',
+    'currency_original' => 'Algne summa',
 
     'show_recent' => 'Näita ainult hiljutisi',
     'show_full' => 'Näita kogu ajalugu',
 
     'empty_period' => 'Sel perioodil pole siin midagi.',
 
+    'empty_recent_has_older' => 'Viimase 90 päeva jooksul pole midagi. Vanemad tehingud on endiselt alles.',
+
+    'empty_history' => 'Tehinguid veel pole.',
     'loading_more' => 'Laadin veel tehinguid',
     'load_more' => 'Laadi veel',
 

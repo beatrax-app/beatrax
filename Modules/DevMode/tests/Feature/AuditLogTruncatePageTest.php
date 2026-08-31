@@ -21,7 +21,7 @@ function altpDeveloper(string $username): User
     ]);
 }
 
-it('truncateAll deletes every dev_mode_audit row', function (): void {
+it('truncateAll deletes the calling developer\'s dev_mode_audit rows', function (): void {
     $user = altpDeveloper('audit-truncate@example.com');
 
     /** @var AuditWriter $writer */
@@ -68,12 +68,10 @@ it('truncateAll resets the cursor and filter state', function (): void {
     Livewire::actingAs($user)
         ->test(AuditLogPage::class)
         ->set('tierFilter', 'safe')
-        ->set('callerFilter', 'someone')
         ->set('commandFilter', 'cache:clear')
         ->set('before', 999)
         ->call('truncateAll')
         ->assertSet('tierFilter', '')
-        ->assertSet('callerFilter', '')
         ->assertSet('commandFilter', '')
         ->assertSet('before', null);
 });

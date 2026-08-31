@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Tudnivalók: :subject',
+        'close' => 'Bezárás',
+    ],
+
     'page_title' => 'Hol vannak az adataim?',
     'intro' => 'A Beatrax mindent ezen az eszközön tárol. Semmi nem megy szerverre, semmi nem szinkronizálódik a felhőbe, és semmi nem hagyja el ezt az eszközt, amíg nem exportálod.',
 

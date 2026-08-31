@@ -27,9 +27,9 @@ final class SecretFileException extends RuntimeException
         return new self("Could not finalize the GDK keyring file for user {$userId}.");
     }
 
-    public static function couldNotReadIdentity(): self
+    public static function couldNotReadStagedPlaintext(string $path): self
     {
-        return new self('Failed to read the decrypted device identity key-file.');
+        return new self("Failed to read the decrypted secret staged at: {$path}");
     }
 
     public static function couldNotCreateSecretsDirectory(string $directory): self

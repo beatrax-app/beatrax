@@ -13,14 +13,14 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 // admits exactly one key rather than anything a public CA has signed.
 final class RelayTlsMaterial
 {
-    private const CERT_FILE = 'sync-relay-cert.pem';
+    private const string CERT_FILE = 'sync-relay-cert.pem';
 
-    private const KEY_FILE = 'sync-relay-key.pem';
+    private const string KEY_FILE = 'sync-relay-key.pem';
 
     // Long enough that a self-hosted relay is not silently broken by an
     // expiry nobody is watching; the pin, not the validity window, is what
     // actually gates trust here.
-    private const VALID_DAYS = 3650;
+    private const int VALID_DAYS = 3650;
 
     public function certPath(): string
     {

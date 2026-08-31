@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Taip pat pažymėti dar :count iš',
     'batch_after' => '?',
+    'batch_confirm' => 'Pažymėti visas likusias operacijas iš :name kaip atskaitomas iš mokesčių? Kiekviena jų gauna šią kategoriją ir šią pastabą. Vėliau žymą pašalinti galima tik po vieną operaciją.',
     'batch_tag_all' => 'Žymėti visas',
     'batch_dismiss' => 'Slėpti',
 ];

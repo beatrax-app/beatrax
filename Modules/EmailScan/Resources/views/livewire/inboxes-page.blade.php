@@ -12,13 +12,22 @@
      All copy is locked verbatim against 06-UI-SPEC.md § Copywriting
      Contract. --}}
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-12">
         <x-core::page-heading>{{ Lang::get('email-scan::inboxes.heading') }}</x-core::page-heading>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            {{ Lang::get('email-scan::inboxes.intro') }}
+            {{ Lang::get($onPhone ? 'email-scan::inboxes.intro_phone' : 'email-scan::inboxes.intro') }}
         </p>
     </header>
+
+    {{-- Above the OAuth banners and the hero, because a reader who learns this
+         after tapping Connect has already been sent somewhere pointless. --}}
+    @if ($onPhone)
+        <x-core::alert tone="info" class="mb-6">
+            <p class="font-medium">{{ Lang::get('email-scan::inboxes.phone_heading') }}</p>
+            <p class="mt-1">{{ Lang::get('email-scan::inboxes.phone_body') }}</p>
+        </x-core::alert>
+    @endif
 
     {{-- Read OAuth flash values from props the Livewire component
          pulled out of the session in mount(), not via the session()
@@ -54,8 +63,7 @@
                 <div class="flex flex-wrap items-center justify-between text-xs text-slate-700 dark:text-slate-300">
                     <span>
                         {{ Lang::get('email-scan::inboxes.backfilling') }} {{ $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
-                        <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) $inbox->backfillFetchedCount) }} / ~{{ Fmt::number((int) ($inbox->backfillTotalEstimated ?? 0)) }}</span>
-                        {{ Lang::get('email-scan::inboxes.messages_suffix') }}
+                        <span style="font-variant-numeric: tabular-nums;">{{ Lang::choice('email-scan::inboxes.backfill_progress', (int) ($inbox->backfillTotalEstimated ?? 0), ['fetched' => Fmt::number((int) $inbox->backfillFetchedCount)]) }}</span>
                     </span>
                 </div>
             @endforeach
@@ -67,7 +75,7 @@
         <section class="mx-auto max-w-md text-center mt-12">
             <h2 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::inboxes.connect_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('email-scan::inboxes.connect_body') }}
+                {{ Lang::get($onPhone ? 'email-scan::inboxes.connect_body_phone' : 'email-scan::inboxes.connect_body') }}
             </p>
             <div class="mt-8 flex items-center justify-center gap-4">
                 <button
@@ -95,7 +103,7 @@
                     $providerLabel = $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
                     $windowText = Lang::choice('email-scan::inboxes.months', $inbox->backfillWindowMonths);
                     $lastScanText = $inbox->lastScanAt === null
-                        ? Lang::get('email-scan::inboxes.not_scanned_yet')
+                        ? Lang::get($onPhone ? 'email-scan::inboxes.not_scanned_yet_phone' : 'email-scan::inboxes.not_scanned_yet')
                         : Lang::get('email-scan::inboxes.last_scanned').' '.\Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true);
 
                     // Status Badge Matrix — UI-SPEC § Status Badge Matrix.
@@ -118,7 +126,10 @@
                         InboxScanStatus::Error->value => Lang::get('email-scan::inboxes.badge.error'),
                     ][$inbox->status] ?? Lang::get('email-scan::inboxes.badge.idle');
 
-                    $scanDisabled = in_array($inbox->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true);
+                    // $onPhone is "no scan runs on this device", so the control
+                    // is refused for the same reason the component refuses the
+                    // call behind it.
+                    $scanDisabled = $onPhone || in_array($inbox->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true);
 
                     // Inline retry-after detail for rate_limited rows.
                     $retryDetail = null;
@@ -156,7 +167,7 @@
                                 id="{{ $errorTooltipId }}"
                                 class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
                                 role="note"
-                            >{{ \Illuminate\Support\Str::limit((string) $inbox->errorMessage, 200) }}</p>
+                            >{{ Lang::get('email-scan::inboxes.error_detail') }}</p>
                         @endif
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
@@ -182,7 +193,7 @@
                             class="gap-1 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
                             :disabled="$scanDisabled"
                             :aria-disabled="$scanDisabled ? 'true' : null"
-                            :title="$scanDisabled ? Lang::get('email-scan::inboxes.scan_in_progress_title') : null"
+                            :title="$onPhone ? Lang::get('email-scan::inboxes.intro_phone') : ($scanDisabled ? Lang::get('email-scan::inboxes.scan_in_progress_title') : null)"
                             wire:click="scanNow({{ $inbox->inboxId }})"
                         >{{ Lang::get('email-scan::inboxes.scan_now') }}</x-core::secondary-button>
                         <x-core::secondary-button
@@ -203,7 +214,7 @@
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Gmail</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::inboxes.gmail_card_body') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($onPhone ? 'email-scan::inboxes.gmail_card_body_phone' : 'email-scan::inboxes.gmail_card_body') }}</p>
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
@@ -212,7 +223,7 @@
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Microsoft 365</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::inboxes.microsoft_card_body') }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($onPhone ? 'email-scan::inboxes.microsoft_card_body_phone' : 'email-scan::inboxes.microsoft_card_body') }}</p>
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"

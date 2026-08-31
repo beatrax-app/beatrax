@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
+use Modules\Recurring\Internal\Support\SeriesDetectionGate;
 
 // UNIQUE(user_id, direction, cluster_key, latest_currency) is the detector's
 // idempotency seam: re-running the sweep cannot duplicate a cluster. The state
@@ -25,7 +26,8 @@ return new class extends ModuleMigration
             $table->string('latest_currency', 3);
             $table->string('latest_fx_rate_used')->nullable();
             $table->bigInteger('monthly_equivalent_minor')->nullable();
-            $table->unsignedTinyInteger('variance_tolerance_percent')->default(25);
+            $table->unsignedTinyInteger('variance_tolerance_percent')
+                ->default(SeriesDetectionGate::DEFAULT_VARIANCE_TOLERANCE_PERCENT);
             $table->foreignId('latest_funding_chain_link_id')
                 ->nullable()
                 ->constrained('chain_links')

@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Comparat cu scenariul de bază de mai sus',
 
+    'run_failed' => 'Această proiecție nu a putut fi calculată. Linia de mai jos arată doar ceea ce este deja înregistrat.',
+
     'scenario_editor_aria' => 'Editor de scenarii',
     'series_confidence' => 'Încrederea în serie',
     'no_series_contribute' => 'Nicio serie nu contribuie încă la previziunea acestui cont.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Se actualizează',
     'chart_noscript' => 'Graficul necesită JavaScript. Intervalul acoperă :days zi.|Graficul necesită JavaScript. Intervalul acoperă :days zile.|Graficul necesită JavaScript. Intervalul acoperă :days de zile.',
     'total_balance' => 'Sold total',
+    'projection_range' => 'Interval de previziune',
+    'point_estimate' => 'Estimare punctuală',
 
     'per_month_suffix' => '/lună',
     'confidence_chip_aria' => ':name, încredere :confidence — intervalul previziunii reprezintă :percent la sută din estimarea punctuală',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Minimul în 30 de zile',
     'next_ics' => 'Următoarea decontare ICS: :amount pe :date',
     'ics_overdue' => 'Decontare ICS restantă: :amount, scadentă pe :date',
+
+    'stale_run' => 'Proiectat din :date — neactualizat de atunci.',
+
+    'confidence' => [
+        'high' => 'Ridicată',
+        'medium' => 'Medie',
+        'low' => 'Scăzută',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Suma este obligatorie.',
+        'amount_decimals' => 'Suma trebuie să fie un număr cu cel mult :decimals zecimală.|Suma trebuie să fie un număr cu cel mult :decimals zecimale.|Suma trebuie să fie un număr cu cel mult :decimals de zecimale.',
+        'amount_whole' => 'Suma trebuie să fie un număr întreg — această monedă nu are subunitate.',
+        'amount_non_negative' => 'Suma trebuie să fie zero sau pozitivă.',
+        'amount_non_zero' => 'Suma nu poate fi zero.',
+        'field_required' => 'Câmpul :field este obligatoriu.',
+    ],
 ];

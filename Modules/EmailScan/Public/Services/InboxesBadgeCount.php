@@ -14,13 +14,13 @@ use Modules\EmailScan\Public\Enums\InboxScanStatus;
 // The candidate half reuses DiscoveredSenderQuery's MIN_OCCURRENCES /
 // WITHIN_DAYS threshold, so the badge can never count a sender the panel
 // itself will not show.
-final class InboxesBadgeCount
+final readonly class InboxesBadgeCount
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private DatabaseManager $db,
+        private Clock $clock,
     ) {}
 
     public function forCurrentUser(User $user): int

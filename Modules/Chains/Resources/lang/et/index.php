@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Impordi mõni kontoväljavõte (pank, PayPal, kaart) ja lahendaja toob kontodeülesed ahelad automaatselt siia.',
 
     'no_counterparty' => '(vastaspooleta)',
-    'open_from_row' => 'Ava lähterida',
-    'open_to_row' => 'Ava sihtrida',
     'leg_count' => ':count makse|:count makset',
+    'legs_more' => '+ veel :count',
     'state_aria' => 'Olek: :state',
+
+    'state' => [
+        'candidate' => 'Kandidaat',
+        'confirmed' => 'Kinnitatud',
+        'rejected' => 'Tagasi lükatud',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPali rahastus',

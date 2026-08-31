@@ -24,11 +24,8 @@
         ConfidenceTier::Candidate     => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
     };
 
-    $tierAria = match ($node->confidenceTier) {
-        ConfidenceTier::Deterministic => Lang::get('chains::drawer.confidence_aria.deterministic'),
-        ConfidenceTier::Confirmed     => Lang::get('chains::drawer.confidence_aria.confirmed'),
-        ConfidenceTier::Candidate     => Lang::get('chains::drawer.confidence_aria.candidate'),
-    };
+    $tierAria = Lang::get($node->confidenceTier->ariaKey());
+    $tierLabel = Lang::get($node->confidenceTier->labelKey());
 
     $cardClasses = 'rounded-lg border border-slate-200 bg-white p-4 space-y-1 dark:bg-slate-950 dark:border-slate-700';
     if ($node->confidenceTier === ConfidenceTier::Candidate) {
@@ -69,11 +66,11 @@
                 role="img"
                 aria-label="{{ $tierAria }}"
                 class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $tierClasses }}"
-            >{{ $node->confidenceTier->value }}</span>
+            >{{ $tierLabel }}</span>
         </div>
     </div>
     <p class="text-xs text-slate-500 dark:text-slate-400">
-        {{ $node->bookedAt->translatedFormat('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
+        {{ $node->postedAt->translatedFormat('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
     </p>
 
     @if ($node->confidenceTier === ConfidenceTier::Candidate && $node->chainLinkId !== null)
@@ -127,11 +124,12 @@
                 >{{ Lang::get('chains::drawer.show_more_fanout', ['count' => $nextChunk, 'shown' => count($visibleChildren), 'total' => $childTotal]) }}</button>
             @endif
         </div>
-    @elseif ($node->kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value)
-        {{-- Empty fan-out edge case — a refund-only
-             month leaves a bulk-settle node covering zero ICS charges. --}}
-        <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.no_ics_charges') }}</p>
-        </div>
     @endif
+    {{-- No "covers no charges" box on a childless ics_bulk_settle node: the
+         kind describes the LINK, and the link runs from the settlement to each
+         charge, so a node reached along one is the charge. The box therefore
+         only ever printed under a covered charge, or under the refund leg the
+         refund-after-close pass writes — neither of which is a settlement. The
+         case it was written for cannot occur: a settlement covering nothing
+         gets no link at all, so it never enters the tree. --}}
 </div>

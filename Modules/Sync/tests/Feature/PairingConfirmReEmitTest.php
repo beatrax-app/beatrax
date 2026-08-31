@@ -15,10 +15,17 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
 
 uses(RefreshDatabase::class);
+
+// The responder this side is confirming to. The browse filters on device id,
+// so the peer the fixture advertises has to be the one the frame is addressed
+// to or nothing is ever dialled.
+const REEMIT_RESPONDER_DID = '11111111-2222-4333-8444-555555555555';
 
 // The poll re-emits this side's PAIR_CONFIRM so a frame the peer deferred or
 // lost is sent again. What it must never do is assert a confirmation the trust
@@ -35,17 +42,24 @@ function reEmitUser(string $username): User
     ]);
 }
 
-// No relay and no peer on the wire, so an outbound confirm lands in the local
-// holding space — which is what makes "did it send one" countable at all.
-function reEmitQueuedFrames(): int
+// Every POST this side made at the peer's frame path. Counting the holding
+// space instead cannot answer "did it send one" any more: an identical frame
+// already waiting is folded rather than appended, so a real re-emit leaves the
+// row count exactly where it was.
+function reEmitSendAttempts(): int
 {
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-
-    return $db->connection()->table('relay_mailbox')->count();
+    // Matched on the method and the WHOLE path: the poll also GETs the pull
+    // route, whose '/pair/frames' contains '/pair/frame', so a substring test
+    // counts every poll as a send and the refusal case can never fail.
+    return Http::recorded(static fn (mixed $request): bool => $request->method() === 'POST'
+        && parse_url($request->url(), PHP_URL_PATH) === PairingFrameRequestHandler::FRAME_PATH,
+    )->count();
 }
 
-function reEmitDiscoversNothing(): void
+// A peer that answers every frame with a 503: reachable enough to be dialled,
+// so each re-emit is one countable request, and never accepting, so the frame
+// still ends in the local holding space.
+function reEmitDiscoversARefusingPeer(): void
 {
     app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
     {
@@ -59,7 +73,7 @@ function reEmitDiscoversNothing(): void
          */
         public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
         {
-            return [];
+            return [new DiscoveredPeer(REEMIT_RESPONDER_DID, '127.0.0.1', 51337, DiscoveryMode::Mdns)];
         }
     });
 }
@@ -71,7 +85,7 @@ function reEmitModalOnConfirmStep(string $username): array
 {
     $user = reEmitUser($username);
     test()->actingAs($user);
-    reEmitDiscoversNothing();
+    reEmitDiscoversARefusingPeer();
 
     // The machine running this may have a real relay configured in its own user
     // data path, and an unfaked courier reached it over the wire. Refusing every
@@ -87,7 +101,7 @@ function reEmitModalOnConfirmStep(string $username): array
     $accepted = app(PairingTokenService::class)->accept(
         app(WordCodeEncoder::class)->decode($component->get('wordCode')),
         (int) $user->id,
-        '11111111-2222-4333-8444-555555555555',
+        REEMIT_RESPONDER_DID,
         str_repeat('c', 64),
         str_repeat('d', 64),
     );
@@ -104,10 +118,10 @@ it('re-emits this side confirm on every poll once the tap was recorded', functio
 
     $component->call('confirmMatch')->assertSet('awaitingPeer', true);
 
-    $afterTap = reEmitQueuedFrames();
+    $afterTap = reEmitSendAttempts();
     $component->call('checkPairingState');
 
-    expect(reEmitQueuedFrames())->toBeGreaterThan($afterTap);
+    expect(reEmitSendAttempts())->toBeGreaterThan($afterTap);
 });
 
 it('ships nothing for a tap the safety-number gate refused', function (): void {
@@ -128,12 +142,12 @@ it('ships nothing for a tap the safety-number gate refused', function (): void {
         ->assertSet('awaitingPeer', false)
         ->assertSet('flashMessage', Lang::get('sync::pairing.safety_number_changed'));
 
-    $afterRefusal = reEmitQueuedFrames();
+    $afterRefusal = reEmitSendAttempts();
 
     $component->call('checkPairingState');
     $component->call('checkPairingState');
 
-    expect(reEmitQueuedFrames())->toBe($afterRefusal);
+    expect(reEmitSendAttempts())->toBe($afterRefusal);
 });
 
 // A closed and reopened modal has forgotten it tapped; the row has not, and it
@@ -149,9 +163,9 @@ it('keeps re-emitting after the modal was closed and reopened', function (): voi
         ->assertSet('step', 'confirm')
         ->assertSet('awaitingPeer', true);
 
-    $afterReopen = reEmitQueuedFrames();
+    $afterReopen = reEmitSendAttempts();
     $reopened->call('checkPairingState');
 
-    expect(reEmitQueuedFrames())->toBeGreaterThan($afterReopen);
+    expect(reEmitSendAttempts())->toBeGreaterThan($afterReopen);
     expect((int) $user->id)->toBeGreaterThan(0);
 });

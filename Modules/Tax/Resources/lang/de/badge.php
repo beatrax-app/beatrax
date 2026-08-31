@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Steuer-Markierung bearbeiten: :label',
     'tag' => 'Markieren',
     'tag_aria' => 'Als steuerrelevant markieren',
+    'tag_caption' => 'Markieren',
 ];

@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
+use Modules\Core\Public\Services\SystemAlertQuery;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -126,8 +127,12 @@ it('backup banner round-trip — happy → corrupt → banner → acknowledge', 
     $component->call('acknowledge', $alertId);
     $component->assertDontSee('failed integrity check');
 
-    // Acknowledged, not deleted — the audit trail survives.
+    // Acknowledged, not deleted — the audit trail survives. A backup-corrupt
+    // alert is machine-wide (user_id NULL), so the dismissal is this reader's
+    // and the shared row stays open for the other household member.
     /** @var SystemAlert $persisted */
     $persisted = SystemAlert::withoutGlobalScopes()->findOrFail($alertId);
-    expect($persisted->acknowledged_at)->not->toBeNull('Acknowledge action must stamp acknowledged_at.');
+    expect($persisted->acknowledged_at)->toBeNull('A shared row must not be stamped by one reader.');
+    expect(app(SystemAlertQuery::class)->acknowledgedBy($alertId, $this->user->id))
+        ->toBeTrue('Acknowledge action must record the reader dismissal.');
 });

@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 
 uses(RefreshDatabase::class);
 
@@ -79,7 +79,7 @@ afterEach(function (): void {
 it('carries the settled amount for an account denominated in pounds', function (): void {
     $seriesId = shadowSeries($this->db, $this->user->id, Currency::Usd->value, Currency::Gbp->value);
 
-    $trend = app(RecurringSeriesQuery::class)->amountTrendForSeries($seriesId, $this->user);
+    $trend = app(RecurringOccurrenceQuery::class)->amountTrendForSeries($seriesId, $this->user);
 
     expect($trend->points)->toHaveCount(1)
         ->and($trend->points[0]['settled_amount_minor'])->toBe(-1750)
@@ -89,7 +89,7 @@ it('carries the settled amount for an account denominated in pounds', function (
 it('draws no second line when the account was debited in the currency quoted', function (): void {
     $seriesId = shadowSeries($this->db, $this->user->id, Currency::Gbp->value, Currency::Gbp->value);
 
-    $trend = app(RecurringSeriesQuery::class)->amountTrendForSeries($seriesId, $this->user);
+    $trend = app(RecurringOccurrenceQuery::class)->amountTrendForSeries($seriesId, $this->user);
 
     expect($trend->points[0]['settled_amount_minor'])->toBeNull()
         ->and($trend->points[0]['settled_currency'])->toBeNull();

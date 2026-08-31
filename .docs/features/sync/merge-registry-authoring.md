@@ -15,18 +15,20 @@ to bring a new table under sync. There is no engine change.
 
 ```php
 'goals' => [
-    'name'            => ['strategy' => 'lww', 'nullable' => false],
-    'target_minor'    => ['strategy' => 'lww', 'nullable' => false],
+    'name'            => ['nullable' => false],
+    'target_minor'    => ['nullable' => false],
     '_delete_wins'    => true,
     '_create_required' => ['name', 'target_minor'],
 ],
 ```
 
-**Strategies.** `lww` (last writer wins, per field), `g_counter` (a grow-only
-counter that sums rather than overwrites — `merchant_memories.occurrence_count`
-is the one that needs it), and `or_set` (an observed-remove set, for a
-`{v, tag}`-shaped collection). An unregistered table or field falls back to
-`lww`.
+**Strategies.** The `MergeStrategy` enum names three: `Lww` (last writer wins,
+per field), `GCounter` (a grow-only counter that sums rather than overwrites —
+`merchant_memories.occurrence_count` is the one that needs it), and `OrSet` (an
+observed-remove set, for a `{v, tag}`-shaped collection). **Lww is the default
+and is never written out**: a field entry carries a `'strategy'` key only where
+it is one of the other two. An unregistered table or field falls back to Lww
+the same way.
 
 **`_delete_wins`** decides the tie: when a tombstone and an edit carry the same
 HLC, does the row die? Default true.
@@ -36,6 +38,13 @@ HLC, does the row die? Default true.
 ## The rule for `_create_required`
 
 > List exactly the columns that are `NOT NULL` **and have no database default**.
+
+"Exactly" is enforced in both directions by
+`MergeRulesRegistrySchemaGuardTest`, for every registered table. A name that is
+not such a column quarantines every create of that table; a column MISSING from
+the list is worse, because the create passes the completeness gate and then dies
+at the INSERT. `transactions.posted_at` / `.booked_at` / `.value_date` and
+`goals.start_date` / `.target_date` all sat in that second gap.
 
 Everything else is a consequence of that sentence, but the consequences are not
 obvious, so here they are named.
@@ -67,8 +76,8 @@ legitimately empty. `RuleSchemaMigrationTest` asserts that emptiness so nobody
 The replayer seeds the primary key from the op's own `pk`, so an `id` column
 never belongs in the list. `notifications.id` is the exception: it is a sha256
 string computed by domain code before insert rather than a database
-autoincrement, and `insertOrIgnore` silently drops the row on the `id` NOT NULL
-constraint if it is missing. So that one *is* listed.
+autoincrement, and the insert fails the `id` NOT NULL constraint if it is
+missing. So that one *is* listed.
 
 `anomaly_alerts.id` looks like the same case and is not. It is derived from the
 `(user_id, transaction_id)` its own unique index names, so both devices compute
@@ -84,12 +93,14 @@ is `NOT NULL`, so it is required there.
 
 ### Every name must be a real column
 
-`_create_required` is not free text. Several tables have a dedicated test
-holding the list against the migration's actual NOT-NULL-without-default set —
-`TransactionSplitsRegistryColumnsTest` and
-`EnvelopeAssignmentsRegistryColumnsTest` among them — because a typo here is a
-create that fails only on a peer, only during catch-up, and only for that one
-table.
+`_create_required` is not free text. `MergeRulesRegistrySchemaGuardTest` holds
+every registered table's list against the migration's actual
+NOT-NULL-without-default set, in both directions; the per-table files
+(`TransactionSplitsRegistryColumnsTest`,
+`EnvelopeAssignmentsRegistryColumnsTest` and their siblings) additionally pin
+the exact expected list where the column set carries a specific trap. A typo
+here is a create that fails only on a peer, only during catch-up, and only for
+that one table.
 
 ## Append-only ledgers declare no strategy at all
 
@@ -102,8 +113,9 @@ That is not an oversight to be filled in later — a SET op against one of these
 is meaningless, and `SyncCaptureListener` reports an `edit` on
 `goal_contributions` as an unknown mutation type rather than writing one.
 `recurring_series_occurrences` leans on the same idempotency seam on the peer
-that it uses locally: it is written with `insertOrIgnore` against the
-`(series, transaction)` unique index.
+that it uses locally: its `(series, transaction)` unique index is what absorbs a
+duplicate replay, which `CreateRowInsertFailure::AlreadyPresent` classifies and
+passes over in silence.
 
 ## Registration order is not insertion order
 
@@ -166,8 +178,8 @@ would guess:
   column, and its identity string is `slug`.
 - `merchant_aliases.pattern` is the immutable first-seen raw description and
   the per-user identity column.
-- The per-envelope notify threshold lives on `envelope_settings`, not on the
-  write-dead `category_budgets`.
+- The per-envelope notify threshold lives on `envelope_settings`, which is
+  the only table that has ever carried one.
 - `tax_transaction_tags.transaction_split_id` must replay, or a per-leg
   deduction collapses into a whole-transaction tag and corrupts exported tax
   amounts.
@@ -183,6 +195,15 @@ would guess:
   `SuppressionEvaluator`, not in the registry.
 - `system_alerts` rows with a NULL `user_id` are system-wide and belong to no
   one; the backfill scopes on `user_id` and never captures them, deliberately.
+- `users` is the one covered table with no `user_id` column: its own primary
+  key IS the owner. `RowOwnership` self-scopes it, the wire pk is ignored (two
+  devices mint different autoincrements for one reader), and a create or a
+  tombstone for it is refused — a peer may edit the reader's settings, never
+  mint or remove the reader. The row is also the one that is not all one
+  thing, so the registry carries two extra lists beside the field map:
+  `DEVICE_LOCAL_COLUMNS` (password, theme, the developer gate) and
+  `ASKED_OF_EVERY_JOINER` (`country_code`). `EveryUserColumnIsPlacedTest`
+  refuses a new column that lands in none of the three.
 
 ## See also
 

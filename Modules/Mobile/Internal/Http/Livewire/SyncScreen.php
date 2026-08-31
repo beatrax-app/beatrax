@@ -8,12 +8,14 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
+use Modules\Mobile\Internal\Sync\SyncAttemptOutcome;
 use Modules\Mobile\Internal\Sync\SyncPhase;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
@@ -29,12 +31,23 @@ final class SyncScreen extends Component
 
     public int $progressPercent = 0;
 
+    // The cursor's expected count is max(previous, applied), so it equals what
+    // has already landed unless a genuine total was written over it. Without
+    // this the bar was full from the first record on and never moved again.
+    public bool $progressMeasured = false;
+
     public bool $pauseOnCellular = false;
 
     // No confirmed peer means "Sync now" has nothing to talk to: the burst
     // would dial nobody and report success, which reads as a working sync on
     // a device that has never been paired.
     public bool $hasPeers = false;
+
+    // The SyncAttemptOutcome the last press produced, null before the first
+    // one. Locked because it names the sentence the screen renders and only
+    // the service is entitled to choose which.
+    #[Locked]
+    public ?string $lastSyncResult = null;
 
     public function mount(
         CurrentUser $currentUser,
@@ -51,6 +64,9 @@ final class SyncScreen extends Component
     // through to whatever transport it can already reach, then re-fetches
     // this screen's own progress state so the record line reflects
     // reality immediately after the attempt.
+    /**
+     * @link ../../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-sync-now-button-was-a-silent-no-op
+     */
     public function syncNow(
         CurrentUser $currentUser,
         MobileSyncTriggerService $trigger,
@@ -63,9 +79,29 @@ final class SyncScreen extends Component
             return;
         }
 
-        // Same reason as the setup screen: without an address the LAN leg is
-        // skipped and the relay fallback applies nothing.
-        $trigger->syncOnce($currentUser->id(), $session, $peerAddress->host(), $peerAddress->port());
+        // Where this device last REACHED the desktop. The relay endpoint's
+        // host used to stand in for it, so a LAN-paired phone passed a null
+        // host, skipped the LAN leg, drained a relay it had never configured,
+        // and reported nothing.
+        $address = $peerAddress->locate($currentUser->id());
+
+        $outcome = $trigger->attempt(
+            $currentUser->id(),
+            $session,
+            $address['host'] ?? null,
+            $address['port'] ?? null,
+        );
+
+        // An address that was dialled and reached nobody is a desktop that
+        // moved or went away. Kept, every later press retries the same dead
+        // address; dropped, the next one browses for the live one.
+        if ($address !== null && $outcome === SyncAttemptOutcome::Unreachable) {
+            $peerAddress->forget($currentUser->id());
+        }
+
+        // The outcome is kept rather than dropped — a press that changes
+        // nothing on screen is indistinguishable from a sync that worked.
+        $this->lastSyncResult = $outcome->value;
 
         $this->hydrateProgress($currentUser->id(), $db);
 
@@ -109,6 +145,7 @@ final class SyncScreen extends Component
             $this->progressApplied = 0;
             $this->progressExpected = null;
             $this->progressPercent = 0;
+            $this->progressMeasured = false;
 
             return;
         }
@@ -117,11 +154,16 @@ final class SyncScreen extends Component
         $expected = is_numeric($row->records_expected) ? (int) $row->records_expected : null;
         $phase = SyncPhase::fromStorage($row->phase);
 
-        $this->initialSyncInProgress = $phase === SyncPhase::Pulling;
+        // A total that merely equals what has landed is the cursor's own
+        // max(previous, applied) written back, not a count of what is coming.
+        $measuredTotal = $expected !== null && $expected > $applied ? $expected : null;
+
+        $this->initialSyncInProgress = $phase->isInitialSyncInFlight();
         $this->progressApplied = $applied;
         $this->progressExpected = $expected;
-        $this->progressPercent = ($expected === null || $expected <= 0)
+        $this->progressMeasured = $measuredTotal !== null;
+        $this->progressPercent = $measuredTotal === null
             ? 0
-            : max(0, min(100, intdiv($applied * 100, $expected)));
+            : max(0, min(100, intdiv($applied * 100, $measuredTotal)));
     }
 }

@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Comparé à la référence ci-dessus',
 
+    'run_failed' => 'Cette projection n’a pas pu être calculée. La courbe ci-dessous ne montre que ce qui est déjà comptabilisé.',
+
     'scenario_editor_aria' => 'Éditeur de scénario',
     'series_confidence' => 'Confiance des séries',
     'no_series_contribute' => 'Aucune série ne contribue encore à la prévision de ce compte.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Mise à jour',
     'chart_noscript' => 'Le graphique nécessite JavaScript. La plage couvre :days jour.|Le graphique nécessite JavaScript. La plage couvre :days jours.',
     'total_balance' => 'Solde total',
+    'projection_range' => 'Plage de projection',
+    'point_estimate' => 'Estimation ponctuelle',
 
     'per_month_suffix' => '/mois',
     'confidence_chip_aria' => ':name, confiance :confidence — la plage de projection représente :percent pour cent de l\'estimation ponctuelle',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Point le plus bas sur 30 jours',
     'next_ics' => 'Prochain règlement ICS : :amount le :date',
     'ics_overdue' => 'Règlement ICS en retard : :amount, échu le :date',
+
+    'stale_run' => 'Projeté à partir du :date — non actualisé depuis.',
+
+    'confidence' => [
+        'high' => 'Élevée',
+        'medium' => 'Moyenne',
+        'low' => 'Faible',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Le montant est obligatoire.',
+        'amount_decimals' => 'Le montant doit être un nombre avec au plus :decimals décimale.|Le montant doit être un nombre avec au plus :decimals décimales.',
+        'amount_whole' => 'Le montant doit être un nombre entier : cette devise n’a pas de sous-unité.',
+        'amount_non_negative' => 'Le montant doit être nul ou positif.',
+        'amount_non_zero' => 'Le montant ne peut pas être nul.',
+        'field_required' => 'Le champ :field est obligatoire.',
+    ],
 ];

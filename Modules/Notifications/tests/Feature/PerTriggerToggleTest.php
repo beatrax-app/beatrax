@@ -14,6 +14,7 @@ use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\DriftAlerts\Internal\Jobs\EmitSavingsPromptsJob;
@@ -23,15 +24,15 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Services\PeriodQuery;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Enums\DigestCadence;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
 use Modules\Position\Public\Services\PositionQuery;
 use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 uses(RefreshDatabase::class);
@@ -124,7 +125,7 @@ function pttRunReminder(User $user): bool
     ]);
 
     $job = new EmitPaymentRemindersJob($user->id, 3);
-    $job->handle(app(RecurringSeriesQuery::class), app(Dispatcher::class), app(Clock::class));
+    $job->handle(app(RecurringSeriesQuery::class), app(RecurringOccurrenceQuery::class), app(Dispatcher::class), app(Clock::class));
 
     return pttOsFired();
 }
@@ -202,7 +203,7 @@ function pttRunDigest(User $user): bool
 {
     Http::fake();
 
-    $job = new EmitPositionDigestJob($user->id, 'daily');
+    $job = new EmitPositionDigestJob($user->id, DigestCadence::Daily);
     $job->handle(app(Clock::class), app(PositionQuery::class), app(PeriodQuery::class), app(Dispatcher::class), app(AuthFactory::class));
 
     return pttOsFired();
@@ -263,14 +264,14 @@ function pttRunSavingsPrompt(User $user): bool
     return pttOsFired();
 }
 
-function pttNotificationRowExists(int $userId, string $triggerType): bool
+function pttNotificationRowExists(int $userId, NotificationTrigger $triggerType): bool
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', $triggerType)
+        ->where('trigger_type', $triggerType->value)
         ->exists();
 }
 
@@ -298,7 +299,7 @@ it('disabling payment_reminder fires no OS notification for it while the other t
     expect(pttRunDigest($user))->toBeTrue();
     expect(pttRunSavingsPrompt($user))->toBeTrue();
 
-    expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER))->toBeTrue();
+    expect(pttNotificationRowExists((int) $user->id, NotificationTrigger::PaymentReminder))->toBeTrue();
 });
 
 it('disabling budget_nudge fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
@@ -316,7 +317,7 @@ it('disabling budget_nudge fires no OS notification for it while the other three
     expect(pttRunDigest($user))->toBeTrue();
     expect(pttRunSavingsPrompt($user))->toBeTrue();
 
-    expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE))->toBeTrue();
+    expect(pttNotificationRowExists((int) $user->id, NotificationTrigger::BudgetNudge))->toBeTrue();
 });
 
 it('disabling position_digest (cadence off) fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
@@ -334,7 +335,7 @@ it('disabling position_digest (cadence off) fires no OS notification for it whil
     expect(pttRunDigest($user))->toBeFalse();
     expect(pttRunSavingsPrompt($user))->toBeTrue();
 
-    expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST))->toBeTrue();
+    expect(pttNotificationRowExists((int) $user->id, NotificationTrigger::PositionDigest))->toBeTrue();
 });
 
 it('disabling savings_prompt fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
@@ -352,5 +353,5 @@ it('disabling savings_prompt fires no OS notification for it while the other thr
     expect(pttRunDigest($user))->toBeTrue();
     expect(pttRunSavingsPrompt($user))->toBeFalse();
 
-    expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT))->toBeTrue();
+    expect(pttNotificationRowExists((int) $user->id, NotificationTrigger::SavingsPrompt))->toBeTrue();
 });

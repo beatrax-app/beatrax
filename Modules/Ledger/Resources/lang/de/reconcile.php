@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'wähle ein Konto',
+        'choose_date' => 'wähle ein Kontoauszugsdatum',
         'enter_balance' => 'gib einen Saldo laut Kontoauszug ein',
         'matched' => 'stimmt überein — :amount',
         'discrepancy' => 'Abweichung — :amount',
+        'reconciled_through' => 'abgeglichen bis :date',
     ],
 
     'mismatch_html' => 'Der Saldo laut Kontoauszug stimmt noch nicht mit deinem bestätigten Saldo überein. Schalte bestätigte Zeilen in der <a href=":url" class="underline">Transaktionsliste</a> um oder passe den eingegebenen Saldo an, bis die Differenz null ist — dieser Ablauf legt nie eine Ausgleichsbuchung an.',
+    'unreachable_no_baseline_html' => 'Kein Umschalten von Zeilen bringt diese Differenz auf null. Für dieses Konto ist kein Anfangssaldo hinterlegt, sein Saldo wird also ab null gemessen. Importiere den Kontoauszug, mit dem das Konto beginnt, oder setze den Anfangssaldo in den <a href=":url" class="underline">Einstellungen</a>.',
+    'unreachable' => 'Kein Umschalten von Zeilen bringt diese Differenz auf null: sie liegt außerhalb der Spanne aller Zeilen dieses Kontos bis zum angegebenen Datum. Prüfe das Kontoauszugsdatum und den eingegebenen Saldo.',
 
     'check' => 'Prüfen',
     'complete' => 'Abgleich abschließen',
+    'complete_unavailable' => 'Bis zu diesem Datum gibt es nichts mehr zu sperren — markiere weitere Zeilen als bestätigt oder wähle ein späteres Kontoauszugsdatum.',
 
     'errors' => [
         'choose_account' => 'Wähle zuerst ein Konto.',

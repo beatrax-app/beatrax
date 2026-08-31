@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 // The four titles are asserted as literal strings, not constants, so a reword
@@ -40,27 +40,27 @@ function rnpDispatch(object $event): void
 /**
  * @return array<int, string>
  */
-function rnpTitlesFor(int $userId, string $triggerType): array
+function rnpTitlesFor(int $userId, NotificationTrigger $triggerType): array
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', $triggerType)
+        ->where('trigger_type', $triggerType->value)
         ->pluck('title')
         ->map(static fn (mixed $title): string => (string) $title)
         ->all();
 }
 
-function rnpCount(int $userId, string $triggerType): int
+function rnpCount(int $userId, NotificationTrigger $triggerType): int
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     return $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', $triggerType)
+        ->where('trigger_type', $triggerType->value)
         ->count();
 }
 
@@ -73,8 +73,8 @@ it('produces one inbox row with the locked "Import finished" title for a csv Tra
         sourceFormats: ['csv'],
     ));
 
-    expect(rnpCount($user->id, DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED))->toBe(1);
-    expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED))->toBe(['Import finished']);
+    expect(rnpCount($user->id, NotificationTrigger::ImportFinished))->toBe(1);
+    expect(rnpTitlesFor($user->id, NotificationTrigger::ImportFinished))->toBe(['Import finished']);
 });
 
 it('produces one inbox row with the locked "New receipts found" title for an eml TransactionBatchImported', function (): void {
@@ -86,8 +86,8 @@ it('produces one inbox row with the locked "New receipts found" title for an eml
         sourceFormats: ['eml'],
     ));
 
-    expect(rnpCount($user->id, DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND))->toBe(1);
-    expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND))->toBe(['New receipts found']);
+    expect(rnpCount($user->id, NotificationTrigger::ReceiptsFound))->toBe(1);
+    expect(rnpTitlesFor($user->id, NotificationTrigger::ReceiptsFound))->toBe(['New receipts found']);
 });
 
 it('produces one inbox row with the locked "A recurring charge changed" title for DriftAlertOpened', function (): void {
@@ -103,8 +103,8 @@ it('produces one inbox row with the locked "A recurring charge changed" title fo
         currency: 'EUR',
     ));
 
-    expect(rnpCount($user->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(1);
-    expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(['A recurring charge changed']);
+    expect(rnpCount($user->id, NotificationTrigger::DriftChanged))->toBe(1);
+    expect(rnpTitlesFor($user->id, NotificationTrigger::DriftChanged))->toBe(['A recurring charge changed']);
 });
 
 it('produces one inbox row with the locked "Cash-flow shortfall ahead" title for ForecastShortfallDetected', function (): void {
@@ -114,15 +114,15 @@ it('produces one inbox row with the locked "Cash-flow shortfall ahead" title for
         userId: $user->id,
         accountId: 1,
         scenarioId: null,
-        startsAt: Carbon::parse('2026-06-01'),
-        endsAt: Carbon::parse('2026-06-15'),
+        startsAt: CarbonImmutable::parse('2026-06-01'),
+        endsAt: CarbonImmutable::parse('2026-06-15'),
         lowestBalanceMinor: -1500,
         currency: 'EUR',
         bufferUsedMinor: 0,
     ));
 
-    expect(rnpCount($user->id, DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL))->toBe(1);
-    expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL))->toBe(['Cash-flow shortfall ahead']);
+    expect(rnpCount($user->id, NotificationTrigger::ForecastShortfall))->toBe(1);
+    expect(rnpTitlesFor($user->id, NotificationTrigger::ForecastShortfall))->toBe(['Cash-flow shortfall ahead']);
 });
 
 it('re-dispatching the SAME drift alert still yields exactly one row (deterministic-id convergence)', function (): void {
@@ -141,7 +141,7 @@ it('re-dispatching the SAME drift alert still yields exactly one row (determinis
     rnpDispatch($alert);
     rnpDispatch($alert);
 
-    expect(rnpCount($user->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(1);
+    expect(rnpCount($user->id, NotificationTrigger::DriftChanged))->toBe(1);
 });
 
 it('never leaks one user\'s reactive notifications into another user\'s inbox (cross-user)', function (): void {
@@ -158,6 +158,6 @@ it('never leaks one user\'s reactive notifications into another user\'s inbox (c
         currency: 'EUR',
     ));
 
-    expect(rnpCount($userA->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(1);
-    expect(rnpCount($userB->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(0);
+    expect(rnpCount($userA->id, NotificationTrigger::DriftChanged))->toBe(1);
+    expect(rnpCount($userB->id, NotificationTrigger::DriftChanged))->toBe(0);
 });

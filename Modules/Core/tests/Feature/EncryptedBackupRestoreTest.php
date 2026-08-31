@@ -7,8 +7,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
@@ -67,7 +67,7 @@ it('passes a fully-gated request to the SQLite-guarded restore service', functio
         ->set('confirmation', 'RESTORE')
         ->call('restore')
         ->assertSet('snapshotPath', '')
-        ->assertSet('error', 'Restore is only available on the SQLite build.');
+        ->assertSet('error', Lang::get('core::backup.errors.restore_not_supported'));
 });
 
 function rbMakeSqlite(string $path, string $marker): void
@@ -162,7 +162,7 @@ it('refuses a payload that decrypts but will not open as a database', function (
 
     try {
         expect(fn () => app(RestoreEncryptedBackup::class)($enc, 'pw'))
-            ->toThrow(BackupFormatException::class, 'not a readable database');
+            ->toThrow(BackupContentsUnreadableException::class, 'not a readable database');
     } finally {
         Config::set('database.default', 'sqlite_testing');
         $db->purge('sqlite');

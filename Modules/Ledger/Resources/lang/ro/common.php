@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Necategorizat',
+    'unavailable_category' => 'Categoria nu există pe acest dispozitiv',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Decontată',
         'uncleared' => 'Nedecontată',

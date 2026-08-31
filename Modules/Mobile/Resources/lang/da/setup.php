@@ -12,6 +12,7 @@ return [
         'locked' => 'Lås appen op for at fortsætte opsætningen.',
         'revoked' => 'Denne enhed er fjernet fra din anden enhed. Par igen for at fortsætte synkroniseringen.',
     ],
+    'unlock_cta' => 'Lås appen op',
     'step' => [
         'connect' => 'Forbinder til din anden enhed',
         'keys' => 'Modtager krypteringsnøgler',
@@ -19,16 +20,9 @@ return [
         'rebuild' => 'Genopbygger din historik',
     ],
     'step_current' => 'aktuelt trin',
-    'working' => [
-        'connect' => 'Kontakter din anden enhed…',
-        'keys' => 'Låser dine data op…',
-        'transfer' => 'Beder om din historik…',
-        'rebuild' => 'Genopbygger din historik — det kan tage et øjeblik.',
-    ],
     'page_title' => 'Sætter op…',
     'resuming' => 'Genoptager opsætningen…',
     'setting_up' => 'Sætter denne enhed op…',
     'progress_aria' => 'Fremdrift for opsætningen',
     'records' => ':count post|:count poster',
-    'records_preparing' => 'Venter på den anden enhed…',
 ];

@@ -33,7 +33,6 @@ Practical recipes for exercising the `Categorization` module in isolation.
     (`ApplyEnrichmentsConflictTest`).
   - The CRUD UI flows (`RulesPageTest`, `RuleFormModalTest`,
     `TriagePageTest`, `CategorizationProvenancePanelTest`).
-  - The divergence flow end-to-end (`CorrectionDivergenceTest`).
   - The seeded-rule-set ≥40% gate against a sampled real-world
     distribution
     (`SeedRulesEndToEndCategorizationTest`, fixture in
@@ -92,11 +91,12 @@ composer test
   candidate evaluated. Run
   `vendor/bin/pest Modules/Categorization/tests/Unit/RuleEvaluatorSpecificityTest.php`
   to confirm the score table.
-- **`CategorizationDiverged` not firing on a manual reclassify against
-  a rule's category** — the prior provenance is probably
-  `source=memory`, not `source=rule`. Memory divergence is silent by
-  design (see `CorrectionDivergenceTest`); only rule divergence opens
-  the toast.
+- **The provenance panel draws nothing after a manual correction** —
+  it renders the rule card only for `source=rule`. A `source=memory`
+  row gets the memory card and a `source=manual` row gets nothing at
+  all, both by design. Run
+  `vendor/bin/pest Modules/Categorization/tests/Feature/CategorizationProvenancePanelTest.php`
+  to see the three variants.
 - **A test failing with "unknown field/match" trigger error** — the
   paired BEFORE INSERT / BEFORE UPDATE triggers on
   `categorization_rules.field / match` reject any value outside the
@@ -115,10 +115,6 @@ Each contract below names the test that proves it. The requirement it
 serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
-
-The behavioural contract for the `Categorization` module.
-
-## Behavioral contracts
 
 - **The rule evaluator picks at most one winner per transaction, by
   specificity score.** Equals beats memory beats starts_with beats
@@ -145,12 +141,11 @@ The behavioural contract for the `Categorization` module.
   reclassify.** No double-dispatch on the same write; no dispatch when
   the underlying Ledger updater reports zero rows affected.
   (`tests/Feature/MerchantMemoryWriterTest.php`)
-- **`CategorizationDiverged` fires only when a manual pick contradicts
-  a still-active rule.** Memory divergence is silent — memory grows
-  transparently via `MerchantMemoryWriter` on every
-  `TransactionCategorized`. The static
-  `CategorizationDiverged::fromProvenance` is the single decision point.
-  (`tests/Feature/CorrectionDivergenceTest.php`)
+- **The "should the rule change too?" question has exactly one
+  surface.** `CategorizationProvenancePanel` draws it inline on the
+  transaction detail page from the row's own provenance; no layout
+  mounts a second surface for it.
+  (`tests/Feature/CategorizationProvenancePanelTest.php`)
 - **The seeded rule corpus targets universal merchants only — no
   personal identifiers.** A live-distribution sampled fixture
   (`tests/Fixtures/seed-rules-live-distribution.php`) drives an
@@ -206,12 +201,12 @@ The behavioural contract for the `Categorization` module.
   the lookup is scoped to `user_id IS NULL`.
 - **Manual reclassify reports zero rows affected (e.g. the row
   vanished)** — `AssignCategory` does NOT dispatch
-  `TransactionCategorized` and does NOT dispatch
-  `CategorizationDiverged`; the action is a no-op.
+  `TransactionCategorized`; the action is a no-op.
 - **Corrupt JSON in `auto_category_provenance`** —
   `AssignCategory::readPriorProvenance` swallows the `JsonException`
-  and returns `null`, so the divergence path is skipped (best-effort
-  audit metadata; a corrupt blob must not crash a reclassify request).
+  and returns `null`, so `CategorizationProvenancePanel` renders the
+  `none` variant (best-effort audit metadata; a corrupt blob must not
+  crash the detail page).
 
 ## Cross-module collaborators
 

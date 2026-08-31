@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Отключване',
 
-    'digits_entered' => 'въведени цифри',
+    'digits_entered' => 'въведена :count цифра|въведени :count цифри',
     'pin_pad' => 'ПИН клавиатура',
     'digit' => 'Цифра :digit',
     'backspace' => 'Изтриване назад',

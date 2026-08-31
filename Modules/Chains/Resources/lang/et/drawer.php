@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Sellest lülist edasi rahastusahelat ei leitud.',
 
     'covers_charges' => 'Katab :count ICS makse|Katab :count ICS makset',
-    'no_ics_charges' => 'Selles arvelduses ICS makseid pole',
     'show_more_fanout' => 'Näita veel :count · :shown / :total',
 
     'confirm' => 'Kinnita',
     'reject' => 'Lükka tagasi',
     'confirm_aria' => 'Kinnita ahela lüli :id',
     'reject_aria' => 'Lükka ahela lüli :id tagasi',
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministlik',
+        'confirmed' => 'Kinnitatud',
+        'candidate' => 'Kandidaat',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Kindlus: deterministlik vaste',

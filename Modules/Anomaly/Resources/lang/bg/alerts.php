@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'база :baseline → реално: :actual',
+    'charged' => 'начислено :actual',
     'detected' => 'открито на :date',
     'sensitivity' => 'чувствителност :percent от 100',
 

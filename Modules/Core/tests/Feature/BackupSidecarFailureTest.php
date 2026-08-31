@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Internal\Enums\BackupFailureCause;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\StoredCopy;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -110,4 +112,29 @@ it('records a critical alert when the sidecar cannot be renamed into place', fun
 
     @unlink($sidecar.DIRECTORY_SEPARATOR.'occupied');
     @rmdir($sidecar);
+});
+
+// The alert is what the operator reads, and this run had already opened the
+// source, vacuumed it, and passed its integrity check before the sidecar
+// failed — with the backup itself on disk. Naming the database sends them
+// hunting corruption in the one thing that was proven sound.
+it('names the failure it had rather than the one it had already ruled out', function (): void {
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    (new Filesystem)->ensureDirectoryExists($backupsDir);
+
+    $basename = sidecarBasename($this->app);
+    mkdir($backupsDir.DIRECTORY_SEPARATOR.$basename.'.meta.json.tmp');
+
+    $this->artisan('db:backup', ['--force' => true])->assertExitCode(1);
+
+    $alert = DB::table('system_alerts')->where('kind', 'backup_corrupt')->first();
+    /** @var array<string, mixed> $metadata */
+    $metadata = json_decode((string) $alert->metadata, true);
+    $message = StoredCopy::readFromParams($metadata, (string) $alert->message);
+
+    expect($metadata['cause'] ?? null)->toBe(BackupFailureCause::WriteFailed->value)
+        ->and($message)->not->toContain('aborted before any file was produced')
+        ->and($message)->not->toContain('source DB failed integrity check')
+        ->and($message)->toContain('the database passed its checks');
 });

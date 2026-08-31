@@ -20,7 +20,7 @@ return [
     'ok_aria' => 'Labi — apstiprināt PIN kodu',
     'ok' => 'Labi',
 
-    'error_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
+    'error_pin_shape' => 'PIN kodā jābūt :min līdz :max cipariem — tikai cipari.',
 
     'error_backoff' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
 

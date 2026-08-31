@@ -18,6 +18,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -35,12 +36,12 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
 
     public function __construct(
         public readonly int $userId,
-        public readonly string $cadence,
+        public readonly DigestCadence $cadence,
     ) {}
 
     public function uniqueId(): string
     {
-        return $this->userId.':'.$this->cadence;
+        return $this->userId.':'.$this->cadence->value;
     }
 
     public function uniqueFor(): int
@@ -60,7 +61,7 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
         Dispatcher $events,
         AuthFactory $auth,
     ): void {
-        if ($this->cadence === 'off') {
+        if ($this->cadence->isOff()) {
             return;
         }
 
@@ -71,9 +72,11 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
         }
 
         $now = $clock->now();
-        $occurrence = $this->cadence === 'daily'
-            ? $now->toDateString()
-            : $now->isoWeekYear.'-W'.str_pad((string) $now->isoWeek, 2, '0', STR_PAD_LEFT);
+        $occurrence = match ($this->cadence) {
+            DigestCadence::Daily => $now->toDateString(),
+            DigestCadence::Weekly => $now->isoWeekYear.'-W'.str_pad((string) $now->isoWeek, 2, '0', STR_PAD_LEFT),
+            DigestCadence::Off => '',
+        };
 
         $position = $this->withGuardBoundTo(
             $user,

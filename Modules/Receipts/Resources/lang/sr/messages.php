@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Prevuci poruku e-pošte (.eml) ili arhivu poštanskog sandučeta (.mbox). Podudarivač prepoznaje PayPal potvrde i prikazuje ih kao redovne transakcije; nepodudareni pošiljaoci ostaju u revizionom logu za trijažu.',
-    ],
-
     'conflict' => [
 
         'field' => [

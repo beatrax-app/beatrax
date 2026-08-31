@@ -12,6 +12,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\DevMode\Internal\Sql\QueryTimedOutException;
 use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 use Modules\DevMode\Internal\Sql\SchemaSnapshot;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
@@ -105,6 +106,8 @@ final class SqlPanelPage extends Component
 
     // The engine's own error text is surfaced verbatim, so a SQLITE_READONLY
     // from a write that slipped past the validator is visible rather than lost.
+    // The cap arrives as its own exception type: it used to be read off the
+    // message text of an expiry that is fatal, so it could never be caught.
     /**
      * @return array{rows: list<object>, duration_ms: int}|null
      */
@@ -112,10 +115,12 @@ final class SqlPanelPage extends Component
     {
         try {
             return $connection->execute($sql);
+        } catch (QueryTimedOutException) {
+            $this->errorMessage = Lang::get('dev::sql.errors.timeout');
+
+            return null;
         } catch (Throwable $e) {
-            $this->errorMessage = str_contains($e->getMessage(), 'maximum execution time')
-                ? Lang::get('dev::sql.errors.timeout')
-                : Lang::get('dev::sql.errors.engine', ['message' => $e->getMessage()]);
+            $this->errorMessage = Lang::get('dev::sql.errors.engine', ['message' => $e->getMessage()]);
 
             return null;
         }
@@ -133,7 +138,7 @@ final class SqlPanelPage extends Component
 
         return array_values(array_filter(
             array_keys(get_object_vars($rows[0])),
-            static fn ($k): bool => is_string($k),
+            static fn (int|string $k): bool => is_string($k),
         ));
     }
 

@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Sammenlignet med basislinjen ovenfor',
 
+    'run_failed' => 'Denne fremskrivning kunne ikke beregnes. Linjen nedenfor viser kun det, der allerede er bogført.',
+
     'scenario_editor_aria' => 'Scenarieeditor',
     'series_confidence' => 'Seriens pålidelighed',
     'no_series_contribute' => 'Ingen serier bidrager til prognosen for denne konto endnu.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Opdaterer',
     'chart_noscript' => 'Diagrammet kræver JavaScript. Intervallet dækker :days dag.|Diagrammet kræver JavaScript. Intervallet dækker :days dage.',
     'total_balance' => 'Samlet saldo',
+    'projection_range' => 'Prognoseinterval',
+    'point_estimate' => 'Punktestimat',
 
     'per_month_suffix' => '/md.',
     'confidence_chip_aria' => ':name, pålidelighed :confidence — prognoseintervallet er :percent procent af punktestimatet',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Laveste på 30 dage',
     'next_ics' => 'Næste ICS-afregning: :amount den :date',
     'ics_overdue' => 'ICS-afregning er forfalden: :amount, forfaldt :date',
+
+    'stale_run' => 'Fremskrevet fra :date — ikke opdateret siden.',
+
+    'confidence' => [
+        'high' => 'Høj',
+        'medium' => 'Middel',
+        'low' => 'Lav',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Beløb er påkrævet.',
+        'amount_decimals' => 'Beløb skal være et tal med højst :decimals decimal.|Beløb skal være et tal med højst :decimals decimaler.',
+        'amount_whole' => 'Beløb skal være et helt tal — denne valuta har ingen mindre enhed.',
+        'amount_non_negative' => 'Beløb skal være nul eller positivt.',
+        'amount_non_zero' => 'Beløb må ikke være nul.',
+        'field_required' => 'Feltet :field er påkrævet.',
+    ],
 ];

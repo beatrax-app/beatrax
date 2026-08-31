@@ -56,6 +56,9 @@ are **no longer here**. They are in the spec:
 - **Cross-links are relative within this tree**, and absolute to the spec — so a
   reader can always tell which layer they are being sent to.
 - **One topic per file.** A topic that outgrows a few screens gets split.
-- **No workflow vocabulary.** Phase numbers, plan identifiers, and planning-tool
-  references are not reference documentation; the `noGsdLeakage` invariant fails
-  the build on them.
+- **No workflow vocabulary.** Phase numbers, round numbers, plan identifiers and
+  planning-tool references are not reference documentation. Neither is the story
+  of the session that produced a page: how a change was verified, what a sweep
+  counted, or what was left for a later pass. The failure a guard exists to
+  prevent is a permanent reason and stays; the working session that discovered it
+  does not.

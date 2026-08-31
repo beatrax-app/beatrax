@@ -60,7 +60,6 @@ function makeRuleEvalCanonical(int $userId, int $accountId, ?string $counterpart
         currency: 'EUR',
         settledAmountMinor: -1299,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: $counterpartyName,
         counterpartyIban: null,
         counterpartyNormalized: $counterpartyNormalized,
@@ -147,33 +146,39 @@ it('skips the memory lookup when counterparty_normalized is the empty sentinel',
     expect($row)->toBeNull();
 });
 
-it('memory uses highest occurrence_count when multiple memories exist for the same merchant', function (): void {
-    $merchantId = (int) DB::table('merchants')->insertGetId([
-        'user_id' => $this->user->id,
-        'name' => 'spotify premium',
-        'normalized_name' => 'spotify premium',
+function seedMemoryForMerchant(int $userId, int $merchantId, int $categoryId, int $occurrenceCount, string $lastSeenAt): int
+{
+    return (int) DB::table('merchant_memories')->insertGetId([
+        'user_id' => $userId,
+        'merchant_id' => $merchantId,
+        'category_id' => $categoryId,
+        'occurrence_count' => $occurrenceCount,
+        'last_seen_at' => $lastSeenAt,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
+}
 
-    DB::table('merchant_memories')->insert([
-        'user_id' => $this->user->id,
-        'merchant_id' => $merchantId,
-        'category_id' => $this->streaming->id,
-        'occurrence_count' => 2,
-        'last_seen_at' => CarbonImmutable::now()->toDateTimeString(),
+function seedMerchantOnly(int $userId, string $normalizedName): int
+{
+    return (int) DB::table('merchants')->insertGetId([
+        'user_id' => $userId,
+        'name' => $normalizedName,
+        'normalized_name' => $normalizedName,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
-    DB::table('merchant_memories')->insert([
-        'user_id' => $this->user->id,
-        'merchant_id' => $merchantId,
-        'category_id' => $this->groceries->id,
-        'occurrence_count' => 10,
-        'last_seen_at' => CarbonImmutable::now()->toDateTimeString(),
-        'created_at' => CarbonImmutable::now()->toDateTimeString(),
-        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
-    ]);
+}
+
+// last_seen_at is the primary key of the ordering and occurrence_count only
+// breaks a tie on it. Written with both rows stamped `now()`, the primary key
+// ties and the count is the only thing under test — the assertion held whichever
+// way round the two columns were listed.
+it('ranks memories on last_seen_at first, so a stale count of 10 loses to a fresher 2', function (): void {
+    $merchantId = seedMerchantOnly($this->user->id, 'spotify premium');
+
+    seedMemoryForMerchant($this->user->id, $merchantId, $this->groceries->id, 10, '2026-06-01 10:00:00');
+    $fresher = seedMemoryForMerchant($this->user->id, $merchantId, $this->streaming->id, 2, '2026-08-27 10:00:00');
 
     $evaluator = $this->app->make(RuleEvaluator::class);
     $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
@@ -181,6 +186,23 @@ it('memory uses highest occurrence_count when multiple memories exist for the sa
     $row = $evaluator->lookupMemory($tx, $this->user->id);
 
     expect($row)->not->toBeNull();
+    expect((int) $row->id)->toBe($fresher);
+    expect((int) $row->category_id)->toBe($this->streaming->id);
+});
+
+it('falls back to the highest occurrence_count only where two memories were last seen at the same instant', function (): void {
+    $merchantId = seedMerchantOnly($this->user->id, 'spotify premium');
+
+    seedMemoryForMerchant($this->user->id, $merchantId, $this->streaming->id, 2, '2026-08-27 10:00:00');
+    $strongest = seedMemoryForMerchant($this->user->id, $merchantId, $this->groceries->id, 10, '2026-08-27 10:00:00');
+
+    $evaluator = $this->app->make(RuleEvaluator::class);
+    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Spotify Premium', 'spotify premium');
+
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
+
+    expect($row)->not->toBeNull();
+    expect((int) $row->id)->toBe($strongest);
     expect((int) $row->category_id)->toBe($this->groceries->id);
 });
 
@@ -195,4 +217,36 @@ it('lookupMemory() is public and returns the raw memory row directly', function 
     expect($row)->not->toBeNull();
     expect((int) $row->id)->toBe($seeded['memory_id']);
     expect((int) $row->category_id)->toBe($this->streaming->id);
+});
+
+it('lets the newest correction outrank a long-standing memory', function (): void {
+    // AssignCategory's docblock says overriding a memory-provenance category
+    // needs no divergence prompt because "merchant memory relearns on its own".
+    // Ranked on the occurrence count alone it did not: a correction landed at 1
+    // and the old memory kept winning at 18, so the reader corrected a merchant,
+    // imported again, and silently got the wrong category back.
+    $seeded = seedMerchantAndMemory($this->user->id, 'albert heijn', $this->streaming->id, occurrenceCount: 18);
+
+    DB::table('merchant_memories')
+        ->where('id', $seeded['memory_id'])
+        ->update(['last_seen_at' => '2026-08-01 10:00:00']);
+
+    $correctedId = (int) DB::table('merchant_memories')->insertGetId([
+        'user_id' => $this->user->id,
+        'merchant_id' => $seeded['merchant_id'],
+        'category_id' => $this->groceries->id,
+        'occurrence_count' => 1,
+        'last_seen_at' => '2026-08-27 10:00:00',
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $evaluator = $this->app->make(RuleEvaluator::class);
+    $tx = makeRuleEvalCanonical($this->user->id, $this->account->id, 'Albert Heijn', 'albert heijn');
+
+    $row = $evaluator->lookupMemory($tx, $this->user->id);
+
+    expect($row)->not->toBeNull();
+    expect((int) $row->id)->toBe($correctedId);
+    expect((int) $row->category_id)->toBe($this->groceries->id);
 });

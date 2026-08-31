@@ -6,6 +6,7 @@ namespace Modules\FX\Internal\Jobs;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,9 +16,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
+use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Internal\RateProviderRegistry;
+use Modules\FX\Public\Enums\FxRefreshFailureReason;
+use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\Ledger\Public\Enums\Currency;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -48,8 +53,12 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
         return LockStore::forUniqueJobs();
     }
 
-    public function handle(RateProviderRegistry $registry, DatabaseManager $db, LoggerInterface $logger): void
-    {
+    public function handle(
+        RateProviderRegistry $registry,
+        DatabaseManager $db,
+        LoggerInterface $logger,
+        FxRefreshStatus $status,
+    ): void {
         // Re-checked here rather than trusted from the caller: the UI gate is
         // not a security boundary, and no dispatch path may make a network
         // call for a user who never opted in.
@@ -62,10 +71,22 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
                 'user_id' => $this->userId,
             ]);
 
+            $status->clear($this->userId);
+
             return;
         }
 
-        $result = $registry->fetchCurrentRates();
+        // Recorded on this attempt rather than only from failed(), because the
+        // settings screen waits seconds while the retry backoff runs to twenty
+        // minutes: by the time the last attempt gives up, the reader has been
+        // watching a spinner die with no reason for it.
+        try {
+            $result = $registry->fetchCurrentRates();
+        } catch (AllProvidersFailed $exhausted) {
+            $status->recordFailure($this->userId, FxRefreshFailureReason::AllProvidersFailed);
+
+            throw $exhausted;
+        }
 
         $date = $result['date'];
 
@@ -106,6 +127,10 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
         }
 
         if ($rows === []) {
+            // A feed that answered and left nothing behind writes no row, so the
+            // screen watching for one waits on a write that is never coming.
+            $status->recordFailure($this->userId, FxRefreshFailureReason::NoUsableRates);
+
             return;
         }
 
@@ -114,5 +139,27 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
             ['base_currency', 'quote_currency', 'rate_date', 'source'],
             ['rate', 'updated_at'],
         );
+
+        $status->clear($this->userId);
+    }
+
+    // Laravel calls this as a bare `$command->failed($e)` with no container
+    // resolution, so collaborators cannot be declared as parameters.
+    public function failed(?Throwable $exception): void
+    {
+        $container = Container::getInstance();
+
+        $container->make(FxRefreshStatus::class)->recordFailure(
+            $this->userId,
+            $exception instanceof AllProvidersFailed
+                ? FxRefreshFailureReason::AllProvidersFailed
+                : FxRefreshFailureReason::Unexpected,
+        );
+
+        $container->make(LoggerInterface::class)->warning('FetchFxRatesJob: giving up on the rate refresh.', [
+            'user_id' => $this->userId,
+            'exception' => $exception === null ? null : $exception::class,
+            'message' => $exception?->getMessage(),
+        ]);
     }
 }

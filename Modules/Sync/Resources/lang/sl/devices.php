@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Tvoje naprave',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Seznanjanje, imena naprav in šifriranje so zdaj pri stanju sinhronizacije.',
-    'moved_cta' => 'Odpri Sinhronizacijo in napravo',
     'device_name' => 'Ime naprave',
     'save' => 'Shrani',
     'peer_default_name' => 'Seznanjena naprava',
     'rename_device' => 'Preimenuj napravo',
+    'rename_device_caption' => 'Preimenuj',
     'this_device' => 'Ta naprava',
     'removed' => 'Odstranjeno',
     'confirmed' => 'Potrjeno',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Končna točka releja',
     'relay_endpoint_help' => 'Neobvezno. Ko je nastavljena, se naprave brez povezave sinhronizirajo prek tega releja. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
+    'relay_endpoint_help_phone' => 'Neobvezno. Ko je nastavljena, spremembe potujejo prek tega releja tudi takrat, ko tvoji napravi nista v istem omrežju. Ta naprava jih prevzame, ko sinhroniziraš s tega zaslona — nikoli v ozadju, ker zaklep aplikacije hrani edini ključ. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
     'relay_endpoint_aria' => 'URL končne točke releja',
     'relay_insecure_warning' => 'Ta končna točka releja uporablja navaden HTTP. Čeprav rele tvojih podatkov nikoli ne dešifrira, nezavarovana povezava opazovalcem omrežja razkrije velikosti šifriranih podatkov in čas pošiljanja. Za najboljšo zasebnost uporabi končno točko <strong>https://</strong>.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Odstranjuje se:',
     'remove_rotates_key' => 'Odstranitev te naprave zamenja šifrirni ključ, zato naprava ne prejme nobenih prihodnjih posodobitev.',
     'remove_cannot_erase' => 'Podatkov, ki so že na tej napravi, ne more izbrisati. Če je bila naprava izgubljena ali ukradena, obravnavaj vse podatke na njej kot razkrite.',
+    'remove_is_local' => 'Tvoje druge naprave imajo svoj seznam. Dokler je ne odstraniš tudi tam, se bodo z njo še naprej sinhronizirale.',
     'remove_device' => 'Odstrani napravo',
     'keep_device' => 'Obdrži napravo',
     'rotating_key' => 'Menjava šifrirnega ključa…',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Transakcija',
     'heading' => 'Transakcija',
+    'booked_on' => 'Knjiženo :date',
 
     'counterparty' => 'Druga strana',
     'description' => 'Opis',
@@ -24,6 +25,7 @@ return [
         'note_placeholder' => 'Beleška (opciono)',
         'tax_deductible' => 'Odbitno od poreza',
         'remove_leg_aria' => 'Ukloni ovu kategoriju',
+        'remove_leg_caption' => 'Ukloni',
         'add_category' => '+ Dodaj kategoriju',
         'soft_cap' => ':count od ~20 kategorija — razmisli o grupisanju malih iznosa.',
         'remaining_zero' => 'Preostalo :amount ✓',
@@ -95,7 +97,7 @@ return [
         'heading' => 'Obriši transakciju',
         'help' => 'Trajno uklanja ovu transakciju. Ova radnja ne može da se opozove.',
         'button' => 'Obriši',
-        'confirm_prompt' => 'Da li si siguran?',
+        'confirm_prompt' => 'Obrisati ovu transakciju? S njom nestaju beleška, podela i poreske oznake.',
         'confirm' => 'Da, obriši',
         'cancel' => 'Otkaži',
     ],
@@ -104,12 +106,21 @@ return [
         'view' => 'Prikaži lanac',
     ],
 
+    'unreconcile' => [
+        'heading' => 'Usaglašeno i zaključano',
+        'help' => 'Dovršeno usaglašavanje zaključalo je ovu transakciju. Njena kategorija, beleška, podela i poreske oznake ostaju kakve jesu dok je ne otključaš.',
+        'button' => 'Otključaj za uređivanje',
+        'confirm_question' => 'Otključati ovu transakciju za uređivanje? Na njoj se ništa ne menja, a sledeće dovršeno usaglašavanje je ponovo zaključava.',
+        'cancel' => 'Ostavi je zaključanu',
+    ],
+
     'toast' => [
         'reconciled_locked' => 'Ova transakcija je usaglašena. Poništi usaglašavanje da napraviš izmene.',
         'reclassified_pair_removed' => 'Preklasifikovano u :type — uparivanje uklonjeno',
         'reclassified' => 'Preklasifikovano u :type',
         'note_saved' => 'Beleška sačuvana',
         'unreconciled' => 'Usaglašavanje poništeno — možeš ponovo da uređuješ ovu transakciju.',
+        'note_too_long' => 'Beleška ima najviše :max znak.|Beleška ima najviše :max znaka.|Beleška ima najviše :max znakova.',
         'counterparty_updated' => 'Druga strana ažurirana',
         'goal_attributed' => 'Uračunato u ovaj cilj',
         'goal_attribution_removed' => 'Više se ne uračunava u ovaj cilj',

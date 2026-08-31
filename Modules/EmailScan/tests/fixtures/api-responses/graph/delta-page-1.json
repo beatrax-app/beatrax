@@ -1,0 +1,17 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('local-user%40example.test')/messages/$delta",
+    "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$deltatoken=walked-abc",
+    "value": [
+        {
+            "id": "ics-sample-statement-notice",
+            "subject": "Je nieuwe maandafschrift staat klaar",
+            "receivedDateTime": "2026-05-12T06:00:13Z",
+            "from": {
+                "emailAddress": {
+                    "name": "ICS Cards",
+                    "address": "noreply@ics.nl"
+                }
+            }
+        }
+    ]
+}

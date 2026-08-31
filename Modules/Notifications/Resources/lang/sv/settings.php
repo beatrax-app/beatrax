@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Vad du vill få notiser om',
+    'background_note' => 'Beatrax förbereder dem medan appen är öppen. En schemalagd körning i bakgrunden klarar det inte — applåset har den enda nyckeln — så det som väntar hämtas medan du fortsätter använda appen.',
+    'background_note_phone' => 'Beatrax förbereder dem medan appen är öppen. I bakgrunden kan den inte — applåset har den enda nyckeln — så det som väntar kommer nästa gång du öppnar appen.',
 
     'reminders' => [
         'label' => 'Betalningspåminnelser',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Dölj detaljer i notiser',
-        'help' => 'Visa belopp och handlarnamn i själva notisbannern. Stäng av om din skärm kan synas för andra.',
+        'help' => 'Dölj belopp och handlarnamn i själva notisbannern. Slå på om din skärm kan synas för andra.',
     ],
 
     'save' => 'Spara notisinställningar',

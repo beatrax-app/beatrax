@@ -26,13 +26,11 @@ return [
     'dismiss_title' => 'Skjul fra visningen (ændrer ikke logfilen)',
     'dismiss_aria' => 'Skjul logposten fra visningen',
     'totals' => [
-        'showing' => 'Viser',
-        'of' => 'af',
-        'received' => 'modtagne (buffergrænse 10k)',
-        'lines_today' => 'linjer i dag',
+        'showing' => 'Viser :shown af :count modtaget linje (buffergrænse :cap)|Viser :shown af :count modtagne linjer (buffergrænse :cap)',
+        'lines_today' => ':count linje i dag|:count linjer i dag',
+        'lines_today_capped' => 'over :count linje i dag|over :count linjer i dag',
         'today' => 'i dag',
-        'across' => 'fordelt på',
-        'daily_files' => 'daglige filer',
+        'all_files' => ':size fordelt på :count daglig fil|:size fordelt på :count daglige filer',
     ],
 
     'status' => [

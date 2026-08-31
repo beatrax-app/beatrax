@@ -6,6 +6,8 @@ return [
     'eyebrow' => 'Kviitungid e-postist (valikuline)',
     'h1' => 'Lase Beatraxil ostukirju jälgida',
     'lede' => 'Ühenda Gmail või Outlook, et tellimuste kinnitused ja tellimuste kviitungid seotaks automaatselt sinu tehingutega. Võid selle vahele jätta ja hiljem lisada.',
+    'h1_phone' => 'Ostukirju jälgitakse lauaarvutis',
+    'lede_phone' => 'Tellimuste kinnitused ja tellimuste kviitungid seotakse lauaarvuti rakenduses automaatselt sinu tehingutega ja jõuavad sünkroonimise kaudu sellesse telefoni. Selles telefonis ei loe miski sinu posti, seega jäta see samm siin vahele ja ühenda lauaarvutis.',
 
     'mini' => [
         'signin_label' => 'Logi sisse',

@@ -133,7 +133,7 @@ it('does not detect a fresh install when at least one user exists', function ():
         'username' => 'partner',
         'password' => bcrypt('not-the-real-password'),
         'period_start_day' => 1,
-        'default_currency_view' => 'EUR',
+        'default_currency_view' => 'eur_only',
         'receipt_conflict_resolution' => 'unset',
     ]);
 
@@ -177,7 +177,7 @@ it('lets requests through when no migrations are pending and at least one user e
         'username' => 'existing',
         'password' => bcrypt('not-the-real-password'),
         'period_start_day' => 1,
-        'default_currency_view' => 'EUR',
+        'default_currency_view' => 'eur_only',
         'receipt_conflict_resolution' => 'unset',
     ]);
 
@@ -275,7 +275,7 @@ it('does not redirect to welcome once at least one user exists (post-signup runt
         'username' => 'partner',
         'password' => bcrypt('not-the-real-password'),
         'period_start_day' => 1,
-        'default_currency_view' => 'EUR',
+        'default_currency_view' => 'eur_only',
         'receipt_conflict_resolution' => 'unset',
     ]);
 

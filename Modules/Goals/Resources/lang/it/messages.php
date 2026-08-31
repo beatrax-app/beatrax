@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Aggiungi contributi per vedere una proiezione',
         'not_enough_history' => 'Storico ancora insufficiente per stimare una data',
         'no_recent_contributions' => 'Nessun versamento recente su cui basare una stima',
+        'too_far_to_date' => 'Troppo lontano per una data a questo ritmo',
         'est' => 'Stima :date ·',
         'projection_note' => '(proiezione)',
         'projected' => 'Previsto: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Altre azioni per :name',
         'mark_complete' => 'Segna come completato',
+        'mark_complete_caption' => 'Segna',
         'archive' => 'Archivia',
         'restore' => 'Ripristina',
     ],
 
-    'archived_disclosure' => 'Obiettivi archiviati (:count)',
+    'archived_disclosure' => 'Obiettivo archiviato (:count)|Obiettivi archiviati (:count)',
 
     'form' => [
         'title_edit' => 'Modifica obiettivo',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Inserisci un nome per il tuo obiettivo.',
         'date' => 'Scegli una data obiettivo.',
+        'date_invalid' => 'Scegli una data reale.',
+        'date_before_start' => 'Scegli una data pari o successiva all\'inizio dell\'obiettivo.',
+        'generic' => 'Impossibile salvare l\'obiettivo. Controlla i campi e riprova.',
         'amount' => 'Inserisci un importo valido maggiore di zero.',
         'pot_linked_category' => 'Questo salvadanaio è collegato a una categoria. Rimuovi prima quel collegamento nella pagina Salvadanai.',
+        'pot_already_linked' => 'Questo salvadanaio finanzia già un altro obiettivo. Rimuovi prima quel collegamento.',
+        'pot_missing' => 'Quel salvadanaio non è più disponibile. Scegline un altro, oppure lascia questo obiettivo senza collegamento.',
     ],
 ];

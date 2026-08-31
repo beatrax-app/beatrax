@@ -9,9 +9,9 @@ use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 
 // The boundary-compliant seam for a rate refresh: cross-module callers must not
 // reach into Internal\Jobs\FetchFxRatesJob directly.
-final class DispatchFxRatesRefresh
+final readonly class DispatchFxRatesRefresh
 {
-    public function __construct(private readonly Dispatcher $bus) {}
+    public function __construct(private Dispatcher $bus) {}
 
     public function __invoke(int $userId): void
     {

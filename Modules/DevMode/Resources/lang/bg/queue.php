@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Изтрий :count задача|Изтрий :count задачи',
     'empty_pending' => 'Опашката е празна.',
     'empty_failed' => 'Няма неуспешни задачи.',
-    'empty_batches' => 'Няма активни партиди.',
+    'empty_batches' => 'Няма партиди.',
     'select_aria' => 'Избери',
     'select_row_aria' => 'Избери ред :key',
     'col_id' => 'Id',
     'col_queue' => 'Опашка',
     'col_attempts' => 'Опити',
+    'col_state' => 'Състояние',
     'col_created' => 'Създадено',
     'col_uuid' => 'Идентификатор',
     'col_failed' => 'Неуспешно',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Изчакващи',
     'col_actions' => 'Действия',
     'delete_job' => 'Изтрий задачата',
+    'worker_running' => 'Работникът я изпълнява',
     'delete_pending_confirm' => 'Да се изтрие изчакващата задача #:key?',
     'retry_job' => 'Опитай задачата отново',
     'forget_confirm' => 'Да се премахне неуспешната задача :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Избраните неуспешни задачи ще се върнат в опашката, за да ги опита отново работният процес.',
     'cancel' => 'Отказ',
 
+    'state' => [
+        'available' => 'Готова',
+        'reserved' => 'Заета',
+        'scheduled' => 'Насрочена',
+    ],
+
     'tab' => [
         'pending' => 'Изчакващи',
         'failed' => 'Неуспешни',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Изчакващата задача е изтрита',
+        'pending_already_gone' => 'Задачата вече я нямаше',
         'failed_requeued' => 'Неуспешната задача е върната в опашката',
         'failed_removed' => 'Неуспешната задача е премахната',
         'batch_cancelled' => 'Партидата е отменена',
         'batch_deleted' => 'Партидата е изтрита',
         'batch_failures_requeued' => 'Неуспехите на партидата са върнати в опашката',
+        'batch_failures_none' => 'Няма останали неуспехи в партидата за повторно нареждане',
         'failed_jobs_requeued' => 'Неуспешните задачи са върнати в опашката',
+        'failed_jobs_none' => 'Няма останали неуспешни задачи за повторно нареждане',
         'bulk_refused' => 'Груповото изтриване е отказано — :reason',
         'rows_deleted' => 'Избраните редове са изтрити',
     ],

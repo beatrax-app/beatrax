@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Напредък на настройката',
     'step_progress' => 'Стъпка :current от :total',
-    'step_dot_aria' => 'Стъпка :number от :total',
 
     'eyebrow_step' => 'Стъпка :number — ',
 ];

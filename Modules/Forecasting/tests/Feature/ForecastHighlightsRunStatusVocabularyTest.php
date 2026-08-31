@@ -51,7 +51,7 @@ function fvRun(object $context, JobRunStatus $status, int $pointMinor): void
     DB::table('forecast_runs')->insert([
         'user_id' => $context->user->id,
         'scenario_id' => null,
-        'horizon_days' => ForecastHighlightsQuery::HORIZON_DAYS,
+        'horizon_days' => ForecastHighlightsQuery::TILE_HORIZON,
         'started_at' => $now,
         'completed_at' => $now,
         'status' => $status->value,

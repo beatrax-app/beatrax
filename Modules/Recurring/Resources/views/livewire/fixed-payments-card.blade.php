@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Recurring\Internal\Enums\FixedPaymentsFilter')
 {{--
     Inline dashboard card — top six approved recurring series by
     monthly equivalent, with a filter toggle (`All series` /
@@ -29,33 +30,22 @@
             role="group"
             aria-label="{{ Lang::get('recurring::fixed_payments.filter_aria') }}"
         >
-            <button
-                type="button"
-                wire:click="setFilter('all')"
-                @class([
-                    'rounded-md px-2 py-1',
-                    'bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $filter === 'all',
-                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $filter !== 'all',
-                ])
-            >{{ Lang::get('recurring::fixed_payments.filter_all') }}</button>
-            <button
-                type="button"
-                wire:click="setFilter('this-month')"
-                @class([
-                    'rounded-md px-2 py-1',
-                    'bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $filter === 'this-month',
-                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $filter !== 'this-month',
-                ])
-            >{{ Lang::get('recurring::fixed_payments.filter_this_month') }}</button>
+            @foreach (FixedPaymentsFilter::cases() as $filterOption)
+                <button
+                    type="button"
+                    wire:click="setFilter('{{ $filterOption->value }}')"
+                    @class([
+                        'rounded-md px-2 py-1',
+                        'bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $activeFilter === $filterOption,
+                        'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $activeFilter !== $filterOption,
+                    ])
+                >{{ Lang::get($filterOption->labelKey()) }}</button>
+            @endforeach
         </div>
     </header>
 
     @if (count($rows) === 0)
-        @if ($filter === 'this-month')
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::fixed_payments.empty_this_month') }}</p>
-        @else
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::fixed_payments.empty_all') }}</p>
-        @endif
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get($activeFilter->emptyKey()) }}</p>
     @else
         {{-- ============================================================
              PHONE card-list (visible only at <768px)
@@ -93,7 +83,7 @@
                     <div class="min-w-0 flex-1">
                         <a
                             href="{{ route('recurring.series.show', ['seriesId' => $row->seriesId]) }}"
-                            class="block truncate text-sm font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
+                            class="tap-link block truncate text-sm font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                         >{{ $row->displayName() }}</a>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             <x-core::status-pill class="uppercase tracking-wide">{{ $row->direction }}</x-core::status-pill>

@@ -47,11 +47,10 @@ function previewRow(int $index, PreviewRowStatus $status = PreviewRowStatus::New
         rowIndex: $index,
         status: $status,
         accountId: 1,
-        bookedAt: '2026-02-01',
+        postedAt: '2026-02-01',
         counterpartyName: 'Row '.$index,
         counterpartyIban: null,
         description: null,
-        categoryName: null,
         amountMinor: -100 - $index,
         currency: 'EUR',
         error: null,
@@ -188,6 +187,53 @@ it('says so when a result holds a window rather than the whole run', function ()
         ->and($preview?->totalRows())->toBe(PreviewCache::RESULT_ROW_WINDOW + 20)
         ->and($preview?->errorRows())->toBe(52)
         ->and($preview?->importableRows())->toBe(PreviewCache::RESULT_ROW_WINDOW + 20 - 52);
+})->group('phase-2');
+
+// ParseStage's mbox arm counts every message and yields only the ones that
+// parsed, so a preview's rowIndex values are the source's, with gaps. Renaming
+// by chunk arithmetic reads those as positions and lands one row over.
+it('renames the row the reader clicked when the source row indexes skip a message', function (): void {
+    $rows = [];
+    for ($position = 0; $position < PreviewKeys::CHUNK_ROWS + 10; $position++) {
+        $rows[] = previewRow($position + 1);
+    }
+    storePreview(792, $rows);
+
+    $target = PreviewKeys::CHUNK_ROWS + 5;
+
+    expect($this->cache->applyAliasInPlace(792, $target, 'Albert Heijn'))->toBeTrue();
+
+    $renamed = array_values(array_filter(
+        $this->cache->rows(792, 0, count($rows)),
+        static fn (PreviewRowDto $row): bool => $row->aliasFriendlyName !== null,
+    ));
+
+    expect($renamed)->toHaveCount(1)
+        ->and($renamed[0]->rowIndex)->toBe($target);
+})->group('phase-2');
+
+// The head's rowCount counts preview rows, so it is no bound on a source index
+// at all: an mbox that carried more mail than receipts hands the wizard indexes
+// past it, and every rename on that run was refused.
+it('renames a row whose source index runs past the number of rows in the preview', function (): void {
+    $rows = [];
+    for ($position = 0; $position < PreviewKeys::CHUNK_ROWS + 10; $position++) {
+        $rows[] = previewRow($position * 2);
+    }
+    storePreview(793, $rows);
+
+    $target = (PreviewKeys::CHUNK_ROWS + 2) * 2;
+
+    expect($this->cache->applyAliasInPlace(793, $target, 'Jumbo'))->toBeTrue()
+        ->and($this->cache->applyAliasInPlace(793, 1, 'Never Written'))->toBeFalse();
+
+    $renamed = array_values(array_filter(
+        $this->cache->rows(793, 0, count($rows)),
+        static fn (PreviewRowDto $row): bool => $row->aliasFriendlyName !== null,
+    ));
+
+    expect($renamed)->toHaveCount(1)
+        ->and($renamed[0]->rowIndex)->toBe($target);
 })->group('phase-2');
 
 it('drops every chunk of a run when the run is forgotten', function (): void {

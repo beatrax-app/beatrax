@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\OpenBanking\Internal\Enums\ConsentStatus;
 
 final readonly class OpenBankingConnectionView
 {
-    /**
-     * @param  'connected'|'expiring'|'expired'  $consentStatus
-     */
     public function __construct(
         public int $connectionId,
         public bool $enabled,
         public string $institutionId,
         public string $bankDisplayName,
-        public string $consentStatus,
+        public ConsentStatus $consentStatus,
         public ?CarbonImmutable $consentExpiresAt,
         public ?CarbonImmutable $lastSuccessfulSyncAt,
         public ?CarbonImmutable $lastAttemptAt,
@@ -24,11 +22,4 @@ final readonly class OpenBankingConnectionView
         public string $aggregator,
         public string $whatsFetched,
     ) {}
-
-    // last_attempt_status is 'ok' on success and never null once an attempt
-    // has run, so anything else is a failure.
-    public function lastAttemptFailed(): bool
-    {
-        return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';
-    }
 }

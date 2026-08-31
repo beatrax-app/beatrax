@@ -62,7 +62,7 @@ final class EmitSavingsPromptsJob implements ShouldBeUniqueUntilProcessing, Shou
                 name: $insight->name,
                 monthlyMinor: $insight->monthlyMinor,
                 currency: $insight->currency,
-                message: $insight->message,
+                messageKey: $insight->messageKey,
                 actionUrl: $insight->actionUrl,
             ));
         }

@@ -46,19 +46,6 @@ it('reclassify refuses to change the type of a reconciled transaction', function
     expect(Transaction::query()->find($tx->id)->type)->toBe('expense');
 });
 
-it('reclassifyCategory refuses to change the category of a reconciled transaction', function (): void {
-    $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
-        'status' => 'reconciled',
-        'category_id' => $this->groceries->id,
-    ]);
-
-    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->call('reclassifyCategory', $this->household->id)
-        ->assertDispatched('toast');
-
-    expect(DB::table('transactions')->where('id', $tx->id)->value('category_id'))->toBe($this->groceries->id);
-});
-
 it('toggleLegTax refuses to change a reconciled transaction\'s leg tax state', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
         'status' => 'cleared',

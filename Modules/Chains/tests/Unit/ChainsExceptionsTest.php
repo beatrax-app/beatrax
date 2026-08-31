@@ -28,10 +28,10 @@ it('names the statement and user a lookup failed for', function (): void {
 });
 
 it('names the call site whose evidence would not encode', function (): void {
-    $e = new EvidenceEncodingFailedException('hint event');
+    $e = new EvidenceEncodingFailedException('insert helper');
 
-    expect($e->context)->toBe('hint event')
+    expect($e->context)->toBe('insert helper')
         ->and($e->getMessage())->toContain('chain_links.evidence')
-        ->and($e->getMessage())->toContain('hint event')
+        ->and($e->getMessage())->toContain('insert helper')
         ->and($e)->toBeInstanceOf(RuntimeException::class);
 });

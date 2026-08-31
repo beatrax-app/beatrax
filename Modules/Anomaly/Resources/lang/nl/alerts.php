@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'basislijn :baseline → werkelijk: :actual',
+    'charged' => 'afgeschreven :actual',
     'detected' => 'gedetecteerd :date',
     'sensitivity' => 'gevoeligheid :percent van 100',
 

@@ -6,6 +6,14 @@ namespace Modules\Sync\Internal\Transport\Noise;
 
 final class NoiseSymmetricState
 {
+    // BLAKE2b HASHLEN for this protocol suite, and the length of everything
+    // derived at it: the chaining key, the handshake hash, and each half of an
+    // HKDF split. Deliberately NOT the sibling's PUBLIC_KEY_BYTES — that the
+    // two are both 32 is a coincidence of the suite, not a shared definition.
+    private const int HASH_BYTES = 32;
+
+    private const int HKDF_OUTPUT_BYTES = self::HASH_BYTES * 2;
+
     /** @var string 32-byte chaining key */
     private string $ck;
 
@@ -21,10 +29,10 @@ final class NoiseSymmetricState
     {
         $nameLen = strlen($protocolName);
 
-        if ($nameLen <= 32) {
-            $this->h = str_pad($protocolName, 32, "\0");
+        if ($nameLen <= self::HASH_BYTES) {
+            $this->h = str_pad($protocolName, self::HASH_BYTES, "\0");
         } else {
-            $this->h = sodium_crypto_generichash($protocolName, '', 32);
+            $this->h = sodium_crypto_generichash($protocolName, '', self::HASH_BYTES);
         }
 
         $this->ck = $this->h;
@@ -35,9 +43,9 @@ final class NoiseSymmetricState
     // zeroed by the caller immediately after passing to mixKey.
     public function mixKey(string $inputMaterial): void
     {
-        $temp = sodium_crypto_generichash($inputMaterial, $this->ck, 64);
-        $this->ck = substr($temp, 0, 32);
-        $k = substr($temp, 32, 32);
+        $temp = sodium_crypto_generichash($inputMaterial, $this->ck, self::HKDF_OUTPUT_BYTES);
+        $this->ck = substr($temp, 0, self::HASH_BYTES);
+        $k = substr($temp, self::HASH_BYTES, self::HASH_BYTES);
         sodium_memzero($temp);
 
         $this->cipher = new NoiseCipherState($k);
@@ -46,7 +54,7 @@ final class NoiseSymmetricState
 
     public function mixHash(string $data): void
     {
-        $this->h = sodium_crypto_generichash($this->h.$data, '', 32);
+        $this->h = sodium_crypto_generichash($this->h.$data, '', self::HASH_BYTES);
     }
 
     // If cipher not yet initialised (pre-mixKey), returns plaintext and
@@ -92,9 +100,9 @@ final class NoiseSymmetricState
      */
     public function split(): array
     {
-        $temp = sodium_crypto_generichash('', $this->ck, 64);
-        $k1 = substr($temp, 0, 32);
-        $k2 = substr($temp, 32, 32);
+        $temp = sodium_crypto_generichash('', $this->ck, self::HKDF_OUTPUT_BYTES);
+        $k1 = substr($temp, 0, self::HASH_BYTES);
+        $k2 = substr($temp, self::HASH_BYTES, self::HASH_BYTES);
         sodium_memzero($temp);
 
         $c1 = new NoiseCipherState($k1);

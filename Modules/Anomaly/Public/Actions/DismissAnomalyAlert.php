@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Modules\Anomaly\Internal\Enums\DismissedAs;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
@@ -15,12 +16,12 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Plain dismiss: records no suppression rule — that is
 // DismissAnomalyAlertAsExpected's job.
-final class DismissAnomalyAlert
+final readonly class DismissAnomalyAlert
 {
     public function __construct(
-        private readonly AnomalyAlertStateMachine $stateMachine,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
+        private AnomalyAlertStateMachine $stateMachine,
+        private Dispatcher $events,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $alertId, User $user): void
@@ -35,7 +36,9 @@ final class DismissAnomalyAlert
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        if ($alert->state === AnomalyAlertState::Dismissed->value) {
+        // A second tab, or the paired device, acting on a row this one still
+        // shows as open is a no-op, not a 500: acknowledged is terminal.
+        if (! AnomalyAlertState::from($alert->state)->allows(AnomalyAlertState::Dismissed)) {
             return;
         }
 
@@ -47,13 +50,13 @@ final class DismissAnomalyAlert
             'user_dismissed',
             'user',
             null,
-            ['dismissed_as' => 'dismissed', 'actioned_at' => $now->toDateTimeString()],
+            ['dismissed_as' => DismissedAs::Dismissed->value, 'actioned_at' => $now->toDateTimeString()],
         );
 
         $this->events->dispatch(new AnomalyAlertDismissed(
             userId: $user->id,
             anomalyAlertId: $alertId,
-            dismissedAs: 'dismissed',
+            dismissedAs: DismissedAs::Dismissed,
         ));
     }
 }

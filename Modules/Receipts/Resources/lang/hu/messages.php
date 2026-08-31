@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Húzz ide egy e-mail üzenetet (.eml) vagy egy postafiók-archívumot (.mbox). Az illesztő felismeri a PayPal-bizonylatokat, és kanonikus tranzakcióként jeleníti meg őket; az illesztetlen feladók besorolásra várva az auditnaplóban maradnak.',
-    ],
-
     'conflict' => [
 
         'field' => [

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Okategoriserat',
+    'no_counterparty' => 'Ingen motpart',
+    'unavailable_counterparty' => 'Motparten finns inte på den här enheten',
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'subtitle' => 'Sätt ihop en rapport utifrån dina transaktioner.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Anpassat intervall',
         'from' => 'Från',
         'to' => 'Till',
+        'error' => [
+            'incomplete' => 'Välj både ett start- och ett slutdatum.',
+            'malformed' => 'Använd ett giltigt datum i formatet ÅÅÅÅ-MM-DD.',
+            'inverted' => 'Slutdatumet ligger före startdatumet.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filter',
+        'net_worth_note' => 'Nettoförmögenhet är ett saldo: bara kontofiltret gäller.',
     ],
 
     'compare' => 'Jämför med föregående period',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Diagram i :currency — :list visas inte',
+        'undrawn' => 'Inte i ringen — :amount går åt andra hållet',
         'bar_title' => 'Klicka på en stapel för att visa dess transaktioner',
         'line_title' => 'Klicka på en punkt för att visa dess transaktioner',
         'donut_title' => 'Klicka på ett segment för att visa dess transaktioner',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Avgifter och justeringar (ej medräknade)',
+    'other_movement_with_refunds' => 'Avgifter, återbetalningar och justeringar (ej medräknade)',
 ];

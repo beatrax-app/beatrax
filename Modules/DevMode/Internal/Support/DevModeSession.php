@@ -8,7 +8,7 @@ namespace Modules\DevMode\Internal\Support;
 // ADVANCED_KEY fails open and leaves Advanced armed across logins.
 final class DevModeSession
 {
-    public const ADVANCED_KEY = 'dev_mode.advanced';
+    public const string ADVANCED_KEY = 'dev_mode.advanced';
 
-    public const ADVANCED_SEEN_KEY = 'dev_mode.advanced_session_seen';
+    public const string ADVANCED_SEEN_KEY = 'dev_mode.advanced_session_seen';
 }

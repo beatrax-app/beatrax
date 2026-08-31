@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Suscripciones →',
     'disclaimer' => 'Enlaces oficiales del corpus de soporte — Beatrax nunca cancela ni cambia nada por ti.',
     'dismiss_aria' => 'Descartar la sugerencia',
+    'dismiss_caption' => 'Descartar',
 
     'insight' => [
         'cheaper_message' => ':name puede tener un plan más barato: pagas :monthly/mes.',

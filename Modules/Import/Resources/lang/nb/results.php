@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Last opp en ny kontoutskrift',
 
+    'chain' => [
+        'heading' => 'Løser opp kjeder…',
+        'pending' => 'I kø. Kjedeløseren starter snart.',
+        'running' => 'Kobler sammen finansieringskjeder og deler opp oppgjør fra kontoutskriften.',
+    ],
+
     'issues' => [
         'row' => 'Rad :row: :reason',
         'file_stopped' => 'Filen kunne ikke leses lenger enn til rad :row. Ingenting etter den raden ble importert.',

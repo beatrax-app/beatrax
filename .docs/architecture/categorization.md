@@ -24,16 +24,15 @@ payment-type filter, ...) and one assignment (the `category_id` to
 apply on match). Every row carries `user_id` — rules are per-user, never
 shared (see [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md)).
 
-Each rule carries a **specificity score** computed at save time from the
-shape of the conditions: more conditions = higher specificity; narrower
-conditions (exact IBAN match) = higher than broader conditions
-(description substring); user-authored rules score higher than
-default-seed rules of equivalent shape.
-
-The categorizer walks the user's rules in **descending specificity order**
-and stops at the first rule whose conditions match the transaction. The
-matched rule's `category_id` is applied. If no rule matches, layer 2
-takes over.
+Each rule carries an integer `priority`. `RuleEngine::match()` reads the
+user's active rules ordered by `priority` ascending then `id` ascending,
+evaluates **every** one of them, and returns all that fired — there is no
+short-circuit and no early exit. `RuleApplier` then folds the fired rules'
+actions in that same order, so the **last** matching rule wins: a rule at
+priority 10 overrides a rule at priority 1. The full account, including
+what makes a rule fire and how a rule with no conditions is handled, is
+[Rule evaluation order](../features/categorization/rule-evaluation-order.md).
+If no fired rule carries a category action, layer 2 takes over.
 
 ### Layer 2: Per-user merchant memory
 
@@ -50,32 +49,28 @@ suffixes (`PAY ID 12345`, `*MERCHANT REF`), and provider prefixes
 merchant with different transaction-IDs in their descriptions both
 match the same memory row.
 
-Memory rows carry an `occurrences` counter that increments on every
-match. A memory row with high occurrences plus 100% same-category
-agreement counts as more confident than a row with one observation.
+Memory rows carry an `occurrence_count` that increments on every match,
+and a `last_seen_at`. `RuleEvaluator::lookupMemory()` orders by
+`last_seen_at` descending, then `occurrence_count` descending, then `id`
+descending, and takes the first row. Recency leads deliberately: on the
+count alone a fresh correction at one observation could never beat a
+stale memory at eighteen, and the reader would get the category they had
+just corrected away.
 
-## The ≥40% confidence gate
+## When nothing is applied
 
-The auto-category stage applies a category only if its match confidence
-clears the ≥40% gate. Confidence is computed differently per layer:
+There is no confidence score and no numeric gate. A transaction is left
+uncategorised when no rule fired with a category action **and** the
+merchant memory has no row for its normalised counterparty — which is
+also the case for a row whose counterparty could not be normalised at
+all.
 
-- **Rule match**: confidence = `rule.specificity_score / max_possible_score`.
-  A user-authored exact-IBAN rule clears the gate immediately. A
-  default-seed substring rule does not, unless the substring is unusual.
-- **Merchant-memory match**: confidence = `same_category_count / total_count`
-  for the matched memory row. A new memory row (one observation) starts
-  at 100% but is also one observation; the auto-category stage requires
-  both confidence ≥40% AND a minimum observation count.
-
-Transactions that fail the gate are left uncategorised. They surface
-in the `/triage` queue where the user manually assigns a category;
-that action records a merchant memory (or strengthens an existing one)
-and the next similar transaction clears the gate.
-
-The gate's purpose is high precision over high recall — better to leave
-a transaction uncategorised than to assign the wrong category and
-silently mis-train the memory layer. The triage UI is the explicit
-catch-up surface; the dashboard surfaces "X transactions need
+Uncategorised rows surface in the `/triage` queue where the user assigns
+a category by hand; that action records a merchant memory (or strengthens
+an existing one) and the next transaction from the same merchant lands on
+its own. The posture is precision over recall — better to leave a
+transaction uncategorised than to assign the wrong category and silently
+mis-train the memory layer. The dashboard surfaces "X transactions need
 categorising" so the work doesn't accumulate invisibly.
 
 ## The default seed set
@@ -89,10 +84,11 @@ settlements map to Transfers. The seed is intentionally small — high
 precision on a handful of universally-true patterns, leaving everything
 else to the per-user learning loop.
 
-A user can disable or modify any seed rule. The default rules carry a
-flag distinguishing them from user-authored rules, and the specificity
-calculation breaks ties in favour of user-authored rules so an explicit
-user override always beats the seed.
+A user can disable or modify any seed rule; deactivating one removes it
+from the candidate set entirely rather than skipping it later. A user
+rule that must beat a seed rule does so by carrying the higher
+`priority`, since the last matching rule is the one whose category
+lands.
 
 ## The receipt-vs-statement enrichment conflict resolver
 
@@ -130,9 +126,9 @@ or memory level.
   from it unless the user explicitly imports an entry into their own
   rules table.
 - **No LLM inference.** The matchers are deterministic regex and
-  substring + counterparty + amount-range conditions. The trade-off
-  (visible explainability vs the higher recall an LLM would offer)
-  was made explicitly during Phase 7.
+  substring + counterparty + amount-range conditions. The trade-off is
+  deliberate: visible explainability over the higher recall an LLM
+  would offer.
 - **No re-categorisation of past transactions when a new rule lands.**
   The triage UI lets the user retro-categorise on demand; the
   categorizer does not silently re-walk history when rules change.
@@ -153,4 +149,4 @@ or memory level.
 - `Modules/Categorization/Database/Migrations/` — the schema for
   rules, conflicts, and the per-user conflict-resolution preference.
 - `Modules/Categorization/tests/` — the contract tests covering
-  specificity scoring, the confidence gate, and conflict resolution.
+  evaluation order, merchant-memory lookup, and conflict resolution.

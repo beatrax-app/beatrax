@@ -24,6 +24,17 @@ final class EnableBankingFixtures
         return self::decode(self::root().'/enable-banking-transactions.json');
     }
 
+    // A zero-decimal currency, kept out of the EUR fixture above so the
+    // parity contract's pinned row counts stay pinned: a whole-yen figure and
+    // one with a fractional part no yen can hold.
+    /**
+     * @return array{transactions: list<array<string, mixed>>, continuation_key: mixed}
+     */
+    public static function jpyTransactions(): array
+    {
+        return self::decode(self::root().'/enable-banking-transactions-jpy.json');
+    }
+
     /**
      * @return array{balances: list<array<string, mixed>>}
      */

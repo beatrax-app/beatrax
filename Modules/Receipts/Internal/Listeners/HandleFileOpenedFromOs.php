@@ -11,10 +11,10 @@ use Modules\Desktop\Public\Events\FileOpenedFromOs;
 // to the eml extension and persists the validated path into Desktop's
 // session-scoped pending-intent store via its Public contract only —
 // never reaching into Modules\Desktop\Internal directly.
-final class HandleFileOpenedFromOs
+final readonly class HandleFileOpenedFromOs
 {
     public function __construct(
-        private readonly RemembersPendingFileIntent $intent,
+        private RemembersPendingFileIntent $intent,
     ) {}
 
     public function handle(FileOpenedFromOs $event): void

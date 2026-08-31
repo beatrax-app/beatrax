@@ -48,8 +48,8 @@ That holds for **Pest test names** too, and the arch test scans the `it()`,
 `test()` and `describe()` literals as well as the comments. A test name is read
 at a failure, where what broke is the useful thing to know and which requirement
 row it traces to is not. Names and comments read the *same* pattern — they
-drifted apart once, and 19 `Wave`/`issue #` names survived a 420-name sweep
-because of it. Standards names share the shape an identifier has, so `SHA-256`
+drifted apart once, and identifiers went on living in test names because only
+comments were being read. Standards names share the shape an identifier has, so `SHA-256`
 and its neighbours sit in a named allow-list in that test — extend the list
 rather than working around the pattern. A regex character class that merely
 reads as an identifier is exempted as an exact literal, never by loosening the
@@ -60,8 +60,8 @@ not just the `{{-- --}}` form. A `{{-- --}}` block is inline HTML to the PHP
 tokeniser, so the token-based passes cannot see one and a separate pass lifts
 them out of the raw source; the `//` and `/* */` comments inside an `@php`,
 `<?php` or `<script>` island are invisible for exactly the same reason, and
-gating only the first form left 26 identifiers sitting in the other half of the
-same files. JS written into an Alpine attribute (`x-data`, `x-on:…`) is *not*
+gating only the first form left identifiers sitting untouched in the other half
+of the same files. JS written into an Alpine attribute (`x-data`, `x-on:…`) is *not*
 scanned — an attribute value has nowhere to put a comment. A `UI-SPEC
 §`-section reference is a pointer into a living document rather than a
 requirement identifier, and stays. The
@@ -94,6 +94,33 @@ pass for a clean one.
   noun are written together across 26 locales
 - [Translations awaiting a native reader](translations-awaiting-a-native-reader.md)
   — the `i18n-review:` marker, and the standing work-list of strings carrying it
+- [Copy that follows the reader](../features/notifications/reader-language-copy.md)
+  — the seam a stored line keeps its key through, for a column a screen reads
+  back long after the language that wrote it
+- [A translated line has a call site](a-translated-line-has-a-call-site.md) — the
+  four ways a key is assembled, and why parity cannot see a line nothing renders
+- [A call site names a key that resolves](a-call-site-names-a-key-that-resolves.md)
+  — the other direction: a key no locale declares renders as itself, and the four
+  shapes that look broken and are not
+- [A mark that is a picture carries U+FE0F](emoji-presentation-selector.md) — the
+  three characters the two phone engines drew differently, and the one they stay
+  bare for
+- [An icon-only action says its verb on touch](an-icon-only-action-says-its-verb-on-touch.md)
+  — why `title` is not a label on a phone, why the hold is Android's own
+  gesture, and the event order that made a hold archive the row it was naming
+- [Help a reader can open](help-a-reader-can-open.md) — the tip beside a label
+  the screen cannot teach, why its mark is a glyph where an action's is an emoji,
+  and the `@link` that keeps the copy tied to the page it came from
+- [A public Livewire method is a public endpoint](a-public-livewire-method-is-a-public-endpoint.md)
+  — why an unreachable action is two defects rather than one, what the guard
+  counts as a caller, and the six callers a grep cannot see
+- [Which actions ask before they act](which-actions-ask-before-they-act.md) — the
+  order of preference (reversible over a prompt), the three shapes a question
+  takes, and the judgment behind every action left bare
+- [Analyser rules enforced locally](analyser-rules-enforced-locally.md) — the
+  three hosted-analysis rules that now fail on the commit rather than on the
+  dashboard, why each one reports far less than its name suggests, and how each
+  guard was checked against the published figures before it was written
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

@@ -4,6 +4,7 @@
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
     // A row carries the currency it settled in; the reader's base is only the
     // fallback for a row that lost one.
@@ -16,7 +17,7 @@
     $taxState ??= [];
 @endphp
 
-<div class="mx-auto max-w-3xl px-4 py-12">
+<div class="mx-auto max-w-3xl px-4 py-6">
     {{-- Tax tag picker — rendered once for the whole page (not per-row). --}}
     @include('tax::components.tax-tag-popover')
     <header class="mb-8">
@@ -48,9 +49,9 @@
                 name="amount"
                 field-id="cb-amount"
                 :label="Lang::get('cashbook::cash-book.amount', ['symbol' => Money::symbolFor($entryCurrency)])"
-                inputmode="decimal"
+                inputmode="{{ MoneyInput::decimalPlaces($entryCurrency) === 0 ? 'numeric' : 'decimal' }}"
                 wire:model="amount"
-                :placeholder="Lang::get('core::components.amount_placeholder')"
+                :placeholder="MoneyInput::formatAbsMinor(0, $entryCurrency)"
             />
             <div class="space-y-1">
                 <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.date') }}</label>
@@ -112,7 +113,7 @@
                     @endphp
                     <div wire:key="manual-phone-{{ $entry->id }}" class="card-list-item" style="display: flex; justify-content: space-between;">
                         <div style="min-width: 0; flex: 1 1 auto;">
-                            <span class="primary">{{ $entry->counterparty_name }}</span>
+                            <span class="primary">{{ $entry->counterparty_name ?? '—' }}</span>
                             <span class="secondary">
                                 {{ Fmt::shortDate((string) $entry->posted_at) }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
@@ -129,6 +130,7 @@
                             <x-core::emoji-action
                                 tone="danger"
                                 :label="Lang::get('cashbook::cash-book.delete_entry')"
+                                :caption="Lang::get('cashbook::cash-book.delete_entry_caption')"
                                 wire:click="confirmDelete({{ (int) $entry->id }})"
                             >🗑️</x-core::emoji-action>
                         </div>
@@ -157,7 +159,7 @@
                     @endphp
                     <li wire:key="manual-{{ $entry->id }}" class="group flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name }}</p>
+                            <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name ?? '—' }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
                                 {{ Fmt::shortDate((string) $entry->posted_at) }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
@@ -188,6 +190,8 @@
                     </li>
                 @endforeach
             </ul>
+
+            <div class="mt-4">{{ $entries->links() }}</div>
         @endif
     </section>
 </div>

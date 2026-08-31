@@ -6,16 +6,18 @@ namespace Modules\Desktop\Internal\Listeners;
 
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 
-final class ContinuePendingFileIntentAfterLogin
+final readonly class ContinuePendingFileIntentAfterLogin
 {
     public function __construct(
-        private readonly PendingFileIntent $intent,
+        private PendingFileIntent $intent,
     ) {}
 
     public function handle(): void
     {
-        // Read purely for pending()'s realpath()/is_file() side effect, so the next
-        // /desktop/file-staging navigation never finds a vanished file.
+        // Read purely for pending()'s realpath()/is_file() side effect: an
+        // intent whose file went with an unmounted drive is dropped here, so
+        // ContinueToStagedFile does not send the reader to a staging screen
+        // with nothing on it.
         $this->intent->pending();
     }
 }

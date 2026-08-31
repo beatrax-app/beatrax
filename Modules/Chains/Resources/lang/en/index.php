@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Import a few statements (bank, PayPal, card) and the resolver will surface cross-account chains here automatically.',
 
     'no_counterparty' => '(no counterparty)',
-    'open_from_row' => 'Open from-row',
-    'open_to_row' => 'Open to-row',
     'leg_count' => ':count payment|:count payments',
+    'legs_more' => '+ :count more',
     'state_aria' => 'State: :state',
+
+    'state' => [
+        'candidate' => 'Candidate',
+        'confirmed' => 'Confirmed',
+        'rejected' => 'Rejected',
+    ],
 
     'kind' => [
         'paypal_funding' => 'PayPal funding',

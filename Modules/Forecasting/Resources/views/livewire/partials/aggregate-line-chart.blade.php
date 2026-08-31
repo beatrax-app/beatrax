@@ -13,18 +13,21 @@
       - $aggregatePoints : list<array{date: string, point_minor: int}>
       - $aggregateBufferFloor : int                (per-account effective buffers in base currency, in minor)
       - $aggregateCurrency : string                (the reader's base currency)
+      - $chartTestId : string                      (data-testid; the baseline and
+        scenario roll-ups both render this partial and a shared id would make
+        an assertion about one of them true of the other)
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 @use('Modules\Core\Public\Support\Lang')
 @php
     $aggData = array_map(
-        static fn (array $p): array => ['x' => $p['date'], 'y' => $p['point_minor'] / Money::MINOR_UNITS_PER_MAJOR],
+        static fn (array $p): array => ['x' => $p['date'], 'y' => Money::majorUnits($p['point_minor'], $aggregateCurrency)],
         $aggregatePoints,
     );
     $yMin = $aggData === [] ? 0 : min(array_map(static fn ($p) => $p['y'], $aggData)) - 1;
     $yMax = $aggData === [] ? 0 : max(array_map(static fn ($p) => $p['y'], $aggData)) + 1;
-    $bufferValue = $aggregateBufferFloor / Money::MINOR_UNITS_PER_MAJOR;
+    $bufferValue = Money::majorUnits($aggregateBufferFloor, $aggregateCurrency);
 
     $options = [
         // The axis formatter in app.js has no other way to know what these
@@ -140,7 +143,7 @@
     <div
         wire:ignore
         id="{{ $chartElementId }}"
-        data-testid="all-accounts-aggregate-chart"
+        data-testid="{{ $chartTestId }}"
         data-chart-variant="line"
         class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
     ></div>

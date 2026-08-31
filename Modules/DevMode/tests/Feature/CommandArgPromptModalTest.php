@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
 
 function promptUser(string $username): User
@@ -177,3 +178,17 @@ it('refuses a client-side write to the #[Locked] $command property', function ()
         ->dispatch('command-args:prompt', name: 'config:show', tier: 'safe', prefill: [])
         ->set('command', 'db:restore');
 })->throws(CannotUpdateLockedPropertyException::class);
+
+it('answers an unbacked tier with the lock rather than a fatal from CommandTier itself', function (): void {
+    $user = promptUser('arg-prompt-tier-unbacked');
+
+    $probe = fn (mixed $tier) => fn () => Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'config:show', tier: CommandTier::Safe->value, prefill: [])
+        ->set('claimedTier', $tier);
+
+    expect($probe('-1'))->toThrow(CannotUpdateLockedPropertyException::class);
+    expect($probe(['a' => 'b']))->toThrow(CannotUpdateLockedPropertyException::class);
+    expect($probe(''))->toThrow(CannotUpdateLockedPropertyException::class);
+    expect($probe(CommandTier::Destructive->value))->toThrow(CannotUpdateLockedPropertyException::class);
+});

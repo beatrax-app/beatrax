@@ -6,10 +6,13 @@ namespace Modules\Counterparties\Public\Queries;
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Counterparties\Internal\Actions\LabelCounterparty;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -21,11 +24,11 @@ final readonly class CounterpartyTriageQueue
 {
     // The queue is capped, not paged: a user with more than 200 unknowns
     // only ever sees the 200 most recently updated.
-    private const SCAN_LIMIT = 200;
+    private const int SCAN_LIMIT = 200;
 
-    private const CONFIDENCE_HIGH = 80;
+    private const int CONFIDENCE_HIGH = 80;
 
-    private const CONFIDENCE_MEDIUM = 60;
+    private const int CONFIDENCE_MEDIUM = 60;
 
     public function __construct(
         private DatabaseManager $db,
@@ -47,6 +50,16 @@ final readonly class CounterpartyTriageQueue
         $rawRows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->where('type', CounterpartyType::Unknown->value)
+            // Excluded before the cap, so an ignored row never spends one of the
+            // 200 slots. A ?queue_first={id} naming it is the reader asking for
+            // that row, which outranks a standing "stop offering me this one".
+            ->where(static function (Builder $scope) use ($queueFirstId): void {
+                LabelCounterparty::excludeIgnored($scope);
+
+                if ($queueFirstId !== null) {
+                    $scope->orWhere('id', $queueFirstId);
+                }
+            })
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit(self::SCAN_LIMIT)
@@ -98,7 +111,8 @@ final readonly class CounterpartyTriageQueue
         // Unknown, not empty: hydrate() makes whatever lands here the model's
         // own value, and the two nullable columns say "we have none" with null.
         // display_name is not nullable, so there the blank stands.
-        $row->display_name = $decrypted['display_name'];
+        $storedName = is_string($decrypted['display_name']) ? $decrypted['display_name'] : '';
+        $row->display_name = CounterpartyDefaultName::resolve($storedName, $row->metadata ?? null);
         $row->merchant_name = $decrypted->isUnreadable('merchant_name') ? null : $decrypted['merchant_name'];
         $row->iban = $decrypted->isUnreadable('iban') ? null : $decrypted['iban'];
 
@@ -176,11 +190,15 @@ final readonly class CounterpartyTriageQueue
         );
     }
 
+    // Same predicate as the queue itself: a badge counting rows the reader has
+    // already dismissed sends them to a screen with nothing on it.
     public function unknownCountForUser(User $user): int
     {
-        return $this->db->connection()->table('counterparties')
+        $query = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
-            ->where('type', CounterpartyType::Unknown->value)
-            ->count();
+            ->where('type', CounterpartyType::Unknown->value);
+        LabelCounterparty::excludeIgnored($query);
+
+        return $query->count();
     }
 }

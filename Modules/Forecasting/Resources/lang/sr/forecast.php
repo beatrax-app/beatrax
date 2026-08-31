@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Upoređeno sa polaznim scenariom iznad',
 
+    'run_failed' => 'Ovu projekciju nije bilo moguće izračunati. Linija ispod prikazuje samo ono što je već proknjiženo.',
+
     'scenario_editor_aria' => 'Uređivač scenarija',
     'series_confidence' => 'Pouzdanost serije',
     'no_series_contribute' => 'Nijedna serija još ne utiče na prognozu ovog računa.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Ažuriranje',
     'chart_noscript' => 'Grafikon zahteva JavaScript. Raspon obuhvata :days dan.|Grafikon zahteva JavaScript. Raspon obuhvata :days dana.|Grafikon zahteva JavaScript. Raspon obuhvata :days dana.',
     'total_balance' => 'Ukupno stanje',
+    'projection_range' => 'Raspon prognoze',
+    'point_estimate' => 'Tačkasta procena',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, pouzdanost :confidence — raspon prognoze je :percent procenata tačkaste procene',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Najniže u 30 dana',
     'next_ics' => 'Sledeće ICS namirenje: :amount na dan :date',
     'ics_overdue' => 'ICS namirenje je dospelo: :amount, rok je bio :date',
+
+    'stale_run' => 'Projekcija od :date — od tada nije osvežena.',
+
+    'confidence' => [
+        'high' => 'Visoka',
+        'medium' => 'Srednja',
+        'low' => 'Niska',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Iznos je obavezan.',
+        'amount_decimals' => 'Iznos mora biti broj sa najviše :decimals decimalom.|Iznos mora biti broj sa najviše :decimals decimale.|Iznos mora biti broj sa najviše :decimals decimala.',
+        'amount_whole' => 'Iznos mora biti ceo broj — ova valuta nema manju jedinicu.',
+        'amount_non_negative' => 'Iznos mora biti nula ili pozitivan.',
+        'amount_non_zero' => 'Iznos ne sme biti nula.',
+        'field_required' => 'Polje :field je obavezno.',
+    ],
 ];

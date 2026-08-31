@@ -79,7 +79,11 @@ it('reads the migration import run once however many rows it promotes', function
 
     app(PromoteStagingToDomain::class)->promote($this->runId, $this->user);
 
-    expect($statements)->toBe(2);
+    // Look, insert, then read the new id back by the same match — three, and
+    // three for six hundred rows as much as for one. The read-back is not
+    // insertGetId() because lastInsertId() is per connection, and the badge
+    // listener writes a `cache` row from inside that INSERT's own event.
+    expect($statements)->toBe(3);
 });
 
 it('files every promoted row under one import run', function (): void {

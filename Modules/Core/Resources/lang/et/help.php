@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Teave: :subject',
+        'close' => 'Sulge',
+    ],
+
     'page_title' => 'Kus mu andmed on?',
     'intro' => 'Beatrax hoiab kõike selles seadmes. Midagi ei saadeta serverisse, midagi ei sünkroonita pilve ja midagi ei lahku sellest seadmest enne, kui sa selle ise ekspordid.',
 

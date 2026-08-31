@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Cik viegli Beatrax uzskata maksājumu par neparastu šim tirgotājam vai kategorijai, no 1 līdz 100. Augstāks atzīmē vairāk.',
 
     'min_amount_label' => 'Minimālā maksājuma summa',
-    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā centos (:symbol) — 1000 nozīmē :example.',
+    'min_amount_help' => 'Ignorēt novirzes maksājumiem, kas mazāki par šo summu. Glabā mazākajās vienībās (:symbol) — :minor nozīmē :example.',
 
     'save' => 'Saglabāt noviržu iestatījumus',
     'saved' => 'Saglabāts.',

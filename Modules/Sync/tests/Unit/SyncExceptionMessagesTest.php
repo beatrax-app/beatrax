@@ -66,8 +66,8 @@ it('says which path the secret material could not reach', function (): void {
         ->toContain('0600')
         ->and(SecretFileException::couldNotFinalizeKeyring(42)->getMessage())
         ->toContain('user 42')
-        ->and(SecretFileException::couldNotReadIdentity()->getMessage())
-        ->toContain('device identity');
+        ->and(SecretFileException::couldNotReadStagedPlaintext('/tmp/x.tmp')->getMessage())
+        ->toContain('/tmp/x.tmp');
 });
 
 // Every one of these is caught, if at all, as a RuntimeException somewhere up
@@ -127,7 +127,7 @@ it('says which relay file could not be written', function (): void {
         ->toContain('/data/secrets/relay.token');
 });
 
-// Named per operation rather than shared, because the four guarded methods
+// Named per operation rather than shared, because the guarded methods all
 // fail for the same reason but a maintainer needs to know which one a caller
 // reached before the handshake finished.
 it('names the session operation attempted before the handshake', function (string $operation): void {
@@ -135,7 +135,7 @@ it('names the session operation attempted before the handshake', function (strin
 
     expect($e->getMessage())->toContain("SyncSession::{$operation}")
         ->and($e->getMessage())->toContain('session not authenticated yet');
-})->with(['encrypt', 'decrypt', 'sendOps', 'receiveOps']);
+})->with(['encrypt', 'decrypt', 'receiveOps']);
 
 // A decryption failure says nothing about the build, so it must not read like
 // one — it means the ciphertext was altered, replayed, or sent under another

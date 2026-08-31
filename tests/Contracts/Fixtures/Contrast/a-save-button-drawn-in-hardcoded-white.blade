@@ -1,0 +1,28 @@
+{{-- The Tax popover footer as it shipped, kept here so the guard can be run
+     against the defect without the production file being broken again. The
+     product owner found it on a phone in dark mode: white on #f1f5f9, 1.10:1. --}}
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <button
+        type="button"
+        wire:click="saveTaxCategory"
+        style="
+            background: var(--color-text, #0f172a);
+            color: #fff;
+            border: 0;
+            border-radius: var(--radius-sm, 0.25rem);
+            padding: 8px 16px;
+            font-size: var(--text-base, 15px);
+            font-weight: 600;
+            cursor: pointer;
+            min-height: 44px;
+        "
+        data-testid="picker-save"
+    >Save</button>
+    <button
+        type="button"
+        style="background: transparent; border: 0; color: var(--color-text-muted, #64748b);"
+    >Untag</button>
+</div>
+<div class="fee-bar-fill" style="width: 40%; background: var(--color-amber);"></div>
+<span style="background: {{ $on ? 'var(--color-emerald-bg)' : 'transparent' }}; color: {{ $on ? 'var(--color-emerald)' : 'var(--color-text-muted)' }};">2025</span>
+<span style="{{ $chip }}">A style this file cannot read</span>

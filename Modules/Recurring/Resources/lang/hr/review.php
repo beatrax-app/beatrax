@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Uredi naziv',
     'edit_name_aria' => 'Preimenuj ponavljajuću seriju :id',
     'new_name_label' => 'Novi naziv za ovu seriju',
+    'load_more' => 'Učitaj još',
     'save' => 'Spremi',
 
     'toast' => [

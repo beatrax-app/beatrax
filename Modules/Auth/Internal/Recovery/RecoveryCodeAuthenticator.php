@@ -7,36 +7,41 @@ namespace Modules\Auth\Internal\Recovery;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 use stdClass;
 
-final class RecoveryCodeAuthenticator
+final readonly class RecoveryCodeAuthenticator
 {
-    private const GROUP_LENGTH = 4;
+    private const int GROUP_LENGTH = 4;
 
     // A fixed bcrypt count per attempt, matching the ten codes issued, so
     // response time never separates a missing username from a wrong code.
-    private const HASH_OPS = 10;
+    // Kept at ten and not lowered — that is the real cost of ten independently
+    // salted hashes; ResetPasswordAction caps how often it can be spent.
+    private const int HASH_OPS = 10;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
-        private readonly Clock $clock,
-        private readonly RecoveryCodeNormalizer $normalizer,
-        private readonly SystemAlertWriter $alerts,
+        private DatabaseManager $db,
+        private Hasher $hasher,
+        private Clock $clock,
+        private RecoveryCodeNormalizer $normalizer,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function verify(string $usernameInput, string $codeInput): ?User
     {
-        /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>}> $alerts */
+        /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>, once: bool}> $alerts */
         $alerts = [];
 
         /** @var User|null $result */
         $result = $this->db->connection()->transaction(function () use ($usernameInput, $codeInput, &$alerts): ?User {
             $connection = $this->db->connection();
-            $username = strtolower(trim($usernameInput));
+            $username = Username::normalize($usernameInput);
 
             /** @var User|null $user */
             $user = User::query()->where('username', $username)->first();
@@ -55,7 +60,8 @@ final class RecoveryCodeAuthenticator
 
             // An unknown username has no owner to warn, and a user_id=null
             // alert shows to everyone, so recording one would let an
-            // unauthenticated caller flood every banner.
+            // unauthenticated caller flood every banner. A KNOWN username was
+            // the other half of that flood, which is why the row below is one.
             if ($user instanceof User) {
                 $alerts[] = self::failureAlert($user);
             }
@@ -66,7 +72,9 @@ final class RecoveryCodeAuthenticator
         // After commit: the alert is the owner's own row and has to reach
         // their other device, which only the writer arranges.
         foreach ($alerts as $alert) {
-            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message'], $alert['metadata']);
+            $alert['once']
+                ? $this->alerts->raiseOnceForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message'], $alert['metadata'])
+                : $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message'], $alert['metadata']);
         }
 
         return $result;
@@ -117,27 +125,38 @@ final class RecoveryCodeAuthenticator
         return implode('-', $groups);
     }
 
-    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>} */
+    // A redemption spends a code, so there are ten of these at most and each
+    // one is a distinct thing that happened.
+    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>, once: bool} */
     private static function successAlert(User $user): array
     {
+        $line = CopyLine::of('core::alerts.messages.auth_recovery_code_consumed', ['username' => $user->username]);
+
         return [
             'userId' => $user->id,
             'kind' => 'auth.recovery_code_consumed',
             'severity' => 'warning',
-            'message' => "Recovery code used by {$user->username}.",
-            'metadata' => ['username' => $user->username],
+            'message' => $line->sentence(),
+            'metadata' => StoredCopy::inParams($line) + ['username' => $user->username],
+            'once' => false,
         ];
     }
 
-    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>} */
+    // A failure spends nothing, so nothing caps how many arrive. One open row
+    // says everything a hundred would, and a mistyped sheet no longer buries
+    // the reader's own banner under critical rows.
+    /** @return array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>, once: bool} */
     private static function failureAlert(User $user): array
     {
+        $line = CopyLine::of('core::alerts.messages.auth_recovery_code_failed', ['username' => $user->username]);
+
         return [
             'userId' => $user->id,
             'kind' => 'auth.recovery_code_failed',
             'severity' => 'critical',
-            'message' => "Failed recovery code attempt for {$user->username}.",
-            'metadata' => ['username' => $user->username],
+            'message' => $line->sentence(),
+            'metadata' => StoredCopy::inParams($line) + ['username' => $user->username],
+            'once' => true,
         ];
     }
 }

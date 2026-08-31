@@ -6,10 +6,10 @@ namespace Modules\Auth\Public\Services;
 
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 
-final class BiometricKeyBlobCodec
+final readonly class BiometricKeyBlobCodec
 {
     public function __construct(
-        private readonly AppLockKeyWrap $keyWrap,
+        private AppLockKeyWrap $keyWrap,
     ) {}
 
     /**

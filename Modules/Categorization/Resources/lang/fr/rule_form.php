@@ -24,6 +24,7 @@ return [
     'to' => 'à',
     'text_placeholder' => 'ex. SPOTIFY',
     'remove_condition' => 'Supprimer la condition',
+    'remove_condition_caption' => 'Supprimer',
     'add_condition' => '+ Ajouter une condition',
 
     'then' => 'Alors',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Ajouter à la suite',
     'deduction_category_aria' => 'Catégorie de déduction pour l\'action :number',
     'remove_action' => 'Supprimer l\'action',
+    'remove_action_caption' => 'Supprimer',
     'add_action' => '+ Ajouter une action',
 
     'this_year_only' => 'Cette année seulement ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Les actions de marquage fiscal s\'appliquent à la prochaine réapplication, pas à l\'import en cours.',
 
     'priority' => 'Priorité',
-    'priority_help' => 'Les nombres les plus bas passent en premier. Les règles sans champs communs n\'entrent jamais en conflit.',
+    'priority_help' => 'Les règles s\'exécutent du plus petit numéro vers le plus grand, donc le numéro le plus élevé l\'emporte lorsque deux règles définissent le même champ. Les règles sans champs communs n\'entrent jamais en conflit.',
 
     'cancel' => 'Annuler',
     'save_changes' => 'Enregistrer les modifications',

@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Muuda nime',
     'edit_name_aria' => 'Muuda korduvmaksete seeria :id nime',
     'new_name_label' => 'Selle seeria uus nimi',
+    'load_more' => 'Laadi veel',
     'save' => 'Salvesta',
 
     'toast' => [

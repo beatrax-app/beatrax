@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Pravidla zůstávají v tomto zařízení. Nesdílejí se s vašimi ostatními zařízeními.',
 
     'reapply' => 'Použít pravidla znovu na historii',
+    'reapply_confirm' => 'Použít znovu všechna pravidla na celou tvou historii? Každá kategorie, protistrana, poznámka i daňový štítek, které tam pravidlo dalo, se přepíšou. Co je nastavené ručně, zůstane, a stejně tak vše na odsouhlaseném výpisu. Staré hodnoty už nic nevrátí.',
     'reapplying' => 'Aplikuje se…',
     'new_rule' => 'Nové pravidlo',
 
-    'reapply_progress_lead' => 'Pravidla se znovu aplikují…',
-    'reapply_progress_of' => 'z',
-    'reapply_progress_trail' => 'zkontrolovaných transakcí',
+    'reapply_progress' => 'Pravidla se znovu aplikují… :checked z :count zkontrolované transakce|Pravidla se znovu aplikují… :checked z :count zkontrolovaných transakcí|Pravidla se znovu aplikují… :checked z :count zkontrolovaných transakcí',
 
     'empty_heading' => 'Zatím žádná pravidla',
     'empty_body' => 'Pravidla porovnávají transakce podle několika podmínek a automaticky mění kategorii, protistranu, poznámku i daňový štítek — při importu a pokaždé, když je znovu použiješ na svou dosavadní historii.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Vytvořeno',
     'col_row_actions' => 'Akce',
     'inactive_badge' => 'Vypnuto',
+    'combinator_all' => 'VŠECHNY',
+    'combinator_any' => 'LIBOVOLNÁ',
     'inactive_title' => 'Toto pravidlo neběží. Pravidlo se vypne, když je smazána kategorie nebo protistrana, na kterou odkazuje.',
 
     'more_conditions' => '+:count dalších',

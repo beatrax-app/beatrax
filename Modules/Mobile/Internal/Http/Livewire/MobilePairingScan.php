@@ -44,17 +44,17 @@ final class MobilePairingScan extends Component
 
     // Read once by MobileLockScreen::mount(). A public property cannot carry
     // it across navigate:false, which is a full page load.
-    public const LOCKED_IDENTITY_FLASH = 'mobile.pairing.locked_identity';
+    public const string LOCKED_IDENTITY_FLASH = 'mobile.pairing.locked_identity';
 
     // Put, not flashed: the lock screen render, the PIN post and the redirect
     // back are three requests, and a flash survives only the first.
-    public const TYPED_CODE_SESSION = 'mobile.pairing.typed_code';
+    public const string TYPED_CODE_SESSION = 'mobile.pairing.typed_code';
 
     // `native:` plus the PHP event class the plugin fired. Plain strings
     // because the plugin lives only in mobile-app/vendor, unresolvable here.
-    private const EVENT_CODE_SCANNED = 'native:Native\Mobile\Events\Scanner\CodeScanned';
+    private const string EVENT_CODE_SCANNED = 'native:Native\Mobile\Events\Scanner\CodeScanned';
 
-    private const EVENT_SCANNER_CANCELLED = 'native:Native\Mobile\Events\Scanner\ScannerCancelled';
+    private const string EVENT_SCANNER_CANCELLED = 'native:Native\Mobile\Events\Scanner\ScannerCancelled';
 
     // Stays a string on the wire: a public property is rehydrated straight from
     // the client payload with no enum coercion, so typing it would turn a
@@ -397,7 +397,7 @@ final class MobilePairingScan extends Component
             } catch (Throwable $e) {
                 // The courier throws only when no road home is open at all.
                 // Swallowing that left the user watching a spinner forever.
-                $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
+                $this->flashMessage = Lang::get($this->undeliveredAcceptKey($gateway, $this->importResponderTokenHash, $this->importDesktopDeviceId));
 
                 $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay re-emit failed during poll.', [
                     'user_id' => $userId,
@@ -684,13 +684,20 @@ final class MobilePairingScan extends Component
         $this->redirect($urls->route($route), navigate: false);
     }
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, PairingGateway $gateway): View
     {
+        // Read here rather than at submit: reach() is a config lookup that
+        // touches no network, so the screen can say a typed code has nothing to
+        // find BEFORE thirty-two base-32 characters of one are typed into it.
+        $typedCodeCanFindPeer = $gateway->lanDiscoveryReach()->silenceMeansNoPeers();
+
         // Under its own name, not $step: view data cannot shadow a public
         // property, and the view needs the resolved enum rather than the raw
         // string the client last put on the wire.
         $view = $views->make('mobile::livewire.mobile-pairing-scan', [
             'wizardStep' => $this->currentStep(),
+            'typedCodeCanFindPeer' => $typedCodeCanFindPeer,
+            'entryNotice' => $this->entryArmNotice($typedCodeCanFindPeer),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

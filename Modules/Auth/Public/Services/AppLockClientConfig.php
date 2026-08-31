@@ -6,14 +6,15 @@ namespace Modules\Auth\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Enums\Duration;
 
 // One source of truth for "does this session have a lock at all", read by the
 // layout that emits window.beatraxIdleMs and by LockEngageController, so the
 // client and server halves of that gate cannot drift.
-final class AppLockClientConfig
+final readonly class AppLockClientConfig
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private DatabaseManager $db,
     ) {}
 
     // No row or lock_enabled off means nothing exists that could release a
@@ -57,6 +58,6 @@ final class AppLockClientConfig
             ? (int) $row->idle_timeout_minutes
             : 5;
 
-        return $minutes * 60_000;
+        return $minutes * Duration::Minute->milliseconds();
     }
 }

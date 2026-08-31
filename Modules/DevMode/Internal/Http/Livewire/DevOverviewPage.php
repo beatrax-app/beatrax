@@ -52,23 +52,29 @@ final class DevOverviewPage extends Component
         ]);
     }
 
+    // The age governs the wording of the label and the ttl rides along as a
+    // replacement, which is how one key carries two numbers.
     /**
      * @return array{label: string, secondsAgo: ?int}
+     *
+     * @link ../../../../../.docs/conventions/counted-nouns-in-copy.md#a-phrase-carrying-a-count-and-a-cap
      */
     private function resolveWorkerHeartbeat(CacheRepository $cache, CarbonImmutable $now): array
     {
         $raw = $cache->get(WriteWorkerHeartbeat::CACHE_KEY);
         if (! is_int($raw) && ! (is_string($raw) && ctype_digit($raw))) {
-            return ['label' => 'NOT RUNNING', 'secondsAgo' => null];
+            return ['label' => Lang::get('dev::overview.not_running'), 'secondsAgo' => null];
         }
         $timestamp = is_int($raw) ? $raw : (int) $raw;
         $secondsAgo = $now->getTimestamp() - $timestamp;
-        if ($secondsAgo < 0 || $secondsAgo > WriteWorkerHeartbeat::TTL_SECONDS) {
-            return ['label' => 'NOT RUNNING', 'secondsAgo' => null];
+        if ($secondsAgo < 0 || $secondsAgo > WriteWorkerHeartbeat::ttlSeconds()) {
+            return ['label' => Lang::get('dev::overview.not_running'), 'secondsAgo' => null];
         }
 
         return [
-            'label' => $secondsAgo.'s ago · ttl '.WriteWorkerHeartbeat::TTL_SECONDS.'s',
+            'label' => Lang::choice('dev::overview.heartbeat_age', $secondsAgo, [
+                'ttl' => WriteWorkerHeartbeat::ttlSeconds(),
+            ]),
             'secondsAgo' => $secondsAgo,
         ];
     }

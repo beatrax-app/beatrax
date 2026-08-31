@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Trascina qui un messaggio email (.eml) o un archivio di casella (.mbox). Il matcher riconosce le ricevute PayPal e le presenta come transazioni canoniche; i mittenti non riconosciuti restano nel log di audit per lo smistamento.',
-    ],
-
     'conflict' => [
 
         'field' => [

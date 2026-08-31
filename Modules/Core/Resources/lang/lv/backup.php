@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Šis tālrunis nevar saglabāt failu, ko lietotne tam nodod, tāpēc šifrētā dublējuma kopija tiek veidota datora lietotnē. Savieno šo ierīci, lai abas paliktu sinhronizētas.',
+        'no_download_route' => 'Šī lietotne nevar nodot failu tavai ierīcei, tāpēc šifrētais dublējums tiek veidots datora lietotnē. Savieno šo ierīci, lai abas paliktu sinhronizētas.',
         'unavailable' => 'Šifrēti dublējumi ir pieejami darbvirsmas (SQLite) versijā. Servera datubāzē izmantojiet pašas datubāzes dublēšanas rīkus.',
         'intro' => 'Lejupielādējiet ar paroles frāzi šifrētu visas datubāzes kopiju — to var droši glabāt ārējā diskā vai mākonī, jo bez paroles frāzes tā nav nolasāma (kvantu drošs XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Paroles frāze',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Fails netika augšupielādēts līdz galam. Iespējams, tas ir pārāk liels šai ierīcei — atjaunošana datora lietotnē pieņem lielāku dublējumu.',
         'enter_passphrase' => 'Ievadiet paroles frāzi, ar kuru dublējums tika šifrēts.',
         'unreadable' => 'Augšupielādēto failu neizdevās nolasīt. Mēģiniet vēlreiz.',
+        'restore_wrong_passphrase' => 'Šī paroles frāze šo dublējumu neatvēra, un nekas netika mainīts. Ievadiet to vēlreiz un mēģiniet vēlreiz. Ja tā noteikti ir pareiza, fails pēc izveides ir mainīts — tad atjaunojiet no citas kopijas.',
+        'restore_not_a_backup' => 'Šis fails nav šifrēts Beatrax dublējums, tāpēc nav ko atjaunot un nekas netika mainīts. Izvēlieties .enc failu, ko lietotne ierakstīja dublējuma izveides laikā.',
+        'restore_contents_unreadable' => 'Dublējums atvērās, bet tajā esošā datubāze ir bojāta, tāpēc tā netika atjaunota un nekas netika mainīts. Atjaunojiet no vecāka dublējuma.',
+        'restore_could_not_read' => 'Dublējuma failu neizdevās nolasīt, tāpēc atjaunošana nenotika un nekas netika mainīts. Pārbaudiet, vai ierīcē ir brīva vieta, un mēģiniet vēlreiz.',
+        'restore_not_supported' => 'Atjaunošana darbojas laidienā, kas glabā datus vienā failā, un šis tāds nav, tāpēc nekas netika mainīts. Servera datubāzei izmantojiet tās pašas atjaunošanas rīkus.',
+        'restore_failed' => 'Atjaunošana nenotika, un nekas netika mainīts. Mēģiniet vēlreiz — ja tas joprojām neizdodas, lietotnes žurnālā ir pierakstīts, kas to apturēja.',
     ],
 ];

@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Merge\RowOwnership;
 
 uses(RefreshDatabase::class);
 
@@ -58,10 +59,11 @@ it('can attribute every covered table to a user', function (): void {
     $db = app(DatabaseManager::class);
     $schema = $db->connection()->getSchemaBuilder();
 
-    // Mirrors OpLogEntryApplier::PARENT_SCOPE — a covered table with neither a
-    // user_id column nor a known parent cannot be bounded to an owner, so the
-    // applier refuses to write it at all. Keep the two in step.
+    // Mirrors RowOwnership — a covered table with no user_id column, no known
+    // parent and no self-scope cannot be bounded to an owner, so the applier
+    // refuses to write it at all. Keep the two in step.
     $parentScoped = ['rule_conditions', 'rule_actions'];
+    $ownership = app(RowOwnership::class);
 
     $unattributable = [];
 
@@ -71,6 +73,12 @@ it('can attribute every covered table to a user', function (): void {
         }
 
         if (in_array($table, $parentScoped, true)) {
+            continue;
+        }
+
+        // The row IS the user: attributable by its own primary key, which is
+        // exactly what a table-level check could not see.
+        if ($ownership->isSelfScoped($table)) {
             continue;
         }
 

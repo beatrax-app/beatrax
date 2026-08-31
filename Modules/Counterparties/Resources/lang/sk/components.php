@@ -24,6 +24,10 @@ return [
         'unknown' => 'Neznáme',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankový poplatok',
+    ],
+
     'cp_card' => [
         'aria' => 'Protistrana: :name',
         'recent_aria' => 'Nedávna aktivita',

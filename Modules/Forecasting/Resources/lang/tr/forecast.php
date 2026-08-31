@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Yukarıdaki referansla karşılaştırıldı',
 
+    'run_failed' => 'Bu tahmin hesaplanamadı. Aşağıdaki çizgi yalnızca hâlihazırda kaydedilmiş olanları gösterir.',
+
     'scenario_editor_aria' => 'Senaryo düzenleyici',
     'series_confidence' => 'Seri güveni',
     'no_series_contribute' => 'Bu hesabın tahminine katkıda bulunan henüz bir seri yok.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Güncelleniyor',
     'chart_noscript' => 'Grafik için JavaScript gerekir. Aralık :days günü kapsar.',
     'total_balance' => 'Toplam bakiye',
+    'projection_range' => 'Projeksiyon aralığı',
+    'point_estimate' => 'Nokta tahmini',
 
     'per_month_suffix' => '/ay',
     'confidence_chip_aria' => ':name, :confidence güven — projeksiyon aralığı, nokta tahmininin yüzde :percent kadarı',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => '30 gündeki en düşük',
     'next_ics' => 'Sonraki ICS tahsilatı: :date tarihinde :amount',
     'ics_overdue' => 'ICS tahsilatı gecikti: :amount, son tarih :date',
+
+    'stale_run' => ':date tarihinden öngörüldü — o tarihten beri yenilenmedi.',
+
+    'confidence' => [
+        'high' => 'Yüksek',
+        'medium' => 'Orta',
+        'low' => 'Düşük',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Tutar zorunludur.',
+        'amount_decimals' => 'Tutar en fazla :decimals ondalık basamaklı bir sayı olmalıdır.',
+        'amount_whole' => 'Tutar tam sayı olmalıdır — bu para biriminin daha küçük birimi yoktur.',
+        'amount_non_negative' => 'Tutar sıfır veya pozitif olmalıdır.',
+        'amount_non_zero' => 'Tutar sıfır olamaz.',
+        'field_required' => ':field alanı zorunludur.',
+    ],
 ];

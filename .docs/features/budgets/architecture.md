@@ -4,12 +4,10 @@ The `Budgets` module owns zero-based envelope budgeting: assigning every
 euro of income to a category ("envelope") for the current period, tracking
 what each envelope has spent, and carrying its leftover or shortfall
 forward into the next period. It replaced an earlier flat, period-agnostic
-`category_budgets` ceiling list, which is now write-dead — every write path
-in this module goes through the envelope tables
-(`envelope_assignments`, `envelope_moves`, `envelope_settings`) instead.
-`CategoryBudget`/`BudgetProgressQuery`/`BudgetWriter` remain only as the
-legacy read/write path for the retired `/budgets` predecessor and are not
-exercised by the current `/budgets` grid.
+`category_budgets` ceiling list, which went write-dead at the cutover and
+whose table was dropped once the last reader moved off it. Every read and
+write in this module now goes through the envelope tables
+(`envelope_assignments`, `envelope_moves`, `envelope_settings`).
 
 ## Envelope activation (the hard cutover)
 
@@ -58,12 +56,15 @@ Every live expense category is iterated every period — via
 that happen to have an `envelope_assignments`/`envelope_settings` row, so
 an unassigned-but-spending category still surfaces as an overspent
 €0-assigned envelope instead of silently vanishing. When
-`envelope_activated_at` is null (pre-cutover) there is no genesis anchor
-to walk from, so the fold does not run — but what comes back is not
-zeroes. `unstartedRows()` reads this period's real spend per category, so
-a category already spending against nothing assigned returns a negative
+`envelope_activated_at` is null, `genesisAnchorFor()` falls back to the
+earliest period the user has an `envelope_assignments` row for — a device
+that joined by pairing never receives that column, and reporting every
+synced assignment as zero was the alternative. Only when that fallback is
+empty too is there no anchor to walk from, and what comes back then is
+not zeroes. `unstartedRows()` reads this period's real spend per category,
+so a category already spending against nothing assigned returns a negative
 `availableMinor`, counts toward `overspentCount`, and carries the same
-`nonEurSpentMinor` split the fold applies; "Ready to assign" is the
+`unconvertedSpentMinor` split the fold applies; "Ready to assign" is the
 period's own income, because carry and assigned are both nought
 pre-genesis and income is all the fold would have had to add. An
 all-zero result told a reader with a month's pay banked that they had
@@ -71,9 +72,15 @@ nothing to assign and nothing overspent, on a screen listing two dozen
 categories. The walk
 is bounded `genesis..min(target, current+12)` — it never walks further
 into the future than 12 periods past "now", closing an unbounded
-past/future-walk resource-exhaustion surface. Every read carries an
-explicit `WHERE user_id = ?` — no reliance on a global `UserScope` for
-this cross-module Public service.
+past/future-walk resource-exhaustion surface. Its *length* is capped too,
+at `MAX_WALK_PERIODS`, and the walk is built **backwards from the target**
+so that cap can only ever cost carry-in from beyond it. Built forwards
+from genesis, a cap reached first left the target period unfolded and the
+whole read fell through to `rows => []` — which is the "no expense
+categories yet" empty state, drawn at two dozen of them, for a reader
+whose only fault was an activation anchor decades in the past. Every read
+carries an explicit `WHERE user_id = ?` — no reliance on a global
+`UserScope` for this cross-module Public service.
 
 Per-envelope availability is `available = assigned + carriedIn + netMoved
 
@@ -82,13 +89,16 @@ Per-envelope availability is `available = assigned + carriedIn + netMoved
 `reduce_to_budget` (the default) debits the pool once for the shortfall
 and resets that envelope's carry to zero next period; `carry_negative`
 lets the negative balance itself roll forward untouched, never touching
-the pool. Envelopes are EUR-only; settled spend the ledger holds in other
-currencies (a USD Google Play charge, a non-EUR ICS merchant charge) is
-summed separately into `nonEurSpentMinor` so the grid can *surface* that
-spend rather than silently drop it or collapse it into a EUR total — that
-figure is deliberately never folded into `spentMinor`/`availableMinor`,
-and because it may mix several non-EUR currencies it is only ever a
-"there is spend not shown here" signal, never an authoritative amount.
+the pool. Envelopes are held in the user's base currency, and settled
+spend the ledger holds in another currency is converted into it at the
+rate table's rate and folded into `spentMinor` like any other spend — a
+USD Google Play charge counts against its envelope. What does not fold in
+is spend in a currency the rate table cannot *reach* at all: that is
+summed separately into `EnvelopeRow::$unconvertedSpentMinor` so the grid
+can surface it rather than silently drop it or count it at one to one.
+Because that residue may mix several unreachable currencies it is only
+ever a "there is spend not shown here" signal, never an authoritative
+amount.
 
 `CarryoverQuery` is bound as a request-lifetime singleton so the grid, the
 sticky "Ready to assign" header, and the dashboard glance card share one
@@ -105,9 +115,8 @@ unsafe result cache.
 
 ## The over-budget nudge job (`EmitBudgetNudgesJob`)
 
-Runs hourly per user and reads the *live* envelope model via
-`CarryoverQuery::forUserAndPeriod()` — never the write-dead
-`category_budgets`/`BudgetProgressQuery` path. A row is over its threshold
+Runs hourly per user and reads the envelope model via
+`CarryoverQuery::forUserAndPeriod()`. A row is over its threshold
 when `spentMinor * 100 >= notifyThresholdPercent * (availableMinor +
 spentMinor)`, guarding the case where the budget base
 (`availableMinor + spentMinor`) is zero or negative (no positive budget
@@ -119,17 +128,17 @@ keeping the module boundary one-directional.
 
 Because a queue job has no authenticated web-guard user, but
 `PeriodQuery::current()`/`containing()` are bound to the request-scoped
-`CurrentUser` contract, the job reproduces `PeriodQuery::containing()`'s
-exact period-window algorithm inline, scoped explicitly to the loaded
-user's own `period_start_day`. `CarryoverQuery` also calls `PeriodQuery`
-internally for its own genesis/current-period bounds, and that internal
-dependency can't be bypassed from outside the class — so for the
-*duration* of the `forUserAndPeriod()` call only, the job binds the loaded
-user onto the default auth guard (making every transitive `CurrentUser`
-read inside that call resolve correctly) and always restores whatever
-guard state existed beforehand in a `finally` block, so the job never
-leaves a queue worker process with another user's identity bound to the
-guard after it returns.
+`CurrentUser` contract, the job binds the loaded user onto the default
+auth guard for the *duration* of the period read and the
+`forUserAndPeriod()` call, then always restores whatever guard state
+existed beforehand in a `finally` block — so the job never leaves a queue
+worker process with another user's identity bound to the guard after it
+returns. Inside that window it calls `PeriodQuery::current()` itself
+rather than reproducing the window algorithm: `CarryoverQuery` calls
+`PeriodQuery` internally for its own genesis/current-period bounds anyway
+and that dependency cannot be bypassed from outside the class, so a second
+inline copy of the algorithm would have been one more thing to keep in
+step for nothing.
 
 ## Moving money between envelopes (`EnvelopeWriter::move()`)
 
@@ -144,6 +153,48 @@ envelope negative succeeds outright, which is the correct behavior for
 zero-based budgeting (over-allocation is a normal, expected state here,
 not an error). `undoMove()` hard-deletes both paired rows and dispatches a
 `delete` mutation event for each row's own primary key.
+
+`copyFromPeriod()` ("Copy last month") applies every row of the source
+period inside **one** transaction and dispatches its collected events
+after that single commit, rather than opening a transaction and an event
+per category: a copy that stopped half way left a partially-assigned month
+indistinguishable from a deliberate one. Each source row is **converted**
+out of the currency it was written in and into the reader's base currency
+on the way, because the reader's base currency can have changed since the
+source month: handing the raw minor units on and stamping the new code
+beside them turned USD 500.00 into EUR 500.00 on every envelope of the
+month, from one click. A row in a currency the rate table cannot reach is
+carried across in its own currency instead — the fold surfaces it exactly
+as it surfaced the source, and relabelling is the one thing that must not
+happen.
+
+`setAssigned()` normalises the date it is handed to the start of the period
+that *contains* it, resolved against the **owner's** own `period_start_day`
+via `PeriodQuery::containingForUser()` — never the browsing session's.
+`CarryoverQuery` looks assignments up by an exact `period_start` string
+match, so a row keyed to anything but a real period boundary matches no
+period the fold walks: written, on disk, and read as zero forever. The
+grid and the onboarding step already passed `$period->start`, so for them
+this is the identity; the migration promoter did not, and a YNAB/Actual
+export's `startOfMonth()` budget month landed off-boundary for every
+reader whose month does not start on the 1st. Normalising in the writer
+rather than at each caller is what makes a fourth caller safe by default.
+[`EnvelopePeriodRekeyer`](moving-the-budget-month.md) repairs rows
+already on disk when the reader *moves* their boundary; this stops new
+ones being written off it.
+`move()` keys its paired rows the same way, for the same reason.
+
+`envelope_assignments.currency` and `envelope_moves.currency` are stamped
+from `BaseCurrency::forUser($user)`, never `code()`: `code()` answers for
+whoever the guard carries, and falls through to the install default in a
+console or queued context — two callers of "the user's base currency"
+giving two answers for a writer that was handed the owner explicitly. The
+currency is part of what an edit compares, not only part of what it
+writes: the grid seeds its cell with the figure it printed, so a reader
+re-typing that figure after a reporting-currency switch sends the same
+minor units under a different sign, and a guard reading only
+`assigned_minor` dropped the write as unchanged and left the row
+denominated in the currency they had just left.
 
 `setAssigned()` upserts one `(user, category, period)` row,
 preserving its primary key on edit; setting the amount to zero *deletes*
@@ -160,26 +211,35 @@ commits, never from inside it.
 `Y-m-d` string via the raw query builder rather than through the Eloquent
 model's `'date'` cast: that cast serializes on save using the connection
 grammar's full datetime format (`"Y-m-d 00:00:00"`), which would break the
-fold's exact `where('period_start', 'Y-m-d')` string match. The model's
-own `periodStart()` `Attribute` accessor mirrors this by storing a bare
-date string on write while still returning a `CarbonImmutable` on read, so
-the model and the writer always agree on storage format.
+fold's exact `where('period_start', 'Y-m-d')` string match. There is one
+writer and this is it — `EnvelopeAssignment` carries no cast and no
+accessor for the column, and the assertion that the stored value is a bare
+date is made against `EnvelopeWriter` itself. It used to be made against
+an `Attribute` on the model that no production caller reached, which meant
+the fold's own tests seeded their rows through the model and would have
+stayed green had the writer started storing the datetime form.
 
 ## Public seam
 
 - **Actions/writes** — `EnvelopeWriter` (the sole write path for
   assignments, moves, overspend mode, notify thresholds, copy-last-month),
-  `EnvelopeActivationService` (the cutover), `BudgetWriter` (legacy
-  `category_budgets` path).
+  `EnvelopeActivationService` (the cutover).
 - **Reads** — `CarryoverQuery` (the genesis-to-target fold),
   `EnvelopeBalanceQuery` (per-envelope recent moves, batched across many
-  categories in one query to avoid an N+1 on every grid render),
-  `BudgetProgressQuery` (legacy progress read model; also the
+  categories in one query to avoid an N+1 on every grid render, each row
+  converted into the reader's base currency the way the fold nets it —
+  a line left in its stored units read `+EUR 500.00` beside a moved column
+  reading `EUR 440.18`, off one rate the fold had already applied),
+  `EnvelopeProgressQuery` (the fold reduced to one progress row per
+  envelope that has something to report, which is what `Position`
+  composes its budget status from), `BudgetProgressQuery` (the
   `canBudget()`/`expenseCategories()` category-authorization surface every
   write path re-validates against).
 - **DTOs** — `EnvelopeRow` (one envelope's per-period figures),
-  `EnvelopeMoveRow` (one recent-moves history entry), `BudgetProgressRow`
-  (legacy progress row).
+  `EnvelopeMoveRow` (one recent-moves history entry, carrying the currency
+  its `amountMinor` is denominated in — the reader's, or the row's own when
+  the rate table cannot reach it), `BudgetProgressRow`
+  (one envelope reduced to budget/spent/status).
 - **Events** — `BudgetThresholdCrossed`, dispatched once per envelope that
   crosses its own configured notify threshold; its `$period` field is a
   canonical `Y-m-d` period-start string that must be computed identically
@@ -194,7 +254,23 @@ The Livewire `BudgetsPage` renders the assign-every-euro grid: a sticky
 bounded at the user's genesis and `current + 12` periods, a per-row
 overspend-mode toggle, a "Copy last month" auto-fill offered only when the
 selected period has zero assignments and the prior period has some, and a
-per-row move-money modal with a recent-moves + undo list. All service
+per-row move-money modal with a recent-moves + undo list.
+
+A row prints **every term of its own availability** — assigned, carried
+in, moved, spent, available — because that is the arithmetic
+`CarryoverQuery` did, and printing three of the five terms left the fifth
+underivable. On a demo install the utilities envelope read `Assigned
+EUR 150.00 · Spent EUR 0.00 · Available EUR 425.00`, and nothing on the
+page said where the other EUR 275.00 had come from. The phone card prints
+the two middle terms only when they carry something, since a row where
+both are nought has nothing to explain. Each history line carries the
+move's note as well, which the modal has always asked for and stored. A line
+whose `kind` this build has no case for keeps its date, note, counterpart and
+signed amount and says so instead of picking a direction —
+`envelope_moves.kind` has no CHECK and a peer on a newer version writes its
+own spelling straight through the op log
+([a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)).
+All service
 collaborators arrive as method parameters (no constructor injection,
 project-wide rule for Livewire `Component` subclasses); every action
 re-checks `CurrentUser` before any write. The `periodStartStr` client
@@ -202,9 +278,21 @@ property is always re-validated through `resolvePeriod()` against a strict
 `Y-m-d` round-trip before use, so a malformed value can never reach
 `CarbonImmutable::parse()` uncaught.
 
+The page renders the period `CarryoverQuery::boundedPeriodFor()` hands back,
+never the one its anchor resolved to. The fold clamps a target outside
+`[genesis, current + 12]` and answers for the clamped month, and a page that
+went on drawing the resolved month put two months on one screen: heading,
+moves list and copy banner from one, grid figures from the other. It needs no
+tampered anchor to happen — zeroing the earliest month deletes its rows, and
+with `envelope_activated_at` null genesis follows the earliest row forward,
+straight past the month the reader has open. The clamp lives on
+`CarryoverQuery` beside the fold that applies it, for the same reason
+`genesisPeriodFor()` does: a second copy on the page is how the two came to
+disagree about which months exist.
+
 `EnvelopeGlanceCard` is the dashboard's compact analog: it sources its
-"Ready to assign" figure from the same `CarryoverQuery` fold (never the
-retired `category_budgets` table) and renders one of three states —
+"Ready to assign" figure from the same `CarryoverQuery` fold and renders
+one of three states —
 unauthenticated (card chrome with a null figure, never a blank gap),
 authenticated with zero expense categories (renders nothing at all, since
 envelopes are implicit and a "no envelopes yet" state doesn't exist once

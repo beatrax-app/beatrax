@@ -9,9 +9,92 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 final class TransportFramer
 {
-    private const MAX_PAYLOAD_BYTES = 65536;
+    // Public because the caller that PACKS batches has to predict the same
+    // ceiling this class ENFORCES. Two copies meant a batch packed against one
+    // number and rejected by the other, mid-catch-up, as an OverflowException
+    // nothing on that path catches.
+    public const int MAX_PAYLOAD_BYTES = 65536;
 
-    private const MAX_OPS_PER_FRAME = 1024;
+    public const int MAX_OPS_PER_FRAME = 1024;
+
+    public const int LENGTH_PREFIX_BYTES = 4;
+
+    // A serialized batch opens and closes with the JSON array brackets, and
+    // every entry after the first costs one comma separator.
+    private const int JSON_ARRAY_BRACKETS_BYTES = 2;
+
+    private const int JSON_SEPARATOR_BYTES = 1;
+
+    /** @var \WeakMap<OpLogEntry, int> */
+    private \WeakMap $entrySizes;
+
+    public function __construct()
+    {
+        $this->entrySizes = new \WeakMap;
+    }
+
+    // Whether appending $next would push $batch past either ceiling, answered
+    // by the class that throws when it does. A caller re-deriving the size from
+    // its own copy of entryToArray() is how the budget came to be predicted
+    // against a payload carrying a different user_id than encode() emits.
+    /**
+     * @param  list<OpLogEntry>  $batch
+     */
+    public function wouldOverflow(array $batch, OpLogEntry $next): bool
+    {
+        if (count($batch) >= self::MAX_OPS_PER_FRAME) {
+            return true;
+        }
+
+        return $this->payloadBytes([...$batch, $next]) > self::MAX_PAYLOAD_BYTES;
+    }
+
+    // Whether this entry overflows a frame ON ITS OWN, which no packing can
+    // rescue: one entry is the smallest batch there is, so a caller that keeps
+    // starting a new frame for it only ever reaches encode()'s throw. Asked of
+    // the framer for the same reason wouldOverflow() is — it owns the ceiling.
+    public function exceedsFrameBudget(OpLogEntry $entry): bool
+    {
+        return $this->payloadBytes([$entry]) > self::MAX_PAYLOAD_BYTES;
+    }
+
+    // The exact byte length encode() would produce for this batch, minus the
+    // length prefix — the same json_encode of the same array, counted rather
+    // than built.
+    /**
+     * @param  list<OpLogEntry>  $entries
+     */
+    public function payloadBytes(array $entries): int
+    {
+        $bytes = self::JSON_ARRAY_BRACKETS_BYTES
+            + max(0, count($entries) - 1) * self::JSON_SEPARATOR_BYTES;
+
+        foreach ($entries as $entry) {
+            $bytes += $this->sizeOf($entry);
+        }
+
+        return $bytes;
+    }
+
+    // Memoised on the entry object itself: packIntoFrames() asks about the
+    // same entries once per candidate batch, and re-encoding each of them
+    // every time turned a one-pass walk into a quadratic one.
+    public function sizeOf(OpLogEntry $entry): int
+    {
+        $cached = $this->entrySizes[$entry] ?? null;
+        if (is_int($cached)) {
+            return $cached;
+        }
+
+        $size = strlen(json_encode(
+            $this->entryToArray($entry),
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
+        ));
+
+        $this->entrySizes[$entry] = $size;
+
+        return $size;
+    }
 
     /**
      * @param  list<OpLogEntry>  $entries  Must not be empty and must not exceed MAX_OPS_PER_FRAME.
@@ -54,14 +137,15 @@ final class TransportFramer
      */
     public function decode(string $frame): array
     {
-        if (strlen($frame) < 4) {
-            throw new \UnexpectedValueException(
-                'TransportFramer::decode — frame too short (< 4 bytes length prefix).'
-            );
+        if (strlen($frame) < self::LENGTH_PREFIX_BYTES) {
+            throw new \UnexpectedValueException(sprintf(
+                'TransportFramer::decode — frame too short (< %d bytes length prefix).',
+                self::LENGTH_PREFIX_BYTES,
+            ));
         }
 
         /** @var array{len: int} $unpacked */
-        $unpacked = unpack('Vlen', substr($frame, 0, 4));
+        $unpacked = unpack('Vlen', substr($frame, 0, self::LENGTH_PREFIX_BYTES));
         $length = $unpacked['len'];
 
         if ($length > self::MAX_PAYLOAD_BYTES) {
@@ -72,15 +156,15 @@ final class TransportFramer
             ));
         }
 
-        if (strlen($frame) !== 4 + $length) {
+        if (strlen($frame) !== self::LENGTH_PREFIX_BYTES + $length) {
             throw new \UnexpectedValueException(sprintf(
                 'TransportFramer::decode — frame length mismatch: header says %d bytes, got %d bytes of payload.',
                 $length,
-                strlen($frame) - 4,
+                strlen($frame) - self::LENGTH_PREFIX_BYTES,
             ));
         }
 
-        $payload = substr($frame, 4, $length);
+        $payload = substr($frame, self::LENGTH_PREFIX_BYTES, $length);
 
         try {
             $decoded = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
@@ -96,7 +180,6 @@ final class TransportFramer
             throw new \UnexpectedValueException('TransportFramer::decode — payload is not a JSON array.');
         }
 
-        /** @var list<array<string, mixed>> $rows */
         $rows = array_values($decoded);
 
         if (count($rows) > self::MAX_OPS_PER_FRAME) {
@@ -107,7 +190,29 @@ final class TransportFramer
             ));
         }
 
-        return array_map([$this, 'arrayToEntry'], $rows);
+        return array_map(
+            fn (mixed $row): OpLogEntry => $this->arrayToEntry($this->requireRow($row)),
+            $rows,
+        );
+    }
+
+    // A JSON array proves nothing about its elements, and the docblock above
+    // promises every malformed frame arrives as one exception type. Handing a
+    // list of scalars straight to arrayToEntry() raised a TypeError instead,
+    // contained only because both call sites happen to catch Throwable.
+    /**
+     * @return array<string, mixed>
+     */
+    private function requireRow(mixed $row): array
+    {
+        if (! is_array($row)) {
+            throw new \UnexpectedValueException(
+                'TransportFramer::decode — op entry must be a JSON object.'
+            );
+        }
+
+        /** @var array<string, mixed> $row */
+        return $row;
     }
 
     // Mirrors OpLogEntry::signingPayload()'s field order for auditability

@@ -6,7 +6,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 // DriftEvaluator emits the SERIES direction — 'expense' or 'income', the
@@ -50,7 +50,7 @@ function dndBody(int $userId): string
 
     return (string) $db->connection()->table('notifications')
         ->where('user_id', $userId)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED)
+        ->where('trigger_type', NotificationTrigger::DriftChanged)
         ->value('body');
 }
 

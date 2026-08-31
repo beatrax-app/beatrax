@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Kuvatakse :shown viimast kokku :count seast.',
+
     'drawer_nav' => 'Navigeerimine',
 
     'search_placeholder' => 'Otsi…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Kas soovid oma andmeid ka telefonis näha?',
         'body' => 'Paigalda Beatrax telefoni, et pääseda oma rahaasjadele kiiresti ligi.',
         'dismiss_aria' => 'Peida paigaldamise vihje',
+        'dismiss_caption' => 'Peida',
         'install_app' => 'Paigalda rakendus',
 
         'desktop_html' => 'Ava Beatrax telefoni brauseris ja puuduta „Lisa avakuvale“ — või puuduta Safari jagamismenüüs ikooni <strong style="color: var(--color-text);">⚡</strong>.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Valitud faile: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Vali kuupäev',
         'prev_month' => 'Eelmine kuu',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minut',
         'empty' => 'kellaaega pole valitud',
     ],
+
+    'toast_undo' => 'Võta tagasi',
 
     'veil_locked' => 'Rakendus lukustatud',
 

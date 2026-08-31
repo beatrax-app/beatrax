@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Pievienojiet iemaksas, lai redzētu prognozi',
         'not_enough_history' => 'Vēl nepietiek vēstures, lai prognozētu datumu',
         'no_recent_contributions' => 'Nav nesenu iemaksu, uz kurām balstīt prognozi',
+        'too_far_to_date' => 'Šādā tempā pārāk tālu, lai noteiktu datumu',
         'est' => 'Apt. :date ·',
         'projection_note' => '(prognoze)',
         'projected' => 'Prognoze: :date',
@@ -55,11 +56,16 @@ return [
     'actions' => [
         'more_aria' => 'Vairāk darbību ar :name',
         'mark_complete' => 'Atzīmēt kā pabeigtu',
+        'mark_complete_caption' => 'Atzīmēt',
         'archive' => 'Arhivēt',
         'restore' => 'Atjaunot',
     ],
 
-    'archived_disclosure' => 'Arhivētie mērķi (:count)',
+    // i18n-review: lv · archived_disclosure — Latvian selects the FIRST segment
+    // for zero, so it is written as the genitive plural. The disclosure is drawn
+    // only when at least one goal is archived, so that form never renders here;
+    // confirm the case before this key is reused anywhere it can.
+    'archived_disclosure' => 'Arhivētu mērķu (:count)|Arhivēts mērķis (:count)|Arhivēti mērķi (:count)',
 
     'form' => [
         'title_edit' => 'Rediģēt mērķi',
@@ -95,7 +101,12 @@ return [
     'errors' => [
         'name' => 'Ievadiet mērķa nosaukumu.',
         'date' => 'Izvēlieties mērķa datumu.',
+        'date_invalid' => 'Izvēlieties reālu datumu.',
+        'date_before_start' => 'Izvēlies datumu mērķa sākuma dienā vai vēlāk.',
+        'generic' => 'Mērķi neizdevās saglabāt. Pārbaudiet laukus un mēģiniet vēlreiz.',
         'amount' => 'Ievadiet derīgu summu, kas lielāka par nulli.',
         'pot_linked_category' => 'Šī krājkase ir saistīta ar kategoriju. Vispirms noņemiet šo saiti Krājkasu lapā.',
+        'pot_already_linked' => 'Šī krājkase jau finansē citu mērķi. Vispirms noņem saiti tur.',
+        'pot_missing' => 'Šī krājkase vairs nav pieejama. Izvēlieties citu vai atstājiet šo mērķi bez saites.',
     ],
 ];

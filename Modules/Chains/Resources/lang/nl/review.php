@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Bevestig of wijs kandidaatkoppelingen af die de keten-resolver niet automatisch kon bevestigen.',
 
     'empty_heading' => 'Niets te beoordelen',
-    'empty_body' => 'Elke ketenkoppeling is bevestigd of afgewezen. Nieuwe kandidaten verschijnen hier zodra imports binnenkomen.',
+    'empty_body' => 'Elke koppeling die de resolver kon paren, is bevestigd of afgewezen. Nieuwe kandidaten verschijnen hier zodra imports binnenkomen.',
 
     'auto_confirm_nudge' => 'Nog één bevestiging en vergelijkbare koppelingen worden automatisch bevestigd.',
 

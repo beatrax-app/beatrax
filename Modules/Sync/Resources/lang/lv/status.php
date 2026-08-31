@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Noņemta ierīce',
     'dismiss_peer' => 'Aizvērt šo ierīci',
+    'dismiss_peer_caption' => 'Aizvērt',
     'dismiss_stale' => 'Notīrīt ierīces, kas vairs nav sapārotas',
     'not_synced_yet' => 'Vēl nav sinhronizēts',
     'error' => 'Sinhronizācijas kļūda vienā vai vairākās ierīcēs',

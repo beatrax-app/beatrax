@@ -71,30 +71,40 @@ private re-implementation of it with `100` spelled out; both are gone,
 and `TaxCsvExporter`'s `toDecimalString(abs($minor))` is the shape a
 CSV cell that wants an unsigned figure should copy.
 
-## `MINOR_UNITS_PER_MAJOR` is 100, and that is a real limitation
-
-`Money::MINOR_UNITS_PER_MAJOR = 100` is the scale factor every parse
-and format boundary in the repo multiplies or divides by: three of the
-four `Ingestion` amount parsers — `IcsAmountParser` now delegates its
-arithmetic to `MoneyInput` and does none of its own — plus `MoneyInput`,
-`CashBookPage`, and the amount rendering in the `Calendar`, `Tax`,
-`Forecasting`, `Reports` and `Onboarding` views. That includes the
-chart builders (`ForecastChartView`, `PinnedReportsRow`,
-`RecurringSeriesDetailPage`), which used to divide by a literal `100`
-directly beside blades that used the constant.
+## `MINOR_UNITS_PER_MAJOR` is 100, and that is the fallback, not the rule
 
 A constant only works while every currency in play has two decimal
-places. `Currency` already declares `Jpy = 'JPY'`, and JPY has **zero**
-decimal places — the yen has no minor unit. Anything that builds a
-JPY amount by scaling through this constant is therefore out by a
-factor of 100: a parser reading `1000` yen produces `100000` minor,
+places. `Currency` declares `Jpy = 'JPY'`, and JPY has **zero** decimal
+places — the yen has no minor unit. Anything that builds or renders a JPY
+amount by scaling through `Money::MINOR_UNITS_PER_MAJOR = 100` is out by a
+factor of a hundred: a parser reading `1000` yen produces `100000` minor,
 and `brick/money` — which does know JPY's real scale — renders that as
 ¥100,000.
 
-Making this correct means asking the currency for its own scale
-instead of reading a constant, at every one of the call sites above.
-Until that happens, treat 100 as an assumption the code makes, not a
-property of money.
+Two seams now ask the currency for its own scale rather than reading the
+constant, and both fall back to a hundred only for a code no currency table
+knows:
+
+- **`Money::majorUnits($minor, $currency)`** — the single chart-coordinate
+  seam. `ChartAmount` (Reports), `ForecastChartView`, the forecast
+  aggregate-line blade and `RecurringSeriesDetailPage` all route through
+  it. `ForecastChartView` already handed the axis formatter its own
+  `beatraxCurrency`, so before this the symbol was right and the number was
+  a hundredth of itself: the same page printed `-¥980,000` beside a point
+  plotted at `-9800`.
+- **`MoneyInput`'s own `scaleFor()`**, threaded through `tryToMinor()`,
+  `tryToPositiveMinor()`, `exceedsMax()`, `formatMinor()`,
+  `formatAbsMinor()` and `toDecimalString()` as an optional
+  `?string $currencyCode`. Omitting it keeps the two-decimal assumption,
+  which is what a caller with genuinely no currency in hand wants. At a
+  currency's own scale, a zero-decimal currency accepts no fractional part
+  at all — `tryToMinor('1250.00', 'JPY')` is `null`, not `125000`.
+
+The remaining constant users are the boundaries where no currency is in
+scope: three of the four `Ingestion` amount parsers (`IcsAmountParser`
+delegates to `MoneyInput` and does none of its own) and the amount
+rendering in the `Calendar`, `Tax` and `Onboarding` views. Treat the
+hundred there as an assumption the code makes, not a property of money.
 
 ## `format()` picks the locale from the reader
 
@@ -113,11 +123,13 @@ else — it gave a German or Spanish reader Dutch symbol placement on
 every euro amount, and the requirement is that amounts are formatted
 for the user's locale *including symbol position*.
 
-Three seams on `Locale` carry what ICU knows, transcribed so the
+Four seams on `Locale` carry what ICU knows, transcribed so the
 no-ICU path below can reach the same answer: `symbolBeforeAmount()`,
 `symbolGap()` (a non-breaking space in most languages, nothing in
-English and Turkish) and `signPrecedesSymbol()` — false only in Dutch,
-which writes `€ -1.234,50`.
+English and Turkish), `signPrecedesSymbol()` — false only in Dutch,
+which writes `€ -1.234,50` — and `minusSign()`, which is U+2212 MINUS
+SIGN in Estonian, Finnish, Croatian, Lithuanian, Norwegian, Slovenian
+and Swedish, and the ASCII hyphen in the other nineteen.
 
 Internally this calls `brick/money`'s `formatToLocale()`, **not**
 `formatTo()`. The two do the same thing — `formatTo()` forwards to
@@ -147,7 +159,8 @@ uncaught throw is a 500 on any page that shows money.
 `format()` therefore catches both exception types and falls through to
 `formatWithoutIcu()`, which rebuilds the reader's convention from marks
 the repo carries itself — `Locale::groupMark()`, `decimalMark()`,
-`symbolBeforeAmount()`, `symbolGap()` and `signPrecedesSymbol()`:
+`symbolBeforeAmount()`, `symbolGap()`, `signPrecedesSymbol()` and
+`minusSign()`:
 
 - **English.** Symbol first, no gap, sign leading the whole amount:
   `€1,234.56` and `-$74.43`.
@@ -166,6 +179,15 @@ half, which produced mojibake in every language whose mark is not a
 plain space. That was invisible while only Dutch and English drove the
 formatter and became reachable the moment the locale did.
 
+The marks, the grouping and the symbol's placement live in `MoneyText`,
+not in `Money`: `MoneyInput::formatAbsMinor()` writes the *editable*
+figure the reader edits beside the rendered one, so both have to group
+the same way. While each class carried its own copy they did not — the
+two even disagreed, in their comments, about how many shipped locales
+space their thousands. `Money::formatWithoutIcu()` and
+`Money::formatWholeUnits()` are now both `MoneyText::ofDecimal()` over
+a decimal string `brick` produced.
+
 Every shipped language answers for itself: all twenty-six carry their
 own marks, symbol position and sign order on `Locale`, so the fallback
 never has to invent a convention it does not know. A currency with no
@@ -181,14 +203,34 @@ that always does.
 `Modules/Ledger/tests/Unit/MoneyFormatTest` pins the parts of this
 that are easy to break:
 
-- The fallback output is **byte for byte** what ICU produces, asserted
-  by running the same amount through both `format()` and
-  `formatWithoutIcu()` on a host that does have full ICU data.
-  `formatWithoutIcu()` is public for exactly that reason: the device
-  condition cannot be reproduced where the locale data is present, and
-  a rendering nothing can reach is a rendering nothing checks. Mobile
-  must not read differently from desktop, and if the ICU data ever
-  does arrive, nothing about the rendering changes.
+- The fallback output is **byte for byte** what ICU produces —
+  separators, grouping, symbol position, the gap, the sign's place and
+  the sign's own glyph — asserted by running the same amount through
+  both `format()` and `formatWithoutIcu()` on a host that does have
+  full ICU data. `formatWithoutIcu()` is public for exactly that
+  reason: the device condition cannot be reproduced where the locale
+  data is present, and a rendering nothing can reach is a rendering
+  nothing checks. Mobile must not read differently from desktop, and if
+  the ICU data ever does arrive, nothing about the rendering changes.
+
+  The claim held over six languages for a while and was false in seven
+  others. ICU writes U+2212 MINUS SIGN for `et fi hr lt nb sl sv`, the
+  fallback wrote the ASCII hyphen, and the dataset covered
+  `en nl de tr pt fr` — none of which ICU gives U+2212 — so every
+  negative amount in those seven read differently on the phone than on
+  the desktop beside it, and no test could see it. The dataset now
+  covers all twenty-six.
+
+- **What is deliberately NOT byte for byte is the currency's name.**
+  `SYMBOLS` carries one glyph per currency; CLDR carries a name per
+  currency *per locale*. ICU writes USD as `US$` in Dutch, `$US` in
+  French, `USD` in Polish and `щ.д.` in Bulgarian, and writes EUR as
+  `EUR` rather than `€` in Hungarian, Romanian and Ukrainian. Those
+  divergences are out of scope by construction, not defects, and the
+  twenty-six-language assertion is driven over the currency/locale
+  pairs the two sides do agree on — CHF everywhere, since neither side
+  has a glyph for it, plus EUR in the twenty-three where ICU writes the
+  euro sign.
 - The `catch` must not widen into a silent swallow of formatting that
   works. The two paths agree on every currency the product deals in,
   so the proof needs one they cannot: `format()` on an INR amount is

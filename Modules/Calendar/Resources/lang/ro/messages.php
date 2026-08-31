@@ -60,9 +60,14 @@ return [
         'booked_unnamed' => 'Plată înregistrată',
     ],
 
+    'balance' => [
+        'not_counted' => '· :list nu este numărat — plățile de acolo nu schimbă soldul',
+    ],
+
     'panel' => [
         'aria' => 'Panou cu detaliile zilei',
         'close' => 'Închide panoul zilei',
+        'close_caption' => 'Închide',
         'start_of_day' => 'Începutul zilei',
         'no_payments' => 'Nicio plată în această zi.',
         'date_approximate' => '~ dată aproximativă',

@@ -16,9 +16,9 @@
             <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.auto_import.label') }}</span>
             <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 @if ($enabled)
-                    {!! Lang::get('core::settings.auto_import.active_html', ['userId' => $userId]) !!}
+                    {!! Lang::get($onPhone ? 'core::settings.auto_import.active_phone_html' : 'core::settings.auto_import.active_html', ['userId' => $userId]) !!}
                 @else
-                    {!! Lang::get('core::settings.auto_import.inactive_html', ['userId' => $userId]) !!}
+                    {!! Lang::get($onPhone ? 'core::settings.auto_import.inactive_phone_html' : 'core::settings.auto_import.inactive_html', ['userId' => $userId]) !!}
                 @endif
             </p>
         </div>

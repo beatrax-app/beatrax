@@ -8,6 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Pots\Internal\Http\Livewire\PotsPage;
+use Modules\Pots\Internal\Services\PotAllocationLedger;
 use Modules\Pots\Internal\Services\PotRowLoader;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
@@ -17,6 +18,7 @@ final class PotsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(PotAllocationLedger::class);
         $this->app->singleton(PotRowLoader::class);
         $this->app->singleton(PotBalanceQuery::class);
     }

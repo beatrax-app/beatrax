@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Database\Seeders\Demo;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 
@@ -29,6 +29,7 @@ final class DemoMerchantMemorySeeder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -36,10 +37,12 @@ final class DemoMerchantMemorySeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary === null) {
             return 0;
         }
+
+        $now = $this->clock->now()->toDateTimeString();
 
         foreach (self::MEMORIES as $row) {
             $categoryId = $this->resolveCategoryId($row['categorySlug']);
@@ -55,8 +58,9 @@ final class DemoMerchantMemorySeeder
                 $row['merchantName'],
                 $this->counterpartyKey->forNormalized($row['normalizedName'], $primary->id),
                 $categoryId,
+                $now,
             );
-            $this->upsertMemory($primary, $merchantId, $categoryId, $row['occurrenceCount']);
+            $this->upsertMemory($primary, $merchantId, $categoryId, $row['occurrenceCount'], $now);
         }
 
         return (int) $this->db->connection()
@@ -80,10 +84,14 @@ final class DemoMerchantMemorySeeder
         return $category->id;
     }
 
-    private function ensureMerchant(User $user, string $name, string $normalized, int $defaultCategoryId): int
-    {
+    private function ensureMerchant(
+        User $user,
+        string $name,
+        string $normalized,
+        int $defaultCategoryId,
+        string $now,
+    ): int {
         $connection = $this->db->connection();
-        $now = CarbonImmutable::now()->toDateTimeString();
 
         $existing = $connection->table('merchants')
             ->where('user_id', $user->id)
@@ -104,10 +112,14 @@ final class DemoMerchantMemorySeeder
         ]);
     }
 
-    private function upsertMemory(User $user, int $merchantId, int $categoryId, int $occurrenceCount): void
-    {
+    private function upsertMemory(
+        User $user,
+        int $merchantId,
+        int $categoryId,
+        int $occurrenceCount,
+        string $now,
+    ): void {
         $connection = $this->db->connection();
-        $now = CarbonImmutable::now()->toDateTimeString();
 
         $connection->table('merchant_memories')->updateOrInsert(
             [

@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Muster ist erforderlich.',
         'name_required' => 'Name ist erforderlich.',
+        'browser_refused' => 'Dein Browser ließ sich nicht öffnen, also wurde nichts gesendet und nichts hat dieses Gerät verlassen. Versuche es erneut, oder füge die YAML-Vorschau oben selbst in einen Pull Request ein.',
     ],
 ];

@@ -26,6 +26,7 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 use Psr\Log\LoggerInterface;
 
 use function Amp\Websocket\Client\connect;
@@ -33,23 +34,19 @@ use function Amp\Websocket\Client\connect;
 /**
  * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md
  */
-final class LanSyncClient
+final readonly class LanSyncClient
 {
-    private const float CONNECT_TIMEOUT_SECONDS = 5.0;
-
-    private const float READ_TIMEOUT_SECONDS = 15.0;
-
     public function __construct(
-        private readonly DeviceRegistryService $registryService,
-        private readonly DeviceKeySigner $signer,
-        private readonly TransportFramer $framer,
-        private readonly PeerCatchUpExchanger $catchUp,
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly MergeRulesRegistry $rules,
-        private readonly GdkEpochDeliveryGateway $epochDelivery,
-        private readonly ?SearchIndexWriterContract $searchWriter = null,
-        private readonly ?LoggerInterface $logger = null,
+        private DeviceRegistryService $registryService,
+        private DeviceKeySigner $signer,
+        private TransportFramer $framer,
+        private PeerCatchUpExchanger $catchUp,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private MergeRulesRegistry $rules,
+        private GdkEpochDeliveryGateway $epochDelivery,
+        private ?SearchIndexWriterContract $searchWriter = null,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     /**
@@ -79,7 +76,7 @@ final class LanSyncClient
         $connection = null;
 
         try {
-            $connection = connect($uri, new TimeoutCancellation(self::CONNECT_TIMEOUT_SECONDS));
+            $connection = connect($uri, new TimeoutCancellation(ProtocolTimings::SYNC_DIAL_SECONDS));
 
             $noiseSession = $this->performHandshake($connection, $identity, $peerStaticHex);
 
@@ -87,6 +84,11 @@ final class LanSyncClient
 
             $admitted = $syncSession->authenticate($noiseSession, $identity->userId, $identity->deviceId);
             if (! $admitted) {
+                // Say WHY before hanging up, exactly as the responder does when
+                // ITS gate refuses. Told nothing, a desktop this phone has
+                // stopped confirming kept describing itself as synced.
+                $this->tellPeerItIsRevoked($connection, $noiseSession);
+
                 throw LanSyncException::peerFailedConfirmedDeviceGate();
             }
 
@@ -121,6 +123,26 @@ final class LanSyncClient
             return false;
         } finally {
             $connection?->close();
+        }
+    }
+
+    // Best-effort notice sent on the raw Noise session, since SyncSession is
+    // deliberately unauthenticated at this point, and never allowed to throw —
+    // the connection is being torn down either way.
+    /**
+     * @internal Public so the notice is testable without a live amphp dial.
+     */
+    public function tellPeerItIsRevoked(WebsocketConnection $connection, NoiseSession $noiseSession): void
+    {
+        try {
+            $connection->sendBinary($noiseSession->encrypt(json_encode(
+                ['type' => GdkEpochDeliveryGateway::MSG_PEER_REVOKED],
+                JSON_THROW_ON_ERROR,
+            )));
+        } catch (\Throwable $e) {
+            $this->logger?->info('LanSyncClient: could not tell the peer it was revoked.', [
+                'reason' => $e::class,
+            ]);
         }
     }
 
@@ -166,7 +188,7 @@ final class LanSyncClient
         $msg1 = $initHs->writeMessage('');
         $connection->sendBinary($msg1);
 
-        $msg2Message = $connection->receive(new TimeoutCancellation(self::READ_TIMEOUT_SECONDS));
+        $msg2Message = $connection->receive(new TimeoutCancellation(ProtocolTimings::HANDSHAKE_SECONDS));
         if ($msg2Message === null) {
             throw LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2');
         }
@@ -220,7 +242,10 @@ final class LanSyncClient
         string $localDeviceId,
         array $deviceKeys,
     ): void {
-        $myReq = $this->catchUp->buildRequest($userId, $localDeviceId);
+        // Named, not defaulted: the watermark is per peer, and the empty id an
+        // unnamed caller passes reads back as (0, 0) — the phone then asked
+        // this peer for its whole history on every connect.
+        $myReq = $this->catchUp->buildRequest($userId, $localDeviceId, $syncSession->peerDeviceId() ?? '');
         $connection->sendBinary($syncSession->encrypt(json_encode($myReq, JSON_THROW_ON_ERROR)));
 
         $respMsg = $this->receiveWithTimeout($connection, 'catch-up response');
@@ -247,14 +272,14 @@ final class LanSyncClient
         }
 
         $peerReq = $this->catchUp->parseControlMessage($syncSession->decrypt($peerReqMsg->buffer()));
-        $peerHlcL = isset($peerReq['hlc_l']) && is_int($peerReq['hlc_l']) ? max(0, $peerReq['hlc_l']) : 0;
-        $peerHlcC = isset($peerReq['hlc_c']) && is_int($peerReq['hlc_c']) ? max(0, $peerReq['hlc_c']) : 0;
-
-        $frames = $this->catchUp->opsAfterWatermark($userId, $peerHlcL, $peerHlcC);
-        $myResp = $this->catchUp->buildResponse($frames);
+        $delta = $this->catchUp->opsAfterWatermark($userId, $this->catchUp->cursorsFrom($peerReq));
+        $myResp = $this->catchUp->buildResponse($delta);
         $connection->sendBinary($syncSession->encrypt(json_encode($myResp, JSON_THROW_ON_ERROR)));
 
-        foreach ($frames as $frame) {
+        // Iterated, not collected: each frame is built as it is sent, so this
+        // phone's own history crosses the wire without ever being resident at
+        // once — the shape that fatalled the 128 MB ceiling at 50,000 entries.
+        foreach ($delta as $frame) {
             $connection->sendBinary($syncSession->encrypt($frame));
         }
 
@@ -282,6 +307,12 @@ final class LanSyncClient
 
         $this->receiveGdkEpochWraps($connection, $syncSession, $identity, $peerDeviceId, $session);
         $this->pushGdkEpochWraps($connection, $syncSession, $peerDeviceId);
+
+        // A wrap this phone could not open is RETAINED in its own inbox rather
+        // than dropped, and this pass — holding the app-lock key the retaining
+        // one lacked — is the only thing that comes back for it. Without it the
+        // responder half drained and the initiator half never did.
+        $this->epochDelivery->drainInbox($identity->userId, $identity->deviceId, $session);
     }
 
     /**
@@ -432,14 +463,20 @@ final class LanSyncClient
         }
     }
 
+    // Rethrown rather than folded into the null a clean disconnect returns:
+    // a stall mid-phase is not "nothing more to read", and syncOnce()'s
+    // retryable false comes from runExchange() catching it.
     /**
-     * @throws TimeoutException When the peer sends nothing within the bound.
+     * @throws CancelledException When the peer sends nothing within the bound.
      */
     private function receiveWithTimeout(WebsocketConnection $connection, string $phase): ?WebsocketMessage
     {
         try {
-            return $connection->receive(new TimeoutCancellation(self::READ_TIMEOUT_SECONDS));
-        } catch (TimeoutException $e) {
+            return $connection->receive(new TimeoutCancellation(ProtocolTimings::initiatorReadSeconds()));
+        } catch (CancelledException|TimeoutException $e) {
+            // An expired TimeoutCancellation surfaces as CancelledException
+            // carrying TimeoutException as its PREVIOUS, so naming only the
+            // latter here never matched and no real stall was ever logged.
             $this->logger?->info('LanSyncClient: receive timed out.', [
                 'phase' => $phase,
             ]);

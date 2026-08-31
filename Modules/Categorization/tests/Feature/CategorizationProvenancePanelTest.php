@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
@@ -216,9 +217,10 @@ it('removeRule catches NotFoundHttpException when the rule was deleted in anothe
         ->assertSet('flashMessage', 'Rule no longer exists (it may have been deleted in another tab).');
 });
 
-it('removeRule catches NotFoundHttpException when the panel carries a foreign-user ruleId', function (): void {
-    // A tampered payload carrying another user's ruleId: the user-scoped
-    // lookup rejects it, and the foreign row must survive untouched.
+it('refuses a payload naming another reader\'s rule, rather than catching it after the fact', function (): void {
+    // ruleId is derived from the row's own provenance and is #[Locked], so a
+    // foreign id can no longer reach removeRule() at all. The user-scoped
+    // lookup behind it stays as the second line; this pins the first.
     $other = User::create([
         'username' => 'prov-tamper',
         'password' => 'opensesame',
@@ -234,13 +236,15 @@ it('removeRule catches NotFoundHttpException when the panel carries a foreign-us
         null,
     );
 
-    Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
-        ->set('ruleId', $foreignRuleId)
-        ->set('variant', 'rule')
-        ->call('confirmRemove')
-        ->call('removeRule')
-        ->assertSet('flashMessage', 'Rule no longer exists (it may have been deleted in another tab).');
+    $refused = false;
+    try {
+        Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
+            ->set('ruleId', $foreignRuleId);
+    } catch (CannotUpdateLockedPropertyException) {
+        $refused = true;
+    }
 
+    expect($refused)->toBeTrue('A browser can still name another reader\'s rule on this panel.');
     expect(DB::table('categorization_rules')->where('id', $foreignRuleId)->exists())->toBeTrue();
 });
 
@@ -319,13 +323,22 @@ it('hydrateFromProvenance renders the none variant when auto_category_provenance
         ->assertSet('ruleId', null);
 });
 
-it('the app layout @auth block mounts the three global SFCs', function (): void {
+it('the app layout @auth block mounts the global SFCs', function (): void {
     $layoutPath = base_path('resources/views/layouts/app.blade.php');
     $contents = (string) file_get_contents($layoutPath);
 
     expect($contents)->toContain("@livewire('categorization.rule-form-modal')");
-    expect($contents)->toContain("@livewire('categorization.correction-divergence-toast')");
     expect($contents)->toContain("@livewire('receipts.receipt-conflict-toast')");
+});
+
+it('the app layout no longer mounts a second surface for the divergence conversation', function (): void {
+    // A layout mount is a Livewire component built on every authenticated page
+    // render. The toast that used to sit here asked "update the rule?" detached
+    // from the correction that raised the question; the panel asks it inline on
+    // the transaction, and one conversation gets one surface.
+    $contents = (string) file_get_contents(base_path('resources/views/layouts/app.blade.php'));
+
+    expect($contents)->not->toContain('correction-divergence-toast');
 });
 
 it('transaction-detail.blade.php embeds the categorization-provenance-panel', function (): void {

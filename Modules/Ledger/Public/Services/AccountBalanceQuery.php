@@ -16,7 +16,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#accountbalancequery--caveats-shared-by-all-four-methods
  */
-final class AccountBalanceQuery
+final readonly class AccountBalanceQuery
 {
     use CoercesScalars;
 
@@ -24,8 +24,8 @@ final class AccountBalanceQuery
     private const array CLEARED_STATUSES = [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly AccountStartingBalanceQuery $startingBalances,
+        private DatabaseManager $db,
+        private AccountStartingBalanceQuery $startingBalances,
     ) {}
 
     public function currentBalance(int $accountId, User $user): AccountBalance

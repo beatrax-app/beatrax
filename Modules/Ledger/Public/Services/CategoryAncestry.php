@@ -8,19 +8,20 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
 use stdClass;
 
 // The breadcrumb behind a category id: one batched walk up the parent chain,
 // then a path resolved off the map that walk returns. More than one module
 // renders that breadcrumb, and a second copy of the walk is a second copy of
 // the visibility predicate below to keep right.
-final class CategoryAncestry
+final readonly class CategoryAncestry
 {
     use CoercesScalars;
 
     private const int MAX_PARENT_DEPTH = 16;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db) {}
 
     // The visibility predicate applies at every level of the walk: a parent_id
     // pointing cross-tenant ends the chain at the filtered-out parent rather
@@ -95,6 +96,6 @@ final class CategoryAncestry
             $depth++;
         }
 
-        return implode(' / ', $parts);
+        return CategoryPathName::fromParts($parts);
     }
 }

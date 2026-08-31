@@ -606,3 +606,34 @@ it('restores every snapshotted column to exactly its snapshotted value in batche
 
     @unlink($path);
 });
+
+// The restore stages a decrypted copy of every sensitive column the migration
+// is about to rewrite. The encryptor's file-path API renames its own staging
+// file into place at the process umask default, so the narrowing has to happen
+// here, before the first plaintext byte is read back out.
+it('narrows the restored snapshot plaintext to 0600 before a byte of it is read', function (): void {
+    $user = batchedUser('restore-perms');
+    [$account, $importRun] = batchedLedgerScaffold($user, 'restore-perms');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $connection = $db->connection();
+    $connection->table('transactions')->insert(batchedTransactionRow($user, $account, $importRun, 97_001));
+
+    $snapshot = new PreMigrationSnapshot(batchedCopyingEncryptor(), app(Clock::class));
+    $path = $snapshot->takeSnapshot((int) $user->id, $connection, str_repeat("\x2a", 32));
+
+    // The staged file exists only for the length of the restore, so its mode is
+    // read from inside the replay it is feeding rather than afterwards.
+    $stagedMode = null;
+    $stagingGlob = dirname($path).DIRECTORY_SEPARATOR.'beatrax_premig_restore_*.tmp';
+    $connection->listen(function () use (&$stagedMode, $stagingGlob): void {
+        foreach (glob($stagingGlob) ?: [] as $staged) {
+            $stagedMode ??= fileperms($staged) & 0777;
+        }
+    });
+
+    $snapshot->restoreFromSnapshot($path, str_repeat("\x2a", 32), $connection);
+
+    expect($stagedMode)->toBe(0600, 'a decrypted snapshot readable by any local account is the leak the whole store exists to prevent');
+});

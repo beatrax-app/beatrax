@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Bekræft eller afvis kandidatforbindelser, som kædeløseren ikke kunne bekræfte automatisk.',
 
     'empty_heading' => 'Intet at gennemgå',
-    'empty_body' => 'Hver kædeforbindelse er enten bekræftet eller afvist. Nye kandidater dukker op her, efterhånden som importer kommer ind.',
+    'empty_body' => 'Hver forbindelse, som resolveren kunne parre, er bekræftet eller afvist. Nye kandidater dukker op her, efterhånden som importer kommer ind.',
 
     'auto_confirm_nudge' => 'Én bekræftelse mere, så bekræftes lignende forbindelser automatisk.',
 

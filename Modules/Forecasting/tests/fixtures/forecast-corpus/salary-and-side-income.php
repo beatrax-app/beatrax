@@ -29,7 +29,6 @@ return [
             'latest_currency' => 'EUR',
             'variance_tolerance_percent' => 5,
             'state' => 'approved',
-            'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-25',
             'occurrences' => [
                 ['date' => '2025-12-25', 'observed_amount_minor' => 350000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],
@@ -50,7 +49,6 @@ return [
             'latest_currency' => 'EUR',
             'variance_tolerance_percent' => 10,
             'state' => 'approved',
-            'latest_fx_rate_used' => null,
             'next_expected_date' => '2026-05-10',
             'occurrences' => [
                 ['date' => '2025-12-10', 'observed_amount_minor' => 45000, 'observed_currency' => 'EUR', 'fx_rate_used' => null],

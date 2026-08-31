@@ -10,6 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Actions\AttemptToAuthenticate;
 use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Fortify;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 
 // No throttle middleware by design: this is a local-only, single-machine
@@ -33,7 +34,7 @@ final class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            $normalized = strtolower(trim($username));
+            $normalized = Username::normalize($username);
 
             /** @var User|null $user */
             $user = User::query()->where('username', $normalized)->first();

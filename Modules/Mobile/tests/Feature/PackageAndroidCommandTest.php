@@ -305,3 +305,22 @@ it('warns rather than fails when a tree carries no patch scripts', function (): 
     // worse but it is not wrong, so this is a warning and not a refusal.
     expect(packageAndroid())->toBe(0);
 });
+
+// config('nativephp.version_code') is env('NATIVEPHP_APP_VERSION_CODE', 1), and
+// env() answers with a STRING for every variable that IS set. Setting that
+// variable is what this command's other refusal tells the operator to do.
+
+it('accepts the version code as the string the environment actually hands back', function (): void {
+    expect(packageAndroid(
+        files: ['get' => [
+            packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
+                ."\n".'versionCode = 10300',
+        ]],
+        config: ['nativephp.version_code' => '10300'],
+    ))->toBe(0)->and(config('nativephp.version_code'))->toBe(10300);
+});
+
+it('still derives a code when the environment hands back the package default as a string', function (): void {
+    expect(packageAndroid(config: ['nativephp.version_code' => '1']))->toBe(0)
+        ->and(config('nativephp.version_code'))->toBe(20000);
+});

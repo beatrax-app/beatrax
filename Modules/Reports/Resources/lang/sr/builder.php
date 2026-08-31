@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Bez kategorije',
+    'no_counterparty' => 'Nema druge strane',
+    'unavailable_counterparty' => 'Druge strane nema na ovom uređaju',
     'title' => 'Izveštaji',
     'page_title' => 'Izveštaji · Beatrax',
     'subtitle' => 'Sastavi izveštaj iz svoje glavne knjige.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Prilagođeni opseg',
         'from' => 'Od',
         'to' => 'Do',
+        'error' => [
+            'incomplete' => 'Izaberi i početni i završni datum.',
+            'malformed' => 'Unesi ispravan datum u obliku GGGG-MM-DD.',
+            'inverted' => 'Završni datum je pre početnog.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filteri',
+        'net_worth_note' => 'Neto vrednost je stanje: primenjuje se samo filter računa.',
     ],
 
     'compare' => 'Uporedi sa prethodnim periodom',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafikon u valuti :currency — :list nije prikazano',
+        'undrawn' => 'Nije u prstenu — :amount ide u suprotnom smeru',
         'bar_title' => 'Klikni stubić za prikaz njegovih transakcija',
         'line_title' => 'Klikni tačku za prikaz njenih transakcija',
         'donut_title' => 'Klikni segment za prikaz njegovih transakcija',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Naknade i usklađivanja (nisu uračunata)',
+    'other_movement_with_refunds' => 'Naknade, povraćaji i usklađivanja (nisu uračunata)',
 ];

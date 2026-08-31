@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
+use Modules\DevMode\Internal\Sql\IsolatedSelectProcess;
+use Modules\DevMode\Internal\Sql\QueryTimedOutException;
+use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 
 function sqlPanelUser(string $username, bool $isDeveloper = true): User
 {
@@ -111,4 +115,40 @@ it('Browse-table runs a SELECT * FROM <table> LIMIT 100 through the SQL pipeline
     expect($properties['query'])->toContain('users');
     expect($properties['query'])->toContain('LIMIT 100');
     expect($row->description)->toBe(AuditEvent::SqlSelect->value);
+});
+
+// The timeout string used to be selected on the text of a PHP execution-time
+// expiry, which is a fatal error rather than a Throwable: nothing ever reached
+// this branch, in any of the 26 locales.
+it('renders the timeout message when the capped query process is killed', function (): void {
+    $user = sqlPanelUser('sql-timeout');
+    session(['dev_mode.advanced' => true]);
+
+    $isolated = new class extends IsolatedSelectProcess
+    {
+        public function canIsolate(string $databaseFile): bool
+        {
+            return true;
+        }
+
+        public function run(string $databaseFile, string $sql, int $timeoutSeconds, int $busyTimeoutMs = 0): array
+        {
+            throw new QueryTimedOutException('killed at the cap');
+        }
+    };
+    app()->instance(
+        ReadOnlySqliteConnection::class,
+        new ReadOnlySqliteConnection(
+            app(DatabaseManager::class),
+            $isolated,
+        ),
+    );
+
+    $component = Livewire::actingAs($user)
+        ->test(SqlPanelPage::class)
+        ->set('sqlInput', 'WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c) SELECT count(*) n FROM c')
+        ->call('run');
+
+    $component->assertSet('errorMessage', 'Query exceeded the 5-second timeout. Refine your query and try again.');
+    expect(DB::table('dev_mode_audit')->count())->toBe(0);
 });

@@ -7,6 +7,8 @@ namespace Modules\Receipts\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
@@ -18,6 +20,7 @@ final class DemoReceiptsSeeder
 {
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -25,7 +28,7 @@ final class DemoReceiptsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary === null) {
             return 0;
         }
@@ -40,7 +43,9 @@ final class DemoReceiptsSeeder
             return 0;
         }
 
-        $this->upsertFileImport($primary, new DemoFileImportSpec(
+        $now = $this->clock->now();
+
+        $this->upsertFileImport($primary, $now, new DemoFileImportSpec(
             providerMessageId: 'demo-paypal-receipt-001',
             sourceFilename: 'demo-paypal-receipt.eml',
             senderEmail: 'service@paypal.com',
@@ -49,7 +54,7 @@ final class DemoReceiptsSeeder
             matcherKey: 'paypal-receipt',
             ageHours: 48,
         ));
-        $this->upsertFileImport($primary, new DemoFileImportSpec(
+        $this->upsertFileImport($primary, $now, new DemoFileImportSpec(
             providerMessageId: 'demo-ics-statement-001',
             sourceFilename: 'demo-ics-statement.eml',
             senderEmail: 'noreply@ics.nl',
@@ -69,6 +74,7 @@ final class DemoReceiptsSeeder
         if ($bolPaypalTransaction !== null) {
             $this->upsertPendingConflict(
                 $primary,
+                $now,
                 $bolPaypalTransaction,
                 $importRun,
                 fieldName: 'description',
@@ -83,7 +89,7 @@ final class DemoReceiptsSeeder
             ->count();
     }
 
-    private function upsertFileImport(User $user, DemoFileImportSpec $spec): void
+    private function upsertFileImport(User $user, CarbonImmutable $now, DemoFileImportSpec $spec): void
     {
         $connection = $this->db->connection();
 
@@ -96,7 +102,6 @@ final class DemoReceiptsSeeder
             return;
         }
 
-        $now = CarbonImmutable::now();
         $internalDate = $now->subHours($spec->ageHours);
 
         $connection->table('file_imports')->insert([
@@ -119,6 +124,7 @@ final class DemoReceiptsSeeder
 
     private function upsertPendingConflict(
         User $user,
+        CarbonImmutable $now,
         Transaction $tx,
         ImportRun $importRun,
         string $fieldName,
@@ -137,8 +143,6 @@ final class DemoReceiptsSeeder
             return;
         }
 
-        $now = CarbonImmutable::now();
-
         $connection->table('pending_enrichment_conflicts')->insert([
             'user_id' => $user->id,
             'transaction_id' => $tx->id,
@@ -148,7 +152,7 @@ final class DemoReceiptsSeeder
             // resolution action.
             'stored_value' => json_encode($storedValue, JSON_THROW_ON_ERROR),
             'incoming_value' => json_encode($incomingValue, JSON_THROW_ON_ERROR),
-            'incoming_source_format' => 'eml-receipt',
+            'incoming_source_format' => SourceFormat::Eml->value,
             'import_run_id' => $importRun->id,
             'created_at' => $now->subHours(6),
             'updated_at' => $now->subHours(6),

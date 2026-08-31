@@ -33,7 +33,7 @@ it('keeps hyphens and underscores, which are already filesystem-safe', function 
 
 it('maps every upload format the wizard accepts to its stored extension', function (): void {
     expect([
-        SourceFormat::AsnCsv->value => UploadFilename::extensionFor(SourceFormat::AsnCsv->value),
+        CsvPresetRegistry::ASN => UploadFilename::extensionFor(CsvPresetRegistry::ASN),
         SourceFormat::Camt053->value => UploadFilename::extensionFor(SourceFormat::Camt053->value),
         SourceFormat::Mt940->value => UploadFilename::extensionFor(SourceFormat::Mt940->value),
         'ics-pdf' => UploadFilename::extensionFor('ics-pdf'),
@@ -62,7 +62,7 @@ it('gives the bank step the same three extensions its own match gave it', functi
     // the other upload steps accept, only these four reach the bank step, and
     // the ING one is a CSV preset rather than an enum case.
     $bankStepFormats = [
-        SourceFormat::AsnCsv->value,
+        CsvPresetRegistry::ASN,
         CsvPresetRegistry::ING_NL,
         SourceFormat::Camt053->value,
         SourceFormat::Mt940->value,

@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Internal\Actions\TaxCategoryStore;
 use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 
@@ -26,8 +26,8 @@ function taxVocabUser(string $username): User
 it('inserts a new category under the status the column defaults to', function (): void {
     $user = taxVocabUser('tax-vocab-default');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $id = $writer->add($user->id, 'Fresh category');
 
     DB::table('tax_deduction_categories')->insert([
@@ -48,8 +48,8 @@ it('inserts a new category under the status the column defaults to', function ()
 it('moves a category between the two statuses the enum names', function (): void {
     $user = taxVocabUser('tax-vocab-lifecycle');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $id = $writer->add($user->id, 'Round trip');
 
     $writer->archive($user->id, $id);
@@ -64,8 +64,8 @@ it('moves a category between the two statuses the enum names', function (): void
 it('drops the archived rows from the default listing and keeps them under includeArchived', function (): void {
     $user = taxVocabUser('tax-vocab-listing');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $writer->add($user->id, 'Still live');
     $archivedId = $writer->add($user->id, 'Put away');
     $writer->archive($user->id, $archivedId);
@@ -82,8 +82,8 @@ it('drops the archived rows from the default listing and keeps them under includ
 it('splits the settings section into its two status groups', function (): void {
     $user = taxVocabUser('tax-vocab-section');
 
-    /** @var TaxCategoryWriter $writer */
-    $writer = app(TaxCategoryWriter::class);
+    /** @var TaxCategoryStore $writer */
+    $writer = app(TaxCategoryStore::class);
     $writer->add($user->id, 'Section live');
     $archivedId = $writer->add($user->id, 'Section archived');
     $writer->archive($user->id, $archivedId);

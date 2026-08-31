@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Expression;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Enums\NoteMode;
@@ -29,7 +30,7 @@ use Throwable;
 final class RuleApplier
 {
     /** @var array<string, string> Action `type` → `field_provenance` key. */
-    private const PROVENANCE_KEY = [
+    private const array PROVENANCE_KEY = [
         ActionType::Category->value => 'category_id',
         ActionType::Counterparty->value => 'counterparty_id',
         ActionType::Note->value => 'note',
@@ -110,10 +111,24 @@ final class RuleApplier
             if ($result !== null) {
                 [$field, $value] = $result;
                 $changed[$field] = $value;
+                $this->bumpHits($entry['ruleId'], $userId);
             }
         }
 
         return $changed;
+    }
+
+    // ApplyAutoCategoryStage was the only place this column ever moved, so a
+    // rule applied across a whole history still read "0 hits" on /rules. Bumped
+    // here only when the row genuinely changed, because re-running is a no-op
+    // by contract and a second pass over unchanged data must not inflate it.
+    private function bumpHits(int $ruleId, int $userId): void
+    {
+        $this->db->connection()
+            ->table('categorization_rules')
+            ->where('id', $ruleId)
+            ->where('user_id', $userId)
+            ->update(['hits_count' => new Expression('hits_count + 1')]);
     }
 
     private function resolveUser(int $userId): User
@@ -134,7 +149,9 @@ final class RuleApplier
             return null;
         }
 
-        if (! $this->writeCategory($transactionId, $categoryId, $user)) {
+        // Zero covers unchanged, locked and cross-user alike: the action's own
+        // write-only-on-change guard is what keeps a repeat re-apply silent.
+        if (($this->updateCategory)($transactionId, $categoryId, $user) === 0) {
             return null;
         }
 
@@ -147,24 +164,6 @@ final class RuleApplier
         $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'rule']);
 
         return ['category_id', $categoryId];
-    }
-
-    // UpdatesTransactionCategory has no write-only-on-change guard, and an
-    // unchanged category_id still reports one affected row on SQLite, so this
-    // read is the only thing that keeps a repeat re-apply a genuine no-op.
-    private function writeCategory(int $transactionId, int $categoryId, User $user): bool
-    {
-        $currentCategoryId = $this->db->connection()
-            ->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->value('category_id');
-
-        if ((is_numeric($currentCategoryId) ? (int) $currentCategoryId : null) === $categoryId) {
-            return false;
-        }
-
-        return ($this->updateCategory)($transactionId, $categoryId, $user) !== 0;
     }
 
     /**

@@ -11,12 +11,13 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Core\Public\Support\SecretFileMode;
 
 final readonly class PreMigrationSnapshot
 {
     // The same sensitive-column map the migration's projection re-encrypt pass
     // consumes; the op-log pass uses the field registry as its own source.
-    public const PROJECTION_COLUMNS = [
+    public const array PROJECTION_COLUMNS = [
         'transactions' => ['note', 'description', 'counterparty_name', 'counterparty_iban', 'raw_payload'],
         'counterparties' => ['display_name', 'merchant_name', 'iban'],
         'tax_transaction_tags' => ['note'],
@@ -31,7 +32,7 @@ final readonly class PreMigrationSnapshot
     // The pre-migration state of an op-log row is its plaintext value under no
     // epoch at all, so the epoch column is captured beside the value and the
     // restore is driven entirely by what the file holds.
-    private const OP_LOG_COLUMNS = ['value', 'gdk_epoch'];
+    private const array OP_LOG_COLUMNS = ['value', 'gdk_epoch'];
 
     private const int READ_CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
@@ -40,7 +41,7 @@ final readonly class PreMigrationSnapshot
     // A build compiled before SQLite's parameter ceiling was raised to 32766
     // stops at 999, so a batched write sizes itself to stay under the lower
     // number and remains one statement on every build.
-    private const MAX_BINDINGS_PER_STATEMENT = 900;
+    private const int MAX_BINDINGS_PER_STATEMENT = 900;
 
     public function __construct(
         private FileEncryptor $backupEncryptor,
@@ -52,7 +53,7 @@ final readonly class PreMigrationSnapshot
     public function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
     {
         $dir = UserDataPathService::appPath('sync/backups');
-        @mkdir($dir, 0700, true);
+        @mkdir($dir, SecretFileMode::DIRECTORY, true);
 
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_premig_'.bin2hex(random_bytes(8)).'.tmp';
 
@@ -124,7 +125,7 @@ final readonly class PreMigrationSnapshot
 
         // Locked down before the first plaintext byte reaches it, not after the
         // whole payload is on disk.
-        if (! @chmod($path, 0600)) {
+        if (! @chmod($path, SecretFileMode::FILE)) {
             fclose($handle);
             throw new BackupIoException('Cannot chmod the pre-migration snapshot payload to 0600.');
         }
@@ -154,7 +155,14 @@ final readonly class PreMigrationSnapshot
 
         try {
             $this->backupEncryptor->decrypt($snapshotPath, $tmpPlainPath, $kek);
-            $handle = @fopen($tmpPlainPath, 'rb');
+
+            // Narrowed before the first plaintext byte is read back out: the
+            // encryptor renames its own staging file into place at the process
+            // umask default, and this file holds every sensitive column the
+            // migration is about to rewrite. Unreadable beats world-readable.
+            $handle = @chmod($tmpPlainPath, SecretFileMode::FILE)
+                ? @fopen($tmpPlainPath, 'rb')
+                : false;
 
             // Unreadable snapshot: the rollback already reverted every DB write, so
             // there is nothing to repair. Do not throw — the ORIGINAL failure is what

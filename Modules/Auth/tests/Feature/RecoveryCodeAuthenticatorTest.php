@@ -8,6 +8,7 @@ use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\StoredCopy;
 
 // The real SignupAction, so the stored hashes are exactly what a redemption
 // attempt gets compared against.
@@ -95,7 +96,12 @@ it('writes a warning system_alerts row on a successful redemption', function ():
 
     expect($alert)->not->toBeNull();
     expect($alert->severity)->toBe('warning');
-    expect($alert->message)->toBe('Recovery code used by owner.');
+    expect(StoredCopy::readFromParams($alert->metadata, (string) $alert->message))->toBe('Recovery code used by owner.');
+
+    // The column itself stays a sentence. This row travels to the household's
+    // other device, which may be on a build that cannot read the spec beside
+    // it, and a raw envelope on that screen is the reader's problem, not ours.
+    expect((string) $alert->message)->toBe('Recovery code used by owner.');
 });
 
 it('writes a critical system_alerts row on a failed redemption', function (): void {
@@ -112,7 +118,8 @@ it('writes a critical system_alerts row on a failed redemption', function (): vo
 
     expect($alert)->not->toBeNull();
     expect($alert->severity)->toBe('critical');
-    expect($alert->message)->toBe('Failed recovery code attempt for owner.');
+    expect(StoredCopy::readFromParams($alert->metadata, (string) $alert->message))->toBe('Failed recovery code attempt for owner.');
+    expect((string) $alert->message)->toBe('Failed recovery code attempt for owner.');
 });
 
 it('hashes the recovery code as the formatted five-group string', function (): void {

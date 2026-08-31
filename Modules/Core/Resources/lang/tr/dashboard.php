@@ -21,6 +21,7 @@ return [
 
     'top_spending' => 'En çok harcama',
     'no_expenses' => 'Henüz kategorilendirilmiş gider yok.',
+    'top_spending_refunded' => 'Sıralama dışı — :amount geri geldi',
 
     'recent_transactions' => 'Son işlemler',
     'view_all' => 'Tümünü gör',
@@ -30,6 +31,11 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Tutar',
     'uncategorized' => 'Kategorisiz',
+
+    'jump_to_records' => [
+        'body' => 'Bu dönem için burada bir şey yok. En son işlemleriniz hâlâ burada.',
+        'action' => ':period dönemini göster',
+    ],
 
     'reauth' => [
         'title' => 'Bir gelen kutusunun yeniden bağlanması gerekiyor.',

@@ -13,6 +13,7 @@ use Modules\Ledger\Models\ImportRun;
 // refused at the contract boundary, not only by the wizard's own validation.
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     $this->importer = $this->app->make(RunsImports::class);

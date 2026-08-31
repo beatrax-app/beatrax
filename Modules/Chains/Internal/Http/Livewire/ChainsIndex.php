@@ -12,8 +12,10 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-// /chains lists every non-rejected chain_link, unlike /chains/review
-// (candidates only) and /chains/hints (NULL endpoints only).
+// /chains lists the newest settlements and the non-rejected links that fed
+// them, unlike /chains/review (candidates only) and /chains/hints (NULL
+// endpoints only). The card's count and totals come from the second read: it
+// covers every leg, while the first stops at the legs the card lists.
 final class ChainsIndex extends Component
 {
     public function render(
@@ -22,10 +24,11 @@ final class ChainsIndex extends Component
         ViewFactory $views,
     ): View {
         $user = $currentUser->user();
-        $chains = $query->allChainsForUser($user, limit: 100);
-
         $view = $views->make('chains::livewire.chains-index', [
-            'settlements' => SettlementGroup::fromRows($chains),
+            'settlements' => SettlementGroup::fromRows(
+                $query->allChainsForUser($user),
+                $query->settlementTotalsForUser($user),
+            ),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

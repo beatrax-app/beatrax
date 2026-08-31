@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Support\ScenarioHorizonBounds;
 use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
@@ -16,13 +17,14 @@ use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class AddScenarioMutation
+final readonly class AddScenarioMutation
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
-        private readonly ScenarioSeriesResolver $seriesResolver,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
+        private ScenarioSeriesResolver $seriesResolver,
+        private ScenarioHorizonBounds $horizonBounds,
     ) {}
 
     public function __invoke(int $scenarioId, User $user, string $kind, ScenarioMutationPayload $payload): int
@@ -45,6 +47,8 @@ final class AddScenarioMutation
         if ($targetSeriesId !== null) {
             $this->seriesResolver->assertSeriesOwnedByUser($targetSeriesId, $user);
         }
+
+        $this->horizonBounds->assertReachable($payload);
 
         $now = $this->clock->now();
 

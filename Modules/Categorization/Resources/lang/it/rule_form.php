@@ -24,6 +24,7 @@ return [
     'to' => 'a',
     'text_placeholder' => 'es. SPOTIFY',
     'remove_condition' => 'Rimuovi condizione',
+    'remove_condition_caption' => 'Rimuovi',
     'add_condition' => '+ Aggiungi condizione',
 
     'then' => 'Allora',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Aggiungi in coda',
     'deduction_category_aria' => "Categoria di detrazione per l'azione :number",
     'remove_action' => 'Rimuovi azione',
+    'remove_action_caption' => 'Rimuovi',
     'add_action' => '+ Aggiungi azione',
 
     'this_year_only' => "Solo quest'anno ▾",
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => "Le azioni sull'etichetta fiscale si applicano alla prossima riapplicazione, non all'importazione in corso.",
 
     'priority' => 'Priorità',
-    'priority_help' => 'I numeri più bassi vengono eseguiti per primi. Le regole senza campi in comune non vanno mai in conflitto.',
+    'priority_help' => 'Le regole vengono eseguite dal numero più basso in su, quindi vince il numero più alto quando due impostano lo stesso campo. Le regole senza campi in comune non vanno mai in conflitto.',
 
     'cancel' => 'Annulla',
     'save_changes' => 'Salva le modifiche',

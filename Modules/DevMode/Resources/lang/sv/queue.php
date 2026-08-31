@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Ta bort :count jobb|Ta bort :count jobb',
     'empty_pending' => 'Kön är tom.',
     'empty_failed' => 'Inga misslyckade jobb.',
-    'empty_batches' => 'Inga aktiva batcher.',
+    'empty_batches' => 'Inga batchar.',
     'select_aria' => 'Markera',
     'select_row_aria' => 'Markera rad :key',
     'col_id' => 'Id',
     'col_queue' => 'Kö',
     'col_attempts' => 'Försök',
+    'col_state' => 'Status',
     'col_created' => 'Skapad',
     'col_uuid' => 'UUID',
     'col_failed' => 'Misslyckades',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Väntande',
     'col_actions' => 'Åtgärder',
     'delete_job' => 'Ta bort jobb',
+    'worker_running' => 'En worker kör den',
     'delete_pending_confirm' => 'Ta bort väntande jobb #:key?',
     'retry_job' => 'Försök med jobbet igen',
     'forget_confirm' => 'Ta bort misslyckat jobb :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'De markerade misslyckade jobben läggs i kön igen så att arbetaren kan försöka på nytt.',
     'cancel' => 'Avbryt',
 
+    'state' => [
+        'available' => 'Klar',
+        'reserved' => 'Reserverad',
+        'scheduled' => 'Schemalagd',
+    ],
+
     'tab' => [
         'pending' => 'Väntande',
         'failed' => 'Misslyckade',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Väntande jobb borttaget',
+        'pending_already_gone' => 'Jobbet var redan borta',
         'failed_requeued' => 'Misslyckat jobb lagt i kön igen',
         'failed_removed' => 'Misslyckat jobb borttaget',
         'batch_cancelled' => 'Batchen avbröts',
         'batch_deleted' => 'Batchen borttagen',
         'batch_failures_requeued' => 'Misslyckade batchjobb lagda i kön igen',
+        'batch_failures_none' => 'Inga fel kvar i batchen att köa om',
         'failed_jobs_requeued' => 'Misslyckade jobb lagda i kön igen',
+        'failed_jobs_none' => 'Inga misslyckade jobb kvar att köa om',
         'bulk_refused' => 'Massradering nekad — :reason',
         'rows_deleted' => 'Markerade rader borttagna',
     ],

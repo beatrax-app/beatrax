@@ -8,13 +8,13 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-final class FrankfurterRateProvider implements RateProvider
+final readonly class FrankfurterRateProvider implements RateProvider
 {
     // The old api.frankfurter.app 301-redirects here; named directly to skip
     // the hop.
     private const string URL = 'https://api.frankfurter.dev/v1/latest';
 
-    public function __construct(private readonly HttpFactory $http) {}
+    public function __construct(private HttpFactory $http) {}
 
     public function key(): string
     {

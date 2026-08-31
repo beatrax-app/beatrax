@@ -180,3 +180,17 @@ it('encodes an empty batch as a valid, empty frame', function (): void {
 
     expect($framer->decode($framer->encode([])))->toBe([]);
 });
+
+it('refuses a frame whose ops are not objects, as the documented exception', function (mixed $row): void {
+    // A JSON array says nothing about its elements. These arrived as a
+    // TypeError out of arrayToEntry(), which the docblock does not promise and
+    // only a Throwable-wide catch two layers up ever contained.
+    $payload = (string) json_encode([$row]);
+
+    (new TransportFramer)->decode(pack('V', strlen($payload)).$payload);
+})->with([
+    'list of ints' => [7],
+    'list of strings' => ['op'],
+    'list of nulls' => [null],
+    'list of bools' => [true],
+])->throws(UnexpectedValueException::class, 'op entry must be a JSON object');

@@ -19,7 +19,7 @@ use Throwable;
  */
 final readonly class HttpPublisherManifestFetcher implements PublisherManifestFetcher
 {
-    private const TIMEOUT_SECONDS = 10;
+    private const int TIMEOUT_SECONDS = 10;
 
     public function __construct(
         private HttpClient $http,

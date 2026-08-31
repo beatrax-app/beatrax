@@ -16,6 +16,7 @@ return [
     'export_pdf' => 'Export PDF',
     'export_pdf_aria' => 'Export PDF',
     'export_pdf_title' => 'Download beatrax-tax-:year.pdf',
+    'export_dismiss' => 'Dismiss',
 
     'country_prompt_heading' => 'Which country do you file taxes in?',
     'country_prompt_body' => 'You can change this in Settings → :section at any time.',

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Chains\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Chains\Internal\Exceptions\ChainLinkNotDismissableException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class DismissChainLinkHint
+final readonly class DismissChainLinkHint
 {
+    public function __construct(private Dispatcher $events) {}
+
     public function __invoke(int $chainLinkId, User $user): void
     {
         /** @var ChainLink|null $link */
@@ -29,6 +33,17 @@ final class DismissChainLinkHint
             throw new ChainLinkNotDismissableException($chainLinkId);
         }
 
+        $linkId = $link->id;
         $link->delete();
+
+        // A dismissal deletes the row rather than flagging it, so the op the
+        // peer needs is the tombstone: without it the hint the reader waved
+        // away on the desktop is still sitting in the phone's queue.
+        $this->events->dispatch(new EntityMutated(
+            table: 'chain_links',
+            pk: $linkId,
+            userId: $user->id,
+            mutationType: 'delete',
+        ));
     }
 }

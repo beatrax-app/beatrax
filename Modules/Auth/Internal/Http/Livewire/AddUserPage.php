@@ -14,8 +14,9 @@ use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ValidationMessages;
 
-// The partner's recovery codes are never shown to the owner -- the
-// partner sees them after their own first sign-in.
+// Nothing here mints or shows recovery codes: the partner is handed their own
+// sheet by ChangePasswordPage, at the forced password change their first
+// sign-in lands on.
 final class AddUserPage extends Component
 {
     use HoldsFlashMessage;

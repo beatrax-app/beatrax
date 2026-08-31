@@ -8,21 +8,22 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 
-final class LoginAction
+final readonly class LoginAction
 {
     public function __construct(
-        private readonly Hasher $hasher,
-        private readonly AuthManager $auth,
-        private readonly AppLockProvisioner $provisioner,
-        private readonly SessionFactory $session,
+        private Hasher $hasher,
+        private AuthManager $auth,
+        private AppLockProvisioner $provisioner,
+        private SessionFactory $session,
     ) {}
 
     public function __invoke(string $usernameInput, string $password, bool $rememberMe): bool
     {
-        $normalized = strtolower(trim($usernameInput));
+        $normalized = Username::normalize($usernameInput);
 
         /** @var User|null $user */
         $user = User::query()->where('username', $normalized)->first();

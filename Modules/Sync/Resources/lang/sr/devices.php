@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Tvoji uređaji',
 
-    // Settings keeps a pointer to the moved surface; the section
-    // itself now lives on /sync with the status and sync action.
-    'moved_help' => 'Uparivanje, nazivi uređaja i šifrovanje sada se nalaze uz stanje sinhronizacije.',
-    'moved_cta' => 'Otvori Sinhronizaciju i uređaj',
     'device_name' => 'Naziv uređaja',
     'save' => 'Sačuvaj',
     'peer_default_name' => 'Upareni uređaj',
     'rename_device' => 'Preimenuj uređaj',
+    'rename_device_caption' => 'Preimenuj',
     'this_device' => 'Ovaj uređaj',
     'removed' => 'Uklonjeno',
     'confirmed' => 'Potvrđeno',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Krajnja tačka releja',
     'relay_endpoint_help' => 'Opciono. Kad je postavljena, uređaji van mreže se sinhronizuju preko ovog releja. Ostavi prazno samo za direktnu vezu unutar LAN&#8209;a.',
+    'relay_endpoint_help_phone' => 'Opciono. Kad je postavljena, promene putuju kroz ovaj relej i kad tvoji uređaji nisu na istoj mreži. Ovaj uređaj ih preuzima kad sinhronizuješ sa ovog ekrana — nikad u pozadini, jer zaključavanje aplikacije čuva jedini ključ. Ostavi prazno samo za direktnu vezu unutar LAN&#8209;a.',
     'relay_endpoint_aria' => 'URL krajnje tačke releja',
     'relay_insecure_warning' => 'Ova krajnja tačka releja koristi običan HTTP. Iako relej nikad ne dešifruje tvoje podatke, nebezbedna veza otkriva posmatračima mreže veličine šifrovanih podataka i vreme slanja. Za najbolju privatnost koristi <strong>https://</strong> krajnju tačku.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Uklanja se:',
     'remove_rotates_key' => 'Uklanjanje ovog uređaja menja ključ za šifrovanje pa uređaj više ne prima nikakva ažuriranja.',
     'remove_cannot_erase' => 'Time se ne brišu podaci koji su već na tom uređaju. Ako je uređaj izgubljen ili ukraden, sve podatke koje je sadržao smatraj otkrivenim.',
+    'remove_is_local' => 'Tvoji drugi uređaji imaju sopstveni spisak. Dok ga ne ukloniš i tamo, nastaviće da se sinhronizuju sa njim.',
     'remove_device' => 'Ukloni uređaj',
     'keep_device' => 'Zadrži uređaj',
     'rotating_key' => 'Menjanje ključa za šifrovanje…',
@@ -89,7 +88,7 @@ return [
         'relay_save_failed' => 'Čuvanje krajnje tačke releja nije uspelo: :message',
     ],
     'app_lock_permanent' => 'Kada su podaci jednom šifrovani, zaključavanje aplikacije više ne može da se isključi — drži jedini ključ, a povratka na nešifrovano nema.',
-    'backlog_heading' => 'Чека додавање',
-    'backlog_deferred' => 'Овај уређај је примио податке са другог уређаја и још их није додао у твоју евиденцију. Ништа се не губи — биће додати аутоматски, обично за тренутак.',
-    'backlog_awaiting_key' => 'Овај уређај је примио податке за које још нема кључ. Ништа се не губи. Отвори апликацију на упареном уређају док је овај отворен, како би могли да се повежу и кључ буде послат.',
+    'backlog_heading' => 'Čeka dodavanje',
+    'backlog_deferred' => 'Ovaj uređaj je primio podatke sa drugog uređaja i još ih nije dodao u tvoju evidenciju. Ništa se ne gubi — biće dodati automatski, obično za trenutak.',
+    'backlog_awaiting_key' => 'Ovaj uređaj je primio podatke za koje još nema ključ. Ništa se ne gubi. Otvori aplikaciju na uparenom uređaju dok je ovaj otvoren, kako bi mogli da se povežu i ključ bude poslat.',
 ];

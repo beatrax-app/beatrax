@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Upravit název',
     'edit_name_aria' => 'Přejmenovat opakovanou řadu :id',
     'new_name_label' => 'Nový název této řady',
+    'load_more' => 'Načíst další',
     'save' => 'Uložit',
 
     'toast' => [

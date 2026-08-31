@@ -7,8 +7,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
-use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
@@ -70,12 +70,14 @@ it('reads reminders on, weekly digest, savings prompts off and quiet hours off f
     expect($prefs->deviceId)->toBe('self-device');
 });
 
-it('returns defaults with a null device id for an unpaired device', function (): void {
+// An install with no sync identity is the default state, not an error state,
+// so it writes under the reserved key rather than being refused a row.
+it('returns defaults under the unpaired key for a device with no sync identity', function (): void {
     $user = prefUser('pref-unpaired');
 
     $prefs = $this->query->forCurrentDevice($user);
 
-    expect($prefs->deviceId)->toBeNull();
+    expect($prefs->deviceId)->toBe(NotificationPreferenceQuery::UNPAIRED_DEVICE_ID);
     expect($prefs->digestCadence)->toBe(DigestCadence::Weekly);
     expect($prefs->reminderLeadDays)->toBe(3);
 });
@@ -292,13 +294,19 @@ it('dispatches exactly one NotificationPreferenceMutated on save', function (): 
     });
 });
 
-it('is a no-op that emits nothing when the device is unpaired', function (): void {
+it('writes and announces a row for a device with no sync identity', function (): void {
     Event::fake([NotificationPreferenceMutated::class]);
 
     $user = prefUser('pref-noop');
 
-    $this->query->saveForCurrentDevice($user, NotificationPreferencesDto::defaults());
+    // Rebuilt after the fake: the query is a singleton, so the instance
+    // beforeEach() resolved still holds the real dispatcher.
+    $this->app->forgetInstance(NotificationPreferenceQuery::class);
 
-    Event::assertNotDispatched(NotificationPreferenceMutated::class);
-    expect($this->db->connection()->table('notification_preferences')->count())->toBe(0);
+    /** @var NotificationPreferenceQuery $query */
+    $query = $this->app->make(NotificationPreferenceQuery::class);
+    $query->saveForCurrentDevice($user, NotificationPreferencesDto::defaults());
+
+    Event::assertDispatched(NotificationPreferenceMutated::class);
+    expect($this->db->connection()->table('notification_preferences')->count())->toBe(1);
 });

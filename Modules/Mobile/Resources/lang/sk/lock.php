@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Odomknúť',
 
-    'digits_entered' => 'zadaných číslic',
+    'digits_entered' => 'zadaná :count číslica|zadané :count číslice|zadaných :count číslic',
     'pin_pad' => 'Klávesnica PIN',
     'digit' => 'Číslica :digit',
     'backspace' => 'Vymazať znak',

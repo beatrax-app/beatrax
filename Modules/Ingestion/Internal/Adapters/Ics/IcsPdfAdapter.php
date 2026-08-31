@@ -10,6 +10,7 @@ use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
@@ -18,18 +19,20 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
  */
 final class IcsPdfAdapter implements SourceAdapter
 {
-    // A credit-card statement carries no IBAN, so this literal stands in as the
+    // A credit-card statement carries no IBAN, so the sentinel stands in as the
     // account key; AccountResolver scopes by user, so it cannot collide.
-    private const ICS_OWN_IBAN = 'ICS-CARD';
+    private const ICS_OWN_IBAN = SyntheticIban::IcsCard->value;
 
-    private const SCRUB_LITERAL = '<discarded per security policy>';
+    private const string SCRUB_LITERAL = '<discarded per security policy>';
 
-    private const AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
+    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
 
-    private const TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
+    private const string TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
 
+    // The statement header date and the payment deadline are both written this
+    // way; spelled at each reader they were two lists of Dutch months.
     /** @var array<string, int> */
-    private const MONTH_ABBREV = [
+    private const array MONTH_ABBREV = [
         'jan' => 1, 'feb' => 2, 'mrt' => 3, 'apr' => 4,
         'mei' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
         'sep' => 9, 'okt' => 10, 'nov' => 11, 'dec' => 12,
@@ -41,7 +44,7 @@ final class IcsPdfAdapter implements SourceAdapter
         private readonly HeaderSniffer $sniffer,
         private readonly PdfTextExtractor $extractor,
         private readonly IcsAmountParser $amounts,
-        private readonly IcsDateParser $dates,
+        private readonly IcsStatementHeader $header,
     ) {}
 
     public function format(): string
@@ -58,8 +61,12 @@ final class IcsPdfAdapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        $this->sniffer->sniff($localPath, IcsPdfHeaderProfile::FORMAT);
+        // Cleared before the sniff, not after: this adapter is a singleton, so
+        // a run refused at the door would otherwise answer statementMetadata()
+        // with the previous file's statement.
         $this->lastStatementMetadata = null;
+
+        $this->sniffer->sniff($localPath, IcsPdfHeaderProfile::FORMAT);
 
         $text = $this->extractor->extract($localPath);
 
@@ -68,22 +75,23 @@ final class IcsPdfAdapter implements SourceAdapter
         $rawText = $text;
         $cleaned = $this->stripPageNoise($text);
 
-        $statementDate = $this->parseStatementDate($rawText);
-        $statementYear = $statementDate === null ? (int) date('Y') : $statementDate->year;
+        $statementDate = $this->header->statementDate($rawText);
+        $statementYear = $statementDate->year ?? (int) date('Y');
+        $statementMonth = $statementDate->month ?? (int) date('n');
 
-        $cardLast4 = $this->parseCardLast4($rawText);
+        $cardLast4 = $this->header->cardLast4($rawText);
 
         $index = 0;
-        /** @var list<CarbonImmutable> $bookedDates */
-        $bookedDates = [];
+        /** @var list<CarbonImmutable> $postedDates */
+        $postedDates = [];
         $entryCount = 0;
         $ownIban = $this->ownIban();
 
         foreach ($this->iterateTransactionBlocks($cleaned) as $block) {
-            $dto = $this->buildDto($block, $index, $ownIban, $statementYear);
+            $dto = $this->buildDto($block, $index, $ownIban, $statementYear, $statementMonth);
 
             yield $dto;
-            $bookedDates[] = $dto->bookedAt;
+            $postedDates[] = $dto->postedAt;
             $index++;
             $entryCount++;
         }
@@ -91,7 +99,7 @@ final class IcsPdfAdapter implements SourceAdapter
         $this->lastStatementMetadata = $this->buildStatementMetadata(
             rawText: $rawText,
             ownIban: $ownIban,
-            bookedDates: $bookedDates,
+            postedDates: $postedDates,
             entryCount: $entryCount,
             cardLast4: $cardLast4,
         );
@@ -100,36 +108,6 @@ final class IcsPdfAdapter implements SourceAdapter
     private function ownIban(): string
     {
         return self::ICS_OWN_IBAN;
-    }
-
-    private function parseCardLast4(string $text): ?string
-    {
-        $pattern = '/'.preg_quote(IcsPdfExtractionMap::CARD_LAST4_LINE_PREFIX, '/').'(\S{4})/';
-
-        if (preg_match($pattern, $text, $m) === 1) {
-            return $m[1];
-        }
-
-        return null;
-    }
-
-    private function parseStatementDate(string $text): ?CarbonImmutable
-    {
-        if (
-            preg_match(
-                '/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+(\d{4})/i',
-                $text,
-                $m,
-            ) === 1
-        ) {
-            try {
-                return $this->dates->parse(sprintf('%s %s %s', $m[1], $m[2], $m[3]));
-            } catch (InvalidAmountException) {
-                return null;
-            }
-        }
-
-        return null;
     }
 
     private function stripPageNoise(string $text): string
@@ -185,8 +163,13 @@ final class IcsPdfAdapter implements SourceAdapter
         return preg_match('/\s(Af|Bij)$/', $line) === 1;
     }
 
-    private function buildDto(string $block, int $rowIndex, string $ownIban, int $statementYear): SourceTransactionDto
-    {
+    private function buildDto(
+        string $block,
+        int $rowIndex,
+        string $ownIban,
+        int $statementYear,
+        int $statementMonth,
+    ): SourceTransactionDto {
         $lines = explode("\n", $block);
         $primary = $lines[0];
         $fxLine = $lines[1] ?? null;
@@ -208,7 +191,7 @@ final class IcsPdfAdapter implements SourceAdapter
         }
         $rest = trim($amountMatch[1]);
         $settledRaw = $amountMatch[2];
-        $settledMinor = $this->amounts->parse($settledRaw);
+        $settledMinor = $this->amounts->parse($settledRaw, IcsPdfHeaderProfile::STATEMENT_CURRENCY);
         if ($direction === 'Af') {
             $settledMinor = -$settledMinor;
         }
@@ -217,7 +200,10 @@ final class IcsPdfAdapter implements SourceAdapter
         $nativeCurrency = null;
         if (preg_match('/(.+?)\s+([\d.,]+)\s+([A-Z]{3})$/', $rest, $fxMatch) === 1) {
             $rest = trim($fxMatch[1]);
-            $nativeAmountMinor = $this->amounts->parse($fxMatch[2]);
+            // The foreign column is read at ITS currency's scale, not the
+            // euro column's: a yen has no minor unit, and the fixed hundredth
+            // refused the row outright rather than reading it wrong.
+            $nativeAmountMinor = $this->amounts->parse($fxMatch[2], $fxMatch[3]);
             if ($direction === 'Af') {
                 $nativeAmountMinor = -$nativeAmountMinor;
             }
@@ -246,11 +232,8 @@ final class IcsPdfAdapter implements SourceAdapter
             ));
         }
 
-        $txYear = $statementYear;
-        $bookYear = $statementYear;
-        if ($txMonth === 12 && $bookMonth === 1) {
-            $txYear = $statementYear - 1;
-        }
+        $txYear = self::yearForMonth($txMonth, $statementMonth, $statementYear);
+        $bookYear = self::yearForMonth($bookMonth, $statementMonth, $statementYear);
 
         $bookedAt = CarbonImmutable::create($bookYear, $bookMonth, (int) $dateMatch[3], 0, 0, 0);
         if (! $bookedAt instanceof CarbonImmutable) {
@@ -290,8 +273,15 @@ final class IcsPdfAdapter implements SourceAdapter
             sourceRowIndex: $rowIndex,
             settledAmountMinor: $nativeCurrency === null ? null : $settledMinor,
             settledCurrency: $nativeCurrency === null ? null : IcsPdfHeaderProfile::STATEMENT_CURRENCY,
-            fxRateUsed: null,
         );
+    }
+
+    // A row carries a month but no year, and a statement never lists a month past
+    // its own — a later month is therefore last year's tail. Transaction and
+    // booking months straddle the turn independently, so each resolves alone.
+    private static function yearForMonth(int $month, int $statementMonth, int $statementYear): int
+    {
+        return $month > $statementMonth ? $statementYear - 1 : $statementYear;
     }
 
     private function extractCounterpartyName(string $description): ?string
@@ -338,12 +328,14 @@ final class IcsPdfAdapter implements SourceAdapter
     }
 
     /**
-     * @param  list<CarbonImmutable>  $bookedDates
+     * @param  list<CarbonImmutable>  $postedDates
+     *
+     * @link ../../../../../.docs/conventions/invariants-from-shipped-failures.md#a-period-derived-from-one-column-and-tested-on-another
      */
     private function buildStatementMetadata(
         string $rawText,
         string $ownIban,
-        array $bookedDates,
+        array $postedDates,
         int $entryCount,
         ?string $cardLast4,
     ): StatementSummaryData {
@@ -363,10 +355,14 @@ final class IcsPdfAdapter implements SourceAdapter
         $closing = $closing === null ? null : -$closing;
         $charges = $charges === null ? null : -$charges;
 
+        // ICS books a charge on or after the day the card was used, so a period
+        // spanning the BOOKED days always opens later than the earliest charge
+        // billed on it -- and every reader of this period tests membership on
+        // posted_at.
         $periodStart = null;
         $periodEnd = null;
-        if ($bookedDates !== []) {
-            $sorted = $bookedDates;
+        if ($postedDates !== []) {
+            $sorted = $postedDates;
             usort($sorted, static fn (CarbonImmutable $a, CarbonImmutable $b): int => $a <=> $b);
             $periodStart = $sorted[0];
             $periodEnd = $sorted[count($sorted) - 1];
@@ -376,7 +372,7 @@ final class IcsPdfAdapter implements SourceAdapter
             importRunId: 0,
             accountId: 0,
             ibanOwner: $ownIban,
-            statementNumber: $this->parseStatementNumber($rawText),
+            statementNumber: $this->header->statementNumber($rawText),
             periodStart: $periodStart,
             periodEnd: $periodEnd,
             openingBalanceMinor: $opening,
@@ -395,6 +391,7 @@ final class IcsPdfAdapter implements SourceAdapter
                 'creditLimitMinor' => $creditLimit,
                 'minimumDueMinor' => $minDue,
             ],
+            paymentDueDate: $this->header->paymentDueDate($rawText),
         );
     }
 
@@ -472,24 +469,9 @@ final class IcsPdfAdapter implements SourceAdapter
     private function safeParseAmount(string $raw): ?int
     {
         try {
-            return $this->amounts->parse($raw);
+            return $this->amounts->parse($raw, IcsPdfHeaderProfile::STATEMENT_CURRENCY);
         } catch (InvalidAmountException) {
             return null;
         }
-    }
-
-    private function parseStatementNumber(string $text): ?string
-    {
-        if (
-            preg_match(
-                '/Volgnummer\s+Bladnummer\s*\n[^\n]*?(\d+)\s+\d+\s+van\s+\d+/m',
-                $text,
-                $m,
-            ) === 1
-        ) {
-            return $m[1];
-        }
-
-        return null;
     }
 }

@@ -7,7 +7,7 @@ return [
     'sensitivity_help' => 'Koliko lako Beatrax proglašava zaduženje neuobičajenim za tog trgovca ili kategoriju, od 1 do 100. Više označava više.',
 
     'min_amount_label' => 'Najmanji iznos zaduženja',
-    'min_amount_help' => 'Zanemari anomalije na zaduženjima manjim od ovog iznosa. Čuva se u centima (:symbol) — 1000 znači :example.',
+    'min_amount_help' => 'Zanemari anomalije na zaduženjima manjim od ovog iznosa. Čuva se u najmanjim jedinicama (:symbol) — :minor znači :example.',
 
     'save' => 'Sačuvaj podešavanja anomalija',
     'saved' => 'Sačuvano.',

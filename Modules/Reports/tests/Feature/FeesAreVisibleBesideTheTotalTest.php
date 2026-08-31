@@ -92,14 +92,14 @@ it('reports the fees and adjustments the total leaves out', function (): void {
 
     // The total is unchanged — the exclusion was deliberate and stays.
     expect($result->totalMinor)->toBe(200000)
-        ->and($result->otherMovementMinor)->toBe(900);
+        ->and($result->otherMovementsByCurrency)->toBe(['EUR' => 900]);
 });
 
 it('reports nothing when there is nothing excluded', function (): void {
     $user = feesUser();
     feesSeed($user, 'expense', -200000, 0);
 
-    expect(app(ReportAggregator::class)->run($user, feesDefinition())->otherMovementMinor)->toBe(0);
+    expect(app(ReportAggregator::class)->run($user, feesDefinition())->otherMovementsByCurrency)->toBe([]);
 });
 
 it('honours the report filters', function (): void {
@@ -120,7 +120,7 @@ it('honours the report filters', function (): void {
         accounts: [999999],
     );
 
-    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe(0);
+    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementsByCurrency)->toBe([]);
 });
 
 it('says so on the page, in the interface language', function (): void {
@@ -166,7 +166,7 @@ it('reads a fee the same way as the total it sits beside', function (string $met
 
     // A spend report reads positive, so its fee does too; income and net read
     // signed, so the same 9.00 of fees reads as money leaving.
-    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe($expected);
+    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementsByCurrency)->toBe(['EUR' => $expected]);
 })->with([
     ['spend', 900],
     ['income', -900],
@@ -189,7 +189,5 @@ it('carries the fees through the original-currency path too', function (): void 
         customTo: '2026-08-31',
     );
 
-    // applyOriginal() picks the primary currency's total out of the per-currency
-    // map, and nothing exercised that branch at all.
-    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe(150);
+    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementsByCurrency)->toBe(['EUR' => 150]);
 });

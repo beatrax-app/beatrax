@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'základ :baseline → skutečnost: :actual',
+    'charged' => 'zaúčtováno :actual',
     'detected' => 'zjištěno :date',
     'sensitivity' => 'citlivost :percent ze 100',
 

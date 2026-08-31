@@ -24,6 +24,7 @@ return [
 
     'top_spending' => 'Najveći troškovi',
     'no_expenses' => 'Još nema kategoriziranih troškova.',
+    'top_spending_refunded' => 'Izvan poretka — :amount se vratilo',
 
     'recent_transactions' => 'Nedavne transakcije',
     'view_all' => 'Prikaži sve',
@@ -33,6 +34,11 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Iznos',
     'uncategorized' => 'Bez kategorije',
+
+    'jump_to_records' => [
+        'body' => 'Nema ničega za ovo razdoblje. Vaše najnovije transakcije i dalje su ovdje.',
+        'action' => 'Prikaži razdoblje :period',
+    ],
 
     'reauth' => [
         'title' => 'Ulazni pretinac treba ponovno povezati.',

@@ -19,11 +19,12 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
-use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
-use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
+use Modules\Sync\Internal\Pairing\PairingLanAdvertisement;
+use Modules\Sync\Internal\Pairing\PairingPeerErrands;
+use Modules\Sync\Internal\Pairing\PairingRefusalCopy;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -32,6 +33,8 @@ use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\RelayBootstrap;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Dto\PairingPeerIdentity;
+use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Modules\Sync\Public\Enums\PairingSide;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
@@ -40,20 +43,13 @@ use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+/**
+ * @phpstan-type TypedCodeInitiator array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost?: string, lanPort?: int}
+ */
 final class PairingFlowModal extends Component
 {
     use HoldsFlashMessage;
     use ReadsPairingTokenRow;
-
-    // Translation key (resolved via Lang::get at each use site) rather than
-    // literal copy, so the const stays free of the banned container call.
-    private const IDENTITY_LOCKED_MESSAGE = 'sync::pairing.identity_locked';
-
-    // "Unlock and try again" is a lie for a key-file no unlock can open, and
-    // this modal is exactly where a user would keep trying. The copy for that
-    // state belongs to the settings section, which is where the way out of it
-    // is offered.
-    private const IDENTITY_UNREADABLE_MESSAGE = 'sync::devices.identity_unreadable';
 
     public bool $open = false;
 
@@ -229,12 +225,14 @@ final class PairingFlowModal extends Component
         Session $session,
         RelayConfig $relayConfig,
         DeviceRegistryService $registry,
+        PairingRefusalCopy $refusalCopy,
+        PairingLanAdvertisement $lanAdvertisement,
     ): void {
         $userId = $currentUser->user()->id;
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
 
             return;
         }
@@ -263,13 +261,29 @@ final class PairingFlowModal extends Component
                 $relayConfig->authToken(),
                 $relayConfig->pin(),
             ),
+            // The road a phone can take without browsing for it. iOS grants no
+            // multicast entitlement, so a scanned code that names no address
+            // and no relay leaves the responder nowhere to send its accept.
+            $lanAdvertisement->forQr(),
         );
-        $this->wordCode = $wordEncoder->encode($token);
+        $this->wordCode = $this->offersATypedCode() ? $wordEncoder->encode($token) : '';
         $this->pairingTokenId = (string) $this->tokenRowId($db, $userId, $token);
         $this->side = PairingSide::Initiator->value;
         $this->expiresInSeconds = 600;
         $this->flashMessage = '';
         $this->step = PairingWizardStep::ShowCode->value;
+    }
+
+    // Whether a code shown here can be TYPED into the other device. Recovering
+    // one means asking the LAN for the issuer's pairing offer, and only a
+    // device running the sync listener answers: no phone runs one, so a word
+    // code minted there names a row no peer can look up (see @link).
+    /**
+     * @link ../../../../../.docs/features/sync/pairing-handshake.md#a-phone-can-only-be-scanned
+     */
+    private function offersATypedCode(): bool
+    {
+        return ! UserDataPathService::isMobileRuntime();
     }
 
     // On a phone this hands off to the camera-first pairing screen instead of
@@ -289,37 +303,37 @@ final class PairingFlowModal extends Component
         $this->side = PairingSide::Responder->value;
     }
 
-    // Decodes the typed word-code and accepts the peer's token, binding this
-    // device's responder keys. On success advances to confirm and derives
-    // the shared safety-number; on failure stays on enter_code with an error.
+    // Recovers the initiator's identity from the LAN, seeds the local row that
+    // identity is missing from, and accepts the peer's token onto it. On
+    // success advances to confirm and derives the shared safety-number; on
+    // failure stays on enter_code saying which of the four endings happened.
     public function submitCode(
         CurrentUser $currentUser,
         DeviceIdentityLoader $identityLoader,
         PairingTokenService $tokenService,
-        WordCodeEncoder $wordEncoder,
         Session $session,
         PairingGateway $gateway,
         DeviceRegistryService $registry,
+        PairingRefusalCopy $refusalCopy,
+        PairingPeerErrands $errands,
     ): void {
         $userId = $currentUser->user()->id;
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
 
             return;
         }
 
-        try {
-            $tokenHex = $wordEncoder->decode($this->wordCode);
-        } catch (\InvalidArgumentException) {
-            $this->flashMessage = Lang::get('sync::pairing.invalid_code');
+        $initiator = $this->adoptTypedInitiator($gateway, $refusalCopy, $userId);
 
+        if ($initiator === null) {
             return;
         }
 
         $accepted = $tokenService->accept(
-            $tokenHex,
+            $initiator['token'],
             $userId,
             $identity->deviceId,
             $identity->ed25519PublicKeyHex,
@@ -338,6 +352,49 @@ final class PairingFlowModal extends Component
         $this->hydrateDeviceNames($gateway, $registry, $userId, PairingSide::Responder);
         $this->flashMessage = '';
         $this->step = PairingWizardStep::Confirm->value;
+
+        $errands->announceResponderAccept($userId, hash('sha256', $initiator['token']), $initiator['deviceId'], $session);
+    }
+
+    // A typed code carries the token and nothing else, so the row it names has
+    // only ever existed in the database of the device that issued it. Asking
+    // that device for its pairing offer is what turns the token into an identity
+    // a local row can be seeded from; without it accept() binds nothing.
+    /**
+     * @link ../../../../../.docs/features/sync/pairing-handshake.md#both-clients-have-to-ask
+     *
+     * @return TypedCodeInitiator|null Null when the code named no identity that
+     *                                 could be read, the reason already flashed.
+     */
+    private function adoptTypedInitiator(PairingGateway $gateway, PairingRefusalCopy $refusalCopy, int $userId): ?array
+    {
+        $discovered = $gateway->discoverInitiatorOnLan($this->wordCode);
+
+        if ($discovered instanceof PairingOfferLookup) {
+            $this->flashMessage = $refusalCopy->offerLookupRefusal($discovered);
+
+            return null;
+        }
+
+        // No trust decision: the seeded row is Pending and still faces the
+        // whole ceremony, and the safety-number comparison remains the only
+        // gate anything is admitted through.
+        $gateway->seedResponderToken(
+            $discovered['token'],
+            new PairingPeerIdentity(
+                $discovered['deviceId'],
+                $discovered['ed25519PubHex'],
+                $discovered['x25519PubHex'],
+                // The offered name, so the peer is not admitted under the
+                // "Paired device" placeholder the registry falls back to.
+                $discovered['deviceName'],
+                $discovered['lanHost'],
+                $discovered['lanPort'],
+            ),
+            $userId,
+        );
+
+        return $discovered;
     }
 
     // Advances show_code -> confirm when the responder has accepted, and any
@@ -355,6 +412,7 @@ final class PairingFlowModal extends Component
         PendingPairingCourier $courier,
         PreSyncHistoryCapture $historyCapture,
         DeviceRegistryService $registry,
+        PairingPeerErrands $errands,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -393,20 +451,8 @@ final class PairingFlowModal extends Component
         }
 
         if ($row->state === PairingState::Confirmed->value && $this->currentStep() !== PairingWizardStep::Success) {
-            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $db, $gateway, $logger);
+            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $errands);
         }
-    }
-
-    // Asked only once a load() already came back empty, so the extra read is
-    // paid on the refusal path alone.
-    private function identityUnavailableMessage(
-        DeviceIdentityLoader $identityLoader,
-        int $userId,
-        Session $session,
-    ): string {
-        return $identityLoader->state($userId, $session) === DeviceIdentityState::Unreadable
-            ? Lang::get(self::IDENTITY_UNREADABLE_MESSAGE)
-            : Lang::get(self::IDENTITY_LOCKED_MESSAGE);
     }
 
     // Which name is "the peer" depends on the side this modal is playing:
@@ -437,11 +483,9 @@ final class PairingFlowModal extends Component
         PairingTokenService $tokenService,
         Session $session,
         EncryptionMigrationService $migrationService,
-        DatabaseManager $db,
         PairingGateway $gateway,
-        LoggerInterface $logger,
-        PairingFrameCourier $frameCourier,
-        RelayConfig $relayConfig,
+        PairingRefusalCopy $refusalCopy,
+        PairingPeerErrands $errands,
         PreSyncHistoryCapture $historyCapture,
     ): void {
         if ($this->pairingTokenId === '') {
@@ -454,7 +498,7 @@ final class PairingFlowModal extends Component
         // service derives the side from this device id, never from client state.
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $this->identityUnavailableMessage($identityLoader, $userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
 
             return;
         }
@@ -483,11 +527,11 @@ final class PairingFlowModal extends Component
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side has confirmed too.
-        $this->sendConfirmToPeer($db, $frameCourier, $identity, $logger, $userId);
+        $errands->sendConfirm($identity, (int) $this->pairingTokenId, $userId, $this->side);
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
-            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $db, $gateway, $logger);
+            $this->enterSuccessStep($currentUser, $session, $migrationService, $historyCapture, $errands);
         } else {
             $this->awaitingPeer = true;
         }
@@ -502,9 +546,7 @@ final class PairingFlowModal extends Component
         Session $session,
         EncryptionMigrationService $migrationService,
         PreSyncHistoryCapture $historyCapture,
-        DatabaseManager $db,
-        PairingGateway $gateway,
-        LoggerInterface $logger,
+        PairingPeerErrands $errands,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -529,55 +571,9 @@ final class PairingFlowModal extends Component
         // Fans out EVERY epoch to the just-confirmed device. migrate() runs
         // FIRST so a device that had never enabled encryption has something to
         // deliver, and this whole tail is reachable only from a CONFIRMED row.
-        $this->fanOutToNewlyConfirmedDevice($db, $gateway, $logger, $userId, $session);
+        $this->fanOutFailed = ! $errands->fanOutEpochsToConfirmedPeers($userId, $session);
 
         $this->dispatch('pairing-confirmed');
-    }
-
-    // Fans out every keyring epoch to EVERY confirmed peer, asking the
-    // permanent device_registry rather than this transient token: prune()
-    // drops that row on the next issue(), so resolving the recipient from it
-    // delivered nothing once the ceremony outlived its own token.
-    private function fanOutToNewlyConfirmedDevice(
-        DatabaseManager $db,
-        PairingGateway $gateway,
-        LoggerInterface $logger,
-        int $userId,
-        Session $session,
-    ): void {
-        $recipients = $db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 0)
-            ->whereNotNull('confirmed_at')
-            ->pluck('id');
-
-        if ($recipients->isEmpty()) {
-            $this->fanOutFailed = true;
-            $logger->warning('GDK epoch fan-out found no confirmed peer to deliver to — the peer cannot decrypt anything until it is admitted.', [
-                'user_id' => $userId,
-            ]);
-
-            return;
-        }
-
-        $this->fanOutFailed = false;
-
-        foreach ($recipients as $deviceRegistryId) {
-            if (! is_numeric($deviceRegistryId)) {
-                continue;
-            }
-
-            try {
-                $gateway->deliverAllEpochsToDevice($userId, (int) $deviceRegistryId, $session);
-            } catch (Throwable $e) {
-                $this->fanOutFailed = true;
-                $logger->warning('GDK epoch fan-out to newly-confirmed device failed.', [
-                    'user_id' => $userId,
-                    'device_registry_id' => (int) $deviceRegistryId,
-                    'exception' => $e::class,
-                ]);
-            }
-        }
     }
 
     public function onCodeExpired(
@@ -605,8 +601,10 @@ final class PairingFlowModal extends Component
         Session $session,
         RelayConfig $relayConfig,
         DeviceRegistryService $registry,
+        PairingRefusalCopy $refusalCopy,
+        PairingLanAdvertisement $lanAdvertisement,
     ): void {
-        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig, $registry);
+        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig, $registry, $refusalCopy, $lanAdvertisement);
     }
 
     // Cancels an IN-FLIGHT pairing: expires the still-live token and resets
@@ -668,48 +666,7 @@ final class PairingFlowModal extends Component
         // string the client last put on the wire.
         return $views->make('sync::livewire.pairing-flow-modal', [
             'wizardStep' => $this->currentStep(),
+            'offersATypedCode' => $this->offersATypedCode(),
         ]);
-    }
-
-    // No relay check: the courier tries the LAN, then the relay, then holds the
-    // frame for collection, so returning early on an unconfigured relay left a
-    // LAN-only pairing confirmed on one device and not the other. Best-effort —
-    // a courier failure is logged, never flashed.
-    private function sendConfirmToPeer(
-        DatabaseManager $db,
-        PairingFrameCourier $frameCourier,
-        DeviceIdentityDto $identity,
-        LoggerInterface $logger,
-        int $userId,
-    ): void {
-
-        // Scoped even though $pairingTokenId is #[Locked] and every writer is
-        // user-scoped, so no reachable state makes this cross-user. A read of
-        // a user-owned table that does not say whose it is reads as an
-        // oversight to the next person, and its twin in Mobile carries it.
-        $row = $db->connection()->table('pairing_tokens')
-            ->where('id', (int) $this->pairingTokenId)
-            ->where('user_id', $userId)
-            ->first(['token_hash', 'initiator_device_id', 'responder_device_id']);
-
-        if ($row === null) {
-            return;
-        }
-
-        $tokenHash = is_string($row->token_hash) ? $row->token_hash : null;
-        $peerDeviceId = $this->peerDeviceId($row);
-
-        if ($tokenHash === null || $peerDeviceId === null) {
-            return;
-        }
-
-        try {
-            $frameCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
-        } catch (Throwable $e) {
-            $logger->warning('PairingFlowModal: cross-device PAIR_CONFIRM relay delivery failed.', [
-                'pairing_token_id' => $this->pairingTokenId,
-                'exception' => $e::class,
-            ]);
-        }
     }
 }

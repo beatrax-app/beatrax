@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Je creditcard (ICS)',
+    'eyebrow' => 'Je creditcard',
     'h1' => 'Pak je maandelijkse PDF-afschriften',
-    'lede' => 'Zet al je maandelijkse ICS PDF-afschriften neer — we combineren ze tot één voorbeeld.',
+    'lede' => 'Zet al je maandelijkse PDF-afschriften neer — we combineren ze tot één voorbeeld.',
 
     'format_group_aria' => 'ICS exporteert alleen als PDF',
+    'issuer_note' => 'ICS is voorlopig de enige kaartuitgever die we kunnen lezen, en alleen het Nederlandstalige afschrift. Heb je een kaart van een andere uitgever, sla deze stap dan over.',
     'got_it_as' => 'Gekregen als:',
     'badge_only_format' => 'enige formaat',
 

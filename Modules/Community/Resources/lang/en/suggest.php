@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Pattern is required.',
         'name_required' => 'Name is required.',
+        'browser_refused' => 'Your browser could not be opened, so nothing was sent and nothing left this device. Try again, or copy the YAML preview above into a pull request yourself.',
     ],
 ];

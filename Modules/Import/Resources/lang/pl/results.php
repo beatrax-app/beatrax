@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Wgraj kolejny wyciąg',
 
+    'chain' => [
+        'heading' => 'Rozwiązywanie łańcuchów…',
+        'pending' => 'W kolejce. Rozwiązywanie łańcuchów wkrótce się rozpocznie.',
+        'running' => 'Trwa łączenie łańcuchów finansowania i rozkładanie rozliczeń z wyciągu.',
+    ],
+
     'issues' => [
         'row' => 'Wiersz :row: :reason',
         'file_stopped' => 'Pliku nie udało się odczytać dalej niż do wiersza :row. Nic po tym wierszu nie zostało zaimportowane.',

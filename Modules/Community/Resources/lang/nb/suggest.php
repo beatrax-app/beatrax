@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Mønster er påkrevd.',
         'name_required' => 'Navn er påkrevd.',
+        'browser_refused' => 'Nettleseren din kunne ikke åpnes, så ingenting ble sendt og ingenting forlot denne enheten. Prøv igjen, eller kopier YAML-forhåndsvisningen over inn i en pull request selv.',
     ],
 ];

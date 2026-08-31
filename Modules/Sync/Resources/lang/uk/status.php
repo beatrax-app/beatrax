@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Видалений пристрій',
     'dismiss_peer' => 'Відхилити цей пристрій',
+    'dismiss_peer_caption' => 'Відхилити',
     'dismiss_stale' => 'Прибрати пристрої, які більше не пов’язані',
     'not_synced_yet' => 'Ще не синхронізовано',
     'error' => 'Помилка синхронізації на одному чи кількох пристроях',

@@ -24,6 +24,10 @@ return [
         'unknown' => 'Nieznane',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Opłata bankowa',
+    ],
+
     'cp_card' => [
         'aria' => 'Kontrahent: :name',
         'recent_aria' => 'Ostatnia aktywność',

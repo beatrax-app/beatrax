@@ -14,16 +14,16 @@ use Psr\Log\LoggerInterface;
 // any facade call — a forged POST cannot reach App::quit() or
 // Window::current()->hide() with anything other than the two
 // sanctioned strings.
-final class CloseActionController
+final readonly class CloseActionController
 {
-    private const ALLOWED = [
+    private const array ALLOWED = [
         WindowCloseBehavior::CHOICE_QUIT,
         WindowCloseBehavior::CHOICE_TRAY,
     ];
 
     public function __construct(
-        private readonly ApplyCloseWindowChoice $applyChoice,
-        private readonly LoggerInterface $logger,
+        private ApplyCloseWindowChoice $applyChoice,
+        private LoggerInterface $logger,
     ) {}
 
     public function __invoke(Request $request): Response

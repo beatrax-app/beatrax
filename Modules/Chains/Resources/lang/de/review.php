@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Bestätige oder verwirf Kandidatenverknüpfungen, die der Ketten-Resolver nicht automatisch bestätigen konnte.',
 
     'empty_heading' => 'Nichts zu prüfen',
-    'empty_body' => 'Jede Kettenverknüpfung ist bestätigt oder abgelehnt. Neue Kandidaten erscheinen hier, sobald Importe eintreffen.',
+    'empty_body' => 'Jede Verknüpfung, die der Resolver zuordnen konnte, ist bestätigt oder abgelehnt. Neue Kandidaten erscheinen hier, sobald Importe eintreffen.',
 
     'auto_confirm_nudge' => 'Noch eine Bestätigung und ähnliche Verknüpfungen werden automatisch bestätigt.',
 

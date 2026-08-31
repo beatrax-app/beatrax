@@ -131,18 +131,33 @@ a monotonic nonce counter. Two details matter:
   at 2^64−1, which is conservative in the safe direction: it refuses to encrypt
   slightly early rather than silently reusing a nonce.
 
-### Known deviation: nonce byte order
+### Nonce byte order, and the version boundary it moved
 
-The Noise specification (§12.3) forms the 96-bit ChaChaPoly nonce as 32 bits of
-zeros **followed by** the little-endian encoding of `n`. `buildNonce()` emits
-the opposite layout — `n` in bytes 0–7, zeros in bytes 8–11.
+The Noise specification (rev34 §12.3) forms the 96-bit ChaChaPoly nonce as 32
+bits of zeros **followed by** the little-endian encoding of `n`. `buildNonce()`
+emitted the opposite layout — `n` in bytes 0–7, zeros in bytes 8–11 — and now
+emits the spec's.
 
-Because both ends of every Beatrax session run this same implementation, the
-sessions work and the vendored test vectors pass; those vectors were regenerated
-from this implementation rather than taken verbatim from the reference suite.
-The deviation only becomes visible against a third-party Noise implementation,
-which nothing currently talks to. Treat it as a known interoperability
-constraint, not as a bug that is currently biting anything.
+The two layouts are byte-identical at `n = 0`, which is why nothing noticed:
+both ends ran the same implementation, and every message either side could
+compare against a vector encrypts at `n = 0`. The vendored handshake vectors
+were regenerated from this implementation rather than taken from the reference
+suite, so they could not see it either. `NoiseTransportNonceFollowsTheSpecTest`
+now pins the encoding independently, against nonce bytes vendored from the spec
+text rather than from any implementation.
+
+Two consequences worth stating plainly:
+
+- **This is a wire-format change.** Every transport message from the second in a
+  direction onward, and the XX handshake's third message — which encrypts the
+  initiator's static key at `n = 1`, because the cipher from message 2's
+  `mixKey` has already encrypted one payload — differ between a build before
+  this change and one after. An old peer and a new peer cannot complete an XX
+  handshake. IK is unaffected: every one of its handshake encryptions is at
+  `n = 0`.
+- The XX vector's message-3 ciphertext in `noise_test_vectors.json` was
+  re-derived for the same reason. It is a determinism anchor, not an
+  interoperability proof; the fixture says so.
 
 ## The test-only ephemeral seam
 

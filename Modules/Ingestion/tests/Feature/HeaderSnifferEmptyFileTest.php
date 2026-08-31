@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
 beforeEach(function (): void {
@@ -26,5 +26,5 @@ it('rejects an empty file on every CSV sniff path', function (string $format): v
 })->with([
     'preset CSV' => 'n26-csv',
     'PayPal' => PaypalCsvLanguageProfile::FORMAT,
-    'ASN' => AsnCsvHeaderProfile::FORMAT,
+    'ASN' => CsvPresetRegistry::ASN,
 ]);

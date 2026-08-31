@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Šablons ir obligāts.',
         'name_required' => 'Nosaukums ir obligāts.',
+        'browser_refused' => 'Pārlūku neizdevās atvērt, tāpēc nekas netika nosūtīts un nekas neatstāja šo ierīci. Mēģiniet vēlreiz vai pats ielīmējiet augstāk redzamo YAML priekšskatījumu pull request.',
     ],
 ];

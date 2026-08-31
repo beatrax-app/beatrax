@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Odstranjena naprava',
     'dismiss_peer' => 'Opusti to napravo',
+    'dismiss_peer_caption' => 'Opusti',
     'dismiss_stale' => 'Počisti naprave, ki niso več seznanjene',
     'not_synced_yet' => 'Še ni sinhronizirano',
     'error' => 'Napaka sinhronizacije na eni ali več napravah',

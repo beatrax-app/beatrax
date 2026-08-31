@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— eraisikutest kontaktidel rahastusahelaid ei ole',
     'tab_note_bank' => '— pangatasude vastaspool ei tekita rahastusahelaid',
+    'tab_note_bank_institution' => '— institutsionaalsetel vastaspooltel rahastusahelaid ei ole',
     'tab_note_government' => '— riigiasutustest vastaspooltel rahastusahelaid ei ole',
 
     'recent_activity' => 'Hiljutine tegevus',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Pangatasud kategooriate kaupa',
+        'activity_heading' => 'Tegevus kategooriate kaupa',
         'no_fees' => 'Selle vastaspoole kohta pole veel tasusid kirjas.',
     ],
 

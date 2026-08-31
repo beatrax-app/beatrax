@@ -37,9 +37,13 @@ return [
     'parse_preview' => 'Einlesen & Vorschau',
     'cancel_import' => 'Import abbrechen',
 
-    'diff_new' => 'neu,',
-    'diff_unchanged' => 'unverändert,',
-    'diff_conflicts' => 'Konflikte.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    // i18n-review: de · diff_new, diff_unchanged — attributive endings for an
+    // elided neuter Alias, following the anomaly tile's 2 große. Both the gender
+    // and the register against a bare neu are open.
+    'diff_new' => ':count neues|:count neue',
+    'diff_unchanged' => ':count unverändertes|:count unveränderte',
+    'diff_conflicts' => ':count Konflikt|:count Konflikte',
 
     'conflicts_heading' => 'Konflikte',
     'conflict_name' => 'Name — vorhanden: :existing → Datei: :file',
@@ -54,8 +58,7 @@ return [
     'test_heading' => 'An meinen Transaktionen testen',
     'test_help' => 'Bearbeite das verallgemeinerte Muster einer Zeile, um zu sehen, welche Transaktionen es treffen würde.',
     'typing' => 'Eingabe…',
-    'matches_prefix' => 'Trifft auf',
-    'matches_suffix' => 'Transaktionen in deinem jüngeren Verlauf zu.',
+    'matches' => 'Trifft auf :count Transaktion in deinem jüngeren Verlauf zu.|Trifft auf :count Transaktionen in deinem jüngeren Verlauf zu.',
 
     'merge_modal_title' => ':count Alias zusammenführen|:count Aliase zusammenführen',
 
@@ -84,5 +87,10 @@ return [
         'no_file' => 'Keine Datei hochgeladen.',
         'unreadable' => 'Die hochgeladene Datei konnte nicht gelesen werden.',
         'too_short' => 'Das Muster ist zu kurz zum Testen.',
+        'file_not_yaml' => 'Diese Datei ist kein gültiges YAML, deshalb konnte nichts daraus gelesen werden. Exportiere deine Aliase erneut und lade die erzeugte Datei hoch.',
+        'file_unreadable_as_yaml' => 'Diese Datei ließ sich nicht als Aliasliste lesen. Exportiere deine Aliase erneut und lade die erzeugte Datei hoch.',
+        'file_has_no_entries_list' => 'Diese Datei beginnt nicht mit einer entries:-Liste auf oberster Ebene, deshalb sind keine Aliase darin zu importieren. Prüfe, ob du die richtige Datei gewählt hast.',
+        'entry_is_not_a_mapping' => 'Eintrag :entry ist ein einfacher Wert, wo ein Muster und ein Name erwartet wurden. Gib ihm beide Felder oder entferne ihn und lade die Datei erneut hoch.',
+        'entry_is_missing_a_field' => 'Bei Eintrag :entry fehlt das Muster oder der Name, und ein Alias braucht beides. Ergänze das Fehlende oder entferne den Eintrag und lade die Datei erneut hoch.',
     ],
 ];

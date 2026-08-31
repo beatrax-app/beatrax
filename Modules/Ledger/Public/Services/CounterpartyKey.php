@@ -14,7 +14,7 @@ use Modules\Sync\Public\Services\BlindIndexCodec;
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
  */
-final class CounterpartyKey
+final readonly class CounterpartyKey
 {
     // Aliased, not redeclared: the guards that read a blind-index column back
     // resolve the sentinel from the registry, and two spellings of it would
@@ -32,9 +32,9 @@ final class CounterpartyKey
     public const string DOMAIN_IBAN = BlindIndexCodec::DOMAIN_COUNTERPARTY_IBAN;
 
     public function __construct(
-        private readonly FingerprintComposer $fingerprints,
-        private readonly BlindIndexCodec $blindIndex,
-        private readonly SessionFactory $session,
+        private FingerprintComposer $fingerprints,
+        private BlindIndexCodec $blindIndex,
+        private SessionFactory $session,
     ) {}
 
     public function forName(?string $rawName, int $userId): string

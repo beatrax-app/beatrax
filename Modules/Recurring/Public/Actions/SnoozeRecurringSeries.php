@@ -6,6 +6,8 @@ namespace Modules\Recurring\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SnoozeUntil;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -16,10 +18,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // the same row-locked transaction and audit row — the row is never
 // observed in a "future snooze date, original state" intermediate.
 
-final class SnoozeRecurringSeries
+final readonly class SnoozeRecurringSeries
 {
     public function __construct(
-        private readonly RecurringSeriesStateMachine $stateMachine,
+        private RecurringSeriesStateMachine $stateMachine,
+        private Clock $clock,
     ) {}
 
     public function __invoke(int $seriesId, User $user, CarbonImmutable $until): void
@@ -34,15 +37,18 @@ final class SnoozeRecurringSeries
             throw new NotFoundHttpException('Recurring series not found.');
         }
 
+        // Bounded here rather than at the review page, so a tampered payload
+        // cannot take a pending series out of the queue for good: the revival
+        // sweep only reopens rows whose snoozed_until has passed.
+        $bounded = SnoozeUntil::from($until, $this->clock->now());
+        $untilString = $bounded->toDateTimeString();
+
         if (
             $series->state === RecurringSeriesState::Snoozed->value
-            && $series->snoozed_until !== null
-            && $series->snoozed_until->toDateTimeString() === $until->toDateTimeString()
+            && $series->snoozed_until?->toDateTimeString() === $untilString
         ) {
             return;
         }
-
-        $untilString = $until->toDateTimeString();
 
         $this->stateMachine->transition(
             $series,

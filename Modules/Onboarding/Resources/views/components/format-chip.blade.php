@@ -11,9 +11,9 @@
 
     Per UI-SPEC §"Color" #3 ("Format-chip 'recommended' badge — emerald-
     bg + emerald text only"), the emerald treatment is reserved for the
-    single recommended option. The ICS PDF chip is muted ("[only
-    format]" suffix), explicitly NOT emerald because it's a constraint,
-    not a recommendation.
+    single recommended option. The card step's PDF chip is muted
+    ("[only format]" suffix), explicitly NOT emerald because it's a
+    constraint, not a recommendation.
 --}}
 @props([
     'label',

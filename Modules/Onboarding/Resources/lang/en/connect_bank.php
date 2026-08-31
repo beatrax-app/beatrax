@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Drop your CAMT.053 file here',
     'drop_lead_mt940' => 'Drop your MT940 file here',
-    'drop_lead_asn' => 'Drop your ASN CSV here',
-    'drop_lead_ing' => 'Drop your ING CSV here',
+    'drop_lead_csv_layout' => 'Drop your :layout CSV here',
     'drop_lead_pick_bank' => 'Pick which bank exported your CSV — we need to know to read it correctly.',
     'drop_lead_default' => 'Drop your statement file here',
     'browse_file' => 'or browse for a file',
 
-    'banks_mt940' => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Supported: ASN, ING — more formats coming as users contribute samples.',
-    'banks_default' => 'Supported: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 is an XML statement — look under statements or downloads in your online banking.',
+    'format_help_mt940' => 'MT940 is a plain-text statement, offered as .sta or .940 beside the XML and CSV downloads.',
+    'format_help_csv' => 'CSV is the spreadsheet export. Every bank orders its columns differently, so pick the layout yours matches — and if yours is not listed, ask your bank for CAMT.053 or MT940 instead.',
+
+    'account_name_default' => 'Bank account',
+    'account_name_layout' => ':layout account',
 
     'file_ready' => '· ✓ ready',
 

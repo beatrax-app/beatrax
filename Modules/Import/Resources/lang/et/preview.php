@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Anna sellele kontole nimi.',
 
     'ics' => [
+        'name' => 'ICS kaart',
         'heading' => 'Anna oma ICS kaardikontole nimi.',
         'help' => 'See on esimene kord, kui impordid ICS andmeid. Anna sellele kaardile nimi, et see kuvatakse kogu rakenduses ühtmoodi.',
         'placeholder' => 'nt ICS kaart',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'Anna oma PayPali kontole nimi.',
         'help' => 'See on esimene kord, kui impordid PayPali andmeid. Anna sellele rahakotile nimi, et see kuvatakse kogu rakenduses ühtmoodi.',
         'placeholder' => 'nt PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Anna oma Google Play kontole nimi.',
+        'help' => 'See on esimene kord, kui impordid Google Play kviitungi. Anna sellele kontole nimi, et see kuvatakse kogu rakenduses ühtmoodi.',
+        'placeholder' => 'nt Google Play',
     ],
 
     'col_date' => 'Kuupäev',
@@ -53,28 +62,41 @@ return [
         'error' => 'Viga',
     ],
 
-    'chain' => [
-        'heading' => 'Lahendan ahelaid…',
-        'pending' => 'Järjekorras. Ahelate lahendaja alustab peagi.',
-        'running' => 'Seon rahastusahelaid ja lahutan väljavõtte arveldusi.',
-        'failed_prefix' => 'Ahelate lahendamine ebaõnnestus:',
-        'failed_detail' => 'üksikasjad on tööde logis',
-        'open_horizon' => 'Ava Horizon',
-        'failed_suffix' => 'et uuesti proovida või uurida.',
-    ],
-
     'rows_shown' => 'Kuvatud read: :shown / :total',
 
     'show_more' => 'Näita rohkem ridu',
 
     'errors' => [
         'app_locked' => 'Importimiseks avage rakendus: krüpteerimisvõtmeid ei saa lukustatuna kasutada.',
+        'archive_holds_one_message' => 'See fail on üksainus e-kiri, mitte postkasti arhiiv, nii et arhiivina loetuna pole selles midagi. Laadi see uuesti üles vorminguga E-kiri.',
+        'email_file_is_an_archive' => 'See fail on postkasti arhiiv: selles on rohkem kui üks kiri, ja ühe kirjana loetuna võetaks sealt ainult esimene. Laadi see uuesti üles vorminguga Postkasti arhiiv.',
         'file_stopped_short' => 'Päiserida klappis, seega on vorming õige. Lugemine peatus enne faili lõppu. Selle põhjustab üks loetamatu rida, samuti selle seadme jaoks liiga suur fail. Proovi lühemat ajavahemikku.',
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
+        'file_unreadable_detail' => 'Rakendus ei suutnud seda faili lugeda (:code). Täielikud üksikasjad on rakenduse logis; probleemist teatades viita sellele koodile.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
-        'pdf_reader_unavailable' => 'PDF-väljavõtted vajavad programmi pdftotext, mida siin pole paigaldatud. Impordi see fail arvutis, kus see olemas on, või kasuta hoopis panga CSV-eksporti.',
+        'not_an_email_file' => 'See fail pole ei e-kiri ega postkasti arhiiv, nii et sealt pole midagi kviitungina lugeda. Vali impordi tüüp ja vorming, mis sinu failile vastavad.',
+        'pdf_has_no_text_layer' => 'See PDF ei sisalda teksti — see on väljavõtte skann või foto, nii et sealt pole midagi lugeda. Laadi pangast alla väljavõte ise või kasuta CSV-eksporti.',
+        'pdf_password_protected' => 'See PDF on parooliga kaitstud, nii et ükski lugeja ei ava seda. Salvesta oma PDF-vaaturist kaitseta koopia ja impordi see.',
+        'pdf_reader_unavailable' => 'Sellel rakenduse versioonil pole üldse PDF-lugejat, nii et PDF-väljavõtet ei saa siin avada. Impordi see fail teises seadmes või kasuta hoopis panga CSV-eksporti.',
+        'row_belongs_to_another_statement' => 'See rida kuulub tehingu juurde, mis on teises väljavõttefailis. Impordi ka see väljavõte — need kaks loetakse koos.',
         'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',
+        'row_unreadable_detail' => 'Rakendus ei suutnud seda rida lugeda (:code). Täielikud üksikasjad on rakenduse logis; probleemist teatades viita sellele koodile.',
         'unknown_account' => 'See rida kuulub kontole, millele sa pole veel nime andnud.',
+    ],
+
+    'receipts' => [
+        'heading' => 'See fail loeti e-kirjana',
+        'saved' => 'Mida see sisaldas, on all, ja iga sõnum on salvestatud.',
+        'none_imported' => 'Ükski neist ei saanud tehinguks, seega pearaamatusse ei lisatud midagi.',
+        'shown' => 'Kuvatud sõnumid: :shown / :total',
+        'no_subject' => 'Teemata',
+
+        'state' => [
+            'read' => 'Loetud maksena — kinnita see import, et see pearaamatusse jõuaks.',
+            'not_a_payment' => 'Pole makse. See sõnum teatab millestki, mitte ei kinnita makset.',
+            'unreadable' => 'Salvestatud. Rakendus loeb selle saatja kviitungeid, kuid ei leidnud sellest sõnumist summat, kaupmeest ega viidet.',
+            'unknown_sender' => 'Salvestatud. Rakendus ei loe selle saatja kviitungeid, seega ei võtnud sõnumist midagi.',
+        ],
     ],
 
     'failed' => [

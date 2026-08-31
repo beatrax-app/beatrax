@@ -5,18 +5,17 @@ declare(strict_types=1);
 // A bare CarbonImmutable::parse() flattened to a day is the same shape whether
 // or not it reaches for SafeDate first, so both spellings are scanned. Homes
 // below flatten a value that cannot be blank, which is what SafeDate guards.
+// One list, because the staleness check below and the scan above must cover the
+// same set: a home added to one and not the other stops being re-proved.
+// CalendarGrid builds its day with sprintf and from a literal, neither of which
+// can arrive blank.
+const FLATTEN_TO_DAY_HOMES = [
+    'Modules/Forecasting/Internal/Pipeline/ChainAwareForecastRouter.php',
+    'Modules/Calendar/Internal/Services/OccurrenceMatcher.php',
+    'Modules/Calendar/Internal/Services/CalendarGrid.php',
+];
+
 it('flattens a parsed date to its day through SafeDate and nowhere else', function (): void {
-    $allowedHomes = [
-        'Modules/OpenBanking/Internal/Adapters/EnableBanking/EnableBankingSourceAdapter.php',
-        'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php',
-        'Modules/Forecasting/Internal/Pipeline/ChainAwareForecastRouter.php',
-        'Modules/Calendar/Internal/Services/CalendarQuery.php',
-        'Modules/Calendar/Internal/Services/OccurrenceMatcher.php',
-        // Guards `$value === ''` immediately above the parse, and deliberately
-        // lets a present-but-unreadable value throw so the reapply job can count
-        // the row as errored rather than silently matching nothing.
-        'Modules/Categorization/Internal/Services/RuleEngine.php',
-    ];
 
     $shapes = [
         '~parseOrNull\([^;]*\)\?->startOfDay\(\)~',
@@ -43,7 +42,7 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
             }
 
             $relative = str_replace(base_path().'/', '', $path);
-            if (in_array($relative, $allowedHomes, true)) {
+            if (in_array($relative, FLATTEN_TO_DAY_HOMES, true)) {
                 continue;
             }
 
@@ -67,7 +66,8 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
     }
 
     expect($offenders)->toBe([], implode("\n", [
-        'A date-only field flattened to its day is SafeDate::parseDayOrNull().',
+        'A date-only field flattened to its day is SafeDate::normalisedDayOrNull(),',
+        'and a date somebody SUPPLIED is SafeDate::dayOrNull(), which refuses it.',
         'CarbonImmutable::parse("") is NOW, so a blank field books itself today.',
         'These spell it out a second time instead:',
         ...$offenders,
@@ -75,20 +75,9 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
 });
 
 it('keeps every allowed flatten-to-day home present and still flattening', function (): void {
-    $allowedHomes = [
-        'Modules/OpenBanking/Internal/Adapters/EnableBanking/EnableBankingSourceAdapter.php',
-        'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php',
-        'Modules/Forecasting/Internal/Pipeline/ChainAwareForecastRouter.php',
-        'Modules/Calendar/Internal/Services/CalendarQuery.php',
-        'Modules/Calendar/Internal/Services/OccurrenceMatcher.php',
-        // Guards `$value === ''` immediately above the parse, and deliberately
-        // lets a present-but-unreadable value throw so the reapply job can count
-        // the row as errored rather than silently matching nothing.
-        'Modules/Categorization/Internal/Services/RuleEngine.php',
-    ];
 
     $stale = [];
-    foreach ($allowedHomes as $relative) {
+    foreach (FLATTEN_TO_DAY_HOMES as $relative) {
         $path = base_path($relative);
         if (! is_file($path)) {
             $stale[] = $relative.'  (file is gone)';
@@ -102,7 +91,7 @@ it('keeps every allowed flatten-to-day home present and still flattening', funct
 
     expect($stale)->toBe([], implode("\n", [
         'An allowed flatten-to-day home no longer needs its exemption.',
-        'Drop it from $allowedHomes so the scan covers the file again:',
+        'Drop it from FLATTEN_TO_DAY_HOMES so the scan covers the file again:',
         ...$stale,
     ]));
 });

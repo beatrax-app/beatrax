@@ -15,8 +15,14 @@ function ihbrUser(string $username): User
     ]);
 }
 
-function ihbrSeedInbox(User $owner, string $provider, string $email, string $status, int $retryAttempts = 0): int
-{
+function ihbrSeedInbox(
+    User $owner,
+    string $provider,
+    string $email,
+    string $status,
+    int $retryAttempts = 0,
+    string $errorMessage = 'Connection refused by remote host.',
+): int {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();
@@ -36,7 +42,7 @@ function ihbrSeedInbox(User $owner, string $provider, string $email, string $sta
         'status' => $status,
         'retry_attempts' => $retryAttempts,
         'last_scan_at' => $now,
-        'error_message' => $status === 'error' ? 'Connection refused by remote host.' : null,
+        'error_message' => $status === 'error' ? $errorMessage : null,
         'created_at' => $now,
         'updated_at' => $now,
     ]);
@@ -128,7 +134,28 @@ it('renders the Error badge + describedby tooltip when status=error', function (
     $response->assertStatus(200);
     $response->assertSee('Error', false);
     $response->assertSee("aria-describedby=\"inbox-error-{$inboxId}\"", false);
-    $response->assertSee('Connection refused', false);
+    $response->assertSee("The last scan didn't finish");
+});
+
+// error_message is a provider string or an exception message, written for a
+// log. Rendered as-is it hands the reader a class name and an internal id, and
+// tells them nothing they can act on.
+it('tells the reader what to do instead of pasting the internal failure text', function (): void {
+    $user = ihbrUser('leak@example.com');
+    $this->actingAs($user);
+    ihbrSeedInbox(
+        $user,
+        'gmail',
+        'leak@example.com',
+        'error',
+        errorMessage: 'GmailApiClient: no OAuth credentials persisted for inbox 7.',
+    );
+
+    $response = $this->get(route('inboxes.index'));
+    $response->assertStatus(200);
+    $response->assertDontSee('GmailApiClient', false);
+    $response->assertDontSee('no OAuth credentials persisted', false);
+    $response->assertSee("The last scan didn't finish. Try Scan now, or reconnect this inbox.");
 });
 
 it('does NOT render a Reconnect link for non-reauth rows', function (): void {

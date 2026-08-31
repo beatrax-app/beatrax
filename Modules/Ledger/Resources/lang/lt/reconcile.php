@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'pasirink sąskaitą',
+        'choose_date' => 'pasirink išrašo datą',
         'enter_balance' => 'įvesk išrašo likutį',
         'matched' => 'sutampa — :amount',
         'discrepancy' => 'neatitikimas — :amount',
+        'reconciled_through' => 'suderinta iki :date',
     ],
 
     'mismatch_html' => 'Išrašo likutis kol kas nesutampa su įvykdytų operacijų likučiu. Perjunk įvykdytas eilutes <a href=":url" class="underline">operacijų sąraše</a> arba pakoreguok įvestą likutį, kol skirtumas taps nulinis — šis procesas niekada nesukuria balansuojančio įrašo.',
+    'unreachable_no_baseline_html' => 'Jokia eilučių kombinacija negali sumažinti šio skirtumo iki nulio. Šiai sąskaitai nėra užfiksuotas pradinis likutis, todėl jos likutis skaičiuojamas nuo nulio. Importuok išrašą, kuriuo sąskaita atidaroma, arba nustatyk pradinį likutį <a href=":url" class="underline">Nustatymuose</a>.',
+    'unreachable' => 'Jokia eilučių kombinacija negali sumažinti šio skirtumo iki nulio: jis yra už visų šios sąskaitos eilučių intervalo ribų iki nurodytos datos. Patikrink išrašo datą ir įvestą likutį.',
 
     'check' => 'Tikrinti',
     'complete' => 'Užbaigti suderinimą',
+    'complete_unavailable' => 'Iki šios datos daugiau nėra ko užrakinti — pažymėk daugiau eilučių kaip įvykdytas arba pasirink vėlesnę išrašo datą.',
 
     'errors' => [
         'choose_account' => 'Pirmiausia pasirink sąskaitą.',

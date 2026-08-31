@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Public\Services\PortableKeyMaterial;
 
-final class GdkRewrapService implements GdkRewrapContract
+final readonly class GdkRewrapService implements GdkRewrapContract
 {
     public function __construct(
-        private readonly GdkKeyringService $keyringService,
+        private GdkKeyringService $keyringService,
     ) {}
 
     public function rewrap(int $userId, string $oldKek, string $newKek): void
@@ -29,6 +29,6 @@ final class GdkRewrapService implements GdkRewrapContract
 
     private function keyringPath(int $userId): string
     {
-        return UserDataPathService::appPath("sync/gdk/{$userId}.enc");
+        return (new PortableKeyMaterial)->keyringPath($userId);
     }
 }

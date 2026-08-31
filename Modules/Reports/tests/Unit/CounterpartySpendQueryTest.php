@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
@@ -141,7 +142,7 @@ it('groups spend/income/net by counterparty using the canonical type-based defin
     expect(array_sum(array_map(fn ($r) => $r->amountMinor, $net)))->toBe(35_000);
 });
 
-it('groups rows with no counterparty under a null-groupKey "No counterparty" bucket', function (): void {
+it('groups rows with no counterparty under a null-groupKey bucket the reader\'s own language names', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = cpqUser();
@@ -153,6 +154,6 @@ it('groups rows with no counterparty under a null-groupKey "No counterparty" buc
 
     expect($rows)->toHaveCount(1);
     expect($rows[0]->groupKey)->toBeNull();
-    expect($rows[0]->groupLabel)->toBe('No counterparty');
+    expect($rows[0]->groupLabel)->toBe(Lang::get('reports::builder.no_counterparty'));
     expect($rows[0]->amountMinor)->toBe(5_000);
 });

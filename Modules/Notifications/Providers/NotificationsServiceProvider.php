@@ -11,10 +11,15 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
+use Modules\Notifications\Internal\Console\EmitBudgetNudgesCommand;
+use Modules\Notifications\Internal\Console\EmitDailyNotificationTriggersCommand;
+use Modules\Notifications\Internal\Console\PruneNotificationsCommand;
 use Modules\Notifications\Internal\Delivery\NoSystemNotificationConsent;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
+use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationWriter;
@@ -30,42 +35,43 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
 final class NotificationsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
-    private const LISTENER_PERSIST_PAYMENT_REMINDER = 'Modules\Notifications\Internal\Listeners\PersistPaymentReminder';
+    private const string LISTENER_PERSIST_PAYMENT_REMINDER = 'Modules\Notifications\Internal\Listeners\PersistPaymentReminder';
 
-    private const EVENT_PAYMENT_REMINDER_DUE = 'Modules\Recurring\Public\Events\PaymentReminderDue';
+    private const string EVENT_PAYMENT_REMINDER_DUE = 'Modules\Recurring\Public\Events\PaymentReminderDue';
 
-    private const LISTENER_RESOLVE_SETTLED_REMINDER = 'Modules\Notifications\Internal\Listeners\ResolveSettledReminder';
+    private const string LISTENER_RESOLVE_SETTLED_REMINDER = 'Modules\Notifications\Internal\Listeners\ResolveSettledReminder';
 
-    private const EVENT_PAYMENT_SETTLED = 'Modules\Recurring\Public\Events\PaymentSettled';
+    private const string EVENT_PAYMENT_SETTLED = 'Modules\Recurring\Public\Events\PaymentSettled';
 
-    private const LISTENER_PERSIST_BUDGET_NUDGE = 'Modules\Notifications\Internal\Listeners\PersistBudgetNudge';
+    private const string LISTENER_PERSIST_BUDGET_NUDGE = 'Modules\Notifications\Internal\Listeners\PersistBudgetNudge';
 
-    private const EVENT_BUDGET_THRESHOLD_CROSSED = 'Modules\Budgets\Public\Events\BudgetThresholdCrossed';
+    private const string EVENT_BUDGET_THRESHOLD_CROSSED = 'Modules\Budgets\Public\Events\BudgetThresholdCrossed';
 
-    private const LISTENER_PERSIST_SAVINGS_PROMPT = 'Modules\Notifications\Internal\Listeners\PersistSavingsPrompt';
+    private const string LISTENER_PERSIST_SAVINGS_PROMPT = 'Modules\Notifications\Internal\Listeners\PersistSavingsPrompt';
 
-    private const EVENT_SAVINGS_PROMPT_DUE = 'Modules\DriftAlerts\Public\Events\SavingsPromptDue';
+    private const string EVENT_SAVINGS_PROMPT_DUE = 'Modules\DriftAlerts\Public\Events\SavingsPromptDue';
 
-    private const LISTENER_PERSIST_POSITION_DIGEST = 'Modules\Notifications\Internal\Listeners\PersistPositionDigest';
+    private const string LISTENER_PERSIST_POSITION_DIGEST = 'Modules\Notifications\Internal\Listeners\PersistPositionDigest';
 
-    private const EVENT_POSITION_DIGEST_DUE = 'Modules\Position\Public\Events\PositionDigestDue';
+    private const string EVENT_POSITION_DIGEST_DUE = 'Modules\Position\Public\Events\PositionDigestDue';
 
-    private const LISTENER_PERSIST_COALESCED_IMPORT = 'Modules\Notifications\Internal\Listeners\PersistCoalescedImport';
+    private const string LISTENER_PERSIST_COALESCED_IMPORT = 'Modules\Notifications\Internal\Listeners\PersistCoalescedImport';
 
-    private const EVENT_TRANSACTION_BATCH_IMPORTED = 'Modules\Ledger\Public\Events\TransactionBatchImported';
+    private const string EVENT_TRANSACTION_BATCH_IMPORTED = 'Modules\Ledger\Public\Events\TransactionBatchImported';
 
-    private const LISTENER_PERSIST_DRIFT_ALERT = 'Modules\Notifications\Internal\Listeners\PersistDriftAlert';
+    private const string LISTENER_PERSIST_DRIFT_ALERT = 'Modules\Notifications\Internal\Listeners\PersistDriftAlert';
 
-    private const EVENT_DRIFT_ALERT_OPENED = 'Modules\DriftAlerts\Public\Events\DriftAlertOpened';
+    private const string EVENT_DRIFT_ALERT_OPENED = 'Modules\DriftAlerts\Public\Events\DriftAlertOpened';
 
-    private const LISTENER_PERSIST_FORECAST_SHORTFALL = 'Modules\Notifications\Internal\Listeners\PersistForecastShortfall';
+    private const string LISTENER_PERSIST_FORECAST_SHORTFALL = 'Modules\Notifications\Internal\Listeners\PersistForecastShortfall';
 
-    private const EVENT_FORECAST_SHORTFALL_DETECTED = 'Modules\Forecasting\Public\Events\ForecastShortfallDetected';
+    private const string EVENT_FORECAST_SHORTFALL_DETECTED = 'Modules\Forecasting\Public\Events\ForecastShortfallDetected';
 
-    private const LISTENER_PERSIST_ICS_STATEMENT_READY = 'Modules\Notifications\Internal\Listeners\PersistIcsStatementReady';
+    private const string LISTENER_PERSIST_ICS_STATEMENT_READY = 'Modules\Notifications\Internal\Listeners\PersistIcsStatementReady';
 
-    private const EVENT_ICS_STATEMENT_READY = 'Modules\EmailScan\Public\Events\IcsStatementReady';
+    private const string EVENT_ICS_STATEMENT_READY = 'Modules\EmailScan\Public\Events\IcsStatementReady';
 
     public function register(): void
     {
@@ -77,6 +83,7 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(NotificationPreferenceQuery::class);
         $this->app->singleton(SuppressionEvaluator::class);
         $this->app->singleton(NotificationWriter::class);
+        $this->app->singleton(DeferredNotificationPasses::class);
         $this->app->singleton(NotificationCopyRenderer::class);
         $this->app->singleton(NotificationQuery::class);
         $this->app->singleton(MarkNotificationRead::class);
@@ -90,6 +97,12 @@ final class NotificationsServiceProvider extends ServiceProvider
     {
         $this->loadModuleResources('notifications');
 
+        $this->registerScheduledCommands([
+            EmitBudgetNudgesCommand::class,
+            EmitDailyNotificationTriggersCommand::class,
+            PruneNotificationsCommand::class,
+        ]);
+
         $livewire->component('notifications.page', NotificationsPage::class);
         $livewire->component('notifications.settings-section', NotificationsSettingsSection::class);
 
@@ -98,17 +111,16 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->registerTriggerListeners($events);
     }
 
-    // A boot-scoped per-user memo collapses repeated renders down to one
-    // COUNT query.
+    // Counted per render, not memoised for the boot: the drawer holds the one
+    // sidebar mount in the app, so a memo collapsed nothing and instead froze
+    // the badge for any second render — which is exactly what the rail's
+    // recount is.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        /** @var array<int, int> $cache */
-        $cache = [];
-
-        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app): void {
             $currentUser = $app->make(CurrentUser::class);
 
             /** @var array<string, int> $navCounts */
@@ -121,14 +133,8 @@ final class NotificationsServiceProvider extends ServiceProvider
                 return;
             }
 
-            $user = $currentUser->user();
-            $userId = $user->id;
-            if (! array_key_exists($userId, $cache)) {
-                $query = $app->make(NotificationQuery::class);
-                $cache[$userId] = $query->unreadCountForUser($user);
-            }
-
-            $navCounts['notifications'] = $cache[$userId];
+            $query = $app->make(NotificationQuery::class);
+            $navCounts['notifications'] = $query->unreadCountForUser($currentUser->user());
             $compose->with('navCounts', $navCounts);
         });
     }

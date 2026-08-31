@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Importe quelques relevés (banque, PayPal, carte) et le résolveur fera apparaître ici les chaînes entre comptes automatiquement.',
 
     'no_counterparty' => '(aucun tiers)',
-    'open_from_row' => 'Ouvrir la ligne de départ',
-    'open_to_row' => 'Ouvrir la ligne d\'arrivée',
     'leg_count' => ':count paiement|:count paiements',
+    'legs_more' => '+ :count autres',
     'state_aria' => 'État : :state',
+
+    'state' => [
+        'candidate' => 'Candidat',
+        'confirmed' => 'Confirmée',
+        'rejected' => 'Rejetée',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Financement PayPal',

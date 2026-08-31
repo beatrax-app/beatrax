@@ -9,11 +9,11 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-final class NativeMobileAppServiceProvider
+final readonly class NativeMobileAppServiceProvider
 {
     public function __construct(
-        private readonly LoggerInterface $logger,
-        private readonly Dispatcher $events,
+        private LoggerInterface $logger,
+        private Dispatcher $events,
     ) {}
 
     public function boot(): void

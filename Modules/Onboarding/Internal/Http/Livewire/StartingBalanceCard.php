@@ -7,28 +7,32 @@ namespace Modules\Onboarding\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Onboarding\Internal\Services\StartingBalanceRule;
 
 final class StartingBalanceCard extends Component
 {
-    private const MIN_BALANCE_MINOR = -1_000_000_000_00;
-
-    private const MAX_BALANCE_MINOR = 1_000_000_000_00;
-
     public int $accountId = 0;
 
     public string $accountLabel = '';
 
     public string $accountShort = '';
 
+    // Assigned once from the account's default_currency and named by no
+    // binding, while four places in the card and the rule behind it hand it to
+    // Money as the denomination a figure is read at.
+    #[Locked]
     public string $currency = '';
 
+    #[Locked]
     public ?int $detectedMinor = null;
 
+    #[Locked]
     public ?string $detectedDate = null;
 
     public ?int $editedMinor = null;
@@ -44,6 +48,7 @@ final class StartingBalanceCard extends Component
     public string $validationError = '';
 
     /** @var list<array{minor: int, date: string, sourceLabel: string}> */
+    #[Locked]
     public array $alternativeCandidates = [];
 
     public int $selectedConflictIndex = 0;
@@ -75,13 +80,23 @@ final class StartingBalanceCard extends Component
         $this->alternativeCandidates = $alternativeCandidates;
     }
 
-    public function confirm(): void
+    // The detector's own figures still face the rule save() applies to the
+    // typed ones: a statement line can carry an amount out of range or a date
+    // the parser refuses, and this dispatches straight to the writer.
+    public function confirm(StartingBalanceRule $rule): void
     {
         if ($this->accountId <= 0 || $this->detectedMinor === null || $this->detectedDate === null) {
             return;
         }
 
         $this->validationError = '';
+        $error = $rule->error($this->detectedMinor, $this->detectedDate, $this->currency);
+        if ($error !== null) {
+            $this->validationError = $error;
+
+            return;
+        }
+
         $this->editedMinor = $this->detectedMinor;
         $this->editedDate = $this->detectedDate;
         $this->state = 'confirmed';
@@ -121,6 +136,7 @@ final class StartingBalanceCard extends Component
     public function save(
         DatabaseManager $db,
         CurrentUser $currentUser,
+        StartingBalanceRule $rule,
     ): void {
         if ($this->accountId <= 0) {
             $this->validationError = Lang::get('onboarding::starting_balance.errors.account_not_set');
@@ -133,7 +149,7 @@ final class StartingBalanceCard extends Component
 
         $minor = $this->editedMinor;
         $date = $this->editedDate;
-        $error = $this->amountDateError($minor, $date);
+        $error = $rule->error($minor, $date, $this->currency);
         if ($error !== null || $minor === null || $date === null) {
             $this->validationError = $error ?? Lang::get('onboarding::starting_balance.errors.invalid_amount');
 
@@ -141,22 +157,6 @@ final class StartingBalanceCard extends Component
         }
 
         $this->persistConfirmation($db, $currentUser, $minor, $date);
-    }
-
-    // The match(true) arms are ordered most-specific-first, so the message
-    // the user can actually act on wins.
-    private function amountDateError(?int $minor, ?string $date): ?string
-    {
-        $timestamp = ($date === null || $date === '') ? false : strtotime($date);
-
-        return match (true) {
-            $minor === null => Lang::get('onboarding::starting_balance.errors.invalid_amount'),
-            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => Lang::get('onboarding::starting_balance.errors.amount_range', ['min' => Money::ofMinor(self::MIN_BALANCE_MINOR, $this->currency)->formatWholeUnits(), 'max' => Money::ofMinor(self::MAX_BALANCE_MINOR, $this->currency)->formatWholeUnits()]),
-            $date === null || $date === '' => Lang::get('onboarding::starting_balance.errors.pick_date'),
-            $timestamp === false => Lang::get('onboarding::starting_balance.errors.pick_valid_date'),
-            $timestamp > time() => Lang::get('onboarding::starting_balance.errors.future_date'),
-            default => null,
-        };
     }
 
     private function persistConfirmation(DatabaseManager $db, CurrentUser $currentUser, int $minor, string $date): void
@@ -187,13 +187,20 @@ final class StartingBalanceCard extends Component
         );
     }
 
-    public function pickConflictCandidate(int $candidateIndex): void
+    public function pickConflictCandidate(int $candidateIndex, StartingBalanceRule $rule): void
     {
         if ($this->accountId <= 0 || ! array_key_exists($candidateIndex, $this->alternativeCandidates)) {
             return;
         }
 
-        $picked = $this->alternativeCandidates[$candidateIndex];
+        $this->validationError = '';
+        $picked = $rule->confirmed($this->alternativeCandidates[$candidateIndex]);
+        if ($picked === null) {
+            $this->validationError = Lang::get('onboarding::starting_balance.errors.invalid_amount');
+
+            return;
+        }
+
         $this->selectedConflictIndex = $candidateIndex;
         $this->editedMinor = $picked['minor'];
         $this->editedDate = $picked['date'];
@@ -210,6 +217,44 @@ final class StartingBalanceCard extends Component
 
     public function render(ViewFactory $views): View
     {
+        $this->detectedDate = self::readableDayOrNull($this->detectedDate);
+        $this->editedDate = self::readableDayOrNull($this->editedDate);
+        $this->alternativeCandidates = self::readableCandidates($this->alternativeCandidates);
+
         return $views->make('onboarding::livewire.starting-balance-card');
+    }
+
+    // Both dates and the candidate list are public properties the view hands
+    // straight to a date formatter, and that formatter throws on a string it
+    // cannot read. Held to a real day rather than to a readable one: the
+    // wizard writes Y-m-d, and 'tomorrow' formats cleanly into a wrong answer.
+    private static function readableDayOrNull(?string $date): ?string
+    {
+        return $date !== null && SafeDate::dayOrNull($date) !== null ? $date : null;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $candidates
+     * @return list<array{minor: int, date: string, sourceLabel: string}>
+     */
+    private static function readableCandidates(array $candidates): array
+    {
+        $rows = [];
+        foreach ($candidates as $candidate) {
+            if (! is_array($candidate)) {
+                continue;
+            }
+
+            $minor = $candidate['minor'] ?? null;
+            $date = $candidate['date'] ?? null;
+            $label = $candidate['sourceLabel'] ?? null;
+            if (! is_int($minor) || ! is_string($date) || ! is_string($label) || SafeDate::dayOrNull($date) === null) {
+                continue;
+            }
+
+            $rows[] = ['minor' => $minor, 'date' => $date, 'sourceLabel' => $label];
+        }
+
+        return $rows;
     }
 }

@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— privātiem kontaktiem finansējuma ķēžu nav',
     'tab_note_bank' => '— bankas komisiju partneris finansējuma ķēdes neveido',
+    'tab_note_bank_institution' => '— institucionāliem partneriem finansējuma ķēžu nav',
     'tab_note_government' => '— valsts iestāžu partneriem finansējuma ķēžu nav',
 
     'recent_activity' => 'Nesenā aktivitāte',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bankas komisijas pa kategorijām',
+        'activity_heading' => 'Aktivitāte pa kategorijām',
         'no_fees' => 'Šim darījuma partnerim vēl nav reģistrēta neviena komisija.',
     ],
 

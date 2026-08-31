@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Exception;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategorizationRuleDto;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
@@ -18,6 +19,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Support\CategoryPathName;
 use stdClass;
 
 // Rules are read `priority asc, id asc` — the same order RuleEngine::match()
@@ -222,24 +224,38 @@ final readonly class CategorizationRuleQuery
             return [];
         }
 
+        // The visibility predicate applies to the parent half too: without it a
+        // leaf whose parent_id points at another tenant's row prints that
+        // tenant's category name in front of it.
         $rows = $this->db->connection()
             ->table('categories as c')
-            ->leftJoin('categories as p', 'c.parent_id', '=', 'p.id')
-            ->whereIn('c.id', $categoryIds)
+            ->leftJoin('categories as p', static function (JoinClause $join) use ($userId): void {
+                $join->on('c.parent_id', '=', 'p.id')
+                    ->where(static function (QueryBuilder $q) use ($userId): void {
+                        $q->whereNull('p.user_id')->orWhere('p.user_id', $userId);
+                    });
+            })
             ->where(static function (QueryBuilder $q) use ($userId): void {
                 $q->whereNull('c.user_id')->orWhere('c.user_id', $userId);
             })
             ->select(['c.id', ...CategoryDisplayName::columns('c'), ...CategoryDisplayName::columns('p', 'parent_category')])
             ->get();
 
-        $out = [];
+        // Every visible category, not only the ones the rules point at: the
+        // ordinal separating two identical paths counts from the lowest id of
+        // all of them, and the rule form's picker beside this list counts the
+        // same way. Narrowing spells one category two ways on one screen.
+        $paths = [];
         foreach ($rows as $row) {
-            $categoryName = CategoryDisplayName::fromRow($row, 'category') ?? '';
-            $parentName = CategoryDisplayName::fromRow($row, 'parent_category');
-            $out[self::toInt($row->id)] = $parentName === null ? $categoryName : $parentName.' / '.$categoryName;
+            $paths[self::toInt($row->id)] = CategoryPathName::join(
+                CategoryDisplayName::fromRow($row, 'parent_category'),
+                CategoryDisplayName::fromRow($row, 'category') ?? '',
+            );
         }
 
-        return $out;
+        $wanted = array_flip($categoryIds);
+
+        return array_intersect_key(CategoryPathName::distinct($paths), $wanted);
     }
 
     /**

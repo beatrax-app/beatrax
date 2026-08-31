@@ -27,6 +27,7 @@ return [
 
     'batch_before' => 'Auch :count weitere von',
     'batch_after' => ' markieren?',
+    'batch_confirm' => 'Alle übrigen Transaktionen von :name als steuerlich absetzbar markieren? Jede davon bekommt diese Kategorie und diese Notiz. Die Markierung wieder zu entfernen geht nur Transaktion für Transaktion.',
     'batch_tag_all' => 'Alle markieren',
     'batch_dismiss' => 'Verwerfen',
 ];

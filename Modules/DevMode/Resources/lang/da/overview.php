@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Driftsoverblik for den indbyggede udviklerkonsol.',
     'worker_heartbeat' => 'Worker-heartbeat',
     'not_running' => 'KØRER IKKE',
+    'heartbeat_age' => 'for :count s siden · ttl :ttl s|for :count s siden · ttl :ttl s',
     'queue' => 'Kø',
     'pending' => 'afventende',
     'failed' => 'mislykkede',

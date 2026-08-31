@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Ievelciet šeit savu CAMT.053 failu',
     'drop_lead_mt940' => 'Ievelciet šeit savu MT940 failu',
-    'drop_lead_asn' => 'Ievelciet šeit savu ASN CSV failu',
-    'drop_lead_ing' => 'Ievelciet šeit savu ING CSV failu',
+    'drop_lead_csv_layout' => 'Ievelciet šeit savu :layout CSV failu',
     'drop_lead_pick_bank' => 'Izvēlieties, kura banka eksportēja jūsu CSV — bez tā to nevar pareizi nolasīt.',
     'drop_lead_default' => 'Ievelciet šeit konta izraksta failu',
     'browse_file' => 'vai izvēlieties failu',
 
-    'banks_mt940' => 'Atbalstītas: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Atbalstītas: ASN, ING — jauni formāti tiks pievienoti, kad lietotāji atsūtīs paraugus.',
-    'banks_default' => 'Atbalstītas: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 ir XML formāta konta izraksts — meklē to internetbankā pie izrakstiem vai lejupielādēm.',
+    'format_help_mt940' => 'MT940 ir vienkārša teksta izraksts, ko piedāvā kā .sta vai .940 blakus XML un CSV lejupielādēm.',
+    'format_help_csv' => 'CSV ir izklājlapu eksports. Katra banka kolonnas sakārto savādāk, tāpēc izvēlies atbilstošo izkārtojumu. Ja jūsu izkārtojuma sarakstā nav, palūdziet bankai CAMT.053 vai MT940.',
+
+    'account_name_default' => 'Bankas konts',
+    'account_name_layout' => ':layout konts',
 
     'file_ready' => '· ✓ gatavs',
 

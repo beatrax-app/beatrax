@@ -94,6 +94,7 @@ return [
         'heading' => 'Разработчик',
         'open_console' => 'Отвори конзолата за разработка',
         'pulse' => 'Опашка :queue · Worker :worker',
+        'worker_ago' => 'преди :count с|преди :count с',
     ],
 
     'account' => [

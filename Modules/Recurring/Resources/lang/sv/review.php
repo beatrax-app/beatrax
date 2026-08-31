@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Redigera namnet',
     'edit_name_aria' => 'Byt namn på återkommande serie :id',
     'new_name_label' => 'Nytt namn för den här serien',
+    'load_more' => 'Ladda fler',
     'save' => 'Spara',
 
     'toast' => [

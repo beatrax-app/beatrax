@@ -27,5 +27,6 @@ return [
     'errors' => [
         'pattern_required' => 'Šablon je obavezan.',
         'name_required' => 'Naziv je obavezan.',
+        'browser_refused' => 'Pregledač nije mogao da se otvori, pa ništa nije poslato i ništa nije napustilo ovaj uređaj. Pokušaj ponovo ili sam nalepi gornji YAML pregled u pull request.',
     ],
 ];

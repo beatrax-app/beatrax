@@ -313,6 +313,94 @@ it('re-derives the full-text index after a rebuild instead of leaving it behind'
         ->toBeTrue('the rebuilt transaction was never re-indexed');
 });
 
+// The fixture above holds one transaction, and how MANY the sweep visits is
+// the axis this failed on: it plucked every transaction the reader owns and
+// upserted them one at a time — five queries each. A hundred-thousand-row
+// ledger spent 91% of its whole re-projection there, inside a two-second poll.
+it('re-derives only the rows the op log names, not every transaction the reader owns', function (): void {
+    $searchWriter = new class implements SearchIndexWriterContract
+    {
+        /** @var list<int> */
+        public array $indexed = [];
+
+        /** @var list<int> */
+        public array $removed = [];
+
+        public function upsertForTransaction(int $transactionId, int $actorUserId): void
+        {
+            $this->indexed[] = $transactionId;
+        }
+
+        public function deleteForTransaction(int $transactionId, int $actorUserId): void
+        {
+            $this->removed[] = $transactionId;
+        }
+    };
+
+    $db = $this->db;
+    [$userId, $accountId, $runId] = rebuildSeedBase($db, 'scope');
+
+    $named = rebuildSeedImportedTxn($db, $userId, $accountId, $runId, 'expense', -1234, 1);
+
+    // Imported locally and never synced, so no op names it: the replay cannot
+    // have changed it and its document is still true.
+    $untouched = rebuildSeedImportedTxn($db, $userId, $accountId, $runId, 'expense', -5678, 2);
+
+    $replayer = new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]);
+    $replayer->replay([
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $named, 'note', json_encode('findable', JSON_THROW_ON_ERROR), OpType::Set, 1000),
+    ], $userId);
+
+    $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions'], null, $searchWriter);
+    $rebuilder->rebuild($userId);
+
+    expect($searchWriter->indexed)->toBe([$named]);
+    expect($searchWriter->removed)->toBe([]);
+    expect(in_array($untouched, $searchWriter->indexed, true))
+        ->toBeFalse('a transaction no op names was not touched by the replay and must not be reindexed');
+});
+
+it('removes the search document of a transaction the replay deleted, rather than leaving it answering queries', function (): void {
+    // upsertForTransaction() returns silently on a row it cannot find, so a
+    // tombstoned transaction kept its document: the ledger no longer held it
+    // and search went on offering it.
+    $searchWriter = new class implements SearchIndexWriterContract
+    {
+        /** @var list<int> */
+        public array $indexed = [];
+
+        /** @var list<int> */
+        public array $removed = [];
+
+        public function upsertForTransaction(int $transactionId, int $actorUserId): void
+        {
+            $this->indexed[] = $transactionId;
+        }
+
+        public function deleteForTransaction(int $transactionId, int $actorUserId): void
+        {
+            $this->removed[] = $transactionId;
+        }
+    };
+
+    $db = $this->db;
+    [$userId, $accountId, $runId] = rebuildSeedBase($db, 'tomb');
+    $txnId = rebuildSeedImportedTxn($db, $userId, $accountId, $runId);
+
+    $replayer = new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]);
+    $replayer->replay([
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnId, '', null, OpType::DeleteTombstone, 1000),
+    ], $userId);
+
+    expect($db->connection()->table('transactions')->where('id', $txnId)->exists())->toBeFalse();
+
+    $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions'], null, $searchWriter);
+    $rebuilder->rebuild($userId);
+
+    expect($searchWriter->removed)->toBe([$txnId]);
+    expect($searchWriter->indexed)->toBe([]);
+});
+
 // createdRowPks() decides which rows a rebuild may delete before replay, by
 // matching op_log_entries.op_type against the create-row value. That value is
 // on the wire to peers, so it is pinned to the literal the protocol carries,

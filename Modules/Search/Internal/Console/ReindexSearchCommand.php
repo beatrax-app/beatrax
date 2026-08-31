@@ -28,7 +28,7 @@ final class ReindexSearchCommand extends Command
     /** @var string */
     protected $description = 'Rebuild the FTS5 full-text search index from all transactions.';
 
-    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -162,8 +162,17 @@ final class ReindexSearchCommand extends Command
     {
         $ids = $rows->pluck('id')->all();
 
+        // The WHOLE-transaction tag only. A split leg carries a tag of its own
+        // whose note is always null, and an unfiltered read looped it in last:
+        // a rebuild then dropped the note the incremental writer had indexed
+        // and the row stopped being findable by the words on it.
         $notesByTxId = [];
-        foreach ($connection->table('tax_transaction_tags')->select(['transaction_id', 'note'])->whereIn('transaction_id', $ids)->get() as $tag) {
+        $tags = $connection->table('tax_transaction_tags')
+            ->select(['transaction_id', 'note'])
+            ->whereIn('transaction_id', $ids)
+            ->whereNull('transaction_split_id')
+            ->get();
+        foreach ($tags as $tag) {
             if (is_numeric($tag->transaction_id)) {
                 $notesByTxId[(int) $tag->transaction_id] = $tag->note;
             }

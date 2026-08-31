@@ -13,7 +13,7 @@ use Spatie\LaravelData\Data;
 final class PendingEnrichment extends Data
 {
     /**
-     * @param  array<string, array{stored: mixed, incoming: mixed}>  $conflictingFields  Per-field disagreements detected during classify(); ApplyEnrichments resolves each per the user's receipt_conflict_resolution policy. Empty by default (pure source_ref-only enrichment).
+     * @param  array<array-key, array{stored: mixed, incoming: mixed}>  $conflictingFields  Per-field disagreements detected during classify(); ApplyEnrichments resolves each per the user's receipt_conflict_resolution policy. Empty by default (pure source_ref-only enrichment).
      */
     public function __construct(
         public readonly int $existingTransactionId,

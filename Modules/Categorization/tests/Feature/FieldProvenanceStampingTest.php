@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
-use Modules\Categorization\Public\Actions\AssignCategory;
+use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
@@ -15,6 +15,8 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Tax\Public\Actions\TagTransaction;
@@ -209,4 +211,111 @@ it('stamping one field does not erase another already-present field_provenance e
         'category_id' => 'manual',
         'note' => 'manual',
     ]);
+});
+
+// Agreeing with a rule is as much a decision as overruling it, and commoner:
+// the reader sees the rule already chose Groceries and picks Groceries. No
+// column changes, so the write reported zero rows affected, the stamp was
+// skipped, and the next edit of that rule was free to overwrite it.
+it('AssignCategory (confirming the category a rule already chose) — stamps field_provenance.category_id = manual', function (): void {
+    $user = fpsUser('cat-confirm');
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(array_merge(fpsTransactionOverrides($account->id, $run->id), ['user_id' => $user->id]));
+
+    $category = Category::create([
+        'user_id' => null,
+        'name' => 'Groceries',
+        'slug' => 'groceries-confirm-'.bin2hex(random_bytes(4)),
+        'kind' => 'expense',
+        'display_order' => 30,
+    ]);
+
+    /** @var UpdatesTransactionCategory $ruleWrite */
+    $ruleWrite = app(UpdatesTransactionCategory::class);
+    $ruleWrite($tx->id, $category->id, $user);
+    app(FieldProvenanceWriter::class)->stamp($user->id, $tx->id, ['category_id' => 'rule']);
+
+    /** @var AssignsCategory $assign */
+    $assign = app(AssignsCategory::class);
+    $assign($tx->id, $category->id, $user);
+
+    expect(fpsProvenance($tx->id))->toBe(['category_id' => 'manual']);
+});
+
+// The same click is what teaches merchant memory. Gating it on rows-affected
+// meant a reader who only ever agreed with their rules taught it nothing.
+it('AssignCategory (confirming the rule) — still remembers the merchant', function (): void {
+    $user = fpsUser('cat-confirm-memory');
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(array_merge(fpsTransactionOverrides($account->id, $run->id), ['user_id' => $user->id]));
+
+    $category = Category::create([
+        'user_id' => null,
+        'name' => 'Groceries',
+        'slug' => 'groceries-memory-'.bin2hex(random_bytes(4)),
+        'kind' => 'expense',
+        'display_order' => 30,
+    ]);
+
+    /** @var UpdatesTransactionCategory $ruleWrite */
+    $ruleWrite = app(UpdatesTransactionCategory::class);
+    $ruleWrite($tx->id, $category->id, $user);
+
+    /** @var AssignsCategory $assign */
+    $assign = app(AssignsCategory::class);
+    $assign($tx->id, $category->id, $user);
+
+    expect(DB::table('merchant_memories')->where('user_id', $user->id)->where('category_id', $category->id)->count())->toBe(1);
+});
+
+// The lock is the reason rows-affected cannot simply be ignored: a reconciled
+// row refuses the write for a reason, and confirming it is still not a write.
+it('AssignCategory — stamps nothing when the row is locked against edits', function (): void {
+    $user = fpsUser('cat-locked');
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(array_merge(fpsTransactionOverrides($account->id, $run->id), [
+        'user_id' => $user->id,
+        'status' => ClearedStatus::Reconciled->value,
+    ]));
+
+    $category = Category::create([
+        'user_id' => null,
+        'name' => 'Groceries',
+        'slug' => 'groceries-locked-'.bin2hex(random_bytes(4)),
+        'kind' => 'expense',
+        'display_order' => 30,
+    ]);
+    DB::table('transactions')->where('id', $tx->id)->update(['category_id' => $category->id]);
+
+    /** @var AssignsCategory $assign */
+    $assign = app(AssignsCategory::class);
+    $assign($tx->id, $category->id, $user);
+
+    expect(fpsProvenance($tx->id))->toBe([]);
+});
+
+it('AssignCategory — stamps nothing for a transaction belonging to another user', function (): void {
+    $owner = fpsUser('cat-owner');
+    $intruder = fpsUser('cat-intruder');
+    $account = fpsAccount($owner);
+    $run = fpsImportRun($owner);
+    $tx = Transaction::create(array_merge(fpsTransactionOverrides($account->id, $run->id), ['user_id' => $owner->id]));
+
+    $category = Category::create([
+        'user_id' => null,
+        'name' => 'Groceries',
+        'slug' => 'groceries-foreign-'.bin2hex(random_bytes(4)),
+        'kind' => 'expense',
+        'display_order' => 30,
+    ]);
+    DB::table('transactions')->where('id', $tx->id)->update(['category_id' => $category->id]);
+
+    /** @var AssignsCategory $assign */
+    $assign = app(AssignsCategory::class);
+    $assign($tx->id, $category->id, $intruder);
+
+    expect(fpsProvenance($tx->id))->toBe([]);
 });

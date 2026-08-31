@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategória',
         'assigned' => 'Pridelené',
+        'carried_in' => 'Prenesené',
+        'moved' => 'Presunuté',
         'spent' => 'Minuté',
         'available' => 'Dostupné',
         'if_overspent' => 'Pri prečerpaní',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Skryť históriu ↑',
         'moved_from' => 'Presunuté z kategórie: :category',
         'moved_to' => 'Presunuté do kategórie: :category',
+        'moved_unreadable' => 'Presunuté s kategóriou: :category novšou verziou aplikácie Beatrax',
         'undo' => 'Späť',
     ],
 
     'phone' => [
         'spent' => 'Minuté :amount',
+        'carried_in' => 'Prenesené :amount',
+        'moved' => 'Presunuté :amount',
         'available' => 'Dostupné :amount',
         'notify_at' => 'Upozorniť pri',
     ],

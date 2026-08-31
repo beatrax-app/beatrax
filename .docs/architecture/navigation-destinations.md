@@ -3,7 +3,9 @@
 Every screen a user can be sent to is named once, as a case of
 `Modules\Core\Public\Navigation\Destination`. Nothing else spells a route name
 for one of those screens — not a Blade `href`, not a redirect, not the desktop
-menu bar, not a notification deep link.
+menu bar, not a notification deep link. A case is a roster row, so the few
+screens the sidebar deliberately withholds are named by route instead; they are
+listed under [what stays a literal](#what-stays-a-literal-deliberately).
 
 ```php
 Destination::Transactions->routeName();   // 'transactions.index'
@@ -14,11 +16,10 @@ Destination::Settings->path();              // '/settings', root-relative
 
 ## Why it lives in `Core` and not in `Shell`
 
-The vocabulary started in `Shell`, next to the sidebar that renders it, and a
-quality review asked why the feature modules were still writing
-`route('imports.new')` by hand instead of naming a destination. The obvious fix
-— point them at `Shell` — is the wrong one, and the reason is the invariant
-`Shell` exists to hold.
+The vocabulary started in `Shell`, next to the sidebar that renders it, which
+left the feature modules writing `route('imports.new')` by hand instead of
+naming a destination. The obvious fix — point them at `Shell` — is the wrong
+one, and the reason is the invariant `Shell` exists to hold.
 
 `Shell` composes every other module: the dashboard aggregates nine of them, the
 settings page a dozen. That is only free of cycles because **nothing depends
@@ -94,6 +95,17 @@ exists as a method instead of callers reading `->value`.
   `->name('transactions.index')`. That is the definition, not a copy of it, and
   `PaletteReachesEverySidebarDestinationArchTest` fails if any declared
   destination stops resolving to a registered route.
+- **A screen that is deliberately not in the roster.** A `Destination` case is
+  a roster row: `PaletteReachesEverySidebarDestinationArchTest` requires every
+  case to resolve through `AppNavigation`, and the rail and the palette to
+  offer the same set. So a screen the sidebar deliberately withholds cannot be
+  a case. Three exist, and each is named by route: `recurring.series.show` and
+  `migrations.index` in `Modules/Notifications/Internal/`, and
+  `settings.open-banking#ics-import`. `/migrations` is the one to watch — the
+  sidebar's own comment records why migrating earns no permanent nav slot, and
+  a notification announcing a finished migration still has to land somewhere,
+  so the route name is written twice: once where the OS push is stamped, once
+  where `DeepLinkResolver` re-derives the in-app row from `target_kind`.
 - **`Modules/Mobile/Internal/Native/AppShellScreen::DESTINATIONS`.** The phone's
   bottom bar hard-codes four URL *paths*. It cannot read them from the enum:
   the table is a `const`, which no container-backed accessor can fill, and

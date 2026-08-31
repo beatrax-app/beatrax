@@ -24,6 +24,10 @@ return [
         'unknown' => 'Unbekannt',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankgebühr',
+    ],
+
     'cp_card' => [
         'aria' => 'Zahlungspartner: :name',
         'recent_aria' => 'Letzte Aktivität',

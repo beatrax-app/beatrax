@@ -24,7 +24,7 @@ final readonly class MobileEnsureImportCompleted
     // sync.index is deliberately NOT here: exempting the app's settings page
     // let an unfinished setup land there instead of returning to the wizard.
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_PREFIXES = [
+    private const array EXEMPT_ROUTE_PREFIXES = [
         'mobile.pair',
         'mobile.setup',
         'mobile.lock',
@@ -50,7 +50,7 @@ final readonly class MobileEnsureImportCompleted
     // themselves, so bouncing it would break the very flow this gate is
     // trying to return the user to.
     /** @var array<int, string> */
-    private const EXEMPT_ROUTE_SUFFIXES = [
+    private const array EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
         // The restore form's file input posts here. Redirected, it answers
         // with the welcome page at 200 -- iOS turns a redirect into the

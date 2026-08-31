@@ -14,8 +14,8 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Notifications\Database\Seeders\Demo\DemoNotificationsSeeder;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\NotificationDto;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Recurring\Models\RecurringSeries;
 
 uses(RefreshDatabase::class);
@@ -30,12 +30,12 @@ uses(RefreshDatabase::class);
 function dnsPrimaryUser(): array
 {
     $user = User::query()->create([
-        'username' => 'demo-1@beatrax.local',
+        'username' => 'demo-1',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
 
-    return ['id' => (int) $user->id, 'users' => ['demo-1@beatrax.local' => $user]];
+    return ['id' => (int) $user->id, 'users' => ['demo-1' => $user]];
 }
 
 function dnsSeries(User $user, string $clusterKey, int $amountMinor): int
@@ -50,7 +50,6 @@ function dnsSeries(User $user, string $clusterKey, int $amountMinor): int
         'cadence' => 'monthly',
         'latest_amount_minor' => $amountMinor,
         'latest_currency' => 'EUR',
-        'latest_fx_rate_used' => null,
         'monthly_equivalent_minor' => $amountMinor,
         'variance_tolerance_percent' => 25,
         'latest_funding_chain_link_id' => null,
@@ -159,7 +158,7 @@ function dnsOpenDriftAlert(DatabaseManager $db, User $user, int $accountId, int 
 function dnsSeedFixtures(): array
 {
     $primary = dnsPrimaryUser();
-    $user = $primary['users']['demo-1@beatrax.local'];
+    $user = $primary['users']['demo-1'];
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -263,7 +262,7 @@ function dnsHasDeadLink(User $user): bool
 
     $rows = $db->connection()->table('notifications')
         ->where('user_id', $user->id)
-        ->where('trigger_type', DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER)
+        ->where('trigger_type', NotificationTrigger::PaymentReminder)
         ->get(['id', 'title', 'body', 'trigger_type', 'read_at', 'dismissed_at', 'state', 'created_at']);
 
     foreach ($rows as $row) {
@@ -295,26 +294,26 @@ function dnsHasDeadLink(User $user): bool
 
 it('produces rows covering all 8 trigger types', function (): void {
     $users = dnsSeedFixtures();
-    $user = $users['demo-1@beatrax.local'];
+    $user = $users['demo-1'];
 
     Http::fake();
     app(DemoNotificationsSeeder::class)->run($users);
 
     expect(dnsTriggerTypes($user->id))->toBe([
-        DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
-        DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
-        DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
-        DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
-        DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
-        DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
-        DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
-        DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT,
+        NotificationTrigger::BudgetNudge->value,
+        NotificationTrigger::DriftChanged->value,
+        NotificationTrigger::ForecastShortfall->value,
+        NotificationTrigger::ImportFinished->value,
+        NotificationTrigger::PaymentReminder->value,
+        NotificationTrigger::PositionDigest->value,
+        NotificationTrigger::ReceiptsFound->value,
+        NotificationTrigger::SavingsPrompt->value,
     ]);
 });
 
 it('produces every interesting state: unread, read, dismissed, resolved, and a dead link', function (): void {
     $users = dnsSeedFixtures();
-    $user = $users['demo-1@beatrax.local'];
+    $user = $users['demo-1'];
 
     Http::fake();
     app(DemoNotificationsSeeder::class)->run($users);
@@ -328,7 +327,7 @@ it('produces every interesting state: unread, read, dismissed, resolved, and a d
 
 it('keeps the unread count strictly between 0 and the total, so the nav badge shows a real small number', function (): void {
     $users = dnsSeedFixtures();
-    $user = $users['demo-1@beatrax.local'];
+    $user = $users['demo-1'];
 
     Http::fake();
     app(DemoNotificationsSeeder::class)->run($users);
@@ -351,7 +350,7 @@ it('fires ZERO OS notifications during the seed run', function (): void {
 
 it('is idempotent: running the seeder twice yields the same row count', function (): void {
     $users = dnsSeedFixtures();
-    $user = $users['demo-1@beatrax.local'];
+    $user = $users['demo-1'];
 
     Http::fake();
     app(DemoNotificationsSeeder::class)->run($users);
@@ -366,7 +365,7 @@ it('is idempotent: running the seeder twice yields the same row count', function
 
 it('reaches 50+ rows when the volume knob is used', function (): void {
     $users = dnsSeedFixtures();
-    $user = $users['demo-1@beatrax.local'];
+    $user = $users['demo-1'];
 
     Http::fake();
     app(DemoNotificationsSeeder::class)->run($users, 45);

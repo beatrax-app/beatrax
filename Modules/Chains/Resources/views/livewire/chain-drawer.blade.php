@@ -11,7 +11,9 @@
        - $fanoutPage: int    (explicit context; the
                               child partial declares matching @props
                               so the binding contract is visible at
-                              both ends).
+                              both ends)
+       - $actionError: ?string (a chip acted on a link the other tab
+                              had already decided).
 
      The sticky header carries `sticky top-0 bg-white z-10` per
      UI-SPEC § Interaction Contracts; the drawer body itself never
@@ -40,6 +42,17 @@
                 {{ Lang::get('chains::drawer.heading') }}
             @endif
         </flux:heading>
+
+        @if ($actionError)
+            <x-core::alert
+                tone="danger"
+                class="mx-6 mb-md"
+                aria-live="polite" aria-atomic="true"
+                data-testid="chain-drawer-action-error"
+            >
+                {{ $actionError }}
+            </x-core::alert>
+        @endif
 
         @if ($tree === null)
             <x-core::empty-state

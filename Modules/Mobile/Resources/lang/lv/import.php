@@ -48,6 +48,7 @@ return [
         'passwords_mismatch' => 'Paroles nesakrīt.',
         'password_length' => 'Izmantojiet vismaz 12 rakstzīmes.',
         'pin_length' => 'PIN kodā jābūt vismaz 6 cipariem.',
+        'pin_digits' => 'PIN kodā jābūt 6 līdz 10 cipariem — tikai cipari.',
         'pins_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
         'session_expired' => 'Sesijas laiks beidzās, pirms iestatīšana tika pabeigta. Ievadiet PIN kodu un paroli vēlreiz.',
         'retry_failed' => 'Šīs ierīces iestatīšanu joprojām neizdevās pabeigt. Mēģiniet vēlreiz.',

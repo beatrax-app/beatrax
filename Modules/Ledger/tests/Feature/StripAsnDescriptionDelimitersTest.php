@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Internal\Services\StripAsnDescriptionDelimiters;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
@@ -43,7 +43,7 @@ beforeEach(function (): void {
 
     $this->importRun = $this->makeImportRun($this->user, str_repeat('e', 64));
 
-    $this->seedRow = function (string $description, string $sourceFormat = SourceFormat::AsnCsv->value): int {
+    $this->seedRow = function (string $description, string $sourceFormat = CsvPresetRegistry::ASN): int {
         $transaction = $this->makeTransaction($this->user, $this->account, $this->importRun, [
             'description' => $description,
             'source_format' => $sourceFormat,

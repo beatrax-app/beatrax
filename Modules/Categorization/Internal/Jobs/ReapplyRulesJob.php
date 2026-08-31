@@ -22,6 +22,7 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\JobProgressCache;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -54,8 +55,6 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
     use TunedQueueJob;
 
     private const int CHUNK = RowChunk::DEFAULT_SIZE;
-
-    private const PROGRESS_TTL_SECONDS = 3600;
 
     public function __construct(
         public readonly int $userId,
@@ -131,11 +130,11 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             'started_at' => $clock->now()->toIso8601String(),
             'finished_at' => null,
         ];
-        $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+        $cache->put($cacheKey, $progress, JobProgressCache::ttlSeconds());
 
         /** @var LazyCollection<int, stdClass> $rows */
         $rows = $nonSplitQuery()
-            ->select(['transactions.id', 'counterparty_name', 'description', 'settled_amount_minor', 'posted_at'])
+            ->select(['transactions.id', 'counterparty_name', 'description', 'settled_amount_minor', 'settled_currency', 'posted_at'])
             ->orderBy('transactions.id')
             ->lazyById(self::CHUNK, 'transactions.id', 'id');
 
@@ -158,13 +157,13 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                     self::processRow($row, $matcher, $userId, $reconciledIds, $logger, $progress);
                 }
 
-                $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+                $cache->put($cacheKey, $progress, JobProgressCache::ttlSeconds());
             }
         );
 
         $progress['status'] = 'done';
         $progress['finished_at'] = $clock->now()->toIso8601String();
-        $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
+        $cache->put($cacheKey, $progress, JobProgressCache::ttlSeconds());
     }
 
     /**
@@ -200,10 +199,10 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $progress['checked'] = $progress['checked'] + 1;
+        $progress['checked'] += 1;
 
         if (in_array($transactionId, $reconciledIds, true)) {
-            $progress['reconciled_skipped'] = $progress['reconciled_skipped'] + 1;
+            $progress['reconciled_skipped'] += 1;
 
             return;
         }
@@ -214,7 +213,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         try {
             $changed = $matcher->changedFields($row, $transactionId);
         } catch (Throwable $e) {
-            $progress['rows_errored'] = $progress['rows_errored'] + 1;
+            $progress['rows_errored'] += 1;
             $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
                 'user_id' => $userId,
                 'transaction_id' => $transactionId,
@@ -225,8 +224,8 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         }
 
         if ($changed !== []) {
-            $progress['transactions_updated'] = $progress['transactions_updated'] + 1;
-            $progress['fields_updated'] = $progress['fields_updated'] + count($changed);
+            $progress['transactions_updated'] += 1;
+            $progress['fields_updated'] += count($changed);
         }
     }
 }

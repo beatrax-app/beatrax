@@ -10,14 +10,14 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class LoopbackOnly
+final readonly class LoopbackOnly
 {
     // The SAPI is a parameter so the mobile path can be exercised: PHP_SAPI is
     // a compile-time constant, and a gate that cannot be tested off its own
     // SAPI is how this one shipped able to 404 an entire platform.
     public function __construct(
-        private readonly Application $app,
-        private readonly string $sapi = \PHP_SAPI,
+        private Application $app,
+        private string $sapi = \PHP_SAPI,
     ) {}
 
     public function handle(Request $request, Closure $next): Response

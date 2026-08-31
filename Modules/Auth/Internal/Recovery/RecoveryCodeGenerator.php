@@ -8,11 +8,11 @@ final class RecoveryCodeGenerator
 {
     // Phone-readable alphabet -- 31 characters, excludes I, L, O, 0, 1
     // (visually ambiguous when read or typed aloud).
-    private const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    private const string ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-    private const GROUPS = 5;
+    private const int GROUPS = 5;
 
-    private const GROUP_LENGTH = 4;
+    private const int GROUP_LENGTH = 4;
 
     public function generate(): string
     {

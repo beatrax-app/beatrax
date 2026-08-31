@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Pudota CAMT.053-tiedostosi tähän',
     'drop_lead_mt940' => 'Pudota MT940-tiedostosi tähän',
-    'drop_lead_asn' => 'Pudota ASN-CSV-tiedostosi tähän',
-    'drop_lead_ing' => 'Pudota ING-CSV-tiedostosi tähän',
+    'drop_lead_csv_layout' => 'Pudota :layout-CSV-tiedostosi tähän',
     'drop_lead_pick_bank' => 'Valitse, mikä pankki vei CSV-tiedostosi — tarvitsemme sen tiedon lukeaksemme sen oikein.',
     'drop_lead_default' => 'Pudota tiliotetiedostosi tähän',
     'browse_file' => 'tai selaa tiedosto',
 
-    'banks_mt940' => 'Tuetut: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Tuetut: ASN, ING — lisää muotoja tulossa sitä mukaa kun käyttäjät toimittavat näytteitä.',
-    'banks_default' => 'Tuetut: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 on XML-muotoinen tiliote — etsi se verkkopankista tiliotteiden tai latausten kohdalta.',
+    'format_help_mt940' => 'MT940 on tekstimuotoinen tiliote, tarjolla .sta- tai .940-tiedostona XML- ja CSV-latausten vieressä.',
+    'format_help_csv' => 'CSV on taulukkolaskennan vienti. Jokainen pankki järjestää sarakkeet omalla tavallaan, joten valitse sopiva asettelu. Jos omaasi ei ole listalla, pyydä pankiltasi CAMT.053- tai MT940-tiedostoa.',
+
+    'account_name_default' => 'Pankkitili',
+    'account_name_layout' => ':layout-tili',
 
     'file_ready' => '· ✓ valmis',
 

@@ -46,7 +46,6 @@ final class ReceiptSourceAdapter
             sourceRowIndex: $sourceRowIndex,
             settledAmountMinor: $parsed->settledAmountMinor ?? $parsed->amountMinor,
             settledCurrency: $parsed->settledCurrency ?? $parsed->currency,
-            fxRateUsed: null,
         );
     }
 

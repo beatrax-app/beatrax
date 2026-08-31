@@ -11,11 +11,11 @@ use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 
-final class SaveReport
+final readonly class SaveReport
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     public function save(User $user, ReportDefinition $definition, string $name): SavedReport

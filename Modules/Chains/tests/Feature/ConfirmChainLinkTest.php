@@ -260,3 +260,43 @@ it('throws ChainLinkRequiresConcretePartnerException when confirming a hint row 
     $unchanged = ChainLink::query()->findOrFail($hintId);
     expect($unchanged->state)->toBe('candidate');
 });
+
+// Every confirmed ics_bulk_settle link on a statement carries that statement's
+// signature hash, and so does the exceeded-tolerance hint on it. The
+// auto-promotion UPDATE selected by hash alone, so the hint went with them —
+// straight into the NULL-endpoint trigger, aborting the reader's confirm.
+it('leaves a NULL-endpoint hint alone when the auto-promotion sweep fires on its signature', function (): void {
+    $sharedHash = 'sig-shared-statement';
+
+    $hintSource = cclTx($this->user, $this->asn, $this->run, -5000, 'transfer_out', 'promote-hint', 90);
+    $this->db->connection()->table('chain_links')->insert([
+        'user_id' => $this->user->id,
+        'from_transaction_id' => $hintSource->id,
+        'to_transaction_id' => null,
+        'kind' => 'ics_bulk_settle',
+        'state' => 'candidate',
+        'confidence' => '0.900',
+        'resolver' => 'auto',
+        'evidence' => json_encode(['tolerance_used' => 'exceeded', 'signature_hash' => $sharedHash]),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+    $hintId = (int) $this->db->connection()->table('chain_links')->max('id');
+
+    for ($i = 0; $i < 2; $i++) {
+        $from = cclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'promote-from-'.$i, 91 + $i);
+        $to = cclTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'promote-to-'.$i, 95 + $i);
+        cclLink($this->db, $this->user, (int) $from->id, (int) $to->id, 'confirmed', $sharedHash);
+    }
+
+    $from = cclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'promote-from-last', 99);
+    $to = cclTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'promote-to-last', 100);
+    $candidateId = cclLink($this->db, $this->user, (int) $from->id, (int) $to->id, 'candidate', $sharedHash);
+
+    ($this->confirm)($candidateId, $this->user);
+
+    /** @var ChainLink $hint */
+    $hint = ChainLink::query()->findOrFail($hintId);
+    expect($hint->state)->toBe('candidate');
+    expect($hint->to_transaction_id)->toBeNull();
+});

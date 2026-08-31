@@ -18,21 +18,24 @@ That column is already in `SensitiveFieldRegistry::columns()` and
 already syncs between devices, so re-renderable copy needed no new
 column and no new sync rule.
 
-Three classes carry it, all in
-`Modules/Notifications/Internal/Support/`:
+`NotificationCopySpec` — one title line plus a list of body lines — stays in
+`Modules/Notifications/Internal/Support/`. The two pieces it is built from are
+not notification-shaped and now live in `Modules/Core/Public/Support/`, because
+a `display_label` column is the same problem one table over:
 
 | Class | What it is |
 |---|---|
-| `NotificationCopySpec` | One title line plus a list of body lines |
 | `CopyLine` | A translation key, its replacement values, and a plural count |
 | `CopyParam` | A replacement whose *own* rendering depends on the language |
+| `StoredCopy` | The same spec packed into a single string column, for a table with no `params` to put it in |
 
 `CopyLine::plural()` keeps the count rather than the chosen form,
 because a language with more plural categories than the writer's would
 otherwise be stuck with the writer's pick.
 
 `CopyParam` covers the values a plain string cannot: a weekday name, a
-short date, a nested translation key, money, and a category name.
+short date, a date carrying its year, a nested translation key, money, and a
+category name.
 Everything else — a merchant name, a user-authored message — is the
 user's own words, the same text in every language, and rides verbatim.
 
@@ -61,7 +64,7 @@ cannot follow a later language change. So money rides as
 code, stored as `"<minor>|<CUR>"`, formatted at read time through
 `Money::tryOfMinor(...)->format()`.
 
-Two consequences worth knowing:
+Three consequences worth knowing:
 
 - **No listener may call `->format()` on its way into a spec.** If an
   amount is going into a notification, it goes in as
@@ -75,6 +78,33 @@ Two consequences worth knowing:
   across all shipped locales, and the listener passes
   `CopyParam::money(abs($deltaMinor), $currency)`: absolute, because
   the direction word already carries the sign.
+- **The currency code beside it is the *owner's*, not the ambient
+  reader's.** `BaseCurrency::code()` answers for whoever the guard
+  carries and falls through to `config('currency.base')` in a queued
+  context — and every listener here runs in one. An amount that does not
+  come out of a `Money` the event already carries is labelled through
+  `BaseCurrency::forUser($owner)`, the owner loaded from the event's
+  `userId` — the same rule the
+  [envelope writers](../budgets/architecture.md) follow.
+
+### Amounts that are not all in one currency
+
+A digest's "over budget" figure sums envelopes, and
+`envelope_assignments.currency` is stamped per row: one period really can
+hold a EUR envelope beside a USD one. `PersistPositionDigest` therefore
+buckets the over-budget envelopes by their own currency and folds the
+buckets through `CrossCurrencyTotal::of()` into the owner's currency,
+rather than adding minor units that are not the same unit and printing
+the total under whichever code the last row carried.
+
+A fold can leave a bucket out for want of a rate, and a smaller number
+with nothing saying so reads as less overspend rather than a partial
+figure. So the codes it could not price get their own body line, through
+the shared `core::money.not_converted` that every other roll-up names its
+gaps with. A `CopyLine` key reaches `Lang::get()` untouched, so it may
+name **any** module's translation namespace — a Notifications copy of a
+sentence Core already ships in every locale would be a second thing to
+keep in parity for no gain.
 
 ## A category name is a value too
 
@@ -83,8 +113,9 @@ English for a row nobody has renamed and the user's own words for a row
 they have, and
 [`CategoryDisplayName`](../ledger/category-display-names.md) is the one
 place that decides which. A budget nudge is emitted by
-`EmitBudgetNudgesJob`, an hourly `Schedule::call` with no request behind
-it, so everything it resolves is resolved in `config('app.locale')`.
+`EmitBudgetNudgesJob`, dispatched by the hourly `budgets:emit-nudges`
+command with no request behind it, so everything it resolves is resolved
+in `config('app.locale')`.
 That put **"Je hebt 80% van je budget voor Groceries gebruikt"** in
 front of a Dutch reader whose screen says `Boodschappen` everywhere
 else.
@@ -105,6 +136,32 @@ name alongside its slug and flag, `EnvelopeRow` and
 hands them to `CopyParam`. The resolved name is what goes in as the
 fallback string, which is equivalent: a renamed row resolves to itself,
 and an untouched default re-resolves from its slug.
+
+## A sentence another module already rendered is not a value either
+
+`PersistSavingsPrompt` was the one listener that did not follow the rule above.
+Its body line was `notifications::copy.body.savings_prompt`, whose whole English
+value was `':message'`, and `:message` arrived as a plain string —
+`SavingsInsightsQuery::render()` had already resolved one of three
+`drift-alerts::savings.insight.*_message` lines and formatted the monthly amount
+into it. That query runs inside `EmitSavingsPromptsJob`, an hourly job with no
+reader, so the sentence froze in the worker's language and the amount froze
+under the worker's grouping marks.
+
+A plain string is a legal replacement value and always was — that is what a
+merchant name is. What made this one wrong is that it was **copy**, and copy
+belongs to a key. `SavingsPromptDue` now carries `messageKey` instead of
+`message`, and the listener makes the insight's own line the body:
+
+```php
+CopyLine::of($event->messageKey, [
+    'name' => $event->name,
+    'monthly' => CopyParam::money($event->monthlyMinor, $event->currency),
+]);
+```
+
+The `':message'` wrapper key is gone from all twenty-six locales — a frame whose
+entire content is one placeholder was never translating anything.
 
 ## When a key no longer exists
 
@@ -194,6 +251,70 @@ with a hole in it is worse than no spec at all, because the fallback for
 no spec is a whole written sentence and the fallback for a hole is
 nothing. Anything else that decodes or renders part of this spec goes
 through it rather than writing the fold again.
+
+## The row's own words, beside the stored ones
+
+Two strings on a notification row do not come from the spec at all — the type
+chip and the dead-link line — and both were frozen in English until a Dutch
+phone showed them beside correctly translated titles.
+
+`NotificationCopy::TYPE_CHIPS` maps a trigger to a **glyph and a lang key**,
+never a word. `typeChip()` resolves the key through `Lang::get()` on every
+call, so the chip follows whoever is reading rather than whoever read first.
+The chip is `aria-hidden` because it repeats what the title already says — that
+hides it from a screen reader and not from eyes, so it is user-facing text like
+any other. A trigger this build cannot name, and the empty string
+`SensitiveColumnCodec` leaves behind for a column it could not open, both fall
+to `TYPE_CHIP_UNNAMED`, whose key ships in all twenty-six locales like the rest;
+the fallback degrades to a neutral word, never to a raw key.
+
+`notifications::row.dead_link` is **five whole sentences keyed by target kind**,
+not one sentence with a `:kind` placeholder. A noun dropped into a sentence has
+to agree with it, and nine locales inflect the demonstrative — Dutch would read
+"Deze budget" — so the sentence is the unit of translation here. The key is
+built on `NotificationDto::targetKind`, which is why
+`DeepLinkResolver::renderedKind()` folds a kind this build does not know into
+`item` before it gets that far.
+
+## The same spec in a column that has no `params`
+
+`migration_staging_unmapped_items.display_label` and `.reason`, and
+`pot_movements.memo`, are single string columns with no JSON blob beside them.
+`StoredCopy::of(CopyLine)` packs a spec into one, `StoredCopy::read()` unpacks
+it, and anything that is **not** a spec comes back verbatim — which is what
+keeps a memo the user typed, and every row written before the seam existed,
+rendering exactly as it did.
+
+The envelope carries the sentence as it read at write time under `@said`, for
+the same reason the notification row keeps its `title` and `body` columns: a key
+renamed in a later release has to degrade to a stale sentence, never to a raw
+key. `StoredCopy::keyOf()` and `::names()` answer which line a stored value
+names without rendering it, so a query or a test can narrow to the rows the app
+itself wrote without any caller learning the envelope's shape.
+
+### Packed in, or riding beside
+
+Packing the envelope into the column is only safe where **an older build would
+not have rendered it**. `system_alerts` and `pot_movements` are synced, and
+[a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)
+makes that a standing requirement: a build with no `StoredCopy` echoes the
+column, so an envelope arriving from a newer device is raw JSON at a reader who
+did nothing wrong.
+
+So there are two shapes, and the column decides which:
+
+| Where the spec goes | When | Read with |
+|---|---|---|
+| Packed into the column | Nothing older renders it — a staging table, a column no earlier release had | `StoredCopy::read($stored)` |
+| Beside the sentence, in a JSON column | The column is synced and a screen echoes it | `StoredCopy::readFromParams($params, $written)` |
+
+`system_alerts` takes the second: `StoredCopy::inParams($line)` writes the spec
+under `metadata.copy`, `message` keeps the rendered sentence, and an older peer
+renders exactly what it always did. `pot_movements` had no JSON column beside
+`memo` and could not grow one — an op naming a column the peer's schema lacks is
+quarantined whole — so its release movement stopped being a sentence and became
+`PotMovementKind::ReleasedOnArchive`, named from the lang file by the same
+`match` that names a fund and a transfer.
 
 ## Related
 

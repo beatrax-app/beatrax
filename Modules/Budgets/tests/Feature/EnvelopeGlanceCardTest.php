@@ -20,7 +20,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('renders a ready-to-assign figure sourced from the envelope model, not category_budgets', function (): void {
+it('renders a ready-to-assign figure sourced from the envelope fold', function (): void {
     $this->actingAs($this->user);
     Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'glance-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
 

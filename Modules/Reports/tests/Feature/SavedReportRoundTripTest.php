@@ -74,9 +74,10 @@ it('reopens a saved report with currencyMode=base exactly as it was saved', func
 });
 
 // Sync replicates saved reports between devices, so a definition can arrive from
-// a build whose vocabulary is not this one's. Reading an unknown granularity as
-// monthly would show a different report under the name the user gave it.
-it('refuses to reopen a saved report whose stored granularity is not in the vocabulary', function (): void {
+// a build whose vocabulary is not this one's. from() stays strict about that, but
+// it is no longer the read path: one unreadable row used to 500 /reports, and the
+// builder now falls back to a word it knows with the rail showing which.
+it('keeps ReportDefinition::from() strict about a stored granularity outside the vocabulary', function (): void {
     $user = srrtUser();
     test()->actingAs($user);
 

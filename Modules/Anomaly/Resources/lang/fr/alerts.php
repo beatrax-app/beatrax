@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'référence :baseline → réel : :actual',
+    'charged' => 'débité :actual',
     'detected' => 'détecté le :date',
     'sensitivity' => 'sensibilité :percent sur 100',
 

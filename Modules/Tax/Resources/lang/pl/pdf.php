@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Kwota',
 
     'subtotal' => 'Suma częściowa',
+    'subtotal_income' => 'Suma częściowa przychodów',
 
     'footer' => 'Wygenerowano w Beatrax — lokalne finanse osobiste — :year',
 ];

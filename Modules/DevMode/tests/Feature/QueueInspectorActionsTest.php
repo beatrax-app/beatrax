@@ -56,7 +56,10 @@ function seedPendingJob(string $queue = 'default'): int
     ]);
 }
 
-function seedBatch(string $id, int $failedJobs = 0, ?int $cancelledAt = null): void
+// Both stamps are parameters and both are used: `finished_at` was hard-coded
+// null and `$cancelledAt` was never passed, so the tile's two-clause filter had
+// no fixture that varied either clause.
+function seedBatch(string $id, int $failedJobs = 0, ?int $cancelledAt = null, ?int $finishedAt = null, string $failedJobIds = '[]'): void
 {
     DB::table('job_batches')->insert([
         'id' => $id,
@@ -64,11 +67,12 @@ function seedBatch(string $id, int $failedJobs = 0, ?int $cancelledAt = null): v
         'total_jobs' => 5,
         'pending_jobs' => 5 - $failedJobs,
         'failed_jobs' => $failedJobs,
-        'failed_job_ids' => json_encode([]),
-        'options' => json_encode([]),
+        'failed_job_ids' => $failedJobIds,
+        // Laravel writes this column with serialize(), not json_encode().
+        'options' => serialize([]),
         'cancelled_at' => $cancelledAt,
         'created_at' => CarbonImmutable::now()->getTimestamp(),
-        'finished_at' => null,
+        'finished_at' => $finishedAt,
     ]);
 }
 
@@ -262,4 +266,149 @@ it('the bulk-retry action takes the single-confirm path (NOT triple-gate) and re
         }
     }
     expect($hasBulkRetry)->toBeTrue('Bulk-retry audit row should be written');
+});
+
+// The tile filtered on cancelled_at + finished_at and the tab query filtered on
+// nothing, so a finished batch and a cancelled one read "0" straight above a
+// list of two.
+it('counts the batches the batches tab actually lists', function (): void {
+    $user = queueDeveloper('q-batch-tile-agrees');
+    $now = CarbonImmutable::now()->getTimestamp();
+
+    seedBatch('batch-active');
+    seedBatch('batch-finished', 0, null, $now);
+    seedBatch('batch-cancelled', 0, $now);
+
+    $response = $this->actingAs($user)->get('/dev/queue/batches');
+    $response->assertOk();
+    $html = (string) $response->getContent();
+
+    expect($html)->toContain('data-testid="tile-batches-count">3<');
+    expect(substr_count($html, 'data-testid="queue-row"'))->toBe(3);
+});
+
+it('shows the empty-batches copy only when there is no batch at all', function (): void {
+    $user = queueDeveloper('q-batch-empty-copy');
+
+    $response = $this->actingAs($user)->get('/dev/queue/batches');
+
+    $response->assertOk();
+    expect((string) $response->getContent())->toContain('No batches.');
+});
+
+// The counter was incremented for every uuid the batch named, present or not:
+// clicking twice re-queued nothing the second time and still wrote count:1
+// beside an inner row that had correctly recorded "missing".
+it('counts only the batch failures it actually re-queued', function (): void {
+    $user = queueDeveloper('q-batch-retry-count');
+    $this->actingAs($user);
+
+    $uuid = 'uuid-batch-failure-1';
+    seedFailedJob($uuid);
+    seedBatch('batch-retry-count', 1, null, null, json_encode([$uuid]));
+
+    /** @var QueueActions $actions */
+    $actions = app(QueueActions::class);
+
+    expect($actions->retryBatchFailures('batch-retry-count'))->toBe(1);
+    // Second click: the failed row is gone, so there is nothing left to re-queue.
+    expect($actions->retryBatchFailures('batch-retry-count'))->toBe(0);
+
+    $auditRow = DB::table('dev_mode_audit')
+        ->where('description', AuditEvent::QueueAction->value)
+        ->orderByDesc('id')
+        ->first();
+    $properties = json_decode((string) $auditRow->properties, true);
+    expect($properties['action'] ?? null)->toBe(AuditEvent::QueueBatchRetryFailures->value);
+    expect($properties['context']['count'] ?? null)->toBe(0);
+});
+
+it('says nothing was re-queued when the batch has no failure left', function (): void {
+    $user = queueDeveloper('q-batch-retry-toast');
+    $this->actingAs($user);
+
+    seedBatch('batch-retry-toast', 1, null, null, json_encode(['uuid-already-gone']));
+
+    Livewire::test(QueueInspectorPage::class, ['tab' => 'batches'])
+        ->call('retryFailures', 'batch-retry-toast')
+        ->assertDispatched('toast', message: 'No batch failures left to re-queue');
+});
+
+// count:3 for one deleted row is a number nobody can reconcile against the
+// table afterwards.
+it('counts only the rows bulk delete actually removed', function (): void {
+    $user = queueDeveloper('q-bulk-delete-count');
+    $this->actingAs($user);
+
+    $present = 'uuid-bulk-present';
+    seedFailedJob($present);
+
+    /** @var QueueActions $actions */
+    $actions = app(QueueActions::class);
+    $actions->bulkDelete([$present, 'uuid-bulk-gone-1', 'uuid-bulk-gone-2'], 'failed');
+
+    $auditRow = DB::table('dev_mode_audit')->latest('id')->first();
+    $properties = json_decode((string) $auditRow->properties, true);
+    expect($properties['action'] ?? null)->toBe(AuditEvent::QueueBulkDelete->value);
+    expect($properties['context']['count'] ?? null)->toBe(1);
+});
+
+it('counts only the batches bulk delete actually removed', function (): void {
+    $user = queueDeveloper('q-bulk-delete-batches');
+    $this->actingAs($user);
+
+    seedBatch('batch-bulk-present');
+
+    /** @var QueueActions $actions */
+    $actions = app(QueueActions::class);
+    $actions->bulkDelete(['batch-bulk-present', 'batch-bulk-gone'], 'batches');
+
+    $auditRow = DB::table('dev_mode_audit')->latest('id')->first();
+    $properties = json_decode((string) $auditRow->properties, true);
+    expect($properties['context']['count'] ?? null)->toBe(1);
+});
+
+// A row that vanished between render and click left an audit row claiming a
+// deletion and a toast saying it happened.
+it('writes no deletion audit row and says so when the pending job is already gone', function (): void {
+    $user = queueDeveloper('q-pending-gone');
+    $this->actingAs($user);
+
+    /** @var QueueActions $actions */
+    $actions = app(QueueActions::class);
+    expect($actions->deletePending(999999))->toBe(0);
+    expect(DB::table('dev_mode_audit')->count())->toBe(0);
+
+    Livewire::test(QueueInspectorPage::class)
+        ->call('delete', 999999)
+        ->assertDispatched('toast', message: 'That job was already gone');
+});
+
+// job_batches.options is written with serialize(), so the viewer json_decoded
+// it, failed, and printed the raw a:2:{...} blob at the reader.
+it('renders the batch options blob as readable JSON rather than a serialize() string', function (): void {
+    $user = queueDeveloper('q-batch-options');
+    $this->actingAs($user);
+
+    DB::table('job_batches')->insert([
+        'id' => 'batch-options-view',
+        'name' => 'nightly',
+        'total_jobs' => 1,
+        'pending_jobs' => 1,
+        'failed_jobs' => 0,
+        'failed_job_ids' => json_encode([]),
+        'options' => serialize(['allowFailures' => false, 'name' => 'nightly']),
+        'cancelled_at' => null,
+        'created_at' => CarbonImmutable::now()->getTimestamp(),
+        'finished_at' => null,
+    ]);
+
+    $html = Livewire::test(QueueInspectorPage::class, ['tab' => 'batches'])
+        ->call('togglePayloadExpand', 'batch-options-view')
+        ->html();
+
+    // Blade escapes the quotes, so the key is asserted without them.
+    expect($html)->toContain('allowFailures');
+    expect($html)->toContain('&quot;name&quot;: &quot;nightly&quot;');
+    expect($html)->not->toContain('a:2:{');
 });

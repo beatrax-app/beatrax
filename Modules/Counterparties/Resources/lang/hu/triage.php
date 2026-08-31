@@ -6,7 +6,7 @@ return [
     'page_title' => 'Partnerek besorolása',
     'heading' => 'Ismeretlen partnerek besorolása',
 
-    'progress' => ':seen / :total · :percent % · ~:minutes perc van hátra',
+    'progress' => ':seen / :total · :percent% · ~:minutes perc van hátra',
     'progress_aria' => 'Besorolás előrehaladása',
 
     'all_caught_aria' => 'Minden partner felcímkézve',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Még nincs rögzített tranzakció.',
 
     'label_manually' => 'Vagy címkézd fel kézzel',
+    'label_question' => 'Mi ez a partner?',
     'display_name_label' => 'Megjelenítendő név',
-    'display_name_placeholder' => 'Megjelenítendő név…',
     'type_label' => 'Típus',
     'type_merchant' => 'Kereskedő',
     'type_personal' => 'Magánszemély',
     'type_bank' => 'Bank',
     'type_government' => 'Állami',
     'save_label' => 'Címke mentése',
+    'name_required' => 'Előbb adj nevet ennek a partnernek.',
+    'draft_kept' => 'Amit beírsz, megmarad, miközben végighaladsz a soron.',
 
     'skip' => 'Kihagyás egyelőre',
-    'mark_ignored' => 'Megjelölés figyelmen kívül hagyottként',
+    'mark_ignored' => 'Ne kérdezz többet erről',
+    'not_now_note' => 'Egyik sem változtatja meg a partnert — később a Partnerek oldalon még felcímkézheted.',
     'previous' => 'Előző ismeretlen',
-    'next' => 'Következő',
 
     'kbd_yes' => 'igen',
     'kbd_no' => 'nem',

@@ -36,7 +36,6 @@ function ptypeFeatureRow(string $description, string $sourceFormat, ?array $rawP
         currency: 'EUR',
         settledAmountMinor: -1234,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Some Counterparty',
         counterpartyIban: null,
         counterpartyNormalized: 'some counterparty',
@@ -128,7 +127,7 @@ it('falls back to PaymentType::Unknown when no hinter recognises the row', funct
 });
 
 it('prefers the source-specific hinter over the description-keyword fallback when both fire', function (): void {
-    // "iDEAL" fires AsnCsvPaymentTypeHinter at confidence 80 and
+    // "iDEAL" fires PositionalCsvPaymentTypeHinter at confidence 80 and
     // DescriptionKeywordFallbackHinter at 40.
     $tx = ptypeFeatureRow('iDEAL Bestelling', 'asn-csv');
 

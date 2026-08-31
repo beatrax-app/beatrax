@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Database\Support\ModuleMigration;
-use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Core\Public\Support\Instant;
 
 return new class extends ModuleMigration
 {
@@ -80,7 +80,7 @@ return new class extends ModuleMigration
         }
 
         try {
-            return ZuluTimestamp::stamp(CarbonImmutable::parse($value));
+            return Instant::zulu(CarbonImmutable::parse($value));
         } catch (Throwable) {
             return null;
         }

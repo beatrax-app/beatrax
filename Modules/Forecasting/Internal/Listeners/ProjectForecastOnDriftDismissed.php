@@ -8,6 +8,7 @@ use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 
 final readonly class ProjectForecastOnDriftDismissed
@@ -19,7 +20,7 @@ final readonly class ProjectForecastOnDriftDismissed
 
     public function handle(DriftAlertDismissedCancelled $event): void
     {
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+        foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $event->userId,
                 scenarioId: null,
@@ -32,7 +33,7 @@ final readonly class ProjectForecastOnDriftDismissed
             return;
         }
         foreach ($this->scenarioQuery->forUser($user) as $scenario) {
-            foreach (ProjectForecastJob::HORIZON_DAYS as $horizon) {
+            foreach (ForecastHorizon::days() as $horizon) {
                 $this->bus->dispatch(new ProjectForecastJob(
                     userId: $event->userId,
                     scenarioId: $scenario->id,

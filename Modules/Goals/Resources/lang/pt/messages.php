@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Adiciona contribuições para veres uma projeção',
         'not_enough_history' => 'Ainda não há histórico suficiente para projetar uma data',
         'no_recent_contributions' => 'Sem contribuições recentes para projetar uma data',
+        'too_far_to_date' => 'Demasiado longe para uma data a este ritmo',
         'est' => 'Est. :date ·',
         'projection_note' => '(projeção)',
         'projected' => 'Projetado: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Mais ações para :name',
         'mark_complete' => 'Marcar como concluído',
+        'mark_complete_caption' => 'Marcar',
         'archive' => 'Arquivar',
         'restore' => 'Restaurar',
     ],
 
-    'archived_disclosure' => 'Objetivos arquivados (:count)',
+    'archived_disclosure' => 'Objetivo arquivado (:count)|Objetivos arquivados (:count)',
 
     'form' => [
         'title_edit' => 'Editar objetivo',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Introduz um nome para o teu objetivo.',
         'date' => 'Escolhe uma data-alvo.',
+        'date_invalid' => 'Escolha uma data real.',
+        'date_before_start' => 'Escolhe uma data igual ou posterior ao início do objetivo.',
+        'generic' => 'Não foi possível guardar o objetivo. Verifique os campos e tente novamente.',
         'amount' => 'Introduz um montante válido superior a zero.',
         'pot_linked_category' => 'Esta reserva está associada a uma categoria. Remove primeiro essa associação na página Reservas.',
+        'pot_already_linked' => 'Esta reserva já financia outro objetivo. Remove primeiro essa associação.',
+        'pot_missing' => 'Essa reserva já não está disponível. Escolhe outra, ou deixa este objetivo sem associação.',
     ],
 ];

@@ -26,12 +26,11 @@ return [
 
     'your_devices' => 'Az eszközeid',
 
-    'moved_help' => 'A párosítás, az eszköznevek és a titkosítás mostantól a szinkronizálás állapotánál található.',
-    'moved_cta' => 'Szinkronizálás és eszköz megnyitása',
     'device_name' => 'Eszköz neve',
     'save' => 'Mentés',
     'peer_default_name' => 'Párosított eszköz',
     'rename_device' => 'Eszköz átnevezése',
+    'rename_device_caption' => 'Átnevezése',
     'this_device' => 'Ez az eszköz',
     'removed' => 'Eltávolítva',
     'confirmed' => 'Megerősítve',
@@ -49,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Relé végpont',
     'relay_endpoint_help' => 'Opcionális. Ha meg van adva, az offline eszközök ezen a relén keresztül szinkronizálnak. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
+    'relay_endpoint_help_phone' => 'Opcionális. Ha meg van adva, a módosítások ezen a relén át utaznak akkor is, ha az eszközeid nem egy hálózaton vannak. Ez az eszköz akkor veszi át őket, amikor erről a képernyőről szinkronizálsz — soha a háttérben, mert az appzár őrzi az egyetlen kulcsot. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
     'relay_endpoint_aria' => 'A relé végpont URL-je',
     'relay_insecure_warning' => 'Ez a relé végpont sima HTTP-t használ. Bár a relé soha nem fejti vissza az adataidat, a nem biztonságos kapcsolat felfedi a titkosított adatok méretét és időzítését a hálózatot figyelők előtt. A legjobb adatvédelemhez használj <strong>https://</strong> végpontot.',
 
@@ -70,6 +70,7 @@ return [
     'removing' => 'Eltávolítás:',
     'remove_rotates_key' => 'Az eszköz eltávolítása lecseréli a titkosítási kulcsot, így az eszköz nem kap több frissítést.',
     'remove_cannot_erase' => 'A már az eszközön lévő adatokat ez nem törli. Ha ez az eszköz elveszett vagy ellopták, tekintsd az összes rajta lévő adatot nyilvánosságra kerültnek.',
+    'remove_is_local' => 'A többi eszközöd saját listát vezet. Amíg ott is el nem távolítod, tovább szinkronizálnak vele.',
     'remove_device' => 'Eszköz eltávolítása',
     'keep_device' => 'Eszköz megtartása',
     'rotating_key' => 'A titkosítási kulcs cseréje…',

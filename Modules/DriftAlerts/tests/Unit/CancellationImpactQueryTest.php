@@ -84,6 +84,74 @@ it('preserves USD currency on USD series, because monthly_equivalent_minor is no
     expect($dto->annualSavings->toMinor())->toBe(14388);
 });
 
+// monthly_equivalent_minor is a rounded integer, and multiplying it back up
+// advertised a saving the subscription never costs: EUR 109.92 for a EUR
+// 109.90 annual plan, on the same row as the alert's correct annualisation.
+it('annualises a yearly plan at its own price, not through the rounded monthly figure', function (): void {
+    $user = ciqUser('ciq-yearly');
+    $seriesId = ciqSeries($user, [
+        'cadence' => 'yearly',
+        'latest_amount_minor' => -10990,
+        'monthly_equivalent_minor' => -916,
+    ]);
+
+    $dto = app(CancellationImpactQuery::class)->forSeries($seriesId, $user);
+
+    expect($dto)->not->toBeNull();
+    expect($dto->annualSavings->toMinor())->toBe(10990);
+    expect($dto->monthlySavings->toMinor())->toBe(916);
+});
+
+it('annualises the second reported yearly plan exactly too', function (): void {
+    $user = ciqUser('ciq-yearly-2');
+    $seriesId = ciqSeries($user, [
+        'cadence' => 'yearly',
+        'latest_amount_minor' => -57148,
+        'monthly_equivalent_minor' => -4762,
+    ]);
+
+    expect(app(CancellationImpactQuery::class)->forSeries($seriesId, $user)->annualSavings->toMinor())
+        ->toBe(57148);
+});
+
+it('annualises a weekly plan at fifty-two weeks', function (): void {
+    $user = ciqUser('ciq-weekly');
+    $seriesId = ciqSeries($user, [
+        'cadence' => 'weekly',
+        'latest_amount_minor' => -500,
+        'monthly_equivalent_minor' => -2167,
+    ]);
+
+    expect(app(CancellationImpactQuery::class)->forSeries($seriesId, $user)->annualSavings->toMinor())
+        ->toBe(26000);
+});
+
+it('annualises a quarterly plan at four quarters', function (): void {
+    $user = ciqUser('ciq-quarterly');
+    $seriesId = ciqSeries($user, [
+        'cadence' => 'quarterly',
+        'latest_amount_minor' => -4999,
+        'monthly_equivalent_minor' => -1666,
+    ]);
+
+    expect(app(CancellationImpactQuery::class)->forSeries($seriesId, $user)->annualSavings->toMinor())
+        ->toBe(19996);
+});
+
+// An irregular series bills at no rate at all, so the monthly equivalent the
+// detector derived is the only yearly figure there is.
+it('falls back to the monthly equivalent for an irregular series', function (): void {
+    $user = ciqUser('ciq-irregular');
+    $seriesId = ciqSeries($user, [
+        'cadence' => 'irregular',
+        'latest_amount_minor' => -3000,
+        'monthly_equivalent_minor' => -1000,
+    ]);
+
+    expect(app(CancellationImpactQuery::class)->forSeries($seriesId, $user)->annualSavings->toMinor())
+        ->toBe(12000);
+});
+
 it('returns null on cross-user invocation', function (): void {
     $owner = ciqUser('ciq-owner');
     $intruder = ciqUser('ciq-intruder');

@@ -18,8 +18,8 @@
                 @if ($spec !== null)
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         <span class="font-mono">{{ $spec->name }}</span>
-                        @if ($spec->description !== null && $spec->description !== '')
-                            — {{ $spec->description }}
+                        @if ($spec->descriptionKey !== null)
+                            — {{ Lang::get($spec->descriptionKey) }}
                         @endif
                     </p>
                 @endif
@@ -66,7 +66,7 @@
                                 for="{{ $fieldId }}"
                                 class="block text-sm font-medium text-slate-900 dark:text-slate-100"
                             >
-                                {{ $arg->label !== '' ? $arg->label : $arg->name }}
+                                {{ $arg->labelKey !== '' ? Lang::get($arg->labelKey) : $arg->name }}
                                 @if ($isRequired)
                                     <span role="img" class="text-rose-600 dark:text-rose-400" aria-label="{{ Lang::get('dev::arg_prompt.required_aria') }}">*</span>
                                 @endif
@@ -101,15 +101,15 @@
                                     id="{{ $fieldId }}"
                                     type="text"
                                     wire:model.live="values.{{ $arg->name }}"
-                                    @if ($arg->placeholder !== null) placeholder="{{ $arg->placeholder }}" @endif
+                                    @if ($arg->placeholderKey !== null) placeholder="{{ Lang::get($arg->placeholderKey) }}" @endif
                                     @if ($idx === 0) x-init="$nextTick(() => $el.focus())" x-on:keydown.enter.prevent="$wire.submit()" @endif
                                     class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400"
                                     data-testid="arg-input-{{ $arg->name }}"
                                 />
                             @endif
 
-                            @if ($arg->helpText !== null && $arg->helpText !== '')
-                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ $arg->helpText }}</p>
+                            @if ($arg->helpTextKey !== null)
+                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($arg->helpTextKey) }}</p>
                             @endif
                         </div>
                     @endforeach

@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Zadaj kód',
     'camera_off' => 'Prístup k fotoaparátu je vypnutý. Zadaj namiesto toho kód z druhého zariadenia.',
+    'camera_off_no_search' => 'Prístup k fotoaparátu je vypnutý a vyhľadanie druhého zariadenia v sieti na iPhone zatiaľ nefunguje — zadaný kód tak nemá čím ho nájsť. Povoľ fotoaparát pre Beatrax v nastaveniach zariadenia a naskenuj kód z druhého zariadenia.',
+    'no_search' => 'Vyhľadanie druhého zariadenia v sieti na iPhone zatiaľ nefunguje, takže zadaný kód nemá čo nájsť. Naskenuj kód namiesto toho fotoaparátom — ten sieť prehľadávať nemusí.',
     'word_code_aria' => 'Zadaj slovný kód z druhého zariadenia',
     'submit_code' => 'Odoslať kód',
     'cancel' => 'Zrušiť',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Druhé zariadenie sa nedá dosiahnuť. Skontroluj, či sú obe v tej istej sieti a či je na počítači zapnutá synchronizácia.',
+        'no_road_home' => 'Toto zariadenie nedokáže prehľadávať sieť a kód, ktorý si naskenoval, neobsahuje adresu druhého zariadenia. Požiadaj ho o nový kód a naskenuj ten.',
         'invalid_code' => 'Tento kód je neplatný alebo mu vypršala platnosť. Nechaj si na druhom zariadení vygenerovať nový.',
+        'code_incomplete' => 'Tento kód nie je úplný. Porovnaj ho s druhým zariadením a zadaj ho celý.',
         'code_not_accepted' => 'Žiadne zariadenie v tejto sieti tento kód neprijalo. Skontroluj kód a či ho druhé zariadenie stále zobrazuje.',
         'no_peer_answered' => 'V tejto sieti na tento kód nič neodpovedalo. Skontroluj, či na druhom zariadení beží synchronizácia, alebo naskenuj jeho kód fotoaparátom — ten sieť prehľadávať nemusí.',
         'no_peer_answered_ios' => 'V tejto sieti na tento kód nič neodpovedalo. Vyhľadanie druhého zariadenia v sieti na iPhone zatiaľ nefunguje, takže naskenuj jeho kód fotoaparátom.',
+        'no_peer_answered_camera_off' => 'V tejto sieti na tento kód nič neodpovedalo. Vyhľadanie druhého zariadenia v sieti na iPhone zatiaľ nefunguje a prístup k fotoaparátu je vypnutý — povoľ preto fotoaparát pre Beatrax v nastaveniach zariadenia a naskenuj kód z druhého zariadenia.',
         'rate_limited' => 'Príliš veľa pokusov. Počkaj minútu a skús to znova.',
         'identity_locked' => 'Identita tvojho zariadenia je zamknutá. Odomkni aplikáciu a skús to znova.',
         'identity_needs_lock' => 'Najprv nastavte zámok aplikácie — chráni identitu vášho zariadenia.',

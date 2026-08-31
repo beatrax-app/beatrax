@@ -6,7 +6,7 @@ return [
     'page_title' => 'Darījuma partneru šķirošana',
     'heading' => 'Šķirot nezināmos darījuma partnerus',
 
-    'progress' => ':seen no :total · :percent % · atlikušas ~:minutes min',
+    'progress' => ':seen no :total · :percent% · atlikušas ~:minutes min',
     'progress_aria' => 'Šķirošanas progress',
 
     'all_caught_aria' => 'Visi darījuma partneri marķēti',
@@ -29,19 +29,21 @@ return [
     'no_transactions_yet' => 'Vēl nav reģistrēts neviens darījums.',
 
     'label_manually' => 'Vai marķējiet manuāli',
+    'label_question' => 'Kas ir šis darījuma partneris?',
     'display_name_label' => 'Attēlotais nosaukums',
-    'display_name_placeholder' => 'Attēlotais nosaukums…',
     'type_label' => 'Veids',
     'type_merchant' => 'Tirgotājs',
     'type_personal' => 'Privātpersona',
     'type_bank' => 'Banka',
     'type_government' => 'Valsts iestāde',
     'save_label' => 'Saglabāt marķējumu',
+    'name_required' => 'Vispirms piešķiriet šim darījuma partnerim nosaukumu.',
+    'draft_kept' => 'Ievadītais tiek saglabāts, kamēr pārvietojaties pa rindu.',
 
     'skip' => 'Pagaidām izlaist',
-    'mark_ignored' => 'Atzīmēt kā ignorētu',
+    'mark_ignored' => 'Vairs nejautāt par šo',
+    'not_now_note' => 'Neviena no tām nemaina darījuma partneri — jūs varat to marķēt vēlāk darījuma partneru lapā.',
     'previous' => 'Iepriekšējais nezināmais',
-    'next' => 'Tālāk',
 
     'kbd_yes' => 'jā',
     'kbd_no' => 'nē',

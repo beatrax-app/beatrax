@@ -24,6 +24,10 @@ return [
         'unknown' => 'Onbekend',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Bankkosten',
+    ],
+
     'cp_card' => [
         'aria' => 'Tegenpartij: :name',
         'recent_aria' => 'Recente activiteit',

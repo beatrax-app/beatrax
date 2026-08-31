@@ -13,5 +13,7 @@ return [
     'errors' => [
         'name_empty' => 'Nazwa kategorii nie może być pusta.',
         'name_duplicate' => 'Kategoria o tej nazwie już istnieje.',
+        'category_not_saved' => 'Nie udało się zapisać tej kategorii. Spróbuj ponownie.',
+        'tag_refused' => 'Nie udało się zapisać tego oznaczenia. Zamknij wybór i spróbuj ponownie.',
     ],
 ];

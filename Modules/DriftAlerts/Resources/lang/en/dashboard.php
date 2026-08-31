@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Drift alerts',
-    'aria' => 'Drift alerts — :count open, :amount annualized impact',
+    'aria' => 'Drift alerts — :count open, :impact',
     'open' => 'open',
-    'annualized_impact' => 'annualized impact',
+    'impact_rising' => ':amount annualized impact',
+    'impact_flat' => 'no added yearly cost',
 ];

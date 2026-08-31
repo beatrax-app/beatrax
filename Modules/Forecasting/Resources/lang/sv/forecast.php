@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Jämfört med baslinjen ovan',
 
+    'run_failed' => 'Den här prognosen kunde inte beräknas. Linjen nedan visar bara det som redan är bokfört.',
+
     'scenario_editor_aria' => 'Scenarioredigerare',
     'series_confidence' => 'Seriens tillförlitlighet',
     'no_series_contribute' => 'Inga serier bidrar till prognosen för det här kontot än.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Uppdaterar',
     'chart_noscript' => 'Diagrammet kräver JavaScript. Intervallet omfattar :days dag.|Diagrammet kräver JavaScript. Intervallet omfattar :days dagar.',
     'total_balance' => 'Totalt saldo',
+    'projection_range' => 'Prognosintervall',
+    'point_estimate' => 'Punktskattning',
 
     'per_month_suffix' => '/mån',
     'confidence_chip_aria' => ':name, tillförlitlighet :confidence — prognosintervallet är :percent procent av punktskattningen',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Lägst på 30 dagar',
     'next_ics' => 'Nästa ICS-avräkning: :amount den :date',
     'ics_overdue' => 'ICS-avräkningen har förfallit: :amount, förföll :date',
+
+    'stale_run' => 'Prognos från :date — inte uppdaterad sedan dess.',
+
+    'confidence' => [
+        'high' => 'Hög',
+        'medium' => 'Medel',
+        'low' => 'Låg',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Belopp krävs.',
+        'amount_decimals' => 'Belopp måste vara ett tal med högst :decimals decimal.|Belopp måste vara ett tal med högst :decimals decimaler.',
+        'amount_whole' => 'Belopp måste vara ett heltal — den här valutan har ingen mindre enhet.',
+        'amount_non_negative' => 'Belopp måste vara noll eller positivt.',
+        'amount_non_zero' => 'Belopp får inte vara noll.',
+        'field_required' => 'Fältet :field krävs.',
+    ],
 ];

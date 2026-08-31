@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Celá história.',
     'subtitle_recent' => 'Nedávne transakcie (posledných 90 dní).',
 
-    'currency_aria' => 'Zobrazenie meny',
-    'currency_eur' => 'Iba :code',
-    'currency_original' => 'Pôvodná mena',
+    'currency_aria' => 'Zobrazená suma',
+    'currency_eur' => 'Zúčtovaná suma',
+    'currency_original' => 'Pôvodná suma',
 
     'show_recent' => 'Zobraziť iba nedávne',
     'show_full' => 'Zobraziť celú históriu',
 
     'empty_period' => 'Za toto obdobie tu nič nie je.',
 
+    'empty_recent_has_older' => 'Za posledných 90 dní nič. Vaše staršie transakcie tu stále sú.',
+
+    'empty_history' => 'Zatiaľ žiadne transakcie.',
     'loading_more' => 'Načítavajú sa ďalšie transakcie',
     'load_more' => 'Načítať ďalšie',
 

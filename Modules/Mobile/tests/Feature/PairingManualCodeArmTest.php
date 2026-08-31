@@ -222,7 +222,11 @@ it('sends a device that cannot search to the camera rather than to its router', 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     try {
+        // useWordCode(): this line may send a reader to the camera only where
+        // the camera is not the road that was refused, and that is the arm the
+        // deliberate choice puts them on.
         Livewire::test(MobilePairingScan::class)
+            ->call('useWordCode')
             ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
             ->call('submitCode', null)
             ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered_ios'))
@@ -232,7 +236,7 @@ it('sends a device that cannot search to the camera rather than to its router', 
     }
 });
 
-it('offers both no-answer lines in every locale', function (): void {
+it('carries every line the entry arms can select in all twenty-six locales', function (): void {
     $root = base_path('Modules/Mobile/Resources/lang');
     $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $e): bool => ! str_starts_with($e, '.')));
 
@@ -244,8 +248,16 @@ it('offers both no-answer lines in every locale', function (): void {
         $pairing = require $root.'/'.$locale.'/pairing.php';
         $errors = $pairing['errors'] ?? [];
 
-        foreach (['no_peer_answered', 'no_peer_answered_ios'] as $key) {
+        foreach (['no_peer_answered', 'no_peer_answered_ios', 'no_peer_answered_camera_off'] as $key) {
             $copy = is_array($errors) ? ($errors[$key] ?? null) : null;
+
+            if (! is_string($copy) || $copy === '') {
+                $missing[] = $locale.'.errors.'.$key;
+            }
+        }
+
+        foreach (['camera_off', 'camera_off_no_search', 'no_search'] as $key) {
+            $copy = $pairing[$key] ?? null;
 
             if (! is_string($copy) || $copy === '') {
                 $missing[] = $locale.'.'.$key;
@@ -354,4 +366,93 @@ it('pairs from a typed code entered outside import mode', function (): void {
         ->assertSet('flashMessage', '')
         ->assertSet('step', PairingWizardStep::Confirm->value)
         ->assertSet('pairingTokenId', fn (string $id): bool => $id !== '');
+});
+
+// The amber notice and the submit error are separate slots on purpose, and on a
+// phone with the camera denied AND no search both filled at once: one ordered a
+// typed code, the other ordered the camera, and each was the road the other had
+// just ruled out. There is no third affordance on this screen to escape to.
+it('gives no order that another line on the same screen has ruled out', function (): void {
+    $user = manualArmUser('armdeadend');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    // No useWordCode() call: this suite resolves no native scanner, which is
+    // the same condition a device whose camera permission is denied lands in.
+    $component = Livewire::test(MobilePairingScan::class)
+        ->assertSet('step', 'enter_code')
+        ->assertSet('cameraUnavailableNotice', true)
+        ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+        ->call('submitCode', null);
+
+    $html = $component->html();
+
+    expect($html)->not->toContain(Lang::get('mobile::pairing.camera_off'));
+    expect($component->get('flashMessage'))->not->toContain('scan its code with the camera instead');
+    expect($html)->toContain('device settings');
+});
+
+// The reach is readable at render, and the reader spent a minute on 32 base-32
+// characters before the screen admitted there was nothing to find them with.
+it('says a typed code has nothing to search with before one is typed', function (): void {
+    $user = manualArmUser('armupfront');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $component = Livewire::test(MobilePairingScan::class)
+        ->assertSet('flashMessage', '')
+        ->assertSet('wordCode', '');
+
+    expect($component->html())->toContain('does not work on iPhone yet');
+
+    // And again with the camera in hand, which is the arm the screenshot came
+    // from: the reader chose to type, so nothing had flagged the road yet.
+    expect(
+        Livewire::test(MobilePairingScan::class)->call('useWordCode')->html()
+    )->toContain('does not work on iPhone yet');
+});
+
+// "Enter code instead" sits beside the viewfinder as an equal choice. Where the
+// search cannot run it is not one, and the caveat belongs under the control
+// rather than behind it — removing it strands a reader whose camera is refused.
+it('keeps the typed-code arm on the camera step but says what it costs', function (): void {
+    $user = manualArmUser('armcaveat');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
+
+    $html = Livewire::test(MobilePairingScan::class)->set('step', 'scan')->html();
+
+    $armAt = strpos($html, 'useWordCode');
+    $caveatAt = strpos($html, 'does not work on iPhone yet');
+
+    expect($armAt)->not->toBeFalse('the escape hatch was removed rather than qualified');
+    expect($caveatAt)->not->toBeFalse('the arm is still offered as an equal choice');
+    expect($caveatAt)->toBeGreaterThan((int) $armAt);
+});
+
+// The whole point of reading the reach rather than the platform: the day Apple
+// grants the entitlement, or the Bonjour plugin lands, this copy has to leave
+// on its own with nothing to remember and nothing to delete.
+it('retires the no-search copy the moment the search can run', function (): void {
+    $user = manualArmUser('armretires');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Available);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $html = Livewire::test(MobilePairingScan::class)->html();
+
+    expect($html)->not->toContain('does not work on iPhone yet')
+        ->and($html)->toContain(Lang::get('mobile::pairing.camera_off'));
 });

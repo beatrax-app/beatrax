@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Categorieën',
     'section_goals_recurring' => 'Doelen & terugkerend',
     'no_name' => '(geen naam)',
-    'see_all_prefix' => 'Bekijk alle ',
-    'see_all_suffix' => ' resultaten →',
-    'no_transactions_prefix' => 'Geen transacties komen overeen met "',
-    'no_transactions_suffix' => '"',
+    'see_all' => 'Bekijk :count resultaat →|Bekijk alle :count resultaten →',
+    'no_transactions' => 'Geen transacties komen overeen met ":query"',
     'source_txn' => 'txn',
     'source_counterparty' => 'tegenpartij',
     'source_category' => 'categorie',
@@ -30,6 +28,29 @@ return [
     'foot_select' => 'selecteren',
     'foot_close' => 'sluiten',
     'close_aria' => 'Zoeken sluiten',
+    'close_caption' => 'Sluiten',
     'foot_try' => 'Probeer',
-    'results_suffix' => ' resultaten',
+    'results' => ':count resultaat|:count resultaten',
+
+    'action' => [
+        'run_import' => ['label' => 'Import uitvoeren', 'hint' => 'De importwizard openen'],
+        'scan_email' => ['label' => 'E-mail nu scannen', 'hint' => 'De synchronisatie van het postvak meteen uitvoeren'],
+        'open_profile' => ['label' => 'Profiel openen', 'hint' => 'Instellingen — account en voorkeuren'],
+        'toggle_theme' => ['label' => 'Thema wisselen', 'hint' => 'Wisselen tussen licht en donker thema'],
+    ],
+
+    'run_command' => ':command uitvoeren',
+
+    'nav' => [
+        'overview' => ['label' => 'Dev-overzicht', 'hint' => 'Systeemtegels + recente runs'],
+        'artisan' => ['label' => 'Artisan-runner', 'hint' => "Commando's uit de whitelist uitvoeren"],
+        'audit' => ['label' => 'Dev-auditlog', 'hint' => 'Elke actie in dev-modus'],
+        'logs' => ['label' => 'Log-tailer', 'hint' => 'Live stream van laravel-*.log'],
+        'queue' => ['label' => 'Wachtrij-inspecteur', 'hint' => 'In behandeling / mislukt / batches'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Systeemprobes'],
+        'sql' => ['label' => 'SQL-paneel', 'hint' => 'Browser met alleen SELECT'],
+        'system' => ['label' => 'Systeemsnapshot', 'hint' => 'Omgeving + paden + configuratie'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Ingebouwd wachtrijdashboard'],
+        'sync_health' => ['label' => 'Sync-status', 'hint' => 'Merge-acties in quarantaine of overgeslagen'],
+    ],
 ];

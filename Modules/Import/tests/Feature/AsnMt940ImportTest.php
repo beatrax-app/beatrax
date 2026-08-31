@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Transaction;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     $this->importer = $this->app->make(RunsImports::class);

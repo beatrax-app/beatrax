@@ -16,7 +16,9 @@ return [
         'budget' => 'Budget months',
     ],
 
-    'all_clean' => 'Everything mapped cleanly — nothing needs your attention before you confirm.',
+    'all_clean' => 'Everything mapped cleanly — there is nothing here for you to decide.',
+
+    'nothing_staged' => 'This export held nothing to import — there is nothing here to confirm.',
 
     'groups' => [
         'conflict' => 'Needs your decision',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'This will create or update the counts shown above in your categories, budgets, and ledger.',
     'discard_button' => 'Discard import',
+    'discard_confirm' => 'Discard this import? Everything read out of your export file is deleted here, and getting it back means uploading and parsing the whole file again. Nothing has reached your ledger yet.',
     'confirm_button' => 'Confirm import',
 ];

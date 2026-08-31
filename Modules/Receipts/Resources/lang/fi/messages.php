@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Pudota sähköpostiviesti (.eml) tai postilaatikkoarkisto (.mbox). Tunnistin poimii PayPal-kuitit ja tuo ne varsinaisiksi tapahtumiksi; tunnistamattomat lähettäjät jäävät tarkastuslokiin käsittelyä varten.',
-    ],
-
     'conflict' => [
 
         'field' => [

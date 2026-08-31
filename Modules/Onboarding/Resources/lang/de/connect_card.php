@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Deine Kreditkarte (ICS)',
+    'eyebrow' => 'Deine Kreditkarte',
     'h1' => 'Hol dir deine monatlichen PDF-Kontoauszüge',
-    'lede' => 'Lege alle deine monatlichen ICS-PDF-Kontoauszüge ab — wir fassen sie zu einer Vorschau zusammen.',
+    'lede' => 'Lege alle deine monatlichen PDF-Kontoauszüge ab — wir fassen sie zu einer Vorschau zusammen.',
 
     'format_group_aria' => 'ICS exportiert nur als PDF',
+    'issuer_note' => 'ICS ist bislang der einzige Kartenherausgeber, den wir lesen können, und auch nur sein Kontoauszug auf Niederländisch. Ist deine Karte von einem anderen Herausgeber, überspringe diesen Schritt.',
     'got_it_as' => 'Erhalten als:',
     'badge_only_format' => 'einziges Format',
 

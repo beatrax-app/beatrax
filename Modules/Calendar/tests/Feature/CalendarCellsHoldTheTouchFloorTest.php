@@ -11,6 +11,6 @@ it('gives the month grid enough width for a 44px cell on the narrowest phone', f
         base_path('Modules/Calendar/Resources/views/livewire/calendar-page.blade.php'),
     );
 
-    expect($blade)->toContain('class="mx-auto max-w-7xl px-1 sm:px-4 py-12"')
-        ->and($blade)->not->toContain('class="mx-auto max-w-7xl px-4 py-12"');
+    expect($blade)->toContain('class="mx-auto max-w-7xl px-1 sm:px-4 py-6"')
+        ->and($blade)->not->toContain('class="mx-auto max-w-7xl px-4 py-6"');
 });

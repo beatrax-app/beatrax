@@ -26,14 +26,11 @@ return [
 
     'your_devices' => 'Laitteesi',
 
-    // Asetukset säilyttää osoittimen siirrettyyn näkymään; itse osio
-    // sijaitsee nyt /sync-sivulla tilan ja synkronointitoiminnon kanssa.
-    'moved_help' => 'Laiteparit, laitenimet ja salaus löytyvät nyt synkronoinnin tilan yhteydestä.',
-    'moved_cta' => 'Avaa Synkronointi ja laite',
     'device_name' => 'Laitteen nimi',
     'save' => 'Tallenna',
     'peer_default_name' => 'Paritettu laite',
     'rename_device' => 'Nimeä laite uudelleen',
+    'rename_device_caption' => 'Nimeä',
     'this_device' => 'Tämä laite',
     'removed' => 'Poistettu',
     'confirmed' => 'Vahvistettu',
@@ -51,6 +48,7 @@ return [
 
     'relay_endpoint' => 'Välityspalvelimen osoite',
     'relay_endpoint_help' => 'Valinnainen. Kun tämä on asetettu, verkon ulkopuolella olevat laitteet synkronoivat tämän välityspalvelimen kautta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
+    'relay_endpoint_help_phone' => 'Valinnainen. Kun tämä on asetettu, muutokset kulkevat tämän välityspalvelimen kautta myös silloin, kun laitteesi eivät ole samassa verkossa. Tämä laite noutaa ne, kun synkronoit tältä näytöltä — ei koskaan taustalla, koska sovelluslukko pitää ainoaa avainta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
     'relay_endpoint_aria' => 'Välityspalvelimen URL-osoite',
     'relay_insecure_warning' => 'Tämä välityspalvelimen osoite käyttää salaamatonta HTTP-yhteyttä. Vaikka välityspalvelin ei koskaan pura tietojesi salausta, suojaamaton yhteys paljastaa salattujen viestien koot ja ajoituksen verkkoa tarkkaileville. Käytä <strong>https://</strong>-osoitetta parhaan yksityisyyden vuoksi.',
 
@@ -72,6 +70,7 @@ return [
     'removing' => 'Poistetaan:',
     'remove_rotates_key' => 'Tämän laitteen poistaminen kierrättää salausavaimen, joten laite ei saa enää päivityksiä.',
     'remove_cannot_erase' => 'Se ei voi pyyhkiä tietoja, jotka ovat jo kyseisellä laitteella. Jos laite on kadonnut tai varastettu, käsittele sen sisältämiä tietoja paljastuneina.',
+    'remove_is_local' => 'Muilla laitteillasi on oma luettelonsa. Kunnes poistat sen sieltäkin, ne jatkavat synkronointia sen kanssa.',
     'remove_device' => 'Poista laite',
     'keep_device' => 'Säilytä laite',
     'rotating_key' => 'Kierrätetään salausavainta…',

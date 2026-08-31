@@ -29,6 +29,7 @@ return [
 
     'tab_note_personal' => '— no funding chains for personal contacts',
     'tab_note_bank' => "— bank-fee counterparty doesn't generate funding chains",
+    'tab_note_bank_institution' => '— no funding chains for institution counterparties',
     'tab_note_government' => '— no funding chains for government counterparties',
 
     'recent_activity' => 'Recent activity',
@@ -39,6 +40,7 @@ return [
 
     'bank' => [
         'fees_heading' => 'Bank fees by category',
+        'activity_heading' => 'Activity by category',
         'no_fees' => 'No fees recorded on this counterparty yet.',
     ],
 

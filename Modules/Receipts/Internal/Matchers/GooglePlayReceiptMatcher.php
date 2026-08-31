@@ -6,8 +6,8 @@ namespace Modules\Receipts\Internal\Matchers;
 
 use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -18,29 +18,39 @@ use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 // — exact equality, not a google.com suffix match, defeats a spoofed
 // look-alike sender. Amounts are NEGATED (receipts confirm outgoing
 // charges); a "refund" subject skips rather than resolves the pairing.
-final class GooglePlayReceiptMatcher implements SenderMatcher
+final readonly class GooglePlayReceiptMatcher implements SenderMatcher
 {
-    private const GOOGLE_PLAY_SENDER = 'googleplay-noreply@google.com';
+    private const string MATCHER_KEY = 'google-play-receipt';
 
-    private const ORDER_ID_REGEX = '/GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}/';
+    private const string GOOGLE_PLAY_SENDER = 'googleplay-noreply@google.com';
 
-    private const USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
+    private const string ORDER_ID_REGEX = '/GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}/';
 
-    // Parenthesised, Dutch comma decimal — matches both `(€12,07 EUR)`
-    // and `(€ 12,07 EUR)`.
-    private const EUR_SETTLED_REGEX = '/\(€\s*([0-9]+(?:[.,][0-9]+)*)\s*EUR\)/i';
+    private const string USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
 
-    private const ITEM_REGEX = '/Item(?:\s*Name)?:\s*(.+)/i';
+    private const string ITEM_REGEX = '/Item(?:\s*Name)?:\s*(.+)/i';
 
-    private const SUBSCRIPTION_REGEX = '/Your subscription with\s+(.+)/i';
+    private const string SUBSCRIPTION_REGEX = '/Your subscription with\s+(.+)/i';
 
-    private const REFUND_SUBJECT_REGEX = '/refund/i';
+    private const string REFUND_SUBJECT_REGEX = '/refund/i';
 
-    public function __construct(private readonly EmlMimeReader $reader) {}
+    public function __construct(
+        private EmlMimeReader $reader,
+        private ReceiptBodyText $text,
+    ) {}
+
+    // Parenthesised, Dutch comma decimal — matches both `(€12,07 EUR)` and
+    // `(€ 12,07 EUR)`. The settled leg is whatever code the parentheses carry:
+    // a store billing in yen writes `(¥1,250 JPY)`, and the euro this pattern
+    // used to spell twice left that leg unread and the charge settled in USD.
+    private static function settledRegex(): string
+    {
+        return '/\((?:'.ReceiptBodyText::currencyMarkers().')?\s*([0-9]+(?:[.,][0-9]+)*)\s*([A-Z]{3})\)/i';
+    }
 
     public function key(): string
     {
-        return 'google-play-receipt';
+        return self::MATCHER_KEY;
     }
 
     public function priority(): int
@@ -63,7 +73,7 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
 
         $body = $parsed->textBody;
         if ($body === null || $body === '') {
-            $body = $this->stripHtml($parsed->htmlBody ?? '');
+            $body = $this->text->plainText($parsed->htmlBody ?? '');
         }
         if ($body === '') {
             return MatchOutcomeDto::unmatched();
@@ -87,7 +97,7 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         }
         [$orderId, $nativeMinor, $settledMinor, $settledCurrency, $merchant] = $charge;
 
-        $bookedAt = SafeDate::parseDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
@@ -95,15 +105,14 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         $dto = new ParsedReceiptDto(
             merchantName: $merchant,
             amountMinor: $nativeMinor,
-            currency: 'USD',
+            currency: Currency::Usd->value,
             settledAmountMinor: $settledMinor,
             settledCurrency: $settledCurrency,
             referenceId: $orderId,
             bookedAt: $bookedAt,
-            ownIban: 'GOOGLE-PLAY',
+            ownIban: SyntheticIban::GooglePlay->value,
             description: $merchant,
             rawPayload: [
-                'matcher_key' => 'google-play-receipt',
                 'order_id' => $orderId,
                 'subject' => $subject,
                 'sender' => $parsed->headers['from'] ?? '',
@@ -128,7 +137,7 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         ) {
             return null;
         }
-        $nativeMinor = $this->toMinorOrNull($usdMatches[1], 'USD');
+        $nativeMinor = $this->text->amountMinor($usdMatches[1], Currency::Usd->value);
         if ($nativeMinor === null) {
             return null;
         }
@@ -136,11 +145,12 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
 
         $settledMinor = $nativeMinor;
         $settledCurrency = Currency::Usd->value;
-        if (preg_match(self::EUR_SETTLED_REGEX, $body, $eurMatches) === 1) {
-            $eurValue = $this->toMinorOrNull($eurMatches[1], Currency::Eur->value);
-            if ($eurValue !== null) {
-                $settledMinor = -$eurValue;
-                $settledCurrency = Currency::Eur->value;
+        if (preg_match(self::settledRegex(), $body, $settledMatches) === 1) {
+            $marked = $this->text->currencyMarked($settledMatches[2], Currency::Usd->value);
+            $settledValue = $this->text->amountMinor($settledMatches[1], $marked);
+            if ($settledValue !== null) {
+                $settledMinor = -$settledValue;
+                $settledCurrency = $marked;
             }
         }
 
@@ -166,22 +176,5 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         }
 
         return 'Google Play';
-    }
-
-    private function stripHtml(string $html): string
-    {
-        $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
-        $stripped = strip_tags($decoded);
-        $collapsed = (string) preg_replace('/[ \t]+/', ' ', $stripped);
-
-        return trim($collapsed);
-    }
-
-    private function toMinorOrNull(string $raw, string $currency): ?int
-    {
-        // The rightmost of '.' or ',' is the decimal. Assuming the comma always
-        // was misread US grouping: "1,234.56" normalised to "1.23456", so a
-        // $1,234.56 receipt matched as $1.23 — a thousandfold understatement.
-        return Currency::tryFrom($currency) === null ? null : MoneyInput::tryToMinor($raw);
     }
 }

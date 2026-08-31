@@ -24,6 +24,7 @@ return [
     'to' => 'eddig',
     'text_placeholder' => 'pl. SPOTIFY',
     'remove_condition' => 'Feltétel eltávolítása',
+    'remove_condition_caption' => 'Eltávolítása',
     'add_condition' => '+ Feltétel hozzáadása',
 
     'then' => 'Akkor',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Hozzáfűzés',
     'deduction_category_aria' => 'Adókedvezmény-kategória a(z) :number. művelethez',
     'remove_action' => 'Művelet eltávolítása',
+    'remove_action_caption' => 'Eltávolítása',
     'add_action' => '+ Művelet hozzáadása',
 
     'this_year_only' => 'Csak ez az év ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Az adócímke-műveletek a következő újraalkalmazáskor lépnek életbe, nem a jelenlegi importnál.',
 
     'priority' => 'Prioritás',
-    'priority_help' => 'A kisebb számok futnak előbb. A közös mezők nélküli szabályok soha nem ütköznek.',
+    'priority_help' => 'A szabályok a legkisebb számtól felfelé futnak, ezért a legnagyobb szám nyer, ha kettő ugyanazt a mezőt állítja be. A közös mezők nélküli szabályok soha nem ütköznek.',
 
     'cancel' => 'Mégse',
     'save_changes' => 'Módosítások mentése',

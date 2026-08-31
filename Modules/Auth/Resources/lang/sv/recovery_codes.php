@@ -23,5 +23,6 @@ return [
         'body' => 'Återställningskoder är den enda vägen tillbaka till ditt konto om du glömmer lösenordet.',
         'warning' => 'De sparas hashade och kan därför inte visas igen. En ny uppsättning ogiltigförklarar den gamla direkt.',
         'regenerate' => 'Skapa nya koder',
+        'regenerate_confirm' => 'Vill du skapa en ny uppsättning återställningskoder? Den du har nu slutar fungera i samma stund som den nya skapas, och den kan inte visas igen — en utskriven eller nedskriven kopia blir värdelös. Spara de nya koderna innan du lämnar sidan.',
     ],
 ];

@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Dit kreditkort (ICS)',
+    'eyebrow' => 'Dit kreditkort',
     'h1' => 'Hent dine månedlige kontoudtog som PDF',
-    'lede' => 'Slip alle dine månedlige ICS-kontoudtog i PDF — vi samler dem i én forhåndsvisning.',
+    'lede' => 'Slip alle dine månedlige kontoudtog i PDF — vi samler dem i én forhåndsvisning.',
 
     'format_group_aria' => 'ICS eksporterer kun som PDF',
+    'issuer_note' => 'ICS er indtil videre den eneste kortudsteder, vi kan læse, og kun dens kontoudtog på hollandsk. Er dit kort fra en anden udsteder, så spring dette trin over.',
     'got_it_as' => 'Du fik det som:',
     'badge_only_format' => 'eneste format',
 

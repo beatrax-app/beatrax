@@ -13,10 +13,15 @@ return [
     'empty_body' => 'Uvezi nekoliko izvoda (banka, PayPal, kartica) i resolver će ovde automatski prikazati lance između računa.',
 
     'no_counterparty' => '(nema druge strane)',
-    'open_from_row' => 'Otvori polazni red',
-    'open_to_row' => 'Otvori odredišni red',
     'leg_count' => ':count plaćanje|:count plaćanja|:count plaćanja',
+    'legs_more' => '+ još :count',
     'state_aria' => 'Stanje: :state',
+
+    'state' => [
+        'candidate' => 'Kandidat',
+        'confirmed' => 'Potvrđeno',
+        'rejected' => 'Odbijeno',
+    ],
 
     'kind' => [
         'paypal_funding' => 'Finansiranje PayPalom',

@@ -31,7 +31,6 @@ function paypalPtypeRow(?string $eventType, ?array $rawPayload = null, string $s
         currency: 'EUR',
         settledAmountMinor: -1234,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Some Merchant',
         counterpartyIban: null,
         counterpartyNormalized: 'some merchant',

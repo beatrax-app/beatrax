@@ -37,9 +37,10 @@ return [
     'parse_preview' => 'Jäsennä ja esikatsele',
     'cancel_import' => 'Peruuta tuonti',
 
-    'diff_new' => 'uutta,',
-    'diff_unchanged' => 'ennallaan,',
-    'diff_conflicts' => 'ristiriitaa.',
+    'diff_summary' => ':new, :unchanged, :conflicts.',
+    'diff_new' => ':count uusi|:count uutta',
+    'diff_unchanged' => ':count ennallaan|:count ennallaan',
+    'diff_conflicts' => ':count ristiriita|:count ristiriitaa',
 
     'conflicts_heading' => 'Ristiriidat',
     'conflict_name' => 'nimi — nykyinen: :existing → tiedosto: :file',
@@ -54,8 +55,7 @@ return [
     'test_heading' => 'Testaa omilla tapahtumillani',
     'test_help' => 'Muokkaa rivin yleistettyä mallia, niin näet mitkä tapahtumat siihen täsmäisivät.',
     'typing' => 'Kirjoitetaan…',
-    'matches_prefix' => 'Täsmää',
-    'matches_suffix' => 'tapahtumaan viimeaikaisessa historiassasi.',
+    'matches' => 'Täsmää :count tapahtumaan viimeaikaisessa historiassasi.|Täsmää :count tapahtumaan viimeaikaisessa historiassasi.',
 
     'merge_modal_title' => 'Yhdistä :count alias|Yhdistä :count aliasta',
 
@@ -84,5 +84,10 @@ return [
         'no_file' => 'Tiedostoa ei lähetetty.',
         'unreadable' => 'Lähetettyä tiedostoa ei voitu lukea.',
         'too_short' => 'Malli on liian lyhyt testattavaksi.',
+        'file_not_yaml' => 'Tämä tiedosto ei ole kelvollista YAML:ia, joten siitä ei voitu lukea mitään. Vie aliaksesi uudelleen ja lähetä saamasi tiedosto.',
+        'file_unreadable_as_yaml' => 'Tätä tiedostoa ei voitu lukea aliaslistana. Vie aliaksesi uudelleen ja lähetä saamasi tiedosto.',
+        'file_has_no_entries_list' => 'Tämä tiedosto ei ala ylimmän tason entries:-listalla, joten siinä ei ole aliaksia tuotavaksi. Tarkista, että valitsit oikean tiedoston.',
+        'entry_is_not_a_mapping' => 'Kohta :entry on pelkkä arvo, vaikka odotettiin mallia ja nimeä. Anna sille molemmat kentät tai poista se, ja lähetä tiedosto uudelleen.',
+        'entry_is_missing_a_field' => 'Kohdasta :entry puuttuu malli tai nimi, ja alias tarvitsee molemmat. Täydennä puuttuva tai poista kyseinen kohta, ja lähetä tiedosto uudelleen.',
     ],
 ];

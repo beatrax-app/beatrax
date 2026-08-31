@@ -18,17 +18,21 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Receipts\Internal\Exceptions\InboxDropScanException;
+use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
+use Modules\Receipts\Public\Dto\MatchOutcomeDto;
+use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Support\UploadLimits;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Per-user 5-minute scanner for storage/app/inbox-drop/{userId}/.
-// Top-level .eml/.mbox files run through RecordReceipt exactly as the
-// wizard upload path does, then atomically move to a processed/ or
-// failed/ subtree keyed by year-month.
+// Top-level .eml/.mbox files run through RecordReceipt and then
+// ReceiptLedgerBridge, exactly as the wizard upload path does, before
+// moving atomically to a processed/ or failed/ subtree keyed by year-month.
 final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -61,6 +65,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         RecordReceipt $recordReceipt,
         MboxIterator $mboxIterator,
         LoggerInterface $logger,
+        ReceiptLedgerBridge $bridge,
     ): void {
         $userRow = User::query()->where('id', $this->userId)->first();
         if (! $userRow instanceof User) {
@@ -78,9 +83,14 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         $processedDir = $baseDir.'/processed/'.$ym;
         $failedDir = $baseDir.'/failed/'.$ym;
 
+        // Shared across the whole scan, exactly as the inbox job shares one
+        // across its walk: the run is created on the first parsed receipt and
+        // adopted by every later one in the same hour.
+        $importRunId = null;
+
         foreach ($this->topLevelCandidates($files, $baseDir) as $path) {
             try {
-                if (! $this->recordCandidate($files, $recordReceipt, $mboxIterator, $userRow, $path)) {
+                if (! $this->recordCandidate($files, $recordReceipt, $mboxIterator, $bridge, $userRow, $path, $importRunId)) {
                     // Unknown extension on a top-level file — leave it
                     // alone; don't move and don't error.
                     continue;
@@ -99,40 +109,76 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         Filesystem $files,
         RecordReceipt $recordReceipt,
         MboxIterator $mboxIterator,
+        ReceiptLedgerBridge $bridge,
         User $user,
         string $path,
+        ?int &$importRunId,
     ): bool {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return match ($ext) {
-            'eml' => $this->recordEmlFile($recordReceipt, $files, $user, $path),
-            'mbox' => $this->recordMboxFile($recordReceipt, $mboxIterator, $user, $path),
+            'eml' => $this->recordEmlFile($recordReceipt, $bridge, $files, $user, $path, $importRunId),
+            'mbox' => $this->recordMboxFile($recordReceipt, $bridge, $mboxIterator, $user, $path, $importRunId),
             default => false,
         };
     }
 
-    private function recordEmlFile(RecordReceipt $recordReceipt, Filesystem $files, User $user, string $path): bool
-    {
+    private function recordEmlFile(
+        RecordReceipt $recordReceipt,
+        ReceiptLedgerBridge $bridge,
+        Filesystem $files,
+        User $user,
+        string $path,
+        ?int &$importRunId,
+    ): bool {
         $size = @filesize($path);
         if ($size !== false && $size > UploadLimits::MAX_MESSAGE_BYTES) {
             throw InboxDropScanException::emlTooLarge(basename($path));
         }
 
-        ($recordReceipt)($files->get($path), $user, basename($path));
+        $outcome = ($recordReceipt)($files->get($path), $user, basename($path));
+        $this->bridgeOutcome($bridge, $outcome, $user, $importRunId, SourceFormat::Eml);
 
         return true;
     }
 
-    private function recordMboxFile(RecordReceipt $recordReceipt, MboxIterator $mboxIterator, User $user, string $path): bool
-    {
+    private function recordMboxFile(
+        RecordReceipt $recordReceipt,
+        ReceiptLedgerBridge $bridge,
+        MboxIterator $mboxIterator,
+        User $user,
+        string $path,
+        ?int &$importRunId,
+    ): bool {
         foreach ($mboxIterator->iterate($path) as $entry) {
             if ($entry['eml'] === '') {
                 continue;
             }
-            ($recordReceipt)($entry['eml'], $user, basename($path).'@'.$entry['index']);
+            // Index first: RecordReceipt reads the transport off this name's
+            // extension, and a suffix past the dot spelled every archived
+            // message a single .eml.
+            $outcome = ($recordReceipt)($entry['eml'], $user, $entry['index'].'@'.basename($path));
+            $this->bridgeOutcome($bridge, $outcome, $user, $importRunId, SourceFormat::Mbox);
         }
 
         return true;
+    }
+
+    // RecordReceipt persists the audit row and never writes to transactions.
+    // Discarding its outcome here moved the file to processed/ and left the
+    // ledger empty, which the reader had no screen to notice on.
+    private function bridgeOutcome(
+        ReceiptLedgerBridge $bridge,
+        MatchOutcomeDto $outcome,
+        User $user,
+        ?int &$importRunId,
+        SourceFormat $sourceFormat,
+    ): void {
+        if ($outcome->kind !== MatchOutcomeKind::Parsed || $outcome->parsed === null) {
+            return;
+        }
+
+        $importRunId = $bridge->bridge($outcome->parsed, $user, $importRunId, $sourceFormat);
     }
 
     // Moves a failed file into failed/{year-month}/ with a sibling

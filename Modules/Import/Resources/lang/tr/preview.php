@@ -26,15 +26,24 @@ return [
     'unknown_iban_suffix' => 'Bu hesaba bir ad ver.',
 
     'ics' => [
+        'name' => 'ICS kartı',
         'heading' => 'ICS kart hesabına bir ad ver.',
         'help' => 'ICS verilerini ilk kez içe aktarıyorsun. Uygulamanın her yerinde tutarlı görünmesi için bu karta bir ad ver.',
         'placeholder' => 'ör. ICS kartı',
     ],
 
     'paypal' => [
+        'name' => 'PayPal',
         'heading' => 'PayPal hesabına bir ad ver.',
         'help' => 'PayPal verilerini ilk kez içe aktarıyorsun. Uygulamanın her yerinde tutarlı görünmesi için bu cüzdana bir ad ver.',
         'placeholder' => 'ör. PayPal',
+    ],
+
+    'google_play' => [
+        'name' => 'Google Play',
+        'heading' => 'Google Play hesabına bir ad ver.',
+        'help' => 'Google Play makbuzunu ilk kez içe aktarıyorsun. Uygulamanın her yerinde tutarlı görünmesi için bu hesaba bir ad ver.',
+        'placeholder' => 'ör. Google Play',
     ],
 
     'col_date' => 'Tarih',
@@ -53,28 +62,41 @@ return [
         'error' => 'Hata',
     ],
 
-    'chain' => [
-        'heading' => 'Zincirler çözümleniyor…',
-        'pending' => 'Kuyruğa alındı. Zincir çözümleyici birazdan başlayacak.',
-        'running' => 'Finansman zincirleri bağlanıyor ve ekstre tahsilatları ayrıştırılıyor.',
-        'failed_prefix' => 'Zincir çözümleme başarısız oldu:',
-        'failed_detail' => 'ayrıntılar iş günlüğünde',
-        'open_horizon' => "Horizon'u aç",
-        'failed_suffix' => 'yeniden denemek veya incelemek için.',
-    ],
-
     'rows_shown' => 'Gösterilen satırlar: :shown / :total',
 
     'show_more' => 'Daha fazla satır göster',
 
     'errors' => [
         'app_locked' => 'İçe aktarmak için uygulamanın kilidini açın: kilitliyken şifreleme anahtarları kullanılamaz.',
+        'archive_holds_one_message' => 'Bu dosya tek bir e-posta iletisi, posta kutusu arşivi değil; arşiv olarak okunduğunda içinde hiçbir şey bulunmaz. Biçimi E-posta iletisi yapıp yeniden yükle.',
+        'email_file_is_an_archive' => 'Bu dosya bir posta kutusu arşivi: birden fazla ileti içeriyor ve tek bir ileti olarak okunursa yalnızca ilki alınır. Biçimi Posta kutusu arşivi yapıp yeniden yükle.',
         'file_stopped_short' => 'Başlık satırı eşleşti, yani biçim doğru. Okuma dosyanın sonuna gelmeden durdu. Tek bir okunamayan satır buna yol açar, bu cihaz için fazla büyük bir dosya da öyle. Daha kısa bir tarih aralığı dene.',
         'file_unreadable' => 'Bu dosya okunamadı.',
+        'file_unreadable_detail' => 'Uygulama bu dosyayı okuyamadı (:code). Ayrıntıların tamamı uygulama günlüğünde; bir sorun bildirirseniz bu kodu belirtin.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
-        'pdf_reader_unavailable' => 'PDF ekstreleri için pdftotext programı gerekir, o da burada kurulu değil. Bu dosyayı programın kurulu olduğu bir bilgisayarda içe aktar ya da bankandan CSV dışa aktarımı kullan.',
+        'not_an_email_file' => 'Bu dosya ne bir e-posta iletisi ne de bir posta kutusu arşivi, dolayısıyla içinde fiş olarak okunacak bir şey yok. Dosyana uyan içe aktarma türünü ve biçimi seç.',
+        'pdf_has_no_text_layer' => 'Bu PDF hiç metin içermiyor — bir ekstrenin taraması ya da fotoğrafı, dolayısıyla içinde okunacak bir şey yok. Ekstrenin kendisini bankandan indir ya da CSV dışa aktarımı kullan.',
+        'pdf_password_protected' => 'Bu PDF parolayla korunuyor, bu yüzden hiçbir okuyucu açamaz. PDF görüntüleyicinden korumasız bir kopya kaydet ve onu içe aktar.',
+        'pdf_reader_unavailable' => 'Uygulamanın bu sürümünde hiç PDF okuyucu yok, bu yüzden PDF ekstresi burada açılamaz. Bu dosyayı başka bir cihazda içe aktar ya da bankandan CSV dışa aktarımı kullan.',
+        'row_belongs_to_another_statement' => 'Bu satır başka bir ekstre dosyasındaki bir işleme ait. O ekstreyi de içe aktarın — ikisi birlikte okunur.',
         'row_unreadable' => 'Bu satır okunamadı.',
+        'row_unreadable_detail' => 'Uygulama bu satırı okuyamadı (:code). Ayrıntıların tamamı uygulama günlüğünde; bir sorun bildirirseniz bu kodu belirtin.',
         'unknown_account' => 'Bu satır henüz ad vermediğin bir hesaba ait.',
+    ],
+
+    'receipts' => [
+        'heading' => 'Bu dosya e-posta olarak okundu',
+        'saved' => 'İçinde ne varsa aşağıda listelendi ve her ileti kaydedildi.',
+        'none_imported' => 'Bunların hiçbiri işleme dönüşmedi, bu yüzden defterine hiçbir şey eklenmedi.',
+        'shown' => 'Gösterilen iletiler: :shown / :total',
+        'no_subject' => 'Konu yok',
+
+        'state' => [
+            'read' => 'Ödeme olarak okundu — defterine eklenmesi için bu içe aktarmayı onayla.',
+            'not_a_payment' => 'Ödeme değil. Bu ileti bir ödemeyi doğrulamak yerine bir şey duyuruyor.',
+            'unreadable' => 'Kaydedildi. Uygulama bu göndericinin fişlerini okur, ama bu iletide tutar, satıcı ve referans bulamadı.',
+            'unknown_sender' => 'Kaydedildi. Uygulama bu göndericinin fişlerini okumaz, bu yüzden iletiden hiçbir şey almadı.',
+        ],
     ],
 
     'failed' => [

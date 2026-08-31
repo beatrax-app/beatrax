@@ -13,11 +13,11 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class UpdateReport
+final readonly class UpdateReport
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Dispatcher $events,
     ) {}
 
     public function update(User $user, int $reportId, ReportDefinition $definition, string $name): SavedReport

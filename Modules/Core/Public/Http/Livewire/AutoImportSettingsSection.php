@@ -6,15 +6,26 @@ namespace Modules\Core\Public\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 
 final class AutoImportSettingsSection extends Component
 {
     public bool $enabled = false;
 
+    // Rendered into the drop-folder path the copy shows; a wire-writable id
+    // is the shape a later authorization read reaches for.
+    #[Locked]
     public int $userId = 0;
+
+    // Five minutes is the desktop scheduler's real cadence. A device runner
+    // clamps anything under fifteen and hands the interval to an OS that
+    // treats it as a floor, so the phone is told only what it can keep.
+    #[Locked]
+    public bool $onPhone = false;
 
     public function mount(CurrentUser $currentUser): void
     {
@@ -22,6 +33,7 @@ final class AutoImportSettingsSection extends Component
 
         $this->userId = $user->id;
         $this->enabled = (bool) $user->auto_import_drop_folder;
+        $this->onPhone = UserDataPathService::platform() !== null;
     }
 
     // The view binds the checkbox via wire:change only (no wire:model.live),

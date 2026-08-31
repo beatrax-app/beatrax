@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'wizard' => [
-        'intro' => 'Släpp ett e-postmeddelande (.eml) eller ett brevlådearkiv (.mbox). Matchningen känner igen PayPal-kvitton och visar dem som kanoniska transaktioner; avsändare utan träff stannar i granskningsloggen för sortering.',
-    ],
-
     'conflict' => [
 
         'field' => [

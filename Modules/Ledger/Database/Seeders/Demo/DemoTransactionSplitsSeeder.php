@@ -30,6 +30,17 @@ final class DemoTransactionSplitsSeeder
                 ['categoryPath' => ['Personal care'], 'minor' => -1000, 'note' => null],
             ],
         ],
+        // A whole-yen parent. The sum-to-parent rule is where a wrong scale
+        // shows first: read at a hundredth these legs weigh ¥1,184.00 and
+        // ¥200.00 against a ¥13,840 parent, so the split refuses as
+        // over-allocated rather than rendering a merely odd number.
+        [
+            'descriptionMatch' => 'JR EAST TOKYO STATION',
+            'legs' => [
+                ['categoryPath' => ['Transport', 'Public transport'], 'minor' => -11840, 'note' => null],
+                ['categoryPath' => ['Eating out'], 'minor' => -2000, 'note' => null],
+            ],
+        ],
     ];
 
     public function __construct(
@@ -42,7 +53,7 @@ final class DemoTransactionSplitsSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::SPLITS as $row) {
                 $this->applySplit($primary, $row);

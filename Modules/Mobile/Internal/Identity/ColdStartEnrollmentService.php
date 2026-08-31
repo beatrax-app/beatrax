@@ -7,11 +7,11 @@ namespace Modules\Mobile\Internal\Identity;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\MobileLockGateway;
 
-final class ColdStartEnrollmentService
+final readonly class ColdStartEnrollmentService
 {
     public function __construct(
-        private readonly BiometricKeyVault $vault,
-        private readonly MobileLockGateway $gateway,
+        private BiometricKeyVault $vault,
+        private MobileLockGateway $gateway,
     ) {}
 
     // Re-verifies the PIN to obtain the live data key, stores its
@@ -31,7 +31,7 @@ final class ColdStartEnrollmentService
             return false;
         }
 
-        $ok = $this->vault->enroll($dataKey);
+        $ok = $this->vault->enroll($userId, $dataKey);
         // Zero the live data-key copy once it has been wrapped into the
         // enclave.
         sodium_memzero($dataKey);
@@ -45,7 +45,7 @@ final class ColdStartEnrollmentService
 
     public function disable(int $userId): void
     {
-        $this->vault->clear();
+        $this->vault->clear($userId);
         $this->gateway->markColdStartEnrolled($userId, false);
     }
 

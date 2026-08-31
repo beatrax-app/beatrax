@@ -18,11 +18,16 @@ is the daily per-user sweep that applies both.
 
 ## When it runs
 
-`routes/console.php` registers a `counterparties.gc` schedule entry at
-04:00 Europe/Amsterdam that walks every user in batches of 100 and
-dispatches one job per user. 04:00 is one hour after the daily
-`db:backup` run, so a freshly-pruned counterparty set is what the next
-morning's snapshot captures.
+`routes/console.php` registers a daily `counterparties.gc` schedule entry
+running `counterparties:collect-garbage`, which walks every user in
+batches of 100 and dispatches one job per user. It used to name 04:00
+Europe/Amsterdam, an hour after the daily `db:backup` run, so a
+freshly-pruned counterparty set was what the next morning's snapshot
+captured — which still holds now that both run daily and the backup entry
+is defined first. The hour itself had to go: the phone's background
+runner takes a repeat interval and no wall clock, so a `dailyAt()` entry
+never reached a device at all. See
+[the mobile architecture page](../mobile/architecture.md#the-phone-runs-an-artisan-name-on-an-interval-and-nothing-else).
 
 The job is `ShouldBeUniqueUntilProcessing` keyed on the user id, with
 `uniqueFor()` of one hour and the lock taken from
@@ -50,12 +55,30 @@ evidence of interest is that the user is working with this data now,
 not when the money moved. A 2019 statement imported today keeps its
 payees for another year.
 
+Both the number and the clock come from
+`Modules\Core\Public\Support\RetentionWindow`, which
+`PruneNotificationsJob` reads too. This job used to ask SQLite for its own
+cutoff — `datetime('now', '-365 days')` — which is UTC, while
+`transactions.created_at` is written from the app clock at `APP_TIMEZONE`.
+The two sides of the comparison sat in different frames and the edge landed
+an offset away from the rule written above: a row inserted at 15:00 was kept
+where this page says prune. Nothing looked wrong, because rows still expired
+roughly a year later.
+
 `merchant_name` is only ever set by the merchant branch of the
 resolution chain and by the triage accept path, which is why accepting
 a [triage suggestion](triage-suggestions.md) matters here: it writes
 `merchant_name`, and that is the column the alias anchor joins against.
 
 ## The prune
+
+The prune is announced, not silent: one `TransactionMutated` (`edit`,
+`counterparty_id => null`) per row it unlinks, then one `EntityMutated`
+(`delete`) per counterparty it drops, in that order — a peer that saw
+the delete first would replay a transaction pointing at a row it had
+just dropped. `CounterpartyResolverService` emits on create and edit,
+so without these a GC run on one device left the peer holding rows this
+device deleted and links this device broke.
 
 Both steps run inside one `$connection->transaction()`:
 
@@ -76,6 +99,16 @@ explicit `user_id` predicate. The job runs on a queue worker where the
 `BelongsToUser` global scope does not fire, so those filters are the
 only scope there is.
 
+**The `EntityMutated` announcement carries a second consumer.** Because
+the delete goes through the query builder, no Eloquent model event
+fires, and `Categorization`'s `DeactivateRulesOnReferentDelete` — which
+exists precisely so no active rule points at a dangling referent — was
+listening only for that model event. A pruned merchant therefore left a
+categorisation rule active on an id nothing resolves. That listener now
+also reads this job's `EntityMutated` (`counterparties`, `delete`) and
+switches the owning rule off; see
+[categorization architecture](../categorization/architecture.md#app-level-referential-integrity).
+
 ## The encryption problem
 
 `counterparties.merchant_name` is a `SensitiveFieldRegistry` column. In
@@ -85,7 +118,7 @@ plaintext. Once `merchant_name` is encrypted that comparison silently
 stops working — AEAD ciphertext never byte-equals plaintext, so every
 alias-protected row would look unanchored and be pruned.
 
-Worse, the job's only real dispatch origin is the 04:00 scheduler tick:
+Worse, the job's only real dispatch origin is the daily scheduler tick:
 a queue worker with no live session, and therefore no app-lock key with
 which to decrypt anything.
 

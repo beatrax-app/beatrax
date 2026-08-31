@@ -202,6 +202,53 @@ it('the full acknowledged path enables OB', function (): void {
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
+// Two UPDATEs, one invariant. Standing the other rows down and then failing to
+// stand this one up satisfies "one live connection" by having none — every row
+// disabled with its consent blanked, and nothing enabled.
+it('leaves every row as it found them when the enabling half of the flip fails', function (): void {
+    $user = owgUser('owg-enable-atomic');
+    $this->actingAs($user);
+    owgSeedInstitutionSecrets('ASNBNL21');
+
+    $liveId = owgSeedConnection($user, ['institution_id' => 'ASNBNL21', 'enabled' => true]);
+    $pendingId = owgSeedConnection($user, ['institution_id' => 'SNSBNL21']);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    // Fires only on the enabling UPDATE: the stand-down half moves rows the
+    // other way, from enabled to disabled.
+    $db->connection()->statement(
+        'CREATE TRIGGER owg_refuse_enable BEFORE UPDATE ON open_banking_connections '
+        ."WHEN NEW.enabled = 1 AND OLD.enabled = 0 BEGIN SELECT RAISE(ABORT, 'fixture: enable refused'); END"
+    );
+
+    session([
+        'open_banking_connected' => $pendingId,
+        'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
+    ]);
+
+    $thrown = null;
+    try {
+        Livewire::test(OpenBankingSettingsPage::class);
+    } catch (Throwable $e) {
+        // Livewire renders inside mount(), so the query failure arrives
+        // wrapped; the trigger's own message is what identifies it.
+        $thrown = $e;
+    } finally {
+        $db->connection()->statement('DROP TRIGGER owg_refuse_enable');
+    }
+
+    expect($thrown)->not->toBeNull()
+        ->and($thrown->getMessage())->toContain('fixture: enable refused');
+
+    $liveRow = $db->connection()->table('open_banking_connections')->where('id', $liveId)->first();
+    expect((bool) $liveRow->enabled)->toBeTrue()
+        ->and($liveRow->consent_expires_at)->not->toBeNull();
+
+    $pendingRow = $db->connection()->table('open_banking_connections')->where('id', $pendingId)->first();
+    expect((bool) $pendingRow->enabled)->toBeFalse();
+});
+
 it('a post-callback mount with a pending connection but a STALE ack sets needsReconfirm and leaves OB off', function (): void {
     $user = owgUser('owg-reconfirm-stale');
     $this->actingAs($user);

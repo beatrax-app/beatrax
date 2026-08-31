@@ -21,23 +21,23 @@ use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
-final class OpenBankingConnectController
+final readonly class OpenBankingConnectController
 {
     // Enable Banking resolves an ASPSP by name AND country, so a reader who has
     // named no country still needs one sent. The two banks the wizard curates
     // are Dutch, so that is the country to fall back to — never the one to
     // assume over a reader who has said otherwise.
-    private const FALLBACK_ASPSP_COUNTRY = 'NL';
+    private const string FALLBACK_ASPSP_COUNTRY = 'NL';
 
     public function __construct(
-        private readonly OpenBankingSecretsRepository $secrets,
-        private readonly EnableBankingHttpClient $client,
-        private readonly OpenBankingStateRepository $oauthState,
-        private readonly CurrentUser $currentUser,
-        private readonly UserCountry $countries,
-        private readonly Clock $clock,
-        private readonly Redirector $redirector,
-        private readonly LoopbackRedirectUri $loopback,
+        private OpenBankingSecretsRepository $secrets,
+        private EnableBankingHttpClient $client,
+        private OpenBankingStateRepository $oauthState,
+        private CurrentUser $currentUser,
+        private UserCountry $countries,
+        private Clock $clock,
+        private Redirector $redirector,
+        private LoopbackRedirectUri $loopback,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -87,7 +87,7 @@ final class OpenBankingConnectController
             country: $this->aspspCountry(),
             redirectUrl: $redirectUri,
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-            validUntil: $this->clock->now()->addDays(ConsentWindow::VALID_FOR_DAYS),
+            validUntil: ConsentWindow::expiresAfter($this->clock->now()),
         );
 
         $consentUrl = $response['url'] ?? null;
@@ -155,14 +155,29 @@ final class OpenBankingConnectController
         ));
     }
 
+    // Special-use names that resolve inside the network rather than on the
+    // public internet (RFC 6761/8375, plus the cloud metadata suffix).
+    private const array RESERVED_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.invalid'];
+
+    // A strict LDH name of at least two labels whose last label is alphabetic.
+    // The alphabetic TLD is what does the work: it is the one rule that
+    // rejects every numeric notation at once.
+    private const string HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
+
+    // Fails CLOSED, like RelayConfig::isLanHost. Falling through to "contains
+    // a dot" answered "public" for every notation FILTER_VALIDATE_IP cannot
+    // parse -- 0177.0.0.1, 127.1, 0x7f.0x0.0x0.0x1, [::ffff:127.0.0.1] -- for a
+    // value both allow-listed for egress and handed to an outward redirect.
     private function isPublicScaHost(string $host): bool
     {
-        if ($host === '' || $host === 'localhost') {
-            return false;
+        $host = strtolower($host);
+
+        // One trailing dot is a legal absolute-name suffix and normalises away;
+        // anything else with an empty label is malformed.
+        if (str_ends_with($host, '.')) {
+            $host = substr($host, 0, -1);
         }
 
-        // IP literal (v4 or v6): accept only public, non-reserved addresses.
-        // Otherwise require a dotted FQDN, rejecting bare single-label hosts.
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             return filter_var(
                 $host,
@@ -171,6 +186,12 @@ final class OpenBankingConnectController
             ) !== false;
         }
 
-        return str_contains($host, '.');
+        // An empty host names nothing, and neither does anything the hostname
+        // pattern rejects: one answer for both.
+        if ($host === '' || preg_match(self::HOSTNAME_PATTERN, $host) !== 1) {
+            return false;
+        }
+
+        return array_all(self::RESERVED_SUFFIXES, fn (string $suffix): bool => ! str_ends_with($host, $suffix));
     }
 }

@@ -32,13 +32,10 @@ final class MdnsResponseParser
 
     private const int POINTER_BYTES = 2;
 
-    private const int MAX_PORT = 65535;
-
-    // RFC 1035 §2.3.4 caps a name at 255 bytes and a label at 63. Enforcing
-    // both stops a crafted packet growing a name without bound.
+    // RFC 1035 §2.3.4 caps a whole name at 255 bytes. Enforced alongside
+    // PeerAdvertisementLimits::MAX_LABEL_BYTES, which caps each label, so a
+    // crafted packet cannot grow a name without bound either way.
     private const int MAX_NAME_BYTES = 255;
-
-    private const int MAX_LABEL_BYTES = 63;
 
     // A responder that answered is one device. Anything past this is either
     // broken or trying to exhaust memory, and neither deserves the benefit of
@@ -50,7 +47,7 @@ final class MdnsResponseParser
     // The device id is matched against the registry and rendered in the UI,
     // so it is held to the shape the advertiser is supposed to publish rather
     // than accepted as free text from the network.
-    private const int MAX_DEVICE_ID_BYTES = 64;
+    private const int MAX_ADVERTISED_DEVICE_ID_BYTES = 64;
 
     public function parse(string $datagram, string $sender, MdnsInstanceTable $table): void
     {
@@ -192,7 +189,7 @@ final class MdnsResponseParser
         /** @var array{priority: int, weight: int, port: int}|false $service */
         $service = unpack('npriority/nweight/nport', substr($rdata, 0, self::SRV_PREAMBLE_BYTES));
 
-        if ($service === false || $service['port'] < 1 || $service['port'] > self::MAX_PORT) {
+        if ($service === false || $service['port'] < 1 || $service['port'] > PeerAdvertisementLimits::MAX_PORT) {
             return;
         }
 
@@ -257,7 +254,7 @@ final class MdnsResponseParser
     // to the advertiser's own format instead of being trusted as free text.
     private function acceptableDeviceId(string $candidate): ?string
     {
-        if ($candidate === '' || strlen($candidate) > self::MAX_DEVICE_ID_BYTES) {
+        if ($candidate === '' || strlen($candidate) > self::MAX_ADVERTISED_DEVICE_ID_BYTES) {
             return null;
         }
 
@@ -299,7 +296,7 @@ final class MdnsResponseParser
                 continue;
             }
 
-            if ($length > self::MAX_LABEL_BYTES || $cursor + 1 + $length > $limit) {
+            if ($length > PeerAdvertisementLimits::MAX_LABEL_BYTES || $cursor + 1 + $length > $limit) {
                 break;
             }
 

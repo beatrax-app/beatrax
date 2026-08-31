@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Įvesk kodą',
     'camera_off' => 'Kameros prieiga išjungta. Vietoj to įvesk kodą iš kito įrenginio.',
+    'camera_off_no_search' => 'Kameros prieiga išjungta, o kito įrenginio paieška tinkle „iPhone“ dar neveikia — įvestas kodas neturi kuo jo rasti. Įrenginio nustatymuose vėl leisk kamerą Beatrax ir nuskaityk kito įrenginio kodą.',
+    'no_search' => 'Kito įrenginio paieška tinkle „iPhone“ dar neveikia, tad įvestas kodas neturi ko rasti. Vietoj to nuskaityk kodą kamera — kamerai tinkle ieškoti nereikia.',
     'word_code_aria' => 'Įvesk žodinį kodą iš kito įrenginio',
     'submit_code' => 'Pateikti kodą',
     'cancel' => 'Atšaukti',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Nepavyksta pasiekti kito įrenginio. Įsitikink, kad abu yra tame pačiame tinkle ir kad kompiuteryje įjungtas sinchronizavimas.',
+        'no_road_home' => 'Šis įrenginys negali ieškoti tinkle, o nuskaitytame kode nėra kito įrenginio adreso. Paprašyk jo parodyti naują kodą ir nuskaityk jį.',
         'invalid_code' => 'Šis kodas neteisingas arba nebegalioja. Paprašyk kitame įrenginyje sugeneruoti naują.',
+        'code_incomplete' => 'Šis kodas nepilnas. Palygink jį su kitu įrenginiu ir įvesk visą.',
         'code_not_accepted' => 'Nė vienas šio tinklo įrenginys nepriėmė šio kodo. Patikrink kodą ir ar kitas įrenginys jį vis dar rodo.',
         'no_peer_answered' => 'Šiame tinkle į šį kodą niekas neatsakė. Patikrink, ar kitame įrenginyje veikia sinchronizavimas, arba nuskaityk jo kodą kamera — kamerai tinkle ieškoti nereikia.',
         'no_peer_answered_ios' => 'Šiame tinkle į šį kodą niekas neatsakė. Kito įrenginio paieška tinkle „iPhone“ dar neveikia, tad nuskaityk jo kodą kamera.',
+        'no_peer_answered_camera_off' => 'Šiame tinkle į šį kodą niekas neatsakė. Kito įrenginio paieška tinkle „iPhone“ dar neveikia, o kameros prieiga išjungta — tad įrenginio nustatymuose vėl leisk kamerą Beatrax ir nuskaityk kito įrenginio kodą.',
         'rate_limited' => 'Per daug bandymų. Palauk minutę ir bandyk dar kartą.',
         'identity_locked' => 'Tavo įrenginio tapatybė užrakinta. Atrakink programėlę ir bandyk dar kartą.',
         'identity_needs_lock' => 'Pirmiausia nustatykite programėlės užraktą — jis saugo įrenginio tapatybę.',

@@ -10,15 +10,18 @@ return [
     'subtitle_full' => 'Celotna zgodovina.',
     'subtitle_recent' => 'Nedavne transakcije (zadnjih 90 dni).',
 
-    'currency_aria' => 'Prikaz valute',
-    'currency_eur' => 'Samo :code',
-    'currency_original' => 'Izvirna valuta',
+    'currency_aria' => 'Prikazani znesek',
+    'currency_eur' => 'Poravnani znesek',
+    'currency_original' => 'Izvirni znesek',
 
     'show_recent' => 'Prikaži samo nedavne',
     'show_full' => 'Prikaži celotno zgodovino',
 
     'empty_period' => 'Za to obdobje ni ničesar.',
 
+    'empty_recent_has_older' => 'V zadnjih 90 dneh ni ničesar. Vaše starejše transakcije so še vedno tu.',
+
+    'empty_history' => 'Transakcij še ni.',
     'loading_more' => 'Nalaganje več transakcij',
     'load_more' => 'Naloži več',
 

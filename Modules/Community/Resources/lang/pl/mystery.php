@@ -18,6 +18,8 @@ return [
 
     'empty' => 'Na razie nic tajemniczego. Zaimportuj kilka wyciągów, a Beatrax pokaże tutaj wiersze, których nie rozpoznał.',
 
+    'showing_capped' => 'Pokazano pierwsze :shown z :total.',
+
     'footer' => 'Wspólna lista to plik YAML dołączony do Beatrax. Wysłanie propozycji otwiera GitHub w przeglądarce; poza tym nic nie opuszcza tego urządzenia.',
 
     'card' => [

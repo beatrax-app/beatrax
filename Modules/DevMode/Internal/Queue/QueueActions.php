@@ -36,8 +36,10 @@ final readonly class QueueActions
     }
 
     // Mirrors RetryCommand::retryJob, but through the injected QueueFactory
-    // rather than the Queue facade this project does not use.
-    public function retryFailed(string $uuid): void
+    // rather than the Queue facade this project does not use. The bool is what
+    // the batch and bulk callers count: counting the uuids they were handed
+    // made a second click report the same number as the first.
+    public function retryFailed(string $uuid): bool
     {
         $job = $this->failed->find($uuid);
 
@@ -50,7 +52,7 @@ final readonly class QueueActions
                 $this->callerId(),
             );
 
-            return;
+            return false;
         }
 
         $connection = $this->readObjectStringProp($job, 'connection', 'database');
@@ -79,17 +81,28 @@ final readonly class QueueActions
             ['uuid' => $uuid, 'connection' => $connection, 'queue' => $queueName],
             $this->callerId(),
         );
+
+        return true;
     }
 
-    public function deletePending(int $id): void
+    // Returns the rows actually removed. A row that vanished between render and
+    // click deleted nothing, and an audit row saying otherwise is a deletion
+    // nobody can find in the table it names.
+    public function deletePending(int $id): int
     {
-        $this->db->connection()->table('jobs')->where('id', $id)->delete();
+        $deleted = $this->db->connection()->table('jobs')->where('id', $id)->delete();
+
+        if ($deleted === 0) {
+            return 0;
+        }
 
         $this->audit->recordDestructiveQueueAction(
             AuditEvent::QueuePendingDelete->value,
             ['id' => $id],
             $this->callerId(),
         );
+
+        return $deleted;
     }
 
     public function cancelBatch(string $batchId): void
@@ -116,7 +129,7 @@ final readonly class QueueActions
 
     // The framework's Batch class exposes no "retry-failures" method, so
     // this reads the persisted failed_job_ids JSON and loops retryFailed.
-    public function retryBatchFailures(string $batchId): void
+    public function retryBatchFailures(string $batchId): int
     {
         $batch = $this->batches->find($batchId);
 
@@ -127,38 +140,42 @@ final readonly class QueueActions
                 $this->callerId(),
             );
 
-            return;
+            return 0;
         }
 
         $uuids = $batch->failedJobIds;
-        $retried = [];
+        $retried = 0;
         foreach ($uuids as $uuid) {
             if (! is_string($uuid)) {
                 continue;
             }
-            $this->retryFailed($uuid);
-            $retried[] = $uuid;
+            if ($this->retryFailed($uuid)) {
+                $retried++;
+            }
         }
 
         $this->audit->recordDestructiveQueueAction(
             AuditEvent::QueueBatchRetryFailures->value,
-            ['batch_id' => $batchId, 'count' => count($retried)],
+            ['batch_id' => $batchId, 'count' => $retried],
             $this->callerId(),
         );
+
+        return $retried;
     }
 
     /**
      * @param  list<string>  $uuids
      */
-    public function bulkRetry(array $uuids): void
+    public function bulkRetry(array $uuids): int
     {
         $count = 0;
         foreach ($uuids as $uuid) {
             if ($uuid === '') {
                 continue;
             }
-            $this->retryFailed($uuid);
-            $count++;
+            if ($this->retryFailed($uuid)) {
+                $count++;
+            }
         }
 
         $this->audit->recordDestructiveQueueAction(
@@ -166,40 +183,20 @@ final readonly class QueueActions
             ['count' => $count],
             $this->callerId(),
         );
+
+        return $count;
     }
 
+    // The count is affected rows, not selected ids: a selection of three that
+    // found one row still on disk used to be audited as three deletions.
     /**
      * @param  list<int|string>  $ids
      */
-    public function bulkDelete(array $ids, string $kind): void
+    public function bulkDelete(array $ids, string $kind): int
     {
         $count = 0;
         foreach ($ids as $id) {
-            switch ($kind) {
-                case 'pending':
-                    if (is_int($id)) {
-                        $this->db->connection()->table('jobs')->where('id', $id)->delete();
-                        $count++;
-                    } elseif (ctype_digit($id)) {
-                        $this->db->connection()->table('jobs')->where('id', (int) $id)->delete();
-                        $count++;
-                    }
-                    break;
-                case 'failed':
-                    if (is_string($id) && $id !== '') {
-                        $this->failed->forget($id);
-                        $count++;
-                    }
-                    break;
-                case 'batches':
-                    if (is_string($id) && $id !== '') {
-                        $this->batches->delete($id);
-                        $count++;
-                    }
-                    break;
-                default:
-                    throw new InvalidArgumentException("Unknown bulk-delete kind '{$kind}'.");
-            }
+            $count += $this->deleteOne($id, $kind);
         }
 
         $this->audit->recordDestructiveQueueAction(
@@ -207,6 +204,40 @@ final readonly class QueueActions
             ['kind' => $kind, 'count' => $count],
             $this->callerId(),
         );
+
+        return $count;
+    }
+
+    private function deleteOne(int|string $id, string $kind): int
+    {
+        return match ($kind) {
+            'pending' => $this->deleteOnePending($id),
+            'failed' => is_string($id) && $id !== '' && $this->failed->forget($id) === true ? 1 : 0,
+            // BatchRepository::delete() reports nothing, so the row is looked
+            // up first rather than assumed to have been there.
+            'batches' => $this->deleteOneBatch($id),
+            default => throw new InvalidArgumentException("Unknown bulk-delete kind '{$kind}'."),
+        };
+    }
+
+    private function deleteOnePending(int|string $id): int
+    {
+        if (! is_int($id) && ! ctype_digit($id)) {
+            return 0;
+        }
+
+        return $this->db->connection()->table('jobs')->where('id', (int) $id)->delete() > 0 ? 1 : 0;
+    }
+
+    private function deleteOneBatch(int|string $id): int
+    {
+        if (! is_string($id) || $id === '' || $this->batches->find($id) === null) {
+            return 0;
+        }
+
+        $this->batches->delete($id);
+
+        return 1;
     }
 
     // CurrentUser throws with no bound user, so 0 is the sentinel that lets a

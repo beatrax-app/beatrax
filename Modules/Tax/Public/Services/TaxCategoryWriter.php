@@ -7,15 +7,16 @@ namespace Modules\Tax\Public\Services;
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Events\EntityMutated;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter as InternalTaxCategoryWriter;
+use Modules\Tax\Internal\Actions\TaxCategoryStore;
 use Modules\Tax\Internal\Enums\TaxCategoryStatus;
+use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class TaxCategoryWriter
+final readonly class TaxCategoryWriter
 {
     public function __construct(
-        private readonly InternalTaxCategoryWriter $writer,
-        private readonly Dispatcher $events,
+        private TaxCategoryStore $store,
+        private Dispatcher $events,
     ) {}
 
     /**
@@ -23,7 +24,7 @@ final class TaxCategoryWriter
      */
     public function seedFromCorpus(User $user, string $countryCode): int
     {
-        return $this->writer->seedFromCorpus($user, $countryCode);
+        return $this->store->seedFromCorpus($user, $countryCode);
     }
 
     /**
@@ -33,7 +34,7 @@ final class TaxCategoryWriter
      */
     public function add(int $userId, string $name, ?string $shortName = null, ?string $hint = null): int
     {
-        $id = $this->writer->add($userId, $name, $shortName, $hint);
+        $id = $this->store->add($userId, $name, $shortName, $hint);
 
         $this->capture($userId, $id, 'create', [
             'user_id' => $userId,
@@ -47,10 +48,12 @@ final class TaxCategoryWriter
 
     /**
      * @throws NotFoundHttpException When the category id is not owned by the user.
+     * @throws \InvalidArgumentException When the new name is empty.
+     * @throws DuplicateTaxCategoryNameException When another category already carries the new name.
      */
     public function rename(int $userId, int $categoryId, string $name): void
     {
-        $this->writer->rename($userId, $categoryId, $name);
+        $this->store->rename($userId, $categoryId, $name);
 
         $this->capture($userId, $categoryId, 'edit', ['name' => $name]);
     }
@@ -60,7 +63,7 @@ final class TaxCategoryWriter
      */
     public function archive(int $userId, int $categoryId): void
     {
-        $this->writer->archive($userId, $categoryId);
+        $this->store->archive($userId, $categoryId);
 
         $this->capture($userId, $categoryId, 'edit', ['status' => TaxCategoryStatus::Archived->value]);
     }
@@ -70,7 +73,7 @@ final class TaxCategoryWriter
      */
     public function unarchive(int $userId, int $categoryId): void
     {
-        $this->writer->unarchive($userId, $categoryId);
+        $this->store->unarchive($userId, $categoryId);
 
         $this->capture($userId, $categoryId, 'edit', ['status' => TaxCategoryStatus::Active->value]);
     }
@@ -80,7 +83,7 @@ final class TaxCategoryWriter
      */
     public function listForUser(int $userId, bool $includeArchived = false): array
     {
-        return $this->writer->listForUser($userId, $includeArchived);
+        return $this->store->listForUser($userId, $includeArchived);
     }
 
     // Deduction categories had no capture, so a tag synced to a peer arrived

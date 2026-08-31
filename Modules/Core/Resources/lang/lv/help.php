@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tip' => [
+        'about' => 'Par :subject',
+        'close' => 'Aizvērt',
+    ],
+
     'page_title' => 'Kur ir mani dati?',
     'intro' => 'Beatrax glabā visu šajā ierīcē. Nekas netiek sūtīts uz serveri, nekas netiek sinhronizēts ar mākoni, nekas nepamet šo ierīci, kamēr to neeksportējat.',
 

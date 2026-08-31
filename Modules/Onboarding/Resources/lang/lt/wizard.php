@@ -10,8 +10,6 @@ return [
 
     'step_progress' => ':current žingsnis iš :total',
 
-    'step_dot_aria' => ':number žingsnis iš :total',
-
     'back' => 'Atgal',
     'back_aria' => 'Atgal — grįžta į ankstesnį sąrankos žingsnį',
 

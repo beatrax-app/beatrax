@@ -62,7 +62,7 @@ it('prices a dollar account baseline before it joins the euro balance line', fun
 
     // The bundled snapshot prices USD1,000.00 at EUR880.36, so a past day the
     // overlay owns reads EUR1,880.36 — never EUR2,000.00.
-    expect($result['map']['2026-06-05'][0])->toBe(188_036);
+    expect($result['map']['2026-06-05']->minor)->toBe(188_036);
 });
 
 it('leaves a single-currency line at its face value', function (): void {
@@ -76,7 +76,7 @@ it('leaves a single-currency line at its face value', function (): void {
         CarbonImmutable::parse('2026-06-30'),
     );
 
-    expect($result['map']['2026-06-05'][0])->toBe(200_000);
+    expect($result['map']['2026-06-05']->minor)->toBe(200_000);
 });
 
 // A currency the bundled snapshot does not carry: the rate table cannot reach
@@ -92,7 +92,25 @@ it('leaves a currency it has no rate for off the line rather than counting it at
         CarbonImmutable::parse('2026-06-30'),
     );
 
-    expect($result['map']['2026-06-05'][0])->toBe(100_000);
+    // The figure alone cannot tell "left off the line" from "counted at par":
+    // both are one integer. The day's own codes are the channel that can, and
+    // they are what the page folds up, so this cannot drift from what renders.
+    expect($result['map']['2026-06-05']->minor)->toBe(100_000)
+        ->and($result['map']['2026-06-05']->unconvertedCurrencies)->toBe(['AED']);
+});
+
+it('names nothing when every currency on the line could be priced', function (): void {
+    $euro = blwcAccount($this->db, $this->user->id, Currency::Eur->value, 100_000);
+    $dollar = blwcAccount($this->db, $this->user->id, Currency::Usd->value, 100_000);
+
+    $result = app(DailyBalanceAggregator::class)->buildBalanceMap(
+        [$euro, $dollar],
+        $this->user,
+        CarbonImmutable::parse('2026-06-01'),
+        CarbonImmutable::parse('2026-06-30'),
+    );
+
+    expect($result['map']['2026-06-05']->unconvertedCurrencies)->toBe([]);
 });
 
 // convertToBase() reads the whole exchange_rates table on every call, and the

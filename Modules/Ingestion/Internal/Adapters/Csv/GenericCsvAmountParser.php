@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Csv;
 
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
-use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\CurrencyScale;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 final class GenericCsvAmountParser
 {
-    public function parseMinor(string $cell, string $decimalSeparator): int
+    // The scale is the currency's own — a yen has no minor unit, so the
+    // repo-wide hundred read ¥1.000 as ¥100.000 at the boundary that reads the
+    // file. A caller with no currency to hand keeps the two-decimal assumption.
+    public function parseMinor(string $cell, string $decimalSeparator, ?string $currencyCode = null): int
     {
         $raw = trim($cell);
         if ($raw === '') {
@@ -45,15 +48,18 @@ final class GenericCsvAmountParser
             throw new InvalidAmountException(sprintf("Amount out of range: '%s'.", $cell));
         }
 
-        // Round (not truncate) to two decimals: read the first three
-        // fractional digits and round the cents on the third. A carry
-        // (e.g. 0.999 → 100 cents) folds naturally into intPart*100 + cents.
-        $frac3 = substr($fracPart.'000', 0, 3);
-        $cents = (int) substr($frac3, 0, 2);
-        if ((int) substr($frac3, 2, 1) >= 5) {
-            $cents++;
+        $scale = CurrencyScale::minorUnitsPerMajor($currencyCode);
+        $decimals = CurrencyScale::decimals($currencyCode);
+
+        // Round (not truncate) at the currency's last minor unit: read one
+        // fractional digit past it and round on that digit. A carry
+        // (e.g. 0.999 -> 100 cents) folds naturally into intPart*scale + units.
+        $guard = substr($fracPart.str_repeat('0', $decimals + 1), 0, $decimals + 1);
+        $units = (int) substr($guard, 0, $decimals);
+        if ((int) substr($guard, $decimals, 1) >= 5) {
+            $units++;
         }
-        $minor = ((int) $intPart) * Money::MINOR_UNITS_PER_MAJOR + $cents;
+        $minor = ((int) $intPart) * $scale + $units;
 
         return $negative ? -$minor : $minor;
     }

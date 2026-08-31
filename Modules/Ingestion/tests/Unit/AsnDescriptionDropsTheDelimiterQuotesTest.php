@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
-use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Csv\AsnDescriptionDelimiters;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
+use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 // Read off an iPhone 12 mini after importing a real ASN export: the transaction
 // detail page printed 'Rentevergoeding tweede kwartaal' — apostrophes and all.
@@ -12,7 +13,7 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 // normalises that field's stray CR/LF, and this is the same kind of artifact.
 
 beforeEach(function (): void {
-    $this->adapter = app(AsnCsvAdapter::class);
+    $this->adapter = app(SourceAdapterRegistry::class)->for(CsvPresetRegistry::ASN);
     $this->resolver = Mockery::mock(AccountResolver::class);
     $this->resolver->shouldReceive('resolve')->andReturn(null);
 });

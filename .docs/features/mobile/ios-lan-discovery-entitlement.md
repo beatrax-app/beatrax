@@ -107,9 +107,27 @@ platform limitation, not a bug to keep hunting. The desktop and Android are
 unaffected — Android needs a multicast lock, which is a runtime API rather than
 a grant.
 
-A phone can still pair: the QR arm carries the desktop's address in the
-payload, and the relay arm needs no discovery at all. It is the typed-code arm,
-which depends on finding the peer, that has nothing to find.
+A phone can still pair, but only because the QR arm was made to carry the
+desktop's address. It did not always: `QrPayloadBuilder` emitted `token`, `ed`,
+`kx`, `device`, `name` and the optional relay trio and nothing else, so a
+scanned pairing had a token, a name and no idea where the peer was. Delivery
+then fell to `LanPairingFrameCourier`, which resolved the peer by browsing —
+the one thing an iPhone cannot do. Scanning the code was documented as the
+escape from the entitlement and led to the same dead end.
+
+`QrPayloadBuilder::buildUri()` now appends `&host=&port=` from
+`PairingLanAdvertisement`, and `LanPairingFrameCourier::deliver()` takes an
+out-of-band `$known` peer it tries before any browse. `ScannedPeerAddress`
+reads it back off `pairing_tokens.initiator_lan_host/port`, the columns
+`seedFromInitiator()` had always written and nothing had ever read on this
+road. The address is unicast, which `NSLocalNetworkUsageDescription` already
+covers — an IP rather than the SRV record's `.local` name, because resolving a
+`.local` name is itself multicast and would need the entitlement all over
+again. Trust is unchanged: an address decides which machine is asked, never
+which one is trusted, and the safety number remains the only gate.
+
+It is the typed-code arm, which depends on finding the peer, that has nothing
+to find.
 
 If the grant is refused, the fix is not to keep the entitlement flag: it is a
 discovery path that uses `NWBrowser` through a native plugin, which
@@ -120,37 +138,94 @@ contract.
 
 The screen used to answer `PairingOfferLookup::NoPeerReached` with "Cannot
 reach the other device. Make sure both are on the same network and sync is
-enabled on the desktop." On the iPhone that produced this page all three claims
-were false at once — same wifi, `sync:serve` live, seven interfaces advertising
-— and the message appeared while the system's own "allow Beatrax to find
-devices on local networks?" prompt was still sitting unanswered on top of the
-app.
+enabled on the desktop." On an iPhone all three claims were false at once —
+same wifi, `sync:serve` live, seven interfaces advertising — and the message
+appeared while the system's own "allow Beatrax to find devices on local
+networks?" prompt was still sitting unanswered on top of the app.
 
-`AcceptsPairingCode::nothingAnsweredKey()` now picks by platform, and neither
-line names a cause this device cannot observe — it knows only that it asked and
-heard nothing:
+`AcceptsPairingCode::nothingAnsweredKey()` picks between three lines, and none
+names a cause this device cannot observe — it knows only that it asked, heard
+nothing, and whether the question could leave this device at all:
 
-| Platform | Key |
-|---|---|
-| iOS | `mobile::pairing.errors.no_peer_answered_ios` |
-| everything else | `mobile::pairing.errors.no_peer_answered` |
+| `silenceMeansNoPeers()` | camera | Key |
+|---|---|---|
+| `true` | either | `mobile::pairing.errors.no_peer_answered` |
+| `false` | usable | `mobile::pairing.errors.no_peer_answered_ios` |
+| `false` | refused | `mobile::pairing.errors.no_peer_answered_camera_off` |
 
 The iOS line says the network search does not work on iPhone *yet* and sends
-the reader to the camera, which needs no discovery at all. **That line is bound
+the reader to the camera, which needs no discovery — true only since the QR
+began carrying an address; before that the advice named the other dead end. **That line is bound
 to this page.** If the multicast entitlement is granted and the search starts
 working, `no_peer_answered_ios` becomes false and has to go — the general line
 is true on iOS too from that moment.
+
+The third line exists because sending a reader to the camera is the one piece of
+advice that cannot be given to the reader whose camera is the road that was
+refused. That pair is not hypothetical: `enterACode()` lands a device with no
+usable scanner on the typed-code step and raises the amber notice, whose own
+copy — *"Camera access is off. Enter the code from the other device instead."*
+— was then printed directly above the line telling them to scan. Two orders on
+one screen, each ruling out the other's, and this blade carries no relay
+affordance to escape to: the relay arm is reachable only from a scanned QR.
+`ChoosesCodeEntryArm::entryArmNotice()` now resolves the amber slot off the same
+two signals, so the pair cannot disagree:
+
+| `silenceMeansNoPeers()` | camera | Amber notice |
+|---|---|---|
+| `true` | usable | none |
+| `true` | refused | `mobile::pairing.camera_off` |
+| `false` | usable | `mobile::pairing.no_search` |
+| `false` | refused | `mobile::pairing.camera_off_no_search` |
+
+### And what it says when the accept cannot be delivered
+
+The same rule governs the *send* failure, which had escaped it. The poll
+re-emits the responder-accept and reports a throw with
+`mobile::pairing.errors.relay_unreachable` — "Make sure both are on the same
+network and sync is enabled on the desktop." On the iPhone this was measured
+on, both claims were true and checkable: phone `192.168.178.124` and desktop
+`192.168.178.119` on one /24, `sync:serve` listening on `*:51337`, seven
+interfaces advertising `did=…`, firewall off, `/pair/frame` answering. The
+cause was on this side, and the line named the far one.
+
+`MobilePairingScan::undeliveredAcceptKey()` now asks
+`PairingGateway::hadAnyRoadTo()` — a browse this device can run, a configured
+relay, or an address the code carried — and falls back to
+`mobile::pairing.errors.no_road_home` when the answer is none. That line says
+this device cannot search and the code carried no address, and asks for a
+fresh code, which is the one action that helps.
 
 The permission state itself is not readable. iOS exposes no API for whether
 local-network access was granted, so the app cannot wait for the prompt to be
 answered before it reports, and nothing on that surface may claim to know why
 the silence happened.
 
-That selection is a hardcoded platform check, and the platform is not really
-what it wants to know — it wants to know whether the search ran. The transport
-now answers that directly; see the next section. Once the screen reads the
-reach instead of the platform, the obligation below stops needing anyone to
-remember it.
+### Answering the prompt does not make the search work
+
+`no_peer_answered_ios` has been photographed on a real iPhone printed *under*
+iOS's own still-open "Allow Beatrax to find devices on local networks?" alert,
+which reads as the system offering the exact capability the app has just called
+impossible. It is not. The alert fires *because* the app sent a multicast
+datagram; the send is a side effect of the browse, not a sign that the browse
+can succeed. **Allow** was tapped on the device and the identical code
+resubmitted, and the identical message came back. Without
+`com.apple.developer.networking.multicast` iOS drops outgoing multicast whether
+or not local-network access was granted, so "just answer the prompt" is not a
+theory this page leaves open, and the line is accurate as written.
+
+### Said before the code is typed, not after
+
+`runtimeReach()` is a platform check and a config read with no I/O, so the
+verdict is knowable when the screen is drawn. It used to be consulted only from
+`nothingAnsweredKey()`, which runs after a submit — the reader typed
+thirty-two base-32 characters of a code and only then learned there was nothing
+to find the peer with. `MobilePairingScan::render()` reads it as well and hands
+the view `typedCodeCanFindPeer`, which raises the notice above on arrival and
+qualifies the "Enter code instead" control on the camera step, where it is
+offered. Qualified, not hidden: with the camera refused that control is the
+reader's only remaining affordance, and removing it strands them harder than an
+equal-looking choice that cannot work.
 
 ## Telling "nobody is there" from "I cannot look"
 
@@ -192,8 +267,12 @@ dependency: `typedCodeIdentity()` already holds the gateway it would pass.
 ```php
 private function nothingAnsweredKey(PairingGateway $gateway): string
 {
-    return $gateway->lanDiscoveryReach()->silenceMeansNoPeers()
-        ? 'mobile::pairing.errors.no_peer_answered'
+    if ($gateway->lanDiscoveryReach()->silenceMeansNoPeers()) {
+        return 'mobile::pairing.errors.no_peer_answered';
+    }
+
+    return $this->cameraUnavailableNotice
+        ? 'mobile::pairing.errors.no_peer_answered_camera_off'
         : 'mobile::pairing.errors.no_peer_answered_ios';
 }
 ```
@@ -230,19 +309,16 @@ So the PHP half was built and is tested: `BonjourBridgeQuery` speaks
 `Discovery.Browse` over the `NativeBridge` seam and reports `Unsupported`
 whenever the shell registered no such function — which is every build today.
 
-**The Swift half is not written, and could not be.** Two reasons, both real:
+**The Swift half is not written.** `NWBrowser` alone does not return what
+`DiscoveredPeer` needs: `NWBrowser.Results` are
+`NWEndpoint.service(name:type:domain:interface:)` — an instance name, not an
+address. `DiscoveredPeer` needs host and port, so each result has to be resolved
+as well, either through an `NWConnection` and its `currentPath.remoteEndpoint`,
+or through `NetService.resolve(withTimeout:)`. That resolution step, not the
+browse, is the part most likely to be wrong on the first attempt, and nothing
+short of a real device can exercise it.
 
-1. Nothing on this machine can compile, sign, run or test it. Swift that has
-   never been through a compiler is a proposal, not a discovery path.
-2. `NWBrowser` alone does not return what `DiscoveredPeer` needs.
-   `NWBrowser.Results` are `NWEndpoint.service(name:type:domain:interface:)` —
-   an instance name, not an address. `DiscoveredPeer` needs host and port, so
-   each result has to be resolved as well, either through an `NWConnection` and
-   its `currentPath.remoteEndpoint`, or through `NetService.resolve(withTimeout:)`.
-   That resolution step, not the browse, is the part most likely to be wrong on
-   the first attempt, and it is untestable from here.
-
-### What a human has to do
+### What building it takes
 
 1. Scaffold a plugin beside `biometric-vault` declaring one bridge function,
    `Discovery.Browse`, taking `serviceType` and `timeoutSeconds`.
@@ -277,16 +353,16 @@ observed on the iPhone in this repo, and nothing should be built on it until a
 real device has shown that state arriving. `LanDiscoveryReach` has two cases on
 purpose; a third belongs there only once something can genuinely produce it.
 
-### What is proven here, and what is not
+### What rests on evidence, and what does not
 
-**Verified on this machine**: the symbol table of the shipped `libphp.a`; the
-`@_cdecl` entry points; that a Beatrax-authored plugin already flows through
-`IOSPluginCompiler` into the generated project; the response envelope (on
-success `BridgeResponse.success()` returns the function's data dict *unwrapped*,
-so the `{status, data}` shape in the bridge README is wrong for the success
-case); and every PHP behaviour described above, by test.
+**Read off the shipped artefacts and pinned by tests**: the symbol table of the
+shipped `libphp.a`; the `@_cdecl` entry points; that a Beatrax-authored plugin
+already flows through `IOSPluginCompiler` into the generated project; the
+response envelope (on success `BridgeResponse.success()` returns the function's
+data dict *unwrapped*, so the `{status, data}` shape in the bridge README is
+wrong for the success case); and every PHP behaviour described above.
 
-**Not verified**: that `NWBrowser` returns Beatrax's advertisement on a real
+**Unverified on a device**: that `NWBrowser` returns Beatrax's advertisement on a real
 iPhone; that resolution yields a dialable host and port; that blocking a bridge
 call for two seconds is safe on device; and whether `stream_socket_sendto()` to
 a multicast address reports failure on iOS or succeeds and is dropped. The last

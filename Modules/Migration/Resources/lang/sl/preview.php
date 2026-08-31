@@ -16,7 +16,9 @@ return [
         'budget' => 'Proračunski meseci',
     ],
 
-    'all_clean' => 'Vse je preslikano brez težav — pred potrditvijo nič ne potrebuje tvoje pozornosti.',
+    'all_clean' => 'Vse je preslikano brez težav — tukaj ni ničesar za odločanje.',
+
+    'nothing_staged' => 'Ta izvoz ni vseboval ničesar za uvoz — tukaj ni ničesar za potrditi.',
 
     'groups' => [
         'conflict' => 'Potrebuje tvojo odločitev',
@@ -29,5 +31,6 @@ return [
 
     'footer_note' => 'To bo ustvarilo ali posodobilo zgoraj prikazane količine v tvojih kategorijah, proračunih in glavni knjigi.',
     'discard_button' => 'Zavrzi uvoz',
+    'discard_confirm' => 'Zavržem ta uvoz? Vse, kar je bilo prebrano iz tvoje izvozne datoteke, se tukaj izbriše, nazaj pa to dobiš le tako, da celotno datoteko znova naložiš in obdelaš. V glavno knjigo še ni prišlo nič.',
     'confirm_button' => 'Potrdi uvoz',
 ];

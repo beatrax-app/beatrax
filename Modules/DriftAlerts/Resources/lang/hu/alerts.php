@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Eltérésriasztások',
-    'heading' => 'Riasztások',
     'intro_anomaly' => 'Egyedi terhelések, amelyek szokatlannak tűnnek nálad.',
     'intro_drift' => 'Jóváhagyott ismétlődő sorozatok, amelyek legutóbbi terhelése kilépett a küszöbértékedből.',
     'adjust_threshold' => 'Küszöbérték módosítása →',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Ez a riasztás már nincs meg.',
         'acknowledged' => 'Tudomásul véve',
         'snoozed' => 'Elhalasztva',
         'dismissed' => 'Elvetve',

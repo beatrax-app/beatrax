@@ -35,7 +35,7 @@
     };
 @endphp
 
-<div class="mx-auto max-w-5xl px-4 py-12">
+<div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-12">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
             <x-core::page-heading>{{ Lang::get('chains::review.heading') }}</x-core::page-heading>
@@ -137,7 +137,7 @@
         </ul>
         </div>{{-- /overflow-x-scroll-wrapper --}}
 
-        @if (count($candidates) >= 25)
+        @if ($hasMore)
             @php
                 $last = $candidates[count($candidates) - 1] ?? null;
             @endphp

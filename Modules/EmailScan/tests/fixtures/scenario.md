@@ -1,15 +1,14 @@
-# EmailScan Wave 0 scenario — synthesised three-sender fixture
+# EmailScan scenario — synthesised three-sender fixture
 
 **NOT anonymised from real user mail.** Every header, body, amount,
 reference, and Message-ID is synthetic and authored from scratch by
-hand for this plan. Re-running future fixture-refresh scripts must
-produce byte-identical output (no PII drift).
+hand. Re-running any fixture-refresh script must produce byte-identical
+output (no PII drift).
 
 ## Fixture surface
 
-Three RFC 822 `.eml` messages, one per Phase 6 D-120 system seed
-sender, exercising the trio of receipt-shaped inboxes downstream
-plans must support:
+Three RFC 822 `.eml` messages, one per seeded system sender, exercising
+the three receipt-shaped inboxes the scanner has to support:
 
 | File                                                  | From                                                  | Subject                                                                                | Q-encoded? |
 |-------------------------------------------------------|-------------------------------------------------------|----------------------------------------------------------------------------------------|------------|
@@ -17,10 +16,9 @@ plans must support:
 | `eml/ics/sample-statement-notice.eml`                 | "ICS Cards" <noreply@ics.nl>                          | Je nieuwe maandafschrift staat klaar                                                   | no         |
 | `eml/googleplay/sample-purchase.eml`                  | "Google Play" <googleplay-noreply@google.com>         | Your Google Play Order Receipt                                                         | no         |
 
-The PayPal subject is intentionally Q-encoded so the future MIME
-header parser (zbateson/mail-mime-parser, lands in a later plan) is
-exercised against the spec-compliant encoding shape on its very first
-fixture pass.
+The PayPal subject is intentionally Q-encoded so the MIME header parser
+(zbateson/mail-mime-parser) is exercised against the spec-compliant
+encoding shape.
 
 ## API response fixtures
 
@@ -45,16 +43,15 @@ encode the wire shapes both Fake API clients replay:
 |--------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
 | `graph/messages-page-1.json`               | Three messages, `@odata.nextLink` set.                                                                                 |
 | `graph/messages-page-2-empty.json`         | Empty `value` array, no nextLink (last-page sentinel).                                                                 |
-| `graph/delta-baseline.json`                | Empty initial delta page with `@odata.deltaLink` set (the cursor downstream plans persist as `last_delta_link`).        |
+| `graph/delta-baseline.json`                | Empty initial delta page with `@odata.deltaLink` set (the cursor persisted as `last_delta_link`).                       |
 | `graph/delta-410.json`                     | `syncStateNotFound` — Fake's `simulateCursorExpired()` toggle replays this shape and throws `CursorExpiredException`.  |
 | `graph/throttle-429.json`                  | `TooManyRequests` — Fake's `simulateRateLimit()` toggle replays this shape and throws `RateLimitedException`.          |
 
 ## Expected post-fetch state of `inbox_messages`
 
-After the future `BackfillInboxJob` / `IncrementalScanJob`
-implementations walk this corpus through both Fake clients, the
-`inbox_messages` table should contain three rows (one per `.eml`),
-all `status='fetched'`:
+After `BackfillInboxJob` / `IncrementalScanJob` walk this corpus
+through both Fake clients, the `inbox_messages` table holds three rows
+(one per `.eml`), all `status='fetched'`:
 
 | provider_message_id                | sender_email                       | sender_name   | subject                                                       | internal_date          | status   |
 |------------------------------------|------------------------------------|---------------|---------------------------------------------------------------|------------------------|----------|
@@ -63,8 +60,7 @@ all `status='fetched'`:
 | `googleplay-sample-purchase`       | `googleplay-noreply@google.com`    | `Google Play` | `Your Google Play Order Receipt`                              | 2026-05-13 17:45:49Z   | `fetched`|
 
 The PayPal row's `subject` is the *decoded* form — `MimeHeaderParser`
-(future plan) is responsible for turning the Q-encoded header value
-into the readable UTF-8 string above. The fixture provides the raw
+turns the Q-encoded header value into the readable UTF-8 string above. The fixture provides the raw
 Q-encoded byte sequence so that parser is exercised on this corpus.
 
 `internal_date` is sourced from Gmail's millisecond-epoch

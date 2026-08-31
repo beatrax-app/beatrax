@@ -27,20 +27,26 @@
     inside a <ul> may not be a <div> and one that stands in for a table cell
     must be a <td>.
 
+    flex-wrap and shrink-0 are the 44px floor's documented trap, measured in
+    Chromium at 375px: the coarse-pointer `min-width: 44px` REPLACES a button's
+    `min-width: auto`, so a shrinkable button squeezes to exactly 44px and
+    breaks its label one word per line. All 26 locales did it — English drew
+    "Keep it locked" three lines tall and 44px wide.
+
     Every string is a prop: this component owns no copy, so each site keeps
     the words it already had.
 --}}
-<{{ $tag }} {{ $attributes->merge(['class' => 'flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900']) }}>
+<{{ $tag }} {{ $attributes->merge(['class' => 'flex flex-wrap items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900']) }}>
     <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ $question }}</p>
     <button
         type="button"
         wire:click="{{ $cancel }}"
-        class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+        class="shrink-0 text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
     >{{ $cancelLabel }}</button>
     <button
         type="button"
         wire:click="{{ $confirm }}"
         @if ($confirmAria !== null) aria-label="{{ $confirmAria }}" @endif
-        class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
+        class="shrink-0 text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
     >{{ $confirmLabel }}</button>
 </{{ $tag }}>

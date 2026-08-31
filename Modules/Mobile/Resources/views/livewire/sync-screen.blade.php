@@ -15,9 +15,17 @@
     semantic colors, never through this ink accent.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-lg mx-auto px-4 py-12 space-y-6 sm:px-6" data-testid="sync-screen">
+@php
+    // The two clusters this page is: everything about this device and its
+    // locks, then everything about where its data comes from and goes. Both
+    // groups arrived here from Settings, which still names its own four.
+    $groupHead = 'pt-4 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100';
+@endphp
+<div class="max-w-lg mx-auto px-4 py-6 space-y-6 sm:px-6" data-testid="sync-screen">
 
     <x-core::page-heading>{{ Lang::get('mobile::sync.heading') }}</x-core::page-heading>
+
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.security') }}</h2>
 
     <section class="space-y-3">
         {{-- "Sync status", not "Your devices": the devices section below owns
@@ -40,6 +48,7 @@
                 </p>
                 <x-core::progress-bar
                     :value="$progressPercent"
+                    :indeterminate="! $progressMeasured"
                     :label="Lang::get('mobile::sync.initial_sync_aria')"
                 />
             </div>
@@ -65,9 +74,23 @@
         {{ Lang::get('mobile::sync.sync_now') }}
     </button>
 
-    @if (! $hasPeers)
-        <p class="-mt-4 text-xs text-slate-500 dark:text-slate-400" data-testid="sync-no-peers">{{ Lang::get('mobile::sync.no_peers') }}</p>
-    @endif
+    {{-- What the press did, and what this device can do without one. The
+         outcome line used to be nothing at all: the component ran the burst
+         and discarded its answer, so a skipped tick, a failed dial and a real
+         sync all left the screen exactly as it was. --}}
+    <div class="-mt-4 space-y-1">
+        @if (! $hasPeers)
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sync-no-peers">{{ Lang::get('mobile::sync.no_peers') }}</p>
+        @endif
+
+        @if ($lastSyncResult !== null)
+            <p class="text-sm text-slate-600 dark:text-slate-400" aria-live="polite" data-testid="sync-now-result">
+                {{ Lang::get('mobile::sync.result.'.$lastSyncResult) }}
+            </p>
+        @endif
+
+        <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sync-background-note">{{ Lang::get('mobile::sync.background_note') }}</p>
+    </div>
 
     {{-- Device identity, pairing and the encryption controls. This is the
          canonical home for them: they are about the sync relationship
@@ -116,6 +139,8 @@
          from and where it goes — whereas Settings is for preferences. Order
          runs from the most automatic source to the most manual: a live bank
          connection, then a watched folder, then a file you carry yourself. --}}
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.data') }}</h2>
+
     <section class="space-y-3" id="open-banking" data-testid="data-open-banking">
         @livewire('openbanking.open-banking-status-row')
     </section>

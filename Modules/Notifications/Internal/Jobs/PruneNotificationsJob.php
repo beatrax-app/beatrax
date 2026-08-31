@@ -15,9 +15,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Concerns\TunedQueueJob;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\RetentionWindow;
 use Modules\Core\Public\Support\RowChunk;
 use Psr\Log\LoggerInterface;
 
@@ -28,10 +30,6 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     use Queueable;
     use SerializesModels;
     use TunedQueueJob;
-
-    // One retention number across the project (CounterpartyGarbageCollectorJob
-    // matches). A constant rather than config so a user cannot widen it.
-    private const int RETENTION_DAYS = 365;
 
     private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
@@ -56,6 +54,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
 
     public function handle(
         DatabaseManager $db,
+        Clock $clock,
         ?Session $session = null,
         ?AppLockKeyService $appLockKeyService = null,
         ?EncryptionMigrationService $encryptionMigrationService = null,
@@ -79,11 +78,13 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
 
         $connection = $db->connection();
 
+        $cutoff = RetentionWindow::cutoff($clock);
+
         do {
             /** @var list<string> $ids */
             $ids = $connection->table('notifications')
                 ->where('notifications.user_id', $this->userId)
-                ->whereRaw("notifications.created_at < datetime('now', '-".self::RETENTION_DAYS." days')")
+                ->where('notifications.created_at', '<', $cutoff)
                 ->orderBy('notifications.id')
                 ->limit(self::CHUNK_SIZE)
                 ->pluck('notifications.id')

@@ -46,6 +46,8 @@ return [
 
     'compared_against_baseline' => 'Palyginta su baziniu variantu viršuje',
 
+    'run_failed' => 'Šios prognozės apskaičiuoti nepavyko. Žemiau esanti linija rodo tik tai, kas jau užregistruota.',
+
     'scenario_editor_aria' => 'Scenarijaus redaktorius',
     'series_confidence' => 'Serijos patikimumas',
     'no_series_contribute' => 'Šios sąskaitos prognozei kol kas neprisideda nė viena serija.',
@@ -63,6 +65,8 @@ return [
     'updating' => 'Atnaujinama',
     'chart_noscript' => 'Diagramai reikia JavaScript. Intervalas apima :days dieną.|Diagramai reikia JavaScript. Intervalas apima :days dienas.|Diagramai reikia JavaScript. Intervalas apima :days dienų.',
     'total_balance' => 'Bendras likutis',
+    'projection_range' => 'Prognozės intervalas',
+    'point_estimate' => 'Taškinis įvertis',
 
     'per_month_suffix' => '/mėn.',
     'confidence_chip_aria' => ':name, patikimumas :confidence — prognozės intervalas sudaro :percent procentų taškinio įverčio',
@@ -74,4 +78,21 @@ return [
     'lowest_in_30_label' => 'Mažiausias per 30 dienų',
     'next_ics' => 'Kitas ICS atsiskaitymas: :amount :date',
     'ics_overdue' => 'ICS atsiskaitymas pradelstas: :amount, terminas buvo :date',
+
+    'stale_run' => 'Prognozė nuo :date — nuo tada neatnaujinta.',
+
+    'confidence' => [
+        'high' => 'Aukštas',
+        'medium' => 'Vidutinis',
+        'low' => 'Žemas',
+    ],
+
+    'errors' => [
+        'amount_required' => 'Suma yra privaloma.',
+        'amount_decimals' => 'Suma turi būti skaičius su ne daugiau kaip :decimals dešimtaine dalimi.|Suma turi būti skaičius su ne daugiau kaip :decimals dešimtainėmis dalimis.|Suma turi būti skaičius su ne daugiau kaip :decimals dešimtainių dalių.',
+        'amount_whole' => 'Suma turi būti sveikasis skaičius — ši valiuta neturi mažesnio vieneto.',
+        'amount_non_negative' => 'Suma turi būti nulis arba teigiama.',
+        'amount_non_zero' => 'Suma negali būti nulis.',
+        'field_required' => 'Laukas :field yra privalomas.',
+    ],
 ];

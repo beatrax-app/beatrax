@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Rakendusesisese arenduskonsooli operatiivvaade.',
     'worker_heartbeat' => 'Töötaja pulss',
     'not_running' => 'EI TÖÖTA',
+    'heartbeat_age' => ':count s tagasi · ttl :ttl s|:count s tagasi · ttl :ttl s',
     'queue' => 'Järjekord',
     'pending' => 'ootel',
     'failed' => 'ebaõnnestunud',

@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 return [
-    'eyebrow' => 'Cardul tău de credit (ICS)',
+    'eyebrow' => 'Cardul tău de credit',
     'h1' => 'Ia extrasele lunare în PDF',
-    'lede' => 'Trage aici toate extrasele lunare ICS în PDF — le combinăm într-o singură previzualizare.',
+    'lede' => 'Trage aici toate extrasele lunare în PDF — le combinăm într-o singură previzualizare.',
 
     'format_group_aria' => 'ICS exportă doar în PDF',
+    'issuer_note' => 'ICS este deocamdată singurul emitent de carduri pe care îl putem citi, și doar extrasul lui în neerlandeză. Dacă ai card de la alt emitent, sari peste acest pas.',
     'got_it_as' => 'L-ai primit ca:',
     'badge_only_format' => 'singurul format',
 

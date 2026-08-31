@@ -87,7 +87,7 @@ it('snoozes an open alert to an in-range target with the snoozed_until patch + e
 it('rejects a snooze target beyond now+6mo without touching the row', function (): void {
     $action = $this->app->make(SnoozeAnomalyAlert::class);
     $alert = snzAlert($this->user, 'open');
-    $beyond = CarbonImmutable::parse('2026-06-20 09:00:00')->addMonths(6)->addDay();
+    $beyond = CarbonImmutable::parse('2026-06-20 09:00:00')->addMonthsNoOverflow(6)->addDay();
 
     expect(fn () => ($action)($alert->id, $this->user, $beyond))
         ->toThrow(InvalidArgumentException::class);

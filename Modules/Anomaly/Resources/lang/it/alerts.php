@@ -18,6 +18,7 @@ return [
     ],
 
     'baseline_to_actual' => 'riferimento :baseline → effettivo: :actual',
+    'charged' => 'addebitato :actual',
     'detected' => 'rilevato il :date',
     'sensitivity' => 'sensibilità :percent su 100',
 

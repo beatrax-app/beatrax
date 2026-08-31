@@ -125,18 +125,16 @@ function offeredFormatsByComponent(): array
     return $offered;
 }
 
-// The receipt formats never reach the adapter registry — a receipt file carries
-// no account, so ParseStage reads it through the receipt recorder instead. Read
-// from source for the same reason the pickers are.
+// A receipt file carries no account, so ParseStage routes it to the receipt
+// recorder rather than the adapter registry — which is why these count as
+// parseable while binding no adapter. The enum owns the pair, so this asks it
+// instead of reading a constant a call site might keep its own copy of.
 /**
  * @return list<string>
  */
 function offeredFormatReceiptArm(): array
 {
-    $contents = offeredFormatSourceWithoutComments(base_path('Modules/Import/Internal/Pipeline/Stages/ParseStage.php'));
-    preg_match('/RECEIPT_FORMATS\s*=\s*\[(.*?)\];/s', $contents, $match);
-
-    return offeredFormatValues($match[1] ?? '', offeredFormatImportMap($contents));
+    return SourceFormat::receiptFormats();
 }
 
 it('offers no source format that nothing in the app can parse', function (): void {

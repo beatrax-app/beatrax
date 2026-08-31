@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Ištrinti :count užduotį|Ištrinti :count užduotis|Ištrinti :count užduočių',
     'empty_pending' => 'Eilė tuščia.',
     'empty_failed' => 'Nepavykusių užduočių nėra.',
-    'empty_batches' => 'Aktyvių paketų nėra.',
+    'empty_batches' => 'Partijų nėra.',
     'select_aria' => 'Pasirinkti',
     'select_row_aria' => 'Pasirinkti eilutę :key',
     'col_id' => 'Id',
     'col_queue' => 'Eilė',
     'col_attempts' => 'Bandymai',
+    'col_state' => 'Būsena',
     'col_created' => 'Sukurta',
     'col_uuid' => 'UUID',
     'col_failed' => 'Nepavyko',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Laukia',
     'col_actions' => 'Veiksmai',
     'delete_job' => 'Ištrinti užduotį',
+    'worker_running' => 'Vykdo worker',
     'delete_pending_confirm' => 'Ištrinti laukiančią užduotį #:key?',
     'retry_job' => 'Kartoti užduotį',
     'forget_confirm' => 'Pašalinti nepavykusią užduotį :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Pasirinktos nepavykusios užduotys bus grąžintos į eilę, kad vykdytojas jas pakartotų.',
     'cancel' => 'Atšaukti',
 
+    'state' => [
+        'available' => 'Paruošta',
+        'reserved' => 'Rezervuota',
+        'scheduled' => 'Suplanuota',
+    ],
+
     'tab' => [
         'pending' => 'Laukia',
         'failed' => 'Nepavyko',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Laukianti užduotis ištrinta',
+        'pending_already_gone' => 'Tos užduoties jau nebebuvo',
         'failed_requeued' => 'Nepavykusi užduotis grąžinta į eilę',
         'failed_removed' => 'Nepavykusi užduotis pašalinta',
         'batch_cancelled' => 'Paketas atšauktas',
         'batch_deleted' => 'Paketas ištrintas',
         'batch_failures_requeued' => 'Paketo nesėkmės grąžintos į eilę',
+        'batch_failures_none' => 'Partijoje neliko klaidų, kurias būtų galima grąžinti į eilę',
         'failed_jobs_requeued' => 'Nepavykusios užduotys grąžintos į eilę',
+        'failed_jobs_none' => 'Neliko nepavykusių užduočių, kurias būtų galima grąžinti į eilę',
         'bulk_refused' => 'Grupinis trynimas atmestas — :reason',
         'rows_deleted' => 'Pasirinktos eilutės ištrintos',
     ],

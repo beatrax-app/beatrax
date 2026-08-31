@@ -19,15 +19,20 @@ return [
 
     'pill' => [
         'choose_account' => 'valitse tili',
+        'choose_date' => 'valitse tiliotteen päivä',
         'enter_balance' => 'syötä tiliotteen saldo',
         'matched' => 'täsmää — :amount',
         'discrepancy' => 'ero — :amount',
+        'reconciled_through' => 'täsmäytetty :date saakka',
     ],
 
     'mismatch_html' => 'Tiliotteen saldo ei vielä vastaa kuitattua saldoasi. Vaihda rivien kuittaustilaa <a href=":url" class="underline">tapahtumalistalla</a> tai muuta syötettyä saldoa, kunnes erotus on nolla — tämä kulku ei koskaan luo tasauskirjausta.',
+    'unreachable_no_baseline_html' => 'Rivien vaihtelu ei saa tätä eroa nollaan. Tälle tilille ei ole kirjattu alkusaldoa, joten sen saldo mitataan nollasta. Tuo tiliote, jolla tili avautuu, tai aseta alkusaldo <a href=":url" class="underline">Asetuksissa</a>.',
+    'unreachable' => 'Rivien vaihtelu ei saa tätä eroa nollaan: se on kaikkien tämän tilin rivien vaihteluvälin ulkopuolella annettuun päivään asti. Tarkista tiliotteen päivä ja syöttämäsi saldo.',
 
     'check' => 'Tarkista',
     'complete' => 'Viimeistele täsmäytys',
+    'complete_unavailable' => 'Tähän päivään asti ei ole enää mitään lukittavaa — kuittaa lisää rivejä tai valitse myöhempi tiliotteen päivä.',
 
     'errors' => [
         'choose_account' => 'Valitse ensin tili.',

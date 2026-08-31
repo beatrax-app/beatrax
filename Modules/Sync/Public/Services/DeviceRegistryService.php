@@ -33,6 +33,25 @@ final readonly class DeviceRegistryService
         return $keys;
     }
 
+    // Every key this registry still remembers, CONFIRMED OR REVOKED: the map
+    // that verifies HISTORY, never the one that admits a peer. Removal shuts
+    // the Noise transport to the device, so retention grants it nothing and
+    // deviceKeys() stays the admission anchor.
+    /**
+     * @return array<string, string> device_id => hex Ed25519 public key.
+     */
+    public function retainedDeviceKeys(int $userId): array
+    {
+        /** @var array<string, string> $keys */
+        $keys = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->pluck('ed25519_public_key_hex', 'device_id')
+            ->all();
+
+        return $keys;
+    }
+
     // Whether this device is STILL a confirmed peer, asked live rather than
     // read from a connect-time snapshot. Removing a device cleared the row
     // but never reached the open connection, so a revoked peer kept syncing
@@ -51,10 +70,30 @@ final readonly class DeviceRegistryService
             ->exists();
     }
 
-    // Removes every trace of a device AFTER its trust has been revoked and
-    // the keyring rotated. Revocation alone only cleared confirmed_at, so the
-    // device kept appearing as a peer: sync_sessions is what the status
-    // section lists, and it still held a row under the device's own UUID.
+    // Drops this side's confirmation of a peer that has said it no longer
+    // confirms us. Never the self row: a device answering for itself here
+    // would revoke the only identity this install has.
+    public function forgetPeerConfirmation(int $userId, string $deviceId): void
+    {
+        if ($deviceId === '') {
+            return;
+        }
+
+        $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $deviceId)
+            ->where('is_self', 0)
+            ->update(['confirmed_at' => null]);
+    }
+
+    // Every REACHABLE trace of a device, AFTER its trust is revoked and the
+    // keyring rotated. The device_registry row itself stays: already revoked,
+    // so every confirmed-only query steps over it, and its public key is the
+    // only thing that can still verify the history the device wrote.
+    /**
+     * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md
+     */
     public function purge(int $userId, int $deviceRegistryId): void
     {
         $connection = $this->db->connection();
@@ -87,11 +126,14 @@ final readonly class DeviceRegistryService
             })
             ->delete();
 
+        // GdkRotationService clears this first, and purge() must not DEPEND on
+        // that having happened: a purge is a removal, and a removal that leaves
+        // confirmed_at standing leaves the device trusted.
         $connection->table('device_registry')
             ->where('id', $deviceRegistryId)
             ->where('user_id', $userId)
             ->where('is_self', 0)
-            ->delete();
+            ->update(['confirmed_at' => null]);
     }
 
     /**

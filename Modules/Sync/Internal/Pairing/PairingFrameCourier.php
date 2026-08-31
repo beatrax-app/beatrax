@@ -17,19 +17,20 @@ use Throwable;
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
  */
-final class PairingFrameCourier
+final readonly class PairingFrameCourier
 {
     private const string FOREIGN_FRAME_TYPE = GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP;
 
     public function __construct(
-        private readonly RelayClient $relayClient,
-        private readonly RelayConfig $relayConfig,
-        private readonly DeviceKeySigner $signer,
-        private readonly PairingFrameApplier $applier,
-        private readonly LanPairingFrameCourier $lanCourier,
-        private readonly PairingPeerOutbox $outbox,
-        private readonly DatabaseManager $db,
-        private readonly ?LoggerInterface $logger = null,
+        private RelayClient $relayClient,
+        private RelayConfig $relayConfig,
+        private DeviceKeySigner $signer,
+        private PairingFrameApplier $applier,
+        private LanPairingFrameCourier $lanCourier,
+        private PairingPeerOutbox $outbox,
+        private ScannedPeerAddress $scannedAddress,
+        private DatabaseManager $db,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     // Delivers a PAIR_RESPONDER_ACCEPT frame (phone -> desktop) so the
@@ -84,8 +85,9 @@ final class PairingFrameCourier
         $this->deliver($self->deviceId, $peerDid, $frame);
     }
 
-    // LAN first, relay second, then held for collection. Silent by design: which
-    // road a frame took is not something the reader chose or can act on.
+    // The address the scanned code named first, then a browse for one, then the
+    // relay, then held for collection. Silent by design: which road a frame
+    // took is not something the reader chose or can act on.
     /**
      * @param  array<string, mixed>  $frame
      *
@@ -95,7 +97,7 @@ final class PairingFrameCourier
      */
     private function deliver(string $senderDid, string $recipientDid, array $frame): void
     {
-        if ($this->lanCourier->deliver($recipientDid, $frame)) {
+        if ($this->lanCourier->deliver($recipientDid, $frame, $this->scannedAddress->forTokenHash(self::tokenHashOf($frame), $recipientDid))) {
             return;
         }
 
@@ -112,6 +114,18 @@ final class PairingFrameCourier
                 throw $e;
             }
         }
+    }
+
+    // Every pairing frame names the row it belongs to, which is what makes the
+    // scanned address findable without threading it through each send.
+    /**
+     * @param  array<string, mixed>  $frame
+     */
+    private static function tokenHashOf(array $frame): string
+    {
+        $tokenHash = $frame['token_hash'] ?? null;
+
+        return is_string($tokenHash) ? $tokenHash : '';
     }
 
     // The peer's bound X25519 (sealing) key from THIS device's own pairing

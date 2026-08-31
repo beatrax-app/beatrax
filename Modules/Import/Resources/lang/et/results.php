@@ -18,6 +18,12 @@ return [
 
     'upload_another' => 'Laadi üles järgmine väljavõte',
 
+    'chain' => [
+        'heading' => 'Lahendan ahelaid…',
+        'pending' => 'Järjekorras. Ahelate lahendaja alustab peagi.',
+        'running' => 'Seon rahastusahelaid ja lahutan väljavõtte arveldusi.',
+    ],
+
     'issues' => [
         'row' => 'Rida :row: :reason',
         'file_stopped' => 'Faili ei õnnestunud lugeda kaugemale kui rida :row. Midagi pärast seda rida ei imporditud.',

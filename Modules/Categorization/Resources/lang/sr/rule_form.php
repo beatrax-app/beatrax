@@ -24,6 +24,7 @@ return [
     'to' => 'do',
     'text_placeholder' => 'npr. SPOTIFY',
     'remove_condition' => 'Ukloni uslov',
+    'remove_condition_caption' => 'Ukloni',
     'add_condition' => '+ Dodaj uslov',
 
     'then' => 'Tada',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Dodaj na kraj',
     'deduction_category_aria' => 'Kategorija odbitka za radnju :number',
     'remove_action' => 'Ukloni radnju',
+    'remove_action_caption' => 'Ukloni',
     'add_action' => '+ Dodaj radnju',
 
     'this_year_only' => 'Samo ova godina ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Radnje poreske oznake primenjuju se pri sledećoj ponovnoj primeni, a ne pri trenutnom uvozu.',
 
     'priority' => 'Prioritet',
-    'priority_help' => 'Manji brojevi se izvršavaju prvi. Pravila bez zajedničkih polja nikad nisu u sukobu.',
+    'priority_help' => 'Pravila se izvršavaju od najnižeg broja naviše, pa pobeđuje najviši broj kada dva postavljaju isto polje. Pravila bez zajedničkih polja nikad nisu u sukobu.',
 
     'cancel' => 'Otkaži',
     'save_changes' => 'Sačuvaj izmene',

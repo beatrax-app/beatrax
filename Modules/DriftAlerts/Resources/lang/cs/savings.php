@@ -8,6 +8,7 @@ return [
     'subscriptions_link' => 'Předplatné →',
     'disclaimer' => 'Oficiální odkazy z korpusu podpory — Beatrax za tebe nikdy nic neruší ani nepřepíná.',
     'dismiss_aria' => 'Zamítnout návrh',
+    'dismiss_caption' => 'Zamítnout',
 
     'insight' => [
         'cheaper_message' => ':name možná nabízí levnější tarif — platíš :monthly/měs.',

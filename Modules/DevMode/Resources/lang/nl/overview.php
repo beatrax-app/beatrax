@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Operationeel overzicht voor de ingebouwde Developer Console.',
     'worker_heartbeat' => 'Worker-heartbeat',
     'not_running' => 'DRAAIT NIET',
+    'heartbeat_age' => ':count s geleden · ttl :ttl s|:count s geleden · ttl :ttl s',
     'queue' => 'Wachtrij',
     'pending' => 'in behandeling',
     'failed' => 'mislukt',

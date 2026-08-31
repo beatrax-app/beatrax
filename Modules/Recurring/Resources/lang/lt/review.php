@@ -42,6 +42,7 @@ return [
     'edit_name' => 'Redaguoti pavadinimą',
     'edit_name_aria' => 'Pervadinti pasikartojančią seriją :id',
     'new_name_label' => 'Naujas šios serijos pavadinimas',
+    'load_more' => 'Įkelti daugiau',
     'save' => 'Išsaugoti',
 
     'toast' => [

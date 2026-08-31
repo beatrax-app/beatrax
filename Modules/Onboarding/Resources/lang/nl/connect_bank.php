@@ -26,15 +26,17 @@ return [
 
     'drop_lead_camt053' => 'Zet je CAMT.053-bestand hier neer',
     'drop_lead_mt940' => 'Zet je MT940-bestand hier neer',
-    'drop_lead_asn' => 'Zet je ASN-CSV hier neer',
-    'drop_lead_ing' => 'Zet je ING-CSV hier neer',
+    'drop_lead_csv_layout' => 'Zet je :layout-CSV hier neer',
     'drop_lead_pick_bank' => 'Kies welke bank je CSV heeft geëxporteerd — dat moeten we weten om hem goed te lezen.',
     'drop_lead_default' => 'Zet je afschriftbestand hier neer',
     'browse_file' => 'of blader naar een bestand',
 
-    'banks_mt940' => 'Ondersteund: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-    'banks_csv' => 'Ondersteund: ASN, ING — meer formaten volgen naarmate gebruikers voorbeelden aandragen.',
-    'banks_default' => 'Ondersteund: ASN, ING',
+    'format_help_camt053' => 'CAMT.053 is een afschrift in XML — kijk in je online bankieren bij afschriften of downloads.',
+    'format_help_mt940' => 'MT940 is een afschrift in platte tekst, aangeboden als .sta of .940 naast de XML- en CSV-downloads.',
+    'format_help_csv' => 'CSV is de export voor spreadsheets. Elke bank zet de kolommen anders neer, dus kies de indeling die past. Staat de jouwe er niet bij, vraag je bank dan om CAMT.053 of MT940.',
+
+    'account_name_default' => 'Bankrekening',
+    'account_name_layout' => ':layout-rekening',
 
     'file_ready' => '· ✓ klaar',
 

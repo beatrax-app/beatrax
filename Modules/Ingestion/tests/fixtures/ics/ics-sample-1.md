@@ -227,14 +227,23 @@ statement-summary header. The six empirically-confirmed tokens are:
 There is **no `Periode` field**: the statement does not explicitly print
 the period start/end dates anywhere in the extracted text. The earliest
 transaction date (line 19 / 22) and the latest transaction date (line
-94) are the only positional cues for the period boundaries. The
-adapter can either:
+94) are the only positional cues for the period boundaries, so the
+period must be derived.
 
-1. Derive `period_start_at` / `period_end_at` from the min/max
-   `booked_at` across parsed transactions, OR
-2. Parse the body paragraph on line 96 (`Uw betalingen aan
-   International Card Services BV zijn bijgewerkt tot 15 februari 2026`)
-   for the period-end date.
+The adapter derives it from the min and max **transactiedatum**
+(`posted_at`) across the parsed rows. Not the boekdatum: ICS books a
+charge on or after the day the card was used — `15 jan.` books on
+`16 jan.` on line 22 of this very fixture — and every reader of the
+stored period tests membership on `posted_at`, so a boekdatum-derived
+period opens after the earliest charge it bills and the statement can
+never settle. See [a period derived from one column and tested on
+another](../../../../../.docs/conventions/invariants-from-shipped-failures.md#a-period-derived-from-one-column-and-tested-on-another).
+
+The body paragraph on line 96 (`Uw betalingen aan International Card
+Services BV zijn bijgewerkt tot 15 februari 2026`) states a
+period-end-ish date and is deliberately not parsed: it is one boundary
+out of two, phrased as prose, and a period whose two ends came from
+different places is the defect above wearing a different hat.
 
 The values on line 13 (page-1 summary) are written as a four-column row
 with `Af` / `Bij` direction markers:

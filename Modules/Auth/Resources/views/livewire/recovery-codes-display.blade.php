@@ -7,7 +7,7 @@
      the flow. Padding it again here reserved the status bar twice and pushed
      the heading down by a second copy of its height. --}}
 <div class="min-h-screen bg-white pb-[calc(3rem+var(--safe-bottom))] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-12 dark:bg-slate-950">
-    <div class="max-w-xl mx-auto px-6 space-y-6">
+    <div class="max-w-xl mx-auto px-4 sm:px-6 space-y-6">
         <x-core::page-header
             :title="Lang::get('auth::recovery_codes.title')"
             :subtitle="Lang::get('auth::recovery_codes.subtitle')"

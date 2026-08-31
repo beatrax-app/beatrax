@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Kategorija',
         'assigned' => 'Piešķirts',
+        'carried_in' => 'Pārnests',
+        'moved' => 'Pārvietots',
         'spent' => 'Iztērēts',
         'available' => 'Pieejams',
         'if_overspent' => 'Ja pārtērēts',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Slēpt vēsturi ↑',
         'moved_from' => 'Pārvietots no :category',
         'moved_to' => 'Pārvietots uz :category',
+        'moved_unreadable' => 'Pārvietots ar :category jaunākā Beatrax versijā',
         'undo' => 'Atsaukt',
     ],
 
     'phone' => [
         'spent' => 'Iztērēts :amount',
+        'carried_in' => 'Pārnests :amount',
+        'moved' => 'Pārvietots :amount',
         'available' => 'Pieejams :amount',
         'notify_at' => 'Paziņot pie',
     ],

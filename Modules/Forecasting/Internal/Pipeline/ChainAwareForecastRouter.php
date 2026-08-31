@@ -29,7 +29,7 @@ final readonly class ChainAwareForecastRouter
      * @param  list<ForecastContribution>  $contributions
      * @return list<ForecastContribution>
      */
-    public function route(array $contributions, User $user, bool $viewByFunder = false): array
+    public function route(array $contributions, User $user): array
     {
         /** @var array<int, int|null> $funderBySeries — null marks "no chain". */
         $funderBySeries = [];
@@ -57,19 +57,13 @@ final readonly class ChainAwareForecastRouter
                 lowMinor: $contribution->lowMinor,
                 highMinor: $contribution->highMinor,
                 currency: $contribution->currency,
-                fxRateUsed: $contribution->fxRateUsed,
                 seriesId: $contribution->seriesId,
                 accountId: $funderAccountId,
+                dateIsUncertain: $contribution->dateIsUncertain,
             );
         }
 
-        $routed = $this->appendSettlement($routed, $user, $chainRoutedSeriesIds);
-
-        if ($viewByFunder) {
-            $routed = $this->collapseByFunder($routed);
-        }
-
-        return $routed;
+        return $this->appendSettlement($routed, $user, $chainRoutedSeriesIds);
     }
 
     /**
@@ -98,7 +92,6 @@ final readonly class ChainAwareForecastRouter
             lowMinor: $settlementMinor,
             highMinor: $settlementMinor,
             currency: $nextSettlement->amount->currency(),
-            fxRateUsed: null,
             seriesId: self::NO_SERIES,
             accountId: $nextSettlement->accountId,
         );
@@ -158,19 +151,25 @@ final readonly class ChainAwareForecastRouter
         return false;
     }
 
-    // Assumes contributions sharing an (accountId, date) tuple are already in
-    // the funder's default currency; conversion stays at the daily-fold.
+    // Bucketed by currency as well as by (accountId, date). This router never
+    // converts — that stays at the daily fold — so summing two denominations
+    // under the first one's code would state a total in a currency the money
+    // was never in.
     /**
      * @param  list<ForecastContribution>  $contributions
      * @return list<ForecastContribution>
      */
-    private function collapseByFunder(array $contributions): array
+    public function collapseByFunder(array $contributions): array
     {
         /** @var array<string, array{date: CarbonImmutable, accountId: int, currency: string, point: int, low: int, high: int}> $buckets */
         $buckets = [];
 
         foreach ($contributions as $c) {
-            $key = $c->accountId.'|'.$c->date->toDateString();
+            $key = implode('|', [
+                (string) $c->accountId,
+                $c->date->toDateString(),
+                $c->currency,
+            ]);
             if (! array_key_exists($key, $buckets)) {
                 $buckets[$key] = [
                     'date' => $c->date,
@@ -194,7 +193,6 @@ final readonly class ChainAwareForecastRouter
                 lowMinor: $b['low'],
                 highMinor: $b['high'],
                 currency: $b['currency'],
-                fxRateUsed: null,
                 seriesId: self::NO_SERIES,
                 accountId: $b['accountId'],
             );
@@ -216,10 +214,11 @@ final readonly class ChainAwareForecastRouter
             return $cache[$seriesId];
         }
 
-        $links = $this->chainQuery->confirmedAndDeterministicForSeries($seriesId, $user);
+        $links = $this->chainQuery->confirmedFundersForSeries($seriesId, $user);
 
-        // The query is already user-scoped and state-filtered, so the first row
-        // is the canonical funder.
+        // The query orders by confidence then id, so the first row is the same
+        // funder on every run — unordered, two equally confirmed funders took
+        // turns and the projection moved between accounts for no reason.
         $cache[$seriesId] = $links === [] ? null : $links[0]->funderAccountId;
 
         return $cache[$seriesId];

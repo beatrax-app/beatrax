@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ava',
 
-    'digits_entered' => 'numbrit sisestatud',
+    'digits_entered' => 'sisestatud :count number|sisestatud :count numbrit',
     'pin_pad' => 'PIN-klaviatuur',
     'digit' => 'Number :digit',
     'backspace' => 'Tagasilüke',

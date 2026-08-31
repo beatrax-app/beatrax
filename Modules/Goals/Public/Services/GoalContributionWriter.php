@@ -8,26 +8,34 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 
-final class GoalContributionWriter
+final readonly class GoalContributionWriter
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
-        private readonly Dispatcher $events,
+        private DatabaseManager $db,
+        private Clock $clock,
+        private Dispatcher $events,
+        private PotBalanceQuery $potBalance,
     ) {}
 
     // A goal or transaction the caller does not own writes nothing rather than
     // throwing: this is reachable straight from the browser, and an error would
-    // confirm the row exists.
+    // confirm the row exists. A pot-funded goal is refused for a different
+    // reason: its progress comes from the pot, so the row would never be read.
     /**
-     * @return bool whether the attribution exists afterwards — false only when
-     *              the goal or transaction is not the user's
+     * @return bool whether the attribution exists afterwards — false when the
+     *              goal or transaction is not the user's, or the goal is funded
+     *              by a linked pot
      */
     public function attribute(User $user, int $goalId, int $transactionId): bool
     {
         if (! $this->ownsBoth($user, $goalId, $transactionId)) {
+            return false;
+        }
+
+        if ($this->potBalance->linkedPotIdForGoal($goalId, $user) !== null) {
             return false;
         }
 

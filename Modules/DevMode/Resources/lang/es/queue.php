@@ -14,12 +14,13 @@ return [
     'bulk_delete' => 'Eliminar :count trabajo|Eliminar :count trabajos',
     'empty_pending' => 'La cola está vacía.',
     'empty_failed' => 'No hay trabajos fallidos.',
-    'empty_batches' => 'No hay lotes activos.',
+    'empty_batches' => 'No hay lotes.',
     'select_aria' => 'Seleccionar',
     'select_row_aria' => 'Seleccionar la fila :key',
     'col_id' => 'Id',
     'col_queue' => 'Cola',
     'col_attempts' => 'Intentos',
+    'col_state' => 'Estado',
     'col_created' => 'Creado',
     'col_uuid' => 'UUID',
     'col_failed' => 'Fallido',
@@ -27,6 +28,7 @@ return [
     'col_pending' => 'Pendientes',
     'col_actions' => 'Acciones',
     'delete_job' => 'Eliminar trabajo',
+    'worker_running' => 'Un worker la está ejecutando',
     'delete_pending_confirm' => '¿Eliminar el trabajo pendiente #:key?',
     'retry_job' => 'Reintentar trabajo',
     'forget_confirm' => '¿Quitar el trabajo fallido :uuid?',
@@ -39,6 +41,12 @@ return [
     'retry_modal_intro' => 'Los trabajos fallidos seleccionados se volverán a poner en cola para que el worker los reintente.',
     'cancel' => 'Cancelar',
 
+    'state' => [
+        'available' => 'Disponible',
+        'reserved' => 'Reservada',
+        'scheduled' => 'Programada',
+    ],
+
     'tab' => [
         'pending' => 'Pendientes',
         'failed' => 'Fallidos',
@@ -47,12 +55,15 @@ return [
 
     'toast' => [
         'pending_deleted' => 'Trabajo pendiente eliminado',
+        'pending_already_gone' => 'Ese trabajo ya no estaba',
         'failed_requeued' => 'Trabajo fallido devuelto a la cola',
         'failed_removed' => 'Trabajo fallido quitado',
         'batch_cancelled' => 'Lote cancelado',
         'batch_deleted' => 'Lote eliminado',
         'batch_failures_requeued' => 'Fallos del lote devueltos a la cola',
+        'batch_failures_none' => 'No quedan fallos del lote para volver a encolar',
         'failed_jobs_requeued' => 'Trabajos fallidos devueltos a la cola',
+        'failed_jobs_none' => 'No quedan trabajos fallidos para volver a encolar',
         'bulk_refused' => 'Borrado masivo rechazado — :reason',
         'rows_deleted' => 'Filas seleccionadas eliminadas',
     ],

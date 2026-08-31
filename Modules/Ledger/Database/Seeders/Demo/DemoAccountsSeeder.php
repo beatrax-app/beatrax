@@ -15,7 +15,7 @@ final class DemoAccountsSeeder
 {
     /** @var array<string, list<array{name: string, slug: string, kind: string, iban: string, default_currency: string, starting_balance_minor: int}>> */
     private const ACCOUNTS = [
-        'demo-1@beatrax.local' => [
+        'demo-1' => [
             [
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-1',
@@ -42,8 +42,32 @@ final class DemoAccountsSeeder
                 'default_currency' => Currency::Eur->value,
                 'starting_balance_minor' => 4200,
             ],
+            // Zero-decimal on purpose. Every other account here is 1/100, so a
+            // dataset without this one cannot tell a correct scale from a
+            // hardcoded division by 100: the balance, the split editor and the
+            // reconcile field all read identically either way.
+            [
+                'name' => 'Japan Trip Card',
+                'slug' => 'jpy-demo-1',
+                'kind' => AccountKind::IcsCard->value,
+                'iban' => 'ICS-DEMO-1-JPY',
+                'default_currency' => Currency::Jpy->value,
+                'starting_balance_minor' => 120000,
+            ],
+            // A card holds no allocatable balance, so with the trip card as the
+            // only zero-decimal account no pot, pot-funded goal or cash entry
+            // could be denominated without a minor unit. It is also the account
+            // the cash book takes the scale of its amount field from.
+            [
+                'name' => 'Japan Trip Cash',
+                'slug' => 'jpy-cash-demo-1',
+                'kind' => AccountKind::Cash->value,
+                'iban' => 'CASH-DEMO-1-JPY',
+                'default_currency' => Currency::Jpy->value,
+                'starting_balance_minor' => 600000,
+            ],
         ],
-        'demo-2@beatrax.local' => [
+        'demo-2' => [
             [
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-2',

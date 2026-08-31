@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Käyttöönoton edistyminen',
     'step_progress' => 'Vaihe :current / :total',
-    'step_dot_aria' => 'Vaihe :number / :total',
 
     'eyebrow_step' => 'Vaihe :number — ',
 ];

@@ -7,19 +7,21 @@ namespace Modules\Ledger\Internal\Http\Livewire\Concerns;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
-use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
+use stdClass;
 
 // Extracted from TransactionDetail: the inline split editor was fifteen
 // of that component's twenty-five methods.
@@ -55,6 +57,13 @@ trait ManagesSplitEditor
 
     public ?int $pendingRemoveIndex = null;
 
+    // The parent's own currency, which is the scale every leg amount in this
+    // editor is written and read at. The repo-wide hundredth prefilled a
+    // JPY 1,000 charge as "10,00" under a total line reading JPY 1,000, and
+    // refused "600" + "400" as over-allocated by JPY 99,000.
+    #[Locked]
+    public string $splitCurrency = '';
+
     public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         if ($this->hasPersistedSplit) {
@@ -66,7 +75,7 @@ trait ManagesSplitEditor
             ->table('transactions')
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
-            ->first(['category_id', 'settled_amount_minor']);
+            ->first(['category_id', 'settled_amount_minor', 'settled_currency']);
 
         if ($parent === null) {
             return;
@@ -74,10 +83,11 @@ trait ManagesSplitEditor
 
         $categoryId = is_numeric($parent->category_id) ? (int) $parent->category_id : null;
         $absMinor = abs(is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0);
+        $this->splitCurrency = self::parentCurrency($parent, $baseCurrency->forUser($currentUser->user()));
 
         $this->legs = [
-            ['id' => null, 'categoryId' => $categoryId, 'amount' => MoneyInput::formatAbsMinor($absMinor), 'note' => '', 'tax' => false],
-            ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0), 'note' => '', 'tax' => false],
+            ['id' => null, 'categoryId' => $categoryId, 'amount' => MoneyInput::formatAbsMinor($absMinor, $this->splitCurrency), 'note' => '', 'tax' => false],
+            ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0, $this->splitCurrency), 'note' => '', 'tax' => false],
         ];
         $this->editingSplit = true;
         $this->splitError = null;
@@ -87,7 +97,7 @@ trait ManagesSplitEditor
 
     public function addLeg(): void
     {
-        $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0), 'note' => '', 'tax' => false];
+        $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => MoneyInput::formatAbsMinor(0, $this->splitCurrency), 'note' => '', 'tax' => false];
     }
 
     // Removing the second-to-last leg would collapse the split to a single
@@ -264,13 +274,13 @@ trait ManagesSplitEditor
         $legsPayload = [];
 
         foreach ($this->legs as $leg) {
-            $abs = MoneyInput::tryToPositiveMinor($leg['amount']);
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount'], $this->splitCurrency);
             if ($abs === null) {
                 // The zero rides as a parameter rather than sitting in the
                 // sentence: written into the copy it was one locale's zero in
                 // twenty-six languages.
                 $this->splitError = Lang::get('ledger::detail.errors.amount_zero', [
-                    'amount' => Money::ofMinor(0, BaseCurrency::value())->format(),
+                    'amount' => Money::ofMinor(0, $this->splitCurrency !== '' ? $this->splitCurrency : BaseCurrency::value())->format(),
                 ]);
 
                 return null;
@@ -298,7 +308,7 @@ trait ManagesSplitEditor
 
     // A no-op for a leg that has not yet been persisted (no id) — leg-
     // scoped tax tagging requires an existing transaction_splits row.
-    public function toggleLegTax(int $index, TagTransaction $tag, UntagTransaction $untag, CurrentUser $currentUser, DatabaseManager $db): void
+    public function toggleLegTax(int $index, TagTransaction $tag, UntagTransaction $untag, CurrentUser $currentUser, TransactionStatusQuery $statusQuery): void
     {
         if (! array_key_exists($index, $this->legs)) {
             return;
@@ -313,13 +323,7 @@ trait ManagesSplitEditor
 
         // Warn-first, no write: a leg's tax tag is exactly the
         // classification a reconcile is meant to freeze.
-        $status = $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
-            ->value('status');
-
-        if ($status === ClearedStatus::Reconciled->value) {
+        if ($statusQuery->isReconciled($userId, $this->transactionId)) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
@@ -356,6 +360,7 @@ trait ManagesSplitEditor
         }
 
         $taxStates = $taxTagQuery->forTransactionIdsWithLegs($userId, [$this->transactionId]);
+        $this->loadParentCurrency($db, $userId, $readerCurrency);
 
         $legs = [];
         foreach ($rows as $row) {
@@ -369,7 +374,7 @@ trait ManagesSplitEditor
             $legs[] = [
                 'id' => $legId,
                 'categoryId' => is_numeric($row->category_id) ? (int) $row->category_id : null,
-                'amount' => MoneyInput::formatAbsMinor(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0),
+                'amount' => MoneyInput::formatAbsMinor(is_numeric($row->settled_amount_minor) ? abs((int) $row->settled_amount_minor) : 0, $this->splitCurrency),
                 'note' => $legNote,
                 'tax' => isset($taxStates[$key]),
             ];
@@ -399,17 +404,36 @@ trait ManagesSplitEditor
         }
 
         $parentMinor = is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0;
-        $currency = is_string($parent->settled_currency) ? $parent->settled_currency : $readerCurrency;
+        $currency = self::parentCurrency($parent, $readerCurrency);
+        $this->splitCurrency = $currency;
 
         $parentAbs = Money::ofMinor(abs($parentMinor), $currency);
         $sumAbs = Money::ofMinor(0, $currency);
 
         foreach ($this->legs as $leg) {
-            $abs = MoneyInput::tryToPositiveMinor($leg['amount']) ?? 0;
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount'], $currency) ?? 0;
             $sumAbs = $sumAbs->plus(Money::ofMinor($abs, $currency));
         }
 
         $this->remainingMinor = $parentAbs->minus($sumAbs)->toMinor();
+    }
+
+    private function loadParentCurrency(DatabaseManager $db, int $userId, string $fallback): void
+    {
+        $currency = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $userId)
+            ->value('settled_currency');
+
+        $this->splitCurrency = is_string($currency) && $currency !== '' ? $currency : $fallback;
+    }
+
+    private static function parentCurrency(stdClass $parent, string $fallback): string
+    {
+        return is_string($parent->settled_currency) && $parent->settled_currency !== ''
+            ? $parent->settled_currency
+            : $fallback;
     }
 
     private function resetSplitEditor(): void
@@ -427,7 +451,7 @@ trait ManagesSplitEditor
         $bestAbs = -1;
 
         foreach ($this->legs as $index => $leg) {
-            $abs = MoneyInput::tryToPositiveMinor($leg['amount']) ?? 0;
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount'], $this->splitCurrency) ?? 0;
             if ($abs > $bestAbs) {
                 $bestAbs = $abs;
                 $bestIndex = $index;

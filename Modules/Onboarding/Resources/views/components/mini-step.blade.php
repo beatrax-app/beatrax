@@ -6,7 +6,7 @@
     Props:
       :glyph  — single emoji ("🔐" / "📑" / "📅" / "⬇️").
       :label  — short action label ("Log in", "Pick a range").
-      :sub    — single-line sub-label ("mijn.asnbank.nl", "Last 90 days").
+      :sub    — single-line sub-label ("mijn.icscards.nl", "Last 90 days").
       :subLang — BCP-47 tag when :sub is a verbatim foreign-language menu
                  name from the provider's own portal (PayPal NL's
                  "Aangepast → Betalingen"). Tagging it keeps a screen

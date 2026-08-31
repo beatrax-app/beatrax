@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Non catégorisé',
+    'unavailable_category' => 'Catégorie absente de cet appareil',
+    'duplicate_path' => ':path (:number)',
     'status' => [
         'cleared' => 'Compensée',
         'uncleared' => 'Non compensée',

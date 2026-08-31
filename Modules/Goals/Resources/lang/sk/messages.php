@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: dokončené na :pct%',
+        'aria' => ':name: dokončené na :pct %',
     ],
 
     'card' => [
@@ -40,6 +40,7 @@ return [
         'add_contributions' => 'Pridaj príspevky a zobrazí sa prognóza',
         'not_enough_history' => 'Zatiaľ nie je dosť histórie na odhad dátumu',
         'no_recent_contributions' => 'Žiadne nedávne vklady, z ktorých by sa dalo odhadovať',
+        'too_far_to_date' => 'Pri tomto tempe príliš ďaleko na určenie dátumu',
         'est' => 'Odhad :date ·',
         'projection_note' => '(prognóza)',
         'projected' => 'Prognóza: :date',
@@ -55,11 +56,12 @@ return [
     'actions' => [
         'more_aria' => 'Ďalšie akcie — cieľ: :name',
         'mark_complete' => 'Označiť ako dokončený',
+        'mark_complete_caption' => 'Označiť',
         'archive' => 'Archivovať',
         'restore' => 'Obnoviť',
     ],
 
-    'archived_disclosure' => 'Archivované ciele (:count)',
+    'archived_disclosure' => 'Archivovaný cieľ (:count)|Archivované ciele (:count)|Archivovaných cieľov (:count)',
 
     'form' => [
         'title_edit' => 'Upraviť cieľ',
@@ -95,7 +97,12 @@ return [
     'errors' => [
         'name' => 'Zadaj názov cieľa.',
         'date' => 'Vyber cieľový dátum.',
+        'date_invalid' => 'Vyberte skutočný dátum.',
+        'date_before_start' => 'Vyber dátum v deň začiatku cieľa alebo neskorší.',
+        'generic' => 'Cieľ sa nepodarilo uložiť. Skontrolujte polia a skúste to znova.',
         'amount' => 'Zadaj platnú sumu väčšiu ako nula.',
         'pot_linked_category' => 'Táto sporiaca obálka je prepojená s kategóriou. Najprv toto prepojenie odstráň na stránke Sporiace obálky.',
+        'pot_already_linked' => 'Táto obálka už sporí na iný cieľ. Najprv tam zruš prepojenie.',
+        'pot_missing' => 'Táto obálka už nie je dostupná. Vyber inú, alebo nechaj tento cieľ bez prepojenia.',
     ],
 ];

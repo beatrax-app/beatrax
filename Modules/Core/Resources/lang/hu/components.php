@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'A(z) :count elem közül a :shown legutóbbi látható.',
+
     'drawer_nav' => 'Navigáció',
 
     'search_placeholder' => 'Keresés…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Az adataidat a telefonodon is látnád?',
         'body' => 'Telepítsd a Beatraxot a telefonodra, hogy gyorsan elérd a pénzügyeidet.',
         'dismiss_aria' => 'Telepítési tipp elvetése',
+        'dismiss_caption' => 'Elvetés',
         'install_app' => 'Alkalmazás telepítése',
 
         'desktop_html' => 'Nyisd meg a Beatraxot a telefonod böngészőjében, és koppints a „Hozzáadás a kezdőképernyőhöz” lehetőségre — vagy koppints a <strong style="color: var(--color-text);">⚡</strong> ikonra a Safari megosztási menüjében.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Kiválasztott fájlok: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Válassz dátumot',
         'prev_month' => 'Előző hónap',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Perc',
         'empty' => 'nincs időpont kiválasztva',
     ],
+
+    'toast_undo' => 'Visszavonás',
 
     'veil_locked' => 'Alkalmazás zárolva',
 

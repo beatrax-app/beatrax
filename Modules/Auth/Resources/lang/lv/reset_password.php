@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Izmantojiet vismaz 12 rakstzīmes.',
     'error_wrong_code' => 'Šis lietotājvārds un atkopšanas kods nesakrīt. Rūpīgi pārbaudiet kodu — tikai lielie burti, bez nulles, bez O, bez vieninieka, bez L.',
+    'error_throttled' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
 ];

@@ -8,7 +8,7 @@ final class RecoveryCodeNormalizer
 {
     // Same ambiguous-free alphabet the generator draws from -- excludes
     // I, L, O, 0, and 1.
-    private const ALLOWED = 'A-HJKMNP-Z2-9';
+    private const string ALLOWED = 'A-HJKMNP-Z2-9';
 
     public function normalize(string $input): string
     {

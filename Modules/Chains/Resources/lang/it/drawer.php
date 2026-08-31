@@ -15,13 +15,18 @@ return [
     'none_beyond_leg' => 'Nessuna catena di finanziamento trovata oltre questo passaggio.',
 
     'covers_charges' => 'Copre :count addebito ICS|Copre :count addebiti ICS',
-    'no_ics_charges' => 'Nessun addebito ICS in questo regolamento',
     'show_more_fanout' => 'Mostra altri :count · :shown di :total',
 
     'confirm' => 'Conferma',
     'reject' => 'Rifiuta',
     'confirm_aria' => "Conferma l'anello della catena :id",
     'reject_aria' => "Rifiuta l'anello della catena :id",
+
+    'confidence_tier' => [
+        'deterministic' => 'Deterministica',
+        'confirmed' => 'Confermata',
+        'candidate' => 'Candidato',
+    ],
 
     'confidence_aria' => [
         'deterministic' => 'Affidabilità: corrispondenza deterministica',

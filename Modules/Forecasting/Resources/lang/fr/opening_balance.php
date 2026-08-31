@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 return [
     'help_paypal' => 'Les exports PayPal ne contiennent pas de lignes de solde : renseigne-le manuellement.',
-    'help_asn' => 'Calé automatiquement sur ton dernier relevé. Ne le modifie que si tu sais que le solde réel diffère.',
     'help_default' => 'Ne le modifie que si tu sais que le solde réel actuel diffère de celui que Beatrax calcule.',
 
     'legend' => 'Solde d\'ouverture prévisionnel pour :name',
     'opening_label' => 'Solde d\'ouverture',
-    'opening_placeholder' => 'ex. 1.250,00',
+    'opening_placeholder' => 'ex. :amount',
     'as_of_label' => 'Solde d\'ouverture à la date du',
     'as_of_help' => 'La date à laquelle le montant ci-dessus est exact.',
 
     'divergence' => 'C\'est plus de :threshold d\'écart avec le solde que Beatrax calcule à partir de tes transactions importées. Tu confirmes ?',
+    'computed_is' => 'Beatrax calcule :amount.',
     'use_beatrax' => 'Utiliser le chiffre de Beatrax',
     'use_mine' => 'Utiliser mon chiffre',
 

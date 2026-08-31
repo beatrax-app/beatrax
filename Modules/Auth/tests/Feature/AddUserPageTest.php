@@ -40,17 +40,16 @@ it('lowercases the partner username before storage', function (): void {
     expect($partner->username)->toBe('bob');
 });
 
-it('provisions ten bcrypt-hashed recovery codes for the partner', function (): void {
+// The sheet is minted at the partner's own forced password change instead --
+// see ThePartnerIsHandedTheirOwnRecoveryCodesTest -- because codes issued here
+// are codes neither the owner nor the partner is ever shown.
+it('provisions no recovery codes the partner could not be handed', function (): void {
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
     $partner = $addUser(developerCaller(), 'partner', 'partner-initial-pw-12');
 
-    $codes = UserRecoveryCode::query()->where('user_id', $partner->id)->get();
-    expect($codes)->toHaveCount(10);
-    foreach ($codes as $code) {
-        expect($code->code_hash)->toStartWith('$2y$');
-    }
+    expect(UserRecoveryCode::query()->where('user_id', $partner->id)->get())->toHaveCount(0);
 });
 
 it('rejects a duplicate username with the locked copy', function (): void {
@@ -86,7 +85,11 @@ it('rejects a password shorter than twelve characters', function (): void {
     expect(User::query()->where('username', 'partner')->exists())->toBeFalse();
 });
 
-it('throws a 404 for a non-developer caller', function (): void {
+// The gate is the account created FIRST, not is_developer, so the fixture has
+// to mint an owner before the caller: on its own the caller IS the owner.
+it('throws a 404 for a caller who is not the account owner', function (): void {
+    developerCaller();
+
     $nonDeveloper = User::query()->create([
         'username' => 'plainuser',
         'password' => 'plain-password-12ch',

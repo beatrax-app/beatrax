@@ -24,6 +24,7 @@ return [
     'to' => 'do',
     'text_placeholder' => 'např. SPOTIFY',
     'remove_condition' => 'Odebrat podmínku',
+    'remove_condition_caption' => 'Odebrat',
     'add_condition' => '+ Přidat podmínku',
 
     'then' => 'Pak',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Připojit',
     'deduction_category_aria' => 'Kategorie odpočtu pro akci :number',
     'remove_action' => 'Odebrat akci',
+    'remove_action_caption' => 'Odebrat',
     'add_action' => '+ Přidat akci',
 
     'this_year_only' => 'Jen tento rok ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Akce s daňovým štítkem se projeví až při příštím opětovném použití pravidel, ne u aktuálního importu.',
 
     'priority' => 'Priorita',
-    'priority_help' => 'Nižší čísla se spouštějí dřív. Pravidla bez společných polí si nikdy neodporují.',
+    'priority_help' => 'Pravidla se spouštějí od nejnižšího čísla nahoru, takže když dvě nastavují stejné pole, vyhrává nejvyšší číslo. Pravidla bez společných polí si nikdy neodporují.',
 
     'cancel' => 'Zrušit',
     'save_changes' => 'Uložit změny',

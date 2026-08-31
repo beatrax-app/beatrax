@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\StoredCopy;
 use Modules\Ledger\Models\Category;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
@@ -239,7 +240,10 @@ it('MigrationConfirm: two genuinely distinct same-day same-amount same-account t
     $collisionItems = $this->db->connection()->table('migration_staging_unmapped_items')
         ->where('migration_run_id', $run->id)
         ->where('item_type', 'extra')
-        ->where('display_label', 'like', 'Transaction:%')
-        ->get();
+        ->get()
+        ->filter(static fn (object $row): bool => StoredCopy::names(
+            is_string($row->display_label) ? $row->display_label : null,
+            'migration::unmapped.label.transaction',
+        ));
     expect($collisionItems)->toBeEmpty();
 });

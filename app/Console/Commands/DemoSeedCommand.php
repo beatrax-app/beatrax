@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Database\Seeders\Demo\DemoAnomalyAlertsSeeder;
 use Modules\Auth\Database\Seeders\Demo\DemoRecoveryCodesSeeder;
+use Modules\Auth\Public\Actions\PurgeUserDataAction;
 use Modules\Budgets\Database\Seeders\Demo\DemoEnvelopeBudgetsSeeder;
+use Modules\CashBook\Database\Seeders\Demo\DemoCashEntriesSeeder;
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
 use Modules\Categorization\Database\Seeders\Demo\DemoCategorizationRulesSeeder;
 use Modules\Categorization\Database\Seeders\Demo\DemoMerchantMemorySeeder;
@@ -45,7 +47,7 @@ final class DemoSeedCommand extends Command
     protected $signature = 'demo:seed {--reset : Tear down existing demo data before reseeding}';
 
     /** @var string */
-    protected $description = 'Stand up a realistic-looking demo dataset (2 users, 5 accounts, ~165 transactions, chains, recurring, forecast, drift, system + scan + receipts + recovery + wizard data). Developer-only.';
+    protected $description = 'Stand up a realistic-looking demo dataset (2 users, 7 accounts, 174+ transactions, chains, recurring, forecast, drift, system + scan + receipts + recovery + wizard data). Developer-only.';
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -55,6 +57,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoAccountsSeeder $accounts,
         private readonly DemoUserPreferencesSeeder $userPreferences,
         private readonly DemoTransactionsSeeder $transactions,
+        private readonly DemoCashEntriesSeeder $cashEntries,
         private readonly DemoEnvelopeBudgetsSeeder $envelopeBudgets,
         private readonly DemoCounterpartiesSeeder $counterparties,
         private readonly DemoChainsSeeder $chains,
@@ -78,6 +81,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoTransactionSplitsSeeder $transactionSplits,
         private readonly DemoSavedReportsSeeder $savedReports,
         private readonly DemoAnomalyAlertsSeeder $anomalyAlerts,
+        private readonly PurgeUserDataAction $purgeUserData,
     ) {
         parent::__construct();
     }
@@ -108,11 +112,18 @@ final class DemoSeedCommand extends Command
         }
         $this->info(sprintf('  %d demo accounts present', $accountCount));
 
-        $this->line('Seeding demo transactions (~165 rows across 90 days)…');
+        $this->line('Seeding demo transactions across each persona\'s own last three budget periods…');
         $txCount = $this->transactions->run($userMap, $accountMap);
         $this->info(sprintf('  %d demo transactions present', $txCount));
 
-        $this->line('Activating envelope budgeting + seeding current-period assignments…');
+        // Before the budget assignments, which are tuned against the spend the
+        // ledger holds, and before the pots, whose funding is bounded by what
+        // the cash account is left holding.
+        $this->line('Recording demo cash-book entries in the cash account\'s own denomination…');
+        $cashEntryCount = $this->cashEntries->run($userMap);
+        $this->info(sprintf('  %d demo cash-book entries present', $cashEntryCount));
+
+        $this->line('Activating envelope budgeting + seeding three periods of assignments, settings and moves…');
         $assignmentCount = $this->envelopeBudgets->run($userMap);
         $this->info(sprintf('  %d demo envelope assignments present (demo users activated)', $assignmentCount));
 
@@ -216,23 +227,27 @@ final class DemoSeedCommand extends Command
         $this->call('search:reindex', ['--force' => true]);
 
         $this->newLine();
-        $this->info('Demo dataset is ready. Log in as demo-1@beatrax.local (password: demo-only).');
+        $this->info('Demo dataset is ready. Log in as demo-1 (password: demo-only).');
 
         return self::SUCCESS;
     }
 
-    // Bounded to demo rows by the system_alerts seed_key marker and the
-    // demo:// eml_path prefix, so it is safe against a real database.
+    // Bounded to the demo usernames and to import runs stamped
+    // source_format='demo', so it is safe against a real database. One
+    // transaction, because the purge reads back what it deleted and throws:
+    // otherwise a failed check leaves the half-wiped database it guards against.
     private function resetDemoData(): void
     {
         $connection = $this->db->connection();
         $demoUserIds = $this->demoUserIds($connection);
 
-        $this->purgeDemoImportRuns($connection);
+        $connection->transaction(function () use ($connection, $demoUserIds): void {
+            $this->purgeDemoImportRuns($connection);
 
-        if ($demoUserIds !== []) {
-            $this->purgeUserScopedData($connection, $demoUserIds);
-        }
+            foreach ($demoUserIds as $userId) {
+                ($this->purgeUserData)($connection, $userId);
+            }
+        });
 
         $this->info(sprintf(
             'Reset complete: cleared %d demo users + linked demo rows.',
@@ -243,115 +258,40 @@ final class DemoSeedCommand extends Command
     /**
      * @return list<int>
      */
-    private function demoUserIds(ConnectionInterface $connection): array
+    private function demoUserIds(Connection $connection): array
     {
         $demoUserIds = $connection->table('users')
-            ->where('username', 'like', 'demo-%@beatrax.local')
+            ->whereIn('username', DemoUsersSeeder::usernames())
             ->pluck('id')
             ->all();
 
+        // Dropped, never coerced: an id that will not read as a number is not
+        // user 0, and this list is handed straight to a purge.
         return array_values(array_map(
-            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
-            $demoUserIds,
+            static fn (mixed $id): int => (int) $id,
+            array_filter($demoUserIds, static fn (mixed $id): bool => is_numeric($id)),
         ));
     }
 
-    // A stale row would block a re-seed on the UNIQUE (user_id, fingerprint)
-    // index. Wiped explicitly, not by cascade, so the order shows in the logs.
-    private function purgeDemoImportRuns(ConnectionInterface $connection): void
+    // Keyed by source_format rather than by owner, so a run stranded by an
+    // earlier interrupted reset still clears once its user is already gone.
+    // A stale row would otherwise block the re-seed on UNIQUE (user_id, fingerprint).
+    private function purgeDemoImportRuns(Connection $connection): void
     {
         $importRunIds = $connection->table('import_runs')
             ->where('source_format', 'demo')
             ->pluck('id')
             ->all();
 
+        $importRunIds = array_values(array_map(
+            static fn (mixed $id): int => (int) $id,
+            array_filter($importRunIds, static fn (mixed $id): bool => is_numeric($id)),
+        ));
         if ($importRunIds === []) {
             return;
         }
 
-        $importRunIds = array_map(
-            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
-            $importRunIds,
-        );
         $connection->table('transactions')->whereIn('import_run_id', $importRunIds)->delete();
         $connection->table('import_runs')->whereIn('id', $importRunIds)->delete();
-    }
-
-    // Rule children hang off rule_id, not user_id, so they clear through the
-    // parent rules' ids first.
-    /**
-     * @param  list<int>  $demoUserIds
-     */
-    private function purgeCategorizationRules(ConnectionInterface $connection, array $demoUserIds): void
-    {
-        $ruleIds = $connection->table('categorization_rules')
-            ->whereIn('user_id', $demoUserIds)
-            ->pluck('id')
-            ->all();
-
-        if ($ruleIds === []) {
-            return;
-        }
-
-        $connection->table('rule_actions')->whereIn('rule_id', $ruleIds)->delete();
-        $connection->table('rule_conditions')->whereIn('rule_id', $ruleIds)->delete();
-        $connection->table('categorization_rules')->whereIn('id', $ruleIds)->delete();
-    }
-
-    // These tables carry a user_id but are not necessarily owned by an
-    // ImportRun, so wiping them explicitly lets a partial reset finish.
-    /**
-     * @param  list<int>  $demoUserIds
-     */
-    private function purgeUserScopedData(ConnectionInterface $connection, array $demoUserIds): void
-    {
-        $connection->table('anomaly_alert_transitions')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('anomaly_alerts')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('saved_reports')->whereIn('user_id', $demoUserIds)->delete();
-
-        $this->purgeCategorizationRules($connection, $demoUserIds);
-
-        // Movements before pots before goals, so a partial reset never strands
-        // a row pointing at something already deleted.
-        $connection->table('pot_movements')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('pots')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('goal_contributions')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('goals')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('tax_transaction_tags')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('tax_deduction_categories')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('envelope_moves')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('envelope_assignments')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('envelope_settings')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('drift_alert_transitions')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('drift_alerts')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('recurring_series_transitions')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('recurring_series_occurrences')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('forecast_shortfall_windows')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('forecast_scenario_mutations')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('chain_links')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('recurring_series')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('forecast_scenarios')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('counterparties')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('merchant_aliases')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('merchant_memories')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('merchants')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('system_alerts')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('user_preferences')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('user_recovery_codes')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('community_merchant_mappings')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('wizard_progress')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('pending_enrichment_conflicts')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('file_imports')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('known_senders')->whereIn('user_id', $demoUserIds)->delete();
-
-        // Children first, so a partial-reset state holding orphan
-        // inbox_messages still cleans up before their parents go.
-        $connection->table('discovered_senders')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('inbox_messages')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('inbox_scan_state')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('inboxes')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('oauth_secrets')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('accounts')->whereIn('user_id', $demoUserIds)->delete();
-        $connection->table('users')->whereIn('id', $demoUserIds)->delete();
     }
 }

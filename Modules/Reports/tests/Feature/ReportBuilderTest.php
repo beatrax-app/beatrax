@@ -133,7 +133,7 @@ it('shows the friendly empty state (not a 500) when Custom range is chosen but d
     Livewire::test(ReportBuilder::class)
         ->set('periodPreset', 'custom')
         ->assertOk()
-        ->assertSee('Nothing to show for this selection');
+        ->assertSee('Pick both a start and an end date.');
 });
 
 it('?report={id} restores a user-owned saved definition into the builder', function (): void {

@@ -181,6 +181,16 @@ return [
         // focused and the tray's open item silently did nothing.
         'php scripts/nativephp_inject_persistent_tray.php',
 
+        // Without a fileAssociations block no OS routes a .csv or .eml here,
+        // so macOS never fires open-file and no argv ever carries a document:
+        // the whole FileOpenIntake path was unreachable on every platform.
+        'php scripts/nativephp_inject_file_associations.php',
+
+        // The other half of the same gap: Windows and Linux deliver the path
+        // on argv and through second-instance, neither of which NativePHP
+        // forwards as a document.
+        'php scripts/nativephp_inject_file_open_ingress.php',
+
         // The yauzl streaming extractor inflates the arm64 Mach-O by ~5 MB
         // and codesign then rejects it ("main executable failed strict
         // validation"); ditto/unzip keeps the binary byte-exact.

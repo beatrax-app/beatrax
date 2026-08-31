@@ -94,6 +94,7 @@ return [
         'heading' => 'Razvojni alati',
         'open_console' => 'Otvori razvojnu konzolu',
         'pulse' => 'Red :queue · Worker :worker',
+        'worker_ago' => 'prije :count s|prije :count s|prije :count s',
     ],
 
     'account' => [

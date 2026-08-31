@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'uncategorized' => 'Senza categoria',
+    'no_counterparty' => 'Nessuna controparte',
+    'unavailable_counterparty' => 'Controparte non presente su questo dispositivo',
     'title' => 'Report',
     'page_title' => 'Report · Beatrax',
     'subtitle' => 'Componi un report a partire dal tuo registro.',
@@ -40,6 +42,11 @@ return [
         'custom' => 'Intervallo personalizzato',
         'from' => 'Da',
         'to' => 'A',
+        'error' => [
+            'incomplete' => 'Scegli sia una data di inizio sia una di fine.',
+            'malformed' => 'Usa una data valida nel formato AAAA-MM-GG.',
+            'inverted' => 'La data di fine precede quella di inizio.',
+        ],
     ],
 
     'currency' => [
@@ -58,6 +65,7 @@ return [
 
     'filters' => [
         'heading' => 'Filtri',
+        'net_worth_note' => 'Il patrimonio netto è un saldo: si applica solo il filtro conto.',
     ],
 
     'compare' => 'Confronta con il periodo precedente',
@@ -103,6 +111,8 @@ return [
     ],
 
     'chart' => [
+        'other_currencies' => 'Grafico in :currency — :list non rappresentato',
+        'undrawn' => 'Fuori dall’anello — :amount va nella direzione opposta',
         'bar_title' => 'Fai clic su una barra per vedere le sue transazioni',
         'line_title' => 'Fai clic su un punto per vedere le sue transazioni',
         'donut_title' => 'Fai clic su un segmento per vedere le sue transazioni',
@@ -142,4 +152,5 @@ return [
     ],
 
     'other_movement' => 'Commissioni e rettifiche (non conteggiate sopra)',
+    'other_movement_with_refunds' => 'Commissioni, rimborsi e rettifiche (non conteggiate sopra)',
 ];

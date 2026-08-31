@@ -6,11 +6,11 @@ namespace Modules\EmailScan\Public;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
-final class LoopbackRedirectUri
+final readonly class LoopbackRedirectUri
 {
-    private const DEFAULT_PORT = 8000;
+    private const int DEFAULT_PORT = 8000;
 
-    public function __construct(private readonly ConfigRepository $config) {}
+    public function __construct(private ConfigRepository $config) {}
 
     public function forProvider(string $provider, string $scheme = 'http'): string
     {

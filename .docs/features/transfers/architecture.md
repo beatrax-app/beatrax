@@ -53,13 +53,23 @@ What the module explicitly does NOT do:
   - `PairLookup::isPaired($txId, $user): bool` and
     `PairLookup::partnerId($txId, $user): ?int` — read the
     persisted `pair_transaction_id` for a row.
-  - `PairLookup::counterLegOnAccount($accountId, $amountMinor,
-    $types, $bookedAt, $windowDays, $currency, $unpairedOnly,
-    $excludeTransactionId, $order, $user): ?int` — the
-    counter-leg SEARCH, for a caller holding the far side's
+  - `PairLookup::counterLegOnAccount($match, $window, $user): ?int`
+    — the counter-leg SEARCH, for a caller holding the far side's
     account and amount rather than a paired row's id. Two
     callers: `Chains::PaypalFundingResolver`'s deterministic
     arm, and this module's own `TransferPairer` forward arm.
+  - `PairUnlinker` — implements [`Ledger`](../ledger/architecture.md)'s
+    `UnpairsTransferLegs`. What happens to the surviving half when
+    the other half is deleted: it stops being a transfer and
+    becomes plain income or expense. Called by `Ledger`'s
+    `DeleteTransaction` and by `Sync`'s merge replay.
+- **Support/**
+  - `CounterLegMatch` — what the far leg has to look like
+    (account, amount, types, currency, whether an existing pair
+    disqualifies it, which id to exclude).
+  - `CounterLegWindow` — where it may sit in time, and which of
+    several the caller wants.
+- **Enums/**
   - `CounterLegOrder` — which of several counter-legs wins.
     `NearestToCentre` for chain resolution, `EarliestBooked`
     for the pairer.
@@ -69,6 +79,11 @@ What the module explicitly does NOT do:
 - **Internal/Services/TransferPairer** — concrete
   `PairsTransferLegs`. Deterministic matcher:
   - same user (every query filters on `$user->id`);
+  - the two legs sit on two DIFFERENT accounts — a transfer
+    crosses accounts, so the forward arm refuses a partner
+    account that resolved back to the one the firing leg is
+    already on, which the alias bridge does whenever that leg
+    sits on the lowest-id account of the aliased kind;
   - amount equal-and-opposite, same currency;
   - `booked_at` within ±WINDOW_DAYS calendar days;
   - both legs typed `transfer_in` / `transfer_out`;
@@ -84,7 +99,10 @@ What the module explicitly does NOT do:
 - **Internal/Listeners/PairTransferCandidates** — listens for
   `Import::TransactionImported`; calls
   `TransferPairer::pairOne()` per row inside the import
-  transaction frame.
+  transaction frame. An event whose `user` does not match the
+  transaction's `user_id` raises
+  `Internal/Exceptions/MismatchedTransferUserException` rather
+  than pairing across a user boundary.
 
 ### Decrypt-then-match (encrypted `counterparty_iban`)
 
@@ -136,6 +154,14 @@ signal and the returned value is valid plaintext.
   same-day pair used to resolve on whichever index SQLite picked,
   which made the chosen leg an accident of the query planner.
 
+- `PairUnlinker::unpair($userId, $survivorId, $deletedType)` —
+  the surviving half of a deleted pair stops being a transfer.
+  Which way it goes is read off the SURVIVOR's own amount, not
+  off the deleted leg's type: the two legs do not always carry
+  opposite types (`Ingestion`'s `PaypalCsvEventTypeMap` types a
+  withdrawal `transfer_in` on both sides), and a survivor that
+  is no longer a transfer leg is left alone.
+
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.
 
@@ -148,12 +174,16 @@ Import::ConfirmImport persists transaction
   → dispatch TransactionImported($transactionId)
        → PairTransferCandidates::handle($event)
             → TransferPairer::pairOne($tx, $user)
-                 → forward arm: resolve the partner account, then
+                 → forward arm: resolve the partner account —
+                      never the firing leg's own — then
                       PairLookup::counterLegOnAccount(
-                        $partnerAccountId, -$amountMinor,
-                        [TransferOut, TransferIn], $bookedAt,
-                        WINDOW_DAYS, $currency, unpairedOnly: true,
-                        exclude: $tx->id, EarliestBooked, $user)
+                        new CounterLegMatch($partnerAccountId,
+                          -$amountMinor, [TransferOut, TransferIn],
+                          $currency, unpairedOnly: true,
+                          excludeTransactionId: $tx->id),
+                        new CounterLegWindow($bookedAt, WINDOW_DAYS,
+                          EarliestBooked),
+                        $user)
                  → reverse arm: SELECT the narrow candidate set,
                       then decrypt-and-match in PHP
                  → if match found:
@@ -180,16 +210,13 @@ Chains::PaypalFundingResolver deterministic arm
   → for each unfunded PayPal transfer_out / expense:
        → read the destination IBAN out of the stored PayPal event
        → resolve it to one of the user's accounts
-       → PairLookup::counterLegOnAccount($accountId,
-                                         -$amountMinor,
-                                         [TransferIn],
-                                         $bookedAt,
-                                         DATE_WINDOW_DAYS,
-                                         currency: null,
-                                         unpairedOnly: false,
-                                         exclude: null,
-                                         NearestToCentre,
-                                         $user)
+       → PairLookup::counterLegOnAccount(
+             new CounterLegMatch($accountId, -$amountMinor,
+               [TransferIn], currency: null,
+               unpairedOnly: false, excludeTransactionId: null),
+             new CounterLegWindow($bookedAt, CounterLegWindow::DEFAULT_DAYS,
+               NearestToCentre),
+             $user)
        → write chain_links row
 ```
 

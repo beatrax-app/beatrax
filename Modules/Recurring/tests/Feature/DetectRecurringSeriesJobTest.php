@@ -453,11 +453,11 @@ it('respects the per-user recurring_detection_window_months when filtering trans
     $this->user->save();
 
     // Starts 2023-01, over three years before the pinned now — outside 18.
-    $oldStart = CarbonImmutable::parse('2024-01-15')->subMonths(12);
+    $oldStart = CarbonImmutable::parse('2024-01-15')->subMonthsNoOverflow(12);
     for ($i = 0; $i < 3; $i++) {
         drsjSeedTx(
             $this->db, $this->user, $this->account, $this->run,
-            $oldStart->addMonths($i)->toDateString(),
+            $oldStart->addMonthsNoOverflow($i)->toDateString(),
             -999, 'EUR', -999, 'EUR',
             'old-spotify', 'expense', 100 + $i, 'old-'.$i,
         );
@@ -467,7 +467,7 @@ it('respects the per-user recurring_detection_window_months when filtering trans
     for ($i = 0; $i < 3; $i++) {
         drsjSeedTx(
             $this->db, $this->user, $this->account, $this->run,
-            $newStart->addMonths($i)->toDateString(),
+            $newStart->addMonthsNoOverflow($i)->toDateString(),
             -1099, 'EUR', -1099, 'EUR',
             'new-spotify', 'expense', 200 + $i, 'new-'.$i,
         );
@@ -524,3 +524,84 @@ it('DetectRecurringSeriesJob is ShouldBeUniqueUntilProcessing and locks via the 
     expect($contents)->toContain('ShouldBeUniqueUntilProcessing');
     expect($contents)->toContain('LockStore::forUniqueJobs()');
 })->group('job-shape');
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function drsjSnoozedSeries(User $user, string $name, array $overrides = []): RecurringSeries
+{
+    return RecurringSeries::query()->create(array_merge([
+        'user_id' => $user->id,
+        'direction' => 'expense',
+        'detected_name' => $name,
+        'state' => 'snoozed',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -999,
+        'latest_currency' => 'EUR',
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'expense::'.$name.'::eur::monthly',
+        'cluster_counterparty_key' => $name,
+        'snoozed_until' => '2026-05-17 11:00:00',
+    ], $overrides));
+}
+
+function drsjRunExpiry(User $user): void
+{
+    $app = app();
+    /** @var Clock $clock */
+    $clock = $app->make(Clock::class);
+    /** @var RecurringSeriesStateMachine $machine */
+    $machine = $app->make(RecurringSeriesStateMachine::class);
+    /** @var DatabaseManager $db */
+    $db = $app->make(DatabaseManager::class);
+
+    (new DetectRecurringSeriesJob($user->id))->handle($db, $clock, [], $machine);
+}
+
+// dispatchSync bypasses the uniqueness lock, so two sweeps overlap on the
+// request path. The row the loser reads as snoozed has already moved, and an
+// uncaught guard refusal took the rest of the batch down with it.
+it('expires the rest of the batch when one snoozed row moved out from under the sweep', function (): void {
+    $first = drsjSnoozedSeries($this->user, 'snooze-a');
+    $second = drsjSnoozedSeries($this->user, 'snooze-b');
+
+    $hijacked = false;
+    $this->db->connection()->listen(function ($query) use (&$hijacked): void {
+        if ($hijacked || ! str_contains($query->sql, 'update "recurring_series"')) {
+            return;
+        }
+        $hijacked = true;
+        $this->db->connection()->table('recurring_series')
+            ->where('state', 'snoozed')
+            ->update(['state' => 'approved']);
+    });
+
+    drsjRunExpiry($this->user);
+
+    $states = RecurringSeries::query()
+        ->whereIn('id', [$first->id, $second->id])
+        ->pluck('state', 'id')
+        ->all();
+
+    expect(array_count_values($states)['pending'] ?? 0)->toBe(1);
+    expect(array_count_values($states)['approved'] ?? 0)->toBe(1);
+})->group('snooze-expiry');
+
+it('expires the rest of the batch when one snoozed row was deleted under the sweep', function (): void {
+    $first = drsjSnoozedSeries($this->user, 'snooze-c');
+    $second = drsjSnoozedSeries($this->user, 'snooze-d');
+
+    $hijacked = false;
+    $this->db->connection()->listen(function ($query) use (&$hijacked): void {
+        if ($hijacked || ! str_contains($query->sql, 'update "recurring_series"')) {
+            return;
+        }
+        $hijacked = true;
+        $this->db->connection()->table('recurring_series')->where('state', 'snoozed')->delete();
+    });
+
+    drsjRunExpiry($this->user);
+
+    expect(RecurringSeries::query()->whereIn('id', [$first->id, $second->id])->pluck('state')->all())
+        ->toBe(['pending']);
+})->group('snooze-expiry');

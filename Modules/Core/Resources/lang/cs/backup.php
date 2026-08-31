@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'download' => [
-        'no_download_route' => 'Tento telefon neumí uložit soubor, který mu aplikace předá, proto se šifrovaná záloha vytváří v desktopové aplikaci. Spárujte toto zařízení, aby zůstala synchronizovaná.',
+        'no_download_route' => 'Tato aplikace nedokáže předat soubor tvému zařízení, takže se zašifrovaná záloha vytváří v aplikaci pro počítač. Spárujte toto zařízení, aby zůstala synchronizovaná.',
         'unavailable' => 'Šifrované zálohy jsou dostupné v desktopové verzi (SQLite). U databáze na serveru použij zálohovací nástroje samotné databáze.',
         'intro' => 'Stáhni si kopii celé své databáze zašifrovanou přístupovou frází — bezpečně ji uložíš na externí disk nebo do cloudu, protože bez fráze je nečitelná (kvantově odolné XChaCha20-Poly1305 + Argon2id).',
         'passphrase' => 'Přístupová fráze',
@@ -39,5 +39,11 @@ return [
         'upload_failed' => 'Soubor se nepodařilo celý nahrát. Možná je pro toto zařízení příliš velký — obnovení v desktopové aplikaci přijme větší zálohu.',
         'enter_passphrase' => 'Zadej přístupovou frázi, kterou byla záloha zašifrovaná.',
         'unreadable' => 'Nahraný soubor se nepodařilo přečíst. Zkus to znovu.',
+        'restore_wrong_passphrase' => 'Tato přístupová fráze tuto zálohu neotevřela a nic se nezměnilo. Napiš ji znovu a zkus to ještě jednou. Pokud je určitě správná, soubor byl po vytvoření změněn — obnov tedy z jiné kopie.',
+        'restore_not_a_backup' => 'Tento soubor není šifrovaná záloha Beatrax, takže není co obnovovat a nic se nezměnilo. Vyber soubor .enc, který aplikace zapsala při vytváření zálohy.',
+        'restore_contents_unreadable' => 'Záloha se otevřela, ale databáze uvnitř je poškozená, takže se neobnovila a nic se nezměnilo. Obnov ze starší zálohy.',
+        'restore_could_not_read' => 'Soubor zálohy se nepodařilo přečíst, takže obnova neproběhla a nic se nezměnilo. Zkontroluj, že má zařízení volné místo, a zkus to znovu.',
+        'restore_not_supported' => 'Obnova funguje ve verzi, která drží data v jediném souboru, a tato jí není, takže se nic nezměnilo. U serverové databáze použij její vlastní nástroje obnovy.',
+        'restore_failed' => 'Obnova neproběhla a nic se nezměnilo. Zkus to znovu — pokud selhává dál, protokol aplikace zaznamenává, co ji zastavilo.',
     ],
 ];

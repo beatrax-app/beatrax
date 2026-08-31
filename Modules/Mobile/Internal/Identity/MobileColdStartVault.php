@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Contracts\ColdStartVault;
-use Modules\Auth\Public\Services\MobileLockGateway;
+use Modules\Auth\Public\Services\ColdStartEnrolmentFlag;
 
 // Presents the enclave-gated key vault through the shared ColdStartVault
 // contract, so the lock screen asks one question on every platform instead
@@ -17,7 +17,7 @@ final readonly class MobileColdStartVault implements ColdStartVault
 {
     public function __construct(
         private BiometricKeyVault $vault,
-        private MobileLockGateway $gateway,
+        private ColdStartEnrolmentFlag $enrolment,
     ) {}
 
     public function isAvailable(): bool
@@ -29,14 +29,14 @@ final readonly class MobileColdStartVault implements ColdStartVault
     // itself would fire the biometric prompt just to render a button.
     public function isEnrolled(int $userId): bool
     {
-        return $this->gateway->isColdStartEnrolled($userId);
+        return $this->enrolment->isEnrolled($userId);
     }
 
     public function enroll(int $userId, string $dataKey): bool
     {
-        $enrolled = $this->vault->enroll($dataKey);
+        $enrolled = $this->vault->enroll($userId, $dataKey);
 
-        $this->gateway->markColdStartEnrolled($userId, $enrolled);
+        $this->enrolment->mark($userId, $enrolled);
 
         return $enrolled;
     }
@@ -45,14 +45,14 @@ final readonly class MobileColdStartVault implements ColdStartVault
     // own — never fire a second prompt around it.
     public function recover(int $userId, string $reason): ?string
     {
-        $result = $this->vault->recover($reason);
+        $result = $this->vault->recover($userId, $reason);
 
         return $result->isRecovered() ? $result->dataKey : null;
     }
 
     public function forget(int $userId): void
     {
-        $this->vault->clear();
-        $this->gateway->markColdStartEnrolled($userId, false);
+        $this->vault->clear($userId);
+        $this->enrolment->mark($userId, false);
     }
 }

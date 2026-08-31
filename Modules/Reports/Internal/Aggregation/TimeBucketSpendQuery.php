@@ -13,14 +13,14 @@ use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 use stdClass;
 
-final class TimeBucketSpendQuery
+final readonly class TimeBucketSpendQuery
 {
     use CoercesScalars;
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly TimeBucketGenerator $timeBucketGenerator,
-        private readonly SpendFilterApplier $filterApplier,
+        private DatabaseManager $db,
+        private TimeBucketGenerator $timeBucketGenerator,
+        private SpendFilterApplier $filterApplier,
     ) {}
 
     /**

@@ -1,10 +1,10 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
-{{-- `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B). --}}
+@use('Modules\OpenBanking\Internal\Enums\ConsentStatus')
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="open-banking-settings-page">
-    <a href="{{ Destination::Settings->url() }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
+    <a href="{{ Destination::Settings->url() }}" class="tap-link text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
 
     <header class="space-y-1">
         <x-core::page-heading level="section">{{ Lang::get('openbanking::messages.page.heading') }}</x-core::page-heading>
@@ -21,7 +21,6 @@
         >{{ $flashMessage }}</x-core::alert>
     @endif
 
-    {{-- ===== B1: header + toggle ===== --}}
     <x-core::card>
         <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
@@ -43,9 +42,9 @@
         </div>
     </x-core::card>
 
-    {{-- ===== Re-confirm CTA — the SCA dance completed but the
-         acknowledgement TTL lapsed before mount() could finalize the
-         enable. Surface a visible re-confirm instead of a silent no-op. ===== --}}
+    {{-- The SCA dance completed but the acknowledgement TTL lapsed before
+         mount() could finalize the enable, which would otherwise be a silent
+         no-op the reader has no way to understand or undo. --}}
     @if ($needsReconfirm)
         <x-core::alert
             tone="warning"
@@ -63,17 +62,14 @@
         </x-core::alert>
     @endif
 
-    {{-- ===== B5: consent-expiry banner — rendered above the
-         transparency panel when consent has expired ===== --}}
+    {{-- Above the transparency panel, not inside it: an expired consent is a
+         thing to act on, and the panel below is a thing to read. --}}
     @include('openbanking::partials.open-banking-consent-banner')
 
-    {{-- ===== B4: transparency panel ===== --}}
     @include('openbanking::partials.open-banking-transparency-panel')
 
-    {{-- ===== B6: scheduled auto-sync + manual sync — only ever
-         rendered while OB is enabled; hidden entirely when off, per
-         UI-SPEC's Copywriting Contract ("Sync-now disabled caption (OB
-         off) | (button hidden entirely)") ===== --}}
+    {{-- Hidden entirely while open banking is off, rather than shown disabled:
+         there is nothing to sync and nothing for a caption to explain. --}}
     @if ($enabled)
         <div class="space-y-2" data-testid="open-banking-sync-now">
             @if ($syncFlashMessage !== '')
@@ -99,7 +95,11 @@
                     data-testid="ob-sync-flash"
                 >
                     {{ $syncFlashMessage }}
-                    @if ($syncFlashTone === 'success' && $syncReviewImportRunId !== null)
+                    {{-- Keyed on the id alone. Gated on the success tone as
+                         well, the link was unreachable from the two flashes
+                         that most need it: a truncated walk and a run that
+                         filed none of its rows. --}}
+                    @if ($syncReviewImportRunId !== null)
                         <a
                             href="{{ route('imports.preview', ['id' => $syncReviewImportRunId]) }}"
                             class="ml-1 font-medium underline"
@@ -109,15 +109,16 @@
                 </x-core::alert>
             @endif
 
+            @php($needsReconnect = ConsentStatus::from($consentStatus)->needsReconnect())
             <div class="flex items-center justify-between gap-3">
-                @if ($consentStatus === 'expired')
+                @if ($needsReconnect)
                     <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ob-sync-now-disabled-caption">{{ Lang::get('openbanking::messages.sync.reconnect_first') }}</p>
                 @else
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.sync.auto_caption') }}</p>
                 @endif
                 <x-core::neutral-button
                     class="min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="$consentStatus === 'expired'"
+                    :disabled="$needsReconnect"
                     wire:click="syncNow"
                     wire:loading.attr="disabled"
                     wire:target="syncNow"
@@ -130,15 +131,15 @@
         </div>
     @endif
 
-    {{-- ===== B7: guided ICS file-import affordance — always
-         visible regardless of OB state, visually separated from the OB
-         cards above by its own section label ===== --}}
+    {{-- Visible regardless of open-banking state — it stores no credentials
+         and needs no consent — so it carries its own section label to keep it
+         from reading as part of the connector above. --}}
     @include('openbanking::partials.open-banking-ics-import-card')
 
     @include('openbanking::partials.open-banking-warning-modal')
 
-    {{-- ===== Disconnect confirm — shared by the ON->OFF toggle click and
-         the B4 transparency panel's "Disconnect" button ===== --}}
+    {{-- One confirm for both entry points: the on-to-off toggle click and the
+         transparency panel's own Disconnect button. --}}
     @if ($showDisconnectModal)
         <flux:modal wire:model="showDisconnectModal" class="md:max-w-sm" data-testid="open-banking-disconnect-modal">
             <div class="space-y-4 p-6">

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Budgets\Models\CategoryBudget;
+use Modules\Budgets\Models\EnvelopeAssignment;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -47,7 +47,6 @@ it('saves entered amounts as month-1 envelope assignments and advances the wizar
         'assigned_minor' => 5000,
         'period_start' => $period->start->toDateString(),
     ]);
-    $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
 });
 
 it('advances without saving anything on skip', function (): void {
@@ -64,7 +63,7 @@ it('advances on continue even when no amounts were entered', function (): void {
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    expect(CategoryBudget::query()->count())->toBe(0);
+    expect(EnvelopeAssignment::query()->count())->toBe(0);
 });
 
 it('ignores a foreign / non-budgetable category id on continue', function (): void {

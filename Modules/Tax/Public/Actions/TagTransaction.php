@@ -11,27 +11,29 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Tax\Internal\Support\TaxYearBounds;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @link ../../../../.docs/features/tax/tag-write-contract.md
  */
-final class TagTransaction
+final readonly class TagTransaction
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
-        private readonly Clock $clock,
-        private readonly FieldProvenanceWriter $provenance,
-        private readonly SensitiveColumnCodec $codec,
+        private DatabaseManager $db,
+        private Dispatcher $events,
+        private Clock $clock,
+        private FieldProvenanceWriter $provenance,
+        private SensitiveColumnCodec $codec,
         // A factory, not the session: resolving a session builds the encrypter,
         // and Artisan constructs this class merely to list a console command.
-        private readonly SessionFactory $session,
-        private readonly ?SearchIndexWriterContract $searchIndex = null,
+        private SessionFactory $session,
+        private ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
     /**
@@ -48,14 +50,21 @@ final class TagTransaction
         ?int $transactionSplitId = null,
         string $provenanceSource = 'manual',
     ): void {
-        $txExists = $this->db->connection()
+        $txRow = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)
-            ->exists();
+            ->first(['status']);
 
-        if (! $txExists) {
+        if ($txRow === null) {
             throw new NotFoundHttpException('Transaction not found.');
+        }
+
+        // The rule engine, a bulk tag and a replay all reach this action
+        // without passing the page's own lock, and a tag is exactly the
+        // classification a reconcile froze.
+        if (TransactionStatusQuery::locksEdits($txRow->status)) {
+            return;
         }
 
         // Leg-ownership guard: a forged transactionSplitId could otherwise
@@ -87,13 +96,10 @@ final class TagTransaction
             }
         }
 
-        if ($taxYearOverride !== null) {
-            $currentYear = $this->clock->now()->year;
-            if ($taxYearOverride < $currentYear - 10 || $taxYearOverride > $currentYear + 10) {
-                throw new \InvalidArgumentException(
-                    "tax_year_override {$taxYearOverride} is outside the allowed range (current year ±10).",
-                );
-            }
+        if ($taxYearOverride !== null && ! TaxYearBounds::contains($taxYearOverride, $this->clock->now()->year)) {
+            throw new \InvalidArgumentException(
+                "tax_year_override {$taxYearOverride} is outside the allowed range (current year ±".TaxYearBounds::SPAN_YEARS.').',
+            );
         }
 
         // A bare where('transaction_split_id', null) does not reliably compile

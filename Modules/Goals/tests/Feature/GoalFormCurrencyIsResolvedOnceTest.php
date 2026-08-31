@@ -36,8 +36,8 @@ $gfcGoal = static function (User $user, string $name, string $currency, string $
         'name' => $name,
         'target_minor' => 250000,
         'target_currency' => $currency,
-        'start_date' => now()->subMonths(2)->toDateString(),
-        'target_date' => now()->addYear()->toDateString(),
+        'start_date' => now()->subMonthsNoOverflow(2)->toDateString(),
+        'target_date' => now()->addYearNoOverflow()->toDateString(),
         'status' => $status,
         'created_at' => now(),
         'updated_at' => now(),
@@ -62,7 +62,7 @@ it('labels both copies of the form with the edited goal s own currency', functio
     $user = $gfcUser('gfc-editing');
     $goalId = $gfcGoal($user, 'Dollar goal', 'USD');
 
-    $html = (string) Livewire::actingAs($user)->test(GoalsPage::class)->set('editGoalId', $goalId)->html();
+    $html = (string) Livewire::actingAs($user)->test(GoalsPage::class, ['editGoalId' => $goalId])->html();
 
     expect(substr_count($html, 'Target amount (USD)'))->toBe(2)
         ->and($html)->not->toContain('Target amount (EUR)');
@@ -72,7 +72,7 @@ it('falls back to the base currency when the edited id is on no listed goal', fu
     $user = $gfcUser('gfc-archived');
     $archivedId = $gfcGoal($user, 'Archived dollar goal', 'USD', 'archived');
 
-    $html = (string) Livewire::actingAs($user)->test(GoalsPage::class)->set('editGoalId', $archivedId)->html();
+    $html = (string) Livewire::actingAs($user)->test(GoalsPage::class, ['editGoalId' => $archivedId])->html();
 
     expect(substr_count($html, 'Target amount (EUR)'))->toBe(2)
         ->and($html)->not->toContain('Target amount (USD)');

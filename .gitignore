@@ -16,6 +16,8 @@
 /storage/app/public
 /storage/app/dev_mode
 /storage/app/inbox
+/storage/app/inbox-drop
+/storage/app/mobile
 /storage/app/backups
 /storage/app/sync
 /storage/app/secrets

@@ -19,6 +19,8 @@ return [
 
     'enter_heading' => 'Saisis le code',
     'camera_off' => 'L\'accès à la caméra est désactivé. Saisis plutôt le code de l\'autre appareil.',
+    'camera_off_no_search' => 'L’accès à la caméra est désactivé, et chercher l’autre appareil sur le réseau ne fonctionne pas encore sur iPhone — un code saisi n’a donc rien pour le trouver. Réactive l’accès à la caméra pour Beatrax dans les paramètres de ton appareil, puis scanne le code affiché sur l’autre appareil.',
+    'no_search' => 'Chercher l’autre appareil sur le réseau ne fonctionne pas encore sur iPhone, donc un code saisi n’a rien à trouver. Scanne plutôt le code avec la caméra — la caméra n’a pas besoin de chercher sur le réseau.',
     'word_code_aria' => 'Saisis le code en mots affiché sur l\'autre appareil',
     'submit_code' => 'Envoyer le code',
     'cancel' => 'Annuler',
@@ -36,10 +38,13 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Impossible de joindre l\'autre appareil. Vérifie que les deux sont sur le même réseau et que la synchronisation est activée sur l\'ordinateur.',
+        'no_road_home' => 'Cet appareil ne peut pas parcourir le réseau, et le code scanné ne contient aucune adresse pour joindre l\'autre appareil. Demande-lui d\'afficher un nouveau code, puis scanne celui-là.',
         'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
+        'code_incomplete' => 'Ce code n\'est pas complet. Compare-le avec l\'autre appareil et saisis-le en entier.',
         'code_not_accepted' => 'Aucun appareil de ce réseau n’a accepté ce code. Vérifie le code et que l’autre appareil l’affiche toujours.',
         'no_peer_answered' => 'Rien sur ce réseau n’a répondu à ce code. Vérifie que la synchronisation tourne sur l’autre appareil, ou scanne son code avec l’appareil photo — celui-ci n’a pas besoin de chercher sur le réseau.',
         'no_peer_answered_ios' => 'Rien sur ce réseau n’a répondu à ce code. Chercher l’autre appareil sur le réseau ne fonctionne pas encore sur iPhone : scanne plutôt son code avec l’appareil photo.',
+        'no_peer_answered_camera_off' => 'Rien sur ce réseau n’a répondu à ce code. Chercher l’autre appareil sur le réseau ne fonctionne pas encore sur iPhone, et l’accès à la caméra est désactivé : réactive l’accès à la caméra pour Beatrax dans les paramètres de ton appareil, puis scanne le code affiché sur l’autre appareil.',
         'rate_limited' => 'Trop de tentatives. Attends une minute et réessaie.',
         'identity_locked' => 'L\'identité de ton appareil est verrouillée. Déverrouille l\'application et réessaie.',
         'identity_needs_lock' => 'Configurez d\'abord le verrouillage de l\'application — il protège l\'identité de votre appareil.',

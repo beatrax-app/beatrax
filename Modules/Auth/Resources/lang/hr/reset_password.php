@@ -20,4 +20,5 @@ return [
 
     'error_min_length' => 'Upotrijebi barem 12 znakova.',
     'error_wrong_code' => 'To korisničko ime i kod za oporavak se ne podudaraju. Pažljivo provjeri kod — sva su slova velika, bez nule, bez slova O, bez jedinice, bez slova L.',
+    'error_throttled' => 'Previše pokušaja — pokušaj ponovno za :wait.',
 ];

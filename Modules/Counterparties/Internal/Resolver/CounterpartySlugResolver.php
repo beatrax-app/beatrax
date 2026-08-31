@@ -49,11 +49,14 @@ final readonly class CounterpartySlugResolver
         private SessionFactory $session,
     ) {}
 
-    public function resolveUnique(int $userId, string $displayName): string
+    // $ownedBy is the row being renamed. An import has no row yet and asks by
+    // name; a rename does, and two rows may legitimately carry the same name,
+    // so answering by name there would move one row onto another's slug.
+    public function resolveUnique(int $userId, string $displayName, ?int $ownedBy = null): string
     {
         return UniqueSlug::walk(
             self::slugify($displayName),
-            fn (string $slug): bool => $this->slugIsFreeFor($userId, $slug, $displayName),
+            fn (string $slug): bool => $this->slugIsFreeFor($userId, $slug, $displayName, $ownedBy),
         );
     }
 
@@ -61,16 +64,27 @@ final readonly class CounterpartySlugResolver
     // stored name is decrypted before comparing: a raw ciphertext comparison
     // treats every re-import as a different holder and fragments one merchant
     // across bol, bol-2, bol-3 forever.
-    private function slugIsFreeFor(int $userId, string $slug, string $displayName): bool
+    private function slugIsFreeFor(int $userId, string $slug, string $displayName, ?int $ownedBy): bool
     {
         $existing = $this->db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)
             ->where('slug', $slug)
-            ->value('display_name');
+            ->first(['id', 'display_name']);
 
-        return $existing === null
-            || (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName);
+        if ($existing === null) {
+            return true;
+        }
+
+        if ($ownedBy !== null) {
+            $holderId = $existing->id ?? null;
+
+            return is_numeric($holderId) && (int) $holderId === $ownedBy;
+        }
+
+        $storedName = $existing->display_name ?? null;
+
+        return is_string($storedName) && $this->decryptDisplayName($storedName, $userId) === $displayName;
     }
 
     // Never throws: an undecryptable value comes back as raw ciphertext,

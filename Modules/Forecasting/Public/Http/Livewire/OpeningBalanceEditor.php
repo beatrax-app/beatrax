@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
@@ -23,6 +24,10 @@ final class OpeningBalanceEditor extends Component
 {
     use DispatchesToast;
 
+    // Locked: mount() checks this id against the reader's own accounts, and
+    // every save writes to whatever it holds afterwards. Unlocked, the checked
+    // id and the written id were allowed to be different accounts.
+    #[Locked]
     public int $accountId = 0;
 
     public string $accountName = '';
@@ -33,6 +38,10 @@ final class OpeningBalanceEditor extends Component
 
     public ?string $currentAsOfDate = null;
 
+    // Locked: the account's own denomination, and parseInputToMinor() reads
+    // the typed figure at its scale. Unlocked, a payload naming JPY made
+    // "150" on a EUR account persist as 150 minor rather than 15000.
+    #[Locked]
     public string $currency = Currency::Eur->value;
 
     public string $openingInput = '';
@@ -79,7 +88,7 @@ final class OpeningBalanceEditor extends Component
         $this->currency = $currency;
 
         $this->openingInput = $currentOpeningMinor !== null
-            ? MoneyInput::formatMinor($currentOpeningMinor)
+            ? MoneyInput::formatMinor($currentOpeningMinor, $currency)
             : '';
         $this->asOfInput = $currentAsOfDate ?? '';
     }
@@ -176,7 +185,7 @@ final class OpeningBalanceEditor extends Component
         if ($this->beatraxsNumberMinor === null) {
             return;
         }
-        $this->openingInput = MoneyInput::formatMinor($this->beatraxsNumberMinor);
+        $this->openingInput = MoneyInput::formatMinor($this->beatraxsNumberMinor, $this->currency);
         $this->showingDivergenceBanner = false;
         $this->divergenceDiffMinor = null;
         $this->errorMessage = null;
@@ -207,7 +216,7 @@ final class OpeningBalanceEditor extends Component
         }
 
         try {
-            return AmountStringParser::toMinor($input);
+            return AmountStringParser::toMinor($input, $this->currency);
         } catch (InvalidArgumentException) {
             return false;
         }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Upozornění na odchylky',
-    'heading' => 'Upozornění',
     'intro_anomaly' => 'Jednotlivé platby, které u tebe vypadají neobvykle.',
     'intro_drift' => 'Schválené opakované série, jejichž poslední platba vybočila z tvého prahu.',
     'adjust_threshold' => 'Upravit práh →',
@@ -53,7 +52,7 @@ return [
         'per_year' => '/rok',
         'meta_prior_now' => 'dřív :prior → teď :now',
         'meta_detected' => 'zjištěno :date',
-        'meta_threshold' => 'práh ±:percent%',
+        'meta_threshold' => 'práh ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/rok)',
         'cancel_impact' => 'Zrušit → úspora :amount/rok',
         'cadence_flipped' => 'Změna frekvence — zobrazuje se také v',
@@ -71,6 +70,7 @@ return [
     ],
 
     'toasts' => [
+        'gone' => 'Toto upozornění už neexistuje.',
         'acknowledged' => 'Potvrzeno',
         'snoozed' => 'Odloženo',
         'dismissed' => 'Zamítnuto',

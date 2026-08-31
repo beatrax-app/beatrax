@@ -80,8 +80,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Auth/Public/Actions/ResetPasswordAction.php',
         'Modules/Budgets/Public/Dto/EnvelopeMoveRow.php',
         'Modules/Budgets/Public/Dto/EnvelopeRow.php',
+        // The declared type of EnvelopeMoveRow::$kind. That DTO is Public and
+        // a Public class may not expose an Internal type, so the enum lives
+        // here even though the vocabulary is read and written inside Budgets.
+        'Modules/Budgets/Public/Enums/EnvelopeMoveKind.php',
         'Modules/Budgets/Public/Enums/OverspendMode.php',
-        'Modules/Budgets/Public/Services/BudgetWriter.php',
         'Modules/Budgets/Public/Services/EnvelopeBalanceQuery.php',
         'Modules/Categorization/Public/Actions/Concerns/NormalisesRuleInput.php',
         'Modules/Categorization/Public/Actions/DeleteCategorizationRule.php',
@@ -190,9 +193,10 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/EmailScan/Public/Services/OAuthSecretsRepository.php',
         'Modules/EmailScan/Public/Services/SecretsWriteFailed.php',
         'Modules/FX/Public/Contracts/RateProvider.php',
+        // Returned by FxRefreshStatus::lastFailure(), which Shell's settings
+        // page calls to say why a refresh gave up.
+        'Modules/FX/Public/Dto/FxRefreshFailure.php',
         'Modules/FX/Public/Exceptions/RateFetchException.php',
-        'Modules/Forecasting/Public/Actions/CreateAmountChangeScenarioForSeries.php',
-        'Modules/Forecasting/Public/Actions/CreateCancellationScenarioForSeries.php',
         'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php',
         'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php',
         'Modules/Forecasting/Public/Dto/AccountBalanceLine.php',
@@ -212,9 +216,17 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Forecasting/Public/Events/ScenarioMutated.php',
         'Modules/Goals/Public/Dto/GoalAttributionRow.php',
         'Modules/Goals/Public/Dto/GoalProgressRow.php',
+        // The vocabulary of GoalProgressRow::$progressState, which is a Public
+        // DTO field: a reader outside Goals has to be able to name the values
+        // it compares against.
+        'Modules/Goals/Public/Enums/GoalProgressState.php',
         'Modules/Goals/Public/Enums/GoalStatus.php',
         'Modules/Goals/Public/Exceptions/GoalNotFoundException.php',
         'Modules/Goals/Public/Exceptions/InvalidGoalAmountException.php',
+        'Modules/Goals/Public/Exceptions/InvalidGoalNameException.php',
+        // The documented @throws of GoalWriter::save()/update(), which is
+        // Public: a caller outside Goals has to be able to catch it by type.
+        'Modules/Goals/Public/Exceptions/InvalidGoalTargetDateException.php',
         'Modules/Goals/Public/Services/GoalProgressQuery.php',
         'Modules/Goals/Public/Services/GoalProjectionService.php',
         'Modules/Import/Public/Actions/ConfirmImport.php',
@@ -241,13 +253,29 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Import/Public/Services/SourceRefRanker.php',
         'Modules/Ingestion/Public/Contracts/SourceAdapter.php',
         'Modules/Ingestion/Public/Dto/CsvPreset.php',
+        // The declared return of CsvPresetRegistry::positional() and
+        // ::allPositional(). The upload wizard and both onboarding connector
+        // steps call those to render the CSV-layout picker, reading ->format
+        // and ->label off the result without ever naming the type.
+        'Modules/Ingestion/Public/Dto/PositionalCsvPreset.php',
         'Modules/Ingestion/Public/Dto/SniffResult.php',
         'Modules/Ingestion/Public/Exceptions/UnsupportedFormatException.php',
+        // The declared return of PaypalCsvEventTypeMap::classify(), which is
+        // Public. Import's ClassifyTransactionType holds the map but only ever
+        // calls transactionType(), so the enum is named nowhere outside here.
+        'Modules/Ingestion/Public/Paypal/PaypalEventAction.php',
         'Modules/Ingestion/Public/Services/CsvPresetRegistry.php',
         'Modules/Ingestion/Public/Services/HeaderSniffer.php',
+        // The four write actions behind Ledger's Public contracts. Their
+        // callers name the contract, never the action.
+        'Modules/Ledger/Public/Actions/DeleteTransaction.php',
         'Modules/Ledger/Public/Actions/ReassignCounterparty.php',
         'Modules/Ledger/Public/Actions/SetTransactionNote.php',
         'Modules/Ledger/Public/Actions/UpdateTransactionCategory.php',
+        // Public alongside its four sibling mutator contracts, which is where a
+        // neighbour needing to delete a transaction would look; today only the
+        // detail page inside Ledger names it.
+        'Modules/Ledger/Public/Contracts/DeletesTransaction.php',
         'Modules/Ledger/Public/Dto/CategoryDelta.php',
         'Modules/Ledger/Public/Dto/PeriodResolution.php',
         'Modules/Ledger/Public/Dto/RecordResult.php',
@@ -268,15 +296,33 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Notifications/Public/Dto/DeliveryDecision.php',
         'Modules/Notifications/Public/Dto/NotificationDto.php',
         'Modules/Notifications/Public/Dto/NotificationPreferencesDto.php',
-        'Modules/Notifications/Public/Enums/DigestCadence.php',
         'Modules/Notifications/Public/Enums/NotificationState.php',
         'Modules/Notifications/Public/NotificationCopy.php',
+        // The type NotificationsSettingsSection names in its mount(), save()
+        // and render() signatures. That component is mounted by alias from
+        // Shell's settings page, so the consumer is real and outside this
+        // scan — a Blade mount never names the types the component injects.
+        'Modules/Notifications/Public/Services/NotificationPreferenceQuery.php',
         'Modules/Notifications/Public/Services/NotificationQuery.php',
         'Modules/Pots/Public/Dto/PotMovementRow.php',
         'Modules/Pots/Public/Dto/PotRow.php',
         'Modules/Pots/Public/Dto/ReconciliationRow.php',
+        // The declared type of PotMovementRow::$kind, a Public DTO field.
+        'Modules/Pots/Public/Enums/PotMovementKind.php',
         'Modules/Pots/Public/Enums/PotStatus.php',
         'Modules/Pots/Public/Exceptions/InsufficientUnallocatedException.php',
+        // Documented @throws of PotWriter, which is Public and whose
+        // transfer() Sync already calls. A caller outside Pots that wants to
+        // tell the refusals apart has to name them, so an Internal one would
+        // be a Public method throwing a type nobody is allowed to catch.
+        'Modules/Pots/Public/Exceptions/CrossAccountTransferException.php',
+        'Modules/Pots/Public/Exceptions/GoalAlreadyLinkedException.php',
+        'Modules/Pots/Public/Exceptions/InvalidPotAmountException.php',
+        'Modules/Pots/Public/Exceptions/SelfTransferException.php',
+        // Narrows the Public PotNotFoundException, which Goals catches. An
+        // Internal subclass would reach that catch under a name the catching
+        // module is not allowed to write.
+        'Modules/Pots/Public/Exceptions/TargetPotNotFoundException.php',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php',
         'Modules/Receipts/Public/Contracts/SenderMatcher.php',
         'Modules/Receipts/Public/Dto/MatchOutcomeDto.php',
@@ -301,7 +347,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Recurring/Public/Dto/RecurringSeriesAmountTrendDto.php',
         'Modules/Recurring/Public/Events/RecurringSeriesDetected.php',
         'Modules/Recurring/Public/Services/FixedPaymentsViewQuery.php',
-        'Modules/Search/Public/Dto/SearchResultPage.php',
         'Modules/Sync/Public/Services/ImportSyncCapture.php',
         'Modules/Sync/Public/Services/SyncStatusService.php',
         'Modules/Tax/Public/Dto/BatchTagSuggestion.php',
@@ -310,9 +355,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Tax/Public/Dto/TaxYearSummary.php',
         'Modules/Tax/Public/Events/TransactionTagged.php',
         'Modules/Tax/Public/Events/TransactionUntagged.php',
-        'Modules/Tax/Public/Services/TaxCsvExporter.php',
-        'Modules/Tax/Public/Services/TaxPdfRenderer.php',
-        'Modules/Tax/Public/Services/TaxYearQuery.php',
     ];
 
     $sources = publicSurfaceSources();

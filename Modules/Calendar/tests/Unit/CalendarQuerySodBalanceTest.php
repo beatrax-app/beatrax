@@ -183,10 +183,58 @@ it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null',
 
     expect(cqsbDay($days, '2026-06-20')->sodBalanceMinor)->toBe(30000);
 
-    // June 2026 starts on a Monday, so June 1 is the first grid day and has no
-    // prior day to chain from — while its own EoD is a real (zero) actual.
+    // June 2026 starts on a Monday, so June 1 is the first grid day. It has no
+    // prior grid day to chain from, but the aggregator already computed the
+    // balance the day opened on — that figure seeds the actuals overlay — so
+    // the panel states it rather than reporting a value it holds as unknown.
     $gridFirst = cqsbDay($days, '2026-06-01');
-    expect($gridFirst->sodBalanceMinor)->toBeNull();
+    expect($gridFirst->sodBalanceMinor)->toBe(0);
     expect($gridFirst->isComputing)->toBeFalse();
     expect($gridFirst->eodBalanceMinor)->toBe(0);
+});
+
+// The opening figure exists only where the actuals overlay reaches. A grid that
+// starts after today is projection all the way down, and a projection carries
+// points for its own days and no opening balance for the day before the first.
+it('still reports an unknown start of day on a grid the actuals overlay never reaches', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqsbUser('future-grid');
+    $accountId = cqsbAccount($db, $user->id);
+
+    cqsbTransaction($db, $user->id, $accountId, '2026-06-10', 50000);
+    cqsbForecastRun($db, $user->id, $accountId, 50000, ['2026-09-05' => 40000]);
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+    $days = $calendarQuery->forMonth($user, 2026, 9, null, [$accountId]);
+
+    expect($days[0]->date->toDateString())->toBe('2026-08-31')
+        ->and($days[0]->sodBalanceMinor)->toBeNull();
+});
+
+// A grid start the overlay does reach but cannot price is not a known opening
+// either: the figure it would state is the priced part of a partial line.
+it('keeps the first grid day unknown when its opening balance could not be priced', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqsbUser('unpriced-open');
+
+    $hex = bin2hex(random_bytes(4));
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $user->id,
+        'name' => 'CQSB Peso',
+        'slug' => 'cqsb-ars-'.$hex,
+        'kind' => 'bank',
+        'iban' => 'AR00CQSB'.strtoupper($hex),
+        'default_currency' => 'ARS',
+        'opening_balance_minor' => 1_000_000,
+        'opening_balance_as_of_date' => '2026-05-01',
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ]);
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+    $days = $calendarQuery->forMonth($user, 2026, 6, null, [$accountId]);
+
+    expect(cqsbDay($days, '2026-06-01')->sodBalanceMinor)->toBeNull();
 });

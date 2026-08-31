@@ -11,30 +11,33 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\OwnAccountPrompt;
+use Modules\Import\Internal\Services\RemoteFetchPath;
+use Modules\Import\Internal\Services\StandInAccountName;
 use Modules\Import\Public\Actions\DiscardImport;
+use Modules\Import\Public\Actions\EnsureGooglePlayAccountAction;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Services\AccountDenomination;
 use Modules\Import\Public\Services\AccountNamer;
-use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
-use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
@@ -62,11 +65,9 @@ final class PreviewWizard extends Component
 
     public string $paypalAccountName = '';
 
+    public string $googlePlayAccountName = '';
+
     public bool $previewExpired = false;
-
-    public ?JobRunStatus $chainResolutionStatus = null;
-
-    public int $chainResolutionLinkedCount = 0;
 
     public function mount(int $id, CurrentUser $currentUser): void
     {
@@ -99,42 +100,6 @@ final class PreviewWizard extends Component
         $cache->applyAliasInPlace($this->importRunId, $rowIndex, $friendlyName);
     }
 
-    // Never reintroduce a failed_jobs.payload LIKE '%userId:N%' lookup here:
-    // it leaks cross-user state, and WizardChainResolutionStatusTest greps
-    // this file to keep it out.
-    public function refreshChainResolutionStatus(
-        DatabaseManager $db,
-        CurrentUser $currentUser,
-        UrlGenerator $urls,
-    ): void {
-        $user = $currentUser->user();
-
-        $row = $db->connection()->table('chain_resolution_runs')
-            ->where('user_id', $user->id)
-            ->orderByDesc('id')
-            ->limit(1)
-            ->first(['status', 'linked_count']);
-
-        if ($row === null) {
-            $this->chainResolutionStatus = null;
-            $this->chainResolutionLinkedCount = 0;
-
-            return;
-        }
-
-        $this->chainResolutionStatus = is_scalar($row->status)
-            ? JobRunStatus::tryFrom((string) $row->status)
-            : null;
-        $this->chainResolutionLinkedCount = is_numeric($row->linked_count) ? (int) $row->linked_count : 0;
-
-        if ($this->chainResolutionStatus === JobRunStatus::Complete && $this->importRunId > 0) {
-            $this->redirect(
-                $urls->route('imports.results', ['id' => $this->importRunId]),
-                navigate: false,
-            );
-        }
-    }
-
     public function nameAccount(
         string $iban,
         string $name,
@@ -150,12 +115,11 @@ final class PreviewWizard extends Component
         $this->accountName = $name;
 
         // A crafted wire request naming an arbitrary IBAN is rejected before
-        // it reaches the namer, which user-scopes its writes anyway.
-        $preview = $cache->getPreview($this->importRunId);
-        $allowedIbans = $preview === null
-            ? []
-            : array_map(static fn ($unknown): string => $unknown->iban, $preview->accountsToName);
-        if (! in_array($iban, $allowedIbans, true)) {
+        // it reaches the namer, which user-scopes its writes anyway. The
+        // matched entry also carries the denomination, so that comes off the
+        // parsed file rather than off the wire.
+        $named = self::previewEntryFor($cache->getPreview($this->importRunId), $iban);
+        if (! $named instanceof UnknownIban) {
             $this->addError('accountName', Lang::get('import::preview.errors.iban_not_in_preview'));
 
             return;
@@ -164,26 +128,14 @@ final class PreviewWizard extends Component
         $user = $currentUser->user();
 
         try {
-            ($namer)($iban, $name, $user);
+            ($namer)($iban, $name, $user, $named->statementCurrency);
         } catch (InvalidAccountNameException $e) {
             $this->addError('accountName', $e->getMessage());
 
             return;
         }
 
-        /** @var ImportRun $importRun */
-        $importRun = ImportRun::query()
-            ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
-        $importer->runFromUpload(
-            $importRun->raw_file_path,
-            $importRun->source_format,
-            $user,
-            basename($importRun->raw_file_path),
-            $this->formatHintForReRun($importRun->source_format),
-        );
+        $this->reReadTheSource($importer, $user);
 
         $this->accountName = '';
     }
@@ -193,14 +145,14 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         OwnAccountPrompt $prompt,
         AccountSlugResolver $slugs,
-        BaseCurrency $baseCurrency,
+        AccountDenomination $denomination,
     ): void {
         $this->resetErrorBag('icsAccountName');
 
         // The same guard the prompt is drawn behind, on the write side: the
         // form is gone by the next render, and a submit already in flight
         // would otherwise still land the account.
-        if ($prompt->previewReadNothing($this->importRunId)) {
+        if ($prompt->hasNothingToName($this->importRunId, $currentUser)) {
             return;
         }
 
@@ -222,22 +174,12 @@ final class PreviewWizard extends Component
             'slug' => $slugs->resolveUnique($user->id, $trimmed),
             'kind' => AccountKind::IcsCard->value,
             'iban' => OwnAccountPrompt::ICS_OWN_IBAN,
-            'default_currency' => $baseCurrency->code(),
+            'default_currency' => $denomination->forStatement(
+                $prompt->statementCurrency($this->importRunId, $currentUser, OwnAccountPrompt::ICS_OWN_IBAN),
+            ),
         ]);
 
-        /** @var ImportRun $importRun */
-        $importRun = ImportRun::query()
-            ->where('id', $this->importRunId)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
-        $importer->runFromUpload(
-            $importRun->raw_file_path,
-            $importRun->source_format,
-            $user,
-            basename($importRun->raw_file_path),
-            $this->formatHintForReRun($importRun->source_format),
-        );
+        $this->reReadTheSource($importer, $user);
 
         $this->icsAccountName = '';
     }
@@ -250,7 +192,7 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('paypalAccountName');
 
-        if ($prompt->previewReadNothing($this->importRunId)) {
+        if ($prompt->hasNothingToName($this->importRunId, $currentUser)) {
             return;
         }
 
@@ -266,13 +208,65 @@ final class PreviewWizard extends Component
 
         $user = $currentUser->user();
 
-        ($ensurePaypal)($user, nameOverride: $trimmed);
+        ($ensurePaypal)(
+            $user,
+            nameOverride: $trimmed,
+            statementCurrency: $prompt->statementCurrency($this->importRunId, $currentUser, EnsurePaypalAccountAction::PAYPAL_OWN_IBAN),
+        );
 
+        $this->reReadTheSource($importer, $user);
+
+        $this->paypalAccountName = '';
+    }
+
+    public function saveGooglePlayAccountName(
+        RunsImports $importer,
+        CurrentUser $currentUser,
+        OwnAccountPrompt $prompt,
+        EnsureGooglePlayAccountAction $ensureGooglePlay,
+    ): void {
+        $this->resetErrorBag('googlePlayAccountName');
+
+        if ($prompt->hasNothingToName($this->importRunId, $currentUser)) {
+            return;
+        }
+
+        try {
+            $trimmed = AccountNamer::validateName($this->googlePlayAccountName);
+        } catch (InvalidAccountNameException $e) {
+            $this->addError('googlePlayAccountName', $e->getMessage());
+
+            return;
+        }
+
+        $this->googlePlayAccountName = $trimmed;
+
+        $user = $currentUser->user();
+
+        ($ensureGooglePlay)(
+            $user,
+            nameOverride: $trimmed,
+            statementCurrency: $prompt->statementCurrency($this->importRunId, $currentUser, EnsureGooglePlayAccountAction::GOOGLE_PLAY_OWN_IBAN),
+        );
+
+        $this->reReadTheSource($importer, $user);
+
+        $this->googlePlayAccountName = '';
+    }
+
+    // A bank-fetched window has no file to re-read, and the named account is
+    // already written: the still-open window picks it up on the next sync.
+    private function reReadTheSource(RunsImports $importer, User $user): void
+    {
         /** @var ImportRun $importRun */
         $importRun = ImportRun::query()
             ->where('id', $this->importRunId)
             ->where('user_id', $user->id)
             ->firstOrFail();
+
+        if (RemoteFetchPath::isRemote($importRun->raw_file_path)) {
+            return;
+        }
 
         $importer->runFromUpload(
             $importRun->raw_file_path,
@@ -281,8 +275,6 @@ final class PreviewWizard extends Component
             basename($importRun->raw_file_path),
             $this->formatHintForReRun($importRun->source_format),
         );
-
-        $this->paypalAccountName = '';
     }
 
     // The pipeline refuses a hint-less CSV import, and on a re-run the stored
@@ -290,7 +282,7 @@ final class PreviewWizard extends Component
     private function formatHintForReRun(string $sourceFormat): ?BankCsvFormatHint
     {
         return match ($sourceFormat) {
-            SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
+            CsvPresetRegistry::ASN => BankCsvFormatHint::Asn,
             default => null,
         };
     }
@@ -320,23 +312,19 @@ final class PreviewWizard extends Component
         );
     }
 
-    // The blade's @disabled on Confirm is a DOM guard and devtools defeats it;
-    // this is the one that counts. Nothing importable is blocked too, because
-    // confirming it wrote a confirmed run whose own summary reported zero of
-    // everything. A missing preview is a different case and stays expired.
+    // Returning here keeps the reader on the wizard with the prompt they still
+    // have to answer, rather than on ConfirmImport's exception, which enforces
+    // the same rule for every caller. A missing preview is a different case
+    // and stays expired.
     private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, OwnAccountPrompt $prompt): bool
     {
         if ($prompt->needsIcsAccountName($this->importRunId, $currentUser)
-            || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)) {
+            || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)
+            || $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser)) {
             return true;
         }
 
-        $preview = $cache->getPreview($this->importRunId);
-        if ($preview === null) {
-            return false;
-        }
-
-        return count($preview->accountsToName) > 0 || self::importableRowCount($preview) === 0;
+        return $cache->head($this->importRunId)?->confirmRefusal() !== null;
     }
 
     public function discard(
@@ -354,7 +342,7 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         CurrentUser $currentUser,
         DatabaseManager $db,
-        CsvPresetRegistry $presets,
+        StandInAccountName $standInNames,
         OwnAccountPrompt $prompt,
     ): View {
         $this->assertOwnedRun($currentUser);
@@ -365,6 +353,7 @@ final class PreviewWizard extends Component
             : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
         $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
         $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
+        $needsGooglePlayAccountName = $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser);
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
@@ -372,9 +361,10 @@ final class PreviewWizard extends Component
             'alreadyImported' => $this->alreadyImported($db),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
+            'needsGooglePlayAccountName' => $needsGooglePlayAccountName,
             'importableRowCount' => self::importableRowCount($preview),
             'failedRowCount' => self::failedRowCount($preview),
-            'presetIssuedIdentifiers' => self::presetIssuedIdentifiers($preview, $presets),
+            'standInAccountNames' => self::standInAccountNames($preview, $standInNames),
         ]);
     }
 
@@ -385,23 +375,31 @@ final class PreviewWizard extends Component
         $this->visibleRows += self::ROW_PAGE;
     }
 
-    /**
-     * @return list<string>
-     */
-    private static function presetIssuedIdentifiers(?ImportPreviewResult $preview, CsvPresetRegistry $presets): array
+    private static function previewEntryFor(?ImportPreviewResult $preview, string $iban): ?UnknownIban
     {
-        if ($preview === null) {
-            return [];
-        }
-
-        $issued = [];
-        foreach ($preview->accountsToName as $unknown) {
-            if ($presets->issuesOwnAccountIdentifier($unknown->iban)) {
-                $issued[] = $unknown->iban;
+        foreach ($preview->accountsToName ?? [] as $unknown) {
+            if ($unknown->iban === $iban) {
+                return $unknown;
             }
         }
 
-        return $issued;
+        return null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function standInAccountNames(?ImportPreviewResult $preview, StandInAccountName $standInNames): array
+    {
+        $named = [];
+        foreach ($preview->accountsToName ?? [] as $unknown) {
+            $name = $standInNames->for($unknown->iban);
+            if ($name !== null) {
+                $named[$unknown->iban] = $name;
+            }
+        }
+
+        return $named;
     }
 
     // A confirmed run has no preview left, indistinguishable from an expired one

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
@@ -11,7 +12,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Support\LockStore;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWalk;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
@@ -41,6 +44,34 @@ final class SojaStubRemoteSourceAdapter implements RemoteSourceAdapter
 
         // This job's contract is the bookkeeping around a fetch, not dedup.
         yield from [];
+
+        return FetchWalk::exhausted();
+    }
+}
+
+// ON DELETE CASCADE clears user_id when the owner account goes away. Doing it
+// from inside fetch() is that happening while the attempt is in flight.
+final class SojaOrphaningRemoteSourceAdapter implements RemoteSourceAdapter
+{
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly int $connectionId,
+    ) {}
+
+    public function format(): string
+    {
+        return 'enable-banking';
+    }
+
+    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    {
+        $this->db->connection()->table('open_banking_connections')
+            ->where('id', $this->connectionId)
+            ->update(['user_id' => null]);
+
+        yield from [];
+
+        return FetchWalk::exhausted();
     }
 }
 
@@ -296,6 +327,27 @@ it('exits without touching the row when the connection has no user to sync for',
         ->and($row->last_attempt_status)->toBeNull();
 });
 
+// The id alone would still match the row. The predicate that matters is the
+// owner's: a timestamp written here describes an attempt made on behalf of
+// somebody the row no longer belongs to.
+it('writes no timestamp when the connection\'s owner is cleared while the fetch is in flight', function (): void {
+    $user = sojaUser('sync-orphaned-mid-fetch');
+    $connectionId = sojaSeedConnection($user);
+    sojaSeedCredentials();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    app()->instance(RemoteSourceAdapter::class, new SojaOrphaningRemoteSourceAdapter($db, $connectionId));
+
+    app()->call([new SyncOpenBankingAccountJob($connectionId), 'handle']);
+
+    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+
+    expect($row->last_successful_sync_at)->toBeNull()
+        ->and($row->last_attempt_at)->toBeNull()
+        ->and($row->last_attempt_status)->toBeNull();
+});
+
 // Uniqueness is keyed on the connection, not the job: two schedule ticks would
 // otherwise reconcile the same window against rows the first has not committed.
 it('scopes queue uniqueness to the connection for ten minutes', function (): void {
@@ -305,3 +357,68 @@ it('scopes queue uniqueness to the connection for ten minutes', function (): voi
         ->and($job->uniqueFor())->toBe(600)
         ->and($job->uniqueVia())->toBeInstanceOf(Repository::class);
 });
+
+// The queue releases the until-processing lock before handle() runs, so the
+// fetch itself is unguarded unless the runner re-takes the same key.
+it('holds the connection\'s own uniqueness key for the duration of the fetch', function (): void {
+    $user = sojaUser('sync-holds-lock');
+    $connectionId = sojaSeedConnection($user);
+    sojaSeedCredentials();
+
+    $observed = null;
+    app()->instance(RemoteSourceAdapter::class, new SojaLockObservingRemoteSourceAdapter(
+        $connectionId,
+        function (bool $free) use (&$observed): void {
+            $observed = $free;
+        },
+    ));
+
+    app()->call([new SyncOpenBankingAccountJob($connectionId), 'handle']);
+
+    expect($observed)->toBeFalse();
+
+    // And released again, or one crash would block the connection for ten minutes.
+    $after = LockStore::forUniqueJobs()->lock(
+        UniqueLock::getKey(new SyncOpenBankingAccountJob($connectionId)),
+        SyncOpenBankingAccountJob::UNIQUE_FOR_SECONDS,
+    );
+    expect($after->get())->toBeTrue();
+    $after->release();
+});
+
+// Reports whether the connection's uniqueness key is still free at the moment
+// the fetch runs, which is the window a manual sync would race.
+final class SojaLockObservingRemoteSourceAdapter implements RemoteSourceAdapter
+{
+    /**
+     * @param  Closure(bool): void  $report
+     */
+    public function __construct(
+        private readonly int $connectionId,
+        private readonly Closure $report,
+    ) {}
+
+    public function format(): string
+    {
+        return 'enable-banking';
+    }
+
+    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    {
+        $probe = LockStore::forUniqueJobs()->lock(
+            UniqueLock::getKey(new SyncOpenBankingAccountJob($this->connectionId)),
+            SyncOpenBankingAccountJob::UNIQUE_FOR_SECONDS,
+        );
+
+        $free = $probe->get();
+        if ($free) {
+            $probe->release();
+        }
+
+        ($this->report)($free);
+
+        yield from [];
+
+        return FetchWalk::exhausted();
+    }
+}

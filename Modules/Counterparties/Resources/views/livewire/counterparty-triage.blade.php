@@ -6,13 +6,17 @@
     /counterparties/triage focused single-card queue.
 
     Keyboard bindings respect the project-wide input carve-out (when
-    focus is inside INPUT/TEXTAREA/contentEditable, the keys go to the
-    field, not the handler) via Alpine focus-state tracking on the
-    root element. The Y/N/S/→ wire actions only fire when focus is
-    outside the manual-label fieldset.
+    focus is inside INPUT/TEXTAREA/SELECT/contentEditable, the keys go
+    to the field, not the handler) via Alpine focus-state tracking on
+    the root element. The Y/N/S/→ wire actions only fire when focus is
+    outside the manual-label fieldset. SELECT is in that list because a
+    native picker answers a letter key by jumping to an option, and S
+    on the type picker skipped the whole card instead.
 
-    All copy is verbatim from 17-UI-SPEC.md (Counterparty triage
-    table).
+    Every control in the card is a full-width block, so the card's own
+    content box is the only left and right edge on the screen. The
+    action area was measured at five left edges and seven right edges
+    before that.
 
     Variables exposed by `CounterpartyTriage::render()`:
       $current             ?Counterparty
@@ -21,6 +25,7 @@
       $seen, $total, $percent, $minutesRemaining, $remainingCount  int
       $recentTransactions  list<\stdClass>
       $queueEmpty          bool
+      $hasPrevious         bool
 --}}
 @use('Modules\Counterparties\Public\Enums\CounterpartyType')
 @use('Modules\Ledger\Public\Enums\Currency')
@@ -52,7 +57,7 @@
 <div
     class="triage-shell"
     x-data="{ inputFocused: false }"
-    x-on:focusin.capture="inputFocused = ['INPUT','TEXTAREA'].includes($event.target.tagName) || $event.target.isContentEditable"
+    x-on:focusin.capture="inputFocused = ['INPUT','TEXTAREA','SELECT'].includes($event.target.tagName) || $event.target.isContentEditable"
     x-on:focusout.capture="inputFocused = false"
     x-on:keydown.window.s.prevent="if (!inputFocused) $wire.skipForNow()"
     x-on:keydown.window.arrow-right.prevent="if (!inputFocused) $wire.nextItem()"
@@ -96,7 +101,7 @@
                 {{ Lang::get('counterparties::triage.all_caught_heading') }}
             </h2>
             <p style="margin: 0;">
-                <a href="{{ Destination::Counterparties->url() }}" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::triage.back_to_index') }}</a>
+                <a class="tap-link" href="{{ Destination::Counterparties->url() }}" style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline;">{{ Lang::get('counterparties::triage.back_to_index') }}</a>
             </p>
         </section>
     @else
@@ -106,6 +111,12 @@
             // so the screen asking the reader to identify a counterparty was
             // the one screen not naming it.
             $hasIban = is_string($current->iban) && $current->iban !== '';
+
+            // One solid button per card. With a suggestion on screen the
+            // accept is the action that records the decision, so the manual
+            // save steps down to the outline; with no suggestion the save is
+            // the only way to record one and takes the weight.
+            $suggesting = $showSuggestion && $suggestion !== null;
         @endphp
         <section class="triage-card">
             <header class="triage-head">
@@ -140,19 +151,13 @@
                     </span>
                 </section>
 
-                <div class="triage-actions">
-                    <button
-                        type="button"
-                        class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        aria-keyshortcuts="Y"
-                        wire:click="acceptSuggestion"
-                    >{{ Lang::get('counterparties::triage.yes_link', ['name' => $suggestion->suggestedCounterpartyName]) }}</button>
-                    <button
-                        type="button"
-                        class="pill-btn-ghost focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        aria-keyshortcuts="N"
-                        wire:click="rejectSuggestion"
-                    >{{ Lang::get('counterparties::triage.no_not', ['name' => $suggestion->suggestedCounterpartyName]) }}</button>
+                <div class="triage-stack">
+                    <x-core::neutral-button block="full" aria-keyshortcuts="Y" wire:click="acceptSuggestion">
+                        {{ Lang::get('counterparties::triage.yes_link', ['name' => $suggestion->suggestedCounterpartyName]) }}
+                    </x-core::neutral-button>
+                    <x-core::secondary-button block="full" aria-keyshortcuts="N" wire:click="rejectSuggestion">
+                        {{ Lang::get('counterparties::triage.no_not', ['name' => $suggestion->suggestedCounterpartyName]) }}
+                    </x-core::secondary-button>
                 </div>
             @endif
 
@@ -198,82 +203,86 @@
                 @endif
             </div>
 
-            <fieldset class="triage-section" style="border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3);">
-                <legend style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; padding: 0 var(--space-1);">
-                    {{ Lang::get('counterparties::triage.label_manually') }}
+            <fieldset class="triage-decide" wire:key="triage-decide-{{ $current->id }}">
+                {{-- The "or" only when there is another branch to be the
+                     alternative to. With no suggestion above it, "Or label
+                     manually" named a road the reader had never been shown
+                     and left them looking for the one they had missed. --}}
+                <legend class="triage-legend">
+                    {{ Lang::get($suggesting ? 'counterparties::triage.label_manually' : 'counterparties::triage.label_question') }}
                 </legend>
-                {{-- One Alpine scope over both fields and the button. The
-                     x-data used to sit on the input alone, so the button could
-                     not see it and the wire:click reached into the DOM instead
-                     — and Livewire evaluates a wire:click against the $wire
-                     proxy, where a bare `document` is $wire.document. Every
-                     click threw before manualLabel was reached, silently. --}}
-                {{-- Keyed to the counterparty: without it Livewire morphs the
-                     element in place, Alpine keeps its state, and the name
-                     typed for one counterparty was still in the box for the
-                     next one. --}}
-                <div wire:key="triage-manual-{{ $current?->id ?? 'none' }}" x-data="{ manualName: '', manualType: '{{ CounterpartyType::Merchant->value }}' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
-                    <label for="triage-manual-name" class="sr-only">{{ Lang::get('counterparties::triage.display_name_label') }}</label>
-                    <input
-                        id="triage-manual-name"
-                        type="text"
-                        placeholder="{{ Lang::get('counterparties::triage.display_name_placeholder') }}"
-                        x-model="manualName"
-                        style="flex: 1 1 240px; min-width: 0; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
+
+                {{-- wire:model, not Alpine. The name lived in x-model, so every
+                     Livewire re-render dropped it: typing a name and pressing
+                     the next control lost it with no warning, and going back
+                     did not return it. The server holds it per counterparty
+                     now, which is what lets the reader wander the queue. --}}
+                <div class="triage-stack">
+                    <x-core::form-field
+                        name="draftName"
+                        field-id="triage-manual-name"
+                        size="base"
+                        :label="Lang::get('counterparties::triage.display_name_label')"
+                        wire:model="draftName"
                     />
-                    <label for="triage-manual-type" class="sr-only">{{ Lang::get('counterparties::triage.type_label') }}</label>
-                    {{-- No padding-right here. The base `select` rule draws the
-                         chevron and reserves the room it needs on the right; an
-                         inline shorthand beats that rule and put the chevron on
-                         top of the value -- visible on the Dutch "Winkelier". --}}
-                    <select
-                        id="triage-manual-type"
-                        x-model="manualType"
-                        style="padding-top: 6px; padding-bottom: 6px; padding-left: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
+
+                    <x-core::form-field
+                        type="select"
+                        name="draftType"
+                        field-id="triage-manual-type"
+                        size="base"
+                        :label="Lang::get('counterparties::triage.type_label')"
+                        wire:model="draftType"
                     >
                         <option value="{{ CounterpartyType::Merchant->value }}">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
                         <option value="{{ CounterpartyType::Personal->value }}">{{ Lang::get('counterparties::triage.type_personal') }}</option>
                         <option value="{{ CounterpartyType::Bank->value }}">{{ Lang::get('counterparties::triage.type_bank') }}</option>
                         <option value="{{ CounterpartyType::Government->value }}">{{ Lang::get('counterparties::triage.type_government') }}</option>
-                    </select>
-                    <button
-                        type="button"
-                        class="pill-btn-ghost focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        x-on:click="$wire.manualLabel(manualName, manualType); manualName = ''"
-                    >{{ Lang::get('counterparties::triage.save_label') }}</button>
+                    </x-core::form-field>
+
+                    @if ($suggesting)
+                        <x-core::secondary-button block="full" wire:click="manualLabel">
+                            {{ Lang::get('counterparties::triage.save_label') }}
+                        </x-core::secondary-button>
+                    @else
+                        <x-core::neutral-button block="full" wire:click="manualLabel">
+                            {{ Lang::get('counterparties::triage.save_label') }}
+                        </x-core::neutral-button>
+                    @endif
                 </div>
+
+                <p class="triage-note">{{ Lang::get('counterparties::triage.draft_kept') }}</p>
             </fieldset>
 
-            <div class="triage-actions" style="justify-content: space-between;">
-                <div style="display: flex; gap: var(--space-2);">
-                    <button
-                        type="button"
-                        class="pill-btn-ghost focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        aria-keyshortcuts="S"
-                        wire:click="skipForNow"
-                    >↷ {{ Lang::get('counterparties::triage.skip') }}</button>
-                    <button
-                        type="button"
-                        style="background: transparent; border: 0; color: var(--color-rose); font-size: var(--text-sm); cursor: pointer; padding: 4px 10px;"
-                        wire:click="markIgnored"
-                    >⊘ {{ Lang::get('counterparties::triage.mark_ignored') }}</button>
-                </div>
-                <div style="display: flex; align-items: center; gap: var(--space-2);">
-                    @if ($current !== null)
-                        <button
-                            type="button"
-                            wire:click="previousItem"
-                            style="background: transparent; border: 0; color: var(--color-text-muted); font-size: var(--text-sm); cursor: pointer;"
-                        >↑ {{ Lang::get('counterparties::triage.previous') }}</button>
-                    @endif
-                    <button
-                        type="button"
-                        class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        aria-keyshortcuts="ArrowRight"
-                        wire:click="nextItem"
-                    >{{ Lang::get('counterparties::triage.next') }} ▸</button>
-                </div>
+            {{-- Below the primary, and quieter than it. The solid `Next ▸` that
+                 used to close this card is gone: skipForNow() and nextItem()
+                 were the same movement under two names, and the louder of the
+                 two was the one that did none of the work. --}}
+            <div class="triage-stack">
+                <x-core::secondary-button block="full" aria-keyshortcuts="S" wire:click="skipForNow">
+                    {{ Lang::get('counterparties::triage.skip') }}
+                </x-core::secondary-button>
+
+                {{-- Slate, not rose. Ignoring writes metadata.ignored and
+                     leaves the row, its type and its history alone, and the
+                     index card's "Label this counterparty" link carries
+                     ?queue_first= which overrides the queue's own ignore
+                     filter — so the way back is a tap, and the copy says so
+                     rather than the colour saying the opposite. --}}
+                <x-core::secondary-button block="full" wire:click="markIgnored">
+                    {{ Lang::get('counterparties::triage.mark_ignored') }}
+                </x-core::secondary-button>
+
+                <p class="triage-note">{{ Lang::get('counterparties::triage.not_now_note') }}</p>
             </div>
+
+            @if ($hasPrevious)
+                <div class="triage-stack">
+                    <x-core::secondary-button block="full" wire:click="previousItem">
+                        {{ Lang::get('counterparties::triage.previous') }}
+                    </x-core::secondary-button>
+                </div>
+            @endif
 
             {{-- Kbd hint chips: hidden on touch devices (pointer:coarse = hidden-touch) --}}
             <p class="hidden-touch" style="font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; text-align: center;">

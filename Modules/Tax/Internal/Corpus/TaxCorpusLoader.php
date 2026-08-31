@@ -13,10 +13,10 @@ use Throwable;
 // Every failure mode logs a warning and returns [] rather than throwing, so a
 // bad corpus file cannot break the tax page. PARSE_EXCEPTION_ON_INVALID_TYPE
 // stops a YAML native tag from instantiating an object.
-final class TaxCorpusLoader
+final readonly class TaxCorpusLoader
 {
     public function __construct(
-        private readonly LoggerInterface $logger,
+        private LoggerInterface $logger,
     ) {}
 
     /**

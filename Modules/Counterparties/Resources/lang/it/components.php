@@ -24,6 +24,10 @@ return [
         'unknown' => 'Sconosciute',
     ],
 
+    'default_name' => [
+        'bank_fee' => 'Commissione bancaria',
+    ],
+
     'cp_card' => [
         'aria' => 'Controparte: :name',
         'recent_aria' => 'Attività recente',

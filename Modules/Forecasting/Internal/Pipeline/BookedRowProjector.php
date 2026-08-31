@@ -58,7 +58,6 @@ final readonly class BookedRowProjector
                 lowMinor: $minor,
                 highMinor: $minor,
                 currency: $row->settled->currency(),
-                fxRateUsed: null,
                 seriesId: self::NO_SERIES,
                 accountId: $row->accountId,
             );

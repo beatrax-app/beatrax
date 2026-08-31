@@ -17,10 +17,8 @@ return [
     'section_categories' => 'Kategóriák',
     'section_goals_recurring' => 'Célok és ismétlődők',
     'no_name' => '(nincs név)',
-    'see_all_prefix' => 'Összes megtekintése: ',
-    'see_all_suffix' => ' találat →',
-    'no_transactions_prefix' => 'Nincs tranzakció erre: „',
-    'no_transactions_suffix' => '”',
+    'see_all' => ':count találat megtekintése →|Mind a :count találat megtekintése →',
+    'no_transactions' => 'Nincs tranzakció erre: „:query”',
     'source_txn' => 'txn',
     'source_counterparty' => 'partner',
     'source_category' => 'kategória',
@@ -30,6 +28,32 @@ return [
     'foot_select' => 'kiválasztás',
     'foot_close' => 'bezárás',
     'close_aria' => 'Keresés bezárása',
+    'close_caption' => 'Bezárása',
     'foot_try' => 'Próbáld',
-    'results_suffix' => ' találat',
+    'results' => ':count találat|:count találat',
+
+    'action' => [
+        'run_import' => ['label' => 'Import futtatása', 'hint' => 'Az importvarázsló megnyitása'],
+        'scan_email' => ['label' => 'E-mail vizsgálata most', 'hint' => 'A postafiók szinkronizálásának azonnali futtatása'],
+        // i18n-review: hu · action.open_profile.hint — «beállítások» covers both Settings and
+        // preferences here, so the hint repeats it as the compound «alkalmazásbeállítások».
+        // A native reader decides whether that reads.
+        'open_profile' => ['label' => 'Profil megnyitása', 'hint' => 'Beállítások — fiók és alkalmazásbeállítások'],
+        'toggle_theme' => ['label' => 'Téma váltása', 'hint' => 'Váltás a világos és a sötét téma között'],
+    ],
+
+    'run_command' => ':command futtatása',
+
+    'nav' => [
+        'overview' => ['label' => 'Fejlesztői áttekintés', 'hint' => 'Rendszercsempék + legutóbbi futtatások'],
+        'artisan' => ['label' => 'Artisan runner', 'hint' => 'Engedélyezett parancsok futtatása'],
+        'audit' => ['label' => 'Fejlesztői auditnapló', 'hint' => 'A fejlesztői mód minden művelete'],
+        'logs' => ['label' => 'Naplókövető', 'hint' => 'A laravel-*.log élő folyama'],
+        'queue' => ['label' => 'Várólista-vizsgáló', 'hint' => 'Függőben / sikertelen / kötegek'],
+        'doctor' => ['label' => 'Doctor', 'hint' => 'Rendszerpróbák'],
+        'sql' => ['label' => 'SQL-panel', 'hint' => 'Csak SELECT böngésző'],
+        'system' => ['label' => 'Rendszer-pillanatkép', 'hint' => 'Környezet + útvonalak + konfiguráció'],
+        'horizon' => ['label' => 'Horizon', 'hint' => 'Beágyazott várólista-irányítópult'],
+        'sync_health' => ['label' => 'Szinkron állapota', 'hint' => 'Karanténba tett vagy kihagyott összefésülések'],
+    ],
 ];

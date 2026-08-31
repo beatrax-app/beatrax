@@ -13,7 +13,7 @@ whether to consult the corpus and whether to broadcast suggestions.
 
 A single bank-statement line like `IDEAL BCA*BOLDKING-37261` is
 meaningless until a human knows what it is. The brand owners do not
-self-identify on their statement strings, so every diederik user faces
+self-identify on their statement strings, so every Beatrax user faces
 the same long-tail of unfamiliar charges. The community corpus closes
 that loop once per merchant: one user identifies "Boldking shaving
 subscription" and that mapping ships to every other user on the next
@@ -37,7 +37,7 @@ What the module explicitly does NOT do:
   `OpenExternalUrlAction` has a two-gate defence-in-depth check
   (HTTPS scheme + host allow-list) before reaching the shell contract.
 - It never reaches a network on its own. The corpus is bundled inside
-  the app (`resources/corpus/*.yaml`), seeded into a local table at
+  the app (`resources/corpus/<kind>/*.yaml`), seeded into a local table at
   first install, and updated only when the user downloads a new
   release.
 
@@ -71,16 +71,25 @@ side query used by the import preview:
   - `CommunityCorpusQuery` — the read-only surface other modules
     consume (import preview, triage row). Returns matches for a given
     pattern; never writes.
+  - `CommunitySettings` — the read side of the Settings toggles, keyed
+    by the `CommunitySetting` enum. A consumer in another module gates
+    on this rather than re-reading `users.community_settings` with a
+    string literal of its own.
 
 `Internal/` houses the seed pipeline, the Livewire pages, and the
 NativePHP shell fallback:
 
 - **Internal/Corpus/CorpusLoader** — reads the bundled YAML files
-  (`merchant-mappings.yaml` + `built-in-heuristics.yaml`), validates
+  (`resources/corpus/merchants/*.yaml`, one per region code), validates
   each entry's required fields, computes a `generalized_pattern` via
   the `PatternGeneralizer` from `Import`, returns a stream of
   `CorpusEntryDto`. Per-entry failure tolerated (one malformed row
   does not abort the load).
+- **Internal/Services/ContributionLog** — writes the reader's own row
+  for a suggestion they just filed (`user_id` = theirs), upserted on the
+  table's `(user_id, pattern)` unique index. `created_at` sits outside
+  the update list: re-suggesting a name is one contribution corrected,
+  not two made, and restamping the date destroys when it was made.
 - **Internal/Services/GitHubCompareUrlBuilder** — composes the
   Compare URL the suggest modal opens. Branch slug is a deterministic
   `sha256(pattern)[:16]` so the same suggestion always lands on the
@@ -121,11 +130,12 @@ NativePHP shell fallback:
   each returning the matched merchant name or `null`. Pure reads; they
   never write. The scope is the REGION, not the user: every arm filters
   `user_id IS NULL`, so only the global tier is ever consulted. The
-  per-user override tier that the table's `unique(['user_id',
-  'pattern'])` index anticipates has neither a write path nor a read
-  path today, and the query has read the global tier alone since the
-  module shipped — treat the column as reserved, not as a resolution
-  rule. Region scoping is what earns its keep: consulting every
+  per-user tier the table's `unique(['user_id', 'pattern'])` index
+  carries is written by `ContributionLog` and read by
+  `contributionsCount()` alone: it records that the reader filed a
+  suggestion and resolves nothing, because a suggestion is a pull
+  request until somebody merges it. Do not read it as a resolution
+  tier. Region scoping is what earns its keep: consulting every
   country's corpus at once resolved a Dutch `Albert Heijn 1042` to the
   Czech chain ALBERT, because `cz.yaml` seeds before `nl.yaml` and won
   the first-match scan on the lower id.
@@ -182,8 +192,9 @@ The import-preview consult flow (cross-module):
 ```
 ImportPipeline.preview
   → NormalizeStage produces counterpartyNormalized
-  → CommunityCorpusQuery::findFor($pattern, $user)
-       → return per-user override OR global corpus row OR null
+  → MerchantNameResolver::resolve($description, $userId)
+       → the reader's own aliases first, then the corpus:
+         lookupExact / lookupGeneralized / lookupRegex, region-scoped
   → if hit: preview row offers the corpus name as a suggestion
             (user accepts explicitly during confirm)
 ```
@@ -220,11 +231,12 @@ route. A phone number is kept in the merchant's own published notation rather
 than normalised to E.164: the numbers people actually need (0800/0900 service
 lines, three-digit short codes) have no E.164 form, so normalising would throw
 away the most useful half of the data; a shape check is what stops free text
-reaching a `tel:` href. An email must validate AND carry no `?`, `&` or
-whitespace — all three are legal RFC 5322 atext that `FILTER_VALIDATE_EMAIL`
-accepts but that forge extra headers inside a `mailto:`, the same guard
-`SupportResource::mailtoHref` applies to the support corpus, moved one layer
-earlier so a bad value never lands in the column at all.
+reaching a `tel:` href. An email must pass `Public\Support\RecipientAddress`,
+the one gate `SupportResource::mailtoHref()` and the support corpus also apply:
+it allow-lists the characters a real address needs instead of naming the
+separators known today, because `?`, `&`, `,` and `;` are all legal RFC 5322
+atext that `FILTER_VALIDATE_EMAIL` accepts and that forge a header or a second
+recipient inside a `mailto:`.
 
 Every rejection is a logged warning, never a throw, matching the rest of the
 corpus pipeline. That tolerance is what makes `BundledCorpusIntegrityTest`
@@ -270,10 +282,30 @@ when its words are a leading prefix of the counterparty's words — so
 "Netflix" matches "Netflix International BV" without letting "Apple" match
 "Applebee's". The longest (most specific) matching resource wins. Brand
 words like "Premium" are deliberately NOT stripped, since they distinguish a
-subscription tier from the base brand. `SupportResource::mailtoHref()`
-refuses to build a `mailto:` link when the stored recipient carries `?`, `&`,
-or whitespace/CR/LF — defence against header/recipient injection into the
-pre-filled cancellation email.
+subscription tier from the base brand.
+
+A lookup prefers the reader's own country, then `international.yaml`, and only
+then the remaining countries — and there only when exactly ONE of them answers.
+Two countries disagreeing is not an answer to choose between: Verisure is six
+national companies with six cancellation lines, and a country-less lookup that
+took whichever file globbed first gave the profile page (which passes the
+reader's country) and the savings insights (which pass none) two different
+answers for the same brand inside one app. Refusing is the honest outcome,
+because the wrong country's cancellation route is worse than none. Inside a
+country file an entry is bucketed under the word key of its name while a lookup
+also filters on `type`, so a bucket holds a LIST: two entries sharing a name
+used to silently overwrite each other at load, and `BundledCorpusIntegrityTest`
+now fails the build on a shipped collision.
+
+`SupportResource::mailtoHref()` refuses to build a `mailto:` link unless the
+recipient is a single address built from the characters a real one needs.
+RFC 6068 separates recipients with a comma, `%2C` reaches the mail client as
+one, and `;` is the alternative separator — a deny-list naming only `?`, `&`
+and whitespace let all three through, and a `to` of
+`"cancel@vendor.test,harvest@evil.test"` addressed the cancellation mail to
+both. `SupportResourceProvider::build()` applies the same gate as the corpus
+loads and drops the whole `cancel_email` trio when the address fails, so no
+DTO carries a recipient the href would have to refuse.
 
 ## Read-side query mechanics
 
@@ -318,14 +350,21 @@ there, so the memo does not grow to buy the speed.
 ## Settings, triage, and the suggest flow
 
 `SharedListSettingsPanel` renders the three Settings toggles: "Use the shared
-merchant list" (gates whether `MerchantNameResolver` consults the community
-tier), "Offer to contribute" (gates the triage row's CTA), and "Update the
+merchant list" (the gate on whether the community tier is consulted at all),
+"Offer to contribute" (gates the triage row's CTA), and "Update the
 shared list on app updates" — the third toggle ships disabled: its handler is
 an intentional no-op that writes nothing to `users.community_settings`,
 protecting the column from a forged Livewire call while the live-update
 mechanism itself waits on a future app update. Toggle state lives in the
-`users.community_settings` JSON column, read/written directly rather than
-through a separate settings model.
+`users.community_settings` JSON column under the keys the `CommunitySetting`
+enum names, and is read back through `CommunitySettings`; a key spelled as a
+literal on the reading side is a toggle that silently stops working, which is
+what `ASettingKeyIsSpelledOnlyByItsEnumArchTest` pins. Both the enum and the
+reader are `Public/`, because a gate parked in `Internal/` is one the module
+boundary forbids every consumer from reaching. `useSharedList`'s only consumer
+is the community tail of `Import`'s `MerchantNameResolver`, which asks
+`CommunitySettings::usesSharedList($userId)` before its three corpus arms and
+answers `null` from all three when the switch is off.
 
 The per-row "Help others identify this" CTA lives in Categorization's
 triage view and is gated SERVER-SIDE on the same `offerToContribute` toggle:
@@ -376,13 +415,20 @@ real browser.
 
 ## Demo seeding
 
-`DemoCommunityMappingsSeeder` materialises three per-user override rows
-(`user_id = $primary->id`) for the primary demo user, deliberately choosing
-patterns that do NOT collide with the bundled global corpus — the
+`DemoCommunityMappingsSeeder` materialises three patterns twice: once in the
+shared tier (`user_id IS NULL`), which every lookup and the headline count on
+`/community` read, and once as a per-user override for the primary demo user,
+which is what "Your contributions" counts. Written to the user tier alone,
+they reached neither lookup nor count and the shared list headlined nought.
+The patterns deliberately do NOT collide with the bundled global corpus — the
 `(user_id, pattern)` UNIQUE lets a global row and a per-user row share the
 same pattern, and the seeder exercises that per-user-override branch of the
 resolver on purpose. It is idempotent via `updateOrCreate` keyed on
 `(user_id, pattern)`, matching the table's UNIQUE constraint.
+
+The bundled corpus reaches a demo install because `DemoUsersSeeder` dispatches
+`UserInstalled` — the event signup fires, and the one `SeedCommunityCorpus`
+hangs off. Nothing else in `demo:seed` loads the shared tier.
 
 ## NativePHP Shell binding
 
@@ -413,10 +459,10 @@ override reads filter explicitly at the call site instead (mirrors
 `MysteryMerchantsPage::render()` scans up to 2,000 of the user's most recent
 transactions, groups every description the `MerchantNameResolver` cannot
 identify, and renders the top 24 by occurrence count as mystery cards. The
-stats strip's `contributorCount` KPI is currently a hardcoded zero — there is
-no contribution-tracking listener on `MysteryMerchantSubmitted` yet — so the
-slot renders consistently with its eventual real value rather than being
-omitted.
+stats strip's `contributorCount` KPI counts the reader's own rows via
+`CommunityCorpusQuery::contributionsCount()`, one of which `ContributionLog`
+writes per suggestion; it was a hardcoded zero that still read 0 immediately
+after a submit.
 
 The auto-named KPI is a percentage of the rows this device could **read**,
 not of the rows it scanned. A description that decrypts to nothing is counted

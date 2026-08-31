@@ -21,7 +21,7 @@
         without moving or duplicating any markup:
 
           order-1: header
-          order-2: alerts strip (drift badge)
+          order-2: empty-period notice, alerts strip (drift badge)
           order-3: KPI tiles (single-column at phone)
           order-4: goals summary card, budgets glance
           order-5: upcoming content (fixed payments, spending trend, savings insights)
@@ -84,6 +84,29 @@
             >&rsaquo;</button>
         </div>
     </header>
+
+    {{-- Empty-period notice (order 2 on phone, above the tiles it explains).
+
+         A period the reader has no records in reads as a screen of zeros, and
+         so does an install with nothing imported — a statement covering
+         February to April, imported in August, lands on the second-looking
+         version of the first. The way across is the ‹ glyph pressed an unknown
+         number of times, so the offer names the period it lands on.
+
+         Null unless there is somewhere to go, so this is a state and not a
+         standing banner: see PopulatedPeriodQuery. Deliberately NOT a
+         `dashboard-tile` — that class hides a wrapper whose grandchild is
+         missing, and this block's children hold text rather than a component. --}}
+    @if ($latestWithRecords !== null)
+        <div class="dashboard-phone-order-2 flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white px-6 py-8 text-center dark:bg-slate-950 dark:border-slate-700">
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('core::dashboard.jump_to_records.body') }}
+            </p>
+            <x-core::secondary-button size="sm" wire:click="goToLatestPeriod">
+                {{ Lang::get('core::dashboard.jump_to_records.action', ['period' => $latestWithRecords->label]) }}
+            </x-core::secondary-button>
+        </div>
+    @endif
 
     {{-- Alerts strip (order 2 on phone): drift alerts, full-width stacked --}}
     {{-- Inline "Drift alerts" tile — count + EUR-roll-up annualized
@@ -260,32 +283,38 @@
         {{-- Top spending categories --}}
         <section class="space-y-4">
             <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.top_spending') }}</h2>
-            @if (count($summary->topCategories) === 0)
+            @if ($summary->topCategories->isEmpty() && ! $summary->topCategories->hasRefundedCategories())
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.no_expenses') }}</p>
             @else
-                <ul class="space-y-3">
-                    @foreach ($summary->topCategories as $cat)
-                        <li class="space-y-1">
-                            {{-- The name truncates and the amount holds its width:
-                                 without this a long category pushed the figure
-                                 straight off the right edge of a phone. --}}
-                            <div class="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                                <span class="min-w-0 truncate text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
-                                <span class="shrink-0 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                                    {{ $fmt($cat->spend) }}
-                                </span>
-                            </div>
-                            {{-- The sliver stays a call-site rule: a category with
-                                 a real but tiny share should still draw, while a
-                                 zero draws nothing at all. --}}
-                            @php
-                                $rawPct = (int) round($cat->percentageOfTotal * 100);
-                                $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
-                            @endphp
-                            <x-core::progress-bar :value="$barWidth" :label="$cat->name" />
-                        </li>
-                    @endforeach
-                </ul>
+                @unless ($summary->topCategories->isEmpty())
+                    <ul class="space-y-3">
+                        @foreach ($summary->topCategories->rows as $cat)
+                            <li class="space-y-1">
+                                {{-- The name truncates and the amount holds its width:
+                                     without this a long category pushed the figure
+                                     straight off the right edge of a phone. --}}
+                                <div class="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                                    <span class="min-w-0 truncate text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
+                                    <span class="shrink-0 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                                        {{ $fmt($cat->spend) }}
+                                    </span>
+                                </div>
+                                <x-core::progress-bar :value="$cat->barWidth()" :label="$cat->name" />
+                            </li>
+                        @endforeach
+                    </ul>
+                @endunless
+
+                {{-- The ranking is a narrowing, so what it left out is said here
+                     rather than lost: a category whose refunds outran its
+                     spending is not spending, and with every category in that
+                     state the card used to answer "no categorized expenses yet"
+                     over the very rows listed below it. --}}
+                @if ($summary->topCategories->hasRefundedCategories())
+                    <p class="text-xs text-slate-600 dark:text-slate-400" data-top-spending-omission="refunded">
+                        {{ Lang::get('core::dashboard.top_spending_refunded', ['amount' => $fmt($summary->topCategories->refunded)]) }}
+                    </p>
+                @endif
             @endif
         </section>
 
@@ -318,7 +347,7 @@
 
                     @foreach ($summary->recentTransactions as $row)
                         <tr>
-                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
+                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->postedAt }}</td>
                             <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
                             <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? Lang::get('core::dashboard.uncategorized') }}</td>
                             <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
@@ -333,8 +362,9 @@
 
     {{-- Standing install-hint card (order 8 on phone, bottom of column on all viewports) --}}
     {{-- "Also want to see your data on your phone?" standing promo card.
-         The install-hint component owns the copy and the
-         beforeinstallprompt / iOS fallback logic. --}}
+         The install-hint component owns the copy and the visibility rule.
+         That rule is beforeinstallprompt (Chromium) or a wide viewport --
+         there is no iOS branch, so this never renders on an iPhone. --}}
     {{-- The order class is the component's own, not a wrapper's: Alpine hides
          the root with display:none, and a wrapper around it would stay a flex
          item and keep its gap. --}}
@@ -366,7 +396,7 @@
                     <p class="text-xs text-slate-500 dark:text-slate-400">{!! Lang::get('core::dashboard.reauth.body') !!}</p>
                     <a
                         href="{{ Destination::Email->url() }}"
-                        class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
+                        class="tap-link text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
                     >{{ Lang::get('core::dashboard.reauth.link') }}</a>
                 </div>
                 <x-core::emoji-action
@@ -399,7 +429,7 @@
             </p>
             <a
                 href="{{ route('dev.queue.tab', ['tab' => 'failed']) }}"
-                class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
+                class="tap-link mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
             >{{ Lang::get('core::dashboard.failed_chain.link') }}</a>
         </div>
     @endif

@@ -67,7 +67,7 @@ final readonly class BookedFutureRowQuery
             /** @var stdClass $row */
             $minor = self::toInt($row->settled_amount_minor);
             $settled = Money::tryOfMinor($minor, self::toString($row->settled_currency));
-            $postedAt = SafeDate::parseDayOrNull(self::toString($row->posted_at));
+            $postedAt = SafeDate::normalisedDayOrNull(self::toString($row->posted_at));
             if ($settled === null || $postedAt === null) {
                 continue;
             }

@@ -9,11 +9,12 @@ use Illuminate\Http\Client\PendingRequest;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Transport\ProtocolTimings;
 
 // The browse-and-dial every LAN pairing road runs. Discovery authenticates
-// nothing, so the bounds below are the whole defence: a responder can answer
-// one browse many times over, and each answer would otherwise cost another
-// request from a device that has no way to tell the answers apart.
+// nothing, so the peer cap here and the timings it draws from ProtocolTimings
+// are the whole defence: a responder can answer one browse many times over,
+// and each answer would otherwise cost another request nothing can tell apart.
 
 // Injected, not mixed in. As a trait this reached into $this->http and
 // $this->discovery on whichever class used it, so each of the three roads
@@ -21,14 +22,6 @@ use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 // reader and to a static analyser alike, as two dependencies nothing uses.
 final readonly class LanPeerBrowser
 {
-    // Long enough for a desktop on the same subnet to answer, short enough
-    // that a phone with nothing to find says so rather than hanging.
-    private const float BROWSE_TIMEOUT_SECONDS = 2.0;
-
-    private const int CONNECT_TIMEOUT_SECONDS = 1;
-
-    private const int REQUEST_TIMEOUT_SECONDS = 2;
-
     // Enough for a caller that already knows which device it wants, since the
     // answers past the first are duplicates of that one device. A caller with
     // no device id to aim at has a different question to ask and passes its
@@ -48,7 +41,7 @@ final readonly class LanPeerBrowser
     {
         $tried = 0;
 
-        foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
+        foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, ProtocolTimings::BROWSE_SECONDS) as $peer) {
             if ($tried >= $max) {
                 break;
             }
@@ -71,7 +64,7 @@ final readonly class LanPeerBrowser
     public function peerRequest(): PendingRequest
     {
         return $this->http->createPendingRequest()
-            ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-            ->timeout(self::REQUEST_TIMEOUT_SECONDS);
+            ->connectTimeout(ProtocolTimings::PAIRING_PROBE_CONNECT_SECONDS)
+            ->timeout(ProtocolTimings::PAIRING_PROBE_REQUEST_SECONDS);
     }
 }

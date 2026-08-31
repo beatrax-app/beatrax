@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 
 uses(RefreshDatabase::class);
 
@@ -33,7 +33,7 @@ function dldInsertNotification(DatabaseManager $db, int $userId, string $id, arr
         'title' => 'Payment due Friday',
         'body' => 'Netflix — 12.99 EUR.',
         'params' => json_encode(['target_kind' => 'dashboard'], JSON_THROW_ON_ERROR),
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
+        'trigger_type' => NotificationTrigger::PaymentReminder,
         'created_at' => '2026-07-18 09:00:00',
         'updated_at' => '2026-07-18 09:00:00',
     ], $overrides));
@@ -115,7 +115,7 @@ it('renders a deleted budget (category) target as a disabled, explained link', f
     dldInsertNotification($this->db, $user->id, $id, [
         'title' => 'Budget nearly spent',
         'body' => 'Groceries is at 92%.',
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
+        'trigger_type' => NotificationTrigger::BudgetNudge,
         'params' => json_encode(['target_kind' => 'budget', 'target_id' => $categoryId], JSON_THROW_ON_ERROR),
     ]);
 
@@ -136,7 +136,7 @@ it('renders a deleted counterparty target as a disabled, explained link', functi
     dldInsertNotification($this->db, $user->id, $id, [
         'title' => 'A cheaper plan exists',
         'body' => 'Netflix may have a cheaper plan.',
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT,
+        'trigger_type' => NotificationTrigger::SavingsPrompt,
         'params' => json_encode(['target_kind' => 'counterparty', 'target_id' => $counterpartyId], JSON_THROW_ON_ERROR),
     ]);
 
@@ -174,7 +174,7 @@ it('never disables a dashboard-target digest', function (): void {
     dldInsertNotification($this->db, $user->id, $id, [
         'title' => 'Your weekly position',
         'body' => 'In 1,000.00 EUR, out 800.00 EUR, net 200.00 EUR.',
-        'trigger_type' => DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
+        'trigger_type' => NotificationTrigger::PositionDigest,
         'params' => json_encode(['target_kind' => 'dashboard'], JSON_THROW_ON_ERROR),
     ]);
 
@@ -217,7 +217,10 @@ it('degrades a cross-user target with the SAME generic copy as a genuinely delet
     expect($crossUserResponse->getContent() ?: '')->not->toContain('/recurring/series/'.$foreignSeriesId);
 });
 
-it('degrades a notification whose params JSON is malformed to a disabled generic item link', function (): void {
+// Unreadable params name no target, and a row that names no target is a
+// plain non-link: claiming an item is gone is a claim this row cannot make
+// and the reader cannot check.
+it('degrades a notification whose params JSON is malformed to a disabled link that claims nothing', function (): void {
     $user = dldUser('dld-malformed-params');
     $id = str_repeat('8', 64);
     dldInsertNotification($this->db, $user->id, $id, [
@@ -228,11 +231,11 @@ it('degrades a notification whose params JSON is malformed to a disabled generic
 
     $response->assertOk()
         ->assertSeeText('Payment due Friday')
-        ->assertSeeText('This item no longer exists.')
+        ->assertDontSeeText('no longer exists')
         ->assertSee('aria-disabled="true"', false);
 });
 
-it('degrades a notification whose params column is an empty string to a disabled generic item link', function (): void {
+it('degrades a notification whose params column is an empty string to a disabled link that claims nothing', function (): void {
     $user = dldUser('dld-empty-params');
     $id = str_repeat('9', 64);
     dldInsertNotification($this->db, $user->id, $id, [
@@ -243,6 +246,6 @@ it('degrades a notification whose params column is an empty string to a disabled
 
     $response->assertOk()
         ->assertSeeText('Payment due Friday')
-        ->assertSeeText('This item no longer exists.')
+        ->assertDontSeeText('no longer exists')
         ->assertSee('aria-disabled="true"', false);
 });

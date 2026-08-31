@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Redaguoti mokesčių žymą: :label',
     'tag' => 'Žymėti',
     'tag_aria' => 'Žymėti kaip susijusią su mokesčiais',
+    'tag_caption' => 'Žymėti',
 ];

@@ -17,7 +17,6 @@ return [
 
     'progress_aria' => 'Seadistamise edenemine',
     'step_progress' => 'Samm :current / :total',
-    'step_dot_aria' => 'Samm :number / :total',
 
     'eyebrow_step' => 'Samm :number — ',
 ];

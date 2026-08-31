@@ -20,6 +20,7 @@ return [
         'manage' => 'Nyílt bankolás kezelése',
         'not_connected' => 'Nincs csatlakoztatott bank. Csatlakoztass egyet a tranzakciók automatikus importálásához.',
         'expired' => 'A hozzájárulás lejárt — újracsatlakozás szükséges.',
+        'revoked' => 'A bankod lezárta a kapcsolatot — csatlakozz újra.',
         'connected' => 'Csatlakoztatva ide: :bank, az Enable Bankingen keresztül. Utolsó szinkronizálás: :when.',
         'never' => 'soha',
     ],
@@ -31,6 +32,7 @@ return [
         'pill_expired' => 'Lejárt — csatlakozz újra',
         'pill_expiring' => 'Hamarosan lejár',
         'pill_connected' => 'Csatlakoztatva',
+        'pill_revoked' => 'A bankod zárta le — csatlakozz újra',
         'whats_fetched_label' => 'Mit kérünk le',
         'whats_fetched' => 'Könyvelt tranzakciók és egyenlegek, az elmúlt 90 nap',
         'last_successful_sync_label' => 'Utolsó sikeres szinkronizálás',
@@ -39,12 +41,17 @@ return [
         'last_attempt_failed' => ':when — sikertelen (:reason)',
         'reason_consent_expired' => 'a hozzájárulás lejárt',
         'reason_error' => 'hiba',
+        'reason_truncated' => 'korán leállt',
+        'reason_nothing_imported' => 'semmit sem sikerült rögzíteni',
+        'reason_consent_revoked' => 'a bankod zárta le',
         'disconnect_button' => 'Leválasztás',
     ],
 
     'consent_banner' => [
         'heading' => 'A hozzájárulás lejárt — csatlakozz újra',
+        'heading_revoked' => 'A bankod lezárta a kapcsolatot',
         'body' => 'Az utolsó sikeres szinkronizálás ekkor volt: :when. Csatlakozz újra az automatikus szinkronizálás folytatásához.',
+        'body_revoked' => 'A bankod vagy az Enable Banking visszavonta a hozzáférést, ezért a szinkronizálás leállt. A legutóbbi sikeres szinkronizálás ekkor volt: :when. Csatlakozz újra, és folytatódik.',
         'never' => 'soha',
         'reconnect' => 'Újracsatlakozás',
     ],
@@ -59,6 +66,9 @@ return [
         'unavailable' => 'Az Enable Banking átmenetileg nem érhető el. Próbáld újra hamarosan.',
         'new_found' => ':count új tranzakció található.|:count új tranzakció található.',
         'none' => 'Nincs új tranzakció.',
+        'none_importable' => 'A bankod küldött tranzakciókat, de egyiket sem sikerült rögzíteni. Nyisd meg az import áttekintését, hogy lásd miért.',
+        'in_progress' => 'Már fut egy szinkronizálás. Próbálja meg újra egy pillanat múlva.',
+        'truncated' => 'A bankodnál több tranzakció volt, mint amennyit egy szinkronizálás le tud kérni, ezért ez a futás korán leállt. Semmi sem lett szinkronizáltként rögzítve — a következő szinkronizálás ugyanonnan indul.',
     ],
 
     'disconnect' => [
@@ -141,10 +151,6 @@ return [
         ],
     ],
 
-    'alert' => [
-        'reconsent' => 'Csatlakoztasd újra a bankod',
-    ],
-
     'errors' => [
         'wizard_incomplete' => 'Előbb fejezd be a nyílt bankolás beállítási varázslóját.',
         'no_bank_chosen' => 'Válassz bankot a csatlakoztatás előtt.',
@@ -154,5 +160,6 @@ return [
         'unsafe_consent_url' => 'Az Enable Banking nem biztonságos hozzájárulási URL-t adott vissza.',
         'no_authorization_code' => 'Az Enable Banking visszahívása nem adott vissza engedélyezési kódot.',
         'no_session_id' => 'Az Enable Banking nem adott vissza munkamenet-azonosítót.',
+        'oauth_state_mismatch' => 'Ez a kapcsolódási hivatkozás lejárt, vagy már felhasználták. Kezdje elölről a bank összekapcsolását.',
     ],
 ];

@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Potvrď nebo odmítni navržené vazby, které se nepodařilo potvrdit automaticky.',
 
     'empty_heading' => 'Není co kontrolovat',
-    'empty_body' => 'Každá vazba v řetězci je buď potvrzená, nebo odmítnutá. Nové návrhy se tu objeví s dalšími importy.',
+    'empty_body' => 'Každá vazba, kterou se resolveru podařilo spárovat, je potvrzená, nebo odmítnutá. Nové návrhy se tu objeví s dalšími importy.',
 
     'auto_confirm_nudge' => 'Ještě jedno potvrzení a podobné vazby se budou potvrzovat samy.',
 

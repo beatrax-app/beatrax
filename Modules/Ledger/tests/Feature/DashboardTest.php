@@ -89,7 +89,3 @@ it('renders the uncategorized count badge in the top nav', function (): void {
     $response->assertSee('Uncategorized', false);
     $response->assertSeeText('2');
 });
-
-it('redirects unauthenticated visitors away from the dashboard', function (): void {
-    // No DI-clean way to drive unauthenticated state from inside Pest today.
-})->skip('Verified at the Fortify default-route layer.');

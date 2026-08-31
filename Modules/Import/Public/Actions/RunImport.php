@@ -9,11 +9,13 @@ use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Import\Internal\Dto\PreviewHead;
 use Modules\Import\Internal\Exceptions\RacedImportRunVanishedException;
 use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Internal\Services\RemoteFetchPath;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
@@ -27,18 +29,18 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 /**
  * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
  */
-final class RunImport implements RunsImports
+final readonly class RunImport implements RunsImports
 {
-    private const STORAGE_DISK = 'local';
+    private const string STORAGE_DISK = 'local';
 
-    private const STORAGE_PREFIX = 'imports';
+    private const string STORAGE_PREFIX = 'imports';
 
     public function __construct(
-        private readonly ImportPipeline $pipeline,
-        private readonly PreviewCache $cache,
-        private readonly Clock $clock,
-        private readonly ConfirmImport $confirmAction,
-        private readonly StorageFactory $storage,
+        private ImportPipeline $pipeline,
+        private PreviewCache $cache,
+        private Clock $clock,
+        private ConfirmImport $confirmAction,
+        private StorageFactory $storage,
     ) {}
 
     public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult
@@ -48,11 +50,7 @@ final class RunImport implements RunsImports
             throw UploadStagingException::sha256Unavailable();
         }
 
-        /** @var ImportRun|null $existing */
-        $existing = ImportRun::query()
-            ->where('user_id', $user->id)
-            ->where('sha256', $sha)
-            ->first();
+        $existing = $this->findRun($user, $sha);
 
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
             // This SHA256 already imported and landed, so the re-parse would
@@ -72,7 +70,7 @@ final class RunImport implements RunsImports
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, $stablePath);
         } else {
             try {
-                $importRun = ImportRun::create([
+                $importRun = $this->createRun($user, $sha, [
                     'user_id' => $user->id,
                     'source_format' => $sourceFormat,
                     'raw_file_path' => $stablePath,
@@ -190,11 +188,7 @@ final class RunImport implements RunsImports
      */
     public function runFromRemoteFetch(Generator $sourceRows, string $sourceFormat, User $user, string $idempotencyKey): ImportPreviewResult
     {
-        /** @var ImportRun|null $existing */
-        $existing = ImportRun::query()
-            ->where('user_id', $user->id)
-            ->where('sha256', $idempotencyKey)
-            ->first();
+        $existing = $this->findRun($user, $idempotencyKey);
 
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
             // Same short-circuit as runFromUpload(): this window already
@@ -212,10 +206,10 @@ final class RunImport implements RunsImports
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, null);
         } else {
             try {
-                $importRun = ImportRun::create([
+                $importRun = $this->createRun($user, $idempotencyKey, [
                     'user_id' => $user->id,
                     'source_format' => $sourceFormat,
-                    'raw_file_path' => $this->syntheticRawFilePath($idempotencyKey),
+                    'raw_file_path' => RemoteFetchPath::forKey($idempotencyKey),
                     'sha256' => $idempotencyKey,
                     'uploaded_at' => $this->clock->now(),
                     'status' => ImportRunStatus::Previewed->value,
@@ -258,13 +252,6 @@ final class RunImport implements RunsImports
         );
     }
 
-    // raw_file_path is a required audit string with no FK to storage, so the
-    // remote-fetch path needs a deterministic, obviously-not-a-path marker.
-    private function syntheticRawFilePath(string $idempotencyKey): string
-    {
-        return sprintf('open-banking://%s', $idempotencyKey);
-    }
-
     private function resetPreviewedRun(ImportRun $run, string $sourceFormat, ?string $stablePath): ImportRun
     {
         $attributes = [
@@ -286,20 +273,38 @@ final class RunImport implements RunsImports
         return $run;
     }
 
+    // The run is read back by the (user_id, sha256) UNIQUE rather than carried
+    // out of create(): create() ends in insertGetId(), lastInsertId() is per
+    // connection, and the badge listener writes a `cache` row from inside this
+    // INSERT's own event -- the preview would name a run the confirm cannot find.
+    /**
+     * @param  array<string, mixed>  $attributes
+     *
+     * @link ../../../../.docs/features/core/an-id-read-after-an-insert.md
+     */
+    private function createRun(User $user, string $sha256, array $attributes): ImportRun
+    {
+        ImportRun::create($attributes);
+
+        return $this->findRun($user, $sha256) ?? throw new IdReadBackFailedException('import_runs');
+    }
+
     // The UniqueConstraintViolationException that led here proves the row
     // committed, so a null read is a real invariant break.
     private function reReadAfterRace(User $user, string $sha256): ImportRun
     {
-        /** @var ImportRun|null $raced */
-        $raced = ImportRun::query()
+        return $this->findRun($user, $sha256)
+            ?? throw new RacedImportRunVanishedException($user->id, $sha256);
+    }
+
+    private function findRun(User $user, string $sha256): ?ImportRun
+    {
+        /** @var ImportRun|null $found */
+        $found = ImportRun::query()
             ->where('user_id', $user->id)
             ->where('sha256', $sha256)
             ->first();
 
-        if ($raced === null) {
-            throw new RacedImportRunVanishedException($user->id, $sha256);
-        }
-
-        return $raced;
+        return $found;
     }
 }

@@ -8,32 +8,29 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\EncryptionMigrationService;
-use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../.docs/features/auth/app-lock-data-key-lifetime.md
  */
-final class AppLockProvisioner
+final readonly class AppLockProvisioner
 {
-    private const STRANDED_ALERT_KIND = 'auth.lock.key_material_stranded';
-
-    private const STALE_RECOVERY_ALERT_KIND = 'auth.lock.recovery_wrap_stale';
-
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly AppLockKdf $kdf,
-        private readonly AppLockKeyWrap $keyWrap,
-        private readonly PinHasher $pinHasher,
-        private readonly Clock $clock,
-        private readonly LockStateManager $lockState,
-        private readonly BiometricDeviceStore $biometricStore,
-        private readonly Dispatcher $events,
-        private readonly EncryptionMigrationService $encryption,
-        private readonly SystemAlertWriter $alerts,
+        private DatabaseManager $db,
+        private AppLockKdf $kdf,
+        private AppLockKeyWrap $keyWrap,
+        private PinHasher $pinHasher,
+        private Clock $clock,
+        private LockStateManager $lockState,
+        private BiometricDeviceStore $biometricStore,
+        private Dispatcher $events,
+        private EncryptionMigrationService $encryption,
+        private AppLockKeyMaterialAlerts $keyMaterialAlerts,
+        private ColdStartVault $coldStartVault,
     ) {}
 
     // A PIN's only entropy is its length, so a short one is offline-brute-
@@ -44,10 +41,10 @@ final class AppLockProvisioner
     {
         if (! AppLockPinShape::isWellFormed($pin)) {
             throw ValidationException::withMessages([
-                'pin' => [
-                    'The app lock PIN must be '
-                    .AppLockPinShape::MINIMUM_LENGTH.' to '.AppLockPinShape::MAXIMUM_LENGTH.' digits.',
-                ],
+                'pin' => [Lang::get('auth::app_lock.error_pin_digits', [
+                    'min' => AppLockPinShape::MINIMUM_LENGTH,
+                    'max' => AppLockPinShape::MAXIMUM_LENGTH,
+                ])],
             ]);
         }
     }
@@ -61,7 +58,7 @@ final class AppLockProvisioner
         // weak PIN, because that key wraps the keyring of delivered epochs.
         if ($accountPassword === '') {
             throw ValidationException::withMessages([
-                'pin' => ['A PIN and account password are required to enable the app lock.'],
+                'pin' => [Lang::get('auth::app_lock.error_account_password_required')],
             ]);
         }
 
@@ -75,8 +72,11 @@ final class AppLockProvisioner
             : random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
 
         // A leftover enrollment wraps whatever key the previous provisioning
-        // held, so it must not survive one that may have replaced it.
+        // held, so it must not survive one that may have replaced it. The OS
+        // vault holds one more, outside the row, and answers isEnrolled() from
+        // its own storage: left behind, nothing ever re-enrols under the new key.
         $this->biometricStore->deleteForUser($userId);
+        $this->coldStartVault->forget($userId);
 
         $salt = $this->kdf->generateSalt();
 
@@ -153,7 +153,7 @@ final class AppLockProvisioner
 
         if ($dataKey === null) {
             throw ValidationException::withMessages([
-                'pin' => ['The key that opens this account\'s encrypted data is not available here, so a new PIN cannot be set over it.'],
+                'pin' => [Lang::get('auth::app_lock.error_key_material_lost')],
             ]);
         }
 
@@ -253,13 +253,7 @@ final class AppLockProvisioner
             ->where('user_id', $userId)
             ->update(['password_wrap_stale_at' => $this->clock->now()->toDateTimeString()]);
 
-        $this->raiseOnce(
-            $userId,
-            self::STALE_RECOVERY_ALERT_KIND,
-            'The account password changed without the app-lock recovery wrap being re-wrapped, so that password no '
-                .'longer opens the app lock. The PIN still does. Re-link the account password from the app-lock '
-                .'settings while the PIN is still known, or a forgotten PIN leaves nothing behind it.',
-        );
+        $this->keyMaterialAlerts->recoveryWrapStale($userId);
     }
 
     // The repair, and the only moment both credentials exist at once: the PIN
@@ -308,7 +302,6 @@ final class AppLockProvisioner
             return false;
         }
 
-        /** @var mixed $value */
         $value = get_object_vars($row)['password_wrap_stale_at'] ?? null;
 
         return $value !== null;
@@ -431,8 +424,19 @@ final class AppLockProvisioner
             return;
         }
 
+        // The lock screen sends a reader who has forgotten the PIN to sign
+        // back in with the account password, so arriving here IS that
+        // credential being proved. Left standing, the meter that signed them
+        // out is still at the cap and one mistyped digit does it again.
+        $this->clearFailureMeter($userId);
+
+        // A sign-in is the moment such an install would otherwise come up
+        // blank, and the state is read rather than assumed: a lock switched
+        // off by a reader who still holds their data is not stranded.
         if (! (bool) $row->lock_enabled) {
-            $this->reportStrandedKeyMaterial($userId);
+            if ($this->keyState($userId) === AppLockKeyState::Stranded) {
+                $this->keyMaterialAlerts->keyMaterialStranded($userId);
+            }
 
             return;
         }
@@ -449,6 +453,17 @@ final class AppLockProvisioner
 
         $this->lockState->unlock($session, $dataKey);
         sodium_memzero($dataKey);
+    }
+
+    private function clearFailureMeter(int $userId): void
+    {
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update([
+                'failed_attempts' => 0,
+                'locked_until' => null,
+            ]);
     }
 
     // Both ways the password road can be shut answer null: columns a half
@@ -471,48 +486,6 @@ final class AppLockProvisioner
         }
 
         return $dataKey;
-    }
-
-    // A sign-in is the moment such an install would otherwise come up blank:
-    // nothing will ask for a key, so every encrypted column renders empty and
-    // says nothing. Raised once per unacknowledged row, so a daily sign-in
-    // does not become a daily alert.
-    private function reportStrandedKeyMaterial(int $userId): void
-    {
-        if ($this->keyState($userId) !== AppLockKeyState::Stranded) {
-            return;
-        }
-
-        $this->raiseOnce(
-            $userId,
-            self::STRANDED_ALERT_KIND,
-            'At-rest encryption is active for this account but no app-lock wrap still holds the data key, '
-                .'so every encrypted note, description and counterparty detail reads as empty. '
-                .'Pairing with a device that still holds the key is the only way back.',
-        );
-    }
-
-    // One open row per kind: both key-material faults persist until somebody
-    // acts on them, so a per-sign-in copy would bury the first under repeats.
-    private function raiseOnce(int $userId, string $kind, string $message): void
-    {
-        $alreadyRaised = $this->db->connection()
-            ->table('system_alerts')
-            ->where('user_id', $userId)
-            ->where('kind', $kind)
-            ->whereNull('acknowledged_at')
-            ->exists();
-
-        if ($alreadyRaised) {
-            return;
-        }
-
-        $this->alerts->raiseForUser(
-            userId: $userId,
-            kind: $kind,
-            severity: SystemAlertSeverity::Critical->value,
-            message: $message,
-        );
     }
 
     // Bypasses the failed-attempt backoff meter on purpose: that is scoped to
@@ -569,6 +542,7 @@ final class AppLockProvisioner
             ]);
 
         $this->biometricStore->deleteForUser($userId);
+        $this->coldStartVault->forget($userId);
 
         return AppLockDisableResult::Disabled;
     }

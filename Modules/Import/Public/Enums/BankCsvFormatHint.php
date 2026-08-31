@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Enums;
 
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 
-// Every bank exports its own CSV column shape, so a CSV import has to declare
-// which dialect it is rather than be sniffed. A preset names its own dialect in
-// its format id, which leaves only the built-in ASN CSV needing to say so here.
+// Vestigial: every CSV dialect is now a CsvPresetRegistry preset whose format id
+// already names it, so this carries nothing the id does not. It survives only
+// because its one case is named by test call sites in modules outside Import.
 enum BankCsvFormatHint: string
 {
-    case Asn = SourceFormat::AsnCsv->value;
+    case Asn = CsvPresetRegistry::ASN;
 }

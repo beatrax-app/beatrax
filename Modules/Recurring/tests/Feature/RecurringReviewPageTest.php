@@ -3,13 +3,16 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Support\Lang;
+use Modules\Recurring\Internal\Enums\ReviewTab;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 function rrpUser(string $username): User
@@ -268,3 +271,87 @@ it('anchors both row popovers to the row with one shape and differs only by widt
     // Reconciling them is a decision, not something this extraction may drift.
     expect($content)->not->toContain('role="menu"');
 });
+
+// cadence_changed has no edge to snoozed, so the Snooze popover on that tab was
+// a rendered, enabled control whose only outcome was a 500.
+it('offers no Snooze on a cadence-changed row, whose state has no edge to snoozed', function (): void {
+    RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'direction' => 'expense',
+        'detected_name' => 'flipped',
+        'state' => RecurringSeriesState::CadenceChanged->value,
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1099,
+        'latest_currency' => 'EUR',
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'expense::flipped::eur::monthly',
+    ]);
+
+    $html = Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->call('setTab', ReviewTab::CadenceChanged->value)
+        ->html();
+
+    expect($html)->toContain('flipped');
+    expect($html)->not->toContain('wire:click="snooze(');
+});
+
+it('no-ops instead of dying when the row moved out from under the click', function (): void {
+    $series = RecurringSeries::query()->create([
+        'user_id' => $this->user->id,
+        'direction' => 'expense',
+        'detected_name' => 'moved-on',
+        'state' => RecurringSeriesState::CadenceChanged->value,
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1099,
+        'latest_currency' => 'EUR',
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'expense::moved-on::eur::monthly',
+    ]);
+
+    Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->call('snooze', $series->id, '2026-06-17 12:00:00')
+        ->assertOk();
+
+    expect(RecurringSeries::query()->find($series->id)->state)
+        ->toBe(RecurringSeriesState::CadenceChanged->value);
+});
+
+// 30 pending series, 30 in the sidebar badge, 26 on screen and no control that
+// reached the other four.
+it('reaches every pending series the badge counts', function (): void {
+    for ($i = 0; $i < 30; $i++) {
+        RecurringSeries::query()->create([
+            'user_id' => $this->user->id,
+            'direction' => 'expense',
+            'detected_name' => 'paged-'.$i,
+            'state' => RecurringSeriesState::Pending->value,
+            'cadence' => 'monthly',
+            'latest_amount_minor' => -1000 - $i,
+            'latest_currency' => 'EUR',
+            'variance_tolerance_percent' => 25,
+            'cluster_key' => 'expense::paged-'.$i.'::eur::monthly',
+        ]);
+    }
+
+    $component = Livewire::actingAs($this->user)->test(RecurringReviewPage::class);
+    expect(substr_count($component->html(), 'wire:click="approve('))->toBe(RecurringReviewPage::PAGE_SIZE);
+
+    $component->call('loadMore');
+
+    $html = $component->html();
+    expect(substr_count($html, 'wire:click="approve('))->toBe(30);
+    // The earlier page is still on screen: the bulk bar holds ids from it.
+    expect($html)->toContain('paged-29')->toContain('paged-0');
+});
+
+// $pagesShown sizes the review query's LIMIT, so a wire write to it is a
+// request for every series the reader owns in one render.
+it('refuses a client-side write to the page-count property', function (): void {
+    rrpSeries($this->user, RecurringSeriesState::Pending->value, 'rrp::locked', 'locked-row');
+
+    Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('pagesShown', 100000);
+})->throws(CannotUpdateLockedPropertyException::class);

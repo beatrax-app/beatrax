@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
+use Modules\Auth\Public\Recovery\PendingRecoveryCodes;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -20,13 +21,13 @@ use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
 use Modules\Core\Public\Services\UserCountry;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\PairingEntryUrl;
+use Modules\Mobile\Internal\Identity\DeviceProvisioningOutcome;
 use Modules\Mobile\Internal\Identity\ImportBootstrapStep;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
-use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
 
@@ -36,17 +37,20 @@ final class MobileImportBootstrap extends Component
     use HoldsFlashMessage;
     use ReportsFieldRejections;
 
-    private const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
-
     // Written the moment the codes reach the screen, so a later mount can tell
     // a display still owed from a return trip to one already made.
-    private const RECOVERY_CODES_SHOWN_SESSION_KEY = 'mobile.import.recovery_codes_shown';
+    private const string RECOVERY_CODES_SHOWN_SESSION_KEY = 'mobile.import.recovery_codes_shown';
 
     // Server-side only, for the lifetime of the provisioning_failed retry
     // window, and forgotten the moment provisioning succeeds.
-    private const PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
+    private const string PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
 
-    private const MINIMUM_PIN_LENGTH = 6;
+    // The provisioner's own floor, restated here because this screen gates
+    // ahead of it and the account is committed before the floor is reached: a
+    // gate that admits what the floor refuses strands the device it just made.
+    private const int MINIMUM_PIN_LENGTH = 6;
+
+    private const int MAXIMUM_PIN_LENGTH = 10;
 
     // The five credential boxes, read by ReportsFieldRejections rather than
     // by anything here. SignupAction also rejects under `signup` when the
@@ -69,6 +73,16 @@ final class MobileImportBootstrap extends Component
     public function mount(CurrentUser $currentUser, Session $session): void
     {
         if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
+        // The stash outlives only an unfinished provisioning, so a reload here
+        // is a return to the failure, not a way past it: walking on to the
+        // codes handed the reader a device with no lock and no sync identity,
+        // whose only remaining screen was "abandon import".
+        if ($session->get(self::PENDING_CREDENTIALS_SESSION_KEY) !== null) {
+            $this->step = ImportBootstrapStep::ProvisioningFailed->value;
+
             return;
         }
 
@@ -102,8 +116,8 @@ final class MobileImportBootstrap extends Component
 
     public string $confirmPin = '';
 
-    // Asked here because this is the second way an account is made and `users`
-    // does not sync, so a country left unset on this phone stays unset. Not
+    // The second way an account is made, and the country is asked of every
+    // joiner rather than synced, so one left unset here stays unset. Not
     // choosing is still a real answer: it widens classification to every
     // region rather than pinning the device to a guessed one.
     public string $country = '';
@@ -157,12 +171,23 @@ final class MobileImportBootstrap extends Component
         // never the empty properties cleared immediately above.
         $session->put(self::PENDING_CREDENTIALS_SESSION_KEY, ['pin' => $credentials->pin, 'password' => $credentials->accountPassword]);
 
-        if ($this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
+        $outcome = $this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent);
+
+        if ($outcome === DeviceProvisioningOutcome::Succeeded) {
             $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
             $this->moveTo(ImportBootstrapStep::RecoveryCodes);
-        } else {
-            $this->moveTo(ImportBootstrapStep::ProvisioningFailed);
+
+            return;
         }
+
+        // A credential the floor below refuses is refused again on every replay
+        // of the same stash, so that screen must name the rule rather than
+        // offer a retry that is arithmetic on a fixed answer.
+        if ($outcome === DeviceProvisioningOutcome::CredentialsRejected) {
+            $this->flashMessage = Lang::get('mobile::import.errors.pin_digits');
+        }
+
+        $this->moveTo(ImportBootstrapStep::ProvisioningFailed);
     }
 
     // Field-scoped, so each message renders under the box it is about and that
@@ -185,8 +210,10 @@ final class MobileImportBootstrap extends Component
             $broken['passwordConfirmation'] = Lang::get('mobile::import.errors.passwords_mismatch');
         }
 
-        if (strlen($this->pin) < self::MINIMUM_PIN_LENGTH) {
-            $broken['pin'] = Lang::get('mobile::import.errors.pin_length');
+        $pinRule = $this->brokenPinRule($this->pin);
+
+        if ($pinRule !== null) {
+            $broken['pin'] = $pinRule;
         }
 
         if ($this->pin !== $this->confirmPin) {
@@ -198,6 +225,20 @@ final class MobileImportBootstrap extends Component
         }
 
         return $broken !== [];
+    }
+
+    // Too-short is told apart from the rest so a reader who typed four digits
+    // is not handed a rule about the alphabet. Everything else — eleven digits,
+    // a letter, a space — is one answer, because the keypad types none of them.
+    private function brokenPinRule(string $pin): ?string
+    {
+        if (mb_strlen($pin) < self::MINIMUM_PIN_LENGTH) {
+            return Lang::get('mobile::import.errors.pin_length');
+        }
+
+        return preg_match('/^[0-9]{'.self::MINIMUM_PIN_LENGTH.','.self::MAXIMUM_PIN_LENGTH.'}$/', $pin) === 1
+            ? null
+            : Lang::get('mobile::import.errors.pin_digits');
     }
 
     // Idempotent-safe retry of the provisioning steps only - never
@@ -212,6 +253,13 @@ final class MobileImportBootstrap extends Component
         DatabaseManager $db,
         MobileImportIntentGate $importIntent,
     ): void {
+        // The same guard mount() opens with, because this screen is reachable
+        // outside the auth group and a `calls` payload names a method directly:
+        // nothing between the route and here has asked for a reader yet.
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
         $userId = $currentUser->user()->id;
 
         /** @var array{pin: string, password: string}|null $pending */
@@ -230,8 +278,12 @@ final class MobileImportBootstrap extends Component
 
         $credentials = new MobileProvisioningCredentials($userId, $pending['pin'], $pending['password']);
 
-        if (! $this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
-            $this->flashMessage = Lang::get('mobile::import.errors.retry_failed');
+        $outcome = $this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent);
+
+        if ($outcome !== DeviceProvisioningOutcome::Succeeded) {
+            $this->flashMessage = $outcome === DeviceProvisioningOutcome::CredentialsRejected
+                ? Lang::get('mobile::import.errors.pin_digits')
+                : Lang::get('mobile::import.errors.retry_failed');
 
             return;
         }
@@ -260,23 +312,13 @@ final class MobileImportBootstrap extends Component
         return ImportBootstrapStep::tryFrom($this->step) ?? ImportBootstrapStep::CollectPin;
     }
 
-    // Leaves the recovery-codes ceremony and enters the pairing flow,
-    // redirecting into mobile.pair?mode=import instead of the desktop
-    // dashboard.
-    public function continueToPairing(Session $session, UrlGenerator $urls): void
-    {
-        $this->forgetRecoveryCodes($session);
-
-        $this->redirect(PairingEntryUrl::importingFrom($urls), navigate: false);
-    }
-
     public function render(
         ViewFactory $views,
         Session $session,
         UrlGenerator $urls,
         CurrentUser $currentUser,
         RecoveryCodeFormatter $formatter,
-        RecoveryCodesExportBridge $exportBridge,
+        ShareSheetExport $exportBridge,
         UserCountry $countries,
     ): View {
         // Only the recovery step has an authenticated user: every earlier step
@@ -290,6 +332,7 @@ final class MobileImportBootstrap extends Component
         // back and show them a second time.
         if ($showingCodes) {
             $session->put(self::RECOVERY_CODES_SHOWN_SESSION_KEY, true);
+            PendingRecoveryCodes::renew($session);
         }
 
         $view = $views->make('mobile::livewire.mobile-import-bootstrap', [
@@ -310,9 +353,7 @@ final class MobileImportBootstrap extends Component
             // there the endpoint keeps a copy and the screen says so. A shell
             // that saves the download hands the file to the reader instead, so
             // it keeps the blob and is never sent to the endpoint.
-            'nativeExport' => $showingCodes
-                && $exportBridge->isAvailable()
-                && UserDataPathService::platform()?->savesWebViewDownloads() !== true,
+            'nativeExport' => $showingCodes && $exportBridge->replacesWebViewDownload(),
             'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
@@ -325,7 +366,7 @@ final class MobileImportBootstrap extends Component
     // Made idempotent-safe via a bare table read (not a new cross-module
     // class) so a retry after a partial failure never double-inserts a
     // device_registry row or needlessly re-rotates an already-minted
-    // app-lock data key. Returns false on any failure, never throws.
+    // app-lock data key. Never throws: the answer is in the return.
     private function provisionDeviceLocally(
         MobileProvisioningCredentials $credentials,
         Session $session,
@@ -333,7 +374,7 @@ final class MobileImportBootstrap extends Component
         PairingGateway $pairingGateway,
         DatabaseManager $db,
         MobileImportIntentGate $importIntent,
-    ): bool {
+    ): DeviceProvisioningOutcome {
         $userId = $credentials->userId;
         $importIntent->markImporting($userId);
 
@@ -357,9 +398,11 @@ final class MobileImportBootstrap extends Component
                 $pairingGateway->enableSyncIdentityWithoutEpoch($userId, $session);
             }
 
-            return true;
+            return DeviceProvisioningOutcome::Succeeded;
+        } catch (ValidationException) {
+            return DeviceProvisioningOutcome::CredentialsRejected;
         } catch (Throwable) {
-            return false;
+            return DeviceProvisioningOutcome::Failed;
         }
     }
 
@@ -368,10 +411,7 @@ final class MobileImportBootstrap extends Component
      */
     private function recoveryCodesFromSession(Session $session): array
     {
-        /** @var list<string>|null $codes */
-        $codes = $session->get(self::RECOVERY_CODES_SESSION_KEY);
-
-        return $codes ?? [];
+        return PendingRecoveryCodes::read($session);
     }
 
     private function recoveryCodesAlreadyShown(Session $session): bool
@@ -381,6 +421,7 @@ final class MobileImportBootstrap extends Component
 
     private function forgetRecoveryCodes(Session $session): void
     {
-        $session->forget([self::RECOVERY_CODES_SESSION_KEY, self::RECOVERY_CODES_SHOWN_SESSION_KEY]);
+        PendingRecoveryCodes::forget($session);
+        $session->forget(self::RECOVERY_CODES_SHOWN_SESSION_KEY);
     }
 }

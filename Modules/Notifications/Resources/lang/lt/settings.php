@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'Apie ką pranešti',
+    'background_note' => 'Beatrax juos parengia, kol programėlė atidaryta. Suplanuotas paleidimas fone to negali — programėlės užraktas saugo vienintelį raktą — todėl laukiantys pasiimami tau toliau naudojantis programėle.',
+    'background_note_phone' => 'Beatrax juos parengia, kol programėlė atidaryta. Fone to daryti negali — programėlės užraktas saugo vienintelį raktą — todėl laukiantys ateis kitą kartą atidarius programėlę.',
 
     'reminders' => [
         'label' => 'Mokėjimų priminimai',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Slėpti išsamią informaciją pranešimuose',
-        'help' => 'Rodyti sumas ir prekybininkų pavadinimus pačiame pranešimo skydelyje. Išjunk, jei tavo ekraną gali matyti kiti.',
+        'help' => 'Slėpti sumas ir prekybininkų pavadinimus pačiame pranešimo skydelyje. Įjunk, jei tavo ekraną gali matyti kiti.',
     ],
 
     'save' => 'Išsaugoti pranešimų nustatymus',

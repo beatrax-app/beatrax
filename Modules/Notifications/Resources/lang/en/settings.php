@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'What to notify me about',
+    'background_note' => 'Beatrax prepares these while it is open. A scheduled background run cannot — the app lock holds the only key — so anything due is picked up as you carry on using the app.',
+    'background_note_phone' => 'Beatrax prepares these while it is open. In the background it cannot — the app lock holds the only key — so anything due arrives the next time you open the app.',
 
     'reminders' => [
         'label' => 'Payment reminders',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Hide details in notifications',
-        'help' => 'Show amounts and merchant names in the notification banner itself. Turn off if your screen might be visible to others.',
+        'help' => 'Hide amounts and merchant names in the notification banner itself. Turn on if your screen might be visible to others.',
     ],
 
     'save' => 'Save notification settings',

@@ -20,6 +20,7 @@ return [
     'col_amount' => 'Iznos',
 
     'subtotal' => 'Međuzbroj',
+    'subtotal_income' => 'Međuzbroj prihoda',
 
     'footer' => 'Izradio Beatrax — osobne financije samo lokalno — :year',
 ];

@@ -58,6 +58,7 @@ function blankDateTransaction(string $postedAt): RuleMatchInput
         counterpartyName: 'Albert Heijn',
         description: 'Groceries',
         settledAmountMinor: -4990,
+        settledCurrency: 'EUR',
         postedAt: CarbonImmutable::parse($postedAt),
     );
 }
@@ -90,16 +91,21 @@ it('matches nothing when a between range is missing its upper bound', function (
 });
 
 // The other half of the contract, and the reason the guard is on emptiness
-// rather than on parseability: a value that is present but unreadable still
-// throws, so ReapplyRulesJob can count the row as errored and skip it instead
-// of silently matching nothing. Swapping the throw for a false would hide a
-// malformed rule from the operator entirely.
-it('still raises on a value that is present but unreadable', function (): void {
-    blankDateRule($this->ruleOwner->id, 'not-a-real-date');
+// rather than on parseability: a value that is present but is not a calendar
+// day still throws, so ReapplyRulesJob can count the row as errored and skip it
+// instead of silently matching nothing. Swapping the throw for a false would
+// hide a malformed rule from the operator entirely.
+//
+// 'tomorrow' and '2026-02-31' are here because Carbon read BOTH: the first as a
+// boundary that moved every day the rule ran, the second as 3 March. Neither
+// raised, so the operator was never told, and the rows the rule claimed were
+// not the rows its author wrote.
+it('still raises on a value that is present but is not a calendar day', function (string $stored): void {
+    blankDateRule($this->ruleOwner->id, $stored);
 
     expect(fn (): array => app(RuleEngine::class)->match(blankDateTransaction('2026-06-15'), $this->ruleOwner))
         ->toThrow(InvalidFormatException::class);
-});
+})->with(['not-a-real-date', 'tomorrow', '2026-02-31', '2026-06', '2026-6-1']);
 
 // A real date still decides normally — the guard must not have turned every
 // Date condition into a non-match.

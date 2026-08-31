@@ -18,8 +18,13 @@
              without it the wizard chrome draws under the notch. The app and lock
              layouts already carry it — this shell was the only one that did not.
              Android does not use env() at all: its shell injects --inset-* onto
-             :root, which --safe-* reads through max(). --}}
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+             :root, which --safe-* reads through max().
+
+             interactive-widget=resizes-content is what keeps the soft keyboard
+             from offsetting the visual viewport alone and leaving this shell's
+             sticky chrome anchored off-screen. The wizard takes typed amounts
+             on its starting-balance cards, so it meets the keyboard too. --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
 
         {{-- The wizard has its own layout, and the first import happens here:
@@ -35,7 +40,7 @@
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
-        style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+        style="font-family: system-ui, -apple-system, sans-serif;"
     >
         <div class="wiz-page">
             {{ $slot }}

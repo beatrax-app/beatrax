@@ -74,7 +74,7 @@ final class DemoCategorizationRulesSeeder
      */
     public function run(array $users): int
     {
-        $primary = $users['demo-1@beatrax.local'] ?? null;
+        $primary = $users['demo-1'] ?? null;
         if ($primary !== null) {
             foreach (self::RULES as $row) {
                 $this->upsertRule($primary, $row);

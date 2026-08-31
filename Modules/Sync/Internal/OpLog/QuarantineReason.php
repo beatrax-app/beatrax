@@ -35,6 +35,18 @@ enum QuarantineReason: string
     // poll driving the UI answered 500 instead of advancing.
     case MissingReference = 'missing_reference';
 
+    // A tombstone the database refused because a row still references the one
+    // it names under an ON DELETE NO ACTION foreign key. Swallowed into an
+    // empty catch, it left the two devices disagreeing about a row with
+    // nothing anywhere saying so.
+    case DeleteBlockedByReference = 'delete_blocked_by_reference';
+
+    // A day the calendar does not have, supplied by a peer for a DATE column.
+    // The applier used to write it through and let the model cast refuse it on
+    // the way back out, which left the row holding it. Refusing the op keeps
+    // the column answerable instead.
+    case ImpossibleDate = 'impossible_date';
+
     // The two a key arriving later can undo. Everything else above is a
     // permanent verdict on the entry itself — a forged signature stays forged —
     // so replaying history for one of those would only re-reach it.

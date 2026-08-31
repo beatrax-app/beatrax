@@ -7,6 +7,7 @@ return [
     'subtitle' => 'Programėlės kūrėjo pulto operacinis paviršius.',
     'worker_heartbeat' => 'Vykdytojo pulsas',
     'not_running' => 'NEVEIKIA',
+    'heartbeat_age' => 'prieš :count s · ttl :ttl s|prieš :count s · ttl :ttl s|prieš :count s · ttl :ttl s',
     'queue' => 'Eilė',
     'pending' => 'laukia',
     'failed' => 'nepavyko',

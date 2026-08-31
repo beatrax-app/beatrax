@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Bekreft eller avvis kandidatlenker som kjedeløseren ikke kunne bekrefte automatisk.',
 
     'empty_heading' => 'Ingenting å gjennomgå',
-    'empty_body' => 'Hver kjedelenke er enten bekreftet eller avvist. Nye kandidater dukker opp her etter hvert som importer kommer inn.',
+    'empty_body' => 'Hver lenke som løseren klarte å pare, er bekreftet eller avvist. Nye kandidater dukker opp her etter hvert som importer kommer inn.',
 
     'auto_confirm_nudge' => 'Én bekreftelse til, så bekreftes lignende lenker automatisk.',
 

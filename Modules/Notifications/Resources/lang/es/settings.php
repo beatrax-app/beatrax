@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'what_heading' => 'De qué quiero recibir avisos',
+    'background_note' => 'Beatrax las prepara mientras la app está abierta. Una ejecución programada en segundo plano no puede — el bloqueo de la app guarda la única clave —, así que lo pendiente se recupera mientras sigues usando la app.',
+    'background_note_phone' => 'Beatrax las prepara mientras la app está abierta. En segundo plano no puede — el bloqueo de la app guarda la única clave —, así que lo pendiente llega la próxima vez que abras la app.',
 
     'reminders' => [
         'label' => 'Recordatorios de pago',
@@ -44,7 +46,7 @@ return [
 
     'hide_details' => [
         'label' => 'Ocultar detalles en las notificaciones',
-        'help' => 'Muestra los importes y los nombres de los comercios en el propio banner de la notificación. Desactívalo si otras personas pueden ver tu pantalla.',
+        'help' => 'Oculta los importes y los nombres de los comercios en el propio banner de la notificación. Actívalo si otras personas pueden ver tu pantalla.',
     ],
 
     'save' => 'Guardar los ajustes de notificaciones',

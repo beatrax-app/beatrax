@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
+use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
@@ -184,7 +185,7 @@ it('converts a category breakdown row rather than adding across currencies', fun
     cpRate($this->db, Currency::Usd->value, '2.0');
 
     $cp = Counterparty::query()->where('slug', 'acme')->firstOrFail();
-    $breakdown = app(CounterpartyProfileQuery::class)->categoryBreakdown($cp);
+    $breakdown = app(CounterpartyProfileQuery::class)->categoryBreakdown($cp, $this->user);
 
     expect($breakdown)->toHaveCount(1)
         ->and((int) $breakdown->first()->total_minor)->toBe(-15_000);
@@ -197,7 +198,7 @@ it('converts a government tax-year row rather than adding across currencies', fu
     cpRate($this->db, Currency::Usd->value, '2.0');
 
     $cp = Counterparty::query()->where('slug', 'belastingdienst')->firstOrFail();
-    $years = app(CounterpartyProfileQuery::class)->taxYearBreakdown($cp);
+    $years = app(CounterpartyProfileQuery::class)->taxYearBreakdown($cp, $this->user);
 
     expect($years)->toHaveCount(1)
         ->and((int) $years->first()->total_minor)->toBe(-15_000);
@@ -223,4 +224,61 @@ it('says on /counterparties which currency a total could not reach', function ()
     $html = Livewire::test(CounterpartyIndex::class)->html();
 
     expect($html)->toContain(Currency::Jpy->value.' not converted');
+});
+
+function cpBreakdownCategory(DatabaseManager $db, string $name): int
+{
+    return $db->connection()->table('categories')->insertGetId([
+        'user_id' => null, 'name' => $name, 'slug' => 'cpb-'.bin2hex(random_bytes(4)), 'kind' => 'expense',
+        'display_order' => 1, 'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
+    ]);
+}
+
+// The hero and the category rows under it answer the same question over the
+// same twelve months. Each converted its own slice of one currency's bucket,
+// so the rows stopped adding up to the figure they sit beneath.
+it('adds the category rows up to the twelve-month total above them', function (): void {
+    $cpId = cpMerchant($this->db, $this->user->id, 'acme');
+    // USD 3.33 + 3.33 + 3.34 at 1.07 per euro: each row rounds down on its own,
+    // the whole USD 10.00 bucket rounds up.
+    cpCharge($this->db, $this->user->id, $cpId, -333, Currency::Usd->value, '2026-08-01', cpBreakdownCategory($this->db, 'Office'));
+    cpCharge($this->db, $this->user->id, $cpId, -333, Currency::Usd->value, '2026-08-02', cpBreakdownCategory($this->db, 'Travel'));
+    cpCharge($this->db, $this->user->id, $cpId, -334, Currency::Usd->value, '2026-08-03', cpBreakdownCategory($this->db, 'Tools'));
+    cpRate($this->db, Currency::Usd->value, '1.07');
+
+    $profile = app(CounterpartyProfileQuery::class)->bySlug($this->user, 'acme');
+    $cp = Counterparty::query()->where('slug', 'acme')->firstOrFail();
+    $breakdown = app(CounterpartyProfileQuery::class)->categoryBreakdown($cp, $this->user);
+
+    $rows = 0;
+    foreach ($breakdown as $row) {
+        $rows += (int) $row->total_minor;
+    }
+
+    expect($profile->total12mMinor)->toBe(-935)
+        ->and($rows)->toBe($profile->total12mMinor);
+});
+
+it('names beside a category row the currency that row could not be priced in', function (): void {
+    $categoryId = cpBreakdownCategory($this->db, 'Office');
+    $cpId = cpMerchant($this->db, $this->user->id, 'acme');
+    cpCharge($this->db, $this->user->id, $cpId, -10_000, Currency::Eur->value, '2026-08-01', $categoryId);
+    cpCharge($this->db, $this->user->id, $cpId, -500_000, Currency::Jpy->value, '2026-08-02', $categoryId);
+
+    $cp = Counterparty::query()->where('slug', 'acme')->firstOrFail();
+    $breakdown = app(CounterpartyProfileQuery::class)->categoryBreakdown($cp, $this->user);
+
+    expect($breakdown)->toHaveCount(1)
+        ->and((int) $breakdown->first()->total_minor)->toBe(-10_000)
+        ->and($breakdown->first()->unconverted)->toBe([Currency::Jpy->value]);
+});
+
+it('names on the profile page the currency the hero figure leaves out', function (): void {
+    $cpId = cpMerchant($this->db, $this->user->id, 'acme');
+    cpCharge($this->db, $this->user->id, $cpId, -10_000, Currency::Eur->value);
+    cpCharge($this->db, $this->user->id, $cpId, -500_000, Currency::Jpy->value);
+
+    Livewire::test(CounterpartyProfile::class, ['slug' => 'acme'])
+        ->assertSee('data-not-converted', escape: false)
+        ->assertSee(Currency::Jpy->value);
 });

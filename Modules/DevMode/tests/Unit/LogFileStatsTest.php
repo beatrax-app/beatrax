@@ -23,7 +23,7 @@ it('returns zeroed counters when today\'s log file is missing', function (): voi
     // The sandbox helper makes the directory but never the file.
     $path = statsSandbox();
 
-    $stats = (new LogFileStats)->forToday();
+    $stats = app(LogFileStats::class)->current();
 
     expect($stats['exists'])->toBeFalse();
     expect($stats['path'])->toBe($path);
@@ -52,7 +52,7 @@ it('counts each Monolog severity correctly across a multi-level file', function 
     ])."\n";
     file_put_contents($path, $body);
 
-    $stats = (new LogFileStats)->forToday();
+    $stats = app(LogFileStats::class)->current();
 
     expect($stats['exists'])->toBeTrue();
     expect($stats['sizeBytes'])->toBe(strlen($body));
@@ -81,7 +81,7 @@ it('treats continuation lines (stack-trace rows, JSON tails) as totalLines but n
     ])."\n";
     file_put_contents($path, $body);
 
-    $stats = (new LogFileStats)->forToday();
+    $stats = app(LogFileStats::class)->current();
 
     // 5 raw lines: 2 entry headers, 3 continuations.
     expect($stats['totalLines'])->toBe(5);
@@ -105,7 +105,7 @@ it('sums file sizes across every laravel-*.log file in the daily directory', fun
         file_put_contents($file, $contents);
     }
 
-    $all = (new LogFileStats)->allFiles();
+    $all = app(LogFileStats::class)->allFiles();
 
     expect($all['count'])->toBe(3);
     expect($all['totalBytes'])->toBe(425);
@@ -116,7 +116,7 @@ it('truncates today\'s file to zero bytes and returns the bytes freed', function
     file_put_contents($path, str_repeat('x', 4096));
     expect(filesize($path))->toBe(4096);
 
-    $freed = (new LogFileStats)->truncateToday();
+    $freed = app(LogFileStats::class)->truncate();
 
     expect($freed)->toBe(4096);
     clearstatcache(true, $path);
@@ -126,11 +126,47 @@ it('truncates today\'s file to zero bytes and returns the bytes freed', function
     expect(is_file($path))->toBeTrue();
 });
 
-it('truncateToday returns 0 and is a no-op when today\'s file is missing', function (): void {
+it('truncate returns 0 and is a no-op when the active log file is missing', function (): void {
     $path = statsSandbox();
 
-    $freed = (new LogFileStats)->truncateToday();
+    $freed = app(LogFileStats::class)->truncate();
 
     expect($freed)->toBe(0);
     expect(is_file($path))->toBeFalse();
+});
+
+// totalLines was incremented before the cap was tested, so a capped read
+// reported one line more than the cap it declares and disagreed by one with
+// parsedLines and the severity breakdown printed beside it. The UI appends a
+// "+" to that number, so a file of exactly 100,001 lines read "100,001+".
+it('stops at the declared cap rather than one line past it', function (): void {
+    $path = statsSandbox();
+
+    $handle = fopen($path, 'wb');
+    for ($i = 0; $i < 100_001; $i++) {
+        fwrite($handle, '[2026-05-28 10:00:00] local.INFO: line '.$i."\n");
+    }
+    fclose($handle);
+
+    $stats = app(LogFileStats::class)->current();
+
+    expect($stats['capped'])->toBeTrue();
+    expect($stats['totalLines'])->toBe(100_000);
+    expect($stats['parsedLines'])->toBe($stats['totalLines']);
+    expect(array_sum($stats['perSeverity']))->toBe($stats['totalLines']);
+});
+
+it('does not claim to be capped for a file of exactly the cap', function (): void {
+    $path = statsSandbox();
+
+    $handle = fopen($path, 'wb');
+    for ($i = 0; $i < 100_000; $i++) {
+        fwrite($handle, '[2026-05-28 10:00:00] local.INFO: line '.$i."\n");
+    }
+    fclose($handle);
+
+    $stats = app(LogFileStats::class)->current();
+
+    expect($stats['capped'])->toBeFalse();
+    expect($stats['totalLines'])->toBe(100_000);
 });

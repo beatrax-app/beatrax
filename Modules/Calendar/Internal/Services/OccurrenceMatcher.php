@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\WeekStart;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Support\MatchWindow;
 use stdClass;
@@ -16,8 +17,6 @@ final readonly class OccurrenceMatcher
 {
     use CoercesScalars;
 
-    private const int DAYS_PER_WEEK = 7;
-
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -25,13 +24,13 @@ final readonly class OccurrenceMatcher
      */
     public function buildOccurrenceMap(
         User $user,
-        CarbonImmutable $monthStart,
-        CarbonImmutable $monthEnd,
+        CarbonImmutable $gridStart,
+        CarbonImmutable $gridEnd,
     ): array {
-        // Overshoots the month so an entry near a boundary can still match an
+        // Overshoots the grid so an entry near a boundary can still match an
         // occurrence that landed just outside it.
-        $windowStart = $monthStart->subDays(MatchWindow::DAYS)->toDateString();
-        $windowEnd = $monthEnd->addDays(MatchWindow::DAYS)->toDateString();
+        $windowStart = $gridStart->subDays(MatchWindow::DAYS)->toDateString();
+        $windowEnd = $gridEnd->addDays(MatchWindow::DAYS)->toDateString();
 
         $rows = $this->db->connection()->table('recurring_series_occurrences')
             ->where('user_id', $user->id)
@@ -59,7 +58,7 @@ final readonly class OccurrenceMatcher
         // Only weekly is short enough for the clamp to bite: half a monthly
         // interval already exceeds the default window.
         $cadenceDays = match ($cadence) {
-            SeriesCadence::Weekly => self::DAYS_PER_WEEK,
+            SeriesCadence::Weekly => WeekStart::DAYS_IN_WEEK,
             default => null,
         };
 

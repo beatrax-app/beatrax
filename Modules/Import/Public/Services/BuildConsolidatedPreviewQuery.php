@@ -22,6 +22,12 @@ final readonly class BuildConsolidatedPreviewQuery
 
     public const int SAMPLE_ROW_LIMIT = 5;
 
+    // The ceiling an override is clamped to. loadMoreRows() steps 25 at a time
+    // from 5, so twenty clicks reach it and nothing a reader does goes past it,
+    // while an unbounded override drew every committable row of every section
+    // into one fragment on the phone that has to render it.
+    public const int MAX_SAMPLE_ROW_LIMIT = 500;
+
     public function __construct(
         private DatabaseManager $db,
         private PreviewCache $cache,
@@ -32,7 +38,8 @@ final readonly class BuildConsolidatedPreviewQuery
      * @param  list<int>  $importRunIds
      * @param  array<string, int>  $sectionLimitOverrides  Per-`source_format`
      *                                                     override of the default `SAMPLE_ROW_LIMIT` (5); absent sections keep
-     *                                                     the 5-row default; non-positive values are ignored.
+     *                                                     the 5-row default; non-positive values are ignored, and any
+     *                                                     value above `MAX_SAMPLE_ROW_LIMIT` is clamped to it.
      */
     public function build(
         array $importRunIds,
@@ -127,12 +134,15 @@ final readonly class BuildConsolidatedPreviewQuery
      * @param  list<int>  $importRunIds
      * @param  ?int  $override  When non-null and positive, replaces the
      *                          default `SAMPLE_ROW_LIMIT` slice size for this section only.
-     *                          Non-positive values fall through to the default 5-row cap.
+     *                          Non-positive values fall through to the default 5-row cap,
+     *                          and anything above `MAX_SAMPLE_ROW_LIMIT` is clamped to it.
      * @return array{0: ConsolidatedPreviewSection, 1: int}
      */
     private function buildSection(string $sourceFormat, array $importRunIds, ?int $override = null): array
     {
-        $limit = ($override !== null && $override > 0) ? $override : self::SAMPLE_ROW_LIMIT;
+        $limit = ($override !== null && $override > 0)
+            ? min($override, self::MAX_SAMPLE_ROW_LIMIT)
+            : self::SAMPLE_ROW_LIMIT;
 
         /** @var list<PreviewRowDto> $sampleRows */
         $sampleRows = [];

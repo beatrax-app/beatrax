@@ -1,7 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 <div
     class="p-6"
-    style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
+    style="font-family: system-ui, -apple-system, sans-serif;"
     data-testid="sync-health-page"
 >
     {{-- Page heading --}}
@@ -46,6 +47,17 @@
             {{ Lang::get('sync::health.empty') }}
         </x-core::alert>
     @else
+        {{-- The header counts every skip in the window, the table carries the
+             50 most recent, and without this line the gap between them is
+             invisible: 616 above a list of 50 read as the whole of it, and the
+             rows it does not draw are not the rows it does — the visible 50
+             were one table where the rest held another. --}}
+        @if ($recentCount > $recentSkips->count())
+            <p class="mb-2 text-xs text-slate-500 dark:text-slate-400" data-testid="sync-health-truncated">
+                {{ Lang::get('core::components.showing_recent', ['shown' => Fmt::number($recentSkips->count()), 'count' => Fmt::number($recentCount)]) }}
+            </p>
+        @endif
+
         {{-- overflow-x-auto, not overflow-hidden: four diagnostic columns do
              not fit a phone, and this table is their only rendering at any
              width, so clipping would take the timestamp off the screen for
@@ -99,21 +111,21 @@
                         >
                             <td
                                 class="px-4 py-2 font-mono text-rose-700 dark:text-rose-400"
-                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 12px;"
+                                style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px;"
                                 data-testid="skip-reason"
                             >
                                 {{ $reason }}
                             </td>
                             <td
                                 class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300"
-                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 12px;"
+                                style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px;"
                                 data-testid="skip-table"
                             >
                                 {{ $tableName }}
                             </td>
                             <td
                                 class="px-4 py-2 font-mono text-slate-600 dark:text-slate-300"
-                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 12px;"
+                                style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px;"
                                 data-testid="skip-device"
                             >
                                 {{ $deviceId }}

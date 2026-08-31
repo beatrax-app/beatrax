@@ -9,12 +9,11 @@ return [
     'device_local_note' => 'Las reglas permanecen en este dispositivo. No se comparten con tus otros dispositivos.',
 
     'reapply' => 'Volver a aplicar las reglas al historial',
+    'reapply_confirm' => '¿Volver a aplicar todas las reglas a todo tu historial? Cada categoría, contraparte, nota y etiqueta fiscal que haya puesto una regla se reescribe. Lo que has puesto a mano se mantiene, igual que todo lo que esté en un extracto conciliado. Nada devuelve los valores anteriores.',
     'reapplying' => 'Aplicando de nuevo…',
     'new_rule' => 'Nueva regla',
 
-    'reapply_progress_lead' => 'Volviendo a aplicar las reglas…',
-    'reapply_progress_of' => 'de',
-    'reapply_progress_trail' => 'transacciones revisadas',
+    'reapply_progress' => 'Volviendo a aplicar las reglas… :checked de :count transacción revisada|Volviendo a aplicar las reglas… :checked de :count transacciones revisadas',
 
     'empty_heading' => 'Aún no hay reglas',
     'empty_body' => 'Las reglas comparan las transacciones con varias condiciones y aplican cambios de categoría, contraparte, nota y etiqueta fiscal automáticamente: al importar y cada vez que las vuelves a aplicar a tu historial.',
@@ -27,6 +26,8 @@ return [
     'col_created' => 'Creada',
     'col_row_actions' => 'Acciones',
     'inactive_badge' => 'Inactiva',
+    'combinator_all' => 'TODAS',
+    'combinator_any' => 'CUALQUIERA',
     'inactive_title' => 'Esta regla no se ejecuta. Una regla se desactiva cuando se elimina la categoría o la contraparte a la que apunta.',
 
     'more_conditions' => '+:count más',

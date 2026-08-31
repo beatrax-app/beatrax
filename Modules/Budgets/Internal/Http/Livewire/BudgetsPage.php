@@ -8,15 +8,19 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
@@ -24,10 +28,11 @@ final class BudgetsPage extends Component
 {
     use DispatchesToast;
 
-    // Must agree with CarryoverQuery::FUTURE_HORIZON_PERIODS, which is private:
-    // nav past the fold's forward walk limit reads an unfolded period.
-    private const FUTURE_HORIZON_PERIODS = 12;
-
+    // Locked because only prevPeriod(), nextPeriod() and render() clamp it to
+    // [genesis, now + horizon]; setAssigned(), moveMoney() and copyLastMonth()
+    // resolve it straight. Unlocked, a forged "2099-06-15" wrote a real
+    // envelope_assignments row in a month the fold bounds out of every view.
+    #[Locked]
     public ?string $periodStartStr = null;
 
     /** @var array<int, string> decimal strings keyed by category id */
@@ -89,14 +94,15 @@ final class BudgetsPage extends Component
 
     // An empty or literal-zero input tombstones the row; anything else upserts,
     // and over-assignment is never rejected.
-    public function setAssigned(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, int $categoryId): void
+    public function setAssigned(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, BaseCurrency $baseCurrency, int $categoryId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
 
+        $currency = $baseCurrency->forUser($currentUser->user());
         $raw = trim($this->assignedInputs[$categoryId] ?? '');
-        $minor = $this->parseAssignedAmount($writer, $raw);
+        $minor = $this->parseAssignedAmount($writer, $raw, $currency);
 
         if ($minor === null) {
             // Drop the rejected text so the next render reseeds the cell from
@@ -114,18 +120,30 @@ final class BudgetsPage extends Component
         $this->periodStartStr = $resolved->isoDate;
         $period = $resolved->period;
 
+        $refused = false;
+
         try {
             $writer->setAssigned($currentUser->user(), $categoryId, $period->start, $minor);
         } catch (InvalidArgumentException $e) {
             $this->toast($e->getMessage());
+            $refused = true;
+        } catch (IdReadBackFailedException) {
+            // The write rolled back with the read that could not name its own
+            // row, so the cell is reseeded from what is actually stored rather
+            // than left showing a figure nothing holds.
+            unset($this->assignedInputs[$categoryId]);
+            $this->toast(Lang::get('core::errors.not_saved'));
+            $refused = true;
+        }
 
+        if ($refused) {
             return;
         }
 
         if ($minor === 0) {
             unset($this->assignedInputs[$categoryId]);
         } else {
-            $this->assignedInputs[$categoryId] = $this->minorToDecimal($minor);
+            $this->assignedInputs[$categoryId] = $this->minorToDecimal($minor, $currency);
         }
     }
 
@@ -170,8 +188,16 @@ final class BudgetsPage extends Component
             return;
         }
 
+        $parsed = OverspendMode::tryFrom($mode);
+
+        if ($parsed === null) {
+            $this->toast(Lang::get('budgets::messages.errors.invalid_overspend_mode'));
+
+            return;
+        }
+
         try {
-            $writer->setOverspendMode($currentUser->user(), $categoryId, $mode);
+            $writer->setOverspendMode($currentUser->user(), $categoryId, $parsed);
         } catch (InvalidArgumentException $e) {
             $this->toast($e->getMessage());
         }
@@ -188,7 +214,14 @@ final class BudgetsPage extends Component
         $resolved = $periods->resolveAnchor($this->periodStartStr);
         $this->periodStartStr = $resolved->isoDate;
         $selected = $resolved->period;
-        $writer->copyFromPeriod($currentUser->user(), $periods->previous($selected), $selected);
+        try {
+            $writer->copyFromPeriod($currentUser->user(), $periods->previous($selected), $selected);
+        } catch (IdReadBackFailedException) {
+            $this->toast(Lang::get('core::errors.not_saved'));
+
+            return;
+        }
+
         $this->assignedInputs = [];
         $this->toast(Lang::get('budgets::messages.notices.copied_last_month'));
     }
@@ -209,7 +242,7 @@ final class BudgetsPage extends Component
 
     // No "insufficient balance" catch by design: a move that takes the source
     // envelope negative succeeds.
-    public function moveMoney(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods): void
+    public function moveMoney(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, BaseCurrency $baseCurrency): void
     {
         $this->moveError = '';
 
@@ -218,7 +251,7 @@ final class BudgetsPage extends Component
         }
 
         $toCategoryId = $this->moveToCategoryId !== '' ? (int) $this->moveToCategoryId : 0;
-        $minor = $writer->parseAmount($this->moveAmount);
+        $minor = $writer->parseAmount($this->moveAmount, $baseCurrency->forUser($currentUser->user()));
 
         if ($toCategoryId <= 0 || $minor === null) {
             $this->moveError = $toCategoryId <= 0
@@ -290,8 +323,15 @@ final class BudgetsPage extends Component
 
         $user = $currentUser->user();
         $resolved = $periods->resolveAnchor($this->periodStartStr);
-        $this->periodStartStr = $resolved->isoDate;
-        $selected = $resolved->period;
+
+        // The month the fold will answer for, not the one the anchor named.
+        // Emptying the earliest month moves genesis past a selection already on
+        // screen, and the grid then drew the next month's figures under the
+        // heading, the moves list and the copy banner of the month before it.
+        $selected = $carryover->boundedPeriodFor($user, $resolved->period);
+        $this->periodStartStr = $selected->start->equalTo($resolved->period->start)
+            ? $resolved->isoDate
+            : $selected->start->toDateString();
 
         $fold = $carryover->forUserAndPeriod($user, $selected);
         /** @var array<int, EnvelopeRow> $rows */
@@ -352,7 +392,7 @@ final class BudgetsPage extends Component
     private function maxPeriod(PeriodQuery $periods): Period
     {
         $max = $periods->current();
-        for ($i = 0; $i < self::FUTURE_HORIZON_PERIODS; $i++) {
+        for ($i = 0; $i < CarryoverQuery::FUTURE_HORIZON_PERIODS; $i++) {
             $max = $periods->next($max);
         }
 
@@ -391,7 +431,7 @@ final class BudgetsPage extends Component
         foreach ($rows as $categoryId => $row) {
             if (! array_key_exists($categoryId, $this->assignedInputs)) {
                 $this->assignedInputs[$categoryId] = $row->assignedMinor > 0
-                    ? $this->minorToDecimal($row->assignedMinor)
+                    ? $this->minorToDecimal($row->assignedMinor, $row->currency)
                     : '';
             }
         }
@@ -425,24 +465,24 @@ final class BudgetsPage extends Component
 
     // EnvelopeWriter::parseAmount() returns null for a literal "0" as well as for
     // junk, so zero is recovered here as a tombstone rather than reported invalid.
-    private function parseAssignedAmount(EnvelopeWriter $writer, string $raw): ?int
+    private function parseAssignedAmount(EnvelopeWriter $writer, string $raw, ?string $currency): ?int
     {
         if ($raw === '') {
             return 0;
         }
 
-        $minor = $writer->parseAmount($raw);
+        $minor = $writer->parseAmount($raw, $currency);
         if ($minor !== null) {
             return $minor;
         }
 
-        return MoneyInput::tryToMinor($raw) === 0 ? 0 : null;
+        return MoneyInput::tryToMinor($raw, $currency) === 0 ? 0 : null;
     }
 
     // A dot here put "50.00" next to "€ 50,00" in one row; the shared formatter
     // matches the figures beside it and tryToMinor() accepts both on the way back.
-    private function minorToDecimal(int $minor): string
+    private function minorToDecimal(int $minor, ?string $currency): string
     {
-        return MoneyInput::formatMinor($minor);
+        return MoneyInput::formatMinor($minor, $currency);
     }
 }

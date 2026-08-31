@@ -1,4 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 {{--
     Budgets step (optional) — assign this month's money per expense
     category before finishing setup. Reuses the wizard chrome (wiz-eyebrow /
@@ -28,12 +30,15 @@
                     <li>
                         <label for="budget-{{ $id }}">{{ $name }}</label>
                         <span class="budget-step-amount">
-                            <span aria-hidden="true">€</span>
+                            {{-- The reader's own currency, not a pinned euro: the
+                                 figure typed here is banked in it, and a yen has
+                                 no decimal for the placeholder to offer. --}}
+                            <span aria-hidden="true">{{ Money::symbolFor($currency) }}</span>
                             <input
                                 id="budget-{{ $id }}"
                                 type="text"
-                                inputmode="decimal"
-                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                                inputmode="{{ MoneyInput::decimalPlaces($currency) === 0 ? 'numeric' : 'decimal' }}"
+                                placeholder="{{ MoneyInput::formatAbsMinor(0, $currency) }}"
                                 wire:model="amounts.{{ $id }}"
                                 aria-label="{{ Lang::get('onboarding::budgets.row_aria', ['name' => $name]) }}"
                             >

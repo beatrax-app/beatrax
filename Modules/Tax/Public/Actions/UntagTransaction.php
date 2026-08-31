@@ -7,20 +7,34 @@ namespace Modules\Tax\Public\Actions;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Public\Events\TransactionUntagged;
 
-final class UntagTransaction
+final readonly class UntagTransaction
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Dispatcher $events,
-        private readonly ?SearchIndexWriterContract $searchIndex = null,
+        private DatabaseManager $db,
+        private Dispatcher $events,
+        private ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
     public function execute(int $userId, int $transactionId, ?int $transactionSplitId = null): void
     {
+        // The rule engine, a bulk untag and a replay all reach this action
+        // without passing the page's own lock, and a tag is exactly the
+        // classification a reconcile froze.
+        $status = $this->db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $userId)
+            ->value('status');
+
+        if (TransactionStatusQuery::locksEdits($status)) {
+            return;
+        }
+
         // Read the id before the delete: a tombstone needs the pk, and after
         // the row is gone there is nothing left to name it by.
         $tagId = $this->db->connection()

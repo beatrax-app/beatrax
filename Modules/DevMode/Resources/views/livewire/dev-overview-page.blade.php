@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Enums\OAuthAlertKind')
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\StoredCopy')
 @use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto at the page root ensures no surface
      overflows the viewport at phone width. The dark console pane preserves
@@ -27,7 +28,7 @@
             <div data-testid="console-pane-heartbeat">
                 <div class="text-[11px] uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('dev::overview.worker_heartbeat') }}</div>
                 @if ($workerHeartbeat['secondsAgo'] === null)
-                    <div class="mt-1 text-sm font-mono text-rose-300">{{ Lang::get('dev::overview.not_running') }}</div>
+                    <div class="mt-1 text-sm font-mono text-rose-300">{{ $workerHeartbeat['label'] }}</div>
                 @else
                     <div class="mt-1 text-sm font-mono">{{ $workerHeartbeat['label'] }}</div>
                 @endif
@@ -99,7 +100,7 @@
                     @endphp
                     <a
                         href="{{ $entry['href'] }}"
-                        class="flex items-baseline gap-2 px-1 py-1 rounded text-xs font-mono hover:bg-slate-800/60"
+                        class="dev-list-row flex items-baseline gap-2 px-1 py-1 rounded text-xs font-mono hover:bg-slate-800/60"
                         data-testid="recent-log-entry-row"
                         style="font-variant-numeric: tabular-nums;"
                     >
@@ -152,7 +153,7 @@
                         <li data-testid="recent-run-row">
                             <a
                                 href="{{ $run['href'] }}"
-                                class="flex flex-wrap items-baseline justify-between gap-2 hover:underline"
+                                class="dev-list-row flex flex-wrap items-baseline justify-between gap-2 hover:underline"
                             >
                                 <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
                                 <span
@@ -179,7 +180,13 @@
                 <ul class="space-y-2">
                     @foreach ($openAlerts as $alert)
                         <li class="text-sm flex items-start justify-between gap-2">
-                            <span>{{ $alert->message }}</span>
+                            {{-- The second reader of these rows, so it resolves
+                                 the stored line the same way the banner does and
+                                 falls back to the same column. Two of those lines
+                                 carry the banner's inline <code> span, which this
+                                 one-line list shows as tags; stripped before Blade
+                                 escapes what is left. --}}
+                            <span>{{ strip_tags(StoredCopy::readFromParams($alert->metadata, $alert->message)) }}</span>
                             @if (OAuthAlertKind::promptsReauthorisation($alert->kind))
                                 <a href="{{ Destination::Email->url() }}" class="text-blue-600 hover:underline text-xs">
                                     {{ Lang::get('dev::overview.reauth') }}

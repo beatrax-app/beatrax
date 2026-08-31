@@ -114,6 +114,18 @@ constructor slot for. The array shape carries all three optional keys and
 survives the round trip; the `@var` docblock on the property is what
 keeps it honest at PHPStan level 10.
 
+## The name in the banner is the reader's, not the importer's
+
+The banner puts the counterparty name inside a sentence, so it has to
+read in the same language as the rest of it.
+`untaggedCountForCounterparty()` therefore selects `metadata` beside
+`display_name`, decrypts the name, and only then hands both to
+`CounterpartyDefaultName::resolve()`. For a row the resolver had to name
+itself — `Unknown`, `Government`, `Bank fee` — the stored word is the
+app's English, and without the second step a Dutch reader got "tag the
+other 11 from **Government**" in an otherwise Dutch sentence. See
+[the app's own words](../counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name).
+
 ## Related
 
 - [Tag write contract](tag-write-contract.md) — what each of those

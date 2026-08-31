@@ -12,8 +12,8 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
-use Modules\Ingestion\Public\Asn\AsnDescriptionDelimiters;
-use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ingestion\Public\Csv\AsnDescriptionDelimiters;
+use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Internal\Enums\BackfillPass;
 use Modules\Ledger\Internal\Support\SweptRowSummary;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -24,7 +24,7 @@ use stdClass;
 /**
  * @link ../../../../.docs/features/ingestion/asn-description-delimiters.md
  */
-final class StripAsnDescriptionDelimiters
+final readonly class StripAsnDescriptionDelimiters
 {
     use CoercesScalars;
 
@@ -33,17 +33,17 @@ final class StripAsnDescriptionDelimiters
     private const string COLUMN = 'description';
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
         // A factory, not the session itself: this runs from a migration, and
         // resolving a session builds the encrypter, which an install with no
         // work to do should never pay for.
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryption,
-        private readonly SearchIndexWriterContract $searchIndex,
-        private readonly BackfillCompletionMarkers $markers,
-        private readonly AsnCsvRowSummary $summary,
-        private readonly LoggerInterface $log,
+        private SessionFactory $session,
+        private EncryptionMigrationService $encryption,
+        private SearchIndexWriterContract $searchIndex,
+        private BackfillCompletionMarkers $markers,
+        private AsnCsvRowSummary $summary,
+        private LoggerInterface $log,
     ) {}
 
     // Every owner at once, for the caller that has no particular user in hand.
@@ -139,7 +139,7 @@ final class StripAsnDescriptionDelimiters
             $connection->table(self::TABLE)
                 ->distinct()
                 ->whereNotNull('user_id')
-                ->where('source_format', SourceFormat::AsnCsv->value)
+                ->where('source_format', CsvPresetRegistry::ASN)
                 ->orderBy('user_id')
                 ->pluck('user_id') as $value
         ) {
@@ -160,7 +160,7 @@ final class StripAsnDescriptionDelimiters
     {
         $this->log->warning(
             'StripAsnDescriptionDelimiters: skipped a sealed ledger this process cannot open.',
-            ['userId' => $userId, 'sourceFormat' => SourceFormat::AsnCsv->value],
+            ['userId' => $userId, 'sourceFormat' => CsvPresetRegistry::ASN],
         );
     }
 
@@ -171,7 +171,7 @@ final class StripAsnDescriptionDelimiters
         $connection->table(self::TABLE)
             ->select(['id', self::COLUMN])
             ->where('user_id', $userId)
-            ->where('source_format', SourceFormat::AsnCsv->value)
+            ->where('source_format', CsvPresetRegistry::ASN)
             ->orderBy('id')
             ->chunkById(
                 RowChunk::DEFAULT_SIZE,

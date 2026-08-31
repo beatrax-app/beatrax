@@ -15,7 +15,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // forged runId would SIGTERM an arbitrary process.
 final readonly class ArtisanCancelController
 {
-    private const SIGTERM_GRACE_SECONDS = 3;
+    private const int SIGTERM_GRACE_SECONDS = 3;
 
     public function __construct(
         private RunRegistry $registry,

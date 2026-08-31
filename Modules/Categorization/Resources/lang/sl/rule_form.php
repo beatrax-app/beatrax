@@ -24,6 +24,7 @@ return [
     'to' => 'do',
     'text_placeholder' => 'npr. SPOTIFY',
     'remove_condition' => 'Odstrani pogoj',
+    'remove_condition_caption' => 'Odstrani',
     'add_condition' => '+ Dodaj pogoj',
 
     'then' => 'Potem',
@@ -42,6 +43,7 @@ return [
     'note_append' => 'Pripni',
     'deduction_category_aria' => 'Kategorija olajšave za dejanje :number',
     'remove_action' => 'Odstrani dejanje',
+    'remove_action_caption' => 'Odstrani',
     'add_action' => '+ Dodaj dejanje',
 
     'this_year_only' => 'Samo to leto ▾',
@@ -50,7 +52,7 @@ return [
     'tax_tag_note' => 'Dejanja davčne oznake se uveljavijo ob naslednji ponovni uporabi, ne pri trenutnem uvozu.',
 
     'priority' => 'Prioriteta',
-    'priority_help' => 'Manjše številke se izvedejo prve. Pravila brez skupnih polj nikoli niso v sporu.',
+    'priority_help' => 'Pravila se izvajajo od najnižje številke navzgor, zato zmaga najvišja številka, kadar dve nastavljata isto polje. Pravila brez skupnih polj nikoli niso v sporu.',
 
     'cancel' => 'Prekliči',
     'save_changes' => 'Shrani spremembe',

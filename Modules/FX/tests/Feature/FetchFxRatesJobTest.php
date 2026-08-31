@@ -10,6 +10,7 @@ use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
+use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\FX\Public\Support\BundledRates;
 use Psr\Log\LoggerInterface;
 
@@ -82,7 +83,7 @@ describe('FetchFxRatesJob', function (): void {
         app()->instance(RateProviderRegistry::class, $registry);
 
         $job = new FetchFxRatesJob($this->fxUserId);
-        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class), app(FxRefreshStatus::class));
 
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->count())
             ->toBeGreaterThanOrEqual(2);
@@ -119,10 +120,11 @@ describe('FetchFxRatesJob', function (): void {
 
         $db = app(DatabaseManager::class);
         $logger = app(LoggerInterface::class);
+        $status = app(FxRefreshStatus::class);
         $job = new FetchFxRatesJob($this->fxUserId);
 
-        $job->handle($registry, $db, $logger);
-        $job->handle($registry, $db, $logger);
+        $job->handle($registry, $db, $logger, $status);
+        $job->handle($registry, $db, $logger, $status);
 
         $count = DB::table('exchange_rates')->where([
             'base_currency' => 'EUR',
@@ -147,8 +149,9 @@ describe('FetchFxRatesJob', function (): void {
 
         $db = app(DatabaseManager::class);
         $logger = app(LoggerInterface::class);
+        $status = app(FxRefreshStatus::class);
         $job = new FetchFxRatesJob($this->fxUserId);
-        $job->handle($registry, $db, $logger);
+        $job->handle($registry, $db, $logger, $status);
 
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->exists())->toBeTrue();
         expect(DB::table('exchange_rates')->where('rate_date', now()->toDateString())->exists())->toBeFalse();
@@ -168,7 +171,7 @@ describe('FetchFxRatesJob', function (): void {
         $db = app(DatabaseManager::class);
 
         $job = new FetchFxRatesJob($this->fxUserId);
-        $job->handle($registry, $db, app(LoggerInterface::class));
+        $job->handle($registry, $db, app(LoggerInterface::class), app(FxRefreshStatus::class));
 
         expect(DB::table('exchange_rates')->where('quote_currency', 'USD')->exists())->toBeTrue();
         expect(DB::table('exchange_rates')->where('quote_currency', 'XYZ')->exists())->toBeFalse();
@@ -205,7 +208,7 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([$tripwire], app(Repository::class));
 
         $job = new FetchFxRatesJob($disabledUser->id);
-        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class), app(FxRefreshStatus::class));
 
         // Not a bare count: the bundled snapshot is seeded at migrate time, so
         // what this asserts is that no provider wrote anything on top of it.
@@ -216,7 +219,7 @@ describe('FetchFxRatesJob', function (): void {
         $registry = new RateProviderRegistry([], app(Repository::class));
 
         $job = new FetchFxRatesJob(999_999);
-        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class));
+        $job->handle($registry, app(DatabaseManager::class), app(LoggerInterface::class), app(FxRefreshStatus::class));
 
         expect(DB::table('exchange_rates')->where('source', '!=', BundledRates::SOURCE)->count())->toBe(0);
     });

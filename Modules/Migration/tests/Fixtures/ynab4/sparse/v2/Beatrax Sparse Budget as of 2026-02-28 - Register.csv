@@ -1,0 +1,3 @@
+Account,Flag,"Check Number",Date,Payee,"Category Group/Category","Master Category","Sub Category",Memo,Outflow,Inflow,Cleared,"Running Balance"
+Checking,,,02/02/2026,"Albert Heijn","Frequent: Groceries",Frequent,Groceries,,45.00,0.00,C,955.00
+Checking,,,02/03/2026,Hardware,"Frequent: Household",Frequent,Household,,17.00,0.00,C,938.00

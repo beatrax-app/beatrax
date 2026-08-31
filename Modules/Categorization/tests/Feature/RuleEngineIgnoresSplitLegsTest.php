@@ -8,12 +8,12 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Event;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Internal\Jobs\ReapplyRulesJob;
 use Modules\Categorization\Internal\Pipeline\ApplyAutoCategoryStage;
 use Modules\Categorization\Internal\Services\RuleApplier;
 use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Models\CategorizationRule;
-use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Account;
@@ -144,7 +144,6 @@ it('ApplyAutoCategoryStage leaves a split transaction\'s legs byte-identical eve
         currency: 'EUR',
         settledAmountMinor: -8000,
         settledCurrency: 'EUR',
-        fxRateUsed: null,
         counterpartyName: 'Albert Heijn',
         counterpartyIban: null,
         counterpartyNormalized: 'albert heijn',

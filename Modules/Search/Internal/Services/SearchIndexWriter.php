@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -13,15 +12,15 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // Synchronous writer keeping transaction_search_docs and the FTS5
 // table in lockstep. No try/catch swallow — failures bubble so the
 // outer import-chunk transaction rolls back cleanly.
-final class SearchIndexWriter implements SearchIndexWriterContract
+final readonly class SearchIndexWriter implements SearchIndexWriterContract
 {
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly SensitiveColumnCodec $codec,
+        private DatabaseManager $db,
+        private SensitiveColumnCodec $codec,
         // A factory, not the session itself: resolving a session builds the
         // encrypter, and this class is reachable from a console command that
         // Artisan constructs merely to list it.
-        private readonly SessionFactory $session,
+        private SessionFactory $session,
     ) {}
 
     public function upsertForTransaction(int $transactionId, int $actorUserId): void
@@ -62,11 +61,15 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             ? $this->codec->decryptValue('transactions', 'description', $tx->description, $userId, $session)['value']
             : '';
 
+        // The whole-transaction tag, named rather than left to scan order: a
+        // split leg's tag matches the same transaction_id and carries no note,
+        // so which row `first()` returned decided whether the note was indexed.
         $tag = $connection
             ->table('tax_transaction_tags')
             ->select(['note'])
             ->where('transaction_id', $transactionId)
             ->where('user_id', $userId)
+            ->whereNull('transaction_split_id')
             ->first();
 
         $note = ($tag !== null && is_string($tag->note))

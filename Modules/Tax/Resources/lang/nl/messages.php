@@ -12,5 +12,7 @@ return [
     'errors' => [
         'name_empty' => 'Categorienaam mag niet leeg zijn.',
         'name_duplicate' => 'Er bestaat al een categorie met deze naam.',
+        'category_not_saved' => 'Deze categorie kon niet worden opgeslagen. Probeer het opnieuw.',
+        'tag_refused' => 'Dit label kon niet worden opgeslagen. Sluit de kiezer en probeer het opnieuw.',
     ],
 ];

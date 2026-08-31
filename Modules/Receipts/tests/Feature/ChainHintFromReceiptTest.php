@@ -33,7 +33,7 @@ it('lands a transaction + a candidate chain_links row from an ICS receipt with a
     $file = UploadedFile::fake()->createWithContent('ics-receipt.eml', $emlBytes);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'email-file')
+        ->set('importType', 'email')
         ->set('sourceFormat', 'eml')
         ->set('file', $file)
         ->call('submit')
@@ -79,7 +79,7 @@ it('dispatches ChainHintDetected with the canonical transaction id and the impor
     $file = UploadedFile::fake()->createWithContent('ics-receipt.eml', $emlBytes);
 
     Livewire::test(UploadWizard::class)
-        ->set('issuer', 'email-file')
+        ->set('importType', 'email')
         ->set('sourceFormat', 'eml')
         ->set('file', $file)
         ->call('submit')
@@ -146,7 +146,7 @@ it('keeps chain_links at exactly one row across re-drops of the same .eml', func
     $drop = function () use ($emlBytes): void {
         $file = UploadedFile::fake()->createWithContent('ics-receipt.eml', $emlBytes);
         Livewire::test(UploadWizard::class)
-            ->set('issuer', 'email-file')
+            ->set('importType', 'email')
             ->set('sourceFormat', 'eml')
             ->set('file', $file)
             ->call('submit');

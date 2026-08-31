@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'unknown_device' => 'Fjernet enhed',
     'dismiss_peer' => 'Skjul denne enhed',
+    'dismiss_peer_caption' => 'Skjul',
     'dismiss_stale' => 'Ryd enheder, der ikke længere er parret',
     'not_synced_yet' => 'Ikke synkroniseret endnu',
     'error' => 'Synkroniseringsfejl på en eller flere enheder',

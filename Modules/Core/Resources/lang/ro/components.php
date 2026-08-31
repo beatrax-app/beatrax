@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'showing_recent' => 'Se afișează cele mai recente :shown din :count.',
+
     'drawer_nav' => 'Navigare',
 
     'search_placeholder' => 'Caută…',
@@ -16,6 +18,7 @@ return [
         'headline' => 'Vrei să-ți vezi datele și pe telefon?',
         'body' => 'Instalează Beatrax pe telefon pentru acces rapid la finanțele tale.',
         'dismiss_aria' => 'Închide sugestia de instalare',
+        'dismiss_caption' => 'Închide',
         'install_app' => 'Instalează aplicația',
 
         'desktop_html' => 'Deschide Beatrax în browserul telefonului și atinge „Adaugă pe ecranul principal” — sau atinge pictograma <strong style="color: var(--color-text);">⚡</strong> din meniul de partajare al Safari.',
@@ -34,8 +37,6 @@ return [
         'count' => 'Fișiere alese: :count',
     ],
 
-    'amount_placeholder' => '0,00',
-
     'date' => [
         'open' => 'Alege o dată',
         'prev_month' => 'Luna anterioară',
@@ -51,6 +52,8 @@ return [
         'minute' => 'Minut',
         'empty' => 'nicio oră selectată',
     ],
+
+    'toast_undo' => 'Anulează acțiunea',
 
     'veil_locked' => 'Aplicație blocată',
 

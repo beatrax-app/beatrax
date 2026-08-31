@@ -23,5 +23,7 @@ return [
     'errors' => [
         'unrecognised' => 'Tämä ei näytä YNAB4-, nYNAB- tai Actual-vienniltä, jonka osaamme lukea. Tarkista tiedosto ja yritä uudelleen.',
         'file_too_large' => 'Tiedosto on liian suuri siirtovienniksi.',
+        'archive_reader_unavailable' => 'Tässä sovellusversiossa ei ole ZIP-lukijaa, joka avaisi tämän viennin, joten sitä ei voi lukea täällä. Tuo se työpöytäsovelluksessa tai pakkaa vienti uudelleen tavallisella pakkauksella.',
+        'internal_detail' => 'Sovellus ei voinut lukea tätä vientiä (:code). Täydet tiedot ovat sovelluslokissa; mainitse tämä koodi, jos ilmoitat ongelmasta.',
     ],
 ];

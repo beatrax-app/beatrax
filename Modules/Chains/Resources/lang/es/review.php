@@ -9,7 +9,7 @@ return [
     'subtitle' => 'Confirma o rechaza los enlaces candidatos que el resolutor de cadenas no ha podido confirmar automáticamente.',
 
     'empty_heading' => 'No hay nada que revisar',
-    'empty_body' => 'Todos los enlaces de cadena están confirmados o rechazados. Los nuevos candidatos aparecerán aquí a medida que lleguen importaciones.',
+    'empty_body' => 'Todos los enlaces que el resolutor pudo emparejar están confirmados o rechazados. Los nuevos candidatos aparecerán aquí a medida que lleguen importaciones.',
 
     'auto_confirm_nudge' => 'Una confirmación más y los enlaces similares se confirmarán automáticamente.',
 

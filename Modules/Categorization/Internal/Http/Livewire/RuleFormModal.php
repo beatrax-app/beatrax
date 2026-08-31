@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Internal\Http\Livewire\Concerns\MapsRuleRows;
@@ -62,10 +63,16 @@ final class RuleFormModal extends Component
 
     public string $errorGeneral = '';
 
+    // Locked, both: the modal is mounted by the shared layout, so it answers
+    // on every authenticated page, and the Blade echoes each message straight
+    // out. A wire payload putting an array in a row's slot made that echo a
+    // 500. Only the validator ever writes them.
     /** @var array<int, string> condition row index => error message */
+    #[Locked]
     public array $conditionErrors = [];
 
     /** @var array<int, string> action row index => error message */
+    #[Locked]
     public array $actionErrors = [];
 
     // Never a truly-empty repeater: a blank array property lets a nested
@@ -113,24 +120,21 @@ final class RuleFormModal extends Component
 
     public function updated(string $name): void
     {
-        if (preg_match('/^conditions\.(\d+)\.field$/', $name, $matches) === 1) {
-            $this->realignConditionOp((int) $matches[1]);
-        } elseif (preg_match('/^conditions\.(\d+)\.op$/', $name, $matches) === 1) {
+        $this->normalizeRepeaters();
+
+        if (preg_match('/^conditions\.(\d+)\.op$/', $name, $matches) === 1) {
             $this->clearStaleUpperBound((int) $matches[1]);
-        } elseif (preg_match('/^actions\.(\d+)\./', $name, $matches) === 1) {
-            $this->coerceActionIds((int) $matches[1]);
         }
     }
 
-    private function realignConditionOp(int $index): void
+    // Both repeaters are public arrays, so a single update can replace either
+    // one wholesale with rows the form could never have built. Every path that
+    // reads a row — the view, the validator, the payload mapper — runs after
+    // this, so none of them has to ask whether a key is there.
+    private function normalizeRepeaters(): void
     {
-        if (! isset($this->conditions[$index])) {
-            return;
-        }
-        $validOps = array_keys(self::operatorOptionsFor($this->conditions[$index]['field']));
-        if (! in_array($this->conditions[$index]['op'], $validOps, true)) {
-            $this->conditions[$index]['op'] = $validOps[0] ?? ConditionOperator::Contains->value;
-        }
+        $this->conditions = self::conditionRows($this->conditions);
+        $this->actions = self::actionRows($this->actions);
     }
 
     private function clearStaleUpperBound(int $index): void
@@ -138,19 +142,6 @@ final class RuleFormModal extends Component
         if (isset($this->conditions[$index]) && $this->conditions[$index]['op'] !== ConditionOperator::Between->value) {
             $this->conditions[$index]['value2'] = null;
         }
-    }
-
-    // Livewire delivers <select> values as strings, so without this a picked
-    // id arrives as "20" and blows up actionRowError()'s ?int contract.
-    private function coerceActionIds(int $index): void
-    {
-        if (! isset($this->actions[$index])) {
-            return;
-        }
-        $this->actions[$index]['category_id'] = self::intIdOrNull($this->actions[$index]['category_id']);
-        $this->actions[$index]['counterparty_id'] = self::intIdOrNull($this->actions[$index]['counterparty_id']);
-        $this->actions[$index]['deduction_category_id'] = self::intIdOrNull($this->actions[$index]['deduction_category_id']);
-        $this->actions[$index]['year_override'] = self::intIdOrNull($this->actions[$index]['year_override']);
     }
 
     public function addCondition(): void
@@ -205,6 +196,7 @@ final class RuleFormModal extends Component
         UpdateCategorizationRule $update,
     ): void {
         $this->resetErrors();
+        $this->normalizeRepeaters();
 
         $priority = $this->validatedPriority();
         if ($priority === null) {
@@ -305,6 +297,7 @@ final class RuleFormModal extends Component
         ViewFactory $views,
         CounterpartyDisplayName $counterpartyNames,
     ): View {
+        $this->normalizeRepeaters();
         $user = $currentUser->user();
 
         return $views->make('categorization::livewire.rule-form-modal', [

@@ -7,4 +7,5 @@ return [
     'edit_aria' => 'Modifica etichetta fiscale: :label',
     'tag' => 'Etichetta',
     'tag_aria' => 'Etichetta come rilevante ai fini fiscali',
+    'tag_caption' => 'Etichetta',
 ];

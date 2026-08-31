@@ -11,7 +11,9 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
+use Modules\Forecasting\Internal\Console\ProjectForecastsCommand;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
@@ -30,10 +32,8 @@ use Modules\Forecasting\Internal\Pipeline\ShortfallDetector;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
-use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
-use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
-use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateScenario;
+use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
 use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
@@ -58,6 +58,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 final class ForecastingServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -87,15 +88,12 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(SetAccountOpeningBalance::class);
 
         $this->app->singleton(CreateScenario::class);
+        $this->app->singleton(CreateScenarioFromTemplate::class);
         $this->app->singleton(RenameScenario::class);
         $this->app->singleton(DeleteScenario::class);
         $this->app->singleton(AddScenarioMutation::class);
         $this->app->singleton(RemoveScenarioMutation::class);
         $this->app->singleton(EditScenarioMutation::class);
-
-        $this->app->singleton(CreateCancellationScenarioForAlert::class);
-        $this->app->singleton(CreateCancellationScenarioForSeries::class);
-        $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
 
         // No Livewire component is bound here on purpose: a singleton would
         // leak stale public-property state between requests under Octane.
@@ -108,6 +106,8 @@ final class ForecastingServiceProvider extends ServiceProvider
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
         $this->loadModuleResources('forecasting');
+
+        $this->registerScheduledCommands([ProjectForecastsCommand::class]);
 
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);

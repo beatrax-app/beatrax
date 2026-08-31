@@ -9,14 +9,20 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Internal\Enums\BackupAlertKind;
+use Modules\Core\Internal\Enums\BackupFailureCause;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\RestoreFailedException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Modules\Core\Public\Support\StoredCopy;
 use PDO;
 use Throwable;
 
@@ -37,6 +43,7 @@ final class RestoreDatabaseCommand extends Command
         private readonly Kernel $artisan,
         private readonly Clock $clock,
         private readonly UserDataPathService $paths,
+        private readonly LiveDatabaseTransplant $transplant,
     ) {
         parent::__construct();
     }
@@ -146,17 +153,18 @@ final class RestoreDatabaseCommand extends Command
         }
         $this->info('Pre-restore snapshot: '.$preRestorePath);
 
-        // Release the live PDO handle so the file copy can land cleanly. The
-        // next call to connection() will fire ConnectionEstablished, which
-        // re-applies the WAL + synchronous PRAGMAs on the swapped-in file.
-        $this->db->purge(SqliteDatabase::connectionName($this->config));
-
-        if ($this->files->copy($sourcePath, $livePath) === false) {
+        // Writes the source's pages INTO the live database rather than over
+        // its file, and drops every connection naming it first. `php artisan
+        // down` closes nothing, so a copy landed beside a live `-wal` that the
+        // next reader replayed straight back over the restored pages.
+        try {
+            ($this->transplant)($sourcePath, $livePath, $preRestorePath);
+        } catch (BackupIoException $e) {
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
                 'phase' => 'copy',
-                'reason' => 'Filesystem::copy returned false during swap',
+                'reason' => $e->getMessage(),
             ]);
-            $this->error('Restore copy failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
+            $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
 
             throw new RestoreFailedException(leaveDown: true);
         }
@@ -234,17 +242,24 @@ final class RestoreDatabaseCommand extends Command
      */
     private function recordRestoreFailureAlert(string $sourcePath, string $livePath, string $preRestorePath, array $extra): void
     {
+        // The same line and the same two values the banner builds for this
+        // cause, so the column and the banner cannot drift apart. The full
+        // paths stay in metadata, where an operator can still read them.
+        $line = CopyLine::of('core::alerts.messages.backup_restore_failed', [
+            'timestamp' => CopyParam::dateAndTime($this->clock->now()),
+            'snapshot' => basename($preRestorePath),
+        ]);
+
         SystemAlert::create([
             'user_id' => null,
             'kind' => BackupAlertKind::Corrupt->value,
             'severity' => SystemAlertSeverity::Critical->value,
-            'message' => sprintf(
-                'Restore from %s failed at %s. Pre-restore snapshot at %s.',
-                $sourcePath,
-                $this->clock->now()->format('d M Y · H:i'),
-                $preRestorePath,
-            ),
-            'metadata' => array_merge([
+            'message' => $line->sentence(),
+            'metadata' => array_merge(StoredCopy::inParams($line) + [
+                // A restore failure shares the backup_corrupt kind with the
+                // backup command, and without this the banner told the reader
+                // a backup had aborted because their database was corrupt.
+                'cause' => BackupFailureCause::RestoreFailed->value,
                 'source_path' => $sourcePath,
                 'live_path' => $livePath,
                 'pre_restore_snapshot' => $preRestorePath,

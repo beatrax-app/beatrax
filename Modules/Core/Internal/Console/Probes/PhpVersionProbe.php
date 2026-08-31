@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Console\Probes;
 
-final class PhpVersionProbe implements Probe
+final readonly class PhpVersionProbe implements Probe
 {
-    private const MIN_PHP = '8.5';
+    private const string MIN_PHP = '8.5';
 
     // The minimum is injectable (default = the shipped floor) purely so the
     // below-minimum path can be driven under test; production resolves it
     // from the container with no argument.
-    public function __construct(private readonly string $minPhp = self::MIN_PHP) {}
+    public function __construct(private string $minPhp = self::MIN_PHP) {}
 
     public function label(): string
     {

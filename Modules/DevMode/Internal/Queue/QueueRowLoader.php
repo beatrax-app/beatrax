@@ -20,6 +20,8 @@ use Illuminate\Support\Collection;
  *   cancelledAt?: int|null,
  *   finishedAt?: int|null,
  *   createdAt?: int|null,
+ *   reservedAt?: int|null,
+ *   availableAt?: int|null,
  *   failedAt?: \Carbon\CarbonInterface|null,
  *   payload?: string|null,
  *   options?: string|null,
@@ -27,7 +29,7 @@ use Illuminate\Support\Collection;
  */
 final readonly class QueueRowLoader
 {
-    private const ROW_LIMIT = 100;
+    private const int ROW_LIMIT = 100;
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -72,11 +74,19 @@ final readonly class QueueRowLoader
             $attempts = $vars['attempts'] ?? null;
             $createdAt = $vars['created_at'] ?? null;
             $payload = $vars['payload'] ?? null;
+            // reserved_at and available_at are what separate a job a worker is
+            // running from one that does not come due until next week. Without
+            // them all three states rendered as the same row, and the delete
+            // button was offered on a job mid-execution.
+            $reservedAt = $vars['reserved_at'] ?? null;
+            $availableAt = $vars['available_at'] ?? null;
             $out[] = [
                 'key' => $key,
                 'queue' => is_string($queue) ? $queue : '',
                 'attempts' => is_int($attempts) ? $attempts : 0,
                 'createdAt' => is_int($createdAt) ? $createdAt : null,
+                'reservedAt' => is_int($reservedAt) ? $reservedAt : null,
+                'availableAt' => is_int($availableAt) ? $availableAt : null,
                 'payload' => is_string($payload) ? $payload : null,
             ];
         }

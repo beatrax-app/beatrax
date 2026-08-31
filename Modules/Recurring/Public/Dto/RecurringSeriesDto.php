@@ -6,6 +6,7 @@ namespace Modules\Recurring\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Spatie\LaravelData\Data;
 
@@ -39,14 +40,22 @@ final class RecurringSeriesDto extends Data
         public readonly bool $nextExpectedConfidenceLow,
         public readonly int $varianceTolerancePercent,
         public readonly ?CarbonImmutable $snoozedUntil,
-        public readonly ?float $latestFxRateUsed = null,
         public readonly ?Money $monthlyEquivalentInBase = null,
         public readonly ?CarbonImmutable $latestObservedAt = null,
+        public readonly ?int $billingDay = null,
     ) {}
 
     public function displayName(): string
     {
         return $this->displayNameOverride ?? $this->detectedName;
+    }
+
+    // A rendered, enabled control whose transition the state graph forbids is a
+    // 500 waiting for a click: cadence_changed has no snoozed edge, and the
+    // review row offered Snooze on that tab anyway.
+    public function allows(RecurringSeriesState $target): bool
+    {
+        return in_array($target, RecurringSeriesState::tryFrom($this->state)?->allowedNext() ?? [], true);
     }
 
     // The expected date itself is one cadence step past the most recent

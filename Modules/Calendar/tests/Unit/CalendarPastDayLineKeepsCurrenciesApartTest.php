@@ -121,5 +121,5 @@ it('converts a past day dollar rows at their own rate instead of adding their ce
         CarbonImmutable::parse('2026-06-30'),
     )['map'];
 
-    expect($map['2026-06-11'][0])->toBe(339_935);
+    expect($map['2026-06-11']->minor)->toBe(339_935);
 });

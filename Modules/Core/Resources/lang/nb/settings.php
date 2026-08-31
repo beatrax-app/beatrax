@@ -80,10 +80,10 @@ return [
     ],
 
     'currency_display' => [
-        'heading' => 'Valutavisning',
+        'heading' => 'Beløpsvisning',
         'label' => 'Standardvisning i transaksjonslisten',
-        'eur_only' => 'Kun :code',
-        'original' => 'Opprinnelig valuta',
+        'eur_only' => 'Oppgjort beløp',
+        'original' => 'Opprinnelig beløp',
         'help' => 'Du kan fortsatt bytte per side fra transaksjonslisten.',
     ],
 
@@ -101,7 +101,7 @@ return [
         'online_off' => 'Medfølgende kurser brukes. Ingen data forlater denne enheten.',
         'fetch_aria' => 'Hent oppdaterte valutakurser på nett',
         'refreshing' => 'Oppdaterer…',
-        'next_refresh' => 'Neste automatiske oppdatering: daglig kl. 09:00',
+        'next_refresh' => 'Automatisk oppdatering: én gang om dagen',
         'refresh_gave_up' => 'Kunne ikke oppdatere kursene. Kursene som allerede ligger på enheten, brukes fortsatt.',
         'refresh_now' => 'Oppdater nå',
     ],
@@ -110,14 +110,18 @@ return [
         'heading' => 'Periode',
         'label' => 'Perioden starter på dag',
         'help' => 'Nummerert fra 1 til 28. De fleste lar denne stå på 1 (kalendermåned). Bruk 25 hvis lønnen kommer den 25., og du tenker på "din måned" som noe som starter da.',
+
+        'move_confirm' => 'Hvis perioden starter på dag :day, blir alle konvoluttbeløp arkivert på nytt og lagt sammen der to måneder faller sammen til én. Å sette dagen tilbake deler dem ikke opp igjen.',
+        'move_cancel' => 'Avbryt',
+        'move_apply' => 'Bruk',
     ],
 
     'recurring' => [
         'heading' => 'Gjenkjenning av gjentakende betalinger',
         'window_label' => 'Gjenkjenningsvindu (måneder)',
         'window_help' => 'Hvor mange måneder med historikk som gjennomsøkes når transaksjoner grupperes i gjentakende mønstre.',
-        'income_label' => 'Minste inntekt (cent)',
-        'income_help' => 'Inntekter under denne terskelen grupperes ikke automatisk. Lagres i cent — 200000 betyr :example. Sett den til 0 for å slå av terskelen.',
+        'income_label' => 'Minste inntekt (minste enheter)',
+        'income_help' => 'Inntekter under denne terskelen grupperes ikke automatisk. Lagres i minste enheter — :minor betyr :example. Sett den til 0 for å slå av terskelen.',
     ],
 
     'drift' => [
@@ -125,12 +129,12 @@ return [
         'label' => 'Standardterskel for avviksvarsler',
         'help' => 'Varsler utløses når det siste beløpet for en gjentakende belastning avviker mer enn denne prosentandelen fra forrige beløp. Innstillinger per serie går foran.',
         'options' => [
-            '1' => '±1%',
-            '2' => '±2%',
-            '5' => '±5% (standard)',
-            '10' => '±10%',
-            '25' => '±25%',
-            '50' => '±50%',
+            '1' => '±1 %',
+            '2' => '±2 %',
+            '5' => '±5 % (standard)',
+            '10' => '±10 %',
+            '25' => '±25 %',
+            '50' => '±50 %',
         ],
     ],
 
@@ -152,6 +156,8 @@ return [
 
         'active_html' => 'Slippmappen er aktiv. Beatrax gjennomsøker <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> hvert 5. minutt etter nye filer.',
         'inactive_html' => 'Når funksjonen er på, gjennomsøker Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> hvert 5. minutt etter <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- og <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-filer og importerer dem gjennom den samme matcher-pipelinen som veiviseren. Behandlede filer flyttes til <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, slik at de aldri importeres to ganger.',
+        'active_phone_html' => 'Slippmappen er aktiv. Beatrax gjennomsøker <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> etter nye filer i bakgrunnen. Telefonen din bestemmer når et bakgrunnssøk kjører, så det kan ta minutter eller timer.',
+        'inactive_phone_html' => 'Når funksjonen er på, gjennomsøker Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> i bakgrunnen etter <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- og <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-filer og importerer dem gjennom den samme matcher-pipelinen som veiviseren. Telefonen din bestemmer når et bakgrunnssøk kjører, så det kan ta minutter eller timer. Behandlede filer flyttes til <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, slik at de aldri importeres to ganger.',
     ],
 
     'aliases' => [
@@ -161,13 +167,12 @@ return [
     ],
 
     'tax_heading' => 'Skatt',
-    'shared_merchant_heading' => 'Delt forhandlerliste',
     'data_backup_heading' => 'Data & sikkerhetskopi',
-    'install_heading' => 'Installasjon',
 
     'about_updates' => [
         'heading' => 'Om oppdateringer',
         'body' => 'Beatrax oppdaterer seg selv automatisk når appen først er installert. Etter at du har installert aller første versjon, kommer kommende versjoner via et banner i appen — du trenger ikke gå tilbake til GitHub. Skulle en framtidig oppdatering en gang mislykkes, kan du alltid laste ned det nyeste installasjonsprogrammet manuelt fra utgivelsessiden.',
+        'body_phone' => 'Her oppdaterer ikke Beatrax seg selv. Nye versjoner av telefonappen kommer via App Store eller Google Play, akkurat som de andre appene dine. Utgivelsessiden viser hva som er endret i hver enkelt.',
         'open_releases' => 'Åpne utgivelsessiden →',
     ],
 
@@ -192,9 +197,10 @@ return [
     ],
 
     'errors' => [
+        'period_move_failed' => 'Budsjettmåneden kunne ikke flyttes, så den ble stående der den var.',
         'currency_required' => 'Velg en valuta.',
         'window_months' => 'Velg mellom 2 og 60 måneder.',
-        'threshold' => 'Velg en terskel på 1%, 2%, 5%, 10%, 25% eller 50%.',
+        'threshold' => 'Velg en terskel på 1 %, 2 %, 5 %, 10 %, 25 % eller 50 %.',
         'amount' => 'Skriv inn et beløp fra :zero og oppover.',
         'period_day' => 'Velg en dag fra 1 til 28.',
         'currency_view' => 'Velg ett av de tilgjengelige alternativene.',

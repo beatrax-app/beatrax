@@ -33,6 +33,8 @@ return [
     'table' => [
         'category' => 'Category',
         'assigned' => 'Assigned',
+        'carried_in' => 'Carried in',
+        'moved' => 'Moved',
         'spent' => 'Spent',
         'available' => 'Available',
         'if_overspent' => 'If overspent',
@@ -65,11 +67,14 @@ return [
         'hide' => 'Hide history ↑',
         'moved_from' => 'Moved from :category',
         'moved_to' => 'Moved to :category',
+        'moved_unreadable' => 'Moved with :category by a newer version of Beatrax',
         'undo' => 'Undo',
     ],
 
     'phone' => [
         'spent' => 'Spent :amount',
+        'carried_in' => 'Carried in :amount',
+        'moved' => 'Moved :amount',
         'available' => 'Available :amount',
         'notify_at' => 'Notify at',
     ],
