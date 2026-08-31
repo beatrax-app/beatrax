@@ -6,7 +6,7 @@
         ['label' => Lang::get('migration::results.stats.account'), 'value' => $run->accounts_count],
         ['label' => Lang::get('migration::results.stats.payee'), 'value' => $run->counterparties_resolved_count],
         ['label' => Lang::get('migration::results.stats.transaction'), 'value' => $run->transactions_inserted_count],
-        ['label' => Lang::get('migration::results.stats.budget'), 'value' => $budgetMonthsCount],
+        ['label' => Lang::get('migration::results.stats.budget'), 'value' => $run->budget_months_count],
     ];
 
     // Each count picks its own plural form before the sentence is
@@ -14,7 +14,7 @@
     // language with three forms needs all three chosen independently.
     $summaryLine = Lang::get('migration::results.summary_line', [
         'categories' => Lang::choice('migration::results.summary_categories', $run->categories_count),
-        'budget_months' => Lang::choice('migration::results.summary_budget_months', $budgetMonthsCount),
+        'budget_months' => Lang::choice('migration::results.summary_budget_months', $run->budget_months_count),
         'transactions' => Lang::choice('migration::results.summary_transactions', $run->transactions_inserted_count),
     ]);
     if ($stillNeedsAttention > 0) {
@@ -66,7 +66,7 @@
         @if ($run->transactions_inserted_count > 0)
             <a href="{{ Destination::Transactions->url() }}" class="tap-link font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
         @endif
-        @if ($budgetMonthsCount > 0)
+        @if ($run->budget_months_count > 0)
             <a href="{{ Destination::Budgets->url() }}" class="tap-link font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
         @endif
     </div>
