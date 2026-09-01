@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Core\Public\Support\SnoozeUntil;
@@ -87,15 +88,6 @@ final class DriftPage extends Component
         return DriftPageType::tryFrom($this->type) ?? DriftPageType::Drift;
     }
 
-    // A derived anomaly id is a 63-bit integer, and every value crossing this
-    // boundary goes through JSON, whose numbers are IEEE doubles — anything
-    // past 2^53 comes back from the browser silently rounded. So the id
-    // travels as a STRING and is only an int again on this side of the wire.
-    private static function anomalyId(int|string $alertId): int
-    {
-        return is_numeric($alertId) ? (int) $alertId : 0;
-    }
-
     public function loadMore(): void
     {
         $this->pageSize += self::PAGE_SIZE;
@@ -108,17 +100,17 @@ final class DriftPage extends Component
 
     public function acknowledgeAnomaly(int|string $alertId, CurrentUser $currentUser, AcknowledgeAnomalyAlert $action): void
     {
-        $this->acknowledgeAlert(self::anomalyId($alertId), $currentUser, $action);
+        $this->acknowledgeAlert(DerivedRowId::fromWire($alertId), $currentUser, $action);
     }
 
     public function snoozeAnomaly(int|string $alertId, string $untilIso, CurrentUser $currentUser, SnoozeAnomalyAlert $action, Clock $clock): void
     {
-        $this->snoozeAlert(self::anomalyId($alertId), $untilIso, $currentUser, $action, $clock);
+        $this->snoozeAlert(DerivedRowId::fromWire($alertId), $untilIso, $currentUser, $action, $clock);
     }
 
     public function dismissAnomaly(int|string $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
     {
-        if (! $this->apply(fn () => ($action)(self::anomalyId($alertId), $currentUser->user()))) {
+        if (! $this->apply(fn () => ($action)(DerivedRowId::fromWire($alertId), $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed'));
@@ -128,7 +120,7 @@ final class DriftPage extends Component
     {
         $ruleWritten = false;
         if (! $this->apply(function () use ($alertId, $currentUser, $action, &$ruleWritten): void {
-            $ruleWritten = ($action)(self::anomalyId($alertId), $currentUser->user());
+            $ruleWritten = ($action)(DerivedRowId::fromWire($alertId), $currentUser->user());
         })) {
             return;
         }
@@ -150,20 +142,20 @@ final class DriftPage extends Component
 
     public function undoAnomalySuppression(int|string $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
     {
-        if (! $this->apply(fn () => $action->undoSuppression(self::anomalyId($alertId), $currentUser->user()))) {
+        if (! $this->apply(fn () => $action->undoSuppression(DerivedRowId::fromWire($alertId), $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.reopened'));
     }
 
-    public function acknowledge(int $alertId, CurrentUser $currentUser, AcknowledgeDriftAlert $action): void
+    public function acknowledge(int|string $alertId, CurrentUser $currentUser, AcknowledgeDriftAlert $action): void
     {
-        $this->acknowledgeAlert($alertId, $currentUser, $action);
+        $this->acknowledgeAlert(DerivedRowId::fromWire($alertId), $currentUser, $action);
     }
 
-    public function snooze(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action, Clock $clock): void
+    public function snooze(int|string $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action, Clock $clock): void
     {
-        $this->snoozeAlert($alertId, $untilIso, $currentUser, $action, $clock);
+        $this->snoozeAlert(DerivedRowId::fromWire($alertId), $untilIso, $currentUser, $action, $clock);
     }
 
     private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
@@ -218,23 +210,25 @@ final class DriftPage extends Component
         $this->toast(Lang::get('drift-alerts::alerts.toasts.snoozed'));
     }
 
-    public function dismissAsCancelled(int $alertId, CurrentUser $currentUser, DismissDriftAlertAsCancelled $action): void
+    public function dismissAsCancelled(int|string $alertId, CurrentUser $currentUser, DismissDriftAlertAsCancelled $action): void
     {
-        if (! $this->apply(fn () => ($action)($alertId, $currentUser->user()))) {
+        $id = DerivedRowId::fromWire($alertId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed_cancelled'));
     }
 
     public function modelCancelInForecast(
-        int $alertId,
+        int|string $alertId,
         CurrentUser $currentUser,
         CreateScenarioFromTemplate $action,
         Redirector $redirector,
     ): mixed {
         $newId = 0;
-        if (! $this->apply(function () use ($alertId, $currentUser, $action, &$newId): void {
-            $newId = $action->forDriftAlert($alertId, $currentUser->user());
+        $id = DerivedRowId::fromWire($alertId);
+        if (! $this->apply(function () use ($id, $currentUser, $action, &$newId): void {
+            $newId = $action->forDriftAlert($id, $currentUser->user());
         })) {
             return null;
         }
