@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Pairing\LanBootstrap;
 use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
 use Modules\Sync\Internal\Pairing\LanPeerBrowser;
@@ -114,7 +115,7 @@ it('leaves the address out when this device could not work out its own', functio
 it('reads the scanned address back off the row the responder seeded', function (): void {
     mintedAtTokenRow('192.168.178.119', 51337);
 
-    $peer = (new ScannedPeerAddress(app(DatabaseManager::class)))->forTokenHash('token-hash-abc', MINTED_AT_DID);
+    $peer = (new ScannedPeerAddress(app(DatabaseManager::class), app(Clock::class)))->forTokenHash('token-hash-abc', MINTED_AT_DID);
 
     expect($peer)->not->toBeNull()
         ->and($peer?->host)->toBe('192.168.178.119')
@@ -127,7 +128,7 @@ it('reads the scanned address back off the row the responder seeded', function (
 it('answers with nothing when the row carries only half an address', function (): void {
     mintedAtTokenRow('192.168.178.119', null);
 
-    expect((new ScannedPeerAddress(app(DatabaseManager::class)))->forTokenHash('token-hash-abc', MINTED_AT_DID))->toBeNull();
+    expect((new ScannedPeerAddress(app(DatabaseManager::class), app(Clock::class)))->forTokenHash('token-hash-abc', MINTED_AT_DID))->toBeNull();
 });
 
 it('delivers to the address the code named on a device that cannot browse at all', function (): void {

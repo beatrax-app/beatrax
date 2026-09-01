@@ -129,6 +129,34 @@ which one is trusted, and the safety number remains the only gate.
 It is the typed-code arm, which depends on finding the peer, that has nothing
 to find.
 
+### The same address, needed again on the way back
+
+Carrying the address fixed the leg that *sends*. The leg that *collects* kept
+the browse, and on an iPhone that is the same dead end one step later:
+`LanPairingFramePuller::pullAndApply()` asked `LanPeerBrowser` for peers, which
+sources them only from `PeerDiscovery::browse()`. So the phone could deliver its
+accept and could never fetch the confirm that answers it. Measured on a real
+iPhone against a desktop on the same wifi: the phone POSTed its accept 112 times
+to the address the QR named, and issued **zero** `GET /pair/frames` in the whole
+session. Both ceremonies reached `confirmed` on the desktop and sat on "Waiting
+for the other device to confirm…" on the phone until they were cancelled.
+
+Nothing self-heals it. `PendingPairingCourier::reEmitOwnConfirm()` stops once the
+row it owns has `peer_confirmed`, which is true the moment the desktop's own
+confirm lands — so the desktop sends its confirm once, and the one road back is
+the pull.
+
+`pullAndApply()` now takes the same two roads `deliver()` does, scanned address
+first and browse second, through `ScannedPeerAddress::forCollector()` — the
+in-flight rows on which *this* device is the responder. On the device that had
+hung twice, the first poll after the fix issued one
+`GET /pair/frames?device=<its own id>` and the ceremony completed on both
+screens.
+
+The two legs are one mechanism and are easy to fix by halves: this was the same
+defect as the one above, found again on the return path, because only the send
+path had been taught the road.
+
 If the grant is refused, the fix is not to keep the entitlement flag: it is a
 discovery path that uses `NWBrowser` through a native plugin, which
 `NSBonjourServices` already covers, behind the existing `PeerDiscovery`

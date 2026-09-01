@@ -465,7 +465,9 @@ the upgrade, answered by the listener itself.
 Two routes rather than one because only ONE side of a pairing listens. The desktop
 runs the daemon; a phone runs no server and advertises nothing, so it can never be
 dialled. Rather than the desktop pushing, the phone collects on the three-second
-poll it already runs.
+poll it already runs — from the address its scan recorded first, then from any
+peer a browse turned up. The scanned address is not a fallback on iOS: it is the
+only road, because the browse there returns nothing and cannot be made to.
 
 `POST /pair/frame` answers **204** when it applied the frame, **202** when it is
 holding one it cannot finish yet, and **404** for a refusal it will never change
