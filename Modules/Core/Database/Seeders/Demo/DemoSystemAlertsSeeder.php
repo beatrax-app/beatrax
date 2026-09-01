@@ -12,6 +12,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Services\UserDataPathService;
 
 // Materialises one row per `system_alerts.kind` (see ALERTS below) so the
 // banner-rotation logic exercises every branch on a fresh install.
@@ -92,7 +93,9 @@ final class DemoSystemAlertsSeeder
         if ($primary !== null) {
             $now = $this->clock->now();
             foreach (self::ALERTS as $row) {
-                $this->upsertAlert($primary, $row, $now);
+                if (self::raisableHere($row['kind'])) {
+                    $this->upsertAlert($primary, $row, $now);
+                }
             }
         }
 
@@ -105,6 +108,16 @@ final class DemoSystemAlertsSeeder
                     ->orWhereNull('user_id');
             })
             ->count();
+    }
+
+    // The rule above holds for the app; this holds it for the SHELL. Only the
+    // Desktop module raises an update alert, and a phone does not load it, so
+    // seeding one there paints an "Install on next launch" no iOS build could
+    // ever honour — a banner promising what the App Store owns.
+    private static function raisableHere(string $kind): bool
+    {
+        return UpdateAlertKind::tryFrom($kind) === null
+            || ! UserDataPathService::isMobileRuntime();
     }
 
     /**
