@@ -13,6 +13,7 @@ return [
 
     'empty_heading' => 'Nog geen aliassen',
     'empty_body' => 'Aliassen verschijnen hier nadat je op de cursieve ruwe omschrijving van een importvoorvertoning-rij klikt en er een herkenbare naam aan geeft.',
+    'empty_body_touch' => 'Aliassen verschijnen hier nadat je op de cursieve ruwe omschrijving van een importvoorvertoning-rij tikt en er een herkenbare naam aan geeft.',
 
     'col_select' => 'Selecteren',
     'col_raw' => 'Ruwe omschrijving',

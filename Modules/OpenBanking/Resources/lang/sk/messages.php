@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Dokonči udelenie súhlasu v prehliadači',
         'step5_body' => 'Klikni nižšie a otvorí sa prihlasovacia obrazovka a obrazovka súhlasu tvojej banky. Prihlás sa, dokonči prípadné dvojfaktorové overenie a potom sa sem automaticky vrátiš, aby sa zapnutie Open Bankingu dokončilo.',
+        // i18n-review: sk · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Ťukni nižšie a otvorí sa prihlasovacia obrazovka a obrazovka súhlasu tvojej banky. Prihlás sa, dokonči prípadné dvojfaktorové overenie a potom sa sem automaticky vrátiš, aby sa zapnutie Open Bankingu dokončilo.',
 
         'cancel' => 'Zrušiť',
         'continue' => 'Pokračovať →',

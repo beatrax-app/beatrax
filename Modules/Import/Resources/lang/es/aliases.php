@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Aún no hay alias',
     'empty_body' => 'Los alias aparecen aquí después de que hagas clic en la descripción original en cursiva de una fila de la vista previa de importación y le des un nombre legible.',
+    // i18n-review: es · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Los alias aparecen aquí después de que toques la descripción original en cursiva de una fila de la vista previa de importación y le des un nombre legible.',
 
     'col_select' => 'Seleccionar',
     'col_raw' => 'Descripción original',

@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker čakalne vrste: DELUJE',
     'worker_not_running' => 'Worker čakalne vrste: NE DELUJE',
     'no_runs' => 'Zagonov še ni. Klikni "Zaženi ukaz" ali uporabi ukazno paleto (⌘K).',
+    // i18n-review: sl · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Zagonov še ni. Tapni "Zaženi ukaz" ali uporabi ukazno paleto (⌘K).',
     'recent_runs_aria' => 'Nedavni zagoni',
     'modal_heading' => 'Zaženi ukaz SAFE',
     'modal_intro' => 'Izberi ukaz ravni SAFE za takojšen zagon. Ukazi DESTRUCTIVE tu niso navedeni — uporabi ponovni zagon na časovnici ali paleto ⌘K.',

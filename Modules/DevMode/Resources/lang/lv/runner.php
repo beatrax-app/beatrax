@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Rindas darbinieks: DARBOJAS',
     'worker_not_running' => 'Rindas darbinieks: NEDARBOJAS',
     'no_runs' => 'Vēl nav nevienas izpildes. Noklikšķiniet „Izpildīt komandu” vai izmantojiet komandu paleti (⌘K).',
+    // i18n-review: lv · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Vēl nav nevienas izpildes. Pieskarieties „Izpildīt komandu” vai izmantojiet komandu paleti (⌘K).',
     'recent_runs_aria' => 'Nesenās izpildes',
     'modal_heading' => 'Izpildīt DROŠU komandu',
     'modal_intro' => 'Izvēlieties DROŠĀ līmeņa komandu, ko izpildīt uzreiz. DESTRUKTĪVĀS komandas šeit nav uzskaitītas — izmantojiet laika joslas atkārtotās izpildes pogu vai ⌘K paleti.',

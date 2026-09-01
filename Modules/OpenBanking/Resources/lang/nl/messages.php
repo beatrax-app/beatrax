@@ -132,6 +132,7 @@ return [
 
         'step5_title' => 'Voltooi de toestemming in je browser',
         'step5_body' => 'Klik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap, dan word je hier automatisch teruggebracht om Open Banking af te ronden.',
+        'step5_body_touch' => 'Tik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap, dan word je hier automatisch teruggebracht om Open Banking af te ronden.',
 
         'cancel' => 'Annuleren',
         'continue' => 'Doorgaan →',

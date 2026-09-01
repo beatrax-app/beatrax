@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Eilės vykdytojas: VEIKIA',
     'worker_not_running' => 'Eilės vykdytojas: NEVEIKIA',
     'no_runs' => 'Vykdymų dar nėra. Spustelėk „Vykdyti komandą“ arba naudok komandų paletę (⌘K).',
+    // i18n-review: lt · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Vykdymų dar nėra. Palieski „Vykdyti komandą“ arba naudok komandų paletę (⌘K).',
     'recent_runs_aria' => 'Naujausi vykdymai',
     'modal_heading' => 'Vykdyti SAUGIĄ komandą',
     'modal_intro' => 'Pasirink SAUGAUS lygio komandą, kuri bus įvykdyta iš karto. ARDOMOSIOS komandos čia nerodomos — naudok laiko juostos mygtuką „Paleisti iš naujo“ arba ⌘K paletę.',

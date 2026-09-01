@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Dokončaj privolitev v brskalniku',
         'step5_body' => 'Klikni spodaj, da odpreš prijavni zaslon in zaslon za privolitev svoje banke. Dokončaj prijavo in morebitno dvostopenjsko potrditev, nato te bo Beatrax samodejno pripeljal nazaj sem, da dokončaš vklop odprtega bančništva.',
+        // i18n-review: sl · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Tapni spodaj, da odpreš prijavni zaslon in zaslon za privolitev svoje banke. Dokončaj prijavo in morebitno dvostopenjsko potrditev, nato te bo Beatrax samodejno pripeljal nazaj sem, da dokončaš vklop odprtega bančništva.',
 
         'cancel' => 'Prekliči',
         'continue' => 'Nadaljuj →',

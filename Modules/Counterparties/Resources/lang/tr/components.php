@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => "IBAN gizli — görmek için IBAN'ı göster düğmesine tıkla",
+        // i18n-review: tr · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => "IBAN gizli — görmek için IBAN'ı göster düğmesine dokun",
         'show' => "IBAN'ı göster",
         'hide' => "IBAN'ı gizle",
     ],

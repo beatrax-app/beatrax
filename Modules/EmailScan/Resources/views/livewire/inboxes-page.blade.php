@@ -77,6 +77,9 @@
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get($onPhone ? 'email-scan::inboxes.connect_body_phone' : 'email-scan::inboxes.connect_body') }}
             </p>
+            {{-- The dance ends at a loopback callback this runtime does
+                 not serve, so the offer belongs where it can finish. --}}
+            @if ($connectsHere)
             <div class="mt-8 flex items-center justify-center gap-4">
                 <button
                     type="button"
@@ -89,6 +92,7 @@
                     class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >{{ Lang::get('email-scan::inboxes.connect_microsoft') }}</button>
             </div>
+            @endif
             <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('email-scan::inboxes.readonly_note') }}
             </p>
@@ -215,20 +219,24 @@
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Gmail</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($onPhone ? 'email-scan::inboxes.gmail_card_body_phone' : 'email-scan::inboxes.gmail_card_body') }}</p>
+                    @if ($connectsHere)
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
                         class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                     >{{ Lang::get('email-scan::inboxes.connect_gmail') }}</button>
+                    @endif
                 </div>
                 <div class="rounded-lg border border-slate-200 bg-white p-6 space-y-4 dark:bg-slate-950 dark:border-slate-700">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Microsoft 365</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get($onPhone ? 'email-scan::inboxes.microsoft_card_body_phone' : 'email-scan::inboxes.microsoft_card_body') }}</p>
+                    @if ($connectsHere)
                     <button
                         type="button"
                         wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"
                         class="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                     >{{ Lang::get('email-scan::inboxes.connect_microsoft') }}</button>
+                    @endif
                 </div>
             </div>
         </section>

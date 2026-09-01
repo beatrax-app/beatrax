@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Várólista-worker: FUT',
     'worker_not_running' => 'Várólista-worker: NEM FUT',
     'no_runs' => 'Még nincs futtatás. Kattints a "Parancs futtatása" gombra, vagy használd a parancspalettát (⌘K).',
+    // i18n-review: hu · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Még nincs futtatás. Koppints a "Parancs futtatása" gombra, vagy használd a parancspalettát (⌘K).',
     'recent_runs_aria' => 'Legutóbbi futtatások',
     'modal_heading' => 'SAFE parancs futtatása',
     'modal_intro' => 'Válassz egy SAFE szintű parancsot az azonnali futtatáshoz. A DESTRUCTIVE parancsok itt nem szerepelnek — használd az idővonal újrafuttatás lehetőségét vagy a ⌘K palettát.',

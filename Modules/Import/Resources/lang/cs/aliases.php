@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Zatím žádné aliasy',
     'empty_body' => 'Aliasy se tu objeví, jakmile v řádku náhledu importu klikneš na kurzívou psaný surový popis a dáš mu srozumitelný název.',
+    // i18n-review: cs · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliasy se tu objeví, jakmile v řádku náhledu importu klepneš na kurzívou psaný surový popis a dáš mu srozumitelný název.',
 
     'col_select' => 'Výběr',
     'col_raw' => 'Surový popis',

@@ -13,7 +13,7 @@ return [
     'empty' => 'Elke transactie heeft een categorie. Open deze pagina opnieuw na je volgende import.',
 
     'col_date' => 'Datum',
-    'col_counterparty' => 'Winkelier',
+    'col_counterparty' => 'Tegenpartij',
     'col_amount' => 'Bedrag',
     'col_category' => 'Categorie',
     'col_row_actions' => 'Rijacties',

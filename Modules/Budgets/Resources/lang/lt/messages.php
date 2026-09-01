@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Kol kas nieko nepaskirstyta',
         'copy_hint' => 'Nukopijuok praėjusio mėnesio planą arba spustelėk langelį žemiau ir pradėk paskirstyti.',
+        // i18n-review: lt · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Nukopijuok praėjusio mėnesio planą arba palieski langelį žemiau ir pradėk paskirstyti.',
         'first_hint' => 'Spustelėk langelį žemiau ir pradėk paskirstyti pirmąjį mėnesį.',
+        // i18n-review: lt · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Palieski langelį žemiau ir pradėk paskirstyti pirmąjį mėnesį.',
         'copy_button' => 'Kopijuoti praėjusį mėnesį',
     ],
 

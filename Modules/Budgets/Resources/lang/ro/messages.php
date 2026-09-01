@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Nimic alocat încă',
         'copy_hint' => 'Copiază planul de luna trecută sau dă clic într-o celulă de mai jos pentru a începe alocarea.',
+        // i18n-review: ro · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Copiază planul de luna trecută sau atinge o celulă de mai jos pentru a începe alocarea.',
         'first_hint' => 'Dă clic într-o celulă de mai jos pentru a începe alocarea primei luni.',
+        // i18n-review: ro · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Atinge o celulă de mai jos pentru a începe alocarea primei luni.',
         'copy_button' => 'Copiază luna trecută',
     ],
 

@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Afstemt — ophæv afstemningen først for at ændre status.',
         'toggle_aria' => ':label — klik for at skifte',
+        // i18n-review: da · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — tryk for at skifte',
     ],
 ];

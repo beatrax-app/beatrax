@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Aliaseid veel pole',
     'empty_body' => 'Aliased ilmuvad siia pärast seda, kui klõpsad impordi eelvaate real kaldkirjas toorkirjeldusel ja annad sellele arusaadava nime.',
+    // i18n-review: et · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliased ilmuvad siia pärast seda, kui puudutad impordi eelvaate real kaldkirjas toorkirjeldusel ja annad sellele arusaadava nime.',
 
     'col_select' => 'Vali',
     'col_raw' => 'Toorkirjeldus',

@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Поки нічого не розподілено',
         'copy_hint' => 'Скопіюй план минулого місяця або клацни на комірку нижче, щоб почати розподіл.',
+        // i18n-review: uk · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Скопіюй план минулого місяця або торкнися комірки нижче, щоб почати розподіл.',
         'first_hint' => 'Клацни на комірку нижче, щоб почати розподіл першого місяця.',
+        // i18n-review: uk · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Торкнися комірки нижче, щоб почати розподіл першого місяця.',
         'copy_button' => 'Скопіювати минулий місяць',
     ],
 

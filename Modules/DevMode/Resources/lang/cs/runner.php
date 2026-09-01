@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker fronty: BĚŽÍ',
     'worker_not_running' => 'Worker fronty: NEBĚŽÍ',
     'no_runs' => 'Zatím žádná spuštění. Klikni na „Spustit příkaz“ nebo použij paletu příkazů (⌘K).',
+    // i18n-review: cs · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Zatím žádná spuštění. Klepni na „Spustit příkaz“ nebo použij paletu příkazů (⌘K).',
     'recent_runs_aria' => 'Nedávná spuštění',
     'modal_heading' => 'Spustit příkaz SAFE',
     'modal_intro' => 'Vyber příkaz úrovně SAFE a spusť ho hned. Příkazy DESTRUCTIVE tady nejsou — použij opětovné spuštění v časové ose nebo paletu ⌘K.',

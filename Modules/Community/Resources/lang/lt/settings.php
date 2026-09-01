@@ -19,6 +19,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Siūlyti prisidėti',
         'help' => 'Rodyti raginimą „Padėk kitiems tai atpažinti“ rūšiavimo eilutėje, kad vienu spustelėjimu galėtum pateikti pasiūlymą bendram sąrašui.',
+        // i18n-review: lt · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Rodyti raginimą „Padėk kitiems tai atpažinti“ rūšiavimo eilutėje, kad vienu palietimu galėtum pateikti pasiūlymą bendram sąrašui.',
     ],
 
     'update_on_updates' => [

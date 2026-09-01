@@ -68,7 +68,7 @@ return [
         'counterparties' => 'Iedereen met wie je transacties doet',
         'triage' => 'Onbekende tegenpartijen identificeren',
         'categorization' => 'Ongecategoriseerde transacties beoordelen',
-        'community' => 'Gedeelde kennis over verkopers',
+        'community' => 'Gedeelde kennis over winkeliers',
         'data_devices' => 'Synchronisatie, koppelen en back-ups',
         'settings' => 'Voorkeuren van de app',
     ],

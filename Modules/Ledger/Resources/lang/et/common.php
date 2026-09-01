@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Kooskõlastatud — oleku muutmiseks tühista kõigepealt kooskõlastus.',
         'toggle_aria' => ':label — klõpsa, et vahetada',
+        // i18n-review: et · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — puuduta, et vahetada',
     ],
 ];

@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Užbaik sutikimą naršyklėje',
         'step5_body' => 'Spustelėk žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą, ir būsi automatiškai grąžinti čia užbaigti atvirosios bankininkystės įjungimo.',
+        // i18n-review: lt · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Palieski žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą, ir būsi automatiškai grąžinti čia užbaigti atvirosios bankininkystės įjungimo.',
 
         'cancel' => 'Atšaukti',
         'continue' => 'Tęsti →',

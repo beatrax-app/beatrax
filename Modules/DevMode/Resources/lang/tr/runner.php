@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Kuyruk worker: ÇALIŞIYOR',
     'worker_not_running' => 'Kuyruk worker: ÇALIŞMIYOR',
     'no_runs' => 'Henüz çalıştırma yok. "Komut çalıştır" düğmesine tıkla veya komut paletini (⌘K) kullan.',
+    // i18n-review: tr · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Henüz çalıştırma yok. "Komut çalıştır" düğmesine dokun veya komut paletini (⌘K) kullan.',
     'recent_runs_aria' => 'Son çalıştırmalar',
     'modal_heading' => 'SAFE komut çalıştır',
     'modal_intro' => 'Hemen çalıştırmak için SAFE seviyesinde bir komut seç. DESTRUCTIVE komutlar burada listelenmez — zaman çizelgesindeki yeniden çalıştırma seçeneğini veya ⌘K paletini kullan.',

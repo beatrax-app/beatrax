@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Tilbyd at bidrage',
         'help' => 'Vis knappen "Hjælp andre med at genkende denne" på sorteringsrækken, så du kan sende et forslag til den delte liste med ét klik.',
+        // i18n-review: da · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Vis knappen "Hjælp andre med at genkende denne" på sorteringsrækken, så du kan sende et forslag til den delte liste med ét tryk.',
     ],
 
     'update_on_updates' => [

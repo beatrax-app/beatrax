@@ -41,6 +41,7 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN verborgen — klik op IBAN tonen om te onthullen',
+        'hidden_aria_touch' => 'IBAN verborgen — tik op IBAN tonen om te onthullen',
         'show' => 'IBAN tonen',
         'hide' => 'IBAN verbergen',
     ],

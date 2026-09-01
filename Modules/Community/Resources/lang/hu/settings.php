@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Hozzájárulás felajánlása',
         'help' => 'Jelenítse meg a „Segíts másoknak azonosítani” gombot a besorolási soron, hogy egy kattintással beküldhesd a javaslatot a megosztott listára.',
+        // i18n-review: hu · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Jelenítse meg a „Segíts másoknak azonosítani” gombot a besorolási soron, hogy egy koppintással beküldhesd a javaslatot a megosztott listára.',
     ],
 
     'update_on_updates' => [

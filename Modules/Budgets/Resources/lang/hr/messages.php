@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Još ništa nije raspoređeno',
         'copy_hint' => 'Kopiraj plan prošlog mjeseca ili klikni na ćeliju ispod i počni raspoređivati.',
+        // i18n-review: hr · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Kopiraj plan prošlog mjeseca ili dodirni ćeliju ispod i počni raspoređivati.',
         'first_hint' => 'Klikni na ćeliju ispod i počni raspoređivati svoj prvi mjesec.',
+        // i18n-review: hr · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Dodirni ćeliju ispod i počni raspoređivati svoj prvi mjesec.',
         'copy_button' => 'Kopiraj prošli mjesec',
     ],
 

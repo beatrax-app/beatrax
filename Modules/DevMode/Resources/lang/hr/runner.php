@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker reda čekanja: RADI',
     'worker_not_running' => 'Worker reda čekanja: NE RADI',
     'no_runs' => 'Još nema pokretanja. Klikni "Pokreni naredbu" ili upotrijebi paletu naredbi (⌘K).',
+    // i18n-review: hr · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Još nema pokretanja. Dodirni "Pokreni naredbu" ili upotrijebi paletu naredbi (⌘K).',
     'recent_runs_aria' => 'Nedavna pokretanja',
     'modal_heading' => 'Pokreni SAFE naredbu',
     'modal_intro' => 'Odaberi naredbu razine SAFE za trenutačno pokretanje. DESTRUCTIVE naredbe ovdje nisu navedene — upotrijebi ponovno pokretanje na vremenskoj crti ili paletu ⌘K.',

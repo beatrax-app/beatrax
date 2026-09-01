@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Ei vielä aliaksia',
     'empty_body' => 'Aliakset ilmestyvät tähän, kun napsautat tuonnin esikatselurivillä kursivoitua raakakuvausta ja annat sille selkeän nimen.',
+    // i18n-review: fi · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliakset ilmestyvät tähän, kun napautat tuonnin esikatselurivillä kursivoitua raakakuvausta ja annat sille selkeän nimen.',
 
     'col_select' => 'Valitse',
     'col_raw' => 'Raakakuvaus',

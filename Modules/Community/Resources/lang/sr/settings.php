@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Ponudi doprinos',
         'help' => 'Prikaži poziv „Pomozi drugima da ovo prepoznaju” u redu trijaže da jednim klikom pošalješ predlog za zajedničku listu.',
+        // i18n-review: sr · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Prikaži poziv „Pomozi drugima da ovo prepoznaju” u redu trijaže da jednim dodirom pošalješ predlog za zajedničku listu.',
     ],
 
     'update_on_updates' => [

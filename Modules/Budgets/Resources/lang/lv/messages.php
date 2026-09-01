@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Vēl nekas nav piešķirts',
         'copy_hint' => 'Kopējiet pagājušā mēneša plānu vai noklikšķiniet uz šūnas zemāk, lai sāktu piešķirt.',
+        // i18n-review: lv · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Kopējiet pagājušā mēneša plānu vai pieskarieties šūnai zemāk, lai sāktu piešķirt.',
         'first_hint' => 'Noklikšķiniet uz šūnas zemāk, lai sāktu piešķirt pirmajā mēnesī.',
+        // i18n-review: lv · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Pieskarieties šūnai zemāk, lai sāktu piešķirt pirmajā mēnesī.',
         'copy_button' => 'Kopēt pagājušo mēnesi',
     ],
 

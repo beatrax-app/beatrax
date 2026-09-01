@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Még nincs kiosztás',
         'copy_hint' => 'Másold át az előző havi tervet, vagy kattints egy alábbi cellába a kiosztás megkezdéséhez.',
+        // i18n-review: hu · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Másold át az előző havi tervet, vagy koppints egy alábbi cellába a kiosztás megkezdéséhez.',
         'first_hint' => 'Kattints egy alábbi cellába, és oszd be az első hónapodat.',
+        // i18n-review: hu · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Koppints egy alábbi cellába, és oszd be az első hónapodat.',
         'copy_button' => 'Előző hónap másolása',
     ],
 

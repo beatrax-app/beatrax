@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Queue worker: BEŽÍ',
     'worker_not_running' => 'Queue worker: NEBEŽÍ',
     'no_runs' => 'Zatiaľ žiadne spustenia. Klikni na „Spustiť príkaz“ alebo použi paletu príkazov (⌘K).',
+    // i18n-review: sk · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Zatiaľ žiadne spustenia. Ťukni na „Spustiť príkaz“ alebo použi paletu príkazov (⌘K).',
     'recent_runs_aria' => 'Nedávne spustenia',
     'modal_heading' => 'Spustiť príkaz SAFE',
     'modal_intro' => 'Vyber príkaz úrovne SAFE a spusti ho hneď. Príkazy DESTRUCTIVE tu nie sú — použi možnosť opätovného spustenia na časovej osi alebo paletu ⌘K.',

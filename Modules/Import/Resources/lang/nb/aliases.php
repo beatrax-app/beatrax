@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Ingen aliaser ennå',
     'empty_body' => 'Aliaser dukker opp her når du klikker på den kursiverte rå beskrivelsen på en rad i importforhåndsvisningen og gir den et forståelig navn.',
+    // i18n-review: nb · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliaser dukker opp her når du trykker på den kursiverte rå beskrivelsen på en rad i importforhåndsvisningen og gir den et forståelig navn.',
 
     'col_select' => 'Velg',
     'col_raw' => 'Rå beskrivelse',
