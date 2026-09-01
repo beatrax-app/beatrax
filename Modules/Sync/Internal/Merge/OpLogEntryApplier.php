@@ -249,9 +249,13 @@ final readonly class OpLogEntryApplier
             $this->quarantine->record($firstField[0], $failure->quarantineReason(), $now);
         }
 
+        // Not 'reason': describe() returns its own, and spread last it wins —
+        // so the line reported the exception class, and every refusal read as
+        // QueryException/23000. SQLite answers NOT NULL, FOREIGN KEY and UNIQUE
+        // all with 23000, which is exactly what the classification separates.
         $this->logger?->warning('OpLogEntryApplier: the database refused a replayed CreateRow.', [
             'table' => $table,
-            'reason' => $failure->quarantineReason()->value,
+            'quarantine_reason' => $failure->quarantineReason()->value,
             ...SafeExceptionContext::describe($e),
         ]);
 
