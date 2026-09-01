@@ -9,6 +9,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
@@ -24,6 +25,14 @@ use Throwable;
  */
 final readonly class HistoryReprojector
 {
+    // Deep enough for a child, its parent and its grandparent, which is as
+    // far as the covered schema nests.
+    private const int PARENT_WALK_LIMIT = 3;
+
+    // One pass does not have to finish the sweep; what it leaves, the next
+    // one takes. The bound is what keeps a large quarantine off the request.
+    private const int SETTLED_SWEEP_LIMIT = 500;
+
     public function __construct(
         private DatabaseManager $db,
         private PersistedOpLogEntries $entries,
@@ -48,12 +57,17 @@ final readonly class HistoryReprojector
      */
     public function replayQuarantined(int $userId, Session $session, ?string $since, ?string $lastFingerprint): int
     {
+        // Spent refusals first: a row already here needs no replay, and the
+        // reasons that are not recoverable never reach the pass below, so this
+        // is the only thing that ever clears one.
+        $this->clearSettled($userId);
+
         $rows = $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint);
         if ($rows === []) {
             return 0;
         }
 
-        $entries = $this->entries->forRows($userId, $rows);
+        $entries = $this->entries->forRows($userId, $this->withParentsNamed($rows, $userId));
         if ($entries === []) {
             return 0;
         }
@@ -61,8 +75,64 @@ final readonly class HistoryReprojector
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
         $this->buildReplayer($userId)->replay($entries, $userId, RowHistoryPolicy::AsGiven);
+        $this->clearSettled($userId);
 
         return count($rows);
+    }
+
+    // A create refused because the row could not be inserted is spent once the
+    // row is here. Nothing ever cleared one, so a phone reported 60 refusals
+    // for rows it already held. A field op held for an unreadable value is NOT
+    // spent by its row existing — that row was never the thing in question.
+    private function clearSettled(int $userId): void
+    {
+        $held = $this->db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->whereIn('reason', QuarantineReason::createRefusals())
+            ->distinct()
+            ->limit(self::SETTLED_SWEEP_LIMIT)
+            ->get(['table_name', 'pk']);
+
+        foreach ($held as $row) {
+            $table = is_string($row->table_name ?? null) ? $row->table_name : '';
+            $pk = isset($row->pk) && (is_string($row->pk) || is_numeric($row->pk)) ? (string) $row->pk : '';
+
+            if ($table === '' || $pk === '' || ! $this->rowIsHere(['table' => $table, 'pk' => $pk], $userId)) {
+                continue;
+            }
+
+            $this->db->connection()->table('op_log_quarantine')
+                ->where('user_id', $userId)
+                ->where('table_name', $table)
+                ->where('pk', $pk)
+                ->delete();
+        }
+    }
+
+    // Here under the id the peer used, or under the one this device minted for
+    // the same row. Both mean the refusal is spent.
+    /**
+     * @param  array{table: string, pk: string}  $row
+     */
+    private function rowIsHere(array $row, int $userId): bool
+    {
+        try {
+            $connection = $this->db->connection();
+
+            if ($connection->table($row['table'])->where('id', $row['pk'])->exists()) {
+                return true;
+            }
+
+            $local = $connection->table('op_log_row_aliases')
+                ->where('user_id', $userId)
+                ->where('table_name', $row['table'])
+                ->where('remote_id', $row['pk'])
+                ->value('local_id');
+
+            return is_string($local) && $connection->table($row['table'])->where('id', $local)->exists();
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     // What a reader should be told. AwaitingKey outranks Deferred because it
@@ -114,6 +184,94 @@ final readonly class HistoryReprojector
         }
 
         return $rows;
+    }
+
+    // A row held for a missing reference NAMES the row that is missing, and
+    // that parent's own ops are sitting in the log unreplayed. Replaying only
+    // the held row re-ran the same failure; pulling its parents into the same
+    // pass is what lets the parent land, or records the id pair when it is
+    // already here under an id this device minted itself.
+    /**
+     * @param  list<array{table: string, pk: string}>  $rows
+     * @return list<array{table: string, pk: string}>
+     */
+    private function withParentsNamed(array $rows, int $userId): array
+    {
+        $order = new CoveredTableOrder($this->db, new MergeRulesRegistry);
+        $seen = [];
+
+        foreach ($rows as $row) {
+            $seen[$row['table'].':'.$row['pk']] = true;
+        }
+
+        // A grandparent can be missing too, so the walk follows what it finds.
+        // Bounded because a cycle in the foreign keys would otherwise not end.
+        $frontier = $rows;
+
+        for ($depth = 0; $depth < self::PARENT_WALK_LIMIT && $frontier !== []; $depth++) {
+            $next = [];
+
+            foreach ($frontier as $row) {
+                foreach ($this->parentsNamedBy($order, $row, $userId) as $parent) {
+                    if (isset($seen[$parent['table'].':'.$parent['pk']])) {
+                        continue;
+                    }
+
+                    $seen[$parent['table'].':'.$parent['pk']] = true;
+                    $rows[] = $parent;
+                    $next[] = $parent;
+                }
+            }
+
+            $frontier = $next;
+        }
+
+        return $rows;
+    }
+
+    // The parent rows one held row points at, read off its own create ops
+    // rather than off the table — the row is held precisely because it is not
+    // in the table.
+    /**
+     * @param  array{table: string, pk: string}  $row
+     * @return list<array{table: string, pk: string}>
+     */
+    private function parentsNamedBy(CoveredTableOrder $order, array $row, int $userId): array
+    {
+        try {
+            $parents = $order->parentColumns($row['table']);
+        } catch (Throwable) {
+            return [];
+        }
+
+        unset($parents['user_id']);
+
+        if ($parents === []) {
+            return [];
+        }
+
+        $named = [];
+
+        $entries = $this->db->connection()->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $row['table'])
+            ->where('pk', $row['pk'])
+            ->whereIn('field', array_keys($parents))
+            ->get(['field', 'value']);
+
+        foreach ($entries as $entry) {
+            $field = is_string($entry->field ?? null) ? $entry->field : '';
+            $parent = $parents[$field] ?? null;
+            $value = is_string($entry->value ?? null) ? json_decode($entry->value, true) : null;
+
+            if ($parent === null || (! is_int($value) && ! is_string($value)) || (string) $value === '') {
+                continue;
+            }
+
+            $named[] = ['table' => $parent, 'pk' => (string) $value];
+        }
+
+        return $named;
     }
 
     // A null epoch is a refusal rather than a failed decrypt — the codec

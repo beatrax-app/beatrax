@@ -167,6 +167,12 @@ final class DevicesAndSyncSettingsSection extends Component
         // a wrap this device was holding, and asking first reports a wait that
         // the same mount had already ended.
         $this->syncBacklog = $opening->backlog($userId, $session)->value;
+
+        // Reported first, then acted on: the reader sees the state this open
+        // found, and the rows it can clear are cleared behind that answer.
+        // Unconditional, because a refusal for a reason nothing retries still
+        // has to be cleared once the row it names is here.
+        $opening->recoverDeferred($userId, $session);
     }
 
     // Enable sync: generate + persist the device identity and show the self

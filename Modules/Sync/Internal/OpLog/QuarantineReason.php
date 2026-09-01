@@ -58,6 +58,18 @@ enum QuarantineReason: string
         return [self::GdkDecryptFailed->value, self::StrategyError->value];
     }
 
+    // The two refusals that happen while INSERTING a row, as opposed to while
+    // merging a field into one. Only these are spent by the row turning up:
+    // a field op held for an unreadable value is still held when the row it
+    // belongs to is sitting right there.
+    /**
+     * @return list<string>
+     */
+    public static function createRefusals(): array
+    {
+        return [self::IncompleteCreateRow->value, self::MissingReference->value];
+    }
+
     // Every verdict a later state can undo. MissingReference is not a verdict
     // on the entry the way a forged signature is: the parent had not landed
     // HERE yet and routinely lands afterwards — two charges went missing from a

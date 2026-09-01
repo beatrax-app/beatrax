@@ -25,6 +25,7 @@ final readonly class OpLogEntryApplier
         private SuppliedDateGate $suppliedDates,
         private SelfReferenceDeferral $selfReferences,
         private TransferPairCascade $pairCascade,
+        private PeerRowAliases $aliases,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -140,12 +141,19 @@ final readonly class OpLogEntryApplier
             return [];
         }
 
+        // The ids this row NAMES, rewritten to the ones this device uses for
+        // the same logical rows: a peer that seeded its own reference data
+        // names it by an id only that device ever had.
+        $first = reset($fields);
+        $deviceId = $first !== false && $first !== [] ? $first[0]->deviceId : '';
+        $payload = $this->aliases->translate($table, $deviceId, $payload, $userId);
+
         // A self-referential FK cannot be satisfied at insert time: transfer
         // pairs point at EACH OTHER, so whichever row lands first names a
         // partner that does not exist. Stripped here, set once both exist.
         $selfRefs = $this->selfReferences->extract($table, $payload);
 
-        if (! $this->insertCreatedRow($table, $payload, $fields, $now)) {
+        if (! $this->insertCreatedRow($table, $payload, $fields, $now, $deviceId, $pk, $userId)) {
             return [];
         }
 
@@ -218,14 +226,14 @@ final readonly class OpLogEntryApplier
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function insertCreatedRow(string $table, array $payload, array $fields, string $now): bool
+    private function insertCreatedRow(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): bool
     {
         try {
             $this->db->connection()->table($table)->insert($payload);
 
             return true;
         } catch (QueryException $e) {
-            return $this->recordRefusedInsert($table, $e, $fields, $now);
+            return $this->recordRefusedInsert($table, $e, $fields, $now, $payload, $deviceId, $pk, $userId);
         }
     }
 
@@ -234,12 +242,18 @@ final readonly class OpLogEntryApplier
     // counts as written. Every other refusal is a real loss and says so.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
+     * @param  array<string, mixed>  $payload
      */
-    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): bool
+    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now, array $payload, string $deviceId, int|string $pk, int $userId): bool
     {
         $failure = CreateRowInsertFailure::classify($e);
 
         if ($failure === CreateRowInsertFailure::AlreadyPresent) {
+            // By the pk it is the idempotent re-apply. By ANOTHER unique index
+            // it is a second id for one row, and the peer's id has to keep
+            // meaning something or every child naming it is orphaned.
+            $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
+
             return true;
         }
 
@@ -432,6 +446,17 @@ final readonly class OpLogEntryApplier
 
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
 
+            // A Set names ids the same way a create does, and addresses a row
+            // by one. Both are rewritten before ownership reads them, so the
+            // check runs against the id this device will actually write.
+            $setDevice = $fieldEntries[0]->deviceId;
+            $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $userId)[$field] ?? $columnValue;
+            $setLocal = $this->aliases->localFor($table, $setDevice, $pk, $userId);
+
+            if ($setLocal !== null) {
+                $pk = is_numeric($setLocal) ? (int) $setLocal : $setLocal;
+            }
+
             // The create path gates the ids a row NAMES, but a Set rewrites
             // that same column afterwards: create a transaction against your
             // own account, then Set account_id to another member's, and the
@@ -514,6 +539,14 @@ final readonly class OpLogEntryApplier
 
         foreach ($pendingDeletes as $table => $pks) {
             foreach ($pks as $pk => $tomb) {
+                // Delete-wins applies to the LOGICAL row, so a peer deleting
+                // the id it minted deletes the twin this device minted.
+                $tombLocal = $this->aliases->localFor($table, $tomb->deviceId, $pk, $userId);
+
+                if ($tombLocal !== null) {
+                    $pk = is_numeric($tombLocal) ? (int) $tombLocal : $tombLocal;
+                }
+
                 $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
 
                 if ($this->deleteRow($table, $pk, $userId)) {
