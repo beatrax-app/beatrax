@@ -66,8 +66,8 @@ it('pending tab shows the pending series rows', function (): void {
     $response = $this->actingAs($this->user)->get(route('recurring.review'));
     $response->assertOk()
         ->assertSeeText('spotify')
-        ->assertSee('wire:click="approve('.$series->id.')"', false)
-        ->assertSee('wire:click="reject('.$series->id.')"', false);
+        ->assertSee('wire:click="approve(\''.$series->id.'\')"', false)
+        ->assertSee('wire:click="reject(\''.$series->id.'\')"', false);
 });
 
 it('approve action flips the series state to approved and dispatches a toast', function (): void {
@@ -220,7 +220,7 @@ it('draws a snooze button for every window, wired the way the hand-written three
 
     foreach (SnoozeWindow::cases() as $window) {
         expect($content)
-            ->toContain('wire:click="snooze('.$series->id.", '")
+            ->toContain('wire:click="snooze(\''.$series->id."', '")
             ->toContain(Lang::get($window->labelKey('recurring::review')));
     }
 
@@ -249,7 +249,7 @@ it('paints every neutral row action from one class string', function (): void {
         ->html();
 
     expect($rejectedHtml)
-        ->toContain('wire:click="unReject('.$rejected->id.')"')
+        ->toContain('wire:click="unReject(\''.$rejected->id.'\')"')
         ->and(substr_count($rejectedHtml, 'class="'.$chip.'"'))->toBe(1);
 });
 

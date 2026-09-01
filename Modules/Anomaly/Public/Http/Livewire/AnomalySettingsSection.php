@@ -16,6 +16,7 @@ use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -93,12 +94,12 @@ final class AnomalySettingsSection extends Component
     // Removing the rule does NOT re-open the originating alert; that is the
     // sibling undoSuppression() path.
     public function removeSuppressionRule(
-        int $ruleId,
+        int|string $ruleId,
         CurrentUser $currentUser,
         RemoveAnomalySuppressionRule $action,
     ): void {
         try {
-            $action->removeRule($ruleId, $currentUser->user());
+            $action->removeRule(DerivedRowId::fromWire($ruleId), $currentUser->user());
             $this->toast(Lang::get('anomaly::settings.suppression.removed_toast'));
         } catch (NotFoundHttpException) {
             // A rule that vanished between render and click is already in the

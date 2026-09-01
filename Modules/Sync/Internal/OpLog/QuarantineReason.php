@@ -47,14 +47,38 @@ enum QuarantineReason: string
     // the column answerable instead.
     case ImpossibleDate = 'impossible_date';
 
-    // The two a key arriving later can undo. Everything else above is a
-    // permanent verdict on the entry itself — a forged signature stays forged —
-    // so replaying history for one of those would only re-reach it.
+    // The two a key arriving later can undo. Kept apart from recoverable()
+    // below because a screen reports these as "waiting for a key", and a row
+    // held for any other reason must never be given that cause.
     /**
      * @return list<string>
      */
     public static function keyRecoverable(): array
     {
         return [self::GdkDecryptFailed->value, self::StrategyError->value];
+    }
+
+    // The two refusals that happen while INSERTING a row, as opposed to while
+    // merging a field into one. Only these are spent by the row turning up:
+    // a field op held for an unreadable value is still held when the row it
+    // belongs to is sitting right there.
+    /**
+     * @return list<string>
+     */
+    public static function createRefusals(): array
+    {
+        return [self::IncompleteCreateRow->value, self::MissingReference->value];
+    }
+
+    // Every verdict a later state can undo. MissingReference is not a verdict
+    // on the entry the way a forged signature is: the parent had not landed
+    // HERE yet and routinely lands afterwards — two charges went missing from a
+    // paired phone whose op log still held every entry needed to place them.
+    /**
+     * @return list<string>
+     */
+    public static function recoverable(): array
+    {
+        return [...self::keyRecoverable(), self::MissingReference->value];
     }
 }

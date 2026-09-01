@@ -96,6 +96,42 @@ final readonly class CoveredTableOrder
         return array_reverse($this->insertionOrder());
     }
 
+    // Which column of $table points at which covered parent, for a caller that
+    // must collect the parents of the rows it is about to emit rather than
+    // order tables it already has. Self-references are excluded for the reason
+    // insertionOrder() excludes them: no order satisfies a pair.
+    /**
+     * @return array<string, string> local column => parent table
+     */
+    public function parentColumns(string $table): array
+    {
+        $covered = array_keys($this->rules->rules());
+        $columns = [];
+
+        try {
+            $schema = $this->db->connection()->getSchemaBuilder();
+
+            if (! $schema->hasTable($table)) {
+                return [];
+            }
+
+            foreach ($schema->getForeignKeys($table) as $foreignKey) {
+                $target = $foreignKey['foreign_table'];
+                $column = $foreignKey['columns'][0] ?? null;
+
+                if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
+                    $columns[$column] = $target;
+                }
+            }
+        } catch (Throwable) {
+            // Same posture as insertionOrder(): a schema that cannot be read
+            // leaves the caller where it was rather than failing the write.
+            return [];
+        }
+
+        return $columns;
+    }
+
     /**
      * @param  list<string>  $covered
      * @return array<string, list<string>>

@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Core\Public\Support\SnoozeUntil;
@@ -74,17 +75,19 @@ final class RecurringReviewPage extends Component
         return ReviewTab::tryFrom($this->tab) ?? ReviewTab::Pending;
     }
 
-    public function approve(int $seriesId, CurrentUser $currentUser, ApproveRecurringSeries $action): void
+    public function approve(int|string $seriesId, CurrentUser $currentUser, ApproveRecurringSeries $action): void
     {
-        if (! $this->apply(fn () => ($action)($seriesId, $currentUser->user()))) {
+        $id = DerivedRowId::fromWire($seriesId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.approved'));
     }
 
-    public function reject(int $seriesId, CurrentUser $currentUser, RejectRecurringSeries $action): void
+    public function reject(int|string $seriesId, CurrentUser $currentUser, RejectRecurringSeries $action): void
     {
-        if (! $this->apply(fn () => ($action)($seriesId, $currentUser->user()))) {
+        $id = DerivedRowId::fromWire($seriesId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.rejected'));
@@ -92,31 +95,34 @@ final class RecurringReviewPage extends Component
 
     // A stale popover's target is dropped here rather than raised on; the
     // action refuses the same value loudly for every other caller.
-    public function snooze(int $seriesId, string $untilIso, CurrentUser $currentUser, SnoozeRecurringSeries $action, Clock $clock): void
+    public function snooze(int|string $seriesId, string $untilIso, CurrentUser $currentUser, SnoozeRecurringSeries $action, Clock $clock): void
     {
         $until = SafeDate::parseOrNull($untilIso);
         if ($until === null || SnoozeUntil::tryFrom($until, $clock->now()) === null) {
             return;
         }
 
-        if (! $this->apply(fn () => ($action)($seriesId, $currentUser->user(), $until))) {
+        $id = DerivedRowId::fromWire($seriesId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user(), $until))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.snoozed'));
     }
 
-    public function editName(int $seriesId, ?string $newName, CurrentUser $currentUser, EditRecurringSeriesName $action): void
+    public function editName(int|string $seriesId, ?string $newName, CurrentUser $currentUser, EditRecurringSeriesName $action): void
     {
         $normalised = $newName !== null && trim($newName) === '' ? null : $newName;
-        if (! $this->apply(fn () => ($action)($seriesId, $currentUser->user(), $normalised))) {
+        $id = DerivedRowId::fromWire($seriesId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user(), $normalised))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.renamed'));
     }
 
-    public function unReject(int $seriesId, CurrentUser $currentUser, UnRejectRecurringSeries $action): void
+    public function unReject(int|string $seriesId, CurrentUser $currentUser, UnRejectRecurringSeries $action): void
     {
-        if (! $this->apply(fn () => ($action)($seriesId, $currentUser->user()))) {
+        $id = DerivedRowId::fromWire($seriesId);
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user()))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.un_rejected'));

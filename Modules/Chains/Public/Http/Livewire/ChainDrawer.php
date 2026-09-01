@@ -24,6 +24,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -61,13 +62,13 @@ final class ChainDrawer extends Component
     // and the shared Public action answers a gone row by throwing. The drawer
     // says so and repaints rather than handing the browser a 404.
     public function confirm(
-        int $chainLinkId,
+        int|string $chainLinkId,
         CurrentUser $currentUser,
         ConfirmChainLink $confirm,
     ): void {
         $this->actionError = null;
         try {
-            $confirm($chainLinkId, $currentUser->user());
+            $confirm(DerivedRowId::fromWire($chainLinkId), $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
             $this->actionError = Lang::get('chains::review.errors.confirm_hint');
         } catch (NotFoundHttpException) {
@@ -76,13 +77,13 @@ final class ChainDrawer extends Component
     }
 
     public function reject(
-        int $chainLinkId,
+        int|string $chainLinkId,
         CurrentUser $currentUser,
         RejectChainLink $reject,
     ): void {
         $this->actionError = null;
         try {
-            $reject($chainLinkId, $currentUser->user());
+            $reject(DerivedRowId::fromWire($chainLinkId), $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
             $this->actionError = Lang::get('chains::review.errors.reject_hint');
         } catch (NotFoundHttpException) {

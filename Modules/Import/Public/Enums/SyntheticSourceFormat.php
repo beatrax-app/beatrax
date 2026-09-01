@@ -11,4 +11,9 @@ namespace Modules\Import\Public\Enums;
 enum SyntheticSourceFormat: string
 {
     case Manual = 'manual';
+
+    // The demo seed hangs its rows off an import run for want of anywhere else
+    // to put them, and no parser produced those either. Naming it here is what
+    // lets the results screen tell an import from a container.
+    case Demo = 'demo';
 }

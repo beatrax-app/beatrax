@@ -135,3 +135,17 @@ it('enforces the token every locale tells the operator to type', function (): vo
         ->assertHasNoErrors()
         ->assertDispatched('triple-gate:confirmed');
 });
+
+// Three surfaces dispatch triple-gate:open — the runner's per-row re-run, the
+// queue inspector's bulk delete, and the command palette — and this component
+// set its four fields and showed nothing, so the gate never appeared. It failed
+// safe, because confirm() is only reachable from inside the modal, but every
+// DESTRUCTIVE command ended at a button that did nothing.
+it('opens the modal it was just asked to gate', function (): void {
+    $this->actingAs(tripleGateUser('triple-gate-opens'));
+
+    Livewire::test(TripleGateModal::class)
+        ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/x'])
+        ->assertSet('command', 'db:restore')
+        ->assertDispatched('modal-show', name: 'triple-gate');
+});

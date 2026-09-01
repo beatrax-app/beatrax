@@ -39,6 +39,7 @@ function syncMachineryTables(): array
     return [
         'op_log_entries' => 'The op log itself; capturing it would put every op on the wire a second time.',
         'op_log_quarantine' => 'Ops this device refused. What a peer does with its own refusals is its own answer.',
+        'op_log_row_aliases' => 'Which local id a peer id means HERE. The mapping is between two devices, and the peer already knows its own half.',
         'hlc_clock_state' => 'This device\'s clock. Two devices sharing one counter is the ordering bug the HLC exists to prevent.',
         'sync_encryption_state' => 'Per-device key state. The group key is established by pairing, never replayed as a row.',
         'sync_sessions' => 'One live connection, known only to the device holding it.',

@@ -77,13 +77,13 @@
         <div class="mt-sm flex items-center gap-sm">
             <button
                 type="button"
-                wire:click="confirm({{ $node->chainLinkId }})"
+                wire:click="confirm('{{ $node->chainLinkId }}')"
                 class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 aria-label="{{ Lang::get('chains::drawer.confirm_aria', ['id' => $node->chainLinkId]) }}"
             >{{ Lang::get('chains::drawer.confirm') }}</button>
             <button
                 type="button"
-                wire:click="reject({{ $node->chainLinkId }})"
+                wire:click="reject('{{ $node->chainLinkId }}')"
                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                 aria-label="{{ Lang::get('chains::drawer.reject_aria', ['id' => $node->chainLinkId]) }}"
             >{{ Lang::get('chains::drawer.reject') }}</button>

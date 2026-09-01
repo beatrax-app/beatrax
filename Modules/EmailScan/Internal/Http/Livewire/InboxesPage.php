@@ -21,6 +21,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DisconnectInbox;
@@ -208,10 +209,11 @@ final class InboxesPage extends Component
     // empty. This page polls, so the row a second tab retired is still on
     // screen here — a toast and a re-render, never a 404 over the list.
     public function editWindow(
-        int $inboxId,
+        int|string $inboxId,
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
     ): void {
+        $inboxId = DerivedRowId::fromWire($inboxId);
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
@@ -238,11 +240,12 @@ final class InboxesPage extends Component
     // IncrementalScanJob's ShouldBeUnique collapses a rapid double-click
     // into one queued job.
     public function scanNow(
-        int $inboxId,
+        int|string $inboxId,
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
         Dispatcher $bus,
     ): void {
+        $inboxId = DerivedRowId::fromWire($inboxId);
         // Asked before anything is dispatched: the job moves last_scan_at on
         // its way to failing, so a tap here overwrote the desktop's real "3h
         // ago" with "22s ago" and left the row in Error advising a reconnect
@@ -307,10 +310,11 @@ final class InboxesPage extends Component
     }
 
     public function disconnect(
-        int $inboxId,
+        int|string $inboxId,
         CurrentUser $currentUser,
         DisconnectInbox $disconnect,
     ): void {
+        $inboxId = DerivedRowId::fromWire($inboxId);
         try {
             ($disconnect)($inboxId, $currentUser->user());
         } catch (NotFoundHttpException) {
@@ -322,10 +326,11 @@ final class InboxesPage extends Component
     // dismissed row is a silent no-op. A row that is gone outright is not,
     // and reporting it as added would be a claim about work never done.
     public function promoteSender(
-        int $discoveredSenderId,
+        int|string $discoveredSenderId,
         CurrentUser $currentUser,
         PromoteDiscoveredSender $promote,
     ): void {
+        $discoveredSenderId = DerivedRowId::fromWire($discoveredSenderId);
         try {
             ($promote)($discoveredSenderId, $currentUser->user());
         } catch (NotFoundHttpException) {
@@ -337,10 +342,11 @@ final class InboxesPage extends Component
     }
 
     public function dismissSender(
-        int $discoveredSenderId,
+        int|string $discoveredSenderId,
         CurrentUser $currentUser,
         DismissDiscoveredSender $dismiss,
     ): void {
+        $discoveredSenderId = DerivedRowId::fromWire($discoveredSenderId);
         try {
             ($dismiss)($discoveredSenderId, $currentUser->user());
         } catch (NotFoundHttpException) {

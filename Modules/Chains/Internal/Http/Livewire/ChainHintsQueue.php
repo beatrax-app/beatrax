@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -20,11 +21,11 @@ final class ChainHintsQueue extends Component
 {
     public ?string $statusMessage = null;
 
-    public function dismiss(int $chainLinkId, CurrentUser $currentUser, DismissChainLinkHint $dismiss): void
+    public function dismiss(int|string $chainLinkId, CurrentUser $currentUser, DismissChainLinkHint $dismiss): void
     {
         $this->statusMessage = null;
         try {
-            ($dismiss)($chainLinkId, $currentUser->user());
+            ($dismiss)(DerivedRowId::fromWire($chainLinkId), $currentUser->user());
         } catch (NotFoundHttpException) {
             // Dismissed on another screen between this render and this click.
             // The row is gone either way, so the queue says so and repaints.

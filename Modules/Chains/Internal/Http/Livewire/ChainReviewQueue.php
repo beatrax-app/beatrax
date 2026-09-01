@@ -12,6 +12,7 @@ use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -38,11 +39,11 @@ final class ChainReviewQueue extends Component
     // The second catch is the two-tab case: the candidate was confirmed or
     // rejected on another screen between this render and this click, and the
     // action answers a gone row by throwing. The queue re-renders without it.
-    public function confirm(int $chainLinkId, CurrentUser $currentUser, ConfirmChainLink $confirm): void
+    public function confirm(int|string $chainLinkId, CurrentUser $currentUser, ConfirmChainLink $confirm): void
     {
         $this->actionError = null;
         try {
-            ($confirm)($chainLinkId, $currentUser->user());
+            ($confirm)(DerivedRowId::fromWire($chainLinkId), $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
             $this->actionError = Lang::get('chains::review.errors.confirm_hint');
         } catch (NotFoundHttpException) {
@@ -50,11 +51,11 @@ final class ChainReviewQueue extends Component
         }
     }
 
-    public function reject(int $chainLinkId, CurrentUser $currentUser, RejectChainLink $reject): void
+    public function reject(int|string $chainLinkId, CurrentUser $currentUser, RejectChainLink $reject): void
     {
         $this->actionError = null;
         try {
-            ($reject)($chainLinkId, $currentUser->user());
+            ($reject)(DerivedRowId::fromWire($chainLinkId), $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
             $this->actionError = Lang::get('chains::review.errors.reject_hint');
         } catch (NotFoundHttpException) {
@@ -62,9 +63,9 @@ final class ChainReviewQueue extends Component
         }
     }
 
-    public function loadMore(int $nextCursorId, ?string $nextCursorConfidence = null): void
+    public function loadMore(int|string $nextCursorId, ?string $nextCursorConfidence = null): void
     {
-        $this->cursorId = $nextCursorId;
+        $this->cursorId = DerivedRowId::fromWire($nextCursorId);
         $this->cursorConfidence = $nextCursorConfidence;
     }
 

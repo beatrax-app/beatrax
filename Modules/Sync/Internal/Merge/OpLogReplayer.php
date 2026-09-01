@@ -112,6 +112,10 @@ final readonly class OpLogReplayer
         );
         $ownership = new RowOwnership($db);
         $this->pairCascade = new TransferPairCascade($db, new PairUnlinker($db));
+        // Ahead of the applier because the applier needs it, and built for the
+        // same reason the ordering below is: the container answers null for a
+        // concrete class nobody registered.
+        $this->tableOrder = new CoveredTableOrder($db, $rules);
         $this->applier = new OpLogEntryApplier(
             $db,
             $rules,
@@ -121,13 +125,9 @@ final readonly class OpLogReplayer
             new SuppliedDateGate($db),
             new SelfReferenceDeferral($db, $ownership),
             $this->pairCascade,
+            new PeerRowAliases($db, $this->tableOrder),
             $this->resolveFromContainer(LoggerInterface::class),
         );
-        // Built, not resolved: Container::bound() answers false for a concrete
-        // class nobody registered, so asking the container handed back null on
-        // every replay and both ordering passes below were inert — children
-        // reached the database first and their foreign keys refused them.
-        $this->tableOrder = new CoveredTableOrder($db, $rules);
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
         $this->remoteClock = new RemoteClockAdvance($db);
         $this->rowHistory = new RowHistoryRehydration(new PersistedOpLogEntries($db), $this->verifier);

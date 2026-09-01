@@ -42,6 +42,12 @@ final class TripleGateModal extends Component
         $this->resolvedArgs = $args;
         $this->typed = '';
         $this->gateError = '';
+
+        // Three surfaces dispatch triple-gate:open and this showed nothing, so
+        // the gate every DESTRUCTIVE command is meant to pass was unreachable.
+        // It failed safe — confirm() is only callable from inside the modal —
+        // but the operator was left with a button that did nothing.
+        $this->dispatch('modal-show', name: 'triple-gate');
     }
 
     public function confirm(

@@ -7,12 +7,14 @@ namespace Modules\Sync\Public\Http\Livewire;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
+use Modules\Sync\Public\SyncEvents;
 
 final class SyncStatusSection extends Component
 {
@@ -53,6 +55,20 @@ final class SyncStatusSection extends Component
         );
         $this->overallStatus = $statusService->overallStatus($userId);
         $this->lastSyncedHuman = $statusService->lastSyncedHuman($now, $userId);
+    }
+
+    // A sync just ran in the sibling screen. Without this the block kept its
+    // mount-time answer — "Not yet synced" — directly above that screen's own
+    // "Synced with your other device", each contradicting the other until the
+    // page was reloaded. Nothing here polls, so the dispatch is the only signal.
+    #[On(SyncEvents::COMPLETED)]
+    public function onSyncCompleted(
+        CurrentUser $currentUser,
+        SyncStatusService $statusService,
+        Clock $clock,
+        DeviceRegistryService $devices,
+    ): void {
+        $this->mount($currentUser, $statusService, $clock, $devices);
     }
 
     // Removes one recorded session and re-reads the surface, so the row and

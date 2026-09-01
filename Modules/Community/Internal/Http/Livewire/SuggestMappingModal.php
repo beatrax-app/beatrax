@@ -54,6 +54,12 @@ final class SuggestMappingModal extends Component
         $this->category = $category;
         $this->region = self::regionFor($currentUser, $countries);
         $this->submitError = '';
+
+        // The component owns the modal's visibility — cancel() and submit()
+        // both close it — and this never opened it. Every one of the 149
+        // mystery merchants had a button that filled these fields behind a
+        // modal that stayed shut, which is the whole feature's only way in.
+        $this->dispatch('modal-show', name: 'suggest-mapping');
     }
 
     public function submit(

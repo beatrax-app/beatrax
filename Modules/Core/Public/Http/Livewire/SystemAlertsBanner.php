@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\SystemAlertQuery;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,7 +31,7 @@ final class SystemAlertsBanner extends Component
         $skippedVersions = $this->skippedVersionsFor($user->id);
 
         return $views->make('core::livewire.system-alerts-banner', [
-            'alerts' => $this->filterSkippedUpdates($alerts, $skippedVersions),
+            'alerts' => $this->filterSkippedUpdates(self::installableHere($alerts), $skippedVersions),
         ]);
     }
 
@@ -125,6 +126,28 @@ final class SystemAlertsBanner extends Component
         }
 
         return $list;
+    }
+
+    // An update alert is the desktop updater's, and it is the only alert whose
+    // buttons promise something outside this app. A phone loads no Desktop
+    // module and updates through the App Store, so an iPhone was offering
+    // "Install on next launch" over a click install() already knows is inert.
+    /**
+     * @param  Collection<int, SystemAlert>  $alerts
+     * @return Collection<int, SystemAlert>
+     */
+    private static function installableHere(Collection $alerts): Collection
+    {
+        if (! UserDataPathService::isMobileRuntime()) {
+            return $alerts;
+        }
+
+        /** @var Collection<int, SystemAlert> $filtered */
+        $filtered = $alerts->reject(
+            static fn (SystemAlert $alert): bool => UpdateAlertKind::tryFrom($alert->kind) !== null,
+        )->values();
+
+        return $filtered;
     }
 
     /**

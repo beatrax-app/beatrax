@@ -120,13 +120,13 @@
                         <div class="flex shrink-0 items-center gap-2">
                             <button
                                 type="button"
-                                wire:click="confirm({{ $row->chainLinkId }})"
+                                wire:click="confirm('{{ $row->chainLinkId }}')"
                                 aria-label="{{ Lang::get('chains::review.confirm_aria', ['id' => $row->chainLinkId]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                             >{{ Lang::get('chains::review.confirm') }}</button>
                             <button
                                 type="button"
-                                wire:click="reject({{ $row->chainLinkId }})"
+                                wire:click="reject('{{ $row->chainLinkId }}')"
                                 aria-label="{{ Lang::get('chains::review.reject_aria', ['id' => $row->chainLinkId]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                             >{{ Lang::get('chains::review.reject') }}</button>
@@ -143,7 +143,7 @@
             @endphp
             @if ($last !== null)
                 <div class="mt-6 flex justify-center">
-                    <x-core::secondary-button wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')">{{ Lang::get('chains::review.show_more') }}</x-core::secondary-button>
+                    <x-core::secondary-button wire:click="loadMore('{{ $last->chainLinkId }}', '{{ number_format($last->confidence, 3, '.', '') }}')">{{ Lang::get('chains::review.show_more') }}</x-core::secondary-button>
                 </div>
             @endif
         @endif

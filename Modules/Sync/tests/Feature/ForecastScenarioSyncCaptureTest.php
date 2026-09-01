@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -65,10 +66,14 @@ function scenarioOps(int $userId, string $table)
         ->get();
 }
 
+// Relative, and deliberately so. ScenarioHorizonBounds refuses a one-off dated
+// before today, so the literal '2026-09-01' this carried was an expiry date: it
+// passed until the day rolled over to the 2nd and then failed four tests at
+// once, on a branch that had touched none of them.
 function oneOffPayload(int $amountMinor = 12500): AddOneOffPayload
 {
     return new AddOneOffPayload(
-        date: '2026-09-01',
+        date: CarbonImmutable::now()->addDays(30)->toDateString(),
         amountMinor: $amountMinor,
         currency: 'EUR',
         direction: 'expense',

@@ -85,7 +85,7 @@
                         </span>
                         <button
                             type="button"
-                            wire:click="removeSuppressionRule({{ $rule->id }})"
+                            wire:click="removeSuppressionRule('{{ $rule->id }}')"
                             aria-label="{{ Lang::get('anomaly::settings.suppression.remove_aria') }}"
                             class="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-rose-400"
                         >{{ Lang::get('anomaly::settings.suppression.remove') }}</button>

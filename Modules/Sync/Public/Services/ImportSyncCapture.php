@@ -12,6 +12,7 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
+use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Psr\Log\LoggerInterface;
@@ -19,16 +20,17 @@ use Throwable;
 
 final readonly class ImportSyncCapture implements CapturesImportForSync, CapturesTransactionsForSync
 {
-    // Parents before children, so a peer replaying these accepts them: a
-    // transaction carries a NOT NULL import_run_id and an account_id, and an
-    // insert naming a row the peer has never seen fails the foreign key.
-    private const array ORDER = ['import_runs', 'accounts', 'transactions'];
+    // The applier seeds user_id from the local user and never writes the value
+    // the wire carried, so the peer's own users row is neither needed nor
+    // wanted here — every other parent of a captured row is.
+    private const string SEEDED_PARENT = 'users';
 
     public function __construct(
         private DatabaseManager $db,
         private OpLogBackfiller $backfiller,
         private LoggerInterface $log,
         private Container $container,
+        private CoveredTableOrder $tableOrder,
     ) {}
 
     public function capture(ImportRun $importRun, User $user): void
@@ -42,11 +44,11 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
         $userId = $user->id;
         $transactionIds = $this->transactionIdsFor($importRun->id, $userId);
 
-        $ids = [
-            'import_runs' => [$importRun->id],
-            'accounts' => $this->accountIdsFor($transactionIds, $userId),
-            'transactions' => $transactionIds,
-        ];
+        // Named outright as well as derived: a run whose rows were all dropped
+        // has no transaction to read it off, and the run still has to travel.
+        $ids = $this->parentIdsFor($transactionIds, $userId);
+        $ids['import_runs'] = array_values(array_unique([...$ids['import_runs'] ?? [], $importRun->id]));
+        $ids['transactions'] = $transactionIds;
 
         $this->captureInOrder($ids, $userId, $writer, ['importRunId' => $importRun->id]);
     }
@@ -69,16 +71,64 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
 
         $userId = $user->id;
 
-        $ids = [
-            'import_runs' => $this->importRunIdsFor($transactionIds, $userId),
-            'accounts' => $this->accountIdsFor($transactionIds, $userId),
-            'transactions' => $transactionIds,
-        ];
+        $ids = $this->parentIdsFor($transactionIds, $userId);
+        $ids['transactions'] = $transactionIds;
 
         $this->captureInOrder($ids, $userId, $writer, []);
     }
 
-    // Stops at the first failure rather than carrying on: ORDER is a
+    // Every covered parent these rows point at, read off the live foreign keys.
+    // This was three names written by hand and category_id was not among them.
+    // Categories 1-29 are global and need no capture, but a user's own start at
+    // 30 and are user-scoped rows a peer only has if this sends them.
+    /**
+     * @param  list<int>  $transactionIds
+     * @return array<string, list<int>>
+     */
+    private function parentIdsFor(array $transactionIds, int $userId): array
+    {
+        $ids = [];
+
+        foreach ($this->tableOrder->parentColumns('transactions') as $column => $parent) {
+            if ($parent === self::SEEDED_PARENT) {
+                continue;
+            }
+
+            $ids[$parent] = $transactionIds === [] ? [] : self::intIds(
+                $this->db->connection()->table('transactions')
+                    ->where('user_id', $userId)
+                    ->whereIn('id', $transactionIds)
+                    ->whereNotNull($column)
+                    ->distinct()
+                    ->pluck($column),
+            );
+        }
+
+        return $ids;
+    }
+
+    // Parents before children, in the same insertion order the backfill and
+    // the replayer both take, so the three cannot disagree about which row a
+    // peer needs first. Tables with nothing to say are dropped rather than
+    // asked for an empty capture.
+    /**
+     * @param  array<string, list<int|string>>  $ids
+     * @return list<string>
+     */
+    private function orderedTables(array $ids): array
+    {
+        $ordered = [];
+
+        foreach ($this->tableOrder->insertionOrder() as $table) {
+            if (($ids[$table] ?? []) !== []) {
+                $ordered[] = $table;
+            }
+        }
+
+        return $ordered;
+    }
+
+    // Stops at the first failure rather than carrying on: the order is a
     // dependency order, and children emitted after their parent failed name
     // rows the peer never received, so its foreign keys drop them. Never
     // throws out — a capture failure costs the peer this write, not the data.
@@ -88,7 +138,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
      */
     private function captureInOrder(array $ids, int $userId, OpLogWriter $writer, array $context): void
     {
-        foreach (self::ORDER as $table) {
+        foreach ($this->orderedTables($ids) as $table) {
             try {
                 $this->backfiller->captureRowsById($table, $ids[$table], $userId, $writer);
             } catch (Throwable $e) {
@@ -120,21 +170,6 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
         }
     }
 
-    /**
-     * @param  list<int>  $transactionIds
-     * @return list<int>
-     */
-    private function importRunIdsFor(array $transactionIds, int $userId): array
-    {
-        return self::intIds(
-            $this->db->connection()->table('transactions')
-                ->where('user_id', $userId)
-                ->whereIn('id', $transactionIds)
-                ->distinct()
-                ->pluck('import_run_id'),
-        );
-    }
-
     /** @return list<int> */
     private function transactionIdsFor(int $importRunId, int $userId): array
     {
@@ -143,25 +178,6 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
                 ->where('user_id', $userId)
                 ->where('import_run_id', $importRunId)
                 ->pluck('id'),
-        );
-    }
-
-    /**
-     * @param  list<int>  $transactionIds
-     * @return list<int>
-     */
-    private function accountIdsFor(array $transactionIds, int $userId): array
-    {
-        if ($transactionIds === []) {
-            return [];
-        }
-
-        return self::intIds(
-            $this->db->connection()->table('transactions')
-                ->where('user_id', $userId)
-                ->whereIn('id', $transactionIds)
-                ->distinct()
-                ->pluck('account_id'),
         );
     }
 

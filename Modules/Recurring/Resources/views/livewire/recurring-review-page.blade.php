@@ -133,14 +133,14 @@
                             @if ($reviewTab === ReviewTab::Rejected)
                                 <button
                                     type="button"
-                                    wire:click="unReject({{ $row->seriesId }})"
+                                    wire:click="unReject('{{ $row->seriesId }}')"
                                     class="{{ $rowActionClass }}"
                                 >{{ Lang::get('recurring::review.un_reject') }}</button>
                             @else
                                 @if ($row->allows(RecurringSeriesState::Approved))
                                 <button
                                     type="button"
-                                    wire:click="approve({{ $row->seriesId }})"
+                                    wire:click="approve('{{ $row->seriesId }}')"
                                     aria-label="{{ Lang::get('recurring::review.approve_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                                 >{{ Lang::get('recurring::review.approve') }}</button>
@@ -148,7 +148,7 @@
                                 @if ($row->allows(RecurringSeriesState::Rejected))
                                 <button
                                     type="button"
-                                    wire:click="reject({{ $row->seriesId }})"
+                                    wire:click="reject('{{ $row->seriesId }}')"
                                     aria-label="{{ Lang::get('recurring::review.reject_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                                 >{{ Lang::get('recurring::review.reject') }}</button>
@@ -173,7 +173,7 @@
                                         @foreach (SnoozeWindow::cases() as $window)
                                             <button
                                                 type="button"
-                                                wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets[$window->value] }}')"
+                                                wire:click="snooze('{{ $row->seriesId }}', '{{ $snoozeTargets[$window->value] }}')"
                                                 x-on:click="open = false"
                                                 class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
                                             >{{ Lang::get($window->labelKey('recurring::review')) }}</button>
@@ -204,7 +204,7 @@
                                         <x-core::neutral-button
                                             size="sm"
                                             class="mt-2 gap-1"
-                                            x-on:click="$wire.editName({{ $row->seriesId }}, newName); editing = false"
+                                            x-on:click="$wire.editName('{{ $row->seriesId }}', newName); editing = false"
                                         >{{ Lang::get('recurring::review.save') }}</x-core::neutral-button>
                                     </div>
                                 </div>

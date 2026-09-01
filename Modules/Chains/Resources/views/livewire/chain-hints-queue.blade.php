@@ -100,7 +100,7 @@
                             <x-core::secondary-button
                                 size="sm"
                                 class="gap-1"
-                                wire:click="dismiss({{ $hint->chainLinkId }})"
+                                wire:click="dismiss('{{ $hint->chainLinkId }}')"
                                 aria-label="{{ Lang::get('chains::hints.dismiss_aria', ['id' => $hint->chainLinkId]) }}"
                                 data-testid="chain-hint-dismiss-{{ $hint->chainLinkId }}"
                             >{{ Lang::get('chains::hints.dismiss') }}</x-core::secondary-button>

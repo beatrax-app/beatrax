@@ -414,10 +414,11 @@ final readonly class ForecastChartView
         }
 
         $currency = $baseline->defaultCurrency;
-        $yMin = Money::majorUnits($lows === [] ? 0 : min($lows), $currency) - 1;
-        $yMax = Money::majorUnits($highs === [] ? 0 : max($highs), $currency) + 1;
 
-        return [$yMin, $yMax];
+        return ChartAxisBounds::spanning(
+            Money::majorUnits($lows === [] ? 0 : min($lows), $currency),
+            Money::majorUnits($highs === [] ? 0 : max($highs), $currency),
+        );
     }
 
     // Exactly zero is neutral, not green: an unchanged balance is not an
@@ -504,8 +505,12 @@ final readonly class ForecastChartView
             $highs[] = $point->highMinor;
         }
 
-        $yMin = $yMinOverride ?? (Money::majorUnits($lows === [] ? 0 : min($lows), $currency) - 1);
-        $yMax = $yMaxOverride ?? (Money::majorUnits($highs === [] ? 0 : max($highs), $currency) + 1);
+        [$ownMin, $ownMax] = ChartAxisBounds::spanning(
+            Money::majorUnits($lows === [] ? 0 : min($lows), $currency),
+            Money::majorUnits($highs === [] ? 0 : max($highs), $currency),
+        );
+        $yMin = $yMinOverride ?? $ownMin;
+        $yMax = $yMaxOverride ?? $ownMax;
 
         // ApexCharts v5 needs the full annotations object: a bare [] serializes
         // to a JSON array and crashes drawImageAnnos.

@@ -157,8 +157,8 @@ it('renders each candidate row with the from/to counterparties + kind label + Co
         ->assertSeeText('Spotify')
         ->assertSeeText('PayPal')
         ->assertSeeText('PayPal funding')
-        ->assertSee('wire:click="confirm('.$this->candidateId.')"', false)
-        ->assertSee('wire:click="reject('.$this->candidateId.')"', false);
+        ->assertSee('wire:click="confirm(\''.$this->candidateId.'\')"', false)
+        ->assertSee('wire:click="reject(\''.$this->candidateId.'\')"', false);
 });
 
 it('Confirm button invokes ConfirmChainLink — chain_link.state becomes confirmed', function (): void {
