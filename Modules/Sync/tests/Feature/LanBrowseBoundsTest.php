@@ -11,6 +11,7 @@ use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
 use Modules\Sync\Internal\Pairing\LanPeerBrowser;
 use Modules\Sync\Internal\Pairing\PairingFrameApplier;
+use Modules\Sync\Internal\Pairing\ScannedPeerAddress;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
@@ -138,6 +139,7 @@ it('asks four peers for waiting frames, because the pull runs on every poll', fu
         new LanPeerBrowser(app(HttpFactory::class), browseBoundsDiscovery(browseBoundsPeers(20))),
         app(PairingFrameApplier::class),
         app(DeviceKeySigner::class),
+        app(ScannedPeerAddress::class),
     );
 
     $puller->pullAndApply(1, browseBoundsIdentity());

@@ -40,4 +40,13 @@ final class DerivedRowId
         // an ordinary positive integer every int-typed call site can hold.
         return $value & PHP_INT_MAX;
     }
+
+    // The way back in, and the reason a blade must send this id QUOTED. Every
+    // wire argument is JSON, whose numbers are IEEE doubles: past 2^53 the
+    // browser rounds the literal before the server ever sees it, and the
+    // rounded value matches no row.
+    public static function fromWire(int|string $id): int
+    {
+        return is_numeric($id) ? (int) $id : 0;
+    }
 }

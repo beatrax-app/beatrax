@@ -274,7 +274,7 @@ it('draws a snooze button for every window, wired the way the hand-written three
 
     foreach (SnoozeWindow::cases() as $window) {
         expect($content)
-            ->toContain('wire:click="snooze('.$alert->id.", '")
+            ->toContain('wire:click="snooze(\''.$alert->id."', '")
             ->toContain(Lang::get($window->labelKey('drift-alerts::alerts.row')));
     }
 

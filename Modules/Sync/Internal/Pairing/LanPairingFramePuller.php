@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use SodiumException;
 use Throwable;
@@ -26,6 +27,7 @@ final readonly class LanPairingFramePuller
         private LanPeerBrowser $peers,
         private PairingFrameApplier $applier,
         private DeviceKeySigner $signer,
+        private ScannedPeerAddress $scannedAddress,
     ) {}
 
     // Returns how many frames were applied, so a caller can tell "nothing was
@@ -41,7 +43,7 @@ final readonly class LanPairingFramePuller
 
         $applied = 0;
 
-        foreach ($this->peers->eachConnectablePeer() as $peer) {
+        foreach ($this->peersToAsk($userId, $ownDeviceId) as $peer) {
             foreach ($this->framesFrom($peer->host, $peer->port, $ownDeviceId, $proof) as $frame) {
                 if ($applied >= self::MAX_FRAMES_APPLIED) {
                     break 2;
@@ -54,6 +56,34 @@ final readonly class LanPairingFramePuller
         }
 
         return $applied;
+    }
+
+    // The address the scanned code named first, then a browse for one — the
+    // same order the send leg takes. A phone cannot browse (see @link), so
+    // without the scanned address its half of the return leg has no road at
+    // all, and the confirm it is waiting for can never be collected.
+    /**
+     * @return iterable<int, DiscoveredPeer>
+     */
+    private function peersToAsk(int $userId, string $ownDeviceId): iterable
+    {
+        $asked = [];
+
+        foreach ($this->scannedAddress->forCollector($userId, $ownDeviceId) as $peer) {
+            if (! $peer->isConnectable()) {
+                continue;
+            }
+
+            $asked[$peer->host.':'.$peer->port] = true;
+
+            yield $peer;
+        }
+
+        foreach ($this->peers->eachConnectablePeer() as $peer) {
+            if (! isset($asked[$peer->host.':'.$peer->port])) {
+                yield $peer;
+            }
+        }
     }
 
     // Null when the secret key will not decode, which is a broken key-file

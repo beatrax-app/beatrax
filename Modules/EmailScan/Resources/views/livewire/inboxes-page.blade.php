@@ -162,7 +162,7 @@
                             {{ $providerLabel }} · {{ $lastScanText }} · {{ Lang::get('email-scan::inboxes.window_prefix') }} {{ $windowText }}
                             <button
                                 type="button"
-                                wire:click="editWindow({{ $inbox->inboxId }})"
+                                wire:click="editWindow('{{ $inbox->inboxId }}')"
                                 class="ml-1 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100"
                             >{{ Lang::get('email-scan::inboxes.edit') }}</button>
                         </p>
@@ -198,12 +198,12 @@
                             :disabled="$scanDisabled"
                             :aria-disabled="$scanDisabled ? 'true' : null"
                             :title="$onPhone ? Lang::get('email-scan::inboxes.intro_phone') : ($scanDisabled ? Lang::get('email-scan::inboxes.scan_in_progress_title') : null)"
-                            wire:click="scanNow({{ $inbox->inboxId }})"
+                            wire:click="scanNow('{{ $inbox->inboxId }}')"
                         >{{ Lang::get('email-scan::inboxes.scan_now') }}</x-core::secondary-button>
                         <x-core::secondary-button
                             size="sm"
                             class="gap-1"
-                            wire:click="disconnect({{ $inbox->inboxId }})"
+                            wire:click="disconnect('{{ $inbox->inboxId }}')"
                             wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect') }}"
                             data-testid="disconnect-inbox-{{ $inbox->inboxId }}"
                         >{{ Lang::get('email-scan::inboxes.disconnect') }}</x-core::secondary-button>
@@ -281,13 +281,13 @@
                             >{{ Lang::choice('email-scan::inboxes.seen_times', $cand->occurrenceCount) }}</span>
                             <button
                                 type="button"
-                                wire:click="promoteSender({{ $cand->id }})"
+                                wire:click="promoteSender('{{ $cand->id }}')"
                                 aria-label="{{ Lang::get('email-scan::inboxes.add_aria', ['email' => $cand->senderEmail]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                             >{{ Lang::get('email-scan::inboxes.add') }}</button>
                             <button
                                 type="button"
-                                wire:click="dismissSender({{ $cand->id }})"
+                                wire:click="dismissSender('{{ $cand->id }}')"
                                 aria-label="{{ Lang::get('email-scan::inboxes.dismiss_aria', ['email' => $cand->senderEmail]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                             >{{ Lang::get('email-scan::inboxes.dismiss') }}</button>

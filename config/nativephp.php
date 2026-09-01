@@ -68,6 +68,16 @@ return [
         // localhost:5173 — an app with no styling and no JavaScript.
         'public/hot',
 
+        // Durable user data belonging to whoever ran the app on the build
+        // machine. Every path UserDataPathService hands out lives under here,
+        // and at runtime appPath() resolves to NATIVEPHP_STORAGE_PATH (desktop)
+        // or persisted_data/ (mobile) — never to the bundle, so nothing reads
+        // this copy. It shipped anyway: a whole database backup, the imported
+        // statements and receipts under private/, the dropped mail under
+        // inbox/, and on mobile the encrypted device identities and group data
+        // keys. gitignore keeps them out of git; it does not bound a build.
+        'storage/app',
+
         // Holds the previous build's own app bundle; without this the copy
         // walker recurses into it and shuffles ~6 GB of stale output.
         'nativephp',

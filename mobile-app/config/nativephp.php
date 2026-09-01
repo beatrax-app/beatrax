@@ -170,6 +170,14 @@ return [
         'storage/framework/testing',
         'storage/logs/laravel.log',
 
+        // Durable user data belonging to whoever built this. On a device
+        // UserDataPathService::appPath() resolves into persisted_data/, so
+        // nothing here is ever read — but the bundle was carrying the builder's
+        // encrypted device identities and group data keys under sync/, one file
+        // per user id they had ever run locally, including a test-suite id.
+        // gitignore keeps them out of git; it does not bound a build.
+        'storage/app',
+
         // Vite's dev-server marker. `public/` is a symlink to the repo root's,
         // so running the desktop dev server writes this file straight into the
         // mobile bundle's view of it — and Laravel then emits every asset URL

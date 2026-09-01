@@ -103,7 +103,7 @@
                 @endif
                 <button
                     type="button"
-                    wire:click="acknowledge({{ $alert->driftAlertId }})"
+                    wire:click="acknowledge('{{ $alert->driftAlertId }}')"
                     aria-label="{{ Lang::get('drift-alerts::alerts.row.acknowledge_aria', ['id' => $alert->driftAlertId]) }}"
                     @class([
                         'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -126,7 +126,7 @@
                         @foreach (SnoozeWindow::cases() as $window)
                             <button
                                 type="button"
-                                wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets[$window->value] }}')"
+                                wire:click="snooze('{{ $alert->driftAlertId }}', '{{ $snoozeTargets[$window->value] }}')"
                                 x-on:click="open = false"
                                 class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
                             >{{ Lang::get($window->labelKey('drift-alerts::alerts.row')) }}</button>
@@ -136,14 +136,14 @@
                 @if ($isExpense)
                     <button
                         type="button"
-                        wire:click="modelCancelInForecast({{ $alert->driftAlertId }})"
+                        wire:click="modelCancelInForecast('{{ $alert->driftAlertId }}')"
                         aria-label="{{ Lang::get('drift-alerts::alerts.row.model_cancel_aria', ['id' => $alert->driftAlertId]) }}"
                         class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                         style="font-variant-numeric: tabular-nums;"
                     >{{ Lang::get('drift-alerts::alerts.row.model_cancel') }}</button>
                     <button
                         type="button"
-                        wire:click="dismissAsCancelled({{ $alert->driftAlertId }})"
+                        wire:click="dismissAsCancelled('{{ $alert->driftAlertId }}')"
                         aria-label="{{ Lang::get('drift-alerts::alerts.row.cancelled_aria', ['id' => $alert->driftAlertId]) }}"
                         class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                     >{{ Lang::get('drift-alerts::alerts.row.cancelled') }}</button>

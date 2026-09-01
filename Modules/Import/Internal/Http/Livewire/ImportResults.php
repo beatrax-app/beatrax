@@ -13,7 +13,9 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Dto\ImportRowIssue;
 use Modules\Import\Internal\Enums\ImportIssueKind;
+use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Models\ImportRun;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#chain-resolution-progress-on-the-results-page
@@ -41,6 +43,14 @@ final class ImportResults extends Component
             ->where('id', $this->importRunId)
             ->where('user_id', $user->id)
             ->firstOrFail();
+
+        // A run whose source_format is synthetic never was an import: a demo
+        // seed and a hand-typed cash entry both hang their rows off one for
+        // want of anywhere else to put them. Reporting "Imported 0
+        // transactions" over 95 of them describes an event that never happened.
+        if (SyntheticSourceFormat::tryFrom($importRun->source_format) !== null) {
+            throw new NotFoundHttpException('That import run is not an import.');
+        }
 
         // The counts alone were the whole disclosure: expanding "show errors"
         // produced a definition of the word rather than the errors. What the

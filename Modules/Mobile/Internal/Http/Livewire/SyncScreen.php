@@ -18,6 +18,7 @@ use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Mobile\Internal\Sync\SyncAttemptOutcome;
 use Modules\Mobile\Internal\Sync\SyncPhase;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\SyncEvents;
 
 final class SyncScreen extends Component
 {
@@ -102,6 +103,11 @@ final class SyncScreen extends Component
         // The outcome is kept rather than dropped — a press that changes
         // nothing on screen is indistinguishable from a sync that worked.
         $this->lastSyncResult = $outcome->value;
+
+        // The status block beside this one reads its answer at mount and has
+        // no poll, so without this it goes on saying "Not yet synced" next to
+        // the line above reporting the sync that just finished.
+        $this->dispatch(SyncEvents::COMPLETED);
 
         $this->hydrateProgress($currentUser->id(), $db);
 

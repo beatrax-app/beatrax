@@ -75,6 +75,29 @@ final readonly class DevicesScreenOpening
         } ?? Lang::get('sync::devices.peer_default_name');
     }
 
+    // The desktop runs this from RecoverSealedLedger after every response. The
+    // mobile root leaves that middleware out on purpose — a pass per poll would
+    // redo the work on every tick of a running import — so a phone had no path
+    // back at all once its initial sync was done. Opening this screen is one.
+    public function recoverDeferred(int $userId, Session $session): void
+    {
+        if (! $this->markers->isEnrolled($userId)) {
+            return;
+        }
+
+        try {
+            $this->reprojector->replayQuarantined(
+                $userId,
+                $session,
+                $this->markers->historyReprojectedAt($userId),
+                $this->markers->reprojectedKeyringFingerprint($userId),
+            );
+        } catch (Throwable) {
+            // The markers are left where they were, so the next open retries.
+            // What this must not do is turn the screen into a 500.
+        }
+    }
+
     // Asked on open rather than on render: render runs on every poll, and the
     // question costs an index seek plus a keyring read. The recovery pass runs
     // after that response, so a Deferred reported here is gone by the next one
