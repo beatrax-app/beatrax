@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -94,7 +95,7 @@ final class DemoTransferPairsSeeder
         ImportRun::query()->updateOrCreate(
             ['user_id' => $user->id, 'sha256' => $sha],
             [
-                'source_format' => 'demo',
+                'source_format' => SyntheticSourceFormat::Demo->value,
                 'raw_file_path' => 'demo://transfer-pair/'.$account->slug,
                 'uploaded_at' => $now->startOfDay(),
                 'confirmed_at' => $now->startOfDay(),

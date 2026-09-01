@@ -8,14 +8,12 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Throwable;
 
-// Which local row a peer's id means, when the two devices minted different ids
-// for the same logical row. Two devices that signed up independently each seed
-// their own reference data — tax deduction categories, for one — so the peer's
-// create arrives as id 109 and collides with local row 13 on (user_id, name).
-//
-// The collision itself is harmless: the row IS already here. What was lost is
-// the peer's identity for it, so all nineteen tax tags naming 109 failed their
-// foreign key and were quarantined with nothing anywhere saying so.
+// Which local row a peer's id means, when two devices minted different ids for
+// the same logical row. Each seeds its own reference data, so the peer's tax
+// category arrives as id 109 and collides with local row 13 on (user_id, name).
+
+// The collision is harmless — the row IS here. The peer's identity for it is
+// what was lost, so nineteen tax tags naming 109 failed their foreign key.
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
@@ -53,7 +51,19 @@ final readonly class PeerRowAliases
         ]);
     }
 
-    // The local id a peer's id stands for, or null when the two agree.
+    // The id to address a row by HERE: the peer's own where the two agree, the
+    // local twin's where they do not.
+    public function resolvePk(string $table, string $deviceId, int|string $pk, int $userId): int|string
+    {
+        $local = $this->localFor($table, $deviceId, $pk, $userId);
+
+        if ($local === null) {
+            return $pk;
+        }
+
+        return is_numeric($local) ? (int) $local : $local;
+    }
+
     public function localFor(string $table, string $deviceId, int|string $remoteId, int $userId): ?string
     {
         $row = $this->db->connection()->table(self::TABLE)
@@ -176,13 +186,7 @@ final readonly class PeerRowAliases
                 continue;
             }
 
-            $columns = [];
-
-            foreach ($connection->select('SELECT name FROM pragma_index_info(?)', [$name]) as $info) {
-                if (is_object($info) && property_exists($info, 'name')) {
-                    $columns[] = self::asText($info->name);
-                }
-            }
+            $columns = $this->indexColumns($name);
 
             if ($columns !== [] && $columns !== ['id']) {
                 $indexes[] = $columns;
@@ -190,5 +194,21 @@ final readonly class PeerRowAliases
         }
 
         return $indexes;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function indexColumns(string $name): array
+    {
+        $columns = [];
+
+        foreach ($this->db->connection()->select('SELECT name FROM pragma_index_info(?)', [$name]) as $info) {
+            if (is_object($info) && property_exists($info, 'name')) {
+                $columns[] = self::asText($info->name);
+            }
+        }
+
+        return $columns;
     }
 }

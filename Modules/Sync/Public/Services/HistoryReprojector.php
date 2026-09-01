@@ -186,11 +186,10 @@ final readonly class HistoryReprojector
         return $rows;
     }
 
-    // A row held for a missing reference NAMES the row that is missing, and
-    // that parent's own ops are sitting in the log unreplayed. Replaying only
-    // the held row re-ran the same failure; pulling its parents into the same
-    // pass is what lets the parent land, or records the id pair when it is
-    // already here under an id this device minted itself.
+    // A row held for a missing reference NAMES the row that is missing, whose
+    // own ops sit in the log unreplayed. Replaying only the held row re-ran the
+    // same failure; pulling its parents in is what lets the parent land, or
+    // records the id pair when it is already here under a locally minted id.
     /**
      * @param  list<array{table: string, pk: string}>  $rows
      * @return list<array{table: string, pk: string}>

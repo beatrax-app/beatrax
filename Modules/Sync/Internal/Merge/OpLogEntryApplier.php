@@ -233,29 +233,27 @@ final readonly class OpLogEntryApplier
 
             return true;
         } catch (QueryException $e) {
-            return $this->recordRefusedInsert($table, $e, $fields, $now, $payload, $deviceId, $pk, $userId);
-        }
-    }
-
-    // A row the database already holds — by pk or by any other unique index —
-    // is the idempotent re-apply replay is built on, so it stays silent and
-    // counts as written. Every other refusal is a real loss and says so.
-    /**
-     * @param  array<string, list<OpLogEntry>>  $fields
-     * @param  array<string, mixed>  $payload
-     */
-    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now, array $payload, string $deviceId, int|string $pk, int $userId): bool
-    {
-        $failure = CreateRowInsertFailure::classify($e);
-
-        if ($failure === CreateRowInsertFailure::AlreadyPresent) {
             // By the pk it is the idempotent re-apply. By ANOTHER unique index
             // it is a second id for one row, and the peer's id has to keep
             // meaning something or every child naming it is orphaned.
-            $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
+            if (CreateRowInsertFailure::classify($e) === CreateRowInsertFailure::AlreadyPresent) {
+                $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
 
-            return true;
+                return true;
+            }
+
+            return $this->recordRefusedInsert($table, $e, $fields, $now);
         }
+    }
+
+    // Every refusal that is a real loss. The already-present arm is answered
+    // one level up, where the payload that identifies the twin is still in hand.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): bool
+    {
+        $failure = CreateRowInsertFailure::classify($e);
 
         $firstField = reset($fields);
 
@@ -451,11 +449,7 @@ final readonly class OpLogEntryApplier
             // check runs against the id this device will actually write.
             $setDevice = $fieldEntries[0]->deviceId;
             $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $userId)[$field] ?? $columnValue;
-            $setLocal = $this->aliases->localFor($table, $setDevice, $pk, $userId);
-
-            if ($setLocal !== null) {
-                $pk = is_numeric($setLocal) ? (int) $setLocal : $setLocal;
-            }
+            $pk = $this->aliases->resolvePk($table, $setDevice, $pk, $userId);
 
             // The create path gates the ids a row NAMES, but a Set rewrites
             // that same column afterwards: create a transaction against your
@@ -541,11 +535,7 @@ final readonly class OpLogEntryApplier
             foreach ($pks as $pk => $tomb) {
                 // Delete-wins applies to the LOGICAL row, so a peer deleting
                 // the id it minted deletes the twin this device minted.
-                $tombLocal = $this->aliases->localFor($table, $tomb->deviceId, $pk, $userId);
-
-                if ($tombLocal !== null) {
-                    $pk = is_numeric($tombLocal) ? (int) $tombLocal : $tombLocal;
-                }
+                $pk = $this->aliases->resolvePk($table, $tomb->deviceId, $pk, $userId);
 
                 $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
 

@@ -18,6 +18,7 @@
         an assertion about one of them true of the other)
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Forecasting\Internal\Support\ChartAxisBounds')
 
 @use('Modules\Core\Public\Support\Lang')
 @php
@@ -25,8 +26,10 @@
         static fn (array $p): array => ['x' => $p['date'], 'y' => Money::majorUnits($p['point_minor'], $aggregateCurrency)],
         $aggregatePoints,
     );
-    $yMin = $aggData === [] ? 0 : min(array_map(static fn ($p) => $p['y'], $aggData)) - 1;
-    $yMax = $aggData === [] ? 0 : max(array_map(static fn ($p) => $p['y'], $aggData)) + 1;
+    [$yMin, $yMax] = ChartAxisBounds::spanning(
+        $aggData === [] ? 0.0 : (float) min(array_map(static fn ($p) => $p['y'], $aggData)),
+        $aggData === [] ? 0.0 : (float) max(array_map(static fn ($p) => $p['y'], $aggData)),
+    );
     $bufferValue = Money::majorUnits($aggregateBufferFloor, $aggregateCurrency);
 
     $options = [
