@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Katkı sunmayı öner',
         'help' => 'Paylaşılan listeye tek tıkla öneri gönderebilmen için ayıklama satırında “Bunu tanımlamaya yardım et” düğmesini göster.',
+        // i18n-review: tr · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Paylaşılan listeye tek dokunuşla öneri gönderebilmen için ayıklama satırında “Bunu tanımlamaya yardım et” düğmesini göster.',
     ],
 
     'update_on_updates' => [

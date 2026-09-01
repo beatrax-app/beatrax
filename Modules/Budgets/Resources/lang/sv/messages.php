@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Inget är fördelat än',
         'copy_hint' => 'Kopiera förra månadens plan, eller klicka i en cell nedan för att börja fördela.',
+        'copy_hint_touch' => 'Kopiera förra månadens plan, eller tryck i en cell nedan för att börja fördela.',
         'first_hint' => 'Klicka i en cell nedan för att börja fördela din första månad.',
+        'first_hint_touch' => 'Tryck i en cell nedan för att börja fördela din första månad.',
         'copy_button' => 'Kopiera förra månaden',
     ],
 

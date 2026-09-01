@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Tarjoa osallistumista',
         'help' => 'Näytä käsittelyrivillä ”Auta muita tunnistamaan tämä” -kehote, jotta voit lähettää ehdotuksen jaettuun listaan yhdellä napsautuksella.',
+        // i18n-review: fi · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Näytä käsittelyrivillä ”Auta muita tunnistamaan tämä” -kehote, jotta voit lähettää ehdotuksen jaettuun listaan yhdellä napautuksella.',
     ],
 
     'update_on_updates' => [

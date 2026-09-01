@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /budgets — the rebuilt zero-based envelope grid.
@@ -85,10 +86,16 @@
         <div class="mb-6 rounded-lg border p-4 {{ $showCopyBanner ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20' : 'border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700' }}">
             <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.empty.nothing_assigned_heading') }}</h2>
             <p class="mt-1 text-sm {{ $showCopyBanner ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400' }}">
+                {{-- "Click into a cell" names a gesture the phone does not
+                     have, the way the drop-zone's "Drop your file here" did. --}}
                 @if ($showCopyBanner)
-                    {{ Lang::get('budgets::messages.empty.copy_hint') }}
+                    {{ UserDataPathService::isMobileRuntime()
+                        ? Lang::get('budgets::messages.empty.copy_hint_touch')
+                        : Lang::get('budgets::messages.empty.copy_hint') }}
                 @else
-                    {{ Lang::get('budgets::messages.empty.first_hint') }}
+                    {{ UserDataPathService::isMobileRuntime()
+                        ? Lang::get('budgets::messages.empty.first_hint_touch')
+                        : Lang::get('budgets::messages.empty.first_hint') }}
                 @endif
             </p>
             @if ($showCopyBanner)

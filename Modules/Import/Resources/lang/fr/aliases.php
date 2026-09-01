@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Pas encore d\'alias',
     'empty_body' => 'Les alias apparaissent ici quand tu cliques sur le libellé brut en italique d\'une ligne d\'aperçu d\'import et que tu lui donnes un nom lisible.',
+    // i18n-review: fr · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Les alias apparaissent ici quand tu touches le libellé brut en italique d\'une ligne d\'aperçu d\'import et que tu lui donnes un nom lisible.',
 
     'col_select' => 'Sélection',
     'col_raw' => 'Libellé brut',

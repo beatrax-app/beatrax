@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Dovrši privolu u pregledniku',
         'step5_body' => 'Klikni ispod da otvoriš zaslon za prijavu i privolu svoje banke. Dovrši prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovamo da dovršiš uključivanje otvorenog bankarstva.',
+        // i18n-review: hr · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Dodirni ispod da otvoriš zaslon za prijavu i privolu svoje banke. Dovrši prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovamo da dovršiš uključivanje otvorenog bankarstva.',
 
         'cancel' => 'Odustani',
         'continue' => 'Nastavi →',

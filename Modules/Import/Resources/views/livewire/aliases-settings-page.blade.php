@@ -13,6 +13,7 @@
      from layouts.app. --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-8" data-testid="aliases-settings-page">
 
     <header class="space-y-1">
@@ -57,7 +58,7 @@
             @if (count($aliases) === 0)
                 <x-core::empty-state
                     :heading="Lang::get('import::aliases.empty_heading')"
-                    :body="Lang::get('import::aliases.empty_body')"
+                    :body="UserDataPathService::isMobileRuntime() ? Lang::get('import::aliases.empty_body_touch') : Lang::get('import::aliases.empty_body')"
                 />
             @else
                 <table class="aliases-table">

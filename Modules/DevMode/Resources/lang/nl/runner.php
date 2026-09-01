@@ -16,6 +16,7 @@ return [
     'worker_running' => 'Wachtrij-worker: DRAAIT',
     'worker_not_running' => 'Wachtrij-worker: DRAAIT NIET',
     'no_runs' => 'Nog geen runs. Klik op "Voer een commando uit" of gebruik het commandopalet (⌘K).',
+    'no_runs_touch' => 'Nog geen runs. Tik op "Voer een commando uit" of gebruik het commandopalet (⌘K).',
     'recent_runs_aria' => 'Recente runs',
     'modal_heading' => 'Voer een SAFE-commando uit',
     'modal_intro' => 'Kies een SAFE-commando om direct uit te voeren. DESTRUCTIVE-commando’s staan hier niet — gebruik de Re-run-knop in de tijdlijn of het ⌘K-palet.',

@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker de file : EN COURS',
     'worker_not_running' => 'Worker de file : ARRÊTÉ',
     'no_runs' => 'Aucune exécution pour l\'instant. Clique sur « Lancer une commande » ou utilise la palette de commandes (⌘K).',
+    // i18n-review: fr · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Aucune exécution pour l\'instant. Touche sur « Lancer une commande » ou utilise la palette de commandes (⌘K).',
     'recent_runs_aria' => 'Exécutions récentes',
     'modal_heading' => 'Lancer une commande SAFE',
     'modal_intro' => 'Choisis une commande de niveau SAFE à lancer immédiatement. Les commandes DESTRUCTIVE ne sont pas listées ici — utilise le bouton Relancer de la chronologie ou la palette ⌘K.',

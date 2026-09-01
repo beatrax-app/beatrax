@@ -12,14 +12,14 @@ return [
     // i18n-review: nl · reapply_confirm — "afgeletterd" follows this file's own
     // summary_reconciled_skipped, while ledger::reconcile calls the same state
     // "afgestemd". One of the two is the word Dutch readers actually use.
-    'reapply_confirm' => 'Alle regels opnieuw op je hele geschiedenis toepassen? Elke categorie, winkelier, notitie en elk belastinglabel dat een regel heeft gezet, wordt overschreven. Wat je met de hand hebt ingevuld blijft staan, net als alles op een afgeletterd afschrift. Niets zet de oude waarden terug.',
+    'reapply_confirm' => 'Alle regels opnieuw op je hele geschiedenis toepassen? Elke categorie, tegenpartij, notitie en elk belastinglabel dat een regel heeft gezet, wordt overschreven. Wat je met de hand hebt ingevuld blijft staan, net als alles op een afgeletterd afschrift. Niets zet de oude waarden terug.',
     'reapplying' => 'Opnieuw toepassen…',
     'new_rule' => 'Nieuwe regel',
 
     'reapply_progress' => 'Regels opnieuw toepassen… :checked van :count transactie gecontroleerd|Regels opnieuw toepassen… :checked van :count transacties gecontroleerd',
 
     'empty_heading' => 'Nog geen regels',
-    'empty_body' => 'Regels vergelijken transacties op meerdere voorwaarden en passen automatisch categorie-, winkelier-, notitie- en belastinglabelwijzigingen toe — bij het importeren, en telkens wanneer je ze opnieuw op je bestaande geschiedenis toepast.',
+    'empty_body' => 'Regels vergelijken transacties op meerdere voorwaarden en passen automatisch categorie-, tegenpartij-, notitie- en belastinglabelwijzigingen toe — bij het importeren, en telkens wanneer je ze opnieuw op je bestaande geschiedenis toepast.',
     'empty_cta' => 'Maak je eerste regel',
 
     'col_priority' => 'Prioriteit',
@@ -46,7 +46,7 @@ return [
     'footer_note' => 'Regels en winkeliergeschiedenis werken samen. Het verwijderen van een regel wist niet wat Beatrax uit eerdere categorisaties heeft geleerd — bij de volgende import kan dezelfde categorie nog steeds automatisch uit de geschiedenis worden voorgesteld.',
 
     'chip_category' => 'Categorie: :path',
-    'chip_counterparty' => 'Winkelier: :path',
+    'chip_counterparty' => 'Tegenpartij: :path',
     'chip_note' => 'Notitie',
     'chip_tax_tag' => 'Belastinglabel',
 

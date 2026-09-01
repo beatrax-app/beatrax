@@ -16,6 +16,7 @@ return [
     'worker_running' => 'Queue worker: RUNNING',
     'worker_not_running' => 'Queue worker: NOT RUNNING',
     'no_runs' => 'No runs yet. Click "Run a command" or use the command palette (⌘K).',
+    'no_runs_touch' => 'No runs yet. Tap "Run a command" or use the command palette (⌘K).',
     'recent_runs_aria' => 'Recent runs',
     'modal_heading' => 'Run a SAFE command',
     'modal_intro' => "Pick a SAFE-tier command to run immediately. DESTRUCTIVE commands are not listed here — use the timeline's Re-run affordance or the ⌘K palette.",

@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Alternatyvių pavadinimų dar nėra',
     'empty_body' => 'Alternatyvūs pavadinimai atsiranda čia, kai importo peržiūros eilutėje spusteli pasvirąjį pirminį aprašymą ir suteiki jam suprantamą pavadinimą.',
+    // i18n-review: lt · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Alternatyvūs pavadinimai atsiranda čia, kai importo peržiūros eilutėje palieti pasvirąjį pirminį aprašymą ir suteiki jam suprantamą pavadinimą.',
 
     'col_select' => 'Pasirinkti',
     'col_raw' => 'Pirminis aprašymas',

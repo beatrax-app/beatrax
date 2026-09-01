@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Jonon työntekijä: KÄYNNISSÄ',
     'worker_not_running' => 'Jonon työntekijä: EI KÄYNNISSÄ',
     'no_runs' => 'Ei vielä suorituksia. Napsauta ”Suorita komento” tai käytä komentopalettia (⌘K).',
+    // i18n-review: fi · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Ei vielä suorituksia. Napauta ”Suorita komento” tai käytä komentopalettia (⌘K).',
     'recent_runs_aria' => 'Viimeisimmät suoritukset',
     'modal_heading' => 'Suorita SAFE-komento',
     'modal_intro' => 'Valitse SAFE-tason komento suoritettavaksi heti. DESTRUCTIVE-komentoja ei ole listattu tässä — käytä aikajanan Suorita uudelleen -toimintoa tai ⌘K-palettia.',

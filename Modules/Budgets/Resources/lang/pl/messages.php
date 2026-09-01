@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Nic jeszcze nie przypisano',
         'copy_hint' => 'Skopiuj plan z zeszłego miesiąca albo kliknij komórkę poniżej, aby zacząć przypisywać.',
+        // i18n-review: pl · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Skopiuj plan z zeszłego miesiąca albo dotknij komórki poniżej, aby zacząć przypisywać.',
         'first_hint' => 'Kliknij komórkę poniżej, aby zacząć przypisywać w pierwszym miesiącu.',
+        // i18n-review: pl · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Dotknij komórki poniżej, aby zacząć przypisywać w pierwszym miesiącu.',
         'copy_button' => 'Kopiuj zeszły miesiąc',
     ],
 

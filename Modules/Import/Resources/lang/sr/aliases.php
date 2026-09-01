@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Još nema alijasa',
     'empty_body' => 'Alijasi se pojavljuju ovde nakon što klikneš kurzivni izvorni opis u redu pregleda uvoza i daš mu razumljiv naziv.',
+    // i18n-review: sr · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Alijasi se pojavljuju ovde nakon što dodirneš kurzivni izvorni opis u redu pregleda uvoza i daš mu razumljiv naziv.',
 
     'col_select' => 'Izaberi',
     'col_raw' => 'Izvorni opis',

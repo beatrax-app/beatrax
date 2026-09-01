@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Ancora nessun alias',
     'empty_body' => "Gli alias compaiono qui dopo che hai fatto clic sulla descrizione grezza in corsivo di una riga dell'anteprima di importazione e le hai dato un nome leggibile.",
+    // i18n-review: it · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => "Gli alias compaiono qui dopo che hai toccato la descrizione grezza in corsivo di una riga dell'anteprima di importazione e le hai dato un nome leggibile.",
 
     'col_select' => 'Seleziona',
     'col_raw' => 'Descrizione grezza',

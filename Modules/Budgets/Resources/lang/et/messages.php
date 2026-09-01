@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Midagi pole veel jagatud',
         'copy_hint' => 'Kopeeri eelmise kuu plaan või klõpsa allolevale lahtrile, et jagamist alustada.',
+        // i18n-review: et · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Kopeeri eelmise kuu plaan või puuduta allolevat lahtrit, et jagamist alustada.',
         'first_hint' => 'Klõpsa allolevale lahtrile, et alustada esimese kuu jagamist.',
+        // i18n-review: et · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Puuduta allolevat lahtrit, et alustada esimese kuu jagamist.',
         'copy_button' => 'Kopeeri eelmine kuu',
     ],
 

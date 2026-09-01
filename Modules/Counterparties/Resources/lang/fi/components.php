@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN piilotettu — paljasta se napsauttamalla Näytä IBAN',
+        // i18n-review: fi · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'IBAN piilotettu — paljasta se napauttamalla Näytä IBAN',
         'show' => 'Näytä IBAN',
         'hide' => 'Piilota IBAN',
     ],

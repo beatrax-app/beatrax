@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 @use('Modules\OpenBanking\Internal\Enums\BankChoice')
 @use('Modules\OpenBanking\Internal\Enums\CuratedInstitution')
 @use('Modules\OpenBanking\Internal\Enums\WizardStep')
@@ -141,7 +142,9 @@
             @elseif ($step === WizardStep::Consent->value)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step5_title') }}</p>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.step5_body') }}</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ UserDataPathService::isMobileRuntime()
+                            ? Lang::get('openbanking::messages.wizard.step5_body_touch')
+                            : Lang::get('openbanking::messages.wizard.step5_body') }}</p>
                 </div>
             @endif
 

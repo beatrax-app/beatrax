@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Odsouhlaseno — pro změnu stavu nejdřív zruš odsouhlasení.',
         'toggle_aria' => ':label — klikni pro přepnutí',
+        // i18n-review: cs · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — klepni pro přepnutí',
     ],
 ];

@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Még nincsenek álnevek',
     'empty_body' => 'Az álnevek akkor jelennek meg itt, ha az import előnézetében rákattintasz egy sor dőlt betűs nyers leírására, és beszédes nevet adsz neki.',
+    // i18n-review: hu · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Az álnevek akkor jelennek meg itt, ha az import előnézetében rákoppintasz egy sor dőlt betűs nyers leírására, és beszédes nevet adsz neki.',
 
     'col_select' => 'Kijelölés',
     'col_raw' => 'Nyers leírás',

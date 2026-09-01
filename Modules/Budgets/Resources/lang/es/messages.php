@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Aún no has asignado nada',
         'copy_hint' => 'Copia el plan del mes pasado o haz clic en una celda de abajo para empezar a asignar.',
+        'copy_hint_touch' => 'Copia el plan del mes pasado o toca una celda de abajo para empezar a asignar.',
         'first_hint' => 'Haz clic en una celda de abajo para empezar a asignar tu primer mes.',
+        'first_hint_touch' => 'Toca una celda de abajo para empezar a asignar tu primer mes.',
         'copy_button' => 'Copiar el mes pasado',
     ],
 

@@ -133,6 +133,7 @@ return [
 
         'step5_title' => 'Complete consent in your browser',
         'step5_body' => "Click below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking.",
+        'step5_body_touch' => "Tap below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking.",
 
         'cancel' => 'Cancel',
         'continue' => 'Continue →',

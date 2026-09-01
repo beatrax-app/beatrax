@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Обробник черги: ПРАЦЮЄ',
     'worker_not_running' => 'Обробник черги: НЕ ПРАЦЮЄ',
     'no_runs' => 'Запусків ще немає. Натисни «Запустити команду» або скористайся палітрою команд (⌘K).',
+    // i18n-review: uk · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Запусків ще немає. Натисни «Запустити команду» або скористайся палітрою команд (⌘K).',
     'recent_runs_aria' => 'Останні запуски',
     'modal_heading' => 'Запустити команду SAFE',
     'modal_intro' => 'Обери команду рівня SAFE, щоб виконати її одразу. Команд DESTRUCTIVE тут немає — скористайся повторним запуском на стрічці подій або палітрою ⌘K.',

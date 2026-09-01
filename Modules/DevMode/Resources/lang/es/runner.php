@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker de la cola: EN MARCHA',
     'worker_not_running' => 'Worker de la cola: DETENIDO',
     'no_runs' => 'Aún no hay ejecuciones. Haz clic en "Ejecutar un comando" o usa la paleta de comandos (⌘K).',
+    // i18n-review: es · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Aún no hay ejecuciones. Toca en "Ejecutar un comando" o usa la paleta de comandos (⌘K).',
     'recent_runs_aria' => 'Ejecuciones recientes',
     'modal_heading' => 'Ejecutar un comando SAFE',
     'modal_intro' => 'Elige un comando de nivel SAFE para ejecutarlo ahora mismo. Los comandos DESTRUCTIVE no aparecen aquí: usa la opción Reejecutar de la cronología o la paleta ⌘K.',

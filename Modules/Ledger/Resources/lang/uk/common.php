@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Звірена — спершу скасуй звірку, щоб змінити статус.',
         'toggle_aria' => ':label — натисни, щоб перемкнути',
+        // i18n-review: uk · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — торкнися, щоб перемкнути',
     ],
 ];

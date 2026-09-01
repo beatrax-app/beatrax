@@ -16,6 +16,7 @@ return [
     'offer_to_contribute' => [
         'title' => 'Bijdragen aanbieden',
         'help' => 'Toon de knop "Help anderen dit herkennen" op de triageregel zodat je met één klik een suggestie aan de gedeelde lijst kunt insturen.',
+        'help_touch' => 'Toon de knop "Help anderen dit herkennen" op de triageregel zodat je met één tik een suggestie aan de gedeelde lijst kunt insturen.',
     ],
 
     'update_on_updates' => [

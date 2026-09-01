@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Ainda não há aliases',
     'empty_body' => 'Os aliases aparecem aqui depois de clicares na descrição original em itálico de uma linha da pré-visualização da importação e lhe dares um nome legível.',
+    // i18n-review: pt · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Os aliases aparecem aqui depois de tocares na descrição original em itálico de uma linha da pré-visualização da importação e lhe dares um nome legível.',
 
     'col_select' => 'Selecionar',
     'col_raw' => 'Descrição original',

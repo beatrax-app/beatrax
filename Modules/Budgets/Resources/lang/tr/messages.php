@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Henüz hiçbir şey dağıtılmadı',
         'copy_hint' => 'Geçen ayın planını kopyala ya da dağıtmaya başlamak için aşağıdaki bir hücreye tıkla.',
+        // i18n-review: tr · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Geçen ayın planını kopyala ya da dağıtmaya başlamak için aşağıdaki bir hücreye dokun.',
         'first_hint' => 'İlk ayını dağıtmaya başlamak için aşağıdaki bir hücreye tıkla.',
+        // i18n-review: tr · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'İlk ayını dağıtmaya başlamak için aşağıdaki bir hücreye dokun.',
         'copy_button' => 'Geçen ayı kopyala',
     ],
 

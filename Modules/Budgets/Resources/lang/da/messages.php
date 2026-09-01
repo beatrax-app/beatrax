@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Der er endnu ikke fordelt noget',
         'copy_hint' => 'Kopiér sidste måneds plan, eller klik i en celle nedenfor for at begynde at fordele.',
+        'copy_hint_touch' => 'Kopiér sidste måneds plan, eller tryk i en celle nedenfor for at begynde at fordele.',
         'first_hint' => 'Klik i en celle nedenfor for at begynde at fordele din første måned.',
+        'first_hint_touch' => 'Tryk i en celle nedenfor for at begynde at fordele din første måned.',
         'copy_button' => 'Kopiér sidste måned',
     ],
 

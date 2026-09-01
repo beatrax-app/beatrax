@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker kolejki: DZIAŁA',
     'worker_not_running' => 'Worker kolejki: NIE DZIAŁA',
     'no_runs' => 'Brak uruchomień. Kliknij „Uruchom polecenie” lub użyj palety poleceń (⌘K).',
+    // i18n-review: pl · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Brak uruchomień. Dotknij „Uruchom polecenie” lub użyj palety poleceń (⌘K).',
     'recent_runs_aria' => 'Ostatnie uruchomienia',
     'modal_heading' => 'Uruchom polecenie SAFE',
     'modal_intro' => 'Wybierz polecenie poziomu SAFE, aby uruchomić je od razu. Poleceń DESTRUCTIVE tutaj nie ma — użyj opcji ponownego uruchomienia na osi czasu albo palety ⌘K.',

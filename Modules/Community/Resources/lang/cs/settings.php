@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Nabízet přispění',
         'help' => 'Zobrazovat v řádku třídění výzvu „Pomoz to rozpoznat ostatním“, aby šlo návrh do sdíleného seznamu odeslat jedním kliknutím.',
+        // i18n-review: cs · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Zobrazovat v řádku třídění výzvu „Pomoz to rozpoznat ostatním“, aby šlo návrh do sdíleného seznamu odeslat jedním klepnutím.',
     ],
 
     'update_on_updates' => [

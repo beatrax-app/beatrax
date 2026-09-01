@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Nothing assigned yet',
         'copy_hint' => "Copy last month's plan, or click into a cell below to start assigning.",
+        'copy_hint_touch' => "Copy last month's plan, or tap a cell below to start assigning.",
         'first_hint' => 'Click into a cell below to start assigning your first month.',
+        'first_hint_touch' => 'Tap a cell below to start assigning your first month.',
         'copy_button' => 'Copy last month',
     ],
 

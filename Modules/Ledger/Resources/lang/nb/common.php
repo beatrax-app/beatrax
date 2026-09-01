@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Avstemt — opphev avstemmingen først for å endre status.',
         'toggle_aria' => ':label — klikk for å veksle',
+        // i18n-review: nb · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — trykk for å veksle',
     ],
 ];

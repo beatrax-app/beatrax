@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Täsmäytetty — pura täsmäytys ennen tilan muuttamista.',
         'toggle_aria' => ':label — vaihda napsauttamalla',
+        // i18n-review: fi · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — vaihda napauttamalla',
     ],
 ];

@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Järjekorra töötaja: TÖÖTAB',
     'worker_not_running' => 'Järjekorra töötaja: EI TÖÖTA',
     'no_runs' => 'Käivitusi veel pole. Klõpsa „Käivita käsk“ või kasuta käsupaletti (⌘K).',
+    // i18n-review: et · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Käivitusi veel pole. Puuduta „Käivita käsk“ või kasuta käsupaletti (⌘K).',
     'recent_runs_aria' => 'Hiljutised käivitused',
     'modal_heading' => 'Käivita OHUTU käsk',
     'modal_intro' => 'Vali OHUTU taseme käsk, mis käivitub kohe. HÄVITAVAID käske siin ei loetleta — kasuta ajajoone uuesti käivitamise nuppu või ⌘K paletti.',

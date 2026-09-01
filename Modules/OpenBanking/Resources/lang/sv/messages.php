@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Slutför samtycket i din webbläsare',
         'step5_body' => 'Klicka nedan för att öppna bankens inloggnings- och samtyckessida. Slutför inloggningen och eventuell tvåfaktorsverifiering, så förs du automatiskt tillbaka hit för att slutföra aktiveringen av Open Banking.',
+        // i18n-review: sv · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Tryck nedan för att öppna bankens inloggnings- och samtyckessida. Slutför inloggningen och eventuell tvåfaktorsverifiering, så förs du automatiskt tillbaka hit för att slutföra aktiveringen av Open Banking.',
 
         'cancel' => 'Avbryt',
         'continue' => 'Fortsätt →',

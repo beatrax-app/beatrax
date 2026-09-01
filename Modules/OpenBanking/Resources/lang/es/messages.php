@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Completa el consentimiento en tu navegador',
         'step5_body' => 'Haz clic abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor y volverás aquí automáticamente para terminar de activar el Open Banking.',
+        // i18n-review: es · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Toca abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor y volverás aquí automáticamente para terminar de activar el Open Banking.',
 
         'cancel' => 'Cancelar',
         'continue' => 'Continuar →',

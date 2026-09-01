@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Proponuj współtworzenie',
         'help' => 'Pokazuj przycisk „Pomóż innym to rozpoznać” w wierszu porządkowania, aby jednym kliknięciem wysłać propozycję do wspólnej listy.',
+        // i18n-review: pl · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Pokazuj przycisk „Pomóż innym to rozpoznać” w wierszu porządkowania, aby jednym dotknięciem wysłać propozycję do wspólnej listy.',
     ],
 
     'update_on_updates' => [

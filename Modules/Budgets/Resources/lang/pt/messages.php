@@ -21,7 +21,9 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Ainda não atribuíste nada',
         'copy_hint' => 'Copia o plano do mês passado ou clica numa célula abaixo para começares a atribuir.',
+        'copy_hint_touch' => 'Copia o plano do mês passado ou toca numa célula abaixo para começares a atribuir.',
         'first_hint' => 'Clica numa célula abaixo para começares a atribuir o teu primeiro mês.',
+        'first_hint_touch' => 'Toca numa célula abaixo para começares a atribuir o teu primeiro mês.',
         'copy_button' => 'Copiar o mês passado',
     ],
 

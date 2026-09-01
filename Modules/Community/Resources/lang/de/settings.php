@@ -19,6 +19,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Beitrag anbieten',
         'help' => 'Zeigt in der Triage-Zeile die Aktion „Hilf anderen, das zu identifizieren“, damit du mit einem Klick einen Vorschlag für die gemeinsame Liste abschicken kannst.',
+        // i18n-review: de · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Zeigt in der Triage-Zeile die Aktion „Hilf anderen, das zu identifizieren“, damit du mit einem Tippen einen Vorschlag für die gemeinsame Liste abschicken kannst.',
     ],
 
     'update_on_updates' => [

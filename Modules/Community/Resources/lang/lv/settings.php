@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Piedāvāt dalīties',
         'help' => 'Rādīt pogu „Palīdziet citiem to atpazīt” šķirošanas rindā, lai ar vienu klikšķi varētu iesniegt ieteikumu kopīgotajam sarakstam.',
+        // i18n-review: lv · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Rādīt pogu „Palīdziet citiem to atpazīt” šķirošanas rindā, lai ar vienu pieskārienu varētu iesniegt ieteikumu kopīgotajam sarakstam.',
     ],
 
     'update_on_updates' => [

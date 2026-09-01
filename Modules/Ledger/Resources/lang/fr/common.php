@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Rapprochée — annule le rapprochement pour changer le statut.',
         'toggle_aria' => ':label — clique pour basculer',
+        // i18n-review: fr · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — touche pour basculer',
     ],
 ];

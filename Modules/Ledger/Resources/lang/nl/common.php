@@ -15,5 +15,6 @@ return [
     'badge' => [
         'reconciled_hint' => 'Afgestemd — hef eerst de afstemming op om de status te wijzigen.',
         'toggle_aria' => ':label — klik om te wisselen',
+        'toggle_aria_touch' => ':label — tik om te wisselen',
     ],
 ];

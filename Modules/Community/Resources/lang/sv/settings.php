@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Erbjud att bidra',
         'help' => 'Visa knappen "Hjälp andra att känna igen den här" på sorteringsraden så att du kan skicka in ett förslag till den delade listan med ett klick.',
+        // i18n-review: sv · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Visa knappen "Hjälp andra att känna igen den här" på sorteringsraden så att du kan skicka in ett förslag till den delade listan med ett tryck.',
     ],
 
     'update_on_updates' => [

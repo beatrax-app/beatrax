@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Pabeidziet piekrišanu pārlūkā',
         'step5_body' => 'Noklikšķiniet zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, un jūs automātiski atgriezīsieties šeit, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
+        // i18n-review: lv · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Pieskarieties zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, un jūs automātiski atgriezīsieties šeit, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
 
         'cancel' => 'Atcelt',
         'continue' => 'Turpināt →',

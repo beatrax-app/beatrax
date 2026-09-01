@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Încă niciun alias',
     'empty_body' => 'Aliasurile apar aici după ce apeși pe descrierea brută scrisă cursiv dintr-un rând al previzualizării importului și îi dai un nume prietenos.',
+    // i18n-review: ro · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aliasurile apar aici după ce apeși pe descrierea brută scrisă cursiv dintr-un rând al previzualizării importului și îi dai un nume prietenos.',
 
     'col_select' => 'Selectează',
     'col_raw' => 'Descriere brută',

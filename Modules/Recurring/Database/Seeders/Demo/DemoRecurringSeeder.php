@@ -198,10 +198,15 @@ final class DemoRecurringSeeder
      */
     private function upsertSeries(User $user, array $row, CarbonImmutable $today): void
     {
-        // The demo file shows this month's instalment as already paid, so the
-        // next expected date sits on the same day-of-month next month.
+        // This month's instalment counts as paid only once its day has arrived.
+        // Calling it paid unconditionally moved the next expected date a month
+        // out, so for the first ten days of a month an approved series had no
+        // entry on the grid the reader was looking at.
+        $thisMonthDay = $today->setDay(min($row['dayOfMonth'], $today->daysInMonth));
         $nextMonth = $today->addMonthNoOverflow()->startOfMonth();
-        $nextExpected = $nextMonth->setDay(min($row['dayOfMonth'], $nextMonth->daysInMonth));
+        $nextExpected = $thisMonthDay->greaterThan($today)
+            ? $thisMonthDay
+            : $nextMonth->setDay(min($row['dayOfMonth'], $nextMonth->daysInMonth));
 
         // A snoozed row carries an explicit snoozed_until so /recurring can show
         // the wake-up date; a rejected row never re-fires, so it stays null.

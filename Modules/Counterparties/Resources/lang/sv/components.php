@@ -41,6 +41,9 @@ return [
     'iban_row' => [
         'label' => 'IBAN',
         'hidden_aria' => 'IBAN dolt — klicka på Visa IBAN för att visa det',
+        // i18n-review: sv · hidden_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'hidden_aria_touch' => 'IBAN dolt — tryck på Visa IBAN för att visa det',
         'show' => 'Visa IBAN',
         'hide' => 'Dölj IBAN',
     ],

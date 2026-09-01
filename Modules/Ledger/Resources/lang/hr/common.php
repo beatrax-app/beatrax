@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Usklađeno — prvo poništi usklađivanje da promijeniš status.',
         'toggle_aria' => ':label — klikni za promjenu',
+        // i18n-review: hr · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — dodirni za promjenu',
     ],
 ];

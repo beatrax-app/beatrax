@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Zatiaľ nič pridelené',
         'copy_hint' => 'Skopíruj plán z minulého mesiaca alebo klikni do bunky nižšie a začni prideľovať.',
+        // i18n-review: sk · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Skopíruj plán z minulého mesiaca alebo ťukni do bunky nižšie a začni prideľovať.',
         'first_hint' => 'Klikni do bunky nižšie a začni prideľovať svoj prvý mesiac.',
+        // i18n-review: sk · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Ťukni do bunky nižšie a začni prideľovať svoj prvý mesiac.',
         'copy_button' => 'Kopírovať minulý mesiac',
     ],
 

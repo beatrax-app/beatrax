@@ -21,7 +21,13 @@ return [
     'empty' => [
         'nothing_assigned_heading' => 'Още нищо не е разпределено',
         'copy_hint' => 'Копирай плана от миналия месец или кликни върху клетка по-долу, за да започнеш да разпределяш.',
+        // i18n-review: bg · empty.copy_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'copy_hint_touch' => 'Копирай плана от миналия месец или докосни клетка по-долу, за да започнеш да разпределяш.',
         'first_hint' => 'Кликни върху клетка по-долу, за да разпределиш първия си месец.',
+        // i18n-review: bg · empty.first_hint_touch — the same line for a
+        // touch screen; check the verb governs this case.
+        'first_hint_touch' => 'Докосни клетка по-долу, за да разпределиш първия си месец.',
         'copy_button' => 'Копирай миналия месец',
     ],
 

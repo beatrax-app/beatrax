@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 @use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the artisan runner
      timeline and run cards scroll horizontally at phone width. --}}
@@ -65,7 +66,9 @@
         @if ($runs->isEmpty())
             <div class="card p-4">
                 <p class="text-sm text-[var(--color-text-muted)]">
-                    {{ Lang::get('dev::runner.no_runs') }}
+                    {{ UserDataPathService::isMobileRuntime()
+                        ? Lang::get('dev::runner.no_runs_touch')
+                        : Lang::get('dev::runner.no_runs') }}
                 </p>
             </div>
         @else

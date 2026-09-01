@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Queue-Worker: LÄUFT',
     'worker_not_running' => 'Queue-Worker: LÄUFT NICHT',
     'no_runs' => 'Noch keine Läufe. Klicke auf "Befehl ausführen" oder nutze die Befehlspalette (⌘K).',
+    // i18n-review: de · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Noch keine Läufe. Tippe auf "Befehl ausführen" oder nutze die Befehlspalette (⌘K).',
     'recent_runs_aria' => 'Letzte Läufe',
     'modal_heading' => 'SAFE-Befehl ausführen',
     'modal_intro' => 'Wähle einen SAFE-Befehl, der sofort ausgeführt wird. DESTRUCTIVE-Befehle stehen hier nicht — nutze die Erneut-ausführen-Option in der Timeline oder die ⌘K-Palette.',

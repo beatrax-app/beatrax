@@ -16,6 +16,9 @@ return [
     'offer_to_contribute' => [
         'title' => 'Proposer de contribuer',
         'help' => 'Affiche le bouton « Aide les autres à l\'identifier » sur la ligne de tri, pour envoyer une suggestion à la liste partagée en un clic.',
+        // i18n-review: fr · help_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'help_touch' => 'Affiche le bouton « Aide les autres à l\'identifier » sur la ligne de tri, pour envoyer une suggestion à la liste partagée en un appui.',
     ],
 
     'update_on_updates' => [

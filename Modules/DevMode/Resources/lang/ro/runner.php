@@ -16,6 +16,9 @@ return [
     'worker_running' => 'Worker de coadă: RULEAZĂ',
     'worker_not_running' => 'Worker de coadă: NU RULEAZĂ',
     'no_runs' => 'Nicio rulare încă. Apasă pe "Rulează o comandă" sau folosește paleta de comenzi (⌘K).',
+    // i18n-review: ro · no_runs_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'no_runs_touch' => 'Nicio rulare încă. Apasă pe "Rulează o comandă" sau folosește paleta de comenzi (⌘K).',
     'recent_runs_aria' => 'Rulări recente',
     'modal_heading' => 'Rulează o comandă SAFE',
     'modal_intro' => 'Alege o comandă de nivel SAFE ca să ruleze imediat. Comenzile DESTRUCTIVE nu apar aici — folosește opțiunea de rulare din nou din cronologie sau paleta ⌘K.',

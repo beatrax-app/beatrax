@@ -16,5 +16,8 @@ return [
 
         'reconciled_hint' => 'Συμφωνημένη — άρε πρώτα τη συμφωνία για να αλλάξεις κατάσταση.',
         'toggle_aria' => ':label — κάνε κλικ για εναλλαγή',
+        // i18n-review: el · toggle_aria_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'toggle_aria_touch' => ':label — πάτησε για εναλλαγή',
     ],
 ];

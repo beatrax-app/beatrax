@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Services\UserDataPathService')
 {{-- Community → Shared merchant list panel.
 
      Renders flat: the Community page provides the card, so this draws no
@@ -43,7 +44,9 @@
             <div class="flex-1">
                 <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('community::settings.offer_to_contribute.title') }}</p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('community::settings.offer_to_contribute.help') }}
+                    {{ UserDataPathService::isMobileRuntime()
+                        ? Lang::get('community::settings.offer_to_contribute.help_touch')
+                        : Lang::get('community::settings.offer_to_contribute.help') }}
                 </p>
             </div>
             <x-core::switch

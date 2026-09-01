@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Iban')
+@use('Modules\Core\Public\Services\UserDataPathService')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     IBAN reveal row — the personal-profile IBAN line with a
@@ -29,7 +30,7 @@
         role="img"
         class="iban-hidden"
         x-show="!revealed"
-        aria-label="{{ Lang::get('counterparties::components.iban_row.hidden_aria') }}"
+        aria-label="{{ UserDataPathService::isMobileRuntime() ? Lang::get('counterparties::components.iban_row.hidden_aria_touch') : Lang::get('counterparties::components.iban_row.hidden_aria') }}"
     >····  ····  ····  ····</span>
     <span
         class="iban-revealed"

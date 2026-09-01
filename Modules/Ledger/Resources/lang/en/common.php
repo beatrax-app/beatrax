@@ -16,5 +16,6 @@ return [
 
         'reconciled_hint' => 'Reconciled — un-reconcile first to change status.',
         'toggle_aria' => ':label — click to toggle',
+        'toggle_aria_touch' => ':label — tap to toggle',
     ],
 ];

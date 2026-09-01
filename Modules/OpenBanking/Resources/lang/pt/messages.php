@@ -133,6 +133,9 @@ return [
 
         'step5_title' => 'Conclui o consentimento no teu navegador',
         'step5_body' => 'Clica aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois voltas para aqui automaticamente para acabares de ativar o Open Banking.',
+        // i18n-review: pt · step5_body_touch — the same line for a touch
+        // screen; check the verb governs this case.
+        'step5_body_touch' => 'Toca aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois voltas para aqui automaticamente para acabares de ativar o Open Banking.',
 
         'cancel' => 'Cancelar',
         'continue' => 'Continuar →',

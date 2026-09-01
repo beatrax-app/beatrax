@@ -13,6 +13,9 @@ return [
 
     'empty_heading' => 'Vēl nav aizstājvārdu',
     'empty_body' => 'Aizstājvārdi parādās šeit pēc tam, kad importa priekšskatījuma rindā noklikšķiniet uz slīprakstā rakstītā sākotnējā apraksta un piešķiriet tam saprotamu nosaukumu.',
+    // i18n-review: lv · empty_body_touch — the same line for a touch
+    // screen; check the verb governs this case.
+    'empty_body_touch' => 'Aizstājvārdi parādās šeit pēc tam, kad importa priekšskatījuma rindā pieskarieties slīprakstā rakstītā sākotnējā apraksta un piešķiriet tam saprotamu nosaukumu.',
 
     'col_select' => 'Atlasīt',
     'col_raw' => 'Sākotnējais apraksts',
