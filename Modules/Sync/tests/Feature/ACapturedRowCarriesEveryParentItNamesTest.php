@@ -12,12 +12,12 @@ use Modules\Sync\Public\Services\ImportSyncCapture;
 uses(RefreshDatabase::class);
 
 // The capture emitted the parents of a transaction from a list of three table
-// names written by hand — import_runs, accounts, transactions. transactions
-// also has a foreign key onto categories, and that one was not in the list, so
-// a peer received a transaction naming a category it had never been sent. Its
-// foreign key refused the insert and the row was quarantined as
-// missing_reference, which nothing ever retries: two charges went missing from
-// a paired phone with nothing on either screen saying so.
+// names written by hand — import_runs, accounts, transactions — while
+// transactions also has a foreign key onto categories. Categories 1-29 are
+// global rows every device already holds, so the gap stayed invisible; a user's
+// own categories start at 30 and are user-scoped, and a peer holds one only
+// because this sent it. A hand-kept list of parents drifts from the schema by
+// construction, which is the defect here — not a loss measured on a device.
 
 function parentCaptureUser(): User
 {
@@ -73,9 +73,8 @@ function parentCaptureTransaction(): array
         'updated_at' => '2026-01-01 00:00:00',
     ]);
 
-    // The row the old list forgot. It exists before the transaction, exactly as
-    // the category did on the machine this was measured on — an older row the
-    // import merely points at.
+    // The row the old list forgot, user-scoped so a peer only holds it if this
+    // capture sends it — the half of `categories` that is not global.
     $categoryId = $connection->table('categories')->insertGetId([
         'user_id' => $user->id,
         'name' => 'Groceries',

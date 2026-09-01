@@ -78,9 +78,9 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     }
 
     // Every covered parent these rows point at, read off the live foreign keys.
-    // This was three names written by hand — import_runs, accounts,
-    // transactions — and transactions.category_id was missing from it, so a
-    // peer refused every transaction naming a category it had never been sent.
+    // This was three names written by hand and category_id was not among them.
+    // Categories 1-29 are global and need no capture, but a user's own start at
+    // 30 and are user-scoped rows a peer only has if this sends them.
     /**
      * @param  list<int>  $transactionIds
      * @return array<string, list<int>>
