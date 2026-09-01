@@ -77,17 +77,32 @@ function bareIdArgumentsIn(string $module): array
 /** @return list<string> */
 function bareIdEchoesOn(string $line): array
 {
-    if (preg_match('/(wire:|x-on:|@click|\$wire\.)/', $line) !== 1) {
+    // Scoped to the attribute the browser evaluates, not the whole line: a
+    // style or aria-label sitting beside a wire:click echoes values too, and
+    // those are not arguments to anything.
+    $attributes = preg_match_all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line, $found) === false
+        ? []
+        : $found[1];
+
+    if ($attributes === []) {
         return [];
     }
 
-    $found = preg_match_all('/[(,]\s*\{\{\s*([^}]+?)\s*\}\}\s*[,)]/', $line, $matches);
+    $matches = [[], []];
 
-    // preg_match_all answers false on a backtrack or JIT limit, and a guard
-    // that reads that as "nothing found" reports the wrong answer.
-    if ($found === false) {
-        throw new RuntimeException('preg_match_all failed on: '.$line);
+    foreach ($attributes as $value) {
+        // Both shapes a value travels in: a positional argument, and a
+        // property of an object literal handed to $dispatch.
+        $hit = preg_match_all('/[(,:]\s*\{\{\s*([^}]+?)\s*\}\}\s*[,)}]/', $value, $inner);
+
+        if ($hit === false) {
+            throw new RuntimeException('preg_match_all failed on: '.$value);
+        }
+
+        $matches[1] = [...$matches[1], ...$inner[1]];
     }
+
+    $found = count($matches[1]);
 
     $bare = [];
 
