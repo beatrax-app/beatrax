@@ -129,11 +129,15 @@ final readonly class HistoryReprojector
             });
     }
 
+    // Narrowed to the reasons a key actually undoes: this drives the
+    // "waiting for a key" line, and a row held because its parent had not
+    // landed would otherwise be given a cause that is not its own.
     private function awaitingRows(int $userId, Session $session): Builder
     {
         $held = $this->heldEpochIds($userId, $session);
 
         return $this->recoverableQuarantine($userId)
+            ->whereIn('reason', QuarantineReason::keyRecoverable())
             ->whereNotNull('gdk_epoch')
             ->whereNotIn('gdk_epoch', $held);
     }
@@ -163,7 +167,7 @@ final readonly class HistoryReprojector
         return $this->db->connection()
             ->table('op_log_quarantine')
             ->where('user_id', $userId)
-            ->whereIn('reason', QuarantineReason::keyRecoverable());
+            ->whereIn('reason', QuarantineReason::recoverable());
     }
 
     /**
