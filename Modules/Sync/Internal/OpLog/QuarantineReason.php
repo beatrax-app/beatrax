@@ -58,13 +58,10 @@ enum QuarantineReason: string
         return [self::GdkDecryptFailed->value, self::StrategyError->value];
     }
 
-    // Every verdict a later state can undo, which is the set worth replaying.
-    // MissingReference is not a verdict on the entry the way a forged signature
-    // is: it says only that the parent had not landed HERE yet, and the parent
-    // routinely arrives afterwards — a category captured by the backfill can be
-    // newer than a child logged live, so the child is refused and, without
-    // this, never looked at again. Two charges went missing from a paired phone
-    // that way, with its op log still holding every entry needed to place them.
+    // Every verdict a later state can undo. MissingReference is not a verdict
+    // on the entry the way a forged signature is: the parent had not landed
+    // HERE yet and routinely lands afterwards — two charges went missing from a
+    // paired phone whose op log still held every entry needed to place them.
     /**
      * @return list<string>
      */

@@ -77,11 +77,10 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
         $this->captureInOrder($ids, $userId, $writer, []);
     }
 
-    // Every covered parent the rows about to be emitted point at, read off the
-    // live foreign keys. This was three table names written by hand —
-    // import_runs, accounts, transactions — and transactions.category_id was
-    // missing from it, so a peer received a transaction naming a category it
-    // had never seen and its foreign key refused the row for good.
+    // Every covered parent these rows point at, read off the live foreign keys.
+    // This was three names written by hand — import_runs, accounts,
+    // transactions — and transactions.category_id was missing from it, so a
+    // peer refused every transaction naming a category it had never been sent.
     /**
      * @param  list<int>  $transactionIds
      * @return array<string, list<int>>
