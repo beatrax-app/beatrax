@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+
+uses(RefreshDatabase::class);
 
 // The two producers that put a row on the wire: an EntityMutated dispatch, and
 // a direct OpLogWriter call from a capture listener. Both name their table as
@@ -32,6 +36,23 @@ function deviceLocalTables(): array
 function referenceDataTables(): array
 {
     return ['categories'];
+}
+
+// ImportSyncCapture stopped naming its parents: it reads them off the live
+// foreign keys of `transactions`, because the three it used to name by hand
+// left out categories and a peer refused every transaction pointing at one.
+// There is no literal left for the scan above to find, so the same derivation
+// runs here — restating the list would put the drift back.
+/**
+ * @return list<string>
+ */
+function parentsCapturedByDerivation(): array
+{
+    $parents = array_values(app(CoveredTableOrder::class)->parentColumns('transactions'));
+
+    // The applier seeds user_id from the local user, so ImportSyncCapture
+    // deliberately does not emit the peer's users row; this must not claim it.
+    return array_values(array_diff($parents, ['users']));
 }
 
 /** @return list<string> */
@@ -141,6 +162,7 @@ it('opens no new capture gap', function (): void {
     $uncaptured = array_values(array_diff(
         $syncable,
         capturedTables(),
+        parentsCapturedByDerivation(),
         snapshotOnlyTables(),
         deviceLocalTables(),
         referenceDataTables(),
