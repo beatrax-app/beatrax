@@ -61,7 +61,7 @@
                     <div class="min-w-0 flex-1">
                         <p class="primary truncate">{{ $row->displayName() }}</p>
                         <p class="secondary mt-0.5 truncate">
-                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->direction }}</x-core::status-pill>
+                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->directionLabel() }}</x-core::status-pill>
                             <span class="ml-1">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 · {{ Lang::get('recurring::fixed_payments.chain') }}
@@ -86,7 +86,7 @@
                             class="tap-link block truncate text-sm font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                         >{{ $row->displayName() }}</a>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->direction }}</x-core::status-pill>
+                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->directionLabel() }}</x-core::status-pill>
                             <span class="ml-2">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 <span
