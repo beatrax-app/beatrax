@@ -102,6 +102,38 @@ Delivery is not one flow, and the legs are independent:
    key by resolving a device identity. Without this leg the retry outcome had no reachable
    consumer and a deferred wrap was deferred forever.
 
+### Leg 4: repay a fan-out the screen never reached
+
+`fanOutAllEpochsToDevice()` is called from `PairingFlowModal::enterSuccessStep()`,
+and that method has exactly two call sites — the initiator's own `confirmMatch()`,
+which reaches it only when the peer has *already* confirmed, and
+`checkPairingState()`, the `wire:poll.3s.keep-alive` tick. Both live inside that
+modal component, so "whichever side learns of the both-confirm first" is only
+true while the modal is mounted. The two confirms are taps on two devices,
+seconds apart, by one person walking between them; close the window, leave the
+screen, quit the app, or let the app-lock idle timeout fire in that gap and the
+token still reaches `confirmed` and the peer is still admitted to the registry —
+with no epoch ever queued for it.
+
+Nothing downstream noticed. `RelayMailbox` has no re-send, `fanOutAllEpochsToDevice()`
+fired once, and `DevicesScreenOpening::recoverDeferred()` replays *local*
+quarantine and never fans out to a peer. A fresh iPhone paired this way held
+4,223 op-log entries, quarantined 460 of them `gdk_decrypt_failed`, and sat on
+"Waiting for the encryption keys from the other device" permanently, with every
+other signal — safety words matched, device listed, token `confirmed` — saying
+the pairing had worked.
+
+`device_registry.epochs_delivered_at` records the debt: null means owed, and
+`fanOutAllEpochsToDevice()` stamps it inside the same transaction as the wraps
+it accounts for, so a crash cannot mark a peer supplied by wraps that rolled
+back. `DeliversOwedEpochs`, a terminate-time middleware beside
+`ResumesPreSyncCapture`, reads `peersOwedEpochs()` after every authenticated
+response — one covered lookup, and with nothing owed that read is the whole cost
+— and pays what it finds. The column starts null for every existing peer on
+purpose: re-delivery is idempotent, because an epoch already in the keyring
+returns `Applied`, so the first request after the upgrade repays any device the
+missed fan-out already stranded.
+
 **Acknowledging before retiring is the point of leg 1.** Confirming a row the moment it was
 handed to the transport marked it delivered even when the connection dropped before the peer saw
 it, and `RelayMailbox` has no re-send: `fanOutAllEpochsToDevice()` fires once, at pairing. The

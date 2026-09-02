@@ -22,6 +22,7 @@ use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Desktop\Internal\Http\Middleware\RecoverSealedLedger;
 use Modules\Notifications\Internal\Http\Middleware\RunDeferredNotificationPasses;
 use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
+use Modules\Sync\Internal\Http\Middleware\DeliversOwedEpochs;
 use Modules\Sync\Internal\Http\Middleware\ResumesPreSyncCapture;
 use Psr\Log\LoggerInterface;
 
@@ -80,6 +81,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // app-lock key, so a capture too large for one request can only be
             // finished by another one.
             ResumesPreSyncCapture::class,
+            DeliversOwedEpochs::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
