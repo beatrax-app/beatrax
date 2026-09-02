@@ -23,14 +23,14 @@ function backfillFixtureUser(DatabaseManager $db): int
     ]);
 }
 
-function backfillWriter(int $userId, string $deviceId = 'backfill-device'): OpLogWriter
+function backfillWriter(int $userId, string $deviceId = 'backfill-device', int $isSelf = 1): OpLogWriter
 {
     $keypair = sodium_crypto_sign_keypair();
 
     // Coverage is only counted for authors a peer can still verify, so an
     // unregistered writer leaves everything it wrote uncovered — the defect
     // these tests sit on top of, not the state they mean to set up.
-    backfillRegisterDevice($userId, $deviceId, sodium_crypto_sign_publickey($keypair));
+    backfillRegisterDevice($userId, $deviceId, sodium_crypto_sign_publickey($keypair), $isSelf);
 
     /** @var OpLogWriter $writer */
     $writer = app(OpLogWriter::class, [
@@ -43,7 +43,7 @@ function backfillWriter(int $userId, string $deviceId = 'backfill-device'): OpLo
     return $writer;
 }
 
-function backfillRegisterDevice(int $userId, string $deviceId, string $publicKey): void
+function backfillRegisterDevice(int $userId, string $deviceId, string $publicKey, int $isSelf = 1): void
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -55,7 +55,7 @@ function backfillRegisterDevice(int $userId, string $deviceId, string $publicKey
         'ed25519_public_key_hex' => sodium_bin2hex($publicKey),
         'x25519_public_key_hex' => str_repeat('00', 32),
         'safety_number_words' => '',
-        'is_self' => 1,
+        'is_self' => $isSelf,
         'paired_at' => '2026-06-14T00:00:00+00:00',
         'confirmed_at' => '2026-06-14T00:00:00+00:00',
         'last_seen_at' => null,
@@ -248,4 +248,31 @@ it('leaves a row alone when its create op author is still a confirmed device', f
     $backfiller->backfill($userId, backfillWriter($userId, 'still-here'));
 
     expect($backfiller->backfill($userId, backfillWriter($userId, 'second-writer')))->toBe(0);
+});
+
+it('re-captures a row whose only create op was written by a peer, not by this device', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = backfillFixtureUser($db);
+    $accountId = backfillSeedAccount($db, $userId);
+
+    // A phone that was paired, then replaced. The row it created carries a
+    // create op signed by an identity THIS device still holds a key for and
+    // the joining device never will, so counting it as coverage left the new
+    // install missing the row for good — no quarantine, nothing to see.
+    /** @var OpLogBackfiller $backfiller */
+    $backfiller = app(OpLogBackfiller::class);
+    expect($backfiller->backfill($userId, backfillWriter($userId, 'old-phone', isSelf: 0)))->toBeGreaterThan(0);
+
+    $recaptured = $backfiller->backfill($userId, backfillWriter($userId, 'this-device'));
+    expect($recaptured)->toBeGreaterThan(0);
+
+    $ownCreate = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'accounts')
+        ->where('pk', (string) $accountId)
+        ->where('device_id', 'this-device')
+        ->count();
+
+    expect($ownCreate)->toBeGreaterThan(0, 'a joining device can verify nothing this device did not sign');
 });
