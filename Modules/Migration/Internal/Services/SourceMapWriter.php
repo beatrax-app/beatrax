@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
 final readonly class SourceMapWriter
@@ -156,7 +157,12 @@ final readonly class SourceMapWriter
             return;
         }
 
+        // Minted rather than taken from the autoincrement: two devices used
+        // while apart both take the next one, and this table declares no
+        // unique index to tell the rows apart. Not derived — the map row it
+        // hangs off is matched by its natural key, so its id is this device's.
         $connection->table('migration_import_baseline')->insert([
+            'id' => DeviceMintedRowId::mint(),
             'user_id' => $user->id,
             'migration_source_map_id' => $mapId,
             'field_name' => $field,

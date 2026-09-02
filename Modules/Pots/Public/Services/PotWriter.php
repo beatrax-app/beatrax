@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
@@ -479,7 +480,13 @@ final readonly class PotWriter
         $row['created_at'] = $stamp;
         $row['updated_at'] = $stamp;
 
-        $id = $this->db->connection()->table('pot_movements')->insertGetId($row);
+        // Not the autoincrement: two devices used while apart both take the
+        // next one, and pot_movements has no unique index to tell the two
+        // rows apart afterwards. Minted rather than derived — a second
+        // deposit of the same amount on the same day is a second deposit.
+        $id = DeviceMintedRowId::mint();
+
+        $this->db->connection()->table('pot_movements')->insert(['id' => $id] + $row);
 
         return new EntityMutated(
             table: 'pot_movements',

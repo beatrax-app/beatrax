@@ -157,7 +157,7 @@
                         type="button"
                         role="radio"
                         aria-checked="{{ $activeScenarioId === $s->id ? 'true' : 'false' }}"
-                        wire:click="setScenario({{ $s->id }})"
+                        wire:click="setScenario('{{ $s->id }}')"
                         @class([
                             'rounded-md px-3 py-1 text-sm',
                             'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' => $activeScenarioId === $s->id,

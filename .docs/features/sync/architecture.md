@@ -556,6 +556,45 @@ A collision is recorded in `op_log_quarantine` with reason
 in `QuarantineReason::recoverable()`: the id is taken by another row, and no
 op arriving later frees it.
 
+### Which id a covered table gives a new row
+
+A table whose only identity is an autoincrement cannot tell one device's row
+from another's, and the section above is what happens when that goes wrong.
+Three answers make a table safe, and every covered table needs one:
+
+| Answer | When it is right |
+| --- | --- |
+| A **natural unique index** | The row has a key the schema already declares, so `PeerRowAliases` finds the local twin and reconciles the two ids. |
+| A **derived id** (`DerivedRowId::for()`) | Every device computes the same identity for the row, so both land on one id without exchanging a message. |
+| A **minted id** (`DeviceMintedRowId::mint()`) | No two devices could compute the same identity, so a random 63-bit value keeps them apart. |
+
+The test between the last two is not whether the row has columns that identify
+it, but **whether those columns are the same on every device**. A foreign key
+usually is not: a parent reconciled through `op_log_row_aliases` is held under a
+*different* id on each side, so an id derived from that key differs per device
+and derives nothing. `forecast_scenario_mutations` and
+`migration_import_baseline` are minted for exactly that reason, while
+`anomaly_suppression_rules` is derived because the alert it hangs off already
+has a derived id.
+
+Deriving where a row is an **event** is the worse mistake, not the safer one: two
+deposits of the same amount into one pot on one day are two deposits, and an id
+folded from their content gives them one row — losing money instead of
+duplicating it. `pot_movements`, `goals` and `saved_reports` are minted for that
+reason.
+
+`ACoveredTableTellsTwoDevicesRowsApartTest` enforces this: a covered table with
+an autoincrement, no other unique index and no id scheme fails it. Two groups
+are named there rather than quietly passing — the three rule tables, which never
+travel in either direction, and `transaction_splits`, which needs a decision
+about the *set* of legs rather than one row's id.
+
+Both id kinds run past 2<sup>53</sup>, so ids in those modules reach the browser
+**quoted** and come back through `DerivedRowId::fromWire()`.
+`ADerivedIdNeverReachesTheBrowserAsANumberArchTest` covers both, and is
+deliberately coarse: it flags every bare id in a module that mints any, small
+autoincrements included, because a blade cannot tell them apart by eye.
+
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 
 Routes each module's `*Mutated` events to the `OpLogWriter`. Wired in
