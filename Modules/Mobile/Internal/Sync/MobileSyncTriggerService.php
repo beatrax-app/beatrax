@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Sync;
 
 use Illuminate\Contracts\Session\Session;
+use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
@@ -122,13 +123,26 @@ final readonly class MobileSyncTriggerService
     // most two LanSyncClient::syncOnce() calls per invocation.
     private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity, Session $session): bool
     {
-        if ($this->lanSyncClient->syncOnce($host, $port, $identity, $session)) {
-            return true;
-        }
+        try {
+            if ($this->lanSyncClient->syncOnce($host, $port, $identity, $session)) {
+                return true;
+            }
 
-        // Single bounded retry — the OS local-network permission prompt may
-        // resolve between the first and second attempt.
-        return $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
+            // Single bounded retry — the OS local-network permission prompt may
+            // resolve between the first and second attempt.
+            return $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
+        } catch (LanSyncException $e) {
+            // The relay leg below degrades to "not reached" on any failure and
+            // this one did not, so a peer refusing the auth gate left the
+            // button raising instead of reporting. Never reached is the truth
+            // either way; the reason belongs in the log, not at the reader.
+            $this->logger?->info('MobileSyncTriggerService: LAN leg refused (not reached).', [
+                'reason' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     // Off-LAN leg (relay is opt-in, zero-knowledge). A real, bounded

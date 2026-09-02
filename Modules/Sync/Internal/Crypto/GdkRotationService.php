@@ -242,10 +242,48 @@ final readonly class GdkRotationService
                         $this->keyedRows->holdsRowsKeyedUnder($userId, $identity->deviceId, $blindIndexKeyHex, $session),
                     );
                 }
+
+                // Inside the same transaction as the wraps it accounts for, so
+                // the debt is cleared exactly when it is paid. A crash between
+                // the two would otherwise mark a peer supplied by wraps that
+                // rolled back, and nothing re-sends a fan-out.
+                $this->markEpochsDelivered($userId, $recipient->deviceId);
             });
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('GDK epoch fan-out to a device', $e);
         }
+    }
+
+    // What a confirmed peer is still owed, so a fan-out the pairing screen
+    // never reached can be repaid from a later request. Null means owed: the
+    // column starts null for every peer and is only ever stamped here.
+    /**
+     * @return list<int> device_registry ids
+     */
+    public function peersOwedEpochs(int $userId): array
+    {
+        $ids = [];
+
+        foreach ($this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->whereNotNull('confirmed_at')
+            ->whereNull('epochs_delivered_at')
+            ->pluck('id') as $id) {
+            if (is_numeric($id)) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function markEpochsDelivered(int $userId, string $peerDeviceId): void
+    {
+        $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $peerDeviceId)
+            ->update(['epochs_delivered_at' => Instant::zulu($this->clock->now())]);
     }
 
     /**

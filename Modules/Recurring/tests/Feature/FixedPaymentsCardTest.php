@@ -243,3 +243,42 @@ it('renders the period-window rows through the component itself', function (): v
         ->assertSee('due-in-period')
         ->assertDontSee('due-after-period');
 });
+
+// The pill beside each series printed RecurringSeriesDto::$direction straight
+// out, so a Dutch reader got "expense" on the same line as "uitgaven". English
+// hid it: the raw case and the label read the same, which is why only switching
+// the locale shows it.
+it('labels the direction pill in the reader language, never the raw enum case', function (): void {
+    fpcSeries($this->user, 'Zilveren Kruis', -14250);
+    fpcSeries($this->user, 'Salaris', 320000, ['direction' => 'income', 'cluster_key' => 'income::salaris::eur::monthly']);
+
+    app()->setLocale('nl');
+
+    $rendered = Livewire::actingAs($this->user)->test(FixedPaymentsCard::class);
+
+    $rendered->assertSee(Lang::get('recurring::fixed_payments.direction.expense'))
+        ->assertSee(Lang::get('recurring::fixed_payments.direction.income'))
+        ->assertDontSee('>expense<', escape: false)
+        ->assertDontSee('>income<', escape: false);
+});
+
+// Every locale answers, so the pill cannot fall back to the raw case in one of
+// the twenty-six. A key resolving to itself is exactly what the parity test
+// cannot see, because it compares the locales to each other.
+it('has a direction label in every locale that differs from the enum case', function (): void {
+    $missing = [];
+
+    foreach (array_map('basename', (array) glob(base_path('Modules/Recurring/Resources/lang/*'))) as $locale) {
+        app()->setLocale((string) $locale);
+
+        foreach (['expense', 'income'] as $case) {
+            $label = Lang::get('recurring::fixed_payments.direction.'.$case);
+
+            if ($label === '' || $label === 'recurring::fixed_payments.direction.'.$case) {
+                $missing[] = $locale.'/'.$case;
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
+});

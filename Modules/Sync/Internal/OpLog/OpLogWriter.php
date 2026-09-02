@@ -9,6 +9,7 @@ use LogicException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
@@ -36,6 +37,7 @@ final readonly class OpLogWriter
         private OpLogFieldCrypto $fieldCrypto,
         private GdkKeyringService $keyring,
         private SessionFactory $session,
+        private MergeRulesRegistry $rules,
     ) {
         $this->restoreClockState();
     }
@@ -112,11 +114,52 @@ final readonly class OpLogWriter
      */
     public function writeCreateRow(string $table, int|string $pk, array $fields): void
     {
-        foreach ($fields as $field => $rawValue) {
+        foreach ($this->withRowTimestamps($table, $pk, $fields) as $field => $rawValue) {
             $jsonValue = $rawValue !== null ? json_encode($rawValue, JSON_THROW_ON_ERROR) : null;
             [$jsonValue, $gdkEpochId] = $this->maybeEncrypt($table, $pk, $field, $jsonValue);
             $this->writeEntry($table, $pk, $field, $jsonValue, OpType::CreateRow, $gdkEpochId);
         }
+    }
+
+    // Thirteen call sites build a create payload: the backfill reads whole rows,
+    // the rest name columns by hand, and several named neither timestamp. A row
+    // then reached a peer complete or with both null, decided only by whether it
+    // predated pairing — and a null created_at is swept by no retention pass.
+    /**
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    private function withRowTimestamps(string $table, int|string $pk, array $fields): array
+    {
+        if (array_key_exists('created_at', $fields) && array_key_exists('updated_at', $fields)) {
+            return $fields;
+        }
+
+        // Read back rather than stamped with now(), so the peer records when
+        // the row was made and not when it travelled. Never blocks the write,
+        // in keeping with maybeEncrypt below.
+        try {
+            $row = (array) $this->db->connection()->table($table)->where('id', $pk)->first();
+        } catch (\Throwable) {
+            return $fields;
+        }
+
+        // These are columns the caller did not choose to send, so the policy
+        // the edit path consults has to be asked here too: users keeps its own
+        // timestamps device-local, and a table added tomorrow may as well.
+        $offTheWire = $this->rules->columnsNeverOnTheWire($table);
+
+        foreach (['created_at', 'updated_at'] as $column) {
+            if (in_array($column, $offTheWire, true)) {
+                continue;
+            }
+
+            if (! array_key_exists($column, $fields) && array_key_exists($column, $row)) {
+                $fields[$column] = $row[$column];
+            }
+        }
+
+        return $fields;
     }
 
     // Encrypts $jsonValue under the CURRENT GDK epoch when (table, field) is

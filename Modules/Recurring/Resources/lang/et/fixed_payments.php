@@ -11,6 +11,14 @@ return [
         'net' => 'neto',
     ],
 
+    // The pill beside each series. It printed Direction's raw case —
+    // "expense" beside "uitgaven" in the same line — because the value went
+    // straight to the template. Same words CashBook labels its picker with.
+    'direction' => [
+        'expense' => 'Kulu',
+        'income' => 'Tulu',
+    ],
+
     'filter_aria' => 'Filtreeri püsimakseid',
     'filter_all' => 'Kõik seeriad',
     'filter_this_month' => 'Ainult see kuu',

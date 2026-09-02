@@ -223,6 +223,7 @@ trait CrossDevicePairingHarness
             $table->text('last_seen_at')->nullable();
             $table->string('last_lan_host')->nullable();
             $table->unsignedInteger('last_lan_port')->nullable();
+            $table->string('epochs_delivered_at')->nullable();
             $table->text('created_at');
             $table->text('updated_at');
         });

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Recurring\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -48,6 +50,19 @@ final class RecurringSeriesDto extends Data
     public function displayName(): string
     {
         return $this->displayNameOverride ?? $this->detectedName;
+    }
+
+    // The dashboard pill printed this column raw, so a Dutch reader saw
+    // "expense" in the same line as "uitgaven". Bounded by the enum rather than
+    // interpolated straight in, so a value outside it cannot render a lang key
+    // at the reader instead of a word.
+    public function directionLabel(): string
+    {
+        return match (Direction::tryFrom($this->direction)) {
+            Direction::Expense => Lang::get('recurring::fixed_payments.direction.expense'),
+            Direction::Income => Lang::get('recurring::fixed_payments.direction.income'),
+            default => $this->direction,
+        };
     }
 
     // A rendered, enabled control whose transition the state graph forbids is a

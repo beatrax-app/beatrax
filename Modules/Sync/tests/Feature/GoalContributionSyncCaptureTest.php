@@ -116,7 +116,7 @@ function goalContributionCaptureFixture(DatabaseManager $db): array
     ];
 }
 
-it('lands a create_row op per identity column when a contribution is attributed', function (): void {
+it('lands a create_row op per stored column when a contribution is attributed', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     [
@@ -143,9 +143,16 @@ it('lands a create_row op per identity column when a contribution is attributed'
         ->where('table_name', 'goal_contributions')
         ->get();
 
-    expect($rows)->toHaveCount(3);
+    // Five, not the three the payload names: writeCreateRow reads the row's
+    // timestamps back so a live write sends what the backfill's whole-row read
+    // already sent. A peer holding the identity columns and a null created_at
+    // is swept by no retention pass and has no place in a keyset order.
+    expect($rows)->toHaveCount(5);
     expect($rows->pluck('op_type')->unique()->all())->toBe(['create_row']);
-    expect($rows->pluck('field')->sort()->values()->all())->toBe(['goal_id', 'transaction_id', 'user_id']);
+    expect($rows->pluck('field')->sort()->values()->all())
+        ->toBe(['created_at', 'goal_id', 'transaction_id', 'updated_at', 'user_id']);
+
+    expect((string) $rows->firstWhere('field', 'created_at')->value)->toContain('2026-06-14');
 });
 
 it('lands a delete_tombstone op when an attribution is removed', function (): void {

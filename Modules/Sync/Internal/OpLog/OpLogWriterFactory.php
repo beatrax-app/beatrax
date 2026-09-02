@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
@@ -103,6 +104,7 @@ final readonly class OpLogWriterFactory
             publicKey: $publicKey,
             sensitiveFields: $this->app->make(SensitiveFieldRegistry::class),
             fieldCrypto: $this->app->make(OpLogFieldCrypto::class),
+            rules: $this->app->make(MergeRulesRegistry::class),
             keyring: $this->app->make(GdkKeyringService::class),
             session: $this->app->make(SessionFactory::class),
         );
