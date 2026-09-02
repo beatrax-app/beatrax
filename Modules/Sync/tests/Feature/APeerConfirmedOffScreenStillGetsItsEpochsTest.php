@@ -5,11 +5,14 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Http\Middleware\DeliversOwedEpochs;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Symfony\Component\HttpFoundation\Response;
 
 uses(RefreshDatabase::class);
 
@@ -101,4 +104,44 @@ it('still owes a peer that was admitted before this column existed', function ()
         ->update(['epochs_delivered_at' => null]);
 
     expect(app(GdkRotationService::class)->peersOwedEpochs((int) $user->id))->toContain($registryId);
+});
+
+// The tail has two halves and the screen skipped both. A key with no history
+// behind it hands the peer a readable log of only what was captured live: this
+// desktop sent 103 transactions from the one import that post-dated sync and
+// none of the 35 that predated it. ResumesPreSyncCapture cannot start one —
+// it only ever resumes a capture that is already open.
+it('opens the pre-sync capture the same skipped tail owed', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pcoUser();
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+    app(GdkKeyringService::class)->generateAndPersist($userId, $session);
+    pcoConfirmedPeer($user);
+
+    // A row that predates sync, so only the history capture can carry it.
+    $db->connection()->table('accounts')->insert([
+        'user_id' => $userId,
+        'name' => 'Predates sync',
+        'slug' => 'pco-pre-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00PCO'.strtoupper(bin2hex(random_bytes(5))),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-09-01 23:00:00',
+        'updated_at' => '2026-09-01 23:00:00',
+    ]);
+
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())->toBe(0);
+
+    app(DeliversOwedEpochs::class)->terminate(Request::create('/'), new Response);
+
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
+        ->toBeGreaterThan(0, 'the peer was handed a key with no history behind it');
 });

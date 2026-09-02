@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -85,5 +86,11 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
                 return;
             }
         }
+
+        // The other half of the same tail. A key with no history behind it left
+        // this desktop sending only what was captured live — 103 rows from the
+        // import that post-dated sync, none of the 35 before it. Opening the
+        // capture is what gives ResumesPreSyncCapture something to finish.
+        $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
     }
 }
