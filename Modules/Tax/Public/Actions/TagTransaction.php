@@ -102,9 +102,42 @@ final readonly class TagTransaction
             );
         }
 
-        // A bare where('transaction_split_id', null) does not reliably compile
-        // to IS NULL, so the whole-transaction branch uses whereNull().
         $now = $this->clock->now()->toDateTimeString();
+        $wasUpdate = $this->upsertTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $note, $taxYearOverride, $now);
+
+        // field_provenance lives only on transactions, so leg-scoped tags
+        // stamp the same whole-transaction key as whole-transaction tags.
+        $this->provenance->stamp($userId, $transactionId, ['tax_tag' => $provenanceSource]);
+
+        $this->events->dispatch(new TransactionTagged(
+            userId: $userId,
+            transactionId: $transactionId,
+            deductionCategoryId: $deductionCategoryId,
+        ));
+
+        // A create_row naming a row the peer already holds is ignored, so
+        // announcing every re-tag as a create left the two devices disagreeing
+        // for good — no quarantine, no error, nothing to see.
+        $this->captureTag($userId, $transactionId, $transactionSplitId, $wasUpdate ? 'edit' : 'create', $wasUpdate
+            ? self::editedColumns($deductionCategoryId, $note, $taxYearOverride, $now)
+            : self::createdColumns($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $note, $taxYearOverride));
+
+        $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+    }
+
+    // True when the row was already there, which is what decides whether the
+    // peer is told to create it or to change it. A bare
+    // where('transaction_split_id', null) does not reliably compile to IS NULL,
+    // so the whole-transaction branch uses whereNull().
+    private function upsertTag(
+        int $userId,
+        int $transactionId,
+        ?int $transactionSplitId,
+        ?int $deductionCategoryId,
+        ?string $note,
+        ?int $taxYearOverride,
+        string $now,
+    ): bool {
         $connection = $this->db->connection();
 
         $exists = $connection
@@ -118,56 +151,44 @@ final readonly class TagTransaction
             )
             ->exists();
 
-        $wasUpdate = $exists;
-
         if ($exists) {
             $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
-        } else {
-            try {
-                $connection
-                    ->table('tax_transaction_tags')
-                    ->insert([
-                        'user_id' => $userId,
-                        'transaction_id' => $transactionId,
-                        'transaction_split_id' => $transactionSplitId,
-                        'deduction_category_id' => $deductionCategoryId,
-                        'note' => $this->encryptNote($note, $userId),
-                        'tax_year_override' => $taxYearOverride,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-            } catch (UniqueConstraintViolationException) {
-                // Lost the select-then-insert race; the row exists now, so
-                // retry as the guarded update rather than surfacing a 500.
-                $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
-                $wasUpdate = true;
-            }
+
+            return true;
         }
 
-        // field_provenance lives only on transactions, so leg-scoped tags
-        // stamp the same whole-transaction key as whole-transaction tags.
-        $this->provenance->stamp($userId, $transactionId, ['tax_tag' => $provenanceSource]);
+        try {
+            $connection
+                ->table('tax_transaction_tags')
+                ->insert([
+                    'user_id' => $userId,
+                    'transaction_id' => $transactionId,
+                    'transaction_split_id' => $transactionSplitId,
+                    'deduction_category_id' => $deductionCategoryId,
+                    'note' => $this->encryptNote($note, $userId),
+                    'tax_year_override' => $taxYearOverride,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
 
-        $this->events->dispatch(new TransactionTagged(
-            userId: $userId,
-            transactionId: $transactionId,
-            deductionCategoryId: $deductionCategoryId,
-        ));
+            return false;
+        } catch (UniqueConstraintViolationException) {
+            // Lost the select-then-insert race; the row exists now, so retry as
+            // the guarded update rather than surfacing a 500. It is an update
+            // like any other, so the peer hears about it as one.
+            $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
 
-        $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $note, $taxYearOverride, $now, $wasUpdate);
-
-        $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+            return true;
+        }
     }
 
+    /** @param array<string, mixed> $dirtyFields */
     private function captureTag(
         int $userId,
         int $transactionId,
         ?int $transactionSplitId,
-        ?int $deductionCategoryId,
-        ?string $note,
-        ?int $taxYearOverride,
-        string $now,
-        bool $wasUpdate,
+        string $mutationType,
+        array $dirtyFields,
     ): void {
         $id = $this->db->connection()
             ->table('tax_transaction_tags')
@@ -188,21 +209,32 @@ final readonly class TagTransaction
             table: 'tax_transaction_tags',
             pk: (int) $id,
             userId: $userId,
-            // A create_row naming a row the peer already holds is ignored, so
-            // announcing every re-tag as a create left the two devices
-            // disagreeing for good — no quarantine, no error, nothing to see.
-            mutationType: $wasUpdate ? 'edit' : 'create',
-            dirtyFields: $wasUpdate
-                ? self::editedColumns($deductionCategoryId, $note, $taxYearOverride, $now)
-                : [
-                    'user_id' => $userId,
-                    'transaction_id' => $transactionId,
-                    'transaction_split_id' => $transactionSplitId,
-                    'deduction_category_id' => $deductionCategoryId,
-                    'note' => $note,
-                    'tax_year_override' => $taxYearOverride,
-                ],
+            mutationType: $mutationType,
+            dirtyFields: $dirtyFields,
         ));
+    }
+
+    // Every column the insert wrote but the two the writer fills in itself.
+    // note travels as plaintext: OpLogWriter seals it again under the current
+    // key epoch, so the stored ciphertext would be encrypted twice and the peer
+    // would never read it.
+    /** @return array<string, mixed> */
+    private static function createdColumns(
+        int $userId,
+        int $transactionId,
+        ?int $transactionSplitId,
+        ?int $deductionCategoryId,
+        ?string $note,
+        ?int $taxYearOverride,
+    ): array {
+        return [
+            'user_id' => $userId,
+            'transaction_id' => $transactionId,
+            'transaction_split_id' => $transactionSplitId,
+            'deduction_category_id' => $deductionCategoryId,
+            'note' => $note,
+            'tax_year_override' => $taxYearOverride,
+        ];
     }
 
     // Exactly what updateExisting() wrote, and nothing more: it leaves the three

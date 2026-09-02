@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Illuminate\Support\Facades\Event;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Public\Actions\TagTransaction;
 
 uses(RefreshDatabase::class);
@@ -17,7 +18,7 @@ uses(RefreshDatabase::class);
 
 function retagUserId(DatabaseManager $db): int
 {
-    $id = (int) $db->connection()->table('users')->insertGetId([
+    return (int) $db->connection()->table('users')->insertGetId([
         'username' => 'retag-'.bin2hex(random_bytes(4)),
         'password' => 'fixture',
         'period_start_day' => 1,
@@ -25,17 +26,6 @@ function retagUserId(DatabaseManager $db): int
         'created_at' => now(),
         'updated_at' => now(),
     ]);
-
-    $keypair = sodium_crypto_sign_keypair();
-
-    app()->instance(OpLogWriter::class, app(OpLogWriter::class, [
-        'deviceId' => 'retag-device',
-        'userId' => $id,
-        'secretKey' => sodium_crypto_sign_secretkey($keypair),
-        'publicKey' => sodium_crypto_sign_publickey($keypair),
-    ]));
-
-    return $id;
 }
 
 function retagTransactionId(DatabaseManager $db, int $userId): int
@@ -75,20 +65,25 @@ function retagCategoryId(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
-/** @return list<array{field: string, op: string}> this user's tax-tag ops, oldest first */
-function retagOps(DatabaseManager $db, int $userId): array
+/** @return list<EntityMutated> every tax-tag announcement, in order */
+function retagAnnouncements(): array
 {
-    $rows = [];
+    $seen = [];
 
-    foreach ($db->connection()->table('op_log_entries')
-        ->where('user_id', $userId)->where('table_name', 'tax_transaction_tags')->orderBy('id')->get() as $row) {
-        $rows[] = ['field' => (string) $row->field, 'op' => (string) $row->op_type];
+    foreach (Event::dispatched(EntityMutated::class) as $dispatch) {
+        $event = $dispatch[0];
+
+        if ($event instanceof EntityMutated && $event->table === 'tax_transaction_tags') {
+            $seen[] = $event;
+        }
     }
 
-    return $rows;
+    return $seen;
 }
 
 it('sends the note the first tag wrote', function (): void {
+    Event::fake([EntityMutated::class]);
+
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = retagUserId($db);
@@ -97,12 +92,16 @@ it('sends the note the first tag wrote', function (): void {
 
     app(TagTransaction::class)->execute($userId, $txId, $catId, 'Tandarts rekening', null, null);
 
-    $fields = array_column(retagOps($db, $userId), 'field');
+    $announced = retagAnnouncements();
 
-    expect($fields)->toContain('note');
+    expect($announced)->toHaveCount(1);
+    expect(array_keys($announced[0]->dirtyFields))->toContain('note');
+    expect($announced[0]->dirtyFields['note'])->toBe('Tandarts rekening');
 });
 
 it('announces a re-tag as an edit, which is the only shape a peer applies', function (): void {
+    Event::fake([EntityMutated::class]);
+
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = retagUserId($db);
@@ -111,21 +110,23 @@ it('announces a re-tag as an edit, which is the only shape a peer applies', func
     $second = retagCategoryId($db, $userId, 'Giften');
 
     app(TagTransaction::class)->execute($userId, $txId, $first, 'Eerste notitie', null, null);
-    $afterCreate = count(retagOps($db, $userId));
-
     app(TagTransaction::class)->execute($userId, $txId, $second, 'Tweede notitie', null, null);
 
-    $edit = array_slice(retagOps($db, $userId), $afterCreate);
+    $announced = retagAnnouncements();
 
-    expect($edit)->not->toBeEmpty('a re-tag that emits nothing leaves the peer on the old category');
-    expect(array_unique(array_column($edit, 'op')))->toBe(['set']);
-    expect(array_column($edit, 'field'))->toContain('deduction_category_id')->toContain('note');
+    expect($announced)->toHaveCount(2);
+    expect($announced[0]->mutationType)->toBe('create');
+    expect($announced[1]->mutationType)->toBe('edit', 'a re-tag announced as a create is discarded by a peer that already holds the row');
+    expect($announced[1]->dirtyFields['deduction_category_id'])->toBe($second)
+        ->and($announced[1]->dirtyFields['note'])->toBe('Tweede notitie');
 });
 
 // updateExisting() leaves the three payload columns alone when every one of them
 // is null, so announcing them anyway would send three null sets and wipe values
 // the peer still holds.
 it('does not wipe the peer when a re-tag carries nothing', function (): void {
+    Event::fake([EntityMutated::class]);
+
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = retagUserId($db);
@@ -133,9 +134,10 @@ it('does not wipe the peer when a re-tag carries nothing', function (): void {
     $catId = retagCategoryId($db, $userId, 'Zorgkosten');
 
     app(TagTransaction::class)->execute($userId, $txId, $catId, 'Eerste notitie', null, null);
-    $afterCreate = count(retagOps($db, $userId));
-
     app(TagTransaction::class)->execute($userId, $txId, null, null, null, null);
 
-    expect(array_column(array_slice(retagOps($db, $userId), $afterCreate), 'field'))->toBe(['updated_at']);
+    $announced = retagAnnouncements();
+
+    expect($announced)->toHaveCount(2);
+    expect(array_keys($announced[1]->dirtyFields))->toBe(['updated_at']);
 });
