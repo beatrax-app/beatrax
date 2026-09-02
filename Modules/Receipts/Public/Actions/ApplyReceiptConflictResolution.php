@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use JsonException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
@@ -59,6 +60,7 @@ final readonly class ApplyReceiptConflictResolution
         private CounterpartyKey $counterpartyKey,
         private Dispatcher $events,
         private LoggerInterface $logger,
+        private WriteUserPreference $preferences,
     ) {}
 
     // One conflict per call, because the toast names one conflict and quotes
@@ -111,6 +113,12 @@ final readonly class ApplyReceiptConflictResolution
                 dirtyFields: $mutation,
             ));
         }
+
+        // The policy is the reader's, not this device's, and the update above
+        // writes it to a synced column that nothing was announcing. Outside the
+        // $mutation guard: the choice is stored even when no conflict row was
+        // there to resolve.
+        $this->preferences->announce($user->id, ['receipt_conflict_resolution']);
 
         return $resolved;
     }
