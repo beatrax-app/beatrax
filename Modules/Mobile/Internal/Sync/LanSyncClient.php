@@ -103,6 +103,17 @@ final readonly class LanSyncClient
 
             return true;
         } catch (LanSyncException $e) {
+            // Same condition as the block below — the dial never completed —
+            // and rethrowing put an error page in front of a reader whose
+            // other device had merely gone to sleep.
+            if ($e->isDialIncomplete()) {
+                $this->logger?->info('LanSyncClient: LAN dial did not complete (retryable).', [
+                    'reason' => $e::class,
+                ]);
+
+                return false;
+            }
+
             if (! $e->isPeerRevocation()) {
                 throw $e;
             }
