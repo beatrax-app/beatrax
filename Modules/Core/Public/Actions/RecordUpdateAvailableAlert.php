@@ -42,8 +42,8 @@ final readonly class RecordUpdateAvailableAlert
 
         // Derived, not minted: every device polls the same feed and raises this
         // alert for itself, and the kind and version are the same strings
-        // everywhere. insertOrIgnore because that id is now the dedupe key —
-        // the poll is scheduled, and a plain insert wrote one row per poll.
+        // everywhere. insertOrIgnore because the id is now unique per release,
+        // so a caller past poll()'s own guard would otherwise raise here.
         $this->db->connection()->table('system_alerts')->insertOrIgnore([
             'id' => DerivedRowId::for('system_alerts', [
                 'kind' => $kind->value,
