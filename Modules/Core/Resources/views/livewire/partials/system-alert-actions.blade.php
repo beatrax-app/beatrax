@@ -42,17 +42,17 @@
         <div class="flex flex-wrap items-center justify-end gap-2">
             <x-core::neutral-button
                 size="sm"
-                wire:click="install({{ $alert->id }})"
+                wire:click="install('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
-                wire:target="install({{ $alert->id }})"
+                wire:target="install('{{ $alert->id }}')"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
             >{{ Lang::get('core::alerts.actions.install_next_launch') }}</x-core::neutral-button>
             <button
                 type="button"
-                wire:click="skipVersion({{ $alert->id }})"
+                wire:click="skipVersion('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
-                wire:target="skipVersion({{ $alert->id }})"
+                wire:target="skipVersion('{{ $alert->id }}')"
                 class="rounded bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >{{ Lang::get('core::alerts.actions.skip_version') }}</button>
             @if ($releaseTag !== null)
@@ -69,18 +69,18 @@
         <div class="flex flex-wrap items-center justify-end gap-2">
             <button
                 type="button"
-                wire:click="acknowledge({{ $alert->id }})"
+                wire:click="acknowledge('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
-                wire:target="acknowledge({{ $alert->id }})"
+                wire:target="acknowledge('{{ $alert->id }}')"
                 aria-label="{{ Lang::get('core::alerts.actions.update_now_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-amber-600 text-white hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600 px-3 py-1.5 text-sm font-medium dark:bg-amber-500 dark:hover:bg-amber-400"
             >{{ Lang::get('core::alerts.actions.update_now') }}</button>
             <button
                 type="button"
-                wire:click="acknowledge({{ $alert->id }})"
+                wire:click="acknowledge('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
-                wire:target="acknowledge({{ $alert->id }})"
+                wire:target="acknowledge('{{ $alert->id }}')"
                 class="rounded bg-amber-100 text-amber-900 hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600 px-3 py-1.5 text-sm font-medium dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800"
             >{{ Lang::get('core::alerts.actions.remind_later') }}</button>
         </div>
@@ -89,9 +89,9 @@
         <div class="flex items-center justify-end">
             <button
                 type="button"
-                wire:click="install({{ $alert->id }})"
+                wire:click="install('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
-                wire:target="install({{ $alert->id }})"
+                wire:target="install('{{ $alert->id }}')"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-700 dark:bg-rose-600"
@@ -101,9 +101,9 @@
     @default
         <button
             type="button"
-            wire:click="acknowledge({{ $alert->id }})"
+            wire:click="acknowledge('{{ $alert->id }}')"
             wire:loading.attr="disabled"
-            wire:target="acknowledge({{ $alert->id }})"
+            wire:target="acknowledge('{{ $alert->id }}')"
             aria-label="{{ Lang::get('core::alerts.actions.mark_resolved_aria', ['id' => $alert->id]) }}"
             data-testid="resolve-alert-{{ $alert->id }}"
             @class([

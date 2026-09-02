@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Dto\UpdateManifestDto;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\StoredCopy;
 
 final readonly class RecordUpdateAvailableAlert
@@ -39,7 +40,15 @@ final readonly class RecordUpdateAvailableAlert
             'publishedAt' => $manifest->publishedAt->toIso8601String(),
         ], static fn (?string $value): bool => $value !== null);
 
-        $this->db->connection()->table('system_alerts')->insert([
+        // Derived, not minted: every device polls the same feed and raises this
+        // alert for itself, and the kind and version are the same strings
+        // everywhere. insertOrIgnore because that id is now the dedupe key —
+        // the poll is scheduled, and a plain insert wrote one row per poll.
+        $this->db->connection()->table('system_alerts')->insertOrIgnore([
+            'id' => DerivedRowId::for('system_alerts', [
+                'kind' => $kind->value,
+                'latest_version' => $manifest->latestVersion,
+            ]),
             'user_id' => null,
             'kind' => $kind->value,
             'severity' => $kind->severity()->value,

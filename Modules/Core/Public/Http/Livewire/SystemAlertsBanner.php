@@ -17,6 +17,7 @@ use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Services\UserPreferenceWriter;
+use Modules\Core\Public\Support\DerivedRowId;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class SystemAlertsBanner extends Component
@@ -35,8 +36,10 @@ final class SystemAlertsBanner extends Component
         ]);
     }
 
-    public function acknowledge(int $alertId, AcknowledgeSystemAlert $action, CurrentUser $currentUser): void
+    public function acknowledge(int|string $alertId, AcknowledgeSystemAlert $action, CurrentUser $currentUser): void
     {
+        $alertId = DerivedRowId::fromWire($alertId);
+
         try {
             $action($alertId, $currentUser->user());
         } catch (NotFoundHttpException) {
@@ -52,11 +55,13 @@ final class SystemAlertsBanner extends Component
     // re-verified download, so on web or mobile — where no listener is bound —
     // the click is inert and nothing outside the app stores ever installs.
     public function install(
-        int $alertId,
+        int|string $alertId,
         AcknowledgeSystemAlert $acknowledge,
         CurrentUser $currentUser,
         SystemAlertQuery $query,
     ): void {
+        $alertId = DerivedRowId::fromWire($alertId);
+
         $alert = $query->visibleTo($alertId, $currentUser->user());
         if ($alert === null) {
             return;
@@ -75,12 +80,14 @@ final class SystemAlertsBanner extends Component
     // acknowledges the alert in one wire round-trip. Idempotent — re-skipping
     // an already-present version does not duplicate the entry.
     public function skipVersion(
-        int $alertId,
+        int|string $alertId,
         UserPreferenceWriter $preferences,
         CurrentUser $currentUser,
         AcknowledgeSystemAlert $acknowledge,
         SystemAlertQuery $query,
     ): void {
+        $alertId = DerivedRowId::fromWire($alertId);
+
         $user = $currentUser->user();
         $alert = $query->visibleTo($alertId, $user);
         if ($alert === null) {

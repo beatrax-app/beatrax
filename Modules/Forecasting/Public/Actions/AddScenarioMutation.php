@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Forecasting\Internal\Support\ScenarioHorizonBounds;
 use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
@@ -54,6 +55,11 @@ final readonly class AddScenarioMutation
 
         $mutation = $this->db->connection()->transaction(function () use ($scenarioId, $user, $kind, $payload, $targetSeriesId, $now): ForecastScenarioMutation {
             $mutation = new ForecastScenarioMutation;
+            // Minted rather than taken from the autoincrement: two devices used
+            // while apart both take the next one, and this table declares no
+            // unique index to tell the rows apart. Not derived — the scenario
+            // it hangs off has an id of its own on each device.
+            $mutation->id = DeviceMintedRowId::mint();
             $mutation->user_id = $user->id;
             $mutation->forecast_scenario_id = $scenarioId;
             $mutation->kind = $kind;
