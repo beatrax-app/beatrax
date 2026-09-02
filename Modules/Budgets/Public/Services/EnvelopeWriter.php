@@ -464,6 +464,7 @@ final readonly class EnvelopeWriter
                 'amount_minor' => -$minor,
                 'currency' => $currency,
                 'kind' => EnvelopeMoveKind::MoveOut->value,
+                'memo' => $memo,
                 'move_group_id' => $groupId,
             ],
         ));
@@ -480,6 +481,7 @@ final readonly class EnvelopeWriter
                 'amount_minor' => $minor,
                 'currency' => $currency,
                 'kind' => EnvelopeMoveKind::MoveIn->value,
+                'memo' => $memo,
                 'move_group_id' => $groupId,
             ],
         ));
