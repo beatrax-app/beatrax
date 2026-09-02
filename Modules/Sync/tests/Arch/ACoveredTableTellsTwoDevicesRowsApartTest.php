@@ -38,9 +38,11 @@ function stillExposed(): array
 }
 
 // Walked rather than found through Finder: composer-require-checker reads
-// Modules/*/tests as production code, and that dependency is dev-only.
+// Modules/*/tests as production code, and that dependency is dev-only. Named
+// apart from the walker in AModalNothingOpensIsAControl...: both load into one
+// process, and a second global of the same name is a fatal.
 /** @return list<string> */
-function moduleSourceFiles(bool $includeTests = false, ?string $only = null): array
+function rowIdentitySourceFiles(bool $includeTests = false, ?string $only = null): array
 {
     $paths = [];
 
@@ -74,7 +76,7 @@ function tablesWithAnIdScheme(): array
     $named = [];
     $minting = [];
 
-    foreach (moduleSourceFiles() as $path) {
+    foreach (rowIdentitySourceFiles() as $path) {
         $source = (string) file_get_contents($path);
 
         if (preg_match_all("/DerivedRowId::for\(\s*'([a-z_]+)'/", $source, $found) !== false) {
@@ -130,7 +132,7 @@ function modelTablesByClassName(): array
 {
     $tables = [];
 
-    foreach (moduleSourceFiles(includeTests: false, only: '#/Models/#') as $path) {
+    foreach (rowIdentitySourceFiles(includeTests: false, only: '#/Models/#') as $path) {
         $source = (string) file_get_contents($path);
 
         if (preg_match('/^namespace\s+([^;]+);/m', $source, $ns) !== 1) {
