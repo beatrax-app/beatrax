@@ -118,6 +118,8 @@ final readonly class TagTransaction
             )
             ->exists();
 
+        $wasUpdate = $exists;
+
         if ($exists) {
             $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
         } else {
@@ -138,6 +140,7 @@ final readonly class TagTransaction
                 // Lost the select-then-insert race; the row exists now, so
                 // retry as the guarded update rather than surfacing a 500.
                 $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
+                $wasUpdate = true;
             }
         }
 
@@ -151,7 +154,7 @@ final readonly class TagTransaction
             deductionCategoryId: $deductionCategoryId,
         ));
 
-        $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $taxYearOverride);
+        $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $note, $taxYearOverride, $now, $wasUpdate);
 
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
     }
@@ -161,7 +164,10 @@ final readonly class TagTransaction
         int $transactionId,
         ?int $transactionSplitId,
         ?int $deductionCategoryId,
+        ?string $note,
         ?int $taxYearOverride,
+        string $now,
+        bool $wasUpdate,
     ): void {
         $id = $this->db->connection()
             ->table('tax_transaction_tags')
@@ -182,15 +188,39 @@ final readonly class TagTransaction
             table: 'tax_transaction_tags',
             pk: (int) $id,
             userId: $userId,
-            mutationType: 'create',
-            dirtyFields: [
-                'user_id' => $userId,
-                'transaction_id' => $transactionId,
-                'transaction_split_id' => $transactionSplitId,
-                'deduction_category_id' => $deductionCategoryId,
-                'tax_year_override' => $taxYearOverride,
-            ],
+            // A create_row naming a row the peer already holds is ignored, so
+            // announcing every re-tag as a create left the two devices
+            // disagreeing for good — no quarantine, no error, nothing to see.
+            mutationType: $wasUpdate ? 'edit' : 'create',
+            dirtyFields: $wasUpdate
+                ? self::editedColumns($deductionCategoryId, $note, $taxYearOverride, $now)
+                : [
+                    'user_id' => $userId,
+                    'transaction_id' => $transactionId,
+                    'transaction_split_id' => $transactionSplitId,
+                    'deduction_category_id' => $deductionCategoryId,
+                    'note' => $note,
+                    'tax_year_override' => $taxYearOverride,
+                ],
         ));
+    }
+
+    // Exactly what updateExisting() wrote, and nothing more: it leaves the three
+    // payload columns alone when all of them are null, so announcing them anyway
+    // would send three null sets and wipe the values the peer still holds.
+    /** @return array<string, mixed> */
+    private static function editedColumns(?int $deductionCategoryId, ?string $note, ?int $taxYearOverride, string $now): array
+    {
+        if ($deductionCategoryId === null && $note === null && $taxYearOverride === null) {
+            return ['updated_at' => $now];
+        }
+
+        return [
+            'deduction_category_id' => $deductionCategoryId,
+            'note' => $note,
+            'tax_year_override' => $taxYearOverride,
+            'updated_at' => $now,
+        ];
     }
 
     // Whole-payload upsert: a bare all-null re-tag leaves the row alone, but
