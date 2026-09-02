@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Middleware\DeliversOwedEpochs;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairedDeviceAdmitter;
 use Symfony\Component\HttpFoundation\Response;
 
 uses(RefreshDatabase::class);
@@ -186,4 +187,44 @@ it('captures the history even when a peer cannot be sealed to', function (): voi
 
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
         ->toBeGreaterThan(0, 'an unsealable peer blocked this device capturing its own history');
+});
+
+// Removing a device revokes it and mints a NEW epoch it has never held. If it
+// pairs again without a reinstall the registry row is matched on
+// (user_id, device_id) and reused, so a stamp left from the previous pairing
+// would read as already-delivered and nothing would ever send the new key.
+it('owes a re-admitted device its epochs again', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pcoUser();
+    $userId = (int) $user->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+    app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+
+    $registryId = pcoConfirmedPeer($user);
+    $row = $db->connection()->table('device_registry')->where('id', $registryId)->first();
+
+    // Delivered once, then removed — the state a re-pair starts from.
+    $db->connection()->table('device_registry')->where('id', $registryId)->update([
+        'epochs_delivered_at' => '2026-09-01T23:34:22Z',
+        'confirmed_at' => null,
+    ]);
+    expect(app(GdkRotationService::class)->peersOwedEpochs($userId))->toBe([]);
+
+    // The shape admitResponderDevice() reads: the pairing token row naming
+    // the peer that just confirmed.
+    $token = (object) [
+        'responder_device_id' => (string) $row->device_id,
+        'responder_ed25519_pub_hex' => (string) $row->ed25519_public_key_hex,
+        'responder_x25519_pub_hex' => (string) $row->x25519_public_key_hex,
+        'responder_name' => 'iPhone',
+        'initiator_ed25519_pub_hex' => (string) $row->ed25519_public_key_hex,
+    ];
+
+    app(PairedDeviceAdmitter::class)->admitResponderDevice($token, $userId);
+
+    expect(app(GdkRotationService::class)->peersOwedEpochs($userId))->toContain($registryId);
 });

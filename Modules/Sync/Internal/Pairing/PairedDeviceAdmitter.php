@@ -136,6 +136,11 @@ final readonly class PairedDeviceAdmitter
                     'safety_number_words' => $safetyWords,
                     'confirmed_at' => $now,
                     'updated_at' => $now,
+                    // Admitting a device means it is owed every epoch again,
+                    // and removal mints a fresh one it has never held. Left
+                    // stamped from the previous pairing, this row would read as
+                    // already-delivered and nothing would ever send them.
+                    'epochs_delivered_at' => null,
                     // Conditional: a re-admit over the relay carries no
                     // address, and writing null would throw away the one the
                     // LAN pairing already recorded.
