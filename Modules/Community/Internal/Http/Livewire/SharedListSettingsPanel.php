@@ -12,6 +12,7 @@ use Modules\Community\Public\Enums\CommunitySetting;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
 use Modules\Community\Public\Services\CommunitySettings;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 
@@ -46,17 +47,17 @@ final class SharedListSettingsPanel extends Component
         $this->updateOnAppUpdates = CommunitySettings::readFrom($settings, CommunitySetting::UpdateOnAppUpdates);
     }
 
-    public function toggleUseSharedList(CurrentUser $currentUser): void
+    public function toggleUseSharedList(CurrentUser $currentUser, WriteUserPreference $preferences): void
     {
         $this->useSharedList = ! $this->useSharedList;
-        $this->persist($currentUser->user(), CommunitySetting::UseSharedList, $this->useSharedList);
+        $this->persist($currentUser->user(), CommunitySetting::UseSharedList, $this->useSharedList, $preferences);
         $this->dispatch('shared-list-settings:saved');
     }
 
-    public function toggleOfferToContribute(CurrentUser $currentUser): void
+    public function toggleOfferToContribute(CurrentUser $currentUser, WriteUserPreference $preferences): void
     {
         $this->offerToContribute = ! $this->offerToContribute;
-        $this->persist($currentUser->user(), CommunitySetting::OfferToContribute, $this->offerToContribute);
+        $this->persist($currentUser->user(), CommunitySetting::OfferToContribute, $this->offerToContribute, $preferences);
         $this->dispatch('shared-list-settings:saved');
     }
 
@@ -74,12 +75,17 @@ final class SharedListSettingsPanel extends Component
         ]);
     }
 
-    private function persist(User $user, CommunitySetting $setting, bool $value): void
+    // community_settings is a synced column, and saving the model is not an
+    // announcement. Without this the toggle stayed on the device it was
+    // flipped on: the backfill had already sent the column as null.
+    private function persist(User $user, CommunitySetting $setting, bool $value, WriteUserPreference $preferences): void
     {
         $settings = self::settingsOf($user);
         $settings[$setting->value] = $value;
         $user->community_settings = $settings;
         $user->save();
+
+        $preferences->announce($user->id, ['community_settings']);
     }
 
     /**
