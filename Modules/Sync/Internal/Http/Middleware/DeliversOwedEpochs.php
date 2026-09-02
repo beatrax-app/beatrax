@@ -61,11 +61,10 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
 
         $this->fanOutTo($owed, $userId, $session);
 
-        // Deliberately NOT gated on the fan-out above. They are two
-        // independent debts of the same skipped tail, and a peer whose key
-        // material can never be sealed would otherwise hold this device's own
-        // history hostage for good. Opening the capture is also the only thing
-        // that gives ResumesPreSyncCapture something to finish.
+        // Deliberately NOT gated on the fan-out above: two independent debts
+        // of one skipped tail. A peer whose key material can never be sealed
+        // would otherwise hold this device's own history hostage for good, and
+        // opening the capture is all ResumesPreSyncCapture has to finish.
         $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
     }
 
