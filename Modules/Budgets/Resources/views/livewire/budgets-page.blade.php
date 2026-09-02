@@ -167,8 +167,8 @@
                                 type="text"
                                 inputmode="{{ MoneyInput::decimalPlaces($row->currency) === 0 ? 'numeric' : 'decimal' }}"
                                 wire:model="assignedInputs.{{ $row->categoryId }}"
-                                wire:keydown.enter="setAssigned({{ $row->categoryId }})"
-                                wire:blur="setAssigned({{ $row->categoryId }})"
+                                wire:keydown.enter="setAssigned('{{ $row->categoryId }}')"
+                                wire:blur="setAssigned('{{ $row->categoryId }}')"
                                 aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryPath]) }}"
                                 placeholder="{{ MoneyInput::formatAbsMinor(0, $row->currency) }}"
                                 class="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -194,7 +194,7 @@
                         <td class="px-4 py-2">
                             <select
                                 x-data="{ mode: @js($row->overspendMode->value) }"
-                                x-on:change="if ($event.target.value !== mode) { mode = $event.target.value; $wire.setOverspendMode({{ $row->categoryId }}, mode) }"
+                                x-on:change="if ($event.target.value !== mode) { mode = $event.target.value; $wire.setOverspendMode('{{ $row->categoryId }}', mode) }"
                                 aria-label="{{ Lang::get('budgets::messages.row.overspend_aria', ['category' => $row->categoryPath]) }}"
                                 class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
                             >
@@ -208,8 +208,8 @@
                                     type="text"
                                     inputmode="numeric"
                                     wire:model="thresholdInputs.{{ $row->categoryId }}"
-                                    wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
-                                    wire:blur="setNotifyThreshold({{ $row->categoryId }})"
+                                    wire:keydown.enter="setNotifyThreshold('{{ $row->categoryId }}')"
+                                    wire:blur="setNotifyThreshold('{{ $row->categoryId }}')"
                                     aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryPath]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
                                     class="w-14 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -224,7 +224,7 @@
                         <td class="px-4 py-2 text-right">
                             <button
                                 type="button"
-                                wire:click="openMove({{ $row->categoryId }})"
+                                wire:click="openMove('{{ $row->categoryId }}')"
                                 x-on:click="$flux.modal('envelope-move').show()"
                                 class="hidden text-sm text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 group-hover:inline dark:hover:text-slate-100 dark:text-slate-400"
                             >{{ Lang::get('budgets::messages.row.move_money') }}</button>
@@ -265,7 +265,7 @@
                                                     </span>
                                                     <button
                                                         type="button"
-                                                        wire:click="undoMove({{ $move->id }})"
+                                                        wire:click="undoMove('{{ $move->id }}')"
                                                         class="text-xs text-slate-600 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-rose-400 dark:text-slate-400"
                                                     >{{ Lang::get('budgets::messages.history.undo') }}</button>
                                                 </div>
@@ -333,8 +333,8 @@
                                     type="text"
                                     inputmode="numeric"
                                     wire:model="thresholdInputs.{{ $row->categoryId }}"
-                                    wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
-                                    wire:blur="setNotifyThreshold({{ $row->categoryId }})"
+                                    wire:keydown.enter="setNotifyThreshold('{{ $row->categoryId }}')"
+                                    wire:blur="setNotifyThreshold('{{ $row->categoryId }}')"
                                     aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryPath]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
                                     class="h-8 w-24 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -353,8 +353,8 @@
                                 type="text"
                                 inputmode="{{ MoneyInput::decimalPlaces($row->currency) === 0 ? 'numeric' : 'decimal' }}"
                                 wire:model="assignedInputs.{{ $row->categoryId }}"
-                                wire:keydown.enter="setAssigned({{ $row->categoryId }})"
-                                wire:blur="setAssigned({{ $row->categoryId }})"
+                                wire:keydown.enter="setAssigned('{{ $row->categoryId }}')"
+                                wire:blur="setAssigned('{{ $row->categoryId }}')"
                                 aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryPath]) }}"
                                 placeholder="{{ MoneyInput::formatAbsMinor(0, $row->currency) }}"
                                 class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
@@ -372,7 +372,7 @@
                          sm:, and that component is the icon and nothing else. --}}
                     <button
                         type="button"
-                        wire:click="openMove({{ $row->categoryId }})"
+                        wire:click="openMove('{{ $row->categoryId }}')"
                         x-on:click="$dispatch('open-sheet', { name: 'envelope-move' })"
                         class="text-xs text-slate-600 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100 dark:text-slate-400"
                      title="{{ Lang::get('budgets::messages.row.move') }}"><span aria-hidden="true" class="sm:hidden">🔄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('budgets::messages.row.move') }}</span></button>

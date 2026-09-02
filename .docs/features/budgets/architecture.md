@@ -154,6 +154,40 @@ zero-based budgeting (over-allocation is a normal, expected state here,
 not an error). `undoMove()` hard-deletes both paired rows and dispatches a
 `delete` mutation event for each row's own primary key.
 
+### The id of a move is derived, not minted (`EnvelopeMoveId`)
+
+`envelope_moves` declares no unique index but its primary key, so an
+autoincrement is the row's only identity and nothing downstream can tell two
+rows apart by content. Two devices writing while apart therefore both took the
+next id: a desktop move of &minus;777 and a phone move of &minus;888 were both
+id 9, and once they synced the arriving create was refused by the primary key
+and discarded as an idempotent replay. The two devices held different money at
+one id, with an empty quarantine on both.
+
+`EnvelopeMoveId::for()` computes the id from `DerivedRowId` over
+`(move_group_id, kind, period_start)` instead:
+
+- `move_group_id` is minted once by the device making the move and travels with
+  both rows, so the arithmetic is the same wherever it is run.
+- `kind` keeps the two halves of one move off a single id.
+- `period_start` is in the tuple because `EnvelopePeriodRekeyer` re-creates each
+  row against a new period, and both devices rekey independently when the start
+  day changes — two autoincrements there are the same collision again.
+
+The demo seeder derives its `move_group_id` from the demo move itself (owner
+username, the two category slugs, the memo key, the period start) rather than
+minting a uuid per run. Every device seeds the same demo moves, and a fresh
+uuid on each made one demo move two the moment they synced.
+
+Move ids run past 2<sup>53</sup>, so the blade sends them **quoted** and
+`BudgetsPage::undoMove()` reads them back through `DerivedRowId::fromWire()`. A
+bare number literal is rounded by the browser before the server sees it, and
+the action then matches no row —
+`ADerivedIdNeverReachesTheBrowserAsANumberArchTest` guards that.
+
+Rows written before this keep the small ids they were given; nothing is
+rewritten, and the two kinds of id sit side by side.
+
 `copyFromPeriod()` ("Copy last month") applies every row of the source
 period inside **one** transaction and dispatches its collected events
 after that single commit, rather than opening a transaction and an event

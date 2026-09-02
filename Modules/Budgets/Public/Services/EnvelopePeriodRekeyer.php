@@ -9,6 +9,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Budgets\Internal\Rekey\PeriodShift;
+use Modules\Budgets\Internal\Support\EnvelopeMoveId;
+use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -263,7 +265,13 @@ final readonly class EnvelopePeriodRekeyer
                 'move_group_id' => $row->move_group_id,
             ];
 
-            $id = $connection->table('envelope_moves')->insertGetId([
+            // Derived, not minted: both devices rekey on their own when the
+            // start day changes, and two autoincrements would hand the same
+            // id to two different rows on a table that cannot tell them apart.
+            $id = EnvelopeMoveId::for(self::toString($row->move_group_id), EnvelopeMoveKind::from($fields['kind']), $key);
+
+            $connection->table('envelope_moves')->insert([
+                'id' => $id,
                 ...$fields,
                 'created_at' => $row->created_at ?? $now,
                 'updated_at' => $now,

@@ -18,6 +18,7 @@ use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -94,11 +95,13 @@ final class BudgetsPage extends Component
 
     // An empty or literal-zero input tombstones the row; anything else upserts,
     // and over-assignment is never rejected.
-    public function setAssigned(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, BaseCurrency $baseCurrency, int $categoryId): void
+    public function setAssigned(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, BaseCurrency $baseCurrency, int|string $categoryId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $categoryId = DerivedRowId::fromWire($categoryId);
 
         $currency = $baseCurrency->forUser($currentUser->user());
         $raw = trim($this->assignedInputs[$categoryId] ?? '');
@@ -149,11 +152,13 @@ final class BudgetsPage extends Component
 
     // Bounds-checked here as well as in the writer so an out-of-range entry is an
     // inline per-row error, not a throw the grid has to render around.
-    public function setNotifyThreshold(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId): void
+    public function setNotifyThreshold(CurrentUser $currentUser, EnvelopeWriter $writer, int|string $categoryId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $categoryId = DerivedRowId::fromWire($categoryId);
 
         unset($this->thresholdErrors[$categoryId]);
 
@@ -182,11 +187,13 @@ final class BudgetsPage extends Component
         $this->thresholdInputs[$categoryId] = $threshold === null ? '' : (string) $threshold;
     }
 
-    public function setOverspendMode(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId, string $mode): void
+    public function setOverspendMode(CurrentUser $currentUser, EnvelopeWriter $writer, int|string $categoryId, string $mode): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $categoryId = DerivedRowId::fromWire($categoryId);
 
         $parsed = OverspendMode::tryFrom($mode);
 
@@ -226,9 +233,9 @@ final class BudgetsPage extends Component
         $this->toast(Lang::get('budgets::messages.notices.copied_last_month'));
     }
 
-    public function openMove(int $fromCategoryId): void
+    public function openMove(int|string $fromCategoryId): void
     {
-        $this->moveFromCategoryId = $fromCategoryId;
+        $this->moveFromCategoryId = DerivedRowId::fromWire($fromCategoryId);
         $this->moveToCategoryId = '';
         $this->moveAmount = '';
         $this->moveMemo = '';
@@ -282,13 +289,16 @@ final class BudgetsPage extends Component
         }
     }
 
-    public function undoMove(CurrentUser $currentUser, EnvelopeWriter $writer, int $moveId): void
+    // Quoted on the way out and read back through fromWire(): a move id is
+    // derived from the move's own identity and runs past 2^53, which a JSON
+    // number literal rounds before the server ever sees it.
+    public function undoMove(CurrentUser $currentUser, EnvelopeWriter $writer, int|string $moveId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
 
-        $writer->undoMove($currentUser->user(), $moveId);
+        $writer->undoMove($currentUser->user(), DerivedRowId::fromWire($moveId));
         $this->toast(Lang::get('budgets::messages.notices.move_undone'));
     }
 

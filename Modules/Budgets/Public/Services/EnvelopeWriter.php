@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Modules\Budgets\Internal\Support\EnvelopeMoveId;
 use Modules\Budgets\Models\EnvelopeSetting;
 use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Budgets\Public\Enums\OverspendMode;
@@ -421,7 +422,15 @@ final readonly class EnvelopeWriter
             $connection = $this->db->connection();
             $now = $this->clock->now();
 
-            $debitId = self::toInt($connection->table('envelope_moves')->insertGetId([
+            // Not the autoincrement: two devices writing while apart both take
+            // the next id and hand it to unrelated moves, and the table has no
+            // unique index to tell those two rows apart afterwards. The group
+            // uuid is minted here, so both devices land on the same arithmetic.
+            $debitId = EnvelopeMoveId::for($groupId, EnvelopeMoveKind::MoveOut, $periodDate);
+            $creditId = EnvelopeMoveId::for($groupId, EnvelopeMoveKind::MoveIn, $periodDate);
+
+            $connection->table('envelope_moves')->insert([
+                'id' => $debitId,
                 'user_id' => $user->id,
                 'category_id' => $fromCategoryId,
                 'counterpart_category_id' => $toCategoryId,
@@ -433,9 +442,10 @@ final readonly class EnvelopeWriter
                 'move_group_id' => $groupId,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]));
+            ]);
 
-            $creditId = self::toInt($connection->table('envelope_moves')->insertGetId([
+            $connection->table('envelope_moves')->insert([
+                'id' => $creditId,
                 'user_id' => $user->id,
                 'category_id' => $toCategoryId,
                 'counterpart_category_id' => $fromCategoryId,
@@ -447,7 +457,7 @@ final readonly class EnvelopeWriter
                 'move_group_id' => $groupId,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]));
+            ]);
 
             return ['debitId' => $debitId, 'creditId' => $creditId];
         });
