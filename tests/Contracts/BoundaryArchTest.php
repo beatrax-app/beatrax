@@ -2315,6 +2315,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Counterparties\\Internal\\Support\\RollingTwelveMonths',
         'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Ledger\\Internal\\Enums\\DateRangePreset',
         'tests/Contracts/APairOfWindowsThatMustAgreeHasOneDefinitionArchTest.php -> Modules\\Reports\\Internal\\Aggregation\\PeriodPresetResolver',
+        // The list of synced users columns is the registry's answer, not a
+        // second copy in the test: a column added there without an announcing
+        // writer is exactly what this guard exists to catch, and a hardcoded
+        // list would go quiet the moment the two drifted.
+        'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
         // parser that stops recognising the paragraph fails there too. Spelling

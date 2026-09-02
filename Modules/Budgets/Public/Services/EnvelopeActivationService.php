@@ -6,6 +6,7 @@ namespace Modules\Budgets\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Services\PotWriter;
@@ -16,6 +17,7 @@ final readonly class EnvelopeActivationService
         private DatabaseManager $db,
         private PotWriter $potWriter,
         private Clock $clock,
+        private WriteUserPreference $preferences,
     ) {}
 
     public function activate(): void
@@ -53,6 +55,12 @@ final readonly class EnvelopeActivationService
             return;
         }
 
+        // The carryover fold's genesis anchor, and a synced column. A peer that
+        // paired before this claim reads every synced assignment as zero until
+        // it hears the stamp, and the whole-row backfill only carries it for a
+        // device that joined afterwards.
+        $this->preferences->announce($userId, ['envelope_activated_at']);
+
         // No spanning transaction: PotWriter::archive() dispatches its events
         // after its own inner commit, and an outer one would defer them. A walk
         // that throws part-way unclaims the user instead, below.
@@ -83,6 +91,8 @@ final readonly class EnvelopeActivationService
                 ->table('users')
                 ->where('id', $userId)
                 ->update(['envelope_activated_at' => null]);
+
+            $this->preferences->announce($userId, ['envelope_activated_at']);
 
             throw $e;
         }
