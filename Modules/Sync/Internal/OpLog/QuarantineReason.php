@@ -47,6 +47,11 @@ enum QuarantineReason: string
     // the column answerable instead.
     case ImpossibleDate = 'impossible_date';
 
+    // Two devices that were apart both took the same autoincrement, so one id
+    // names two different rows. Discarded in silence this read as the ordinary
+    // idempotent replay, and a move made on a phone was simply never there.
+    case PrimaryKeyCollision = 'primary_key_collision';
+
     // The two a key arriving later can undo. Kept apart from recoverable()
     // below because a screen reports these as "waiting for a key", and a row
     // held for any other reason must never be given that cause.
