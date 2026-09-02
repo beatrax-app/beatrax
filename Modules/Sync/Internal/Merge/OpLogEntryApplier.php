@@ -26,6 +26,7 @@ final readonly class OpLogEntryApplier
         private SelfReferenceDeferral $selfReferences,
         private TransferPairCascade $pairCascade,
         private PeerRowAliases $aliases,
+        private CreateRowCollision $collisions,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -237,17 +238,50 @@ final readonly class OpLogEntryApplier
             // it is a second id for one row, and the peer's id has to keep
             // meaning something or every child naming it is orphaned.
             if (CreateRowInsertFailure::classify($e) === CreateRowInsertFailure::AlreadyPresent) {
-                $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
-
-                return true;
+                return $this->answerAlreadyPresent($table, $payload, $fields, $now, $deviceId, $pk, $userId);
             }
 
             return $this->recordRefusedInsert($table, $e, $fields, $now);
         }
     }
 
-    // Every refusal that is a real loss. The already-present arm is answered
-    // one level up, where the payload that identifies the twin is still in hand.
+    // The row is here, but a row is not THE row. An alias means the peer's id
+    // names a local twin and the content did land, under the other id. Without
+    // one, a create contradicting what is stored is two devices' rows wearing
+    // a single id, and answering true is how a phone's move went missing.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function answerAlreadyPresent(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): bool
+    {
+        $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
+
+        if ($this->aliases->localFor($table, $deviceId, $pk, $userId) !== null) {
+            return true;
+        }
+
+        if (! $this->collisions->contradicts($table, $pk, $payload)) {
+            return true;
+        }
+
+        $firstField = reset($fields);
+
+        if ($firstField !== false && $firstField !== []) {
+            $this->quarantine->record($firstField[0], QuarantineReason::PrimaryKeyCollision, $now);
+        }
+
+        $this->logger?->warning('OpLogEntryApplier: two devices minted one primary key.', [
+            'table' => $table,
+            'pk' => (string) $pk,
+            'device_id' => $deviceId,
+        ]);
+
+        return false;
+    }
+
+    // Every refusal the database itself raised. The already-present arm is
+    // answered above, where the payload that identifies the twin is in hand.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */

@@ -509,6 +509,52 @@ itself into the log, in slices that commit as they go and resume across
 requests: [Capturing the history that predates
 sync](pre-sync-history-capture.md).
 
+### When two devices name one row (`Internal\Merge\PeerRowAliases`, `CreateRowCollision`)
+
+A `create_row` whose insert the database refuses as already present is one of
+three different things, and the applier has to tell them apart.
+
+**The row is here under another id.** Each device seeds its own reference data,
+so a peer's tax category arrives as id 109 and matches local row 13 on
+`(user_id, name)`. `PeerRowAliases::remember()` reads every non-primary unique
+index off the schema, finds the local twin, and records the pair in
+`op_log_row_aliases`. `translate()` then rewrites every foreign key naming 109
+to 13 on the way in, and `resolvePk()` routes the peer's later `set` ops to the
+row this device actually holds. Without the alias, nineteen tax tags naming 109
+failed their foreign key.
+
+**The row is here and this is the same op again.** The ordinary idempotent
+replay. Nothing to do.
+
+**The row is here but it is a different row.** Nine covered tables mint an
+autoincrement primary key and declare no natural unique key, so two devices
+writing while apart both take the next id and hand it to unrelated rows. The
+insert is refused by the primary key, there is no natural twin to alias, and
+for a long time the arriving row was simply dropped — two devices then held
+different money at one id with an empty quarantine on both.
+
+`CreateRowCollision::contradicts()` separates the second case from the third.
+It calls it a collision when the op's `created_at` disagrees with the stored
+row's **and** at least one other column disagrees as well. Both halves are
+needed, and each was chosen against a real op log of 320 create groups:
+
+- Comparing the whole payload flags 32 rows that are the same row — a create
+  replayed after its row was edited is stale in the edited column by design.
+- Comparing only `created_at` misses collisions where the stored row's is
+  null, which is how rows written by peers on older builds landed.
+- The conjunction flagged 4 groups, and all four were real collisions.
+
+Sensitive columns are excluded from the comparison: the payload is re-sealed
+for this device before the insert, so a fresh nonce makes the ciphertext differ
+from the stored value on every replay. `id` and `user_id` are seeded by the
+applier from the op envelope rather than the wire, and `updated_at` moves
+whenever anything about the row does.
+
+A collision is recorded in `op_log_quarantine` with reason
+`primary_key_collision` and the create is not applied. It is deliberately not
+in `QuarantineReason::recoverable()`: the id is taken by another row, and no
+op arriving later frees it.
+
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 
 Routes each module's `*Mutated` events to the `OpLogWriter`. Wired in
