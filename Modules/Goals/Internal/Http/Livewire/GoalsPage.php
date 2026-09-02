@@ -12,6 +12,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Internal\Exceptions\GoalTargetDateBeforeStartException;
 use Modules\Goals\Internal\Services\GoalPotLinkWriter;
@@ -94,8 +95,10 @@ final class GoalsPage extends Component
         }
     }
 
-    public function openEdit(int $goalId, GoalProgressQuery $query, CurrentUser $currentUser, PotBalanceQuery $potBalance): void
+    public function openEdit(int|string $goalId, GoalProgressQuery $query, CurrentUser $currentUser, PotBalanceQuery $potBalance): void
     {
+        $goalId = DerivedRowId::fromWire($goalId);
+
         if (! $currentUser->isAuthenticated()) {
             return;
         }
@@ -149,8 +152,10 @@ final class GoalsPage extends Component
         }
     }
 
-    public function markComplete(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
+    public function markComplete(CurrentUser $currentUser, GoalWriter $writer, int|string $goalId): void
     {
+        $goalId = DerivedRowId::fromWire($goalId);
+
         if (! $currentUser->isAuthenticated()) {
             return;
         }
@@ -164,8 +169,10 @@ final class GoalsPage extends Component
         $this->toastWithUndo(Lang::get('goals::messages.notices.goal_marked_complete'), undoAction: 'restore', undoPayload: $goalId);
     }
 
-    public function confirmArchive(CurrentUser $currentUser, int $goalId): void
+    public function confirmArchive(CurrentUser $currentUser, int|string $goalId): void
     {
+        $goalId = DerivedRowId::fromWire($goalId);
+
         if (! $currentUser->isAuthenticated()) {
             return;
         }
@@ -193,8 +200,10 @@ final class GoalsPage extends Component
         $this->toastWithUndo(Lang::get('goals::messages.notices.goal_archived'), undoAction: 'restore', undoPayload: $goalId);
     }
 
-    public function restore(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
+    public function restore(CurrentUser $currentUser, GoalWriter $writer, int|string $goalId): void
     {
+        $goalId = DerivedRowId::fromWire($goalId);
+
         if (! $currentUser->isAuthenticated()) {
             return;
         }

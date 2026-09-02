@@ -141,7 +141,7 @@
                     <x-core::emoji-action
                         :label="Lang::get('goals::messages.row.edit')"
                         x-on:click="
-                            $wire.openEdit({{ $row->id }});
+                            $wire.openEdit('{{ $row->id }}');
                             if (window.innerWidth < 768) {
                                 $dispatch('open-sheet', { name: 'goal-form' });
                             } else {
@@ -156,12 +156,12 @@
                         <x-core::emoji-action
                             :label="Lang::get('goals::messages.actions.mark_complete')"
                             :caption="Lang::get('goals::messages.actions.mark_complete_caption')"
-                            wire:click="markComplete({{ $row->id }})"
+                            wire:click="markComplete('{{ $row->id }}')"
                         >✅</x-core::emoji-action>
                     @endif
                     <x-core::emoji-action
                         :label="Lang::get('goals::messages.actions.archive')"
-                        wire:click="confirmArchive({{ $row->id }})"
+                        wire:click="confirmArchive('{{ $row->id }}')"
                     >🗄️</x-core::emoji-action>
                     </span>
                 </li>
@@ -256,7 +256,7 @@
                         <div class="mt-3 flex items-center gap-2">
                             <x-core::emoji-action
                                 :label="Lang::get('goals::messages.row.edit')"
-                                wire:click="openEdit({{ $row->id }})"
+                                wire:click="openEdit('{{ $row->id }}')"
                                 x-on:click="
                                     if (window.innerWidth < 768) {
                                         $dispatch('open-sheet', { name: 'goal-form' });
@@ -276,9 +276,9 @@
                                 />
                                 <flux:menu>
                                     @if (! $isCompleted)
-                                        <flux:menu.item wire:click="markComplete({{ $row->id }})">{{ Lang::get('goals::messages.actions.mark_complete') }}</flux:menu.item>
+                                        <flux:menu.item wire:click="markComplete('{{ $row->id }}')">{{ Lang::get('goals::messages.actions.mark_complete') }}</flux:menu.item>
                                     @endif
-                                    <flux:menu.item wire:click="confirmArchive({{ $row->id }})">{{ Lang::get('goals::messages.actions.archive') }}</flux:menu.item>
+                                    <flux:menu.item wire:click="confirmArchive('{{ $row->id }}')">{{ Lang::get('goals::messages.actions.archive') }}</flux:menu.item>
                                 </flux:menu>
                             </flux:dropdown>
                         </div>
@@ -330,7 +330,7 @@
                                         aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                     />
                                     <flux:menu>
-                                        <flux:menu.item wire:click="restore({{ $row->id }})">{{ Lang::get('goals::messages.actions.restore') }}</flux:menu.item>
+                                        <flux:menu.item wire:click="restore('{{ $row->id }}')">{{ Lang::get('goals::messages.actions.restore') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </div>

@@ -52,7 +52,9 @@ it('renders the update.available banner with the verbatim copy and the install +
         ->assertSee('Install on next launch')
         ->assertSee('Skip this version')
         ->assertSee('Release notes')
-        ->assertSeeHtml('wire:click="skipVersion('.$id.')"')
+        // Quoted: a system_alerts id is derived and runs past 2^53, which a
+        // number literal would have the browser round before the server sees it.
+        ->assertSeeHtml('wire:click="skipVersion(\''.$id.'\')"')
         ->assertSeeHtml('border-slate-200');
 });
 

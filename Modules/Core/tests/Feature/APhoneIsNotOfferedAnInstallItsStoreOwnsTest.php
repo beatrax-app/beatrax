@@ -85,7 +85,9 @@ it('still shows a phone the alerts it can act on', function (): void {
     putenv('NATIVEPHP_PLATFORM=ios');
 
     Livewire::test(SystemAlertsBanner::class)
-        ->assertSee('acknowledge('.$alert->id.')', false);
+        // Quoted: a system_alerts id is derived and runs past 2^53, which a bare
+        // number literal would have the browser round before the server sees it.
+        ->assertSee("acknowledge('".$alert->id."')", false);
 });
 
 // And the row is not written on a phone in the first place: the demo seeder

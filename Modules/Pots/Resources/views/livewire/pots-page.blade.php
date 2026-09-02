@@ -183,26 +183,26 @@
                         {{-- Row actions always visible on phone --}}
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.fund')"
-                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'fund'); $dispatch('open-sheet', { name: 'pot-fund' }); "
+                            x-on:click=" $wire.set('operationPotId', '{{ $pot->id }}'); $wire.set('operationKind', 'fund'); $dispatch('open-sheet', { name: 'pot-fund' }); "
                         >💰</x-core::emoji-action>
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.move')"
-                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'transfer'); $dispatch('open-sheet', { name: 'pot-move' }); "
+                            x-on:click=" $wire.set('operationPotId', '{{ $pot->id }}'); $wire.set('operationKind', 'transfer'); $dispatch('open-sheet', { name: 'pot-move' }); "
                         >🔄</x-core::emoji-action>
                         {{-- Withdraw, edit and archive lived only in the desktop
                              kebab, which the phone list hides — so on a phone
                              money could go into a pot and never come out. --}}
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.withdraw')"
-                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'withdraw'); $dispatch('open-sheet', { name: 'pot-withdraw' }); "
+                            x-on:click=" $wire.set('operationPotId', '{{ $pot->id }}'); $wire.set('operationKind', 'withdraw'); $dispatch('open-sheet', { name: 'pot-withdraw' }); "
                         >🏧</x-core::emoji-action>
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.edit')"
-                            x-on:click=" $wire.openEdit({{ $pot->id }}); $dispatch('open-sheet', { name: 'pot-form' }); "
+                            x-on:click=" $wire.openEdit('{{ $pot->id }}'); $dispatch('open-sheet', { name: 'pot-form' }); "
                         >✏️</x-core::emoji-action>
                         <x-core::emoji-action
                             :label="Lang::get('pots::messages.actions.archive')"
-                            wire:click="confirmArchive({{ $pot->id }})"
+                            wire:click="confirmArchive('{{ $pot->id }}')"
                         >🗄️</x-core::emoji-action>
                         </div>
                         @endif
@@ -321,7 +321,7 @@
                                         {{-- Fund button --}}
                                         <button
                                             type="button"
-                                            wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'fund')"
+                                            wire:click="$set('operationPotId', '{{ $pot->id }}'); $set('operationKind', 'fund')"
                                             x-on:click="
                                                 if (window.innerWidth < 768) {
                                                     $dispatch('open-sheet', { name: 'pot-fund' });
@@ -337,7 +337,7 @@
                                         {{-- Move button --}}
                                         <button
                                             type="button"
-                                            wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'transfer')"
+                                            wire:click="$set('operationPotId', '{{ $pot->id }}'); $set('operationKind', 'transfer')"
                                             x-on:click="
                                                 if (window.innerWidth < 768) {
                                                     $dispatch('open-sheet', { name: 'pot-move' });
@@ -361,7 +361,7 @@
                                             />
                                             <flux:menu>
                                                 <flux:menu.item
-                                                    wire:click="openEdit({{ $pot->id }})"
+                                                    wire:click="openEdit('{{ $pot->id }}')"
                                                     x-on:click="
                                                         if (window.innerWidth < 768) {
                                                             $dispatch('open-sheet', { name: 'pot-form' });
@@ -371,7 +371,7 @@
                                                     "
                                                 >{{ Lang::get('pots::messages.actions.edit') }}</flux:menu.item>
                                                 <flux:menu.item
-                                                    wire:click="$set('operationPotId', {{ $pot->id }}); $set('operationKind', 'withdraw')"
+                                                    wire:click="$set('operationPotId', '{{ $pot->id }}'); $set('operationKind', 'withdraw')"
                                                     x-on:click="
                                                         if (window.innerWidth < 768) {
                                                             $dispatch('open-sheet', { name: 'pot-withdraw' });
@@ -380,7 +380,7 @@
                                                         }
                                                     "
                                                 >{{ Lang::get('pots::messages.actions.withdraw') }}</flux:menu.item>
-                                                <flux:menu.item wire:click="confirmArchive({{ $pot->id }})">{{ Lang::get('pots::messages.actions.archive') }}</flux:menu.item>
+                                                <flux:menu.item wire:click="confirmArchive('{{ $pot->id }}')">{{ Lang::get('pots::messages.actions.archive') }}</flux:menu.item>
                                             </flux:menu>
                                         </flux:dropdown>
                                     </div>
@@ -493,7 +493,7 @@
                                         aria-label="{{ Lang::get('pots::messages.more_actions_aria', ['name' => $pot->name]) }}"
                                     />
                                     <flux:menu>
-                                        <flux:menu.item wire:click="restorePot({{ $pot->id }})">{{ Lang::get('pots::messages.actions.restore') }}</flux:menu.item>
+                                        <flux:menu.item wire:click="restorePot('{{ $pot->id }}')">{{ Lang::get('pots::messages.actions.restore') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </div>

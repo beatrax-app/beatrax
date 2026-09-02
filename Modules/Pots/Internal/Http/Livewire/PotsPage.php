@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -179,11 +180,13 @@ final class PotsPage extends Component
         );
     }
 
-    public function openEdit(int $potId, PotBalanceQuery $query, CurrentUser $currentUser): void
+    public function openEdit(int|string $potId, PotBalanceQuery $query, CurrentUser $currentUser): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $potId = DerivedRowId::fromWire($potId);
 
         $rows = $query->forUser($currentUser->user());
         foreach ($rows as $pot) {
@@ -495,11 +498,13 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.funds_moved'));
     }
 
-    public function confirmArchive(CurrentUser $currentUser, int $potId): void
+    public function confirmArchive(CurrentUser $currentUser, int|string $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $potId = DerivedRowId::fromWire($potId);
 
         $this->archivingPotId = $potId;
     }
@@ -524,11 +529,13 @@ final class PotsPage extends Component
         $this->toastWithUndo(Lang::get('pots::messages.toast.pot_archived'), undoAction: 'restore', undoPayload: $potId);
     }
 
-    public function restorePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
+    public function restorePot(CurrentUser $currentUser, PotWriter $writer, int|string $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $potId = DerivedRowId::fromWire($potId);
 
         $writer->restore($currentUser->user(), $potId);
         $this->toast(Lang::get('pots::messages.toast.pot_restored'));

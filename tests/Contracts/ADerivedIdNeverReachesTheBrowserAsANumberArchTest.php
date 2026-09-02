@@ -16,13 +16,17 @@ use Symfony\Component\Finder\Finder;
 
 const JS_EXACT_INTEGER_MAX = 9007199254740991;
 
-/** @return list<string> modules that mint derived ids, read off the call sites */
+/** @return list<string> modules whose rows carry ids past 2^53, read off the call sites */
 function modulesMintingDerivedIds(): array
 {
     $modules = [];
 
     foreach (phpSourceFiles() as $file) {
-        if (! str_contains($file->getContents(), 'DerivedRowId::for(')) {
+        $source = $file->getContents();
+
+        // Both ways a row gets an id past 2^53: computed from the row's own
+        // identity, and minted where no two devices could compute one.
+        if (! str_contains($source, 'DerivedRowId::for(') && ! str_contains($source, 'DeviceMintedRowId::mint(')) {
             continue;
         }
 

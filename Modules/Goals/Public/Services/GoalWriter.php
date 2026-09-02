@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Goals\Internal\Exceptions\GoalTargetDateBeforeStartException;
 use Modules\Goals\Models\Goal;
@@ -71,7 +72,12 @@ final readonly class GoalWriter
             'status' => GoalStatus::Active->value,
         ];
 
-        $goal = Goal::query()->withoutGlobalScope(UserScope::class)->create($attributes);
+        // The id is minted, not taken from the autoincrement: two devices used
+        // while apart both take the next one, and goals declares no unique
+        // index to tell the two rows apart afterwards. Not derived either, for
+        // the reason the row is always fresh — two goals of one name are two.
+        $goal = Goal::query()->withoutGlobalScope(UserScope::class)
+            ->forceCreate(['id' => DeviceMintedRowId::mint(), ...$attributes]);
 
         $this->capture($goal, $user, 'create', $attributes);
 

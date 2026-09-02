@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
 use Modules\Forecasting\Public\Actions\CreateScenario;
@@ -100,9 +101,9 @@ final class ForecastPage extends Component
         return null;
     }
 
-    public function setScenario(?int $scenarioId): void
+    public function setScenario(int|string|null $scenarioId): void
     {
-        $this->scenarioId = $scenarioId;
+        $this->scenarioId = $scenarioId === null ? null : DerivedRowId::fromWire($scenarioId);
         $this->confirmingDeleteForScenarioId = null;
         $this->dispatch('forecast-updated');
     }

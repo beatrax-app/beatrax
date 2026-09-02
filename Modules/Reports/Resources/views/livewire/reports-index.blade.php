@@ -81,7 +81,7 @@
                         <span class="cp-head-name">{{ $row->name }}</span>
                         <button
                             type="button"
-                            wire:click="togglePin({{ $row->id }})"
+                            wire:click="togglePin('{{ $row->id }}')"
                             aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                             aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
                             title="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_title') : Lang::get('reports::index.pin.pin_title') }}"
@@ -115,7 +115,7 @@
 
                             <button
                                 type="button"
-                                wire:click="confirmDelete({{ $row->id }})"
+                                wire:click="confirmDelete('{{ $row->id }}')"
                                 aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
                                 class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                 style="color: var(--color-rose);"
@@ -151,7 +151,7 @@
                             <td style="padding: var(--space-2) var(--space-3);">
                                 <button
                                     type="button"
-                                    wire:click="togglePin({{ $row->id }})"
+                                    wire:click="togglePin('{{ $row->id }}')"
                                     aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                                     aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
                                     class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
@@ -176,7 +176,7 @@
 
                                         <button
                                             type="button"
-                                            wire:click="confirmDelete({{ $row->id }})"
+                                            wire:click="confirmDelete('{{ $row->id }}')"
                                             aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
                                             class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                             style="color: var(--color-rose);"

@@ -12,6 +12,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\UserPreferenceWriter;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Internal\Actions\DeleteReport;
 use Modules\Reports\Internal\Actions\TogglePin;
@@ -52,8 +53,10 @@ final class ReportsIndex extends Component
         $preferences->write($currentUser->id(), ['reports_index_view' => $view]);
     }
 
-    public function confirmDelete(int $reportId): void
+    public function confirmDelete(int|string $reportId): void
     {
+        $reportId = DerivedRowId::fromWire($reportId);
+
         $this->confirmingDeleteId = $reportId;
     }
 
@@ -81,8 +84,10 @@ final class ReportsIndex extends Component
 
     // TogglePin enforces the 3-pin cap, and its InvalidArgumentException message
     // is surfaced verbatim as the flash.
-    public function togglePin(int $reportId, CurrentUser $currentUser, TogglePin $togglePin): void
+    public function togglePin(int|string $reportId, CurrentUser $currentUser, TogglePin $togglePin): void
     {
+        $reportId = DerivedRowId::fromWire($reportId);
+
         try {
             $togglePin->toggle($currentUser->user(), $reportId);
         } catch (NotFoundHttpException) {
