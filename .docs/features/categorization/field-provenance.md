@@ -108,6 +108,35 @@ The trade to be aware of: corrupt provenance loses the user's manual
 protection silently. That is accepted because the alternative loses the
 entire run loudly, and the map is reconstructed on the next manual edit.
 
+## It reaches the other devices
+
+`stamp()` announces the map on a `TransactionMutated` of its own, so a field
+the reader set by hand is protected on every device rather than only on the one
+they typed it on. B3-R18 states the guarantee of the person, not of a device.
+
+Three things about the announcement are deliberate:
+
+- **It carries the merged map, read back after the UPDATE — never the delta.**
+  The statement wraps `json_set` around whatever was stored, so the argument to
+  `stamp()` is only the keys that moved. A peer handed those alone would drop
+  every key it had not just been told about, and with it the protection the
+  reader had already earned on another field.
+- **It is silent when nothing moved.** The map is read before and after; a
+  stamp that rewrites the value already stored announces nothing. A re-apply
+  run is expected to be idempotent, and this keeps that true of the op log as
+  well as of the columns.
+- **It is silent when the UPDATE matched no row.** A foreign or missing
+  transaction id is already a no-op through the `user_id` predicate, and
+  announcing a stamp that did not happen would hand a peer a map for a row this
+  device never wrote.
+
+The column merges last-writer-wins like any other, which is worth knowing
+because the value is a map: two devices stamping *different* keys of the same
+transaction at the same time resolve to one of the two maps, not to their
+union. That is the same best-effort posture as the corruption case above — the
+loss is a protection, reconstructed on the next manual edit, not a ledger
+value.
+
 ## The tax-tag exception
 
 Every action type in `RuleApplier` stamps its own provenance and

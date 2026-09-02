@@ -319,3 +319,93 @@ it('AssignCategory — stamps nothing for a transaction belonging to another use
 
     expect(fpsProvenance($tx->id))->toBe([]);
 });
+
+// A re-apply must skip a field the reader set by hand. Until the stamp was
+// announced, `field_provenance` travelled only in the create payload — where
+// it is always null — so that protection held on the device that typed the
+// correction and on no other.
+it('announces the stamped provenance so a peer can honour it', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    $user = fpsUser('announce-'.bin2hex(random_bytes(3)));
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(fpsTransactionOverrides($account->id, $run->id) + ['user_id' => $user->id]);
+
+    app(FieldProvenanceWriter::class)->stamp($user->id, $tx->id, ['category_id' => 'manual']);
+
+    $announced = [];
+    foreach (Event::dispatched(TransactionMutated::class) as [$event]) {
+        if (array_key_exists('field_provenance', $event->dirtyFields)) {
+            $announced[] = $event;
+        }
+    }
+
+    expect($announced)->toHaveCount(1);
+    expect($announced[0]->mutationType)->toBe('edit');
+    expect($announced[0]->transactionId)->toBe($tx->id);
+    expect($announced[0]->dirtyFields['field_provenance'])->toBe(['category_id' => 'manual']);
+});
+
+it('announces the whole merged map, not just the keys that moved', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    $user = fpsUser('merged-'.bin2hex(random_bytes(3)));
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(fpsTransactionOverrides($account->id, $run->id) + ['user_id' => $user->id]);
+
+    $writer = app(FieldProvenanceWriter::class);
+    $writer->stamp($user->id, $tx->id, ['category_id' => 'manual']);
+    $writer->stamp($user->id, $tx->id, ['note' => 'rule']);
+
+    $last = null;
+    foreach (Event::dispatched(TransactionMutated::class) as [$event]) {
+        if (array_key_exists('field_provenance', $event->dirtyFields)) {
+            $last = $event;
+        }
+    }
+
+    // A peer handed only the second key would drop the first, and with it the
+    // protection the reader earned on the category.
+    expect($last?->dirtyFields['field_provenance'])->toBe(['category_id' => 'manual', 'note' => 'rule']);
+});
+
+it('stays silent when the stamp rewrites the value already stored', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    $user = fpsUser('idem-'.bin2hex(random_bytes(3)));
+    $account = fpsAccount($user);
+    $run = fpsImportRun($user);
+    $tx = Transaction::create(fpsTransactionOverrides($account->id, $run->id) + ['user_id' => $user->id]);
+
+    $writer = app(FieldProvenanceWriter::class);
+    $writer->stamp($user->id, $tx->id, ['category_id' => 'manual']);
+    $writer->stamp($user->id, $tx->id, ['category_id' => 'manual']);
+
+    $provenanceEvents = 0;
+    foreach (Event::dispatched(TransactionMutated::class) as [$event]) {
+        if (array_key_exists('field_provenance', $event->dirtyFields)) {
+            $provenanceEvents++;
+        }
+    }
+
+    expect($provenanceEvents)->toBe(1);
+});
+
+it('says nothing for a transaction belonging to somebody else', function (): void {
+    Event::fake([TransactionMutated::class]);
+
+    $owner = fpsUser('owner-'.bin2hex(random_bytes(3)));
+    $stranger = fpsUser('stranger-'.bin2hex(random_bytes(3)));
+    $account = fpsAccount($owner);
+    $run = fpsImportRun($owner);
+    $tx = Transaction::create(fpsTransactionOverrides($account->id, $run->id) + ['user_id' => $owner->id]);
+
+    app(FieldProvenanceWriter::class)->stamp($stranger->id, $tx->id, ['category_id' => 'manual']);
+
+    foreach (Event::dispatched(TransactionMutated::class) as [$event]) {
+        expect($event->dirtyFields)->not->toHaveKey('field_provenance');
+    }
+    expect(fpsProvenance($tx->id))->toBe([]);
+});
