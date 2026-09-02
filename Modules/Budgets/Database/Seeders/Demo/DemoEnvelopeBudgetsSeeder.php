@@ -6,7 +6,7 @@ namespace Modules\Budgets\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Str;
+use Modules\Budgets\Internal\Support\EnvelopeMoveId;
 use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Core\Models\User;
@@ -226,13 +226,17 @@ final class DemoEnvelopeBudgetsSeeder
                 continue;
             }
 
-            $groupId = (string) Str::uuid();
+            // Derived from the demo move itself, never minted: every device
+            // seeds this same move, and a fresh uuid on each would make one
+            // demo move two the moment the two of them synced.
+            $groupId = self::demoGroupId(self::asText($user->username), $move['from'], $move['to'], self::asText($move['memoKey']), $periodStart);
 
             foreach ([
                 ['category_id' => $fromId, 'counterpart_category_id' => $toId, 'amount_minor' => -$move['minor'], 'kind' => EnvelopeMoveKind::MoveOut],
                 ['category_id' => $toId, 'counterpart_category_id' => $fromId, 'amount_minor' => $move['minor'], 'kind' => EnvelopeMoveKind::MoveIn],
             ] as $leg) {
                 $connection->table('envelope_moves')->insert([
+                    'id' => EnvelopeMoveId::for($groupId, $leg['kind'], $periodStart),
                     'user_id' => $user->id,
                     'category_id' => $leg['category_id'],
                     'counterpart_category_id' => $leg['counterpart_category_id'],
@@ -247,5 +251,19 @@ final class DemoEnvelopeBudgetsSeeder
                 ]);
             }
         }
+    }
+
+    // The slugs and the memo key identify the demo move on every device, and
+    // the period start keeps two installs a month apart from claiming one row.
+    // The username rather than the id: it is unique, and it is the same string
+    // on both devices where an autoincrement need not be.
+    private static function demoGroupId(string $username, string $from, string $to, string $memoKey, string $periodStart): string
+    {
+        return 'demo-'.substr(hash('sha256', implode('|', [$username, $from, $to, $memoKey, $periodStart])), 0, 32);
+    }
+
+    private static function asText(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 }

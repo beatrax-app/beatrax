@@ -509,10 +509,11 @@ itself into the log, in slices that commit as they go and resume across
 requests: [Capturing the history that predates
 sync](pre-sync-history-capture.md).
 
-### When two devices name one row (`Internal\Merge\PeerRowAliases`, `CreateRowCollision`)
+### When two devices name one row (`Internal\Merge\AlreadyPresentCreate`)
 
 A `create_row` whose insert the database refuses as already present is one of
-three different things, and the applier has to tell them apart.
+three different things, and `AlreadyPresentCreate` tells them apart — leaning on
+`PeerRowAliases` for the first and `CreateRowCollision` for the third.
 
 **The row is here under another id.** Each device seeds its own reference data,
 so a peer's tax category arrives as id 109 and matches local row 13 on

@@ -26,7 +26,7 @@ final readonly class OpLogEntryApplier
         private SelfReferenceDeferral $selfReferences,
         private TransferPairCascade $pairCascade,
         private PeerRowAliases $aliases,
-        private CreateRowCollision $collisions,
+        private AlreadyPresentCreate $alreadyPresent,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -238,7 +238,7 @@ final readonly class OpLogEntryApplier
             // it is a second id for one row, and the peer's id has to keep
             // meaning something or every child naming it is orphaned.
             if (CreateRowInsertFailure::classify($e) === CreateRowInsertFailure::AlreadyPresent) {
-                return $this->answerAlreadyPresent($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+                return $this->alreadyPresent->answer($table, $payload, $fields, $now, $deviceId, $pk, $userId);
             }
 
             return $this->recordRefusedInsert($table, $e, $fields, $now);
@@ -253,33 +253,6 @@ final readonly class OpLogEntryApplier
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function answerAlreadyPresent(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): bool
-    {
-        $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
-
-        if ($this->aliases->localFor($table, $deviceId, $pk, $userId) !== null) {
-            return true;
-        }
-
-        if (! $this->collisions->contradicts($table, $pk, $payload)) {
-            return true;
-        }
-
-        $firstField = reset($fields);
-
-        if ($firstField !== false && $firstField !== []) {
-            $this->quarantine->record($firstField[0], QuarantineReason::PrimaryKeyCollision, $now);
-        }
-
-        $this->logger?->warning('OpLogEntryApplier: two devices minted one primary key.', [
-            'table' => $table,
-            'pk' => (string) $pk,
-            'device_id' => $deviceId,
-        ]);
-
-        return false;
-    }
-
     // Every refusal the database itself raised. The already-present arm is
     // answered above, where the payload that identifies the twin is in hand.
     /**

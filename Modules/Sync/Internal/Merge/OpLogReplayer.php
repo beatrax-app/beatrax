@@ -126,7 +126,12 @@ final readonly class OpLogReplayer
             new SelfReferenceDeferral($db, $ownership),
             $this->pairCascade,
             new PeerRowAliases($db, $this->tableOrder),
-            new CreateRowCollision($db, $sensitiveFields),
+            new AlreadyPresentCreate(
+                new PeerRowAliases($db, $this->tableOrder),
+                new CreateRowCollision($db, $sensitiveFields),
+                $quarantine,
+                $this->resolveFromContainer(LoggerInterface::class),
+            ),
             $this->resolveFromContainer(LoggerInterface::class),
         );
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
