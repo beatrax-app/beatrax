@@ -103,13 +103,19 @@ final readonly class LanSyncClient
 
             return true;
         } catch (LanSyncException $e) {
-            if (! $e->isPeerRevocation()) {
+            // An incomplete dial is the same condition as the block below and
+            // rethrowing it put an error page in front of a reader whose other
+            // device had merely gone to sleep. A revocation cannot be retried
+            // either, so both answer false and only a refusal still raises.
+            if ($e->isDialIncomplete()) {
+                $this->logger?->info('LanSyncClient: LAN dial did not complete (retryable).', [
+                    'reason' => $e::class,
+                ]);
+            } elseif ($e->isPeerRevocation()) {
+                $this->forgetRevokedPeer($identity->userId);
+            } else {
                 throw $e;
             }
-
-            // Retrying cannot help — this device was removed on the other
-            // side — so stop every surface reporting a peer that refuses it.
-            $this->forgetRevokedPeer($identity->userId);
 
             return false;
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {

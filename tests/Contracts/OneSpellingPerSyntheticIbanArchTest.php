@@ -8,10 +8,14 @@ declare(strict_types=1);
 // this guard is what keeps a fifth site from spelling it by hand again — a
 // rename on one side of a hand-written pair is silent: a prompt that never
 // fires and a receipt that never matches.
-/** @return list<string> repo-relative production PHP files under Modules/ that contain $literal */
-function filesWritingIbanLiteral(string $literal): array
+// $root is injectable for one reason only: the red-proof below needs a tree it
+// can plant a file in, and planting under Modules/ races every other arch guard
+// scanning that tree in a parallel worker.
+/** @return list<string> production PHP files under $root, relative to its parent, that contain $literal */
+function filesWritingIbanLiteral(string $literal, ?string $root = null): array
 {
-    $root = base_path('Modules');
+    $root ??= base_path('Modules');
+    $relativeTo = dirname($root).'/';
     $needle = "'".$literal."'";
     $found = [];
 
@@ -26,7 +30,7 @@ function filesWritingIbanLiteral(string $literal): array
             continue;
         }
         if (str_contains((string) file_get_contents($path), $needle)) {
-            $found[] = str_replace(base_path().'/', '', $path);
+            $found[] = str_replace($relativeTo, '', $path);
         }
     }
 
@@ -72,19 +76,25 @@ it('writes the demo wallet identifier with one spelling across the demo seeders'
 });
 
 it('goes RED both ways — a new site carrying the literal, and a listed site that stops', function (): void {
-    $scratch = base_path('Modules/Core/Internal/OneSpellingPerSyntheticIbanProbe.php');
+    // Deliberately not under Modules/: while a probe exists there, any guard
+    // enumerating that tree in another worker lists it and then finds it gone,
+    // and goes red naming a file it has no business reading.
+    $root = sys_get_temp_dir().'/one-spelling-'.bin2hex(random_bytes(6));
+    $probe = $root.'/OneSpellingPerSyntheticIbanProbe.php';
 
-    file_put_contents($scratch, "<?php\n\nfinal class ScratchProbe { public const IBAN = 'ICS-CARD'; }\n");
+    mkdir($root, 0o777, true);
+    file_put_contents($probe, "<?php\n\nfinal class ScratchProbe { public const IBAN = 'ICS-CARD'; }\n");
 
     try {
-        expect(filesWritingIbanLiteral('ICS-CARD'))
-            ->toContain('Modules/Core/Internal/OneSpellingPerSyntheticIbanProbe.php');
-    } finally {
-        unlink($scratch);
-    }
+        expect(filesWritingIbanLiteral('ICS-CARD', $root))
+            ->toContain(basename($root).'/OneSpellingPerSyntheticIbanProbe.php');
 
-    // The other direction needs no probe: the scan matches the exact quoted
-    // literal, so a site renamed to 'ICS-CARD-PRIMARY' drops out of the list
-    // the assertion above pins, rather than being silently tolerated.
-    expect(filesWritingIbanLiteral('ICS-CARD-PRIMARY'))->toBe([]);
+        // The other direction, against the same planted file: the scan matches
+        // the exact quoted literal, so a site renamed to 'ICS-CARD-PRIMARY'
+        // drops out of the pinned list rather than being silently tolerated.
+        expect(filesWritingIbanLiteral('ICS-CARD-PRIMARY', $root))->toBe([]);
+    } finally {
+        unlink($probe);
+        rmdir($root);
+    }
 });

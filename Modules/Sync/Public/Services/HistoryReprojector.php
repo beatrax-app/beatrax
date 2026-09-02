@@ -72,12 +72,74 @@ final readonly class HistoryReprojector
             return 0;
         }
 
+        // Read BEFORE the replay so the ids name only holds that existed going
+        // in. An op that fails again is recorded afresh by the pass itself,
+        // under a new id, so retiring these cannot swallow the new answer.
+        $spent = $this->keyRecoverableHoldIds($userId, $session, $since, $lastFingerprint);
+
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
         $this->buildReplayer($userId)->replay($entries, $userId, RowHistoryPolicy::AsGiven);
+        $this->retire($spent);
         $this->clearSettled($userId);
 
         return count($rows);
+    }
+
+    // A hold naming an epoch this device now holds has had its answer: the pass
+    // above replayed it with the key in hand. clearSettled() knows only the two
+    // create-refusals, so nothing deleted one, and a phone just handed its key
+    // kept reporting 385 rows "waiting to be added" through every later pass.
+    /**
+     * @return list<int>
+     */
+    private function keyRecoverableHoldIds(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
+    {
+        $held = $this->heldEpochIds($userId, $session);
+        if ($held === []) {
+            return [];
+        }
+
+        $ids = [];
+
+        $query = $this->withinPassWindow(
+            $this->recoverableQuarantine($userId)
+                ->whereIn('reason', QuarantineReason::keyRecoverable())
+                ->whereIn('gdk_epoch', $held),
+            $userId,
+            $since,
+            $lastFingerprint,
+        );
+
+        foreach ($query->limit(self::SETTLED_SWEEP_LIMIT)->pluck('id') as $id) {
+            if (is_numeric($id)) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    // The window a pass answers for, applied identically to the rows it
+    // replays and the holds it retires. Stated once because the two drifting
+    // apart retires a hold that pass never gave an answer to.
+    private function withinPassWindow(Builder $query, int $userId, ?string $since, ?string $lastFingerprint): Builder
+    {
+        if ($since !== null && $this->keyringFingerprint($userId) === $lastFingerprint) {
+            $query->where('created_at', '>', $since);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function retire(array $ids): void
+    {
+        foreach (array_chunk($ids, 200) as $chunk) {
+            $this->db->connection()->table('op_log_quarantine')->whereIn('id', $chunk)->delete();
+        }
     }
 
     // A create refused because the row could not be inserted is spent once the
@@ -162,12 +224,7 @@ final readonly class HistoryReprojector
      */
     private function rowsWorthReplaying(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
-        $keyringMoved = $this->keyringFingerprint($userId) !== $lastFingerprint;
-
-        $query = $this->openableRows($userId, $session);
-        if (! $keyringMoved && $since !== null) {
-            $query->where('created_at', '>', $since);
-        }
+        $query = $this->withinPassWindow($this->openableRows($userId, $session), $userId, $since, $lastFingerprint);
 
         $rows = [];
         $seen = [];
