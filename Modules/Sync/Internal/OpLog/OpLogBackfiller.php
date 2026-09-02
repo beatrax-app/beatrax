@@ -194,14 +194,15 @@ final readonly class OpLogBackfiller
             ->where('table_name', $table)
             ->where('op_type', OpType::CreateRow->value)
             ->whereIn('pk', $pks)
-            // Only an author the registry still holds a key for can be
-            // verified, mirroring the map the wire is handed: counting an op
-            // signed by an unnameable identity as coverage retires the row
-            // while leaving it unreplicable. A removed device keeps its key.
+            // This device's own creates, and no one else's. A peer holds
+            // only the devices it paired with itself, so an op signed by a
+            // former peer is coverage here and unverifiable there — which
+            // left a replaced phone missing every row its predecessor wrote.
             ->whereIn('device_id', static function (Builder $query) use ($userId): void {
                 $query->select('device_id')
                     ->from('device_registry')
-                    ->where('user_id', $userId);
+                    ->where('user_id', $userId)
+                    ->where('is_self', 1);
             })
             ->distinct()
             ->pluck('pk');
