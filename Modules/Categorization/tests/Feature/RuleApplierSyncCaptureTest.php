@@ -179,8 +179,12 @@ it('a re-apply that changes N fields produces exactly N op_log_entries rows via 
         ->where('pk', (string) $tx->id)
         ->get();
 
-    expect($rows)->toHaveCount(3);
-    expect($rows->pluck('field')->sort()->values()->all())->toBe(['category_id', 'counterparty_id', 'note']);
+    // Three values and one provenance map. The stamp is coalesced to a single
+    // write per transaction, so a re-apply that changes N fields still costs
+    // N + 1 rows rather than 2N — the map it carries already names every field
+    // the pass touched.
+    expect($rows)->toHaveCount(4);
+    expect($rows->pluck('field')->sort()->values()->all())->toBe(['category_id', 'counterparty_id', 'field_provenance', 'note']);
     foreach ($rows as $row) {
         expect($row->op_type)->toBe('set');
     }
