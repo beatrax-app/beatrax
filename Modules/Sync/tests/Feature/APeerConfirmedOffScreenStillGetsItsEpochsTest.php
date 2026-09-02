@@ -145,3 +145,45 @@ it('opens the pre-sync capture the same skipped tail owed', function (): void {
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
         ->toBeGreaterThan(0, 'the peer was handed a key with no history behind it');
 });
+
+// The two debts are independent. Gating the capture on the fan-out meant one
+// peer whose key material can never be sealed held this device's own history
+// hostage for good — and the history is what ResumesPreSyncCapture needs
+// opened before it can finish anything.
+it('captures the history even when a peer cannot be sealed to', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = pcoUser();
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+    app(GdkKeyringService::class)->generateAndPersist($userId, $session);
+
+    // Confirmed, owed, and holding a public key no sealed box can be built
+    // against — the fan-out throws for this peer however often it is retried.
+    $registryId = pcoConfirmedPeer($user);
+    $db->connection()->table('device_registry')
+        ->where('id', $registryId)
+        ->update(['x25519_public_key_hex' => 'not-hex-at-all']);
+
+    $db->connection()->table('accounts')->insert([
+        'user_id' => $userId,
+        'name' => 'Predates sync',
+        'slug' => 'pco-unsealable-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00PCU'.strtoupper(bin2hex(random_bytes(5))),
+        'default_currency' => 'EUR',
+        'created_at' => '2026-09-01 23:00:00',
+        'updated_at' => '2026-09-01 23:00:00',
+    ]);
+
+    app(DeliversOwedEpochs::class)->terminate(Request::create('/'), new Response);
+
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
+        ->toBeGreaterThan(0, 'an unsealable peer blocked this device capturing its own history');
+});

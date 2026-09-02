@@ -59,13 +59,14 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
         $userId = $this->currentUser->id();
         $session = $this->container->make(Session::class);
 
-        // Only once every peer took its epochs: a key with no history behind
-        // it left this desktop sending 103 rows from the import that
-        // post-dated sync and none of the 35 before it. Opening the capture is
-        // what gives ResumesPreSyncCapture something to finish.
-        if ($this->fanOutTo($owed, $userId, $session)) {
-            $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
-        }
+        $this->fanOutTo($owed, $userId, $session);
+
+        // Deliberately NOT gated on the fan-out above. They are two
+        // independent debts of the same skipped tail, and a peer whose key
+        // material can never be sealed would otherwise hold this device's own
+        // history hostage for good. Opening the capture is also the only thing
+        // that gives ResumesPreSyncCapture something to finish.
+        $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
     }
 
     // The peers owed, or none. One covered lookup on a table holding a handful
@@ -90,13 +91,13 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
         return $owed;
     }
 
-    // Per peer, so one device whose key material cannot be sealed does not
-    // hold up the rest. loadKeyring() throws when the app-lock key is not
-    // held, which is an ordinary locked request rather than a fault.
+    // Stops at the first failure rather than carrying on: loadKeyring() throws
+    // when the app-lock key is not held, and that is a fact about this process
+    // rather than about one peer, so every peer behind it would fail alike.
     /**
      * @param  list<int>  $owed
      */
-    private function fanOutTo(array $owed, int $userId, Session $session): bool
+    private function fanOutTo(array $owed, int $userId, Session $session): void
     {
         foreach ($owed as $deviceRegistryId) {
             try {
@@ -107,10 +108,8 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
                     ...SafeExceptionContext::describe($e),
                 ]);
 
-                return false;
+                return;
             }
         }
-
-        return true;
     }
 }
