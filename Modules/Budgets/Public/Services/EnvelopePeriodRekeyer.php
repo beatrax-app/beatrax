@@ -256,12 +256,15 @@ final readonly class EnvelopePeriodRekeyer
                 'amount_minor' => self::toInt($row->amount_minor),
                 'currency' => self::toString($row->currency),
                 'kind' => self::toString($row->kind),
+                // Inside $fields, not beside it in the insert: the row the
+                // reader typed a memo on is the row the peer has to receive,
+                // and a column named in only one of the two travels nowhere.
+                'memo' => $row->memo,
                 'move_group_id' => $row->move_group_id,
             ];
 
             $id = $connection->table('envelope_moves')->insertGetId([
                 ...$fields,
-                'memo' => $row->memo,
                 'created_at' => $row->created_at ?? $now,
                 'updated_at' => $now,
             ]);
