@@ -50,31 +50,55 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
 
     private function deliver(): void
     {
-        if (! $this->currentUser->isAuthenticated()) {
-            return;
-        }
-
-        $userId = $this->currentUser->id();
-
-        // One covered lookup on a table holding a handful of rows, and with
-        // nothing owed — which is every request after the first — that read is
-        // the whole cost: no throttle marker, no keyring opened, no wrap built.
-        $owed = $this->rotation->peersOwedEpochs($userId);
+        $owed = $this->due();
 
         if ($owed === []) {
             return;
         }
 
-        if (! $this->cache->add(self::THROTTLE_KEY.$userId, true, self::TICK_INTERVAL_SECONDS)) {
-            return;
-        }
-
+        $userId = $this->currentUser->id();
         $session = $this->container->make(Session::class);
 
+        // Only once every peer took its epochs: a key with no history behind
+        // it left this desktop sending 103 rows from the import that
+        // post-dated sync and none of the 35 before it. Opening the capture is
+        // what gives ResumesPreSyncCapture something to finish.
+        if ($this->fanOutTo($owed, $userId, $session)) {
+            $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
+        }
+    }
+
+    // The peers owed, or none. One covered lookup on a table holding a handful
+    // of rows, and with nothing owed — which is every request after the first
+    // — that read is the whole cost: no throttle marker, no keyring opened.
+    /**
+     * @return list<int>
+     */
+    private function due(): array
+    {
+        if (! $this->currentUser->isAuthenticated()) {
+            return [];
+        }
+
+        $userId = $this->currentUser->id();
+        $owed = $this->rotation->peersOwedEpochs($userId);
+
+        if ($owed === [] || ! $this->cache->add(self::THROTTLE_KEY.$userId, true, self::TICK_INTERVAL_SECONDS)) {
+            return [];
+        }
+
+        return $owed;
+    }
+
+    // Per peer, so one device whose key material cannot be sealed does not
+    // hold up the rest. loadKeyring() throws when the app-lock key is not
+    // held, which is an ordinary locked request rather than a fault.
+    /**
+     * @param  list<int>  $owed
+     */
+    private function fanOutTo(array $owed, int $userId, Session $session): bool
+    {
         foreach ($owed as $deviceRegistryId) {
-            // Per peer, so one device whose key material cannot be sealed does
-            // not hold up the rest. loadKeyring() throws when the app-lock key
-            // is not held, which is an ordinary locked request, not a fault.
             try {
                 $this->rotation->fanOutAllEpochsToDevice($userId, $deviceRegistryId, $session);
             } catch (Throwable $e) {
@@ -83,14 +107,10 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
                     ...SafeExceptionContext::describe($e),
                 ]);
 
-                return;
+                return false;
             }
         }
 
-        // The other half of the same tail. A key with no history behind it left
-        // this desktop sending only what was captured live — 103 rows from the
-        // import that post-dated sync, none of the 35 before it. Opening the
-        // capture is what gives ResumesPreSyncCapture something to finish.
-        $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
+        return true;
     }
 }
