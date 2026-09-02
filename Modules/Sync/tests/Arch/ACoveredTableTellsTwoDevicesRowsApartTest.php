@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
-use Symfony\Component\Finder\Finder;
 
 uses(RefreshDatabase::class);
 
@@ -38,21 +37,52 @@ function stillExposed(): array
     return ['transaction_splits'];
 }
 
+// Walked rather than found through Finder: composer-require-checker reads
+// Modules/*/tests as production code, and that dependency is dev-only.
+/** @return list<string> */
+function moduleSourceFiles(bool $includeTests = false, ?string $only = null): array
+{
+    $paths = [];
+
+    /** @var iterable<SplFileInfo> $files */
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
+
+    foreach ($files as $file) {
+        $path = $file->getPathname();
+
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+
+        if (! $includeTests && preg_match('#/tests/#', $path) === 1) {
+            continue;
+        }
+
+        if ($only !== null && preg_match($only, $path) !== 1) {
+            continue;
+        }
+
+        $paths[] = $path;
+    }
+
+    return $paths;
+}
+
 /** @return list<string> tables named in a DerivedRowId or DeviceMintedRowId call */
 function tablesWithAnIdScheme(): array
 {
     $named = [];
     $minting = [];
 
-    foreach ((new Finder)->files()->in(base_path('Modules'))->name('*.php')->notPath('tests') as $file) {
-        $source = $file->getContents();
+    foreach (moduleSourceFiles() as $path) {
+        $source = (string) file_get_contents($path);
 
-        if (preg_match_all("/DerivedRowId::for\(\s*'([a-z_]+)'/", $source, $found) === 1 || $found[1] !== []) {
+        if (preg_match_all("/DerivedRowId::for\(\s*'([a-z_]+)'/", $source, $found) !== false) {
             $named = [...$named, ...$found[1]];
         }
 
         if (str_contains($source, 'DeviceMintedRowId::mint(')) {
-            $minting[] = $file->getRealPath();
+            $minting[] = $path;
         }
     }
 
@@ -100,14 +130,14 @@ function modelTablesByClassName(): array
 {
     $tables = [];
 
-    foreach ((new Finder)->files()->in(base_path('Modules'))->path('Models')->name('*.php') as $file) {
-        $source = $file->getContents();
+    foreach (moduleSourceFiles(includeTests: false, only: '#/Models/#') as $path) {
+        $source = (string) file_get_contents($path);
 
         if (preg_match('/^namespace\s+([^;]+);/m', $source, $ns) !== 1) {
             continue;
         }
 
-        $class = $ns[1].'\\'.$file->getBasename('.php');
+        $class = $ns[1].'\\'.basename($path, '.php');
 
         if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
             continue;
@@ -115,7 +145,7 @@ function modelTablesByClassName(): array
 
         /** @var Model $model */
         $model = new $class;
-        $tables[$file->getBasename('.php')] = $model->getTable();
+        $tables[basename($path, '.php')] = $model->getTable();
     }
 
     return $tables;
