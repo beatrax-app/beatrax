@@ -95,24 +95,39 @@ final class RuleApplier
         $provenance = $this->provenance->provenanceFor($userId, $transactionId);
 
         $changed = [];
-        foreach ($desiredByType as $type => $entry) {
-            if (($provenance[self::PROVENANCE_KEY[$type] ?? ''] ?? null) === 'manual') {
-                continue;
-            }
+        // Written once at the end, not per action: the stamp announces the
+        // whole merged map, so three of them put three ops on the wire where
+        // the last already says everything. The finally keeps a row that
+        // throws mid-loop as stamped as it is written.
+        $stamps = [];
 
-            $result = match ($type) {
-                ActionType::Category->value => $this->applyCategory($entry['ruleId'], $entry['action'], $transactionId, $user),
-                ActionType::Counterparty->value => $this->applyCounterparty($entry['ruleId'], $entry['action'], $transactionId, $user),
-                ActionType::Note->value => $this->applyNote($entry['ruleId'], $entry['action'], $transactionId, $user),
-                ActionType::TaxTag->value => $this->applyTaxTag($entry['ruleId'], $entry['action'], $transactionId, $userId),
-                default => null,
-            };
+        try {
+            foreach ($desiredByType as $type => $entry) {
+                if (($provenance[self::PROVENANCE_KEY[$type] ?? ''] ?? null) === 'manual') {
+                    continue;
+                }
 
-            if ($result !== null) {
-                [$field, $value] = $result;
-                $changed[$field] = $value;
-                $this->bumpHits($entry['ruleId'], $userId);
+                $result = match ($type) {
+                    ActionType::Category->value => $this->applyCategory($entry['ruleId'], $entry['action'], $transactionId, $user),
+                    ActionType::Counterparty->value => $this->applyCounterparty($entry['ruleId'], $entry['action'], $transactionId, $user),
+                    ActionType::Note->value => $this->applyNote($entry['ruleId'], $entry['action'], $transactionId, $user),
+                    ActionType::TaxTag->value => $this->applyTaxTag($entry['ruleId'], $entry['action'], $transactionId, $userId),
+                    default => null,
+                };
+
+                if ($result !== null) {
+                    [$field, $value] = $result;
+                    $changed[$field] = $value;
+                    // tax_tag is absent by design: TagTransaction stamps that
+                    // one itself, and stamping it here would say it twice.
+                    if ($type !== ActionType::TaxTag->value) {
+                        $stamps[$field] = 'rule';
+                    }
+                    $this->bumpHits($entry['ruleId'], $userId);
+                }
             }
+        } finally {
+            $this->provenance->stamp($userId, $transactionId, $stamps);
         }
 
         return $changed;
@@ -161,7 +176,6 @@ final class RuleApplier
             mutationType: 'edit',
             dirtyFields: ['category_id' => $categoryId],
         ));
-        $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'rule']);
 
         return ['category_id', $categoryId];
     }
@@ -191,7 +205,6 @@ final class RuleApplier
             mutationType: 'edit',
             dirtyFields: ['counterparty_id' => $counterpartyId],
         ));
-        $this->provenance->stamp($user->id, $transactionId, ['counterparty_id' => 'rule']);
 
         return ['counterparty_id', $counterpartyId];
     }
@@ -234,7 +247,6 @@ final class RuleApplier
             mutationType: 'edit',
             dirtyFields: ['note' => $finalNote],
         ));
-        $this->provenance->stamp($user->id, $transactionId, ['note' => 'rule']);
 
         return ['note', $finalNote];
     }

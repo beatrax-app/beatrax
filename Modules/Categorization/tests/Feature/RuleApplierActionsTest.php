@@ -19,6 +19,30 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
+// A stamp announces the provenance map on its own TransactionMutated, so a
+// bare count of the event no longer says how many values moved.
+function ruleApplierValueMutations(): int
+{
+    return ruleApplierMutationsWhere(fn (array $fields): bool => ! array_key_exists('field_provenance', $fields));
+}
+
+function ruleApplierProvenanceMutations(): int
+{
+    return ruleApplierMutationsWhere(fn (array $fields): bool => array_key_exists('field_provenance', $fields));
+}
+
+function ruleApplierMutationsWhere(Closure $matches): int
+{
+    $count = 0;
+    foreach (Event::dispatched(TransactionMutated::class) as [$event]) {
+        if ($matches($event->dirtyFields)) {
+            $count++;
+        }
+    }
+
+    return $count;
+}
+
 function baseCanonicalForRuleApplier(): CanonicalTransaction
 {
     return new CanonicalTransaction(
@@ -232,7 +256,12 @@ it('applies all four actions to a persisted transaction', function (): void {
 
     // Three, not four: tax_tag delegates to TagTransaction, which dispatches
     // TransactionTagged itself rather than a second TransactionMutated.
-    Event::assertDispatched(TransactionMutated::class, 3);
+    expect(ruleApplierValueMutations())->toBe(3);
+
+    // Two, not four: this pass coalesces its own three stamps into one write,
+    // and TagTransaction stamps tax_tag itself. These carry the provenance map
+    // and no value, so they are counted apart from the three above.
+    expect(ruleApplierProvenanceMutations())->toBe(2);
 });
 
 it('preserves a manual-provenance field and only writes the rule-owned field', function (): void {
@@ -313,7 +342,8 @@ it('resolves last-writer-wins on a persisted field with exactly one TransactionM
     $tx->refresh();
     expect($tx->category_id)->toBe($secondCategory->id);
 
-    Event::assertDispatched(TransactionMutated::class, 1);
+    expect(ruleApplierValueMutations())->toBe(1);
+    expect(ruleApplierProvenanceMutations())->toBe(1);
 });
 
 it('skips a dangling category id but still applies the other action', function (): void {
