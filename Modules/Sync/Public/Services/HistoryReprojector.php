@@ -75,7 +75,7 @@ final readonly class HistoryReprojector
         // Read BEFORE the replay so the ids name only holds that existed going
         // in. An op that fails again is recorded afresh by the pass itself,
         // under a new id, so retiring these cannot swallow the new answer.
-        $spent = $this->keyRecoverableHoldIds($userId, $session);
+        $spent = $this->keyRecoverableHoldIds($userId, $session, $since, $lastFingerprint);
 
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
@@ -93,7 +93,7 @@ final readonly class HistoryReprojector
     /**
      * @return list<int>
      */
-    private function keyRecoverableHoldIds(int $userId, Session $session): array
+    private function keyRecoverableHoldIds(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
         $held = $this->heldEpochIds($userId, $session);
         if ($held === []) {
@@ -102,17 +102,34 @@ final readonly class HistoryReprojector
 
         $ids = [];
 
-        foreach ($this->recoverableQuarantine($userId)
-            ->whereIn('reason', QuarantineReason::keyRecoverable())
-            ->whereIn('gdk_epoch', $held)
-            ->limit(self::SETTLED_SWEEP_LIMIT)
-            ->pluck('id') as $id) {
+        $query = $this->withinPassWindow(
+            $this->recoverableQuarantine($userId)
+                ->whereIn('reason', QuarantineReason::keyRecoverable())
+                ->whereIn('gdk_epoch', $held),
+            $userId,
+            $since,
+            $lastFingerprint,
+        );
+
+        foreach ($query->limit(self::SETTLED_SWEEP_LIMIT)->pluck('id') as $id) {
             if (is_numeric($id)) {
                 $ids[] = (int) $id;
             }
         }
 
         return $ids;
+    }
+
+    // The window a pass answers for, applied identically to the rows it
+    // replays and the holds it retires. Stated once because the two drifting
+    // apart retires a hold that pass never gave an answer to.
+    private function withinPassWindow(Builder $query, int $userId, ?string $since, ?string $lastFingerprint): Builder
+    {
+        if ($since !== null && $this->keyringFingerprint($userId) === $lastFingerprint) {
+            $query->where('created_at', '>', $since);
+        }
+
+        return $query;
     }
 
     /**
@@ -207,12 +224,7 @@ final readonly class HistoryReprojector
      */
     private function rowsWorthReplaying(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
-        $keyringMoved = $this->keyringFingerprint($userId) !== $lastFingerprint;
-
-        $query = $this->openableRows($userId, $session);
-        if (! $keyringMoved && $since !== null) {
-            $query->where('created_at', '>', $since);
-        }
+        $query = $this->withinPassWindow($this->openableRows($userId, $session), $userId, $since, $lastFingerprint);
 
         $rows = [];
         $seen = [];

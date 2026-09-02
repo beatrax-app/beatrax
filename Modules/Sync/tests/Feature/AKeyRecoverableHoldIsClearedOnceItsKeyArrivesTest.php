@@ -99,8 +99,7 @@ it('retires a hold the pass has answered, rather than reporting it for ever', fu
 
     app(HistoryReprojector::class)->replayQuarantined($userId, $session, null, null);
 
-    expect(keyHoldIds($db, $userId))
-        ->not->toContain($before[0], 'the hold outlived the pass that answered it');
+    expect(keyHoldIds($db, $userId))->not->toContain($before[0]);
 });
 
 // The other half of retiring by id: an op that fails AGAIN is re-recorded by
@@ -147,4 +146,43 @@ it('keeps a hold whose epoch this device does not have', function (): void {
     app(HistoryReprojector::class)->replayQuarantined($userId, $session, null, null);
 
     expect(keyHoldIds($db, $userId))->toBe($before);
+});
+
+// The pass only replays what falls inside its window — when the keyring has not
+// moved, that is holds newer than the caller's last stamp. Retiring on a wider
+// scope than that would drop a hold this pass never gave an answer to, and its
+// raw_value is the only copy of that value when the entry never reached the log.
+it('keeps a hold the pass did not replay', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = (int) keyHoldUser()->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    $epoch = app(GdkKeyringService::class)->generateAndPersist($userId, $session);
+
+    // Outside the window: older than the caller's stamp, so this pass never
+    // looks at it. Recorded first so its id is the lower of the two.
+    keyHoldQuarantine($db, $userId, $epoch->epochId);
+    $stale = keyHoldIds($db, $userId)[0];
+
+    // Inside it, with an entry so the pass has something to replay.
+    keyHoldEntry($db, $userId, $epoch->epochId);
+    keyHoldQuarantine($db, $userId, $epoch->epochId);
+    $db->connection()->table('op_log_quarantine')
+        ->where('user_id', $userId)->where('id', '>', $stale)
+        ->update(['created_at' => '2026-09-03 00:00:00']);
+
+    // The same fingerprint the pass reads, so the keyring counts as unmoved
+    // and the window is the caller's stamp rather than "everything".
+    $fingerprint = app(HistoryReprojector::class)->keyringFingerprint($userId);
+
+    app(HistoryReprojector::class)
+        ->replayQuarantined($userId, $session, '2026-09-02 00:00:00', $fingerprint);
+
+    // toContain takes NEEDLES, so an explanation passed beside the id becomes a
+    // second needle and fails against a correct value. The reason lives above.
+    expect(keyHoldIds($db, $userId))->toContain($stale);
 });
