@@ -59,11 +59,11 @@ final readonly class CreateRowCollision
      */
     private function differs(string $table, string $column, array $payload, array $stored): bool
     {
-        if (! array_key_exists($column, $payload) || ! array_key_exists($column, $stored)) {
-            return false;
-        }
+        $comparable = array_key_exists($column, $payload)
+            && array_key_exists($column, $stored)
+            && ! $this->sensitive->isSensitive($table, $column);
 
-        if ($this->sensitive->isSensitive($table, $column)) {
+        if (! $comparable) {
             return false;
         }
 
