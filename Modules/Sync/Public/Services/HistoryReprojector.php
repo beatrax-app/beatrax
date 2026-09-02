@@ -72,12 +72,57 @@ final readonly class HistoryReprojector
             return 0;
         }
 
+        // Read BEFORE the replay so the ids name only holds that existed going
+        // in. An op that fails again is recorded afresh by the pass itself,
+        // under a new id, so retiring these cannot swallow the new answer.
+        $spent = $this->keyRecoverableHoldIds($userId, $session);
+
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
         $this->buildReplayer($userId)->replay($entries, $userId, RowHistoryPolicy::AsGiven);
+        $this->retire($spent);
         $this->clearSettled($userId);
 
         return count($rows);
+    }
+
+    // A hold naming an epoch this device now holds has had its answer: the pass
+    // above replayed it with the key in hand. clearSettled() knows only the two
+    // create-refusals, so nothing deleted one, and a phone just handed its key
+    // kept reporting 385 rows "waiting to be added" through every later pass.
+    /**
+     * @return list<int>
+     */
+    private function keyRecoverableHoldIds(int $userId, Session $session): array
+    {
+        $held = $this->heldEpochIds($userId, $session);
+        if ($held === []) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($this->recoverableQuarantine($userId)
+            ->whereIn('reason', QuarantineReason::keyRecoverable())
+            ->whereIn('gdk_epoch', $held)
+            ->limit(self::SETTLED_SWEEP_LIMIT)
+            ->pluck('id') as $id) {
+            if (is_numeric($id)) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function retire(array $ids): void
+    {
+        foreach (array_chunk($ids, 200) as $chunk) {
+            $this->db->connection()->table('op_log_quarantine')->whereIn('id', $chunk)->delete();
+        }
     }
 
     // A create refused because the row could not be inserted is spent once the
