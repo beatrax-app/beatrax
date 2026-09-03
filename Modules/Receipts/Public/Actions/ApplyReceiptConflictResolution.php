@@ -141,10 +141,14 @@ final readonly class ApplyReceiptConflictResolution
                 $incoming = json_decode($incomingRaw, associative: true, flags: JSON_THROW_ON_ERROR);
                 $written = $this->applyIncoming($transactionId, $field, $incoming, $user, $now);
             } catch (JsonException) {
-                // A malformed stored value must not 500 the request —
-                // skip the apply and fall through to delete the
-                // pending row so corruption can never block future
-                // conflicts.
+                // A malformed stored value must not 500 the request, and the
+                // delete below still clears it — but this is the one of the
+                // three no-write outcomes where the reader's answer was lost
+                // rather than declined, and the row carrying it is about to go.
+                $this->logger->warning('Receipt conflict cleared without a write: the stored incoming value would not decode', [
+                    'transaction_id' => $transactionId,
+                    'field' => $field->value,
+                ]);
             }
         }
 
