@@ -13,6 +13,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\StatementSummary;
 use Modules\Ledger\Models\Transaction;
+use Modules\Sync\Public\Services\DependentRowCascade;
 
 // The period is derived from posted_at now, and UNIQUE(user_id, account_id,
 // period_start, period_end) is the whole of deciding whether a fresh read of a
@@ -178,6 +179,10 @@ it('puts the old period back on the healing pass when only the statement was rep
 });
 
 it('leaves a statement whose transactions were deleted exactly as found', function (): void {
+    $transactionIds = Transaction::query()->where('user_id', $this->user->id)
+        ->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all();
+    $this->app->make(DependentRowCascade::class)
+        ->deleteAll('transactions', $transactionIds, $this->user->id);
     Transaction::query()->where('user_id', $this->user->id)->delete();
 
     runPeriodRepair();

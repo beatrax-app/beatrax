@@ -20,6 +20,7 @@ use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\OpLog\OpType;
+use Modules\Sync\Public\Services\DependentRowCascade;
 
 uses(RefreshDatabase::class);
 
@@ -206,7 +207,9 @@ it('rebuilds the scenario and its contents on a peer that saw neither', function
 
     // Stand in for the receiving device: the same signed history against a
     // database holding neither the container nor its contents.
-    $connection->table('forecast_scenario_mutations')->where('user_id', $user->id)->delete();
+    $scenarioIds = $connection->table('forecast_scenarios')->where('user_id', $user->id)
+        ->pluck('id')->map(static fn (mixed $id): int => (int) $id)->all();
+    app(DependentRowCascade::class)->deleteAll('forecast_scenarios', $scenarioIds, $user->id);
     $connection->table('forecast_scenarios')->where('user_id', $user->id)->delete();
 
     $entries = [];

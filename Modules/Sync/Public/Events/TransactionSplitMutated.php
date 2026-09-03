@@ -7,9 +7,10 @@ namespace Modules\Sync\Public\Events;
 final readonly class TransactionSplitMutated
 {
     /**
-     * @param  string  $mutationType  'create' | 'edit' | 'delete'
+     * @param  string  $mutationType  'create' | 'edit'. A removed leg is a row
+     *                                its transaction owns, announced as an
+     *                                EntityMutated delete like every other.
      * @param  array<string, mixed>  $dirtyFields  Changed field → new-value map.
-     *                                             Empty for delete ops.
      */
     public function __construct(
         public int $splitId,

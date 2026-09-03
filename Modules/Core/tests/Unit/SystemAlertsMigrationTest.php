@@ -148,7 +148,7 @@ it('allows a system-wide alert with user_id NULL', function (): void {
     expect($row?->user_id)->toBeNull();
 });
 
-it('cascades a system_alerts row delete when the owning user is deleted', function (): void {
+it('refuses to delete a user while a system_alerts row still names them', function (): void {
     $this->db->connection()->table('system_alerts')->insert([
         'user_id' => $this->user->id,
         'kind' => 'backup_corrupt',
@@ -161,7 +161,13 @@ it('cascades a system_alerts row delete when the owning user is deleted', functi
 
     expect($this->db->connection()->table('system_alerts')->count())->toBe(1);
 
-    $this->user->delete();
+    // Removing an owned row is the application's to do and to announce, so
+    // the database refuses rather than taking it away silently.
+    expect(fn (): mixed => $this->user->delete())->toThrow(QueryException::class);
 
-    expect($this->db->connection()->table('system_alerts')->count())->toBe(0);
+    expect($this->db->connection()->table('system_alerts')->count())->toBe(1);
+
+    $this->db->connection()->table('system_alerts')->delete();
+
+    expect($this->user->delete())->toBeTrue();
 });

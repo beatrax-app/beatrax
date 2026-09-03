@@ -37,6 +37,7 @@ use Modules\Pots\Database\Seeders\Demo\DemoPotsSeeder;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
 use Modules\Reports\Database\Seeders\Demo\DemoSavedReportsSeeder;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Tax\Database\Seeders\Demo\DemoTaxTagsSeeder;
 
 // Every seeded transaction hangs off an import_runs row stamped
@@ -82,6 +83,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoSavedReportsSeeder $savedReports,
         private readonly DemoAnomalyAlertsSeeder $anomalyAlerts,
         private readonly PurgeUserDataAction $purgeUserData,
+        private readonly DependentRowCascade $cascade,
     ) {
         parent::__construct();
     }
@@ -289,6 +291,25 @@ final class DemoSeedCommand extends Command
         ));
         if ($importRunIds === []) {
             return;
+        }
+
+        // The rows those transactions own go first, because the database now
+        // refuses the delete rather than taking them away behind it. Nothing
+        // is announced here, exactly as nothing is announced for the parents:
+        // this clears demo data before re-seeding it.
+        $owners = $connection->table('transactions')
+            ->whereIn('import_run_id', $importRunIds)
+            ->get(['id', 'user_id']);
+
+        $byUser = [];
+        foreach ($owners as $owner) {
+            if (! is_numeric($owner->user_id ?? null) || ! is_numeric($owner->id ?? null)) {
+                continue;
+            }
+            $byUser[(int) $owner->user_id][] = (int) $owner->id;
+        }
+        foreach ($byUser as $userId => $transactionIds) {
+            $this->cascade->deleteAll('transactions', $transactionIds, $userId);
         }
 
         $connection->table('transactions')->whereIn('import_run_id', $importRunIds)->delete();

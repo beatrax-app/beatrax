@@ -22,8 +22,10 @@ use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -41,6 +43,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
         private FieldProvenanceWriter $provenance,
+        private DependentRowCascade $cascade,
     ) {}
 
     /**
@@ -54,7 +57,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
         $parent = $this->loadParent($user, $transactionId, ['id', 'type', 'status', 'settled_amount_minor', 'settled_currency']);
         $this->assertSplittable($user, $parent, $legs);
 
-        /** @var list<TransactionSplitMutated> $dispatchAfterCommit */
+        /** @var list<object> $dispatchAfterCommit */
         $dispatchAfterCommit = [];
 
         $this->db->connection()->transaction(function () use ($user, $transactionId, $legs, &$dispatchAfterCommit): void {
@@ -166,7 +169,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
     // per-field dirty diff, which is what the LWW sync merge requires.
     /**
      * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
-     * @return list<TransactionSplitMutated>
+     * @return list<object>
      */
     private function applyLegDiff(User $user, int $transactionId, array $legs, string $currency): array
     {
@@ -201,7 +204,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             $events[] = $this->insertLeg($user, $transactionId, $leg, $index, $currency, $now);
         }
 
-        return [...$events, ...$this->deleteRemovedLegs($user, $transactionId, $existingIds, $incomingIds)];
+        return [...$events, ...$this->deleteRemovedLegs($user, $existingIds, $incomingIds)];
     }
 
     /**
@@ -304,22 +307,30 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
     /**
      * @param  list<int>  $existingIds
      * @param  list<int>  $incomingIds
-     * @return list<TransactionSplitMutated>
+     * @return list<object>
      */
-    private function deleteRemovedLegs(User $user, int $transactionId, array $existingIds, array $incomingIds): array
+    private function deleteRemovedLegs(User $user, array $existingIds, array $incomingIds): array
     {
         $events = [];
 
         foreach (array_diff($existingIds, $incomingIds) as $removedId) {
+            // The leg owns its tax tags; without this they would go at the
+            // database and the peer would never hear that they had.
+            foreach ($this->cascade->delete('transaction_splits', $removedId, $user->id) as $dependent) {
+                $events[] = $dependent;
+            }
+
             $this->db->connection()
                 ->table('transaction_splits')
                 ->where('id', $removedId)
                 ->where('user_id', $user->id)
                 ->delete();
 
-            $events[] = new TransactionSplitMutated(
-                splitId: $removedId,
-                transactionId: $transactionId,
+            // The same announcement a cascaded leg makes, so a removed leg is
+            // reported one way rather than two.
+            $events[] = new EntityMutated(
+                table: 'transaction_splits',
+                pk: $removedId,
                 userId: $user->id,
                 mutationType: 'delete',
             );
@@ -344,8 +355,10 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
 
         /** @var list<int> $removedIds */
         $removedIds = [];
+        /** @var list<object> $dependents */
+        $dependents = [];
 
-        $this->db->connection()->transaction(function () use ($user, $transactionId, $survivingCategoryId, &$removedIds): void {
+        $this->db->connection()->transaction(function () use ($user, $transactionId, $survivingCategoryId, &$removedIds, &$dependents): void {
             $parent = $this->db->connection()
                 ->table('transactions')
                 ->where('id', $transactionId)
@@ -374,7 +387,11 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
                 throw new InvalidArgumentException(Lang::get('ledger::detail.errors.survivor_must_be_current'));
             }
 
-            $removedIds = $legRows->map(static fn (object $row): int => self::toInt($row->id))->all();
+            $removedIds = array_values($legRows->map(static fn (object $row): int => self::toInt($row->id))->all());
+
+            // The tax tags a leg owns go first, for the same reason they do
+            // when a single leg is dropped from a re-save.
+            $dependents = $this->cascade->deleteAll('transaction_splits', $removedIds, $user->id);
 
             $this->db->connection()
                 ->table('transaction_splits')
@@ -395,10 +412,14 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
         });
 
+        foreach ($dependents as $dependent) {
+            $this->events->dispatch($dependent);
+        }
+
         foreach ($removedIds as $removedId) {
-            $this->events->dispatch(new TransactionSplitMutated(
-                splitId: $removedId,
-                transactionId: $transactionId,
+            $this->events->dispatch(new EntityMutated(
+                table: 'transaction_splits',
+                pk: $removedId,
                 userId: $user->id,
                 mutationType: 'delete',
             ));
