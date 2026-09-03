@@ -222,7 +222,7 @@ it('blocks duplicate card_statements rows via the UNIQUE constraint', function (
         ->toThrow(QueryException::class);
 });
 
-it('cascades chain_links rows when their from_transaction is deleted', function (): void {
+it('refuses to delete a from_transaction while a chain_link still names it', function (): void {
     $this->conn->table('chain_links')->insert([
         'user_id' => $this->user->id,
         'from_transaction_id' => $this->fromTx->id,
@@ -237,11 +237,16 @@ it('cascades chain_links rows when their from_transaction is deleted', function 
     ]);
     expect($this->conn->table('chain_links')->count())->toBe(1);
 
-    $this->conn->table('transactions')->where('id', $this->fromTx->id)->delete();
-    expect($this->conn->table('chain_links')->count())->toBe(0);
+    expect(fn (): mixed => $this->conn->table('transactions')->where('id', $this->fromTx->id)->delete())
+        ->toThrow(QueryException::class);
+    expect($this->conn->table('chain_links')->count())->toBe(1);
+
+    $this->conn->table('chain_links')->delete();
+
+    expect($this->conn->table('transactions')->where('id', $this->fromTx->id)->delete())->toBe(1);
 });
 
-it('cascades card_statement_credits when from_statement is deleted and nulls to_statement on delete', function (): void {
+it('nulls to_statement on delete but refuses to delete the from_statement', function (): void {
     $idA = (int) $this->conn->table('card_statements')->insertGetId([
         'user_id' => $this->user->id,
         'account_id' => $this->icsAccount->id,
@@ -283,8 +288,11 @@ it('cascades card_statement_credits when from_statement is deleted and nulls to_
     expect($survivor->to_statement_id)->toBeNull();
     expect((int) $survivor->from_statement_id)->toBe($idA);
 
-    $this->conn->table('card_statements')->where('id', $idA)->delete();
-    expect($this->conn->table('card_statement_credits')->where('id', $creditId)->count())->toBe(0);
+    // to_statement_id is nulled because the credit outlives that statement.
+    // from_statement_id owns the credit, so the delete is refused instead.
+    expect(fn (): mixed => $this->conn->table('card_statements')->where('id', $idA)->delete())
+        ->toThrow(QueryException::class);
+    expect($this->conn->table('card_statement_credits')->where('id', $creditId)->count())->toBe(1);
 });
 
 it('permits a NULL to_transaction_id for exceeded-tolerance ics_bulk_settle candidates', function (): void {

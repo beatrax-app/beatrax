@@ -8,6 +8,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\QueryException;
 use Modules\Auth\Internal\Exceptions\AccountPurgeException;
+use Modules\Sync\Public\Services\DependentRowCascade;
 
 // The table list is discovered from the live schema, not written down: a
 // hand-kept list goes stale the first time a module adds a table, and it fails
@@ -20,23 +21,20 @@ final readonly class UserScopedDataPurge
 {
     private const string OWNERSHIP_COLUMN = 'user_id';
 
-    // Children with no user_id of their own. The FK cascades, but only while
-    // foreign keys are enforced, and a purge resting on a PRAGMA fails quietly.
-    private const array ORPHANED_CHILDREN = [
-        'rule_actions' => ['rule_id', 'categorization_rules'],
-        'rule_conditions' => ['rule_id', 'categorization_rules'],
-    ];
-
     /** @param list<string> $deviceIds */
     public function __invoke(Connection $connection, int $userId, array $deviceIds): void
     {
         $tables = $this->ownedTables($connection);
 
+        // Before the sweep, not after it: a child with no user_id of its own is
+        // invisible to the sweep, and the parent delete is now refused while
+        // the child is still there rather than taking it away silently.
+        $this->sweepUnownedChildren($connection, $userId);
+
         $this->sweep($connection, $tables, $userId);
         $this->sweepRelayMailbox($connection, $deviceIds);
         $this->sweepQueuedWork($connection, $userId);
         $this->sweepDerivedCache($connection, $userId);
-        $this->sweepOrphanedChildren($connection);
 
         $connection->table('users')->where('id', $userId)->delete();
 
@@ -153,18 +151,28 @@ final readonly class UserScopedDataPurge
             ->delete();
     }
 
-    private function sweepOrphanedChildren(Connection $connection): void
+    // Which keys own which rows is the cascade's to say, so this reads it
+    // rather than keeping a second copy that goes stale on its own.
+    private function sweepUnownedChildren(Connection $connection, int $userId): void
     {
         $schema = $connection->getSchemaBuilder();
 
-        foreach (self::ORPHANED_CHILDREN as $table => [$foreignKey, $parent]) {
-            if (! $schema->hasTable($table) || ! $schema->hasTable($parent)) {
-                continue;
-            }
+        foreach (DependentRowCascade::ownedBy() as $parent => $children) {
+            foreach ($children as [$table, $foreignKey]) {
+                if (! $schema->hasTable($table) || ! $schema->hasTable($parent)) {
+                    continue;
+                }
+                if (in_array(self::OWNERSHIP_COLUMN, $schema->getColumnListing($table), true)) {
+                    continue;
+                }
 
-            $connection->table($table)
-                ->whereNotIn($foreignKey, static fn (QueryBuilder $query): QueryBuilder => $query->select('id')->from($parent))
-                ->delete();
+                $connection->table($table)
+                    ->whereIn($foreignKey, static fn (QueryBuilder $query): QueryBuilder => $query
+                        ->select('id')->from($parent)->where(self::OWNERSHIP_COLUMN, $userId))
+                    ->orWhereNotIn($foreignKey, static fn (QueryBuilder $query): QueryBuilder => $query
+                        ->select('id')->from($parent))
+                    ->delete();
+            }
         }
     }
 

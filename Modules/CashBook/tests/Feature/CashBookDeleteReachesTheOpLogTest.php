@@ -10,8 +10,8 @@ use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Enums\ClearedStatus;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
-use Modules\Sync\Public\Events\TransactionSplitMutated;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -41,7 +41,7 @@ it('refuses to delete a cash entry whose account has been reconciled', function 
     $id = cashBookEntry($this->user);
     DB::table('transactions')->where('id', $id)->update(['status' => ClearedStatus::Reconciled->value]);
 
-    Event::fake([TransactionMutated::class, TransactionSplitMutated::class]);
+    Event::fake([TransactionMutated::class, EntityMutated::class]);
 
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
@@ -71,7 +71,7 @@ it('tells the reader in their own language why a reconciled cash entry stayed', 
 it('replicates a permitted cash-entry delete to the paired devices', function (): void {
     $id = cashBookEntry($this->user);
 
-    Event::fake([TransactionMutated::class, TransactionSplitMutated::class]);
+    Event::fake([TransactionMutated::class, EntityMutated::class]);
 
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
@@ -119,20 +119,20 @@ it('tombstones each leg of a split cash entry it deletes', function (): void {
 
     expect($legIds)->toHaveCount(2);
 
-    Event::fake([TransactionMutated::class, TransactionSplitMutated::class]);
+    Event::fake([TransactionMutated::class, EntityMutated::class]);
 
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)
         ->call('confirmDelete', $id)
         ->call('delete', $id);
 
-    Event::assertDispatchedTimes(TransactionSplitMutated::class, 2);
-
+    // A leg is a row the transaction owns, so it is announced the same way
+    // every other owned row is.
     foreach ($legIds as $legId) {
         Event::assertDispatched(
-            TransactionSplitMutated::class,
-            fn (TransactionSplitMutated $e): bool => $e->splitId === $legId
-                && $e->transactionId === $id
+            EntityMutated::class,
+            fn (EntityMutated $e): bool => $e->table === 'transaction_splits'
+                && $e->pk === $legId
                 && $e->mutationType === 'delete',
         );
     }

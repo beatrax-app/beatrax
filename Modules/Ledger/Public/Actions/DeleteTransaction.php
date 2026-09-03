@@ -14,7 +14,7 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\TransactionMutated;
-use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use stdClass;
 
 final readonly class DeleteTransaction implements DeletesTransaction
@@ -26,6 +26,7 @@ final readonly class DeleteTransaction implements DeletesTransaction
         private Dispatcher $events,
         private SearchIndexWriterContract $searchIndex,
         private UnpairsTransferLegs $unpairer,
+        private DependentRowCascade $cascade,
     ) {}
 
     public function delete(User $user, int $transactionId): bool
@@ -71,14 +72,10 @@ final readonly class DeleteTransaction implements DeletesTransaction
      */
     private function applyDelete(User $user, int $transactionId, stdClass $row): array
     {
-        // Read the leg ids before the parent delete cascades them away:
-        // convergence cannot assume the peer's replay connection has FK cascade
-        // on, so each leg needs its own tombstone.
-        $legIds = $this->db->connection()
-            ->table('transaction_splits')
-            ->where('transaction_id', $transactionId)
-            ->where('user_id', $user->id)
-            ->pluck('id');
+        // Every dependent row goes first and carries its own tombstone. A
+        // database cascade removes them silently, leaving each create op live
+        // in the log for the peer to resurrect or quarantine forever.
+        $dependents = $this->cascade->delete('transactions', $transactionId, $user->id);
 
         $this->db->connection()
             ->table('transactions')
@@ -97,16 +94,7 @@ final readonly class DeleteTransaction implements DeletesTransaction
             userId: $user->id,
             mutationType: 'delete',
             dirtyFields: [],
-        )];
-
-        foreach ($legIds as $legId) {
-            $events[] = new TransactionSplitMutated(
-                splitId: self::toInt($legId),
-                transactionId: $transactionId,
-                userId: $user->id,
-                mutationType: 'delete',
-            );
-        }
+        ), ...$dependents];
 
         $survivorEdit = $this->retypeSurvivor($user, $row->pair_transaction_id, $row->type);
         if ($survivorEdit !== null) {

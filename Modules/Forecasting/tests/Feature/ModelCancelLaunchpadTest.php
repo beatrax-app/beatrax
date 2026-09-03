@@ -10,6 +10,7 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\CreateScenarioFromTemplate;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
@@ -167,6 +168,9 @@ it('CreateScenarioFromTemplate atomic rollback when AddScenarioMutation fails', 
     // makes AddScenarioMutation fail partway through the launchpad.
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix-soon-to-vanish');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
+    // The alert is the series' own row, so it goes with it rather than being
+    // taken away by the database behind the delete.
+    $this->app->make(DependentRowCascade::class)->delete('recurring_series', $seriesId, $this->user->id);
     $this->db->connection()->table('recurring_series')->where('id', $seriesId)->delete();
 
     /** @var CreateScenarioFromTemplate $action */

@@ -14,6 +14,27 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
+use Modules\Sync\Public\Services\DependentRowCascade;
+
+// The occurrences the detector wrote are the transactions' own rows, so they
+// go first: the database refuses the delete rather than taking them with it.
+function idtDeleteTxByIban(DatabaseManager $db, User $user, string $iban): void
+{
+    $ids = $db->connection()->table('transactions')
+        ->where('user_id', $user->id)
+        ->where('counterparty_iban', $iban)
+        ->pluck('id')
+        ->map(static fn (mixed $id): int => (int) $id)
+        ->all();
+
+    if ($ids === []) {
+        return;
+    }
+
+    Container::getInstance()->make(DependentRowCascade::class)->deleteAll('transactions', $ids, $user->id);
+
+    $db->connection()->table('transactions')->whereIn('id', $ids)->delete();
+}
 
 function idtUser(string $username): User
 {
@@ -402,10 +423,7 @@ it('suppresses every cadence variant when the counterparty has a rejected series
     $machine = $this->app->make(RecurringSeriesStateMachine::class);
     $machine->transition($monthly, 'rejected', 'user_action', 'user');
 
-    $this->db->connection()->table('transactions')
-        ->where('user_id', $this->user->id)
-        ->where('counterparty_iban', 'NL07REJE0000000001')
-        ->delete();
+    idtDeleteTxByIban($this->db, $this->user, 'NL07REJE0000000001');
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
         $date = $quarterlyStart->addMonthsNoOverflow($i * 3)->toDateString();
@@ -483,10 +501,7 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
 
     // Employer B's recent occurrences become quarterly, so the cluster_key
     // (which encodes the cadence band) flips for B but not for A.
-    $this->db->connection()->table('transactions')
-        ->where('user_id', $this->user->id)
-        ->where('counterparty_iban', 'NL52EMPB0000000002')
-        ->delete();
+    idtDeleteTxByIban($this->db, $this->user, 'NL52EMPB0000000002');
     $quarterlyStart = CarbonImmutable::parse('2025-06-01');
     for ($i = 0; $i < 4; $i++) {
         $date = $quarterlyStart->addMonthsNoOverflow($i * 3)->toDateString();

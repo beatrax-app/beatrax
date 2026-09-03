@@ -1415,6 +1415,33 @@ resolves real credentials via `DeviceIdentityLoader` before starting
 `sync:serve`; the daemon exits non-zero if credentials are unavailable, and
 NativePHP auto-restarts it.
 
+## A row a parent owns is deleted by the application, not the database
+
+Every foreign key is classified: either the parent **owns** the child, or the
+child outlives it. `DependentRowCascade` (`Modules/Sync/Public/Services`) holds
+that classification and walks it depth-first, deleting owned rows and returning
+one `EntityMutated` delete per row that carries merge rules. Callers dispatch
+those after their transaction commits.
+
+No foreign key declares `ON DELETE CASCADE`. A cascade removes the child and
+tells nothing: no tombstone is written, the child's create op stays live in the
+op log, and the peer either resurrects the row or quarantines it forever. One
+real occurrence of that was found in the field — a `recurring_series_occurrences`
+row quarantined twice as `missing_reference` because the transaction that owned
+it had been deleted on the other device and the occurrence's create op outlived
+it.
+
+Dropping the clause leaves `NO ACTION`, so the database now **refuses** a parent
+delete while an owned row is still there. That is deliberate: a missed delete
+path fails loudly instead of losing a row silently. `user_id` is the exception
+to the registry — it stays discovered from the live schema by
+`UserScopedDataPurge`, which clears children with no `user_id` of their own
+before it sweeps.
+
+Two tests hold the line: every foreign key must be classified as owning or not
+owning, and no foreign key may declare a cascade
+(`Modules/Sync/tests/Feature/EveryForeignKeySaysWhoOwnsTheRowTest.php`).
+
 ## Capture must cover every table the merge registry declares
 
 `MergeRulesRegistry` names the tables sync knows how to merge. Capture is a

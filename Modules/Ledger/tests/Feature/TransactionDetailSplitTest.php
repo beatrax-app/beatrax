@@ -17,6 +17,7 @@ use Modules\Ledger\Models\TransactionSplit;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 
@@ -430,7 +431,7 @@ it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
         ->all());
     expect($legIds)->toHaveCount(2);
 
-    Event::fake([TransactionMutated::class, TransactionSplitMutated::class]);
+    Event::fake([TransactionMutated::class, TransactionSplitMutated::class, EntityMutated::class]);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
         ->call('deleteTransaction');
@@ -441,13 +442,13 @@ it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
         fn (TransactionMutated $e): bool => $e->transactionId === $tx->id && $e->mutationType === 'delete',
     );
 
-    // …plus one explicit leg-delete tombstone per leg, mirroring unsplit().
-    Event::assertDispatchedTimes(TransactionSplitMutated::class, 2);
+    // …plus one explicit leg-delete tombstone per leg, announced the way
+    // every row the transaction owns is announced.
     foreach ($legIds as $legId) {
         Event::assertDispatched(
-            TransactionSplitMutated::class,
-            fn (TransactionSplitMutated $e): bool => $e->splitId === $legId
-                && $e->transactionId === $tx->id
+            EntityMutated::class,
+            fn (EntityMutated $e): bool => $e->table === 'transaction_splits'
+                && $e->pk === $legId
                 && $e->mutationType === 'delete',
         );
     }

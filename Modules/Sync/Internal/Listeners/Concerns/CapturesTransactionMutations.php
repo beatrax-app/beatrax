@@ -53,14 +53,6 @@ trait CapturesTransactionMutations
         }
     }
 
-    private function handleSplitDelete(TransactionSplitMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'transaction_splits',
-            pk: $event->splitId,
-        );
-    }
-
     private function handleSplitCreate(TransactionSplitMutated $event, OpLogWriter $writer): void
     {
         $writer->writeCreateRow(
