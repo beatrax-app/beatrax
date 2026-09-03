@@ -333,10 +333,19 @@ jobs:
                   coverage: none
                   tools: composer:v2
 
+            # `~/.composer/cache` alone was the whole path list, and it does not
+            # exist on the runner — composer keeps its downloads under the XDG
+            # directory. actions/cache found nothing to archive and said so once,
+            # as a warning, in the post-job block nobody reads:
+            # "Path Validation Error: Path(s) specified in the action for caching
+            # do(es) not exist, hence no cache is being saved." So the entry was
+            # never written, and every run missed both the primary key and the
+            # restore-key and installed from cold. vendor/ is what the repo-root
+            # job caches, and that one has been hitting all along.
             - name: Cache Composer packages (mobile-app/ lock file)
               uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
               with:
-                  path: ~/.composer/cache
+                  path: mobile-app/vendor
                   key: composer-mobile-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('mobile-app/composer.lock') }}
                   restore-keys: |
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
@@ -396,10 +405,28 @@ jobs:
                       echo "::error::Desktop module leaked into the mobile-app/ shell"
                       exit 1
                   fi
-                  DESKTOP_ROUTES=$(php artisan route:list --name=desktop 2>&1)
-                  if echo "$DESKTOP_ROUTES" | grep -q '^  desktop'; then
+                  # The route half of this check read `route:list --name=desktop`
+                  # and grepped for a line beginning `  desktop`. No line of that
+                  # table ever begins with a route name — the name sits in the
+                  # right-hand column, behind the verb and the URI — so the
+                  # pattern could not match a leak, and the step passed whatever
+                  # the shell had registered. The JSON output names the field.
+                  #
+                  # The count is the positive control: an empty list would clear
+                  # the leak assertion without proving anything, which is the
+                  # shape the grep was already failing in.
+                  ROUTES=$(php artisan route:list --json)
+                  TOTAL=$(printf '%s' "$ROUTES" | jq 'length')
+                  if [ "$TOTAL" -lt 1 ]; then
+                      echo "::error::route:list returned no routes at all, so a leak check against it proves nothing."
+                      exit 1
+                  fi
+                  echo "route:list returned ${TOTAL} routes; checking each for a desktop name or URI."
+                  LEAKED=$(printf '%s' "$ROUTES" | jq -r '
+                      .[] | select(((.name // "") | startswith("desktop")) or ((.uri // "") | startswith("desktop"))) | "\(.uri) -> \(.name // "unnamed")"')
+                  if [ -n "$LEAKED" ]; then
                       echo "::error::Desktop routes leaked into the mobile-app/ shell"
-                      echo "$DESKTOP_ROUTES"
+                      echo "$LEAKED"
                       exit 1
                   fi
 

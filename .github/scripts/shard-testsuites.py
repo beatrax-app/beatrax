@@ -11,6 +11,16 @@ Balance comes from .github/test-shard-weights.json, which is only a hint: an
 unlisted suite is assigned a default weight and still runs. Stale weights cost
 a slower shard, never a missing test.
 
+A weight is one number: the seconds that suite takes on its own, under
+`php artisan test --parallel --testsuite=<name>`. The previous set tracked
+something closer to test count, and the two disagree by an order of magnitude --
+AuthFeature carries a tenth of Feature's tests and very nearly its whole
+runtime. Scored against real durations that set predicted a 7% spread and
+produced a 230% one, with the shard holding Contracts, Mobile, Sync and
+AuthFeature running three times the shard beside it. Re-measure by timing each
+suite in turn and rounding to seconds; being off by a little is free, and being
+wrong about the ordering is what costs a shard.
+
 The shard totals do not sum to the full-suite total, and that is expected.
 tests/Helpers belongs to the Unit testsuite, but paratest collects it whatever
 `--testsuite` asks for, so its six tests run in every shard rather than only in
