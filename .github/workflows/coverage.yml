@@ -128,8 +128,17 @@ jobs:
 
       - name: Resolve this shard's testsuites
         id: shard
+        # An empty resolve is not an error to `php artisan test --parallel`: it
+        # reports "6 passed" and exits 0, so the shard would report a clean
+        # coverage slice built from six tests. Caught here rather than there,
+        # because a thin clover report imports as confidently as a whole one.
         run: |
+          set -euo pipefail
           suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+          if [ -z "$suites" ]; then
+              echo "::error::the shard resolver named no testsuite, and a run with none passes."
+              exit 1
+          fi
           echo "suites=$suites" >> "$GITHUB_OUTPUT"
           echo "shard ${{ matrix.shard }}/3: $suites"
 
