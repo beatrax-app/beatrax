@@ -117,7 +117,7 @@ it('SaveTransactionSplit::save refuses to edit legs of a reconciled transaction'
 
     DB::table('transactions')->where('id', $tx->id)->update(['status' => 'reconciled']);
 
-    $legsBefore = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->pluck('settled_amount_minor', 'id')->all();
+    $legsBefore = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->pluck('settled_amount_minor', 'id')->all();
     $firstLegId = array_key_first($legsBefore);
 
     expect(
@@ -127,7 +127,7 @@ it('SaveTransactionSplit::save refuses to edit legs of a reconciled transaction'
         ]),
     )->toThrow(InvalidArgumentException::class);
 
-    $legsAfter = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->pluck('settled_amount_minor', 'id')->all();
+    $legsAfter = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->pluck('settled_amount_minor', 'id')->all();
     expect($legsAfter)->toBe($legsBefore);
 });
 

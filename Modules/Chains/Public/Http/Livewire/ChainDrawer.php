@@ -45,9 +45,9 @@ final class ChainDrawer extends Component
     public ?string $actionError = null;
 
     #[On('chain-drawer:open')]
-    public function open(int $transactionId): void
+    public function open(int|string $transactionId): void
     {
-        $this->transactionId = $transactionId;
+        $this->transactionId = DerivedRowId::fromWire($transactionId);
         $this->fanoutPage = 0;
         $this->actionError = null;
         // Dispatch modal-show from here (not the trigger button) so it
