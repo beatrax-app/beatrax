@@ -17,12 +17,12 @@ use Modules\Sync\Internal\OpLog\OpType;
 // so judging it an incomplete create quarantines the only carrier of the
 // columns the first half never had.
 
-function scUser(string $u): User
+function splitTailUser(string $u): User
 {
     return User::query()->create(['username' => $u, 'password' => bcrypt('fixture'), 'period_start_day' => 1, 'default_currency_view' => 'eur_only']);
 }
 
-function scEntry(int $pk, string $field, mixed $value, int $userId): OpLogEntry
+function splitTailEntry(int $pk, string $field, mixed $value, int $userId): OpLogEntry
 {
     return new OpLogEntry(
         userId: $userId, deviceId: 'split-device', table: 'transactions', pk: $pk,
@@ -33,7 +33,7 @@ function scEntry(int $pk, string $field, mixed $value, int $userId): OpLogEntry
 
 it('keeps the tail of a create that was split across two batches', function (): void {
     $db = app(DatabaseManager::class);
-    $userId = (int) scUser('split-create')->id;
+    $userId = (int) splitTailUser('split-create')->id;
 
     test()->actingAs(User::query()->findOrFail($userId));
     $session = app(Session::class);
@@ -71,7 +71,7 @@ it('keeps the tail of a create that was split across two batches', function (): 
 
     $batchOne = [];
     foreach ($head as $f => $v) {
-        $batchOne['transactions'][157][$f] = [scEntry(157, $f, $v, $userId)];
+        $batchOne['transactions'][157][$f] = [splitTailEntry(157, $f, $v, $userId)];
     }
 
     // The tail carries created_at too: it is the same row, so the peer sends
@@ -79,7 +79,7 @@ it('keeps the tail of a create that was split across two batches', function (): 
     // answer "not a contradiction".
     $batchTwo = [];
     foreach ($tail + ['created_at' => '2026-06-10 12:00:00'] as $f => $v) {
-        $batchTwo['transactions'][157][$f] = [scEntry(157, $f, $v, $userId)];
+        $batchTwo['transactions'][157][$f] = [splitTailEntry(157, $f, $v, $userId)];
     }
 
     $touched = [];
