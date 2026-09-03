@@ -17,6 +17,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
@@ -312,12 +313,15 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.goal_attributed'));
     }
 
+    // Quoted on the way out and read back here: a goal id is minted, not taken
+    // from the autoincrement, so it runs past 2^53 and a number literal is
+    // rounded by the browser before the server ever sees it.
     public function removeGoalAttribution(
-        int $goalId,
+        int|string $goalId,
         CurrentUser $currentUser,
         GoalContributionWriter $contributions,
     ): void {
-        if (! $contributions->detach($currentUser->user(), $goalId, $this->transactionId)) {
+        if (! $contributions->detach($currentUser->user(), DerivedRowId::fromWire($goalId), $this->transactionId)) {
             return;
         }
 

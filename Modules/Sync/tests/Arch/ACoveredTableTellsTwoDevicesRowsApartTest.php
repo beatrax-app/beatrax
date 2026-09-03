@@ -26,15 +26,13 @@ function neverTravels(): array
     return ['categorization_rules', 'rule_conditions', 'rule_actions'];
 }
 
-// The one table still exposed, kept here rather than quietly passing. Its rows
-// are the legs of one transaction and their sort_order is reassigned on every
-// save, so neither answer fits as it stands: a minted id lets two devices'
-// legs both land and the split sums to twice the transaction, and a derived one
-// moves the id whenever a leg moves. It needs a decision about the SET of legs.
+// Empty, and it stays empty. transaction_splits was the last entry: its legs
+// now carry a split_uuid minted once and never rewritten, so the derived id
+// survives the reorder that sort_order does not.
 /** @return list<string> */
 function stillExposed(): array
 {
-    return ['transaction_splits'];
+    return [];
 }
 
 // Walked rather than found through Finder: composer-require-checker reads
@@ -203,8 +201,9 @@ it('gives every covered table a way to tell two devices rows apart', function ()
     ]));
 });
 
-// The list only shrinks. A table added to it needs the argument written above
-// it, and a table taken off it needs an id scheme, not a smaller list.
-it('keeps the exposed list to the one table that has an argument', function (): void {
-    expect(stillExposed())->toBe(['transaction_splits']);
+// The list only shrinks, and it has reached nothing. A table added to it needs
+// the argument written above it, and taking one off needs an id scheme rather
+// than a smaller list.
+it('leaves no covered table exposed', function (): void {
+    expect(stillExposed())->toBe([]);
 });

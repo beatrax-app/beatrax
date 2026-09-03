@@ -99,7 +99,7 @@ it('persists a valid split that sums exactly to the parent, re-reading each leg 
         ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
     ]);
 
-    $legs = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $legs = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     expect($legs)->toHaveCount(2);
     expect((int) $legs->sum('settled_amount_minor'))->toBe(-8000);
     expect($legs[0]->category_id)->toBe($this->groceries->id);
@@ -212,7 +212,7 @@ it('preserves leg primary keys on edit: unchanged/edited legs keep their id, add
         ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
     ]);
 
-    $original = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $original = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     $groceriesLegId = $original[0]->id;
     $householdLegId = $original[1]->id;
 
@@ -224,7 +224,7 @@ it('preserves leg primary keys on edit: unchanged/edited legs keep their id, add
         ['id' => null, 'category_id' => $fuel->id, 'settled_amount_minor' => -1000, 'note' => null],
     ]);
 
-    $after = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $after = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     expect($after)->toHaveCount(3);
 
     $groceriesAfter = $after->firstWhere('id', $groceriesLegId);
@@ -241,7 +241,7 @@ it('preserves leg primary keys on edit: unchanged/edited legs keep their id, add
         ['id' => $fuelLegId, 'category_id' => $fuel->id, 'settled_amount_minor' => -1000, 'note' => null],
     ]);
 
-    $final = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $final = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     expect($final)->toHaveCount(2);
     expect($final->firstWhere('id', $householdLegId))->toBeNull();
     expect($final->firstWhere('id', $groceriesLegId)->settled_amount_minor)->toBe(-7000);

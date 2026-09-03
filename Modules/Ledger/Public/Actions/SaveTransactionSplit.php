@@ -9,10 +9,12 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Enums\TransactionType;
@@ -260,6 +262,12 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
      */
     private function insertLeg(User $user, int $transactionId, array $leg, int $index, string $currency, CarbonImmutable $now): TransactionSplitMutated
     {
+        // The leg's own identity, minted once here and never rewritten. Before
+        // it, the table declared nothing two devices could agree on: the pk is
+        // an autoincrement and sort_order is reassigned on every save, so the
+        // same leg was a different row on each of them.
+        $splitUuid = (string) Str::uuid();
+
         $fields = [
             'user_id' => $user->id,
             'transaction_id' => $transactionId,
@@ -268,6 +276,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             'settled_currency' => $currency,
             'note' => self::normalizeNote($leg['note']),
             'sort_order' => $index,
+            'split_uuid' => $splitUuid,
             // Strings, not CarbonImmutable: keeps the op-log capture payload
             // off Carbon and off the serialiser's coercion.
             'created_at' => $now->toDateTimeString(),
@@ -277,7 +286,11 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
         $dbFields = $fields;
         $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
 
-        $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($dbFields));
+        // Derived from that identity rather than taken from the autoincrement,
+        // so the id survives a reorder and names the same leg on every device.
+        $newId = DerivedRowId::for('transaction_splits', ['split_uuid' => $splitUuid]);
+
+        $this->db->connection()->table('transaction_splits')->insert(['id' => $newId] + $dbFields);
 
         return new TransactionSplitMutated(
             splitId: $newId,
