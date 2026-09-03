@@ -24,6 +24,7 @@ final readonly class OpLogEntryApplier
         private RowOwnership $ownership,
         private SuppliedDateGate $suppliedDates,
         private SelfReferenceDeferral $selfReferences,
+        private SplitCreateTail $splitTail,
         private TransferPairCascade $pairCascade,
         private PeerRowAliases $aliases,
         private AlreadyPresentCreate $alreadyPresent,
@@ -187,7 +188,7 @@ final readonly class OpLogEntryApplier
         string $now,
     ): ?array {
         $refused = ($tomb !== null && $this->tombstoneWins($tomb, $fields))
-            || ! $this->createRowComplete($table, $fields, $now);
+            || ! $this->createRowComplete($table, $pk, $fields, $userId, $now);
 
         $payload = $refused ? null : $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
 
@@ -330,13 +331,17 @@ final readonly class OpLogEntryApplier
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function createRowComplete(string $table, array $fields, string $now): bool
+    private function createRowComplete(string $table, int|string $pk, array $fields, int $userId, string $now): bool
     {
         $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
         $missing = array_diff($required, array_keys($fields));
 
         if ($missing === []) {
             return true;
+        }
+
+        if ($this->rowIsHere($table, $pk, $userId)) {
+            return $this->carryTheTail($table, $pk, $fields, $userId, $now);
         }
 
         $firstField = reset($fields);
@@ -346,6 +351,35 @@ final readonly class OpLogEntryApplier
         }
 
         return false;
+    }
+
+    // Nothing keeps one row's create ops inside a single transport frame, so
+    // the half that lands second names a row that is already here and carries
+    // required columns it was never going to repeat. Calling that incomplete
+    // quarantined the only carrier of the columns the first half missed.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function carryTheTail(string $table, int|string $pk, array $fields, int $userId, string $now): bool
+    {
+        $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+        if ($payload !== null) {
+            $this->splitTail->fill($table, $pk, $payload, $userId);
+        }
+
+        return false;
+    }
+
+    private function rowIsHere(string $table, int|string $pk, int $userId): bool
+    {
+        try {
+            $query = $this->db->connection()->table($table)->where('id', $pk);
+
+            return $this->ownership->scopeToUser($query, $table, $userId)->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     // A CreateRow op may legitimately carry a 'user_id' field, and the resolve

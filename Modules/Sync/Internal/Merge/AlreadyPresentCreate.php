@@ -10,8 +10,8 @@ use Psr\Log\LoggerInterface;
 
 // What it means when the database refuses a replayed create as already
 // present. Three different things arrive here: the row is here under a peer's
-// own id, the row is here and this is the same op again, or the row is here and
-// it is a DIFFERENT row wearing the same id.
+// own id, the row is here and this is the same create again (possibly its
+// other half), or the row is here and it is a DIFFERENT row wearing the same id.
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
@@ -21,6 +21,7 @@ final readonly class AlreadyPresentCreate
         private PeerRowAliases $aliases,
         private CreateRowCollision $collisions,
         private OpLogQuarantine $quarantine,
+        private SplitCreateTail $tail,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -40,6 +41,12 @@ final readonly class AlreadyPresentCreate
         }
 
         if (! $this->collisions->contradicts($table, $pk, $payload)) {
+            // The same row, so this is the create arriving again — and a
+            // transport that splits one row's ops across two frames makes the
+            // second half look exactly like that. Returning here without it
+            // dropped every column the first half did not carry.
+            $this->tail->fill($table, $pk, $payload, $userId);
+
             return true;
         }
 
