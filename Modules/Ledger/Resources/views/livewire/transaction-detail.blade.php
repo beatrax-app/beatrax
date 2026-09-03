@@ -647,7 +647,7 @@
                                     <span>{{ $attributed->goalName }}</span>
                                     <button
                                         type="button"
-                                        wire:click="removeGoalAttribution({{ $attributed->goalId }})"
+                                        wire:click="removeGoalAttribution('{{ $attributed->goalId }}')"
                                         aria-label="{{ Lang::get('ledger::detail.goal.remove_aria', ['name' => $attributed->goalName]) }}"
                                         class="rounded-full px-1.5 text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:hover:text-slate-100 dark:text-slate-400"
                                         data-testid="goal-attribution-remove"
@@ -760,7 +760,7 @@
                          deterministic — no Alpine + wire race. --}}
                     <button
                         type="button"
-                        wire:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} })"
+                        wire:click="$dispatch('chain-drawer:open', { transactionId: '{{ $transaction->id }}' })"
                         class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                     >
                         {{ Lang::get('ledger::detail.chain.view') }}

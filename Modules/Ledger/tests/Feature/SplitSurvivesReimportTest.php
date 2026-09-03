@@ -78,7 +78,7 @@ it('leaves a split transaction leg count, amounts, and leg ids unchanged after r
         ['id' => null, 'category_id' => $household->id, 'settled_amount_minor' => -2000, 'note' => null],
     ]);
 
-    $legsBefore = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $legsBefore = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     expect($legsBefore)->toHaveCount(2);
     $legIdsBefore = $legsBefore->pluck('id')->all();
     $legAmountsBefore = $legsBefore->pluck('settled_amount_minor')->all();
@@ -90,7 +90,7 @@ it('leaves a split transaction leg count, amounts, and leg ids unchanged after r
 
     expect(Transaction::query()->where('user_id', $user->id)->count())->toBe(1);
 
-    $legsAfter = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('id')->get();
+    $legsAfter = TransactionSplit::query()->where('transaction_id', $tx->id)->orderBy('sort_order')->get();
     expect($legsAfter)->toHaveCount(2);
     expect($legsAfter->pluck('id')->all())->toBe($legIdsBefore);
     expect($legsAfter->pluck('settled_amount_minor')->all())->toBe($legAmountsBefore);
