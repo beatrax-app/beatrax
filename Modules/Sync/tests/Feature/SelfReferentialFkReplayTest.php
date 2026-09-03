@@ -8,6 +8,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
+use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
@@ -175,4 +176,73 @@ it('leaves a self-reference null when its target never arrives', function (): vo
 
     expect($row)->not->toBeNull('the row itself must still be applied')
         ->and($row->pair_transaction_id)->toBeNull();
+});
+
+it('resolves a self-reference whose target lands in a later batch', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('later-batch-replay')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+
+    $creates = selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId));
+
+    // A backfill is replayed in batches, and nothing makes a transfer pair land
+    // in one of them: on a phone's first sync the partner was 1,300 ops further
+    // down the log, in a batch of its own.
+    $first = ['transactions' => [251 => $creates['transactions'][251]]];
+    $second = ['transactions' => [295 => $creates['transactions'][295]]];
+
+    $touched = [];
+
+    /** @var OpLogEntryApplier $applier */
+    $applier = app(OpLogEntryApplier::class);
+
+    $applier->applyCreates($first, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($second, [], $userId, '2026-06-10 12:00:00', $touched);
+
+    $rows = $db->connection()->table('transactions')
+        ->whereIn('id', [251, 295])
+        ->orderBy('id')
+        ->get(['id', 'pair_transaction_id']);
+
+    expect($rows)->toHaveCount(2, 'both halves of the pair must exist');
+
+    // 251 named 295 while 295 did not exist yet. The link is not optional
+    // decoration — an unpaired transfer_out is counted as money leaving the
+    // household, so losing it moves what the reader is shown.
+    expect((int) $rows[0]->pair_transaction_id)->toBe(295, '251 must find the partner that arrived after it')
+        ->and((int) $rows[1]->pair_transaction_id)->toBe(251);
+});
+
+it('defers every self-referential foreign key the schema declares', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $declared = (new ReflectionClass(SelfReferenceDeferral::class))
+        ->getReflectionConstant('SELF_REFERENCES')?->getValue();
+
+    expect($declared)->toBeArray();
+
+    $inSchema = [];
+
+    foreach ($db->connection()->select("select name from sqlite_master where type='table' and name not like 'sqlite_%'") as $table) {
+        $name = (string) $table->name;
+
+        foreach ($db->connection()->select('pragma foreign_key_list('.$db->connection()->getPdo()->quote($name).')') as $fk) {
+            if ((string) $fk->table === $name) {
+                $inSchema[$name][] = (string) $fk->from;
+            }
+        }
+    }
+
+    foreach ($inSchema as $table => $columns) {
+        sort($columns);
+        $covered = $declared[$table] ?? [];
+        sort($covered);
+
+        // A self-referential FK nobody defers fails the insert outright and
+        // rolls the whole replay back, which is how this class came to exist.
+        expect($covered)->toBe($columns, "{$table} declares a self-referential foreign key the deferral does not cover");
+    }
 });
