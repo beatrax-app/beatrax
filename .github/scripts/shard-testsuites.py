@@ -12,14 +12,27 @@ unlisted suite is assigned a default weight and still runs. Stale weights cost
 a slower shard, never a missing test.
 
 A weight is one number: the seconds that suite takes on its own, under
-`php artisan test --parallel --testsuite=<name>`. The previous set tracked
-something closer to test count, and the two disagree by an order of magnitude --
-AuthFeature carries a tenth of Feature's tests and very nearly its whole
-runtime. Scored against real durations that set predicted a 7% spread and
-produced a 230% one, with the shard holding Contracts, Mobile, Sync and
-AuthFeature running three times the shard beside it. Re-measure by timing each
-suite in turn and rounding to seconds; being off by a little is free, and being
-wrong about the ordering is what costs a shard.
+`php artisan test --parallel --testsuite=<name>`, rounded. Being off by a little
+is free; being wrong about the ordering is what costs a shard.
+
+Measured on a developer machine, and that is a proxy rather than the thing --
+AuthFeature's Argon2id work is memory-hard, so it reads far heavier under a
+contended local run than it costs on a dedicated runner. What the current set
+was measured to do, against the previous one, over two CI runs:
+
+    partition        shard durations        total     tests
+    previous         245s / 124s / 255s      625s     12802
+    current          259s / 107s / 172s      538s     12805
+
+So the critical path did not move: it is pinned by Feature, a single 245s suite
+no split can divide, and every partition lands within about fifteen seconds of
+that floor. What did move is total runner time, down 14%, because a shard that
+is one long suite leaves three of the four workers idle on its tail and a shard
+with more in it packs them. Balance is the cost lever here, not the clock lever.
+Shortening the clock means splitting Feature, which is a phpunit.xml change.
+
+The +3 tests are this commit's own; the totals matching is the check that a
+re-weighting moved tests between shards rather than out of the run.
 
 The shard totals do not sum to the full-suite total, and that is expected.
 tests/Helpers belongs to the Unit testsuite, but paratest collects it whatever
