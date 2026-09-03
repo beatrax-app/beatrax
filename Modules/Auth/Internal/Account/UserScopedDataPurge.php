@@ -158,7 +158,9 @@ final readonly class UserScopedDataPurge
         $schema = $connection->getSchemaBuilder();
 
         foreach (DependentRowCascade::ownedBy() as $parent => $children) {
-            foreach ($children as [$table, $foreignKey]) {
+            foreach ($children as $ownedKey) {
+                [$table, $foreignKey] = explode('.', $ownedKey, 2);
+
                 if (! $schema->hasTable($table) || ! $schema->hasTable($parent)) {
                     continue;
                 }

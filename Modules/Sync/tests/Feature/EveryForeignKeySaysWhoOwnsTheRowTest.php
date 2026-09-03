@@ -6,12 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Sync\Public\Services\DependentRowCascade;
 
 it('classifies every foreign key as owning or not owning', function (): void {
-    $owned = [];
-    foreach (DependentRowCascade::ownedBy() as $children) {
-        foreach ($children as [$childTable, $column]) {
-            $owned[] = $childTable.'.'.$column;
-        }
-    }
+    $owned = array_merge(...array_values(DependentRowCascade::ownedBy()));
     $classified = array_merge($owned, DependentRowCascade::notOwned());
 
     $unclassified = [];

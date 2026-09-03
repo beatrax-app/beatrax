@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Connection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Modules\Sync\Public\Exceptions\CascadeRemovalFailedException;
 
 return new class extends Migration
 {
@@ -70,16 +71,16 @@ return new class extends Migration
         $verdict = is_object($integrity) ? (string) ($integrity->integrity_check ?? '') : '';
 
         if ($verdict !== 'ok') {
-            throw new RuntimeException('Removing the cascade clauses left the schema unreadable: '.$verdict);
+            throw CascadeRemovalFailedException::schemaUnreadable($verdict);
         }
 
         $remaining = $this->stillCascading($connection);
         if ($remaining !== 0) {
-            throw new RuntimeException("Removing the cascade clauses left {$remaining} table(s) still cascading.");
+            throw CascadeRemovalFailedException::stillCascading($remaining);
         }
 
         if ($enforced && ! $this->foreignKeysEnforced($connection)) {
-            throw new RuntimeException('Removing the cascade clauses left foreign keys unenforced.');
+            throw CascadeRemovalFailedException::foreignKeysUnenforced();
         }
     }
 };

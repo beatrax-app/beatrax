@@ -19,91 +19,25 @@ final readonly class DependentRowCascade
     // covers every owning key except user_id, which stays discovered from the
     // schema by UserScopedDataPurge rather than repeated here.
     private const array OWNED_BY = [
-        'accounts' => [
-            ['card_statements', 'account_id'],
-            ['forecast_shortfall_windows', 'account_id'],
-            ['pots', 'account_id'],
-            ['statement_summaries', 'account_id'],
-            ['transactions', 'account_id'],
-        ],
-        'anomaly_alerts' => [
-            ['anomaly_alert_transitions', 'anomaly_alert_id'],
-        ],
-        'card_statements' => [
-            ['card_statement_credits', 'from_statement_id'],
-        ],
-        'categories' => [
-            ['envelope_assignments', 'category_id'],
-            ['envelope_moves', 'category_id'],
-            ['envelope_moves', 'counterpart_category_id'],
-            ['envelope_settings', 'category_id'],
-            ['merchant_memories', 'category_id'],
-        ],
-        'categorization_rules' => [
-            ['rule_actions', 'rule_id'],
-            ['rule_conditions', 'rule_id'],
-        ],
-        'drift_alerts' => [
-            ['drift_alert_transitions', 'drift_alert_id'],
-        ],
-        'forecast_scenarios' => [
-            ['forecast_runs', 'scenario_id'],
-            ['forecast_scenario_mutations', 'forecast_scenario_id'],
-            ['forecast_shortfall_windows', 'scenario_id'],
-        ],
-        'goals' => [
-            ['goal_contributions', 'goal_id'],
-        ],
-        'import_runs' => [
-            ['statement_summaries', 'import_run_id'],
-        ],
-        'inboxes' => [
-            ['discovered_senders', 'inbox_id'],
-            ['inbox_messages', 'inbox_id'],
-            ['inbox_scan_state', 'inbox_id'],
-        ],
-        'merchants' => [
-            ['merchant_memories', 'merchant_id'],
-        ],
-        'migration_runs' => [
-            ['migration_staging_accounts', 'migration_run_id'],
-            ['migration_staging_budget_assignments', 'migration_run_id'],
-            ['migration_staging_categories', 'migration_run_id'],
-            ['migration_staging_goals', 'migration_run_id'],
-            ['migration_staging_payees', 'migration_run_id'],
-            ['migration_staging_transactions', 'migration_run_id'],
-            ['migration_staging_unmapped_items', 'migration_run_id'],
-        ],
-        'migration_source_map' => [
-            ['migration_import_baseline', 'migration_source_map_id'],
-        ],
-        'pots' => [
-            ['pot_movements', 'pot_id'],
-        ],
-        'recurring_series' => [
-            ['drift_alerts', 'recurring_series_id'],
-            ['recurring_series_occurrences', 'recurring_series_id'],
-            ['recurring_series_transitions', 'recurring_series_id'],
-        ],
-        'recurring_series_occurrences' => [
-            ['drift_alerts', 'latest_occurrence_id'],
-        ],
-        'system_alerts' => [
-            ['system_alert_acknowledgements', 'system_alert_id'],
-        ],
-        'transaction_splits' => [
-            ['tax_transaction_tags', 'transaction_split_id'],
-        ],
-        'transactions' => [
-            ['anomaly_alerts', 'transaction_id'],
-            ['chain_links', 'from_transaction_id'],
-            ['chain_links', 'to_transaction_id'],
-            ['goal_contributions', 'transaction_id'],
-            ['pending_enrichment_conflicts', 'transaction_id'],
-            ['recurring_series_occurrences', 'transaction_id'],
-            ['tax_transaction_tags', 'transaction_id'],
-            ['transaction_splits', 'transaction_id'],
-        ],
+        'accounts' => ['card_statements.account_id', 'forecast_shortfall_windows.account_id', 'pots.account_id', 'statement_summaries.account_id', 'transactions.account_id'],
+        'anomaly_alerts' => ['anomaly_alert_transitions.anomaly_alert_id'],
+        'card_statements' => ['card_statement_credits.from_statement_id'],
+        'categories' => ['envelope_assignments.category_id', 'envelope_moves.category_id', 'envelope_moves.counterpart_category_id', 'envelope_settings.category_id', 'merchant_memories.category_id'],
+        'categorization_rules' => ['rule_actions.rule_id', 'rule_conditions.rule_id'],
+        'drift_alerts' => ['drift_alert_transitions.drift_alert_id'],
+        'forecast_scenarios' => ['forecast_runs.scenario_id', 'forecast_scenario_mutations.forecast_scenario_id', 'forecast_shortfall_windows.scenario_id'],
+        'goals' => ['goal_contributions.goal_id'],
+        'import_runs' => ['statement_summaries.import_run_id'],
+        'inboxes' => ['discovered_senders.inbox_id', 'inbox_messages.inbox_id', 'inbox_scan_state.inbox_id'],
+        'merchants' => ['merchant_memories.merchant_id'],
+        'migration_runs' => ['migration_staging_accounts.migration_run_id', 'migration_staging_budget_assignments.migration_run_id', 'migration_staging_categories.migration_run_id', 'migration_staging_goals.migration_run_id', 'migration_staging_payees.migration_run_id', 'migration_staging_transactions.migration_run_id', 'migration_staging_unmapped_items.migration_run_id'],
+        'migration_source_map' => ['migration_import_baseline.migration_source_map_id'],
+        'pots' => ['pot_movements.pot_id'],
+        'recurring_series' => ['drift_alerts.recurring_series_id', 'recurring_series_occurrences.recurring_series_id', 'recurring_series_transitions.recurring_series_id'],
+        'recurring_series_occurrences' => ['drift_alerts.latest_occurrence_id'],
+        'system_alerts' => ['system_alert_acknowledgements.system_alert_id'],
+        'transaction_splits' => ['tax_transaction_tags.transaction_split_id'],
+        'transactions' => ['anomaly_alerts.transaction_id', 'chain_links.from_transaction_id', 'chain_links.to_transaction_id', 'goal_contributions.transaction_id', 'pending_enrichment_conflicts.transaction_id', 'recurring_series_occurrences.transaction_id', 'tax_transaction_tags.transaction_id', 'transaction_splits.transaction_id'],
     ];
 
     // Keys a parent does NOT own: the child outlives it, and the column is
@@ -129,7 +63,7 @@ final readonly class DependentRowCascade
     ];
 
     /**
-     * @return array<string, list<array{0: string, 1: string}>>
+     * @return array<string, list<string>>
      */
     public static function ownedBy(): array
     {
@@ -186,7 +120,8 @@ final readonly class DependentRowCascade
      */
     private function sweep(string $parentTable, array $parentIds, int $userId, array &$events, array &$seen): void
     {
-        foreach (self::OWNED_BY[$parentTable] ?? [] as [$childTable, $column]) {
+        foreach (self::OWNED_BY[$parentTable] ?? [] as $ownedKey) {
+            [$childTable, $column] = explode('.', $ownedKey, 2);
             $fresh = $this->unseen($childTable, $this->childIds($childTable, $column, $parentIds, $userId), $seen);
             if ($fresh === []) {
                 continue;

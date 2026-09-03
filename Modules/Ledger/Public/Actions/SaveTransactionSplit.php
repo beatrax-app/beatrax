@@ -204,7 +204,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             $events[] = $this->insertLeg($user, $transactionId, $leg, $index, $currency, $now);
         }
 
-        return [...$events, ...$this->deleteRemovedLegs($user, $transactionId, $existingIds, $incomingIds)];
+        return [...$events, ...$this->deleteRemovedLegs($user, $existingIds, $incomingIds)];
     }
 
     /**
@@ -309,7 +309,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
      * @param  list<int>  $incomingIds
      * @return list<object>
      */
-    private function deleteRemovedLegs(User $user, int $transactionId, array $existingIds, array $incomingIds): array
+    private function deleteRemovedLegs(User $user, array $existingIds, array $incomingIds): array
     {
         $events = [];
 

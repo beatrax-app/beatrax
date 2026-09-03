@@ -18,6 +18,15 @@ uses(RefreshDatabase::class);
 // its occurrence with it at the database, wrote no tombstone, and the peer
 // quarantined the occurrence's still-live create op as missing_reference.
 
+function tombstoneFor(string $table, int|string $pk): ?object
+{
+    return DB::table('op_log_entries')
+        ->where('table_name', $table)
+        ->where('pk', (string) $pk)
+        ->where('op_type', 'delete_tombstone')
+        ->first();
+}
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-09-04 10:00:00');
 
@@ -105,7 +114,27 @@ it('writes a tombstone for an occurrence the deleted transaction owned', functio
         'observed_currency' => 'EUR',
     ]);
 
+    $categoryId = DB::table('categories')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'Takeaway',
+        'slug' => 'takeaway-'.bin2hex(random_bytes(4)),
+        'kind' => 'expense',
+    ]);
+
+    $legId = DB::table('transaction_splits')->insertGetId([
+        'user_id' => $this->user->id,
+        'transaction_id' => $transaction->id,
+        'category_id' => $categoryId,
+        'settled_amount_minor' => -6521,
+        'settled_currency' => 'EUR',
+        'sort_order' => 0,
+    ]);
+
     app(DeletesTransaction::class)->delete($this->user, $transaction->id);
+
+    // The leg was already tombstoned before this change; the occurrence was
+    // not, and both are the transaction's to announce.
+    expect(tombstoneFor('transaction_splits', $legId))->not->toBeNull();
 
     $tombstone = DB::table('op_log_entries')
         ->where('user_id', $this->user->id)
