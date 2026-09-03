@@ -556,6 +556,32 @@ A collision is recorded in `op_log_quarantine` with reason
 in `QuarantineReason::recoverable()`: the id is taken by another row, and no
 op arriving later frees it.
 
+### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
+
+`SaveTransactionSplit` requires a transaction's legs to add up to it **exactly**.
+The applier had no such rule, and that only became visible once every leg
+carried a `split_uuid` of its own: before, two devices that split the same
+transaction while apart minted leg ids from their own autoincrements, so whether
+the two sets collided at all depended on how far each sequence had run. With an
+identity per leg they stop colliding, and **both sets land** — a desktop split of
+50/30 and a phone split of 40/40 left one 80,00 charge showing four legs adding
+to 160,00, with an empty quarantine on both devices.
+
+The gate refuses a create whose leg would carry the transaction's legs past the
+transaction, and records it as `split_would_overfill_transaction`. Two things it
+must not do, each with a test of its own:
+
+- **Refuse a peer's split when this device has not split the transaction.** The
+  legs then fit, and they apply.
+- **Refuse a leg it has already applied.** The row's own id is excluded from
+  what is already there, so the idempotent re-apply stays idempotent.
+
+This **reports** the conflict rather than resolving it. Two devices that both
+split one transaction still disagree: each keeps its own legs and the peer's
+arrive quarantined with a reason. Resolving it needs a rule about the *set* —
+one save's legs are one value, and the later save replaces the earlier entirely
+— which is a separate decision.
+
 ### A row that arrives without a birth time (`Internal\Merge\SuppliedCreationTime`)
 
 `buildCreatePayload()` writes only the columns the create names, so a row from a
