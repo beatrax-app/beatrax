@@ -28,6 +28,7 @@ final readonly class OpLogEntryApplier
         private PeerRowAliases $aliases,
         private AlreadyPresentCreate $alreadyPresent,
         private SuppliedCreationTime $creationTime,
+        private SplitOverfillGate $splitOverfill,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -199,6 +200,16 @@ final readonly class OpLogEntryApplier
 
             if ($firstField !== false) {
                 $this->quarantine->record($firstField[0], QuarantineReason::CrossUser, $now);
+            }
+
+            return null;
+        }
+
+        if ($payload !== null && $this->splitOverfill->refuses($table, $pk, $payload)) {
+            $firstField = reset($fields);
+
+            if ($firstField !== false) {
+                $this->quarantine->record($firstField[0], QuarantineReason::SplitWouldOverfillTransaction, $now);
             }
 
             return null;
