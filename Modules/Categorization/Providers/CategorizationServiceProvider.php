@@ -45,7 +45,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->singleton(MerchantMemoryQuery::class);
         $this->app->singleton(CreateCategorizationRule::class);
         $this->app->singleton(UpdateCategorizationRule::class);
-        $this->app->singleton(DeleteCategorizationRule::class);
+        $this->app->bind(DeleteCategorizationRule::class);
         $this->app->singleton(DefaultCategorizationRuleSeeder::class);
         $this->app->singleton(DeactivateRulesOnReferentDelete::class);
     }

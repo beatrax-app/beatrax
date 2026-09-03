@@ -30,7 +30,7 @@ final class MigrationServiceProvider extends ServiceProvider
 
         $this->app->singleton(SourceMapWriter::class);
         $this->app->singleton(StartMigrationRun::class);
-        $this->app->singleton(DiscardMigrationRun::class);
+        $this->app->bind(DiscardMigrationRun::class);
     }
 
     public function boot(LivewireManager $livewire): void

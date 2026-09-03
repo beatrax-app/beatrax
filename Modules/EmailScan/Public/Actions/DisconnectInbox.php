@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Public\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\OAuth\GoogleTokenRevoker;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class DisconnectInbox
@@ -17,6 +19,8 @@ final readonly class DisconnectInbox
         private OAuthSecretsRepository $secrets,
         private GoogleTokenRevoker $revoker,
         private DatabaseManager $db,
+        private Dispatcher $events,
+        private DependentRowCascade $cascade,
     ) {}
 
     public function __invoke(int $inboxId, User $user): void
@@ -41,11 +45,18 @@ final readonly class DisconnectInbox
 
         $this->secrets->removeInbox($inboxId);
 
-        // Scan state, fetched messages and discovered senders all cascade on
-        // the inbox delete, so removing this row clears the whole inbox.
+        // Scan state, fetched messages and discovered senders are the inbox's
+        // to remove. Leaving that to the database would clear them without
+        // telling anything, which is how a row outlives its own deletion.
+        $dependents = $this->cascade->delete('inboxes', $inboxId, $user->id);
+
         $connection->table('inboxes')
             ->where('id', $inboxId)
             ->where('user_id', $user->id)
             ->delete();
+
+        foreach ($dependents as $event) {
+            $this->events->dispatch($event);
+        }
     }
 }

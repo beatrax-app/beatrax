@@ -36,7 +36,7 @@ use Modules\Ledger\Public\Support\CategoryPathName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\TransactionMutated;
-use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
@@ -188,6 +188,7 @@ final class CashBookPage extends Component
         DatabaseManager $db,
         Dispatcher $events,
         SearchIndexWriterContract $searchIndex,
+        DependentRowCascade $cascade,
     ): void {
         // Only the entry confirmDelete() was asked about, which the lock on
         // deletingEntryId is what makes true: the id has to have arrived on an
@@ -217,13 +218,9 @@ final class CashBookPage extends Component
             return;
         }
 
-        // Read the leg ids before the parent delete cascades them away: a peer
-        // replaying this op cannot be assumed to have FK cascade on, so every
-        // leg needs a tombstone of its own.
-        $legRows = $connection->table('transaction_splits')
-            ->where('transaction_id', $transactionId)
-            ->where('user_id', $userId)
-            ->get(['id']);
+        // Every dependent row goes first and carries its own tombstone, so a
+        // peer replaying this never has to be assumed to have FK cascade on.
+        $dependents = $cascade->delete('transactions', $transactionId, $userId);
 
         // The source_format predicate is repeated from the read above rather
         // than trusted from it: this page may only ever delete hand-entered
@@ -245,13 +242,8 @@ final class CashBookPage extends Component
             dirtyFields: [],
         ));
 
-        foreach ($legRows as $legRow) {
-            $events->dispatch(new TransactionSplitMutated(
-                splitId: self::toInt($legRow->id),
-                transactionId: $transactionId,
-                userId: $userId,
-                mutationType: 'delete',
-            ));
+        foreach ($dependents as $event) {
+            $events->dispatch($event);
         }
 
         $this->toast(Lang::get('cashbook::cash-book.toast.removed'));

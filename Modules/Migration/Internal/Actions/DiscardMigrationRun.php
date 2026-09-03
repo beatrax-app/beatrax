@@ -4,27 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Actions;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyConfirmedException;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Sync\Public\Services\DependentRowCascade;
 
 final readonly class DiscardMigrationRun
 {
-    /**
-     * @var list<string>
-     */
-    private const array STAGING_TABLES = [
-        'migration_staging_categories',
-        'migration_staging_accounts',
-        'migration_staging_payees',
-        'migration_staging_budget_assignments',
-        'migration_staging_goals',
-        'migration_staging_transactions',
-        'migration_staging_unmapped_items',
-    ];
+    use CoercesScalars;
 
     private const int ABANDONED_THRESHOLD_HOURS = 24;
 
@@ -39,6 +31,8 @@ final readonly class DiscardMigrationRun
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private Dispatcher $events,
+        private DependentRowCascade $cascade,
     ) {}
 
     public function __invoke(int $migrationRunId, User $user): void
@@ -53,7 +47,7 @@ final readonly class DiscardMigrationRun
             throw new MigrationAlreadyConfirmedException($migrationRunId);
         }
 
-        $this->truncateStagingForRun($migrationRunId, $user);
+        $this->discardStagingForRun($migrationRunId, $user->id);
 
         $run->update(['status' => MigrationRunStatus::Discarded->value]);
     }
@@ -74,6 +68,8 @@ final readonly class DiscardMigrationRun
 
         $reclaimed = 0;
         foreach ($staleRunIds as $runId) {
+            $this->discardStagingForRun(self::toInt($runId), $user->id);
+
             $deleted = $this->db->connection()->table('migration_runs')
                 ->where('id', $runId)
                 ->where('user_id', $user->id)
@@ -85,13 +81,13 @@ final readonly class DiscardMigrationRun
         return $reclaimed;
     }
 
-    private function truncateStagingForRun(int $migrationRunId, User $user): void
+    // The staging tables are the run's own rows, so the foreign-key graph
+    // already names them. Repeating that list here is what let the abandoned
+    // sweep delete a run and leave its staging rows to the database.
+    private function discardStagingForRun(int $migrationRunId, int $userId): void
     {
-        foreach (self::STAGING_TABLES as $table) {
-            $this->db->connection()->table($table)
-                ->where('user_id', $user->id)
-                ->where('migration_run_id', $migrationRunId)
-                ->delete();
+        foreach ($this->cascade->delete('migration_runs', $migrationRunId, $userId) as $event) {
+            $this->events->dispatch($event);
         }
     }
 }

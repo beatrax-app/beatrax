@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Http\Livewire\CategorizationProvenancePanel;
 use Modules\Core\Models\User;
@@ -50,6 +51,16 @@ beforeEach(function (): void {
         'display_order' => 100,
     ]);
 });
+
+// The rule's own conditions and actions go with it, because the database no
+// longer takes them away behind the delete.
+function removeProvenanceRule(User $user, int $ruleId): void
+{
+    /** @var DeleteCategorizationRule $delete */
+    $delete = Container::getInstance()->make(DeleteCategorizationRule::class);
+
+    ($delete)($user, $ruleId);
+}
 
 function seedProvenanceRule(User $user, int $categoryId, string $value = 'SPOTIFY'): int
 {
@@ -207,7 +218,7 @@ it('removeRule catches NotFoundHttpException when the rule was deleted in anothe
         ->assertSet('ruleId', $ruleId);
 
     // Simulate the cross-tab race: the row vanishes between renders.
-    DB::table('categorization_rules')->where('id', $ruleId)->delete();
+    removeProvenanceRule($this->user, $ruleId);
 
     $component
         ->call('confirmRemove')
@@ -294,8 +305,8 @@ it('falls back to none variant when the referenced rule has been deleted', funct
         ['source' => 'rule', 'rule_id' => $ruleId, 'memory_id' => null, 'category_id' => $this->streaming->id],
     );
 
-    // Delete the rule directly; provenance JSON still references it.
-    DB::table('categorization_rules')->where('id', $ruleId)->delete();
+    // Delete the rule; provenance JSON still references it.
+    removeProvenanceRule($this->user, $ruleId);
 
     Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
         ->assertSet('variant', 'none');

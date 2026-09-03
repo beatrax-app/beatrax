@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class DeleteScenario
@@ -16,6 +17,7 @@ final readonly class DeleteScenario
     public function __construct(
         private DatabaseManager $db,
         private Dispatcher $events,
+        private DependentRowCascade $cascade,
     ) {}
 
     public function __invoke(int $scenarioId, User $user): void
@@ -28,7 +30,12 @@ final readonly class DeleteScenario
             throw new NotFoundHttpException('Scenario not found.');
         }
 
-        $this->db->connection()->transaction(function () use ($scenarioId, $user): void {
+        /** @var list<object> $dependents */
+        $dependents = [];
+
+        $this->db->connection()->transaction(function () use ($scenarioId, $user, &$dependents): void {
+            $dependents = $this->cascade->delete('forecast_scenarios', $scenarioId, $user->id);
+
             $this->db->connection()->table('forecast_scenarios')
                 ->where('id', $scenarioId)
                 ->where('user_id', $user->id)
@@ -40,14 +47,15 @@ final readonly class DeleteScenario
             scenarioId: $scenarioId,
         ));
 
-        // The mutations cascade away with the scenario at the database, and
-        // they do the same on the peer: their own foreign key is
-        // cascadeOnDelete, so this one tombstone is the whole deletion.
         $this->events->dispatch(new EntityMutated(
             table: 'forecast_scenarios',
             pk: $scenarioId,
             userId: $user->id,
             mutationType: 'delete',
         ));
+
+        foreach ($dependents as $event) {
+            $this->events->dispatch($event);
+        }
     }
 }

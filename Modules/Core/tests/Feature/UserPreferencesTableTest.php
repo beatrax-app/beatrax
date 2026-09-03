@@ -56,7 +56,7 @@ it('enforces a unique constraint on user_id at the database boundary', function 
     ]))->toThrow(QueryException::class);
 });
 
-it('cascades deletion of a user to the user_preferences row', function (): void {
+it('refuses to delete a user while the user_preferences row is still there', function (): void {
     $this->conn->table('user_preferences')->insert([
         'user_id' => $this->userA->id,
         'created_at' => '2026-05-27 00:00:00',
@@ -67,11 +67,17 @@ it('cascades deletion of a user to the user_preferences row', function (): void 
         ->where('user_id', $this->userA->id)
         ->count())->toBe(1);
 
-    $this->userA->delete();
+    // The database no longer removes an owned row on its own: it refuses,
+    // so the application does it and the deletion can be told to a peer.
+    expect(fn (): mixed => $this->userA->delete())->toThrow(QueryException::class);
 
     expect($this->conn->table('user_preferences')
         ->where('user_id', $this->userA->id)
-        ->count())->toBe(0);
+        ->count())->toBe(1);
+
+    $this->conn->table('user_preferences')->where('user_id', $this->userA->id)->delete();
+
+    expect($this->userA->delete())->toBeTrue();
 });
 
 it('scopes UserPreference Eloquent queries to the authenticated user via BelongsToUser', function (): void {

@@ -99,7 +99,6 @@ final readonly class SyncCaptureListener
 
             match ($event->mutationType) {
                 'edit' => $this->handleSplitEdit($event, $writer),
-                'delete' => $this->handleSplitDelete($event, $writer),
                 'create' => $this->handleSplitCreate($event, $writer),
                 default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,

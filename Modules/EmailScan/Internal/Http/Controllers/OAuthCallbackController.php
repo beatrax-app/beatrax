@@ -31,6 +31,7 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -48,6 +49,7 @@ final readonly class OAuthCallbackController
         private LoopbackRedirectUri $loopback,
         private SystemAlertWriter $alerts,
         private InboxScanStateMachine $scanState,
+        private DependentRowCascade $cascade,
     ) {}
 
     public function __invoke(Request $request, string $provider, LoggerInterface $logger): RedirectResponse
@@ -306,10 +308,7 @@ final readonly class OAuthCallbackController
     {
         $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
             $connection = $this->db->connection();
-            $connection->table('inbox_scan_state')
-                ->where('inbox_id', $inboxId)
-                ->where('user_id', $userId)
-                ->delete();
+            $this->cascade->delete('inboxes', $inboxId, $userId);
             $connection->table('inboxes')
                 ->where('id', $inboxId)
                 ->where('user_id', $userId)
