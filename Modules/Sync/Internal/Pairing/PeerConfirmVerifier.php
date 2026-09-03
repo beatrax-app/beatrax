@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Enums\PairingSide;
+use Psr\Log\LoggerInterface;
 
 final readonly class PeerConfirmVerifier
 {
@@ -16,6 +17,7 @@ final readonly class PeerConfirmVerifier
         private DatabaseManager $db,
         private Clock $clock,
         private DeviceKeySigner $deviceKeySigner,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
@@ -38,7 +40,15 @@ final readonly class PeerConfirmVerifier
             ->where('expires_at', '>', Instant::zulu($now))
             ->first();
 
-        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
+        if ($row === null) {
+            $this->refused('no live pairing row holds this token');
+
+            return null;
+        }
+
+        if (! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
+            $this->refused('the located row disagrees about the token hash');
+
             return null;
         }
 
@@ -47,8 +57,13 @@ final readonly class PeerConfirmVerifier
         // $localSide is checked here rather than inside the callee so the
         // signature check below is never reached without a known local side —
         // the peer columns it reads are chosen by that side.
-        if ($localSide === null
-            || ! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
+        if ($localSide === null) {
+            $this->refused('the frame is not addressed to this device');
+
+            return null;
+        }
+
+        if (! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
             return null;
         }
 
@@ -100,14 +115,23 @@ final readonly class PeerConfirmVerifier
         if ($peerBoundDeviceId === null
             || $peerPublicKeyHex === null
             || $confirmingDeviceKxHex === null
-            || $peerDeviceKxHex === null
-            || ! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
+            || $peerDeviceKxHex === null) {
+            $this->refused('this row never bound a key for one of the two sides');
+
+            return false;
+        }
+
+        if (! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
+            $this->refused('the frame claims a device id this row never bound');
+
             return false;
         }
 
         try {
             $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($peerPublicKeyHex);
         } catch (InvalidPublicKeyException) {
+            $this->refused('the peer public key bound to this row will not decode');
+
             return false;
         }
 
@@ -123,7 +147,22 @@ final readonly class PeerConfirmVerifier
             $peerDeviceKxHex,
         );
 
-        return $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin);
+        if (! $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin)) {
+            $this->refused('the signature does not match the key this row bound');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Every refusal here is fail-closed and terminal, and no road that carries
+    // a frame reports one, so a handshake that stops on a real device leaves
+    // nothing to read. The gate is named; no device id, key or token joins it,
+    // because none of those belongs in a log file.
+    private function refused(string $gate): void
+    {
+        $this->logger?->warning('PeerConfirmVerifier: refused a peer confirm.', ['gate' => $gate]);
     }
 
     // Reads one of the peer side's columns — whichever side the local device

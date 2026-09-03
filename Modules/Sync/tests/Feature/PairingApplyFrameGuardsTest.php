@@ -6,17 +6,21 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger as Monolog;
 
 uses(RefreshDatabase::class);
 
 // The rejections that fire when the stored row disagrees with the frame: an
 // unknown token, a frame this device is not the addressee of, a sender that is
 // not the identity the row bound. Each is the only thing between a hostile
-// relay frame and a trust decision, and none announces itself when it stops.
+// relay frame and a trust decision, and each now names the gate it stopped on.
 
 const PAFG_DESKTOP = 'pafg-desktop';
 
@@ -219,4 +223,39 @@ it('refuses a peer-confirm frame when the bound peer key on the row is malformed
     $row = $db->connection()->table('pairing_tokens')->where('token_hash', $arranged['tokenHash'])->first();
     expect($row->state)->toBe(PairingState::AwaitingConfirm->value)
         ->and($row->responder_confirmed_at)->toBeNull();
+});
+
+it('names the gate it refused a peer confirm on, and leaks nothing naming the devices', function (): void {
+    $user = pafgUser('pafg-named-gate');
+    $arranged = pafgArrangeAwaitingConfirm($this->app, (int) $user->id);
+
+    $handler = new TestHandler;
+
+    $verifier = new PeerConfirmVerifier(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        new DeviceKeySigner,
+        new Monolog('pairing', [$handler]),
+    );
+
+    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, 'a-third-device', $arranged['phoneKx'], $arranged['desktopKx']);
+    $sig = (new DeviceKeySigner)->sign($message, sodium_hex2bin($arranged['phone']['edSec']));
+
+    expect($verifier->authenticatePeerConfirm((int) $user->id, $arranged['tokenHash'], PAFG_PHONE, 'a-third-device', $sig))
+        ->toBeNull();
+
+    $records = $handler->getRecords();
+
+    expect($records)->toHaveCount(1)
+        ->and($records[0]['context']['gate'])->toBe('the frame is not addressed to this device');
+
+    // The reason a refusal went unlogged for so long: the frame's own fields
+    // are pairing material. The gate is the whole payload, so a log file that
+    // finally explains a stalled handshake still names no device and no token.
+    $line = json_encode($records[0], JSON_THROW_ON_ERROR);
+
+    expect($line)->not->toContain($arranged['tokenHash'])
+        ->and($line)->not->toContain($arranged['phone']['edPub'])
+        ->and($line)->not->toContain(PAFG_PHONE)
+        ->and($line)->not->toContain(PAFG_DESKTOP);
 });
