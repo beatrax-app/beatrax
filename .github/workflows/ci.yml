@@ -165,8 +165,22 @@ jobs:
 
             - name: Resolve this shard's testsuites
               id: shard
+              # `set -e` and the emptiness check are both load-bearing, and the
+              # second is the one that matters. Without them a resolver that
+              # exits non-zero leaves `suites` empty, the step still ends on a
+              # successful echo, and the run below becomes
+              # `--parallel --testsuite=""` — which does not fail. It reports
+              # "6 passed" and exits 0, those six being the tests/Helpers files
+              # paratest collects whatever `--testsuite` asks for. The serial
+              # form exits 1 on the same input; only the parallel one CI uses is
+              # silent. A shard would have gone green having tested nothing.
               run: |
+                  set -euo pipefail
                   suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+                  if [ -z "$suites" ]; then
+                      echo "::error::the shard resolver named no testsuite, and a run with none passes."
+                      exit 1
+                  fi
                   echo "suites=$suites" >> "$GITHUB_OUTPUT"
                   echo "shard ${{ matrix.shard }}/3: $suites"
 
