@@ -28,11 +28,7 @@ final readonly class SplitOverfillGate
      */
     public function refuses(string $table, int|string $pk, array $payload): bool
     {
-        if ($table !== self::TABLE) {
-            return false;
-        }
-
-        $transactionId = self::asInt($payload['transaction_id'] ?? null);
+        $transactionId = $table === self::TABLE ? self::asInt($payload['transaction_id'] ?? null) : null;
         $incoming = self::asInt($payload['settled_amount_minor'] ?? null);
 
         if ($transactionId === null || $incoming === null) {

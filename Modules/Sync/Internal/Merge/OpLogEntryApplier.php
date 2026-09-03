@@ -189,27 +189,26 @@ final readonly class OpLogEntryApplier
         $refused = ($tomb !== null && $this->tombstoneWins($tomb, $fields))
             || ! $this->createRowComplete($table, $fields, $now);
 
-        if ($refused) {
+        $payload = $refused ? null : $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+        if ($payload === null) {
             return null;
         }
 
-        $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+        // The gates that refuse a payload that WAS built, each with the reason
+        // it is refused under. Ordered: ownership answers whose row this is,
+        // and the sum only means anything once that is settled.
+        $reason = match (true) {
+            ! $this->ownershipAdmits($table, $payload, $userId, $pk) => QuarantineReason::CrossUser,
+            $this->splitOverfill->refuses($table, $pk, $payload) => QuarantineReason::SplitWouldOverfillTransaction,
+            default => null,
+        };
 
-        if ($payload !== null && ! $this->ownershipAdmits($table, $payload, $userId, $pk)) {
+        if ($reason !== null) {
             $firstField = reset($fields);
 
             if ($firstField !== false) {
-                $this->quarantine->record($firstField[0], QuarantineReason::CrossUser, $now);
-            }
-
-            return null;
-        }
-
-        if ($payload !== null && $this->splitOverfill->refuses($table, $pk, $payload)) {
-            $firstField = reset($fields);
-
-            if ($firstField !== false) {
-                $this->quarantine->record($firstField[0], QuarantineReason::SplitWouldOverfillTransaction, $now);
+                $this->quarantine->record($firstField[0], $reason, $now);
             }
 
             return null;
