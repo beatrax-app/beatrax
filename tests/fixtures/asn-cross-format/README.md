@@ -22,10 +22,12 @@ curated subset rather than the same 72 February rows.
 
 Consequence for `CrossFormatDedupTest`: the `csv_then_camt053` and
 `camt053_then_csv` scenarios run on this directory; the `mt940_after_csv`
-and `mt940_then_camt053` scenarios are skipped (or marked `@todo` with the
-reason `'No same-period MT940 export available from ASN'`) until ASN
-re-introduces MT940 downloads or a third-party export tool is added to
-the project.
+and `mt940_then_camt053` scenarios are not written at all. They were carried
+for a while as tests that skipped on the missing fixture, which on every green
+run read as cross-format MT940 coverage that had in fact never executed once.
+This file is the record instead. They come back — with a real same-period
+`.sta` beside the two files above — when ASN re-introduces MT940 downloads or
+a third-party export tool is added to the project.
 
 ## Same-period guarantee
 

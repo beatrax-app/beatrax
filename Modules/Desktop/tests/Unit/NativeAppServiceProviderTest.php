@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
 use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Modules\Desktop\Internal\NativeAppServiceProvider;
 use Native\Desktop\Contracts\ProvidesPhpIni;
@@ -56,9 +57,36 @@ it('does not call the NativePHP `menu-bar/create` endpoint — the persistent tr
     });
 });
 
-it('runs the first-launch DB bootstrap before opening the main window — see FirstLaunchBootstrapTest for the post-boot assertion (Unit suite has no DB)')->todo();
+it('installs the application menu built by AppMenuBuilder, in the same boot that opens the window', function (): void {
+    // Menu still has no v2 fake, but it does not need one: MenuBuilder::create()
+    // registers through the same NativePHP HTTP client the sibling test above
+    // pins, so the dispatch and its payload are both recordable here. Until
+    // this ran, the only thing said about the menu was that one endpoint it
+    // must NOT call — a boot that installed no menu at all passed that.
+    Http::fake();
+    bindConsoleKernelSpy();
+    Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
 
-it('configures the app menu via Native\\Desktop\\Facades\\Menu — deferred to manual UAT (no v2 fake for Menu)')->todo();
+    app(NativeAppServiceProvider::class)->boot();
+
+    Http::assertSent(function (Request $request): bool {
+        if ($request->method() !== 'POST' || ! str_ends_with($request->url(), '/menu')) {
+            return false;
+        }
+
+        $items = $request->data()['items'] ?? [];
+        $labels = array_column(is_array($items) ? $items : [], 'label');
+
+        // The two submenus this app owns outright, so the assertion fails on an
+        // empty menu and on NativePHP's stock default alike.
+        return in_array(Lang::get('desktop::native.menu.file'), $labels, true)
+            && in_array(Lang::get('desktop::native.menu.help'), $labels, true);
+    });
+});
+
+// The other thing boot() must sequence — the first-launch migrations running
+// before the window opens — is asserted in Desktop's FirstLaunchBootstrapTest,
+// which has the database this Unit suite does not.
 
 it('publishes php.ini overrides that lift the upload ceiling above the wizard validator', function (): void {
     // The bundled runtime ships the stock `upload_max_filesize = 2M` /
