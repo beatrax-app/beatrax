@@ -10,8 +10,11 @@ use Illuminate\Database\QueryException;
 // Handles the columns whose foreign key targets their own table. Ordering
 // cannot resolve these — a transfer pair references both ways, so whichever
 // row lands first names one that does not exist yet and SQLite rejects it.
-// They are stripped from the insert and written back once the batch is in.
-final readonly class SelfReferenceDeferral
+// They are stripped from the insert and written back once the target is here.
+/**
+ * @link ../../../../.docs/features/sync/architecture.md
+ */
+final class SelfReferenceDeferral
 {
     // Columns whose FK targets their OWN table, named per table so the
     // stripping pass knows what to defer.
@@ -20,9 +23,18 @@ final readonly class SelfReferenceDeferral
         'categories' => ['parent_id'],
     ];
 
+    // A backfill is replayed in batches and nothing makes a transfer pair land
+    // in one of them, so a link unresolved at the end of a batch is held for
+    // the next. Bounded because a target that never arrives never resolves,
+    // and the oldest have had the most chances already.
+    private const int MAX_PENDING = 10000;
+
+    /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> */
+    private array $pending = [];
+
     public function __construct(
-        private DatabaseManager $db,
-        private RowOwnership $ownership,
+        private readonly DatabaseManager $db,
+        private readonly RowOwnership $ownership,
     ) {}
 
     // Strips the self-referential columns out of an insert payload, nulling
@@ -49,31 +61,49 @@ final readonly class SelfReferenceDeferral
         return $extracted;
     }
 
-    // Re-applies the deferred columns now that every row in the batch is
-    // present. A target still missing (its create was quarantined, or it
-    // lands in a later batch) leaves the column null rather than failing
-    // the row that points at it.
+    // Re-applies the deferred columns now that their targets are present, and
+    // carries whatever is still unsatisfied into the next batch. Dropping it
+    // there cost a first sync every transfer pair whose partner sat further
+    // down the log — the link was never retried once the partner landed.
     /**
      * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
      */
     public function apply(array $deferred, int $userId): void
     {
-        foreach ($deferred as $row) {
+        $this->pending = array_slice([...$this->pending, ...$deferred], -self::MAX_PENDING);
+
+        $stillWaiting = [];
+
+        foreach ($this->pending as $row) {
             $resolvable = $this->resolvableTargets($row['table'], $row['values'], $userId);
 
-            if ($resolvable === []) {
-                continue;
+            if ($resolvable !== []) {
+                $this->write($row['table'], $row['pk'], $resolvable, $userId);
             }
 
-            $query = $this->db->connection()->table($row['table'])->where('id', $row['pk']);
+            $waiting = array_diff_key($row['values'], $resolvable);
 
-            try {
-                $this->ownership->scopeToUser($query, $row['table'], $userId)->update($resolvable);
-            } catch (QueryException) {
-                // The link is optional by construction — the row is already
-                // applied and usable without it, so a refusal here costs the
-                // pairing and never the replay.
+            if ($waiting !== []) {
+                $stillWaiting[] = ['table' => $row['table'], 'pk' => $row['pk'], 'values' => $waiting];
             }
+        }
+
+        $this->pending = $stillWaiting;
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function write(string $table, int|string $pk, array $values, int $userId): void
+    {
+        $query = $this->db->connection()->table($table)->where('id', $pk);
+
+        try {
+            $this->ownership->scopeToUser($query, $table, $userId)->update($values);
+        } catch (QueryException) {
+            // The link is optional by construction — the row is already
+            // applied and usable without it, so a refusal here costs the
+            // pairing and never the replay.
         }
     }
 
