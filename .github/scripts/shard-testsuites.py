@@ -11,28 +11,21 @@ Balance comes from .github/test-shard-weights.json, which is only a hint: an
 unlisted suite is assigned a default weight and still runs. Stale weights cost
 a slower shard, never a missing test.
 
-A weight is one number: the seconds that suite takes on its own, under
-`php artisan test --parallel --testsuite=<name>`, rounded. Being off by a little
-is free; being wrong about the ordering is what costs a shard.
+These weights look badly wrong and are not worth re-deriving. They track
+something close to test count, and runtime does not follow it -- so the split
+they produce is lopsided, around 245s / 124s / 255s across four runs on main.
+Replacing them with measured per-suite seconds was tried and reverted: it
+evened the predicted load to within 1% and made the real thing slightly worse,
+259s / 107s / 172s over two runs, because the local measurement it was built
+from over-reads AuthFeature. That suite's Argon2id work is memory-hard and a
+contended developer machine is the wrong instrument for it.
 
-Measured on a developer machine, and that is a proxy rather than the thing --
-AuthFeature's Argon2id work is memory-hard, so it reads far heavier under a
-contended local run than it costs on a dedicated runner. What the current set
-was measured to do, against the previous one, over two CI runs:
-
-    partition        shard durations        total     tests
-    previous         245s / 124s / 255s      625s     12802
-    current          259s / 107s / 172s      538s     12805
-
-So the critical path did not move: it is pinned by Feature, a single 245s suite
-no split can divide, and every partition lands within about fifteen seconds of
-that floor. What did move is total runner time, down 14%, because a shard that
-is one long suite leaves three of the four workers idle on its tail and a shard
-with more in it packs them. Balance is the cost lever here, not the clock lever.
-Shortening the clock means splitting Feature, which is a phpunit.xml change.
-
-The +3 tests are this commit's own; the totals matching is the check that a
-re-weighting moved tests between shards rather than out of the run.
+What the experiment established is that shard balance is not the lever here at
+all. The longest shard cannot go below Feature, a single ~245s testsuite no
+choice of weights can divide, and the lopsided split already lands within about
+ten seconds of that floor. Evening the load only moves work onto the shard that
+is already the longest. Shortening this workflow means splitting the Feature
+testsuite in phpunit.xml, and nothing short of that will show up on the clock.
 
 The shard totals do not sum to the full-suite total, and that is expected.
 tests/Helpers belongs to the Unit testsuite, but paratest collects it whatever
