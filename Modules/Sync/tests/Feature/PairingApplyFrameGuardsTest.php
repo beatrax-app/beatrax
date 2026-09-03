@@ -12,8 +12,8 @@ use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\PeerConfirmVerifier;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
-use Monolog\Handler\TestHandler;
-use Monolog\Logger as Monolog;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -97,6 +97,24 @@ function pafgArrangeAwaitingConfirm(mixed $app, int $userId, bool $withSelfRow =
     // The sealing keys this arrangement bound, which the confirm signature the
     // guard tests reconstruct now covers.
     return ['tokenHash' => $tokenHash, 'phone' => $phone, 'phoneKx' => str_repeat('c', 64), 'desktopKx' => str_repeat('b', 64)];
+}
+
+function pafgRecorderLogger(): LoggerInterface
+{
+    return new class extends AbstractLogger
+    {
+        /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+        public array $records = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            $this->records[] = [
+                'level' => is_string($level) ? $level : (string) $level,
+                'message' => (string) $message,
+                'context' => $context,
+            ];
+        }
+    };
 }
 
 beforeEach(function (): void {
@@ -229,13 +247,13 @@ it('names the gate it refused a peer confirm on, and leaks nothing naming the de
     $user = pafgUser('pafg-named-gate');
     $arranged = pafgArrangeAwaitingConfirm($this->app, (int) $user->id);
 
-    $handler = new TestHandler;
+    $logger = pafgRecorderLogger();
 
     $verifier = new PeerConfirmVerifier(
         $this->app->make(DatabaseManager::class),
         $this->app->make(Clock::class),
         new DeviceKeySigner,
-        new Monolog('pairing', [$handler]),
+        $logger,
     );
 
     $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, 'a-third-device', $arranged['phoneKx'], $arranged['desktopKx']);
@@ -244,15 +262,13 @@ it('names the gate it refused a peer confirm on, and leaks nothing naming the de
     expect($verifier->authenticatePeerConfirm((int) $user->id, $arranged['tokenHash'], PAFG_PHONE, 'a-third-device', $sig))
         ->toBeNull();
 
-    $records = $handler->getRecords();
-
-    expect($records)->toHaveCount(1)
-        ->and($records[0]['context']['gate'])->toBe('the frame is not addressed to this device');
+    expect($logger->records)->toHaveCount(1)
+        ->and($logger->records[0]['context']['gate'])->toBe('the frame is not addressed to this device');
 
     // The reason a refusal went unlogged for so long: the frame's own fields
     // are pairing material. The gate is the whole payload, so a log file that
     // finally explains a stalled handshake still names no device and no token.
-    $line = json_encode($records[0], JSON_THROW_ON_ERROR);
+    $line = json_encode($logger->records[0], JSON_THROW_ON_ERROR);
 
     expect($line)->not->toContain($arranged['tokenHash'])
         ->and($line)->not->toContain($arranged['phone']['edPub'])
