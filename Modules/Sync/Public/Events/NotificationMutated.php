@@ -7,7 +7,7 @@ namespace Modules\Sync\Public\Events;
 final readonly class NotificationMutated
 {
     /**
-     * @param  string  $mutationType  'create' | 'edit'
+     * @param  string  $mutationType  'create' | 'edit' | 'delete'
      * @param  array<string, mixed>  $dirtyFields  Changed field => new-value map.
      */
     public function __construct(
