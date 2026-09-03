@@ -126,22 +126,7 @@ final readonly class CommandSpawner
             $parts[] = $token;
         }
 
-        $invocation = implode(' ', $parts);
-        $redirect = '> '.escapeshellarg($outPath).' 2>&1';
-
-        // `< /dev/null` stops the child holding the request's stdin open.
-        // setsid would detach more cleanly but is absent from macOS' default
-        // toolchain, so plain `&` it is.
-        $detach = $invocation.' '.$redirect.' < /dev/null &';
-
-        // The subshell is the child's PARENT, which is the only process that
-        // can be told its exit code. `$!` is still the artisan pid, so cancel
-        // signals and liveness probes reach the command itself; `exec 1>&-`
-        // hands the caller EOF so the pid is read without waiting for the run.
-        $watch = '( '.$detach.' p=$!; echo $p; exec 1>&-; '
-            .'wait $p; echo $? > '.escapeshellarg(RunExitCodeFile::pathFor($outPath)).' ) &';
-
-        return 'bash -c '.escapeshellarg($watch);
+        return DetachedRunScript::for(implode(' ', $parts), $outPath);
     }
 
     // Tokens emit in $spec->argsSchema order, so a schema that lists an
