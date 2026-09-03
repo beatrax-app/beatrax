@@ -62,9 +62,16 @@ An IMAP library is not a shortcut here; it is a specification violation.
   package's requirements disappears the day that package drops it, so an
   undeclared import is a break scheduled for an unrelated `composer update`.
 - Comments explain *why*, never *what*, and the bar is high: if the code says it,
-  the comment does not need to. An inline `//` block is **at most 4 lines**, and
-  a thought worth one line should BE one line — there is no floor, and padding to
-  reach one is how comment noise got made here. No prose in a docblock: tag-only.
+  the comment does not need to. An inline `//` block is **2 to 4 lines**: a lone
+  one-line `//` comment is refused outright (M1), because a thought that fits on
+  one line is one the code should carry itself — delete it, or let a rename, an
+  extracted method or a named constant say it. **Never pad a one-liner to two
+  lines to clear M1** — that manufactures the noise the rule exists to stop.
+  No prose in a docblock: tag-only (M4), and no `/* */` blocks (M3).
+- These four rules are enforced twice: `tests/Contracts/CommentPolicyArchTest.php`
+  is the authority, and `.claude/hooks/comment-policy.php` runs the same checks on
+  every edit so a violation is reported the moment it is written rather than at
+  the gate. Both cover `Modules/` and `app/`, never tests or migrations.
 - **No requirement identifiers in comments** (`GOV-R6`). They go in the commit
   trailer and the PR body, which is where the gate reads them.
 - An `@link` into `.docs/` is for a target a reader could not have guessed — a
