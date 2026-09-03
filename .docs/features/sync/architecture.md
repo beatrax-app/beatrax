@@ -556,6 +556,29 @@ A collision is recorded in `op_log_quarantine` with reason
 in `QuarantineReason::recoverable()`: the id is taken by another row, and no
 op arriving later frees it.
 
+### A row that arrives without a birth time (`Internal\Merge\SuppliedCreationTime`)
+
+`buildCreatePayload()` writes only the columns the create names, so a row from a
+build whose capture did not name `created_at` landed with none — and the device
+that later re-captures that row sends the null on, so it spreads.
+
+A null timestamp is not "unknown", it is "sorts wrong forever".
+`EnvelopeBalanceQuery::recentMovesFor()` orders `created_at DESC` with a limit of
+ten, and SQLite sorts nulls **last** under `DESC`: a move made today sat below
+one made a week earlier, and past ten moves in a category it left the page
+entirely while the money it moved still counted. `PotRowLoader` orders the same
+way.
+
+`SuppliedCreationTime` seeds `created_at` and `updated_at` from the create's own
+earliest HLC, whose high half is a wall clock in milliseconds. That is not the
+birth time the writing device knew — it is the earliest moment this device can
+*prove* the row existed, which is honest and, unlike a null, orderable. A create
+that carries its own timestamp keeps it.
+
+The rows already stored are repaired by
+`2026_09_03_000001_give_a_synced_row_back_its_birth_time`, which reads
+`min(hlc_l)` of each undated row's create ops.
+
 ### Which id a covered table gives a new row
 
 A table whose only identity is an autoincrement cannot tell one device's row

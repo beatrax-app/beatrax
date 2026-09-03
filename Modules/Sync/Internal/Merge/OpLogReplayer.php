@@ -132,6 +132,7 @@ final readonly class OpLogReplayer
                 $quarantine,
                 $this->resolveFromContainer(LoggerInterface::class),
             ),
+            new SuppliedCreationTime($db),
             $this->resolveFromContainer(LoggerInterface::class),
         );
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
