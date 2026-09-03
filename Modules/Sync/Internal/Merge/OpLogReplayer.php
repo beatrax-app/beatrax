@@ -133,6 +133,7 @@ final readonly class OpLogReplayer
                 $this->resolveFromContainer(LoggerInterface::class),
             ),
             new SuppliedCreationTime($db),
+            new SplitOverfillGate($db),
             $this->resolveFromContainer(LoggerInterface::class),
         );
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);

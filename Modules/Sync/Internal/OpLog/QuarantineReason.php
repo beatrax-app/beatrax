@@ -52,6 +52,11 @@ enum QuarantineReason: string
     // idempotent replay, and a move made on a phone was simply never there.
     case PrimaryKeyCollision = 'primary_key_collision';
 
+    // Writing this split leg would carry a transaction's legs past the
+    // transaction. The writer requires them to add up exactly; a device that
+    // split the same transaction while apart sends a whole second set.
+    case SplitWouldOverfillTransaction = 'split_would_overfill_transaction';
+
     // The two a key arriving later can undo. Kept apart from recoverable()
     // below because a screen reports these as "waiting for a key", and a row
     // held for any other reason must never be given that cause.
