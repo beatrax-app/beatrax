@@ -27,6 +27,7 @@ final readonly class OpLogEntryApplier
         private TransferPairCascade $pairCascade,
         private PeerRowAliases $aliases,
         private AlreadyPresentCreate $alreadyPresent,
+        private SuppliedCreationTime $creationTime,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -389,7 +390,7 @@ final readonly class OpLogEntryApplier
             unset($payload['user_id']);
         }
 
-        return $payload;
+        return $this->creationTime->seed($table, $payload, $fields);
     }
 
     // Deletions are collected here rather than run here: a tombstone for a
