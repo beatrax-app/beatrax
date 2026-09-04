@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
@@ -224,7 +225,9 @@ it('appends an EUR shadow series for a USD-priced recurring series (eur-shadow-r
 
     $content = $response->getContent() ?: '';
 
-    expect(preg_match('/data-options=("|\')([^"\']*)\1/u', $content, $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options=("|\')([^"\']*)\1/u', $content);
+    expect($matches)->not->toBeEmpty();
+
     /** @var array<int, string> $matches */
     $decoded = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $parsed = json_decode($decoded, true);

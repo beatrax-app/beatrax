@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
@@ -123,8 +124,8 @@ it('sums per-account point estimates in EUR on the aggregate chart payload', fun
     $content = (string) $response->getContent();
 
     // 100000 + 50000 minor, rendered as 1500 in major units.
-    $matches = [];
-    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content, $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content);
+    expect($matches)->not->toBe([]);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
     expect($decoded)->toBeArray();
     expect($decoded['series'][0]['data'][0]['y'])->toBe(1500);
@@ -140,8 +141,8 @@ it('renders the buffer floor as the sum of per-account forecast_min_buffer_minor
     $content = (string) $response->getContent();
 
     // The y2 annotation is the combined buffer floor: (50000 + 30000) / 100.
-    $matches = [];
-    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content, $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content);
+    expect($matches)->not->toBe([]);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
     expect($decoded)->toBeArray();
     expect($decoded['annotations']['yaxis'][0]['y2'])->toBe(800);
@@ -172,8 +173,8 @@ it('converts a dollar account before adding it to the euro aggregate', function 
 
     $response = $this->actingAs($this->user)->get('/forecast');
 
-    $matches = [];
-    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent(), $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent());
+    expect($matches)->not->toBe([]);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
 
     expect($decoded)->toBeArray();
@@ -187,8 +188,8 @@ it('converts a dollar account buffer before adding it to the euro buffer floor',
 
     $response = $this->actingAs($this->user)->get('/forecast');
 
-    $matches = [];
-    expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent(), $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', (string) $response->getContent());
+    expect($matches)->not->toBe([]);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
 
     expect($decoded)->toBeArray();

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Process\Process;
 use Tests\Helpers\CssRule;
 
@@ -90,8 +91,8 @@ it('sizes the tip to be read past a thumb rather than as a hover tooltip', funct
 it('lifts the tip further off the mark than it insets from the screen edge', function (): void {
     $source = (string) file_get_contents(base_path('resources/js/emoji-action-hold.js'));
 
-    preg_match('/const LIFT_PX = (\\d+);/', $source, $lift);
-    preg_match('/const GAP_PX = (\\d+);/', $source, $gap);
+    $lift = PatternScan::first('/const LIFT_PX = (\\d+);/', $source);
+    $gap = PatternScan::first('/const GAP_PX = (\\d+);/', $source);
 
     expect($lift[1] ?? null)->not->toBeNull('emoji-action-hold.js declares no LIFT_PX.')
         ->and($gap[1] ?? null)->not->toBeNull('emoji-action-hold.js declares no GAP_PX.')
@@ -105,7 +106,7 @@ it('lifts the tip further off the mark than it insets from the screen edge', fun
 it('ranks the tip above every overlay a mark can sit inside', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    preg_match('/z-index: (\\d+);/', CssRule::blockFor($css, '.emoji-action__tip {'), $tip);
+    $tip = PatternScan::first('/z-index: (\\d+);/', CssRule::blockFor($css, '.emoji-action__tip {'));
     expect($tip[1] ?? null)->not->toBeNull('.emoji-action__tip declares no z-index.');
 
     $overlays = [];
@@ -114,9 +115,8 @@ it('ranks the tip above every overlay a mark can sit inside', function (): void 
         if (! $file->isFile() || ! str_ends_with($file->getPathname(), '.blade.php')) {
             continue;
         }
-        if (preg_match_all('/z-\\[(\\d+)\\]/', (string) file_get_contents($file->getPathname()), $m) > 0) {
-            $overlays = array_merge($overlays, array_map('intval', $m[1]));
-        }
+        $m = PatternScan::all('/z-\\[(\\d+)\\]/', (string) file_get_contents($file->getPathname()));
+        $overlays = array_merge($overlays, array_map('intval', $m[1]));
     }
 
     expect($overlays)->not->toBeEmpty('No z-[N] overlay utilities found — this guard has stopped reading.')
@@ -127,7 +127,7 @@ it('ranks the tip above every overlay a mark can sit inside', function (): void 
 it('keeps the tip under the privacy veil', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    preg_match('/z-index: (\\d+);/', CssRule::blockFor($css, '.emoji-action__tip {'), $tip);
+    $tip = PatternScan::first('/z-index: (\\d+);/', CssRule::blockFor($css, '.emoji-action__tip {'));
 
     expect((int) $tip[1])->toBeLessThan(2147483000);
 });

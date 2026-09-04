@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The iOS shell writes its own php.ini and wrote only the two CA paths, so
 // post_max_size stayed at the stock 8M. Uploads on that platform are base64 in
 // a JSON body, so 8M of body is 6.29 MB of file, and an 8.05 MB encrypted
@@ -110,8 +112,8 @@ it('sets post_max_size high enough to carry an upload_max_filesize file once bas
 
     $patched = (string) file_get_contents($root.'/nativephp/ios/NativePHP/NativePHPApp.swift');
 
-    preg_match('/upload_max_filesize=(\S+)/', $patched, $upload);
-    preg_match('/post_max_size=(\S+)/', $patched, $post);
+    $upload = PatternScan::first('/upload_max_filesize=(\S+)/', $patched);
+    $post = PatternScan::first('/post_max_size=(\S+)/', $patched);
     expect($upload)->toHaveCount(2);
     expect($post)->toHaveCount(2);
 

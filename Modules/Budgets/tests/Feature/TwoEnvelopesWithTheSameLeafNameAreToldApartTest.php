@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Category;
 
 // A migrated tree and the seeded one can each hold a "Groceries", under
@@ -59,9 +60,9 @@ beforeEach(function (): void {
  */
 function envelopeAccessibleNames(string $html, string $prefix): array
 {
-    $found = preg_match_all('/aria-label="'.preg_quote($prefix, '/').' ([^"]+)"/', $html, $matches);
+    $matches = PatternScan::all('/aria-label="'.preg_quote($prefix, '/').' ([^"]+)"/', $html);
 
-    return $found === false ? [] : $matches[1];
+    return $matches[1];
 }
 
 it('gives the two same-named envelopes different accessible names on their money inputs', function (): void {
@@ -108,8 +109,7 @@ it('tells the two apart in the move-money destination list', function (): void {
         ->call('openMove', $this->group->id)
         ->html();
 
-    $found = preg_match_all('/<option value="\d+">([^<]+)<\/option>/', $html, $matches);
-    expect($found)->not->toBeFalse();
+    $matches = PatternScan::all('/<option value="\d+">([^<]+)<\/option>/', $html);
 
     // The desktop modal and the phone sheet render the same destination list,
     // so every label appears twice; what matters is how many distinct ones.

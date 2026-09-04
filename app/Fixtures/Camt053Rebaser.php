@@ -6,6 +6,7 @@ namespace App\Fixtures;
 
 use Carbon\CarbonImmutable;
 use DateTimeZone;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeDate;
 
 /**
@@ -49,8 +50,7 @@ final class Camt053Rebaser implements RebasesStatementDates
     // the window they were shifted to reach.
     public function newestDate(string $contents): ?CarbonImmutable
     {
-        $matches = [];
-        preg_match_all(self::ENTRY_DATES, $contents, $matches);
+        $matches = PatternScan::all(self::ENTRY_DATES, $contents);
 
         $newest = null;
         foreach ($matches['day'] as $raw) {
@@ -148,8 +148,7 @@ final class Camt053Rebaser implements RebasesStatementDates
      */
     private function days(string $contents): array
     {
-        $matches = [];
-        preg_match_all(self::ELEMENTS, $contents, $matches);
+        $matches = PatternScan::all(self::ELEMENTS, $contents);
 
         $days = [];
         foreach ($matches[2] as $body) {

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 // `transactions` carries two days. `posted_at` is a DATE, the column
@@ -255,7 +256,7 @@ function ledgerDayViewReadsIn(array $paths): array
         $relative = str_replace(base_path().'/', '', $path);
 
         foreach (ledgerDayCodeLines($path) as $number => $line) {
-            preg_match_all('/(?:->|\[\s*[\'"])\s*(posted_?at|booked_?at)\b/i', $line, $matches, PREG_SET_ORDER);
+            $matches = PatternScan::sets('/(?:->|\[\s*[\'"])\s*(posted_?at|booked_?at)\b/i', $line);
 
             foreach ($matches as $match) {
                 $counted++;
@@ -417,7 +418,9 @@ function ledgerDayRowParameters(array $paths): array
 
     foreach ($paths as $path) {
         $source = (string) file_get_contents($path);
-        if (preg_match_all('/\bclass\s+(\w+)/', $source, $classes, PREG_OFFSET_CAPTURE) < 1) {
+        $classes = PatternScan::allWithOffsets('/\bclass\s+(\w+)/', $source);
+
+        if ($classes[1] === []) {
             continue;
         }
 
@@ -436,7 +439,7 @@ function ledgerDayRowParameters(array $paths): array
                 continue;
             }
 
-            preg_match_all('/\$(\w+)/', $signature[1], $parameters);
+            $parameters = PatternScan::all('/\$(\w+)/', $signature[1]);
             $declared[$name] = array_values(array_unique($parameters[1]));
         }
     }

@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Http\Controllers;
 
-use Illuminate\Container\Container;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
+use Modules\DevMode\Internal\Actions\SettleFinishedRun;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
-use Modules\DevMode\Internal\Process\RunExitCodeFile;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// The pump below stays here on purpose: an SSE frame, its id, and the flush
+// that pushes it are the response being written, not work the response
+// reports on. What the run's completion MEANS is the action's.
 final readonly class ArtisanStreamController
 {
     private const string SSE_DATA_PREFIX = 'data: ';
@@ -29,8 +29,8 @@ final readonly class ArtisanStreamController
     public function __construct(
         private RunRegistry $registry,
         private FileTailer $tailer,
-        private FinalizeRunAudit $finalize,
         private ProcessLiveness $liveness,
+        private SettleFinishedRun $settle,
     ) {}
 
     public function __invoke(
@@ -51,8 +51,8 @@ final readonly class ArtisanStreamController
 
         $startOffset = $this->resolveStartOffset($request);
 
-        $response = new StreamedResponse(function () use ($record, $startOffset, $runId): void {
-            $this->streamLoop($record, $startOffset, $runId);
+        $response = new StreamedResponse(function () use ($record, $startOffset): void {
+            $this->streamLoop($record, $startOffset);
         });
 
         $response->headers->set('Content-Type', 'text/event-stream');
@@ -63,7 +63,7 @@ final readonly class ArtisanStreamController
         return $response;
     }
 
-    private function streamLoop(RunRecord $record, int $startOffset, string $runId): void
+    private function streamLoop(RunRecord $record, int $startOffset): void
     {
         @ini_set('output_buffering', '0');
         @ini_set('zlib.output_compression', '0');
@@ -76,101 +76,54 @@ final readonly class ArtisanStreamController
         $deadline = microtime(true) + self::STREAM_TIMEOUT_SECONDS;
 
         while (microtime(true) < $deadline) {
-            $result = $this->tailer->tailOnce($record->outPath, $offset);
-            $offset = $result['newOffset'];
-            if ($result['chunk'] !== '') {
-                $this->writeChunkFrame($result['chunk'], $offset);
-                $this->flushOutput();
-            }
+            $offset = $this->emitAvailable($record->outPath, $offset);
 
             // A gone PID is the only completion signal a detached child
             // gives; the audit pipeline owns the authoritative exit code.
             if (! $this->liveness->isAlive($record->pid)) {
-                $this->emitTerminal($runId, $record->outPath, $offset);
-                break;
+                $this->emitTerminal($record, $offset);
+
+                return;
             }
 
             if (connection_aborted() !== 0) {
-                break;
+                return;
             }
 
             usleep(self::TICK_MICROSECONDS);
         }
     }
 
-    private function emitTerminal(string $runId, string $outPath, int $offset): void
+    private function emitAvailable(string $outPath, int $offset): int
     {
-        $this->emitFinalChunk($outPath, $offset);
-
-        $fresh = $this->registry->find($runId);
-        // The registry only holds a code once something recorded one; for a
-        // detached run that is the watcher subshell's sidecar.
-        $exit = $fresh->exitCode ?? RunExitCodeFile::read($outPath);
-        $cancelled = $fresh?->status === 'cancelled';
-
-        if ($fresh !== null && $fresh->status === 'running') {
-            $this->registry->markFinished($runId, $exit ?? 0);
-        }
-
-        $this->safelyFinalize($runId, $exit, $cancelled);
-
-        echo "event: done\n";
-        echo self::SSE_DATA_PREFIX.json_encode([
-            'exit' => $exit,
-            'cancelled' => $cancelled,
-        ], JSON_UNESCAPED_SLASHES)."\n\n";
-        $this->flushOutput();
-    }
-
-    private function emitFinalChunk(string $outPath, int $offset): int
-    {
-        $finalChunk = $this->tailer->tailOnce($outPath, $offset);
-        if ($finalChunk['chunk'] === '') {
+        $result = $this->tailer->tailOnce($outPath, $offset);
+        if ($result['chunk'] === '') {
             return $offset;
         }
 
-        $offset = $finalChunk['newOffset'];
-        $this->writeChunkFrame($finalChunk['chunk'], $offset);
+        $this->writeFrame(
+            'id: '.$result['newOffset']."\n"
+            .self::SSE_DATA_PREFIX.json_encode(['line' => $result['chunk']], JSON_UNESCAPED_SLASHES)."\n\n",
+        );
 
-        return $offset;
+        return $result['newOffset'];
     }
 
-    // Ordered before the terminal done event, and never allowed to propagate
-    // out of the SSE handler — a failed audit write must not kill the stream.
-    private function safelyFinalize(string $runId, ?int $exit, bool $cancelled): void
+    private function emitTerminal(RunRecord $record, int $offset): void
     {
-        try {
-            ($this->finalize)($runId, $exit, $cancelled);
-        } catch (\Throwable $finalizeError) {
-            $this->logFinalizeFailure($runId, $finalizeError);
-        }
+        $this->emitAvailable($record->outPath, $offset);
+
+        $settled = ($this->settle)($record->runId, $record->outPath);
+
+        $this->writeFrame(
+            "event: done\n"
+            .self::SSE_DATA_PREFIX.json_encode($settled, JSON_UNESCAPED_SLASHES)."\n\n",
+        );
     }
 
-    private function logFinalizeFailure(string $runId, \Throwable $error): void
+    private function writeFrame(string $frame): void
     {
-        try {
-            Container::getInstance()
-                ->make(LoggerInterface::class)
-                ->error('FinalizeRunAudit failed for run '.$runId, [
-                    'exception' => $error->getMessage(),
-                    'exception_class' => get_class($error),
-                ]);
-        } catch (\Throwable) {
-            // Nothing is left to try: this IS the report of a failure, and the
-            // only other channel is the response body, which is a live SSE
-            // stream a stray frame would corrupt. Rethrowing would kill the
-            // stream — the exact outcome safelyFinalize() exists to prevent.
-        }
-    }
-
-    private function writeChunkFrame(string $chunk, int $offset): void
-    {
-        echo 'id: '.$offset."\n";
-        echo self::SSE_DATA_PREFIX.json_encode(['line' => $chunk], JSON_UNESCAPED_SLASHES)."\n\n";
-    }
-
-    private function flushOutput(): void
-    {
+        echo $frame;
         @ob_flush();
         @flush();
     }

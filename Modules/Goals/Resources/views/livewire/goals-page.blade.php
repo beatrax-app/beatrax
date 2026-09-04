@@ -179,7 +179,7 @@
                         :confirm-label="Lang::get('goals::messages.archive.archive')"
                         :confirm-aria="Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name])"
                         cancel="cancelArchive"
-                        :confirm="'archive('.$row->id.')'"
+                        :confirm="'archive(\''.$row->id.'\')'"
                     />
                 @endif
             @endforeach
@@ -250,7 +250,7 @@
                             :confirm-label="Lang::get('goals::messages.archive.archive')"
                             :confirm-aria="Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name])"
                             cancel="cancelArchive"
-                            :confirm="'archive('.$row->id.')'"
+                            :confirm="'archive(\''.$row->id.'\')'"
                         />
                     @else
                         <div class="mt-3 flex items-center gap-2">

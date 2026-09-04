@@ -8,12 +8,13 @@ use Livewire\Mechanisms\HandleComponents\HandleComponents;
 use Livewire\Mechanisms\HandleSynths\HandleSynths;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\LivewireClientRefusal;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
 function scalarPathSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"ledger.transactions-list"')) {

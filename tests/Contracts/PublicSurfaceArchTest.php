@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/architecture/module-boundaries.md
  */
@@ -333,7 +335,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Receipts/Public/Pipeline/FileDropEmlBlobStore.php',
         'Modules/Receipts/Public/Pipeline/ParsedMimeMessage.php',
         'Modules/Receipts/Public/Services/ReceiptConflictQuery.php',
-        'Modules/Receipts/Public/Support/UploadLimits.php',
         'Modules/Recurring/Public/Actions/ApproveRecurringSeries.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesName.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesVarianceTolerance.php',
@@ -380,7 +381,7 @@ it('does not allow a Public class without a consumer outside its own module (pin
         if (! str_contains($normalised, '\\Public\\')) {
             continue;
         }
-        preg_match_all('/Modules\\\\([A-Za-z0-9_]+)\\\\Public\\\\[A-Za-z0-9_\\\\]+/', $normalised, $hits, PREG_SET_ORDER);
+        $hits = PatternScan::sets('/Modules\\\\([A-Za-z0-9_]+)\\\\Public\\\\[A-Za-z0-9_\\\\]+/', $normalised);
         foreach ($hits as $hit) {
             if ($hit[1] !== $owner) {
                 $referenced[rtrim($hit[0], '\\')] = true;

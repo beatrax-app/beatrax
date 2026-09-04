@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 /**
@@ -48,9 +49,7 @@ function shellInboundReferences(array $paths): array
             ));
 
         $normalised = str_replace('\\\\', '\\', (string) $source);
-        if (preg_match_all('/Modules\\\\Shell\\\\[A-Za-z0-9_\\\\]+/', $normalised, $matches) === 0) {
-            continue;
-        }
+        $matches = PatternScan::all('/Modules\\\\Shell\\\\[A-Za-z0-9_\\\\]+/', $normalised);
 
         foreach (array_unique($matches[0]) as $symbol) {
             $hits[] = $relative.' -> '.rtrim($symbol, '\\');

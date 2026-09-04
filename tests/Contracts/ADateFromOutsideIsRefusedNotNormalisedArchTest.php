@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeDate;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -100,7 +101,9 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterAfter = self::supportedDay\(\$this->filterAfter\);/',
+                '/\$this->filterAfter = TransactionFilterInputs::supportedDay\(\$this->filterAfter\);/',
+            ],
+            'Modules/Ledger/Internal/Http/Livewire/Support/TransactionFilterInputs.php' => [
                 "/return SafeDate::dayOrNull\\(\\\$raw\\) === null \\? '' : trim\\(\\\$raw\\);/",
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
@@ -114,7 +117,7 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterBefore = self::supportedDay\(\$this->filterBefore\);/',
+                '/\$this->filterBefore = TransactionFilterInputs::supportedDay\(\$this->filterBefore\);/',
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
                 '/\$before = self::boundDay\(\$filters->before, endOfMonth: true\);/',
@@ -245,13 +248,13 @@ function suppliedDateBindings(array $paths): array
 
         // Attribute values are skipped over as a unit, because a Blade
         // expression inside one may itself hold a `>`.
-        preg_match_all('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source, $tags, PREG_OFFSET_CAPTURE);
+        $tags = PatternScan::allWithOffsets('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source);
 
         foreach ($tags[0] as [$tag, $offset]) {
             $elements++;
             $line = substr_count(substr($source, 0, $offset), "\n") + 1;
 
-            preg_match_all('/wire:model[.\w]*\s*=\s*"([^"]+)"/', $tag, $models);
+            $models = PatternScan::all('/wire:model[.\w]*\s*=\s*"([^"]+)"/', $tag);
 
             foreach ($models[1] as $model) {
                 $field = trim((string) preg_replace('/\{\{.*?\}\}/', '*', $model));

@@ -449,6 +449,73 @@ AJAX update endpoint) is deliberately name-prefix-matched so a fresh
 device can reach the welcome screen, the signup ceremony, or the
 import-bootstrap flow without looping back to itself.
 
+### The migrations only a phone ever runs
+
+The two platforms execute different migration sets. `artisan migrate` calls
+`MigrateCommand::prepareDatabase()`, which loads
+`database/schema/sqlite-schema.sql` and then runs only what that dump has not
+already recorded. `MobileFirstLaunchBootstrap` calls `Migrator->run()`
+directly, and the `Migrator` never loads a dump — the loader shells out to a
+`sqlite3` binary the phone does not carry.
+
+Measured 2026-09-04 at both Composer roots:
+
+| | loads the dump | migrations run | tables |
+|---|---|---|---|
+| desktop / CI (`artisan migrate`) | yes | 104 replayed, 105 run | 102 |
+| repo root, phone path | no | 209 | 102 |
+| `mobile-app/` root, phone path | no | 210 | 103 |
+
+The extra one at the mobile root is
+`nativephp/mobile-local-notifications`'s own migration, dated `2026_03_29`, so
+the phone runs it *first* — before `users` exists.
+
+**104 of those migrations are code no desktop and no CI job has ever
+executed.** One bug in that stretch reached every new install on 2026-08-29: a
+foreign key SQLite cannot add in place, a table rebuild whose
+`insert into "__temp__transactions" … from "transactions"` read as a user
+write, and `ForgetNavCountsOnWrite` reaching a `cache` table a later migration
+had not created yet. The run died on migration eighteen of two hundred and
+nine and the app opened on thirteen tables of a hundred and two. SQLite
+reports `supportsSchemaTransactions()` false, so the half-applied run stays
+behind and every retry fails on `duplicate column name` — reinstall is the
+only exit.
+
+`Modules/Mobile/tests/Feature/TheMigrationsOnlyAPhoneEverRunsTest.php` runs
+that chain the way a phone does and proves the schema it ends on is whole.
+`tests/Support/first-launch-schema-probe.php` builds one schema per process —
+a process of its own because the phone migrates onto the *default* connection
+with a *database* cache store, and a test that swaps the default connection
+inside a phpunit worker leaves `RefreshDatabase` holding one that no longer
+exists. Both probes boot the same root, on a real SQLite file, differing in a
+single environment variable: whether the dump is loaded before the migrator
+runs. Anything the two schemas disagree on can therefore only have come from
+the migrations in between. It compares tables, and per table every column with
+its type, nullability, default and primary-key flag, every index with its
+columns and uniqueness, and every foreign key with its delete rule.
+
+It runs on every pull request from both roots with no workflow change: the
+file lives in the `Mobile` testsuite, which `quality-shard` already picks up
+through `.github/scripts/shard-testsuites.py` and which `mobile-quality`
+already names. Two subprocesses cost about three seconds.
+
+### A half-built schema outranks every route exemption
+
+The exemption list above answers "no user account exists yet", which is a
+different question from "the tables exist yet". `MobileEnsureDatabaseReady`
+therefore asks `SchemaCompletionMarker::isRaised()` *ahead* of it, and the
+only routes that survive a raised marker are the incomplete screen itself, the
+Livewire endpoints its retry button needs, and the brand artefacts the lock
+layout renders. Behind the exemption list, as it was first written, the
+welcome screen still opened over a half-built schema and signup was one tap
+further — the 2026-08-29 experience exactly.
+
+The mobile root's `->booted()` hook raises the marker in its own `catch` as
+well. `runPendingMigrations()` raises it in a `finally` of its own, but the
+container resolution, `ensurePluginViewPaths()` and `hasPendingMigrations()`
+all run before it and land in the same catch, and a throw from any of them
+left the app opening on whatever schema it had with nothing but a log line.
+
 `MobileWelcomeScreen` renders on a genuinely fresh device with two CTAs:
 "Create account" (into the existing signup ceremony) and "Import from
 another device" (into `MobileImportBootstrap`). Once an account exists,
@@ -517,7 +584,7 @@ reprinted all ten codes under the line promising they are shown once,
 with the confirmation checkbox reset. The codes themselves are bcrypt
 digests in `user_recovery_codes` and the session payload is an encrypted
 Laravel envelope, so the fault was a false promise, never plaintext at
-rest. `RecoveryCodesExportController` reads the same session key, which
+rest. `ExportRecoveryCodes` reads the same session key, which
 is why the display marks rather than consumes: a share-sheet export
 fired from the screen must still find the codes.
 

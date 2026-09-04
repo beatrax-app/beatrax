@@ -218,7 +218,7 @@ final readonly class RelayClient
     // they MUST fail closed. Pure + public so the allow-list is pinned by test.
     public static function backendHonorsPinning(string $sslVersion): bool
     {
-        return (bool) preg_match('/openssl|libressl|boringssl|gnutls/i', $sslVersion);
+        return preg_match('/openssl|libressl|boringssl|gnutls/i', $sslVersion) === 1;
     }
 
     // Empty array when no token is configured — some relay deployments may

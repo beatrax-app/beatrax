@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Illuminate\Routing\Route;
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -207,7 +208,7 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
     // backfill_progress sits on the inboxes table rather than inbox_scan_state,
     // but it is a per-inbox lifecycle signal, so routing it through
     // InboxScanStateMachine keeps the sole-mutator invariant whole. The grep
-    // targets UPDATE only: OAuthCallbackController's first-connect INSERT is legal.
+    // targets UPDATE only: ConnectInboxFromGrant's first-connect INSERT is legal.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
@@ -971,20 +972,14 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
 
     $classStringsOf = static function (string $contents): array {
         $strings = [];
-        if (preg_match_all('/class\s*=\s*"([^"]*)"/', $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all('/class\s*=\s*"([^"]*)"/', $contents)[1] as $s) {
+            $strings[] = $s;
         }
-        if (preg_match_all("/class\s*=\s*'([^']*)'/", $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all("/class\s*=\s*'([^']*)'/", $contents)[1] as $s) {
+            $strings[] = $s;
         }
-        if (preg_match_all('/@class\s*\(\s*\[(.*?)\]\s*\)/s', $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all('/@class\s*\(\s*\[(.*?)\]\s*\)/s', $contents)[1] as $s) {
+            $strings[] = $s;
         }
 
         return $strings;
@@ -1698,9 +1693,8 @@ function boundaryTableOwnership(): array
         $source = boundaryBlankComments((string) file_get_contents($path));
 
         foreach ($createdBy as $pattern) {
-            if (preg_match_all($pattern, $source, $found) === 0) {
-                continue;
-            }
+            $found = PatternScan::all($pattern, $source);
+
             foreach ($found[1] as $table) {
                 $table = strtolower($table);
                 if (! in_array($module, $creators[$table] ?? [], true)) {
@@ -1709,11 +1703,11 @@ function boundaryTableOwnership(): array
             }
         }
 
-        if (preg_match_all($alteredBy, $source, $found) > 0) {
-            foreach ($found[1] as $table) {
-                if (! in_array($module, $altered[$table] ?? [], true)) {
-                    $altered[$table][] = $module;
-                }
+        $found = PatternScan::all($alteredBy, $source);
+
+        foreach ($found[1] as $table) {
+            if (! in_array($module, $altered[$table] ?? [], true)) {
+                $altered[$table][] = $module;
             }
         }
     }
@@ -1829,27 +1823,27 @@ function boundaryCrossModuleTableWrites(array $owner): array
 
         $source = boundaryBlankComments((string) file_get_contents($path));
 
-        if (preg_match_all($tableReference, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
-            foreach ($found[0] as $index => [, $offset]) {
-                $table = $found[1][$index][0];
-                if (($owner[$table] ?? $module) === $module) {
-                    continue;
-                }
-                if (array_intersect(boundaryChainMethods($source, $offset), $writeMethods) === []) {
-                    continue;
-                }
-                $hits[] = [$relative, substr_count($source, "\n", 0, $offset) + 1, $table];
+        $found = PatternScan::allWithOffsets($tableReference, $source);
+
+        foreach ($found[0] as $index => [, $offset]) {
+            $table = $found[1][$index][0];
+            if (($owner[$table] ?? $module) === $module) {
+                continue;
             }
+            if (array_intersect(boundaryChainMethods($source, $offset), $writeMethods) === []) {
+                continue;
+            }
+            $hits[] = [$relative, substr_count($source, "\n", 0, $offset) + 1, $table];
         }
 
-        if (preg_match_all($rawStatement, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
-            foreach ($found[1] as $index => [$table]) {
-                $table = strtolower($table);
-                if (($owner[$table] ?? $module) === $module) {
-                    continue;
-                }
-                $hits[] = [$relative, substr_count($source, "\n", 0, $found[0][$index][1]) + 1, $table];
+        $found = PatternScan::allWithOffsets($rawStatement, $source);
+
+        foreach ($found[1] as $index => [$table]) {
+            $table = strtolower($table);
+            if (($owner[$table] ?? $module) === $module) {
+                continue;
             }
+            $hits[] = [$relative, substr_count($source, "\n", 0, $found[0][$index][1]) + 1, $table];
         }
     }
 
@@ -2347,6 +2341,12 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
         'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
+        // The subprocess that builds a phone's first-launch schema drives the
+        // production first-launch class itself, since a copy of it here would
+        // stop proving anything the moment the real one changed. There is no
+        // Public seam: nothing outside the mobile shell may start a migration.
+        'tests/Support/first-launch-schema-probe.php -> Modules\\Mobile\\Internal\\Boot\\MobileFirstLaunchBootstrap',
+        'tests/Support/first-launch-schema-probe.php -> Modules\\Mobile\\Internal\\Boot\\SchemaCompletionMarker',
         // The fixture rebaser and the importer must read a two-digit year the
         // same way, and the only honest proof runs the real parser over the
         // rebased line. SwiftDate carries the rule; the parser around it stays
@@ -2395,11 +2395,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
                 continue;
             }
 
-            preg_match_all(
+            $imports = PatternScan::sets(
                 '/^use\s+(?:function\s+)?(Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+)/m',
                 $contents,
-                $imports,
-                PREG_SET_ORDER,
             );
             foreach ($imports as $import) {
                 if ($import[2] === $owner) {
@@ -2410,11 +2408,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
 
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
             $stripped = preg_replace('/^use\s+[^\n]*$/m', '', $stripped) ?? $stripped;
-            preg_match_all(
+            $inline = PatternScan::sets(
                 '/Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+/',
                 $stripped,
-                $inline,
-                PREG_SET_ORDER,
             );
             foreach ($inline as $reference) {
                 if ($reference[1] !== $owner) {
@@ -2506,7 +2502,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
 
     $providers = [];
     foreach (glob(base_path('Modules/*/Providers/*.php')) ?: [] as $providerPath) {
-        preg_match('#^Modules/([^/]+)/#', str_replace(base_path().'/', '', $providerPath), $providerModule);
+        $providerModule = PatternScan::first('#^Modules/([^/]+)/#', str_replace(base_path().'/', '', $providerPath));
         $providers[] = [$providerModule[1], (string) file_get_contents($providerPath)];
     }
 
@@ -2524,7 +2520,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         if (! str_contains($relative, '/Resources/')) {
             continue;
         }
-        preg_match('#^Modules/([^/]+)/#', $relative, $ownerMatch);
+        $ownerMatch = PatternScan::first('#^Modules/([^/]+)/#', $relative);
         $owner = $ownerMatch[1];
         $contents = (string) file_get_contents($file->getPathname());
 
@@ -2532,17 +2528,15 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         // wraps onto its own line whenever it carries arguments — the alias through
         // the <livewire:...> tag, and the class itself for full-page components.
         $aliases = [];
-        preg_match_all('/@livewire\s*\(\s*[\'"]([A-Za-z0-9._-]+)[\'"]/', $contents, $found);
+        $found = PatternScan::all('/@livewire\s*\(\s*[\'"]([A-Za-z0-9._-]+)[\'"]/', $contents);
         $aliases = array_merge($aliases, $found[1]);
-        preg_match_all('/<livewire:([A-Za-z0-9._-]+)/', $contents, $found);
+        $found = PatternScan::all('/<livewire:([A-Za-z0-9._-]+)/', $contents);
         $aliases = array_merge($aliases, $found[1]);
 
         $targets = [];
-        preg_match_all(
+        $classMounts = PatternScan::sets(
             '/@livewire\s*\(\s*\\\\?Modules\\\\([A-Za-z0-9_]+)\\\\([A-Za-z0-9_\\\\]+)::class/',
             $contents,
-            $classMounts,
-            PREG_SET_ORDER,
         );
         foreach ($classMounts as $classMount) {
             $targets[] = [$classMount[1], $classMount[1].'\\'.$classMount[2]];

@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  */
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -48,7 +49,7 @@ function offeredFormatSourceWithoutComments(string $path): string
  */
 function offeredFormatImportMap(string $contents): array
 {
-    preg_match_all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $contents, $imports);
+    $imports = PatternScan::all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $contents);
 
     $qualify = [];
     foreach ($imports[1] as $fqcn) {
@@ -68,11 +69,9 @@ function offeredFormatImportMap(string $contents): array
  */
 function offeredFormatValues(string $body, array $qualify): array
 {
-    preg_match_all(
+    $tokens = PatternScan::sets(
         '/\'([^\']+)\'|([A-Za-z_][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)/',
         $body,
-        $tokens,
-        PREG_SET_ORDER,
     );
 
     $values = [];
@@ -109,8 +108,8 @@ function offeredFormatsByComponent(): array
         $contents = offeredFormatSourceWithoutComments(base_path($relative));
         $qualify = offeredFormatImportMap($contents);
 
-        preg_match_all('/SUPPORTED_FORMATS\s*=\s*\[(.*?)\];/s', $contents, $lists, PREG_SET_ORDER);
-        preg_match_all('/public\s+string\s+\$(?:selectedFormat|sourceFormat)\s*=\s*([^;]+);/', $contents, $defaults, PREG_SET_ORDER);
+        $lists = PatternScan::sets('/SUPPORTED_FORMATS\s*=\s*\[(.*?)\];/s', $contents);
+        $defaults = PatternScan::sets('/public\s+string\s+\$(?:selectedFormat|sourceFormat)\s*=\s*([^;]+);/', $contents);
 
         $values = [];
         foreach ([...$lists, ...$defaults] as $match) {

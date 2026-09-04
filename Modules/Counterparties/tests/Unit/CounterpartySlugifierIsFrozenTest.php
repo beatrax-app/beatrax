@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Str;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\UniqueSlug;
 use Modules\Counterparties\Internal\Resolver\CounterpartySlugResolver;
 
@@ -60,7 +61,7 @@ it('answers the romanise-or-separate question identically for every codepoint', 
             continue;
         }
 
-        if (preg_match('/\p{Latin}|\P{L}/u', $char) !== preg_match('/[\p{Latin}\P{L}]/u', $char)) {
+        if (PatternScan::matches('/\p{Latin}|\P{L}/u', $char) !== PatternScan::matches('/[\p{Latin}\P{L}]/u', $char)) {
             $disagreements[] = 'U+'.strtoupper(dechex($codepoint));
         }
     }

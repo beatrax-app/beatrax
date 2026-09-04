@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Migration\Internal\Http\Livewire\NewMigration;
 
@@ -10,8 +11,8 @@ use Modules\Migration\Internal\Http\Livewire\NewMigration;
  */
 function offeredUploadExtensions(string $bladePath): array
 {
-    $matched = preg_match('/accept="([^"]+)"/', (string) file_get_contents(base_path($bladePath)), $found);
-    expect($matched)->toBe(1, "No accept attribute in {$bladePath}.");
+    $found = PatternScan::first('/accept="([^"]+)"/', (string) file_get_contents(base_path($bladePath)));
+    expect($found)->not->toBe([], "No accept attribute in {$bladePath}.");
 
     return array_values(array_map(
         static fn (string $extension): string => ltrim(trim($extension), '.'),

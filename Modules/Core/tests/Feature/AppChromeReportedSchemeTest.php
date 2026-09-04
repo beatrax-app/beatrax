@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Theme;
 use Modules\Core\Public\Support\AppChromeResolver;
+use Modules\Core\Public\Support\PatternScan;
 
 // A `system` theme is decided by prefers-color-scheme, which the server cannot
 // read. Left to a client-side script alone the server renders one answer and the
@@ -69,7 +70,7 @@ it('reads the scheme the browser actually sends, through the middleware stack', 
         ->get('/')
         ->getContent();
 
-    preg_match('/<html\b[^>]*\bclass="([^"]*)"/i', $html, $matches);
+    $matches = PatternScan::first('/<html\b[^>]*\bclass="([^"]*)"/i', $html);
 
     expect($matches)->toHaveCount(2)
         ->and($matches[1])->toContain('dark')

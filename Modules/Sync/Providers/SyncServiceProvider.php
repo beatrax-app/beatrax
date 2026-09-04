@@ -43,6 +43,7 @@ use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
+use Modules\Sync\Internal\OpLog\DeferredOpCaptures;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\OpLog\OpLogWriterFactory;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
@@ -238,6 +239,11 @@ final class SyncServiceProvider extends ServiceProvider
         // singleton: it is resolved from a request tail and from a daemon
         // timer, and each of those wants the collaborators of its own process.
         $this->app->bind(PendingPairingCourier::class);
+
+        // Singleton because it carries a memo of how full the queue is: record()
+        // is called on every mutation of a locked device, and a COUNT per write
+        // would make the queue cost grow with the length of the lock.
+        $this->app->singleton(DeferredOpCaptures::class);
 
         // OpLogWriter takes four runtime primitives no autowiring can supply,
         // so EVERY resolution threw "Unresolvable dependency". SyncCaptureListener

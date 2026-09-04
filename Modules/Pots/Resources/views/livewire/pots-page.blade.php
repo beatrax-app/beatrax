@@ -176,7 +176,7 @@
                                 :confirm-label="Lang::get('pots::messages.actions.archive')"
                                 :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
                                 cancel="cancelArchive"
-                                :confirm="'archivePot('.$pot->id.')'"
+                                :confirm="'archivePot(\''.$pot->id.'\')'"
                             />
                         @else
                         <div class="flex w-full flex-wrap items-center justify-end gap-1">
@@ -308,7 +308,7 @@
                                         :confirm-label="Lang::get('pots::messages.actions.archive')"
                                         :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
                                         cancel="cancelArchive"
-                                        :confirm="'archivePot('.$pot->id.')'"
+                                        :confirm="'archivePot(\''.$pot->id.'\')'"
                                     />
                                 @else
                                     {{-- Both actions carried the phone idiom the /budgets

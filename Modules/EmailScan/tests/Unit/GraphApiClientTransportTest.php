@@ -13,12 +13,16 @@ use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BoundedReadException;
+use Modules\Core\Public\Support\FileHead;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
+use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Psr\Http\Message\StreamInterface;
 
 beforeEach(function (): void {
     $this->secrets = new class extends OAuthSecretsRepository
@@ -159,6 +163,203 @@ it('fetches a raw message as bytes rather than a JSON envelope', function (): vo
     ]);
 
     expect($client->getRawMessage(1, 'AAA-BBB_CCC'))->toBe($raw);
+});
+
+// Content-Length is the only thing that can settle the size before the bytes
+// land in one PHP string, so this body answers getSize() and refuses to be
+// read: reaching read() at all is the defect.
+function graphUnreadableBody(int $declaredSize): StreamInterface
+{
+    return new class($declaredSize) implements StreamInterface
+    {
+        public function __construct(private int $declaredSize) {}
+
+        public function __toString(): string
+        {
+            return $this->read(PHP_INT_MAX);
+        }
+
+        public function close(): void {}
+
+        public function detach()
+        {
+            return null;
+        }
+
+        public function getSize(): ?int
+        {
+            return $this->declaredSize;
+        }
+
+        public function tell(): int
+        {
+            return 0;
+        }
+
+        public function eof(): bool
+        {
+            return false;
+        }
+
+        public function isSeekable(): bool
+        {
+            return false;
+        }
+
+        public function seek(int $offset, int $whence = SEEK_SET): void {}
+
+        public function rewind(): void {}
+
+        public function isWritable(): bool
+        {
+            return false;
+        }
+
+        public function write(string $string): int
+        {
+            return 0;
+        }
+
+        public function isReadable(): bool
+        {
+            return true;
+        }
+
+        public function read(int $length): string
+        {
+            throw new RuntimeException('the mailbox decided how much of this device to spend');
+        }
+
+        public function getContents(): string
+        {
+            return $this->read(PHP_INT_MAX);
+        }
+
+        public function getMetadata(?string $key = null)
+        {
+            return null;
+        }
+    };
+}
+
+// Counts what it hands out, so a reader that only wants the front of a body
+// can be held to that rather than trusted to stop.
+function graphCountingBody(string $data): StreamInterface
+{
+    return new class($data) implements StreamInterface
+    {
+        public int $bytesRead = 0;
+
+        private int $position = 0;
+
+        public function __construct(private string $data) {}
+
+        public function __toString(): string
+        {
+            return $this->getContents();
+        }
+
+        public function close(): void {}
+
+        public function detach()
+        {
+            return null;
+        }
+
+        public function getSize(): ?int
+        {
+            return strlen($this->data);
+        }
+
+        public function tell(): int
+        {
+            return $this->position;
+        }
+
+        public function eof(): bool
+        {
+            return $this->position >= strlen($this->data);
+        }
+
+        public function isSeekable(): bool
+        {
+            return false;
+        }
+
+        public function seek(int $offset, int $whence = SEEK_SET): void {}
+
+        public function rewind(): void {}
+
+        public function isWritable(): bool
+        {
+            return false;
+        }
+
+        public function write(string $string): int
+        {
+            return 0;
+        }
+
+        public function isReadable(): bool
+        {
+            return true;
+        }
+
+        public function read(int $length): string
+        {
+            $chunk = substr($this->data, $this->position, $length);
+            $this->position += strlen($chunk);
+            $this->bytesRead += strlen($chunk);
+
+            return $chunk;
+        }
+
+        public function getContents(): string
+        {
+            return $this->read(strlen($this->data) - $this->position);
+        }
+
+        public function getMetadata(?string $key = null)
+        {
+            return null;
+        }
+    };
+}
+
+it('refuses a raw message whose declared length is past the ceiling, without reading the body', function (): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'message/rfc822'], graphUnreadableBody(26 * 1024 * 1024)),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'AAA-BBB_CCC'))
+        ->toThrow(BoundedReadException::class, 'is past the 26214400-byte ceiling');
+});
+
+// The paging calls take the same door: a page is small in practice, but how
+// small is the far end's to decide, and json_decode holds the parsed copy
+// alongside the string it parsed.
+it('refuses a paging response whose declared length is past the ceiling, without reading it', function (): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'application/json'], graphUnreadableBody(26 * 1024 * 1024)),
+    ]);
+
+    expect(fn () => $client->deltaPage(1, null))
+        ->toThrow(BoundedReadException::class, 'is past the 26214400-byte ceiling');
+});
+
+// The status is what the mapper acts on; the body only supplies the sentence.
+// A gateway answering a failure with megabytes must cost the front of it and
+// no more, and the mapped exception must still be the one the status names.
+it('reads only the front of an oversized error body and still maps the status', function (): void {
+    $body = graphCountingBody(str_repeat('x', 4 * FileHead::BYTES));
+    $client = ($this->makeClient)([
+        new Response(429, ['Content-Type' => 'application/json', 'Retry-After' => '30'], $body),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'AAA-BBB_CCC'))
+        ->toThrow(RateLimitedException::class);
+
+    expect($body->bytesRead)->toBeLessThanOrEqual(FileHead::BYTES);
 });
 
 it('refuses a message id that could carry a path traversal', function (string $id): void {

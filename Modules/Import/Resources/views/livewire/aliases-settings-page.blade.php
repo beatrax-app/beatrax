@@ -101,7 +101,7 @@
                                     @if ($editingId === (int) $alias->id)
                                         <button
                                             type="button"
-                                            wire:click="saveAlias({{ $alias->id }})"
+                                            wire:click="saveAlias('{{ $alias->id }}')"
                                             class="rounded-md bg-emerald-700 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-800"
                                         >{{ Lang::get('import::aliases.save') }}</button>
                                         <button
@@ -112,12 +112,12 @@
                                     @else
                                         <button
                                             type="button"
-                                            wire:click="startEdit({{ $alias->id }})"
+                                            wire:click="startEdit('{{ $alias->id }}')"
                                             class="rounded-md px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
                                         >{{ Lang::get('import::aliases.edit') }}</button>
                                         <button
                                             type="button"
-                                            wire:click="deleteAlias({{ $alias->id }})"
+                                            wire:click="deleteAlias('{{ $alias->id }}')"
                                             wire:confirm="{{ Lang::get('import::aliases.delete_confirm', ['pattern' => $alias->pattern]) }}"
                                             class="rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-500 dark:hover:bg-rose-950"
                                         >{{ Lang::get('import::aliases.delete') }}</button>
