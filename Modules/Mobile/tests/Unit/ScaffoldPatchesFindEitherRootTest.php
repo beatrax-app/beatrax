@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /** @return list<string> the scripts that patch the generated native project */
 function scaffoldPatchScripts(): array
 {
@@ -102,4 +104,66 @@ it('still finds this repository own scaffold', function (): void {
 
     expect($resolved)->toBeString()
         ->and(is_file($resolved.'/AndroidManifest.xml'))->toBeTrue();
+});
+
+// A patch script that resolves two independent targets — a generated scaffold
+// file and a vendor source, or one platform and the other — must not let the
+// first one's absence end the process. `nativephp_grant_webview_camera.php`
+// did, and the half it skipped was the vendor patch, the only one that
+// survives a rebuild; `nativephp_exclude_data_from_backup.php` did, and the
+// half it skipped was the iCloud exclusion for the whole ledger. Both reported
+// success in a line naming the other platform.
+it('ends a missing-target skip at its own half rather than the whole run', function (): void {
+    $scripts = glob(scaffoldScriptsDirectory().DIRECTORY_SEPARATOR.'nativephp_*.php') ?: [];
+
+    // Counted first: a resolver that found nothing would otherwise report a
+    // clean tree, which is the same silence this rule exists to catch.
+    expect($scripts)->not->toBeEmpty();
+
+    $offenders = [];
+    $examined = 0;
+
+    foreach ($scripts as $path) {
+        $lines = explode("\n", (string) file_get_contents($path));
+
+        $targets = [];
+        $exits = [];
+
+        foreach ($lines as $number => $line) {
+            $resolved = PatternScan::first("/beatrax(?:ScaffoldPath|MobileVendorPath)\\(\s*'([^']+)'/", $line);
+
+            if ($resolved !== []) {
+                $targets[] = [$number, $resolved[1]];
+            }
+
+            if (PatternScan::matches('/^\s*exit\(0\);/', $line)) {
+                $exits[] = $number;
+            }
+        }
+
+        $first = $targets[0] ?? null;
+        $later = array_values(array_filter($targets, fn (array $t): bool => $first !== null && $t[1] !== $first[1]));
+
+        if ($first === null || $later === []) {
+            continue;
+        }
+
+        $examined++;
+
+        foreach ($exits as $exit) {
+            if ($exit > $first[0] && $exit < $later[0][0]) {
+                $offenders[] = basename($path).':'.($exit + 1);
+
+                break;
+            }
+        }
+    }
+
+    expect($examined)->toBeGreaterThan(1)
+        ->and($offenders)->toBe([], implode("\n  ", array_merge(
+            ['A skip guarding one target must end that half, not the process.',
+                'These scripts exit(0) between resolving one target and resolving a different one,',
+                'so the later half is silently skipped whenever the earlier one is absent:'],
+            $offenders,
+        )));
 });

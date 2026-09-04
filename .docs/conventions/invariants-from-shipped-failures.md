@@ -5948,6 +5948,27 @@ be written correctly. The two halves each answer for themselves now, and the
 test asserts the iOS exclusion still lands when no Android scaffold exists —
 the case that had no coverage precisely because it produced a passing run.
 
+It was not the only one. `nativephp_grant_webview_camera.php` resolves the
+generated `WebViewManager.kt` and, separately, `WebviewRenderer.kt` under
+`vendor/`, and its opening guard exited on the first one's absence. The vendor
+half is the one that matters — every build re-copies `vendor/` over the
+generated tree, so a patch applied only to the generated file survives until
+the next build — and it is the half that was skipped. The visible symptom was
+the in-page QR scanner falling back to the plugin's full-screen activity on
+every attempt, which is `E5-R14`'s camera-first pairing quietly not happening.
+
+Removing that exit exposed a second defect underneath it, which is worth
+recording because the first was hiding it: the vendor anchor *survives its own
+patch*, so with the early exit gone a re-run appended a second
+`onPermissionRequest` and Kotlin would have refused the duplicate method. An
+exit that skips a half also skips that half's idempotence, and neither had ever
+been exercised.
+
+`ScaffoldPatchesFindEitherRootTest` now fails any `scripts/nativephp_*.php`
+that calls `exit(0)` between resolving one target and resolving a different
+one. Run against the tree before either fix, it names both scripts; the
+detector is what found the second instance.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
