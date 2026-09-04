@@ -89,3 +89,36 @@ it('hands back the offsets the offset readings ask for', function (): void {
         ->and(PatternScan::allWithOffsets('/b/', 'abcb')[0])->toBe([['b', 1], ['b', 3]])
         ->and(PatternScan::setsWithOffsets('/b/', 'abcb')[1][0])->toBe(['b', 3]);
 });
+
+it('raises rather than blanking the subject when a replace stops part-way', function (): void {
+    ini_set('pcre.backtrack_limit', '1000');
+
+    $subject = patternScanUnmatchableSubject();
+    $blanked = (string) @preg_replace(PATTERN_SCAN_RUNAWAY, 'x', $subject);
+
+    expect($blanked)->toBe('', 'The cast this seam replaces deletes the subject rather than failing to clean it.')
+        ->and(fn () => PatternScan::replace(PATTERN_SCAN_RUNAWAY, 'x', $subject))
+        ->toThrow(PatternScanFailedException::class)
+        ->and(fn () => PatternScan::replaceCallback(PATTERN_SCAN_RUNAWAY, static fn (): string => 'x', $subject))
+        ->toThrow(PatternScanFailedException::class);
+});
+
+it('raises rather than reporting no parts when a split stops part-way', function (): void {
+    ini_set('pcre.backtrack_limit', '1000');
+
+    $subject = patternScanUnmatchableSubject();
+
+    expect(@preg_split(PATTERN_SCAN_RUNAWAY, $subject) ?: [])
+        ->toBe([], 'The elvis this seam replaces reads a give-up as an input with no parts.')
+        ->and(fn () => PatternScan::split(PATTERN_SCAN_RUNAWAY, $subject))
+        ->toThrow(PatternScanFailedException::class);
+});
+
+it('replaces and splits an ordinary subject the way the functions it replaces do', function (): void {
+    expect(PatternScan::replace('/\d/', '#', 'a1b2'))->toBe('a#b#')
+        ->and(PatternScan::replace(['/a/', '/b/'], ['x', 'y'], 'ab'))->toBe('xy')
+        ->and(PatternScan::replaceCallback('/\d/', static fn (array $m): string => '['.$m[0].']', 'a1'))->toBe('a[1]')
+        ->and(PatternScan::split('/,/', 'a,b,c'))->toBe(['a', 'b', 'c'])
+        ->and(PatternScan::split('/,/', 'a,,b'))->toBe(['a', '', 'b'])
+        ->and(PatternScan::split('/,/', 'nocomma'))->toBe(['nocomma']);
+});

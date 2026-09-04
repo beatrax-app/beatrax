@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Recovery;
 
+use Modules\Core\Public\Support\PatternScan;
+
 final class RecoveryCodeNormalizer
 {
     // Same ambiguous-free alphabet the generator draws from -- excludes
@@ -14,6 +16,6 @@ final class RecoveryCodeNormalizer
     {
         $upper = strtoupper($input);
 
-        return (string) preg_replace('/[^'.self::ALLOWED.']/', '', $upper);
+        return PatternScan::replace('/[^'.self::ALLOWED.']/', '', $upper);
     }
 }

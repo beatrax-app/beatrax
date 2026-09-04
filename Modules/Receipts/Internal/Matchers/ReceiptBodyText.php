@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Internal\Matchers;
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -17,7 +18,7 @@ final class ReceiptBodyText
     {
         $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
         $stripped = strip_tags($decoded);
-        $collapsed = (string) preg_replace('/[ \t]+/', ' ', $stripped);
+        $collapsed = PatternScan::replace('/[ \t]+/', ' ', $stripped);
 
         return trim($collapsed);
     }
