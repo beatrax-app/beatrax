@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'İçe aktarma sonucunu görüntüle',
 
     'expired_html' => 'Önizlemenin süresi doldu. Yeniden denemek için <a href="/imports/new" class="underline">dosyayı yeniden yükle</a>.',
+    'unreadable_html' => 'Bu önizleme okunamıyor. Yeniden denemek için <a href="/imports/new" class="underline">dosyayı yeniden yükle</a>.',
 
     'save_name' => 'Adı kaydet',
     'account_name_label' => 'Hesap adı',

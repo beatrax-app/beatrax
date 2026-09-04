@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Den siste skanningen ble ikke fullført. Prøv Skann nå, eller koble til denne innboksen på nytt.',
     'oauth_state_mismatch' => 'Denne tilkoblingslenken er utløpt eller allerede brukt. Start tilkoblingen på nytt.',
+    'oauth_client_missing' => 'Engangsoppsettet for den e-postleverandøren er ikke fullført på denne enheten, så det finnes ennå ingenting å koble til med. Trykk Koble til igjen for å fullføre det.',
     'oauth_no_code' => 'E-postleverandøren din sendte deg tilbake uten koden Beatrax trenger for å fullføre, så ingen postkasse ble koblet til. Start tilkoblingen på nytt.',
     'oauth_grant_refused' => 'E-postleverandøren din avviste tillatelsen Beatrax hadde fått — den er utløpt eller trukket tilbake. Start tilkoblingen på nytt og godkjenn den.',
     'oauth_exchange_failed' => 'E-postleverandøren din fullførte ikke tilkoblingen, så ingen postkasse ble lagt til. Prøv igjen om noen minutter.',

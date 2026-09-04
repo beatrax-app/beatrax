@@ -64,6 +64,19 @@ final readonly class BlindIndexCodec
         return $this->deriveWithKey($domain, $plaintext, $userId, $this->requireKeyHex($domain, $userId, $session));
     }
 
+    // The lookup twin of derive(). A lookup keyed by a blind index HAS an
+    // answer without the key -- no row matches -- and that is what every read
+    // path here already does for a sealed value it could not open. A write has
+    // no such answer, so derive() still refuses rather than key in the clear.
+    public function deriveOrNull(string $domain, string $plaintext, int $userId, Session $session): ?string
+    {
+        try {
+            return $this->derive($domain, $plaintext, $userId, $session);
+        } catch (BlindIndexKeyMalformedException|BlindIndexKeyUnavailableException) {
+            return null;
+        }
+    }
+
     // Same digest as derive(), over a key the caller already holds. The
     // re-derive sweep uses this so a whole table costs one keyring read
     // rather than one per row, and so it can hash under a key it is in the

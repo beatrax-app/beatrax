@@ -8,9 +8,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\OpenBanking\Internal\Actions\CompleteBankConsent;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final readonly class OpenBankingCallbackController
@@ -20,6 +23,7 @@ final readonly class OpenBankingCallbackController
         private CurrentUser $currentUser,
         private Redirector $redirector,
         private CompleteBankConsent $completeConsent,
+        private LoggerInterface $logger,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -45,9 +49,19 @@ final readonly class OpenBankingCallbackController
             }
 
             $connectionId = ($this->completeConsent)($userId, is_string($codeRaw) ? $codeRaw : '');
+        } catch (OpenBankingCredentialsException $e) {
+            // Its message names the secrets file by absolute path, and this
+            // flash renders verbatim on the settings screen. The reader gets
+            // the line that says what to do; the path goes to the log.
+            $this->logger->warning(
+                'OpenBankingCallbackController: the stored credentials could not be read.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return $this->backToSettings('open_banking_failed', $e->readerMessage());
         } catch (RuntimeException $e) {
-            // Every refusal subclasses RuntimeException and carries a
-            // user-facing reason, so one flash handles all of them.
+            // Everything reaching here builds its message from Lang, so the
+            // reason it carries is already the reader's own words.
             return $this->backToSettings('open_banking_failed', $e->getMessage());
         }
 

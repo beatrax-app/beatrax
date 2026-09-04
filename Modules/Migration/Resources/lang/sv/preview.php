@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Den här exporten innehöll inget att importera — det finns inget att bekräfta här.',
 
+    'discarded' => 'Du kastade den här importen, så det finns inget kvar att förhandsgranska här.',
+    'discarded_link' => 'Starta ny import',
+
     'groups' => [
         'conflict' => 'Kräver ditt beslut',
         'extra' => 'Inte importerat',

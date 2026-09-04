@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Aktivera open banking',
         'toggle_connected' => 'Ansluten till :bank via Enable Banking.',
         'toggle_off_help' => 'Avstängt som standard. Kräver ett engångsgodkännande och en guidad konfiguration.',
+        'credentials_unreadable' => 'Open banking-uppgifterna som är sparade på den här enheten går inte att läsa, så Beatrax kan inte nå din bank.',
+        'credentials_unreadable_next' => 'Kör den guidade konfigurationen igen för att ersätta dem. Transaktioner som redan importerats påverkas inte.',
         'reconfirm_body' => 'Ditt godkännande gick ut innan anslutningen hann bli klar. Bekräfta på nytt för att slutföra aktiveringen av open banking.',
         'reconfirm_button' => 'Bekräfta på nytt för att slutföra aktiveringen',
     ],

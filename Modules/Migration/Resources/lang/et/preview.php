@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'See eksport ei sisaldanud midagi imporditavat — siin pole midagi kinnitada.',
 
+    'discarded' => 'Sa loobusid sellest impordist, nii et siin pole enam midagi vaadata.',
+    'discarded_link' => 'Alusta uut importi',
+
     'groups' => [
         'conflict' => 'Vajab sinu otsust',
         'extra' => 'Ei imporditud',

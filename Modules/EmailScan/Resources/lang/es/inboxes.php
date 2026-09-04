@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'El último análisis no se completó. Prueba «Analizar ahora» o vuelve a conectar este buzón.',
     'oauth_state_mismatch' => 'Ese enlace de conexión ha caducado o ya se ha utilizado. Vuelve a empezar la conexión.',
+    'oauth_client_missing' => 'La configuración única para ese proveedor de correo no está terminada en este dispositivo, así que todavía no hay nada con lo que conectar. Vuelve a pulsar Conectar para terminarla.',
     'oauth_no_code' => 'Tu proveedor de correo te ha devuelto sin el código que Beatrax necesita para terminar, así que no se ha conectado ningún buzón. Vuelve a empezar la conexión.',
     'oauth_grant_refused' => 'Tu proveedor de correo ha rechazado el permiso concedido a Beatrax: ha caducado o se ha retirado. Vuelve a empezar la conexión y concédelo.',
     'oauth_exchange_failed' => 'Tu proveedor de correo no ha completado la conexión, así que no se ha añadido ningún buzón. Inténtalo otra vez dentro de unos minutos.',

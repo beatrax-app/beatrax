@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Zadnje pregledovanje se ni dokončalo. Poskusite Preglej zdaj ali znova povežite ta nabiralnik.',
     'oauth_state_mismatch' => 'Ta povezava za povezovanje je potekla ali je bila že uporabljena. Povezovanje začni znova.',
+    'oauth_client_missing' => 'Enkratna nastavitev za tega ponudnika pošte v tej napravi ni dokončana, zato še ni ničesar, s čimer bi se povezal. Znova pritisni Poveži in jo dokončaj.',
     'oauth_no_code' => 'Tvoj ponudnik pošte te je vrnil brez kode, ki jo Beatrax potrebuje za dokončanje, zato ni bil povezan noben nabiralnik. Povezovanje začni znova.',
     'oauth_grant_refused' => 'Tvoj ponudnik pošte je zavrnil dovoljenje, dano Beatraxu — poteklo je ali je bilo umaknjeno. Povezovanje začni znova in ga odobri.',
     'oauth_exchange_failed' => 'Tvoj ponudnik pošte povezovanja ni dokončal, zato ni bil dodan noben nabiralnik. Poskusi znova čez nekaj minut.',

@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Zobraziť výsledok importu',
 
     'expired_html' => 'Náhľad expiroval. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
+    'unreadable_html' => 'Náhľad sa nedá prečítať. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
 
     'save_name' => 'Uložiť názov',
     'account_name_label' => 'Názov účtu',

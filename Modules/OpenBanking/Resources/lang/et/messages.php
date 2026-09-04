@@ -11,6 +11,11 @@ return [
         'toggle_label' => 'Luba pangaliides',
         'toggle_connected' => 'Ühendatud pangaga :bank Enable Bankingu kaudu.',
         'toggle_off_help' => 'Vaikimisi väljas. Nõuab ühekordset kinnitust ja juhendatud seadistust.',
+        // i18n-review: et · page.credentials_unreadable — "volitusi" is this
+        // file's own noun for stored credentials, taken from disconnect.body,
+        // but it usually reads as a granted authority rather than a secret.
+        'credentials_unreadable' => 'Selles seadmes salvestatud pangaliidese volitusi ei õnnestu lugeda, seega ei saa Beatrax sinu pangaga ühendust.',
+        'credentials_unreadable_next' => 'Käi juhendatud seadistus uuesti läbi, et need asendada. Juba imporditud tehinguid see ei mõjuta.',
         'reconfirm_body' => 'Sinu kinnitus aegus enne, kui jõudsime ühenduse lõpule viia. Kinnita uuesti, et pangaliidese lubamine lõpetada.',
         'reconfirm_button' => 'Kinnita uuesti, et lõpetada',
     ],

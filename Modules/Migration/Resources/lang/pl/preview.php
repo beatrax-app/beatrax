@@ -20,6 +20,12 @@ return [
 
     'nothing_staged' => 'Ten eksport nie zawierał niczego do zaimportowania — nie ma tu czego potwierdzać.',
 
+    // i18n-review: pl · discarded — Polish marks gender in the past tense, so
+    // the reader's own act is written impersonally as "odrzucono" where all 25
+    // sibling locales name the reader. Confirm it still reads as their doing.
+    'discarded' => 'Ten import odrzucono, więc w podglądzie nie ma już czego pokazywać.',
+    'discarded_link' => 'Rozpocznij nowy import',
+
     'groups' => [
         'conflict' => 'Wymaga Twojej decyzji',
         'extra' => 'Nieimportowane',

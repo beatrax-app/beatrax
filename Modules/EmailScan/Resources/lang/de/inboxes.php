@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Der letzte Scan wurde nicht abgeschlossen. Versuchen Sie „Jetzt scannen“ oder verbinden Sie dieses Postfach erneut.',
     'oauth_state_mismatch' => 'Dieser Verbindungslink ist abgelaufen oder wurde bereits verwendet. Starte die Verbindung neu.',
+    'oauth_client_missing' => 'Die einmalige Einrichtung für diesen E-Mail-Anbieter ist auf diesem Gerät nicht abgeschlossen, also gibt es noch keine Zugangsdaten für die Verbindung. Drücke erneut auf Verbinden, um die Einrichtung abzuschließen.',
     'oauth_no_code' => 'Dein E-Mail-Anbieter hat dich ohne den Code zurückgeschickt, den Beatrax zum Abschließen braucht, also wurde kein Postfach verbunden. Starte die Verbindung neu.',
     'oauth_grant_refused' => 'Dein E-Mail-Anbieter hat die Beatrax erteilte Berechtigung abgelehnt — sie ist abgelaufen oder wurde zurückgezogen. Starte die Verbindung neu und bestätige sie.',
     'oauth_exchange_failed' => 'Dein E-Mail-Anbieter hat die Verbindung nicht abgeschlossen, also wurde kein Postfach hinzugefügt. Versuche es in ein paar Minuten erneut.',

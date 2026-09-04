@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Nyílt bankolás bekapcsolása',
         'toggle_connected' => 'Csatlakoztatva ide: :bank, az Enable Bankingen keresztül.',
         'toggle_off_help' => 'Alapértelmezés szerint kikapcsolva. Egyszeri tudomásulvételt és vezetett beállítást igényel.',
+        'credentials_unreadable' => 'A nyílt bankolás ezen az eszközön tárolt hitelesítő adatai nem olvashatók, ezért a Beatrax nem éri el a bankodat.',
+        'credentials_unreadable_next' => 'Végezd el újra a vezetett beállítást, hogy lecseréld őket. A már importált tranzakciókat ez nem érinti.',
         'reconfirm_body' => 'A tudomásulvételed lejárt, mielőtt befejezhettük volna a csatlakoztatást. Erősítsd meg újra a nyílt bankolás bekapcsolásának befejezéséhez.',
         'reconfirm_button' => 'Újbóli megerősítés a befejezéshez',
     ],

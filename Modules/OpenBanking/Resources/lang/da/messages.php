@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Aktivér open banking',
         'toggle_connected' => 'Tilsluttet :bank via Enable Banking.',
         'toggle_off_help' => 'Slået fra som standard. Kræver en engangsgodkendelse og en guidet opsætning.',
+        'credentials_unreadable' => 'Open banking-oplysningerne, der er gemt på denne enhed, kan ikke læses, så Beatrax kan ikke nå din bank.',
+        'credentials_unreadable_next' => 'Kør den guidede opsætning igen for at erstatte dem. Transaktioner, der allerede er importeret, berøres ikke.',
         'reconfirm_body' => 'Din godkendelse udløb, før tilslutningen kunne gøres færdig. Bekræft igen for at gøre aktiveringen af open banking færdig.',
         'reconfirm_button' => 'Bekræft igen for at gøre aktiveringen færdig',
     ],
