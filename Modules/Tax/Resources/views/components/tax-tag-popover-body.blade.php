@@ -82,7 +82,7 @@
                     type="button"
                     role="option"
                     aria-selected="{{ $pickerCategoryId === $catId ? 'true' : 'false' }}"
-                    wire:click="$set('pickerCategoryId', {{ $catId }})"
+                    wire:click="$set('pickerCategoryId', '{{ $catId }}')"
                     style="
                         display: flex;
                         align-items: center;

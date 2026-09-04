@@ -131,7 +131,7 @@
                                 <div class="flex justify-center">
                                     <input
                                         type="checkbox"
-                                        wire:click="toggleEntriesAccount({{ $acct['id'] }})"
+                                        wire:click="toggleEntriesAccount('{{ $acct['id'] }}')"
                                         @checked(in_array($acct['id'], $visibleAccountIds))
                                         class="h-4 w-4 rounded"
                                         aria-label="{{ Lang::get('calendar::messages.toolbar.show_entries_aria', ['name' => $acct['name']]) }}"
@@ -140,7 +140,7 @@
                                 <div class="flex justify-center">
                                     <input
                                         type="checkbox"
-                                        wire:click="toggleBalanceAccount({{ $acct['id'] }})"
+                                        wire:click="toggleBalanceAccount('{{ $acct['id'] }}')"
                                         @checked(in_array($acct['id'], $balanceAccountIds))
                                         class="h-4 w-4 rounded"
                                         aria-label="{{ Lang::get('calendar::messages.toolbar.count_balance_aria', ['name' => $acct['name']]) }}"
