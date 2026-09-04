@@ -246,3 +246,90 @@ it('defers every self-referential foreign key the schema declares', function ():
         expect($covered)->toBe($columns, "{$table} declares a self-referential foreign key the deferral does not cover");
     }
 });
+
+it('resolves a self-reference from the log when the partner landed in a later session', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('later-session-replay')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+
+    $creates = selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId));
+
+    // An import that spans several sync sessions gets a FRESH applier for each
+    // one, so the in-memory carry cannot see a partner that lands after the
+    // session holding it ended. Two appliers is what that looks like.
+    $touched = [];
+    app()->make(OpLogEntryApplier::class)->applyCreates(
+        ['transactions' => [251 => $creates['transactions'][251]]], [], $userId, '2026-06-10 12:00:00', $touched,
+    );
+    app()->forgetInstance(OpLogEntryApplier::class);
+    app()->make(OpLogEntryApplier::class)->applyCreates(
+        ['transactions' => [295 => $creates['transactions'][295]]], [], $userId, '2026-06-10 12:00:00', $touched,
+    );
+
+    expect($db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))
+        ->toBeNull('a fresh applier cannot carry what the previous one held');
+
+    foreach ([[251, 295], [295, 251]] as [$pk, $partner]) {
+        $db->connection()->table('op_log_entries')->insert([
+            'user_id' => $userId,
+            'device_id' => 'self-ref-device',
+            'table_name' => 'transactions',
+            'pk' => (string) $pk,
+            'field' => 'pair_transaction_id',
+            'op_type' => 'create_row',
+            'value' => json_encode($partner, JSON_THROW_ON_ERROR),
+            'hlc_l' => 1,
+            'hlc_c' => 0,
+            'signature' => str_repeat('0', 128),
+            'recorded_at' => '2026-06-10 12:00:00',
+        ]);
+    }
+
+    // One, not two: 295 landed second and found 251 already here, so its own
+    // batch resolved it. Only the leg that named a partner still to come is
+    // left for the sweep.
+    expect(app(SelfReferenceDeferral::class)->resolveFromHistory($userId))->toBe(1);
+
+    $rows = $db->connection()->table('transactions')->whereIn('id', [251, 295])->orderBy('id')->get(['id', 'pair_transaction_id']);
+
+    expect((int) $rows[0]->pair_transaction_id)->toBe(295)
+        ->and((int) $rows[1]->pair_transaction_id)->toBe(251);
+});
+
+it('leaves a link alone when the sweep finds the column already filled', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('sweep-no-overwrite')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+
+    $touched = [];
+    app(OpLogEntryApplier::class)->applyCreates(
+        selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched,
+    );
+
+    // The log says 295, the row says otherwise. A sweep that reaches for a
+    // column somebody already filled is a create talking over an edit.
+    $db->connection()->table('transactions')->where('id', 251)->update(['pair_transaction_id' => null]);
+    $db->connection()->table('transactions')->where('id', 295)->update(['pair_transaction_id' => 251]);
+
+    $db->connection()->table('op_log_entries')->insert([
+        'user_id' => $userId,
+        'device_id' => 'self-ref-device',
+        'table_name' => 'transactions',
+        'pk' => '295',
+        'field' => 'pair_transaction_id',
+        'op_type' => 'create_row',
+        'value' => json_encode(251, JSON_THROW_ON_ERROR),
+        'hlc_l' => 1,
+        'hlc_c' => 0,
+        'signature' => str_repeat('0', 128),
+        'recorded_at' => '2026-06-10 12:00:00',
+    ]);
+
+    expect(app(SelfReferenceDeferral::class)->resolveFromHistory($userId))->toBe(0);
+});

@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\RowHistoryPolicy;
+use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
@@ -61,6 +62,12 @@ final readonly class HistoryReprojector
         // reasons that are not recoverable never reach the pass below, so this
         // is the only thing that ever clears one.
         $this->clearSettled($userId);
+
+        // Before the early returns, because a history with nothing left to
+        // replay is exactly the one whose links are ready to close: a transfer
+        // pair is stripped before its insert and written back per batch, and an
+        // import spanning several sessions ends one with the partner to come.
+        $this->container->make(SelfReferenceDeferral::class)->resolveFromHistory($userId);
 
         $rows = $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint);
         if ($rows === []) {
