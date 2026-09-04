@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 /**
@@ -121,10 +122,9 @@ function phoneUiMarkupOnly(string $blade): string
     return $blade;
 }
 
-// `[^>]*` ends a tag at the first `>` it meets, and a Blade attribute is full of
-// them: `['id' => $x]` in an href, `$attributes->merge(...)` in a component. 113
-// of the 424 button and summary tags in this tree were read half-way by exactly
-// that pattern, class attribute included. Quotes and echoes are stepped over.
+// An element whose closing tag the walk never reached reads as empty here, and
+// empty means "wraps no block", which leaves the link in the guard's sights
+// rather than excused. The unreadable case fails towards a finding.
 /**
  * @return list<array{0: int, 1: string, 2: string}> the offset, the start tag and
  *                                                   the inner source of every
@@ -133,55 +133,28 @@ function phoneUiMarkupOnly(string $blade): string
 function phoneUiElements(string $blade, string $name): array
 {
     $elements = [];
-    $length = strlen($blade);
-    $at = 0;
 
-    while (($at = strpos($blade, '<'.$name, $at)) !== false) {
-        $after = $blade[$at + strlen($name) + 1] ?? '';
-        if ($after !== '' && $after !== '>' && ! ctype_space($after)) {
-            $at += strlen($name) + 1;
-
-            continue;
-        }
-
-        $end = phoneUiTagEnd($blade, $at + strlen($name) + 1, $length);
-        $close = strpos($blade, '</'.$name, $end);
-        $elements[] = [
-            $at,
-            substr($blade, $at, $end - $at + 1),
-            $close === false ? '' : substr($blade, $end + 1, $close - $end - 1),
-        ];
-        $at = $end + 1;
+    foreach (MarkupSource::elements($blade, $name) as $element) {
+        $elements[] = [$element->offset, $element->startTag, $element->inner ?? ''];
     }
 
     return $elements;
 }
 
-/** @return int the offset of the `>` that closes the start tag opened before $from */
-function phoneUiTagEnd(string $blade, int $from, int $length): int
+/** @return string $source with every `<$name>` element removed, its content included */
+function phoneUiWithoutElements(string $source, string $name): string
 {
-    $quote = '';
-    while ($from < $length) {
-        $character = $blade[$from];
-
-        if ($quote !== '') {
-            if ($character === $quote) {
-                $quote = '';
-            }
-        } elseif ($character === '"' || $character === "'") {
-            $quote = $character;
-        } elseif ($character === '{' && ($blade[$from + 1] ?? '') === '{') {
-            $echo = strpos($blade, '}}', $from);
-
-            return $echo === false ? $length - 1 : phoneUiTagEnd($blade, $echo + 2, $length);
-        } elseif ($character === '>') {
-            return $from;
+    foreach (MarkupSource::elements($source, $name) as $element) {
+        if ($element->inner === null) {
+            continue;
         }
 
-        $from++;
+        $whole = strlen($element->startTag) + strlen($element->inner) + strlen('</'.$element->name.'>');
+
+        return phoneUiWithoutElements(substr_replace($source, '', $element->offset, $whole), $name);
     }
 
-    return $length - 1;
+    return $source;
 }
 
 /**
@@ -210,11 +183,12 @@ function phoneUiTouchControlClassLists(): array
 /** @return list<string> the class lists an element declares, merged ones included */
 function phoneUiClassAttributes(string $tag): array
 {
-    $literal = PatternScan::all('/(?<![-:\w])class="([^"]*)"/s', $tag);
-
     $lists = [];
-    foreach ($literal[1] as $list) {
-        $lists[] = phoneUiReplaced('class echo', preg_replace('/\{\{.*?\}\}/s', ' ', $list));
+    foreach (MarkupSource::tags($tag) as $element) {
+        $list = $element->attribute('class');
+        if ($list !== null) {
+            $lists[] = phoneUiReplaced('class echo', preg_replace('/\{\{.*?\}\}/s', ' ', $list));
+        }
     }
 
     $echoes = PatternScan::all('/\{\{(.*?)\}\}/s', $tag);
@@ -299,10 +273,13 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
         $blade = (string) file_get_contents($path);
 
         $dispatched = PatternScan::all('/open-sheet[\'"]?\s*,\s*\{?\s*name\s*:\s*[\'"]([a-z0-9-]+)[\'"]/', $blade);
-        $declared = PatternScan::all('/<x-core::bottom-sheet\s+name=["\']([a-z0-9-]+)["\']/', $blade);
+        $declared = [];
+        foreach (MarkupSource::elements($blade, 'x-core::bottom-sheet') as $sheet) {
+            $declared[] = (string) $sheet->attribute('name');
+        }
 
         foreach (array_unique($dispatched[1]) as $name) {
-            if (! in_array($name, $declared[1], true)) {
+            if (! in_array($name, $declared, true)) {
                 $orphans[] = $name.' in '.str_replace(base_path().'/', '', $path);
             }
         }
@@ -664,9 +641,8 @@ function phoneUiFollowsText(string $before): bool
 
     $lead = substr($before, $from);
     $lead = phoneUiReplaced('directives', preg_replace('/@[a-z]+\s*(\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?/s', '', $lead));
-    $lead = phoneUiReplaced('sibling links', preg_replace('#<a\b[^>]*>.*?</a>#s', '', $lead));
 
-    return trim(phoneUiReplaced('markup', preg_replace('/<[^>]*>/s', '', $lead))) !== '';
+    return trim(MarkupSource::text(phoneUiWithoutElements($lead, 'a'))) !== '';
 }
 
 /**

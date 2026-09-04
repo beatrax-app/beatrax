@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\SafeDate;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -244,19 +244,16 @@ function suppliedDateBindings(array $paths): array
 
         $relative = str_replace(base_path().'/', '', $path);
 
-        // Attribute values are skipped over as a unit, because a Blade
-        // expression inside one may itself hold a `>`.
-        $tags = PatternScan::allWithOffsets('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source);
-
-        foreach ($tags[0] as [$tag, $offset]) {
+        foreach (MarkupSource::elements($source, 'x-core::date-input') as $element) {
             $elements++;
-            $line = substr_count(substr($source, 0, $offset), "\n") + 1;
 
-            $models = PatternScan::all('/wire:model[.\w]*\s*=\s*"([^"]+)"/', $tag);
+            foreach ($element->attributes() as $name => $model) {
+                if ($name !== 'wire:model' && ! str_starts_with($name, 'wire:model.')) {
+                    continue;
+                }
 
-            foreach ($models[1] as $model) {
                 $field = trim((string) preg_replace('/\{\{.*?\}\}/', '*', $model));
-                $bindings[$field][] = $relative.':'.$line;
+                $bindings[$field][] = $relative.':'.$element->line($source);
             }
         }
     }
