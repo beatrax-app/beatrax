@@ -74,19 +74,6 @@ function phoneUiCoarsePointerBlocks(): array
     return $blocks;
 }
 
-// A null replacement is not "nothing to change", it is "stopped reading", and
-// this file has already shipped a guard that reported the opposite of the truth
-// after PCRE gave up on a long block. Every substitution here answers through
-// this.
-function phoneUiReplaced(string $reading, ?string $out): string
-{
-    if ($out === null || preg_last_error() !== PREG_NO_ERROR) {
-        throw new RuntimeException($reading.' stopped reading: '.preg_last_error_msg());
-    }
-
-    return $out;
-}
-
 /** @return list<string> every Blade view in the two roots that hold them */
 function phoneUiBladeViews(): array
 {
@@ -113,7 +100,7 @@ function phoneUiMarkupOnly(string $blade): string
     foreach (['/\{\{--.*?--\}\}/s', '/@php\b.*?@endphp/s', '/@props\s*\(\[.*?\]\)/s', '/<!--.*?-->/s'] as $pattern) {
         $found = PatternScan::allWithOffsets($pattern, $blade);
         foreach ($found[0] as [$text, $at]) {
-            $blank = phoneUiReplaced('blanking', preg_replace('/[^\n]/', ' ', $text));
+            $blank = PatternScan::replace('/[^\n]/', ' ', $text);
             $blade = substr_replace($blade, $blank, $at, strlen($text));
         }
     }
@@ -214,7 +201,7 @@ function phoneUiClassAttributes(string $tag): array
 
     $lists = [];
     foreach ($literal[1] as $list) {
-        $lists[] = phoneUiReplaced('class echo', preg_replace('/\{\{.*?\}\}/s', ' ', $list));
+        $lists[] = PatternScan::replace('/\{\{.*?\}\}/s', ' ', $list);
     }
 
     $echoes = PatternScan::all('/\{\{(.*?)\}\}/s', $tag);
@@ -367,7 +354,7 @@ function phoneUiCoarse44pxSelectors(): array
 {
     $selectors = [];
     foreach (phoneUiCoarsePointerBlocks() as $block) {
-        $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
+        $block = PatternScan::replace('#/\*.*?\*/#s', '', $block);
 
         $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block);
         foreach ($rules as $rule) {
@@ -376,7 +363,7 @@ function phoneUiCoarse44pxSelectors(): array
             }
 
             foreach (explode(',', $rule['selector']) as $selector) {
-                $selectors[] = trim((string) preg_replace('/\s+/', ' ', $selector));
+                $selectors[] = trim(PatternScan::replace('/\s+/', ' ', $selector));
             }
         }
     }
@@ -410,12 +397,12 @@ function phoneUiCoarseRuleBodies(string $selector): array
     $bodies = [];
 
     foreach (phoneUiCoarsePointerBlocks() as $block) {
-        $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
+        $block = PatternScan::replace('#/\*.*?\*/#s', '', $block);
 
         $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block);
         foreach ($rules as $rule) {
             foreach (explode(',', $rule['selector']) as $part) {
-                if (trim((string) preg_replace('/\s+/', ' ', $part)) === $selector) {
+                if (trim(PatternScan::replace('/\s+/', ' ', $part)) === $selector) {
                     $bodies[] = $rule['body'];
                 }
             }
@@ -592,7 +579,7 @@ function phoneUiSpacingStep(string $step): ?float
 /** @return string|null the box a utility class draws, or null when it draws none */
 function phoneUiUtilityBox(string $class, float $line): ?string
 {
-    $class = phoneUiReplaced('variant prefix', preg_replace('/^[a-z]+:/', '', $class));
+    $class = PatternScan::replace('/^[a-z]+:/', '', $class);
 
     if (preg_match('/^(?:min-)?h-(.+)$/', $class, $height) === 1) {
         $px = phoneUiSpacingStep($height[1]);
@@ -663,10 +650,10 @@ function phoneUiFollowsText(string $before): bool
     }
 
     $lead = substr($before, $from);
-    $lead = phoneUiReplaced('directives', preg_replace('/@[a-z]+\s*(\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?/s', '', $lead));
-    $lead = phoneUiReplaced('sibling links', preg_replace('#<a\b[^>]*>.*?</a>#s', '', $lead));
+    $lead = PatternScan::replace('/@[a-z]+\s*(\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?/s', '', $lead);
+    $lead = PatternScan::replace('#<a\b[^>]*>.*?</a>#s', '', $lead);
 
-    return trim(phoneUiReplaced('markup', preg_replace('/<[^>]*>/s', '', $lead))) !== '';
+    return trim(PatternScan::replace('/<[^>]*>/s', '', $lead)) !== '';
 }
 
 /**

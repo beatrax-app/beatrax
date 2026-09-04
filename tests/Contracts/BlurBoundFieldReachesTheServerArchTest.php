@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#wiremodelblur-never-reaches-the-server
  */
@@ -38,9 +40,7 @@ function viewsRenderedBy(string $componentPath): array
 {
     $source = (string) file_get_contents($componentPath);
 
-    if (preg_match_all("/'[a-z0-9\-]+::livewire\.([a-z0-9\-.]+)'/", $source, $matches) === false) {
-        return [];
-    }
+    $matches = PatternScan::all("/'[a-z0-9\-]+::livewire\.([a-z0-9\-.]+)'/", $source);
 
     $paths = [];
     foreach ($matches[1] as $name) {
@@ -65,9 +65,7 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
         foreach (viewsRenderedBy($componentPath) as $viewPath) {
             $view = (string) file_get_contents($viewPath);
 
-            if (preg_match_all('/wire:model((?:\.[\w]+)*)\.blur/', $view, $matches) === false) {
-                continue;
-            }
+            $matches = PatternScan::all('/wire:model((?:\.[\w]+)*)\.blur/', $view);
 
             foreach ($matches[1] as $leading) {
                 if (str_contains($leading, 'live')) {
@@ -96,9 +94,7 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
 /** @return list<string> */
 function deferredFieldBindings(string $view, string $property): array
 {
-    if (preg_match_all('/<([\w:.-]+)\b[^>]*?wire:model((?:\.[\w]+)*)=\"([^\"]+)\"/s', $view, $matches, PREG_SET_ORDER) === false) {
-        return [];
-    }
+    $matches = PatternScan::sets('/<([\w:.-]+)\b[^>]*?wire:model((?:\.[\w]+)*)=\"([^\"]+)\"/s', $view);
 
     $bindings = [];
     foreach ($matches as $match) {
@@ -126,9 +122,7 @@ it('binds every property an updated() hook watches so the hook can actually run'
     foreach (livewireComponentFiles() as $componentPath) {
         $source = (string) file_get_contents($componentPath);
 
-        if (preg_match_all('/function\s+updated([A-Z][A-Za-z0-9]*)\s*\(/', $source, $hooks) === false) {
-            continue;
-        }
+        $hooks = PatternScan::all('/function\s+updated([A-Z][A-Za-z0-9]*)\s*\(/', $source);
 
         foreach (viewsRenderedBy($componentPath) as $viewPath) {
             $view = (string) file_get_contents($viewPath);

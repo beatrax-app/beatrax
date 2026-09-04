@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 // A Flux modal is shown and hidden by name, through `modal-show` and
@@ -21,11 +22,13 @@ function modalNamesClosedPerModule(): array
     foreach (moduleSourceFiles('*.php') as $path => $contents) {
         $module = moduleOf($path);
 
-        if ($module === null || preg_match_all("/'modal-close',\s*name:\s*'([^']+)'/", $contents, $m) !== 1 && ! isset($m[1])) {
+        if ($module === null) {
             continue;
         }
 
-        foreach ($m[1] ?? [] as $name) {
+        $m = PatternScan::all("/'modal-close',\s*name:\s*'([^']+)'/", $contents);
+
+        foreach ($m[1] as $name) {
             $closed[$module][] = $name;
         }
     }

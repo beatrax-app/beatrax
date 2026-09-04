@@ -41,7 +41,7 @@ it('names a colour emoji face for every platform on the mark that asks for one',
 // presentation without naming a face would reintroduce the same asymmetry
 // somewhere else on the page.
 it('leaves no rule asking for emoji presentation from a stack that has no emoji in it', function (): void {
-    $css = (string) preg_replace('~/\*.*?\*/~s', '', $this->css);
+    $css = PatternScan::replace('~/\*.*?\*/~s', '', $this->css);
 
     $matches = PatternScan::sets('/([^{}]+)\{([^{}]*font-variant-emoji\s*:\s*emoji[^{}]*)\}/', $css);
 

@@ -6,6 +6,7 @@ namespace Modules\Community\Internal\Corpus;
 
 use Modules\Community\Internal\Support\RecipientAddress;
 use Modules\Community\Public\Dto\MerchantContactDto;
+use Modules\Core\Public\Support\PatternScan;
 use Psr\Log\LoggerInterface;
 
 final readonly class MerchantContactReader
@@ -125,7 +126,7 @@ final readonly class MerchantContactReader
 
     private static function digitCount(string $value): int
     {
-        return mb_strlen((string) preg_replace('/\D/', '', $value));
+        return mb_strlen(PatternScan::replace('/\D/', '', $value));
     }
 
     /**

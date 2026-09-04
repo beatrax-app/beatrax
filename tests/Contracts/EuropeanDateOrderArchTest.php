@@ -99,7 +99,7 @@ it('corrects only the locales that write the month first', function (): void {
     $monthFirst = [];
 
     foreach ($rendered as $locale => $date) {
-        $digits = preg_replace('/\D+/', ' ', $date) ?? '';
+        $digits = PatternScan::replace('/\D+/', ' ', $date);
         $parts = array_values(array_filter(explode(' ', trim($digits)), static fn (string $p): bool => $p !== ''));
 
         if (count($parts) === 3 && (int) $parts[0] === 8 && (int) $parts[1] === 5) {

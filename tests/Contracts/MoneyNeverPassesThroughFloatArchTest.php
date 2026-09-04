@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
@@ -138,9 +139,7 @@ function floatMoneyTaintedNames(string $source): array
     // is captured instead of the variable assigned three lines inside it.
     $pattern = '/(\$\w+)\s*=\s*([^;{}]*\/\s*'.FLOAT_MONEY_DIVISOR.'[^;{}]*);/';
 
-    if (preg_match_all($pattern, $source, $matches, PREG_SET_ORDER) === false) {
-        return [];
-    }
+    $matches = PatternScan::sets($pattern, $source);
 
     $tainted = [];
     foreach ($matches as $match) {
@@ -173,7 +172,7 @@ it('renders no money through a float formatter', function (): void {
                 }
 
                 if (($divides && $namesMinor) || $carriesTaint || $formatter === 'formatCurrency') {
-                    $offenders[] = $file.':'.$call['line'].' — '.$formatter.'('.trim(preg_replace('/\s+/', ' ', $call['args']) ?? '').')';
+                    $offenders[] = $file.':'.$call['line'].' — '.$formatter.'('.trim(PatternScan::replace('/\s+/', ' ', $call['args'])).')';
                 }
             }
         }
@@ -214,7 +213,7 @@ it('derives no minor-unit amount from a float', function (): void {
             if (preg_match($intoMinor, $text) === 1 || preg_match($outOfFloat, $text) === 1) {
                 $offset = (int) $match[0][1];
                 $offenders[] = $file.':'.($line + substr_count($text, "\n", 0, $offset)).' — '.
-                    trim(preg_replace('/\s+/', ' ', substr($text, (int) strrpos(substr($text, 0, $offset), "\n"))) ?? '');
+                    trim(PatternScan::replace('/\s+/', ' ', substr($text, (int) strrpos(substr($text, 0, $offset), "\n"))));
             }
         }
     }

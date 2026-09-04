@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * DES-R1 — the product name is written "Beatrax" in prose, mid-sentence included.
  *
@@ -103,23 +105,23 @@ function brandProseLines(string $relative, string $contents): array
             if ($inFence) {
                 continue;
             }
-            $text = (string) preg_replace('/\]\([^)]*\)/', ']()', $text);
-            $text = (string) preg_replace('#https?://\S+#', '', $text);
+            $text = PatternScan::replace('/\]\([^)]*\)/', ']()', $text);
+            $text = PatternScan::replace('#https?://\S+#', '', $text);
         }
 
         // A backticked span is the name being typed, not written about.
         if ($isMarkdown || $isPhp) {
-            $text = (string) preg_replace('/`[^`]*`/', '``', $text);
+            $text = PatternScan::replace('/`[^`]*`/', '``', $text);
         }
 
         // A quoted string that is nothing but the token is a value — the
         // database name, the composer vendor, the URI scheme. Prose is never
         // the bare word alone.
         if ($isPhp || $isYaml) {
-            $text = (string) preg_replace('/([\'"])beatrax\1/', '$1$1', $text);
+            $text = PatternScan::replace('/([\'"])beatrax\1/', '$1$1', $text);
         }
         if ($isYaml) {
-            $text = (string) preg_replace('/:\s*beatrax\s*$/', ': ', $text);
+            $text = PatternScan::replace('/:\s*beatrax\s*$/', ': ', $text);
         }
 
         if (preg_match(brandProsePattern(), $text) === 1) {

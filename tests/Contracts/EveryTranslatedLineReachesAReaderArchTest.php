@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // TranslationParityArchTest measures en against every locale in both
 // directions, so a line carried by all twenty-six files is in parity by
 // construction whether or not a screen renders it. This asks the question
@@ -129,33 +131,34 @@ function translatedLineReferences(): array
         // A whole literal is that key — and, when it names a branch rather than
         // a leaf, the subtree under it: labelKey('anomaly::alerts.reasons')
         // appends the leaf inside the enum, where no literal key exists.
-        if (preg_match_all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]/', $source, $found) !== false) {
-            foreach ($found[1] as $key) {
-                $exact[$key] = true;
-                $prefixes[rtrim($key, '.').'.'] = true;
-            }
+        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]/', $source);
+
+        foreach ($found[1] as $key) {
+            $exact[$key] = true;
+            $prefixes[rtrim($key, '.').'.'] = true;
         }
 
         // A literal the code then concatenates onto, or opens an interpolation
         // in, is a prefix: 'recurring::fixed_payments.empty_'.$arm reaches
         // empty_all and empty_this_month without spelling either.
-        if (preg_match_all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]\s*\./', $source, $found) !== false) {
-            foreach ($found[1] as $key) {
-                $prefixes[$key] = true;
-            }
+        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]\s*\./', $source);
+
+        foreach ($found[1] as $key) {
+            $prefixes[$key] = true;
         }
-        if (preg_match_all('/"('.TRANSLATED_LINE_KEY.')(?=[{$])/', $source, $found) !== false) {
-            foreach ($found[1] as $key) {
-                $prefixes[$key] = true;
-            }
+
+        $found = PatternScan::all('/"('.TRANSLATED_LINE_KEY.')(?=[{$])/', $source);
+
+        foreach ($found[1] as $key) {
+            $prefixes[$key] = true;
         }
 
         // A group named without any key under it is read whole, by Lang::group
         // or by a helper that appends: labelKey('recurring::review').
-        if (preg_match_all('/[\'"]('.TRANSLATED_LINE_GROUP.')[\'"]/', $source, $found) !== false) {
-            foreach ($found[1] as $group) {
-                $prefixes[$group.'.'] = true;
-            }
+        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_GROUP.')[\'"]/', $source);
+
+        foreach ($found[1] as $group) {
+            $prefixes[$group.'.'] = true;
         }
     }
 
