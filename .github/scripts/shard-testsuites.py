@@ -11,21 +11,23 @@ Balance comes from .github/test-shard-weights.json, which is only a hint: an
 unlisted suite is assigned a default weight and still runs. Stale weights cost
 a slower shard, never a missing test.
 
-These weights look badly wrong and are not worth re-deriving. They track
-something close to test count, and runtime does not follow it -- so the split
-they produce is lopsided, around 245s / 124s / 255s across four runs on main.
-Replacing them with measured per-suite seconds was tried and reverted: it
-evened the predicted load to within 1% and made the real thing slightly worse,
-259s / 107s / 172s over two runs, because the local measurement it was built
-from over-reads AuthFeature. That suite's Argon2id work is memory-hard and a
-contended developer machine is the wrong instrument for it.
+A weight is measured seconds, taken from a real CI run rather than a developer
+machine: the workflow echoes each shard's composition and Pest prints that
+shard's duration, so one run log carries both halves, and cost is attributed
+inside a shard in proportion to test count. Crude within a shard, but it makes
+the shard TOTALS right, which is the thing a wrong set gets wrong; each run
+corrects the previous guess.
 
-What the experiment established is that shard balance is not the lever here at
-all. The longest shard cannot go below Feature, a single ~245s testsuite no
-choice of weights can divide, and the lopsided split already lands within about
-ten seconds of that floor. Evening the load only moves work onto the shard that
-is already the longest. Shortening this workflow means splitting the Feature
-testsuite in phpunit.xml, and nothing short of that will show up on the clock.
+Two earlier sets did not work and are worth not repeating. The original tracked
+something close to test count, which runtime does not follow. Replacing it with
+seconds timed on a laptop was worse still -- that machine over-reads any suite
+whose cost is memory-bound, and it moved work onto the shard that was already
+the longest.
+
+Balance only became worth having once the Feature testsuite was split. Before
+that the longest shard could not go below one indivisible ~245s suite, so every
+set of weights landed within about ten seconds of the same floor and the
+exercise was pointless.
 
 The shard totals do not sum to the full-suite total, and that is expected.
 tests/Helpers belongs to the Unit testsuite, but paratest collects it whatever
