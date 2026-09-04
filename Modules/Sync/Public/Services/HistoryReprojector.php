@@ -236,7 +236,11 @@ final readonly class HistoryReprojector
         $rows = [];
         $seen = [];
 
-        foreach ($query->get(['table_name', 'pk']) as $row) {
+        // Streamed, not fetched: this is the one query in the class with no
+        // limit, and a limit is the wrong bound for it — the caller stamps the
+        // pass window closed afterwards, so a truncated pass puts its own
+        // remainder permanently outside the next one's `created_at >` filter.
+        foreach ($query->select(['table_name', 'pk'])->cursor() as $row) {
             $table = is_string($row->table_name ?? null) ? $row->table_name : '';
             $pk = isset($row->pk) && (is_string($row->pk) || is_numeric($row->pk)) ? (string) $row->pk : '';
             if ($table === '' || $pk === '' || isset($seen[$table.':'.$pk])) {
