@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Ver el resultado de la importación',
 
     'expired_html' => 'La vista previa ha caducado. <a href="/imports/new" class="underline">Vuelve a subir el archivo</a> para intentarlo de nuevo.',
+    'unreadable_html' => 'No se puede leer la vista previa. <a href="/imports/new" class="underline">Vuelve a subir el archivo</a> para intentarlo de nuevo.',
 
     'save_name' => 'Guardar el nombre',
     'account_name_label' => 'Nombre de la cuenta',

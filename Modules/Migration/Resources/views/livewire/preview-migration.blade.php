@@ -1,7 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Migration\Internal\Enums\ConflictResolution')
 @php
-    $stats = [
+    $discarded = $summary === null;
+
+    $stats = $discarded ? [] : [
         ['key' => 'category', 'label' => Lang::get('migration::preview.stats.category'), 'value' => $summary->categoriesCount],
         ['key' => 'account', 'label' => Lang::get('migration::preview.stats.account'), 'value' => $summary->accountsCount],
         ['key' => 'payee', 'label' => Lang::get('migration::preview.stats.payee'), 'value' => $summary->counterpartiesCount],
@@ -9,8 +11,8 @@
         ['key' => 'budget', 'label' => Lang::get('migration::preview.stats.budget'), 'value' => $summary->budgetMonthsCount],
     ];
 
-    $stagedNothing = $summary->stagedNothing();
-    $everythingClean = ! $stagedNothing && $summary->unmappedCount() === 0;
+    $stagedNothing = ! $discarded && $summary->stagedNothing();
+    $everythingClean = ! $discarded && ! $stagedNothing && $summary->unmappedCount() === 0;
 @endphp
 
 <div class="space-y-8 pb-24">
@@ -19,6 +21,18 @@
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.subtitle') }}</p>
     </header>
 
+    {{-- A discarded run kept its row and lost its staging, so the counts, the
+         decisions and both footer actions have nothing left to act on. --}}
+    @if ($discarded)
+        <x-core::alert tone="warning" role="alert">
+            <p>{{ Lang::get('migration::preview.discarded') }}</p>
+            <p class="mt-2">
+                <a href="{{ route('migrations.new') }}" class="tap-link font-medium underline underline-offset-2">
+                    {{ Lang::get('migration::preview.discarded_link') }}
+                </a>
+            </p>
+        </x-core::alert>
+    @else
     {{-- 5-up mapped-counts stat grid — wraps to 2-up at phone width. --}}
     <section class="grid grid-cols-2 gap-4 sm:grid-cols-5" style="font-feature-settings: 'tnum';">
         @foreach ($stats as $stat)
@@ -107,4 +121,5 @@
             </div>
         </div>
     </footer>
+    @endif
 </div>

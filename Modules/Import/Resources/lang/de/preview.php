@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Importergebnis ansehen',
 
     'expired_html' => 'Die Vorschau ist abgelaufen. <a href="/imports/new" class="underline">Lade die Datei erneut hoch</a>, um es noch einmal zu versuchen.',
+    'unreadable_html' => 'Die Vorschau kann nicht gelesen werden. <a href="/imports/new" class="underline">Lade die Datei erneut hoch</a>, um es noch einmal zu versuchen.',
 
     'save_name' => 'Namen speichern',
     'account_name_label' => 'Kontoname',

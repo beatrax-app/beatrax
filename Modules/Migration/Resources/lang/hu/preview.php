@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Ez az export nem tartalmazott importálnivalót — itt nincs mit megerősíteni.',
 
+    'discarded' => 'Elvetetted ezt az importot, így itt már nincs mit megnézni.',
+    'discarded_link' => 'Új import indítása',
+
     'groups' => [
         'conflict' => 'Döntést igényel',
         'extra' => 'Nem importálva',

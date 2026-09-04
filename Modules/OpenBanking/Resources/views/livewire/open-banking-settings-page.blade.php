@@ -21,6 +21,15 @@
         >{{ $flashMessage }}</x-core::alert>
     @endif
 
+    {{-- The toggle below reads "off" whenever the credentials cannot be read,
+         which on its own would say the reader turned it off. --}}
+    @if ($credentialsUnreadable)
+        <x-core::alert tone="danger" role="alert" data-testid="ob-credentials-unreadable">
+            <p>{{ Lang::get('openbanking::messages.page.credentials_unreadable') }}</p>
+            <p class="mt-2">{{ Lang::get('openbanking::messages.page.credentials_unreadable_next') }}</p>
+        </x-core::alert>
+    @endif
+
     <x-core::card>
         <div class="flex items-start justify-between gap-3">
             <div class="flex-1">

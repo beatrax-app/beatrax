@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Tento export neobsahoval nic k importu — není tu co potvrzovat.',
 
+    'discarded' => 'Tento import jsi zahodil, takže tu už není co prohlížet.',
+    'discarded_link' => 'Spustit nový import',
+
     'groups' => [
         'conflict' => 'Vyžaduje tvé rozhodnutí',
         'extra' => 'Neimportováno',

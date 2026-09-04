@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'De laatste scan is niet voltooid. Probeer Nu scannen of verbind dit postvak opnieuw.',
     'oauth_state_mismatch' => 'Deze koppelingslink is verlopen of al gebruikt. Start de koppeling opnieuw.',
+    'oauth_client_missing' => 'De eenmalige installatie voor die e-mailprovider is op dit apparaat niet afgerond, dus er is nog niets om mee te koppelen. Druk opnieuw op Koppelen om die af te ronden.',
     'oauth_no_code' => 'Je mailprovider stuurde je terug zonder de code die Beatrax nodig heeft om af te ronden, dus er is geen postvak gekoppeld. Start de koppeling opnieuw.',
     'oauth_grant_refused' => 'Je mailprovider weigerde de toestemming die Beatrax had gekregen — die is verlopen of ingetrokken. Start de koppeling opnieuw en geef toestemming.',
     'oauth_exchange_failed' => 'Je mailprovider heeft de koppeling niet afgerond, dus er is geen postvak toegevoegd. Probeer het over een paar minuten opnieuw.',

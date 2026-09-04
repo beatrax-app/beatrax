@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Ver o resultado da importação',
 
     'expired_html' => 'A pré-visualização expirou. <a href="/imports/new" class="underline">Volta a carregar o ficheiro</a> para tentares de novo.',
+    'unreadable_html' => 'Não é possível ler a pré-visualização. <a href="/imports/new" class="underline">Volta a carregar o ficheiro</a> para tentares de novo.',
 
     'save_name' => 'Guardar o nome',
     'account_name_label' => 'Nome da conta',

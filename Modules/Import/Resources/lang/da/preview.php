@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Se importresultatet',
 
     'expired_html' => 'Forhåndsvisningen er udløbet. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
+    'unreadable_html' => 'Forhåndsvisningen kan ikke læses. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
 
     'save_name' => 'Gem navnet',
     'account_name_label' => 'Kontonavn',

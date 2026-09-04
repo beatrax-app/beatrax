@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Denne eksporten inneholdt ingenting å importere — det er ingenting å bekrefte her.',
 
+    'discarded' => 'Du forkastet denne importen, så det er ingenting igjen å forhåndsvise her.',
+    'discarded_link' => 'Start ny import',
+
     'groups' => [
         'conflict' => 'Krever din avgjørelse',
         'extra' => 'Ikke importert',

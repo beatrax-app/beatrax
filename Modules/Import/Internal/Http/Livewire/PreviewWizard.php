@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
+use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\OwnAccountPrompt;
@@ -68,6 +69,11 @@ final class PreviewWizard extends Component
     public string $googlePlayAccountName = '';
 
     public bool $previewExpired = false;
+
+    // Separate from previewExpired because the two are different answers: an
+    // evicted entry is gone and a malformed one is present and will not
+    // decode, and telling the reader it expired names a cause that is not it.
+    public bool $previewUnreadable = false;
 
     public function mount(int $id, CurrentUser $currentUser): void
     {
@@ -318,13 +324,21 @@ final class PreviewWizard extends Component
     // and stays expired.
     private function confirmationIsBlocked(CurrentUser $currentUser, PreviewCache $cache, OwnAccountPrompt $prompt): bool
     {
-        if ($prompt->needsIcsAccountName($this->importRunId, $currentUser)
-            || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)
-            || $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser)) {
+        try {
+            if ($prompt->needsIcsAccountName($this->importRunId, $currentUser)
+                || $prompt->needsPaypalAccountName($this->importRunId, $currentUser)
+                || $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser)) {
+                return true;
+            }
+
+            return $cache->head($this->importRunId)?->confirmRefusal() !== null;
+        } catch (PreviewCacheCorruptedException) {
+            // Nothing to confirm out of an entry that will not decode, and the
+            // reader stays on the wizard where the line above says so.
+            $this->previewUnreadable = true;
+
             return true;
         }
-
-        return $cache->head($this->importRunId)?->confirmRefusal() !== null;
     }
 
     public function discard(
@@ -347,17 +361,29 @@ final class PreviewWizard extends Component
     ): View {
         $this->assertOwnedRun($currentUser);
 
-        $head = $cache->head($this->importRunId);
-        $preview = $head === null
-            ? null
-            : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
-        $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
-        $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
-        $needsGooglePlayAccountName = $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser);
+        // One try around every read that reaches the preview cache, not just
+        // the head: the row page and all three own-account prompts open the
+        // same entry, so a malformed one stops each of them in turn.
+        try {
+            $head = $cache->head($this->importRunId);
+            $preview = $head === null
+                ? null
+                : PreviewCache::resultFrom($head, $cache->rows($this->importRunId, 0, $this->visibleRows));
+            $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
+            $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
+            $needsGooglePlayAccountName = $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser);
+        } catch (PreviewCacheCorruptedException) {
+            $this->previewUnreadable = true;
+            $preview = null;
+            $needsIcsAccountName = false;
+            $needsPaypalAccountName = false;
+            $needsGooglePlayAccountName = false;
+        }
 
         return $views->make('import::livewire.preview-wizard', [
             'preview' => $preview,
             'previewExpired' => $this->previewExpired,
+            'previewUnreadable' => $this->previewUnreadable,
             'alreadyImported' => $this->alreadyImported($db),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,

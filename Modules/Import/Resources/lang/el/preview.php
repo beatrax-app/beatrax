@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Δείτε το αποτέλεσμα της εισαγωγής',
 
     'expired_html' => 'Η προεπισκόπηση έληξε. <a href="/imports/new" class="underline">Ανέβασε ξανά το αρχείο</a> για να δοκιμάσεις πάλι.',
+    'unreadable_html' => 'Η προεπισκόπηση δεν μπορεί να διαβαστεί. <a href="/imports/new" class="underline">Ανέβασε ξανά το αρχείο</a> για να δοκιμάσεις πάλι.',
 
     'save_name' => 'Αποθήκευση ονόματος',
     'account_name_label' => 'Όνομα λογαριασμού',

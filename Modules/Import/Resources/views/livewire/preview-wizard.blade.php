@@ -126,6 +126,13 @@
                 </a>
             </p>
         </x-core::alert>
+    {{-- Ahead of the expired arm, and never folded into it: the entry is
+         present and will not decode, so "it expired" would name the one cause
+         already ruled out. Both end at the same re-upload. --}}
+    @elseif ($previewUnreadable)
+        <x-core::alert tone="warning" role="alert">
+            <p>{!! Lang::get('import::preview.unreadable_html') !!}</p>
+        </x-core::alert>
     @elseif ($preview === null || $previewExpired)
         <x-core::alert tone="warning">
             <p>{!! Lang::get('import::preview.expired_html') !!}</p>

@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Dieser Export enthielt nichts zum Importieren — hier gibt es nichts zu bestätigen.',
 
+    'discarded' => 'Du hast diesen Import verworfen, hier gibt es also nichts mehr in der Vorschau.',
+    'discarded_link' => 'Neuen Import starten',
+
     'groups' => [
         'conflict' => 'Braucht deine Entscheidung',
         'extra' => 'Nicht importiert',

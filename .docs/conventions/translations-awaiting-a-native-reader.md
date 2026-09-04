@@ -295,6 +295,20 @@ on how many reports are pinned. Whoever moves `PinCap::MAX_PINS` gets the right
 arm in every language without touching a string, and Slovenian's dual is
 reachable at a cap of two.
 
+### The lines a screen shows when it cannot show what was asked for
+
+Four screens that used to answer with a crash page now answer with a sentence,
+and the five new lines are spread over three modules. Five markers came out of
+writing them.
+
+| Locale | File · key | What is open |
+|---|---|---|
+| `pl` | `Modules/Migration/Resources/lang/pl/preview.php` · `discarded` | Polish marks gender in the past tense, and this line names something *the reader themselves* did. It is written impersonally — *Ten import odrzucono* — where the other twenty-five name the reader. That is the only gender-free option, and it drops the agent every sibling keeps. Confirm it still reads as their own doing rather than as something that happened to them. |
+| `el` | `Modules/EmailScan/Resources/lang/el/inboxes.php` · `oauth_client_missing` | The one-time setup is named with `wizard.intro`'s own periphrasis, *ρύθμιση που γίνεται μία φορά*, which carries as a gloss and is heavy as a sentence subject. *Εφάπαξ* and *αρχική ρύθμιση* are both shorter; the wizard uses neither, so a reader has to settle which of the three the product says. |
+| `tr` | `Modules/EmailScan/Resources/lang/tr/inboxes.php` · `oauth_client_missing` | The sentence has to name the button the reader presses, and `connect_gmail` reads *Gmail bağla* with a lowercase verb — alone among the twenty-six, it gives the button no standalone name. Written here as *Bağla düğmesine*, which avoids the `Bağla'ya` apostrophe; spelling the whole label out is the alternative. |
+| `et` | `Modules/OpenBanking/Resources/lang/et/messages.php` · `page.credentials_unreadable` | *Volitusi* is this file's own word for the stored credentials, taken from `disconnect.body`, so it was reused rather than a second word introduced. In Estonian it reads more naturally as an authority that was granted than as a secret held on disk; *pääsuandmed* may be the word. |
+| `lv` | `Modules/OpenBanking/Resources/lang/lv/messages.php` · `page.credentials_unreadable` | Naming the feature in full stacks three genitives ahead of the noun — *atvērtās banku saskarnes piekļuves datus*. It is grammatical and it is heavy, and the screen the alert sits on is already titled with the term. |
+
 ## Checked and deliberately left alone
 
 Recording these matters as much as the open list — without it the next reviewer

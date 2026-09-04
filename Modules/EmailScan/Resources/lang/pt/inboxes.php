@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'A última análise não foi concluída. Experimente «Analisar agora» ou volte a ligar esta caixa.',
     'oauth_state_mismatch' => 'Esse link de ligação expirou ou já foi utilizado. Recomeça a ligação.',
+    'oauth_client_missing' => 'A configuração única desse fornecedor de e-mail não está concluída neste dispositivo, por isso ainda não há nada com que estabelecer a ligação. Carrega novamente em Ligar para concluir a configuração.',
     'oauth_no_code' => 'O teu fornecedor de e-mail devolveu-te sem o código de que o Beatrax precisa para terminar, por isso não foi ligada nenhuma caixa. Recomeça a ligação.',
     'oauth_grant_refused' => 'O teu fornecedor de e-mail recusou a permissão dada ao Beatrax — expirou ou foi retirada. Recomeça a ligação e concede-a.',
     'oauth_exchange_failed' => 'O teu fornecedor de e-mail não concluiu a ligação, por isso não foi adicionada nenhuma caixa. Tenta outra vez daqui a alguns minutos.',

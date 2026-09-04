@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Bu dışa aktarımda içe aktarılacak bir şey yoktu — burada onaylanacak bir şey yok.',
 
+    'discarded' => 'Bu içe aktarmayı attın, bu yüzden burada önizlenecek bir şey kalmadı.',
+    'discarded_link' => 'Yeni içe aktarma başlat',
+
     'groups' => [
         'conflict' => 'Kararını bekliyor',
         'extra' => 'İçe aktarılmadı',

@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Esta exportación no contenía nada que importar: aquí no hay nada que confirmar.',
 
+    'discarded' => 'Descartaste esta importación, así que aquí ya no queda nada en la vista previa.',
+    'discarded_link' => 'Iniciar una importación nueva',
+
     'groups' => [
         'conflict' => 'Necesita tu decisión',
         'extra' => 'No importado',

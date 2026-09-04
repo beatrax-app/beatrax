@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Bekijk het importresultaat',
 
     'expired_html' => 'De voorvertoning is verlopen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
+    'unreadable_html' => 'De voorvertoning kan niet worden gelezen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
 
     'save_name' => 'Naam opslaan',
     'account_name_label' => 'Rekeningnaam',

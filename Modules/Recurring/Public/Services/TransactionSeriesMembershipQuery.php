@@ -191,8 +191,12 @@ final readonly class TransactionSeriesMembershipQuery
             if ($iban === '') {
                 continue;
             }
-            $key = $this->counterpartyKey->forIban($iban, $user->id);
-            if ($key === CounterpartyKey::NONE) {
+            // Null on the same request a sealed IBAN two lines up is blanked
+            // on: the key is not held. Skipping keeps the two spellings of one
+            // unreadable row to a single behaviour -- a row written in the
+            // clear used to reach the digest and take the whole screen down.
+            $key = $this->counterpartyKey->forIbanOrNull($iban, $user->id);
+            if ($key === null || $key === CounterpartyKey::NONE) {
                 continue;
             }
             $idsByKey[$key."\0".self::toString($row->currency)][] = self::toInt($row->id);

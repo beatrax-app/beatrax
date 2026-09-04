@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Vklopi odprto bančništvo',
         'toggle_connected' => 'Povezano z banko :bank prek Enable Bankinga.',
         'toggle_off_help' => 'Privzeto izklopljeno. Zahteva enkratno potrditev in vodeno nastavitev.',
+        'credentials_unreadable' => 'Poverilnic za odprto bančništvo, shranjenih v tej napravi, ni mogoče prebrati, zato se Beatrax ne more povezati s tvojo banko.',
+        'credentials_unreadable_next' => 'Znova opravi vodeno nastavitev, da jih zamenjaš. Transakcije, ki so že uvožene, ostanejo nedotaknjene.',
         'reconfirm_body' => 'Tvoja privolitev je potekla, preden smo lahko dokončali povezavo. Znova potrdi, da dokončaš vklop odprtega bančništva.',
         'reconfirm_button' => 'Znova potrdi za dokončanje',
     ],

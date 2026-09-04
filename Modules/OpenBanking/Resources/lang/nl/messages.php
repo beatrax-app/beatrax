@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Open banking inschakelen',
         'toggle_connected' => 'Verbonden met :bank via Enable Banking.',
         'toggle_off_help' => 'Standaard uit. Vereist een eenmalige bevestiging en begeleide installatie.',
+        'credentials_unreadable' => 'De open banking-gegevens die op dit apparaat zijn opgeslagen kunnen niet worden gelezen, dus Beatrax kan je bank niet bereiken.',
+        'credentials_unreadable_next' => 'Doorloop de begeleide installatie opnieuw om ze te vervangen. Al geïmporteerde transacties blijven ongemoeid.',
         'reconfirm_body' => 'Je bevestiging is verlopen voordat we de verbinding konden voltooien. Bevestig opnieuw om open banking af te ronden.',
         'reconfirm_button' => 'Bevestig opnieuw om af te ronden',
     ],

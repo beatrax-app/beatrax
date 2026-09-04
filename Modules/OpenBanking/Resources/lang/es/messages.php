@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Activar el open banking',
         'toggle_connected' => 'Conectado a :bank a través de Enable Banking.',
         'toggle_off_help' => 'Desactivado por defecto. Requiere una aceptación única y una configuración guiada.',
+        'credentials_unreadable' => 'No se pueden leer las credenciales de open banking guardadas en este dispositivo, así que Beatrax no puede conectarse con tu banco.',
+        'credentials_unreadable_next' => 'Vuelve a hacer la configuración guiada para reemplazarlas. Las transacciones ya importadas no se ven afectadas.',
         'reconfirm_body' => 'Tu aceptación caducó antes de que pudiéramos terminar la conexión. Vuelve a confirmarla para terminar de activar el open banking.',
         'reconfirm_button' => 'Vuelve a confirmar para terminar',
     ],

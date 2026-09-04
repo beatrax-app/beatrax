@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Open banking özelliğini etkinleştir',
         'toggle_connected' => 'Enable Banking üzerinden :bank bankasına bağlı.',
         'toggle_off_help' => 'Varsayılan olarak kapalıdır. Tek seferlik bir onay ve rehberli kurulum gerektirir.',
+        'credentials_unreadable' => 'Bu cihazda kayıtlı open banking kimlik bilgileri okunamıyor, bu yüzden Beatrax bankana ulaşamıyor.',
+        'credentials_unreadable_next' => 'Bunları değiştirmek için rehberli kurulumu yeniden çalıştır. Önceden içe aktarılmış işlemler bundan etkilenmez.',
         'reconfirm_body' => 'Bağlantıyı tamamlayamadan onayının süresi doldu. Open banking kurulumunu bitirmek için yeniden onayla.',
         'reconfirm_button' => 'Bitirmek için yeniden onayla',
     ],

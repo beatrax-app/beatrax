@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Den senaste skanningen slutfördes inte. Prova Skanna nu eller anslut den här inkorgen på nytt.',
     'oauth_state_mismatch' => 'Den här anslutningslänken har gått ut eller är redan använd. Börja om kopplingen.',
+    'oauth_client_missing' => 'Engångskonfigurationen för den e-postleverantören är inte klar på den här enheten, så det finns ännu inget att ansluta med. Tryck på Anslut igen för att slutföra den.',
     'oauth_no_code' => 'Din e-postleverantör skickade tillbaka dig utan koden Beatrax behöver för att slutföra, så ingen brevlåda kopplades. Börja om kopplingen.',
     'oauth_grant_refused' => 'Din e-postleverantör nekade behörigheten Beatrax fått — den har gått ut eller dragits tillbaka. Börja om kopplingen och godkänn den.',
     'oauth_exchange_failed' => 'Din e-postleverantör slutförde inte kopplingen, så ingen brevlåda lades till. Försök igen om några minuter.',

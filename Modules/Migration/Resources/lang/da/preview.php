@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Denne eksport indeholdt intet at importere — der er ikke noget at bekræfte her.',
 
+    'discarded' => 'Du kasserede denne import, så der er ikke mere at forhåndsvise her.',
+    'discarded_link' => 'Start ny import',
+
     'groups' => [
         'conflict' => 'Kræver din beslutning',
         'extra' => 'Ikke importeret',

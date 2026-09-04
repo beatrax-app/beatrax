@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => "Cet export ne contenait rien à importer — il n'y a rien à confirmer ici.",
 
+    'discarded' => "Tu as abandonné cet import, il n'y a donc plus rien à afficher dans l'aperçu.",
+    'discarded_link' => 'Démarrer un nouvel import',
+
     'groups' => [
         'conflict' => 'Demande ta décision',
         'extra' => 'Non importé',

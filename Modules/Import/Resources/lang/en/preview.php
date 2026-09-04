@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'View the import result',
 
     'expired_html' => 'The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
+    'unreadable_html' => 'This preview cannot be read. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
 
     'save_name' => 'Save name',
     'account_name_label' => 'Account name',

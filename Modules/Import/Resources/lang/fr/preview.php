@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Voir le résultat de l\'import',
 
     'expired_html' => 'L\'aperçu a expiré. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
+    'unreadable_html' => 'L\'aperçu ne peut pas être lu. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
 
     'save_name' => 'Enregistrer le nom',
     'account_name_label' => 'Nom du compte',

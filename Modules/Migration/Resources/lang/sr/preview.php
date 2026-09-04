@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Ovaj izvoz nije sadržao ništa za uvoz — ovde nema šta da se potvrdi.',
 
+    'discarded' => 'Odbacio si ovaj uvoz, pa ovde više nema šta da se pregleda.',
+    'discarded_link' => 'Pokreni novi uvoz',
+
     'groups' => [
         'conflict' => 'Traži tvoju odluku',
         'extra' => 'Nije uvezeno',

@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'This export held nothing to import — there is nothing here to confirm.',
 
+    'discarded' => 'You discarded this import, so there is nothing left to preview.',
+    'discarded_link' => 'Start a new import',
+
     'groups' => [
         'conflict' => 'Needs your decision',
         'extra' => 'Not imported',
