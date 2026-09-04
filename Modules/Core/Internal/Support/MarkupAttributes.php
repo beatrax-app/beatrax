@@ -80,7 +80,7 @@ final class MarkupAttributes
         $quote = $tag[$at] ?? '';
 
         if ($quote === '"' || $quote === "'") {
-            $end = MarkupLexer::pastQuote($tag, $quote, $at, $length);
+            $end = MarkupLexer::pastQuote($tag, $quote, $at);
 
             return [substr($tag, $at + 1, $end - $at - 2), $end];
         }
