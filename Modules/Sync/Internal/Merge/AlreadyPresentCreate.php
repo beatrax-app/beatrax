@@ -40,7 +40,7 @@ final readonly class AlreadyPresentCreate
             return true;
         }
 
-        if (! $this->collisions->contradicts($table, $pk, $payload)) {
+        if (! $this->collisions->contradicts($table, $pk, $payload, SuppliedCreationTime::seededValueFor($fields))) {
             // The same row, so this is the create arriving again — and a
             // transport that splits one row's ops across two frames makes the
             // second half look exactly like that. Returning here without it

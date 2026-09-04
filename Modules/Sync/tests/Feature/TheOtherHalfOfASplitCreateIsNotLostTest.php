@@ -93,3 +93,61 @@ it('keeps the tail of a create that was split across two batches', function (): 
         ->and($row->payment_type)->toBe('direct_debit', 'the tail of the create must not be discarded')
         ->and((int) $row->counterparty_id)->toBe($cpId);
 });
+
+it('does not call the rest of a create a collision when it seeded the birth time itself', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = (int) splitTailUser('split-seeded-time')->id;
+
+    test()->actingAs(User::query()->findOrFail($userId));
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+    app(GdkKeyringService::class)->generateAndPersist($userId, $session);
+
+    $accountId = (int) $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId, 'name' => 'Main', 'slug' => 'main-'.$userId, 'kind' => 'checking',
+        'iban' => 'NL00SEED'.str_pad((string) $userId, 10, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+    $runId = (int) $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId, 'source_format' => 'demo', 'raw_file_path' => 'i.csv',
+        'sha256' => str_repeat('b', 64), 'uploaded_at' => '2026-06-01 00:00:00',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+
+    // The half that lands first carries no created_at, so the applier seeds one
+    // from the op's HLC. That invented value is what made the REST of the same
+    // create read as a different row wearing id 401 — quarantined as a primary
+    // key collision, on a device that had never seen the id before.
+    $head = [
+        'account_id' => $accountId, 'type' => 'expense', 'posted_at' => '2026-06-10',
+        'booked_at' => '2026-06-10 12:00:00', 'value_date' => '2026-06-10',
+        'amount_minor' => -1999, 'currency' => 'EUR', 'settled_amount_minor' => -1999,
+        'settled_currency' => 'EUR', 'counterparty_normalized' => 'seeded',
+        'normalization_version' => 3, 'source_format' => 'demo', 'import_run_id' => $runId,
+        'source_row_index' => 9, 'fingerprint' => str_repeat('5', 64), 'fingerprint_version' => 3,
+        'status' => 'cleared',
+    ];
+
+    $batchOne = [];
+    foreach ($head as $f => $v) {
+        $batchOne['transactions'][401][$f] = [splitTailEntry(401, $f, $v, $userId)];
+    }
+
+    // The whole create comes back — a recoverable quarantine re-drive delivers
+    // it complete — so this half DOES reach the insert, fails on the primary
+    // key, and is judged against the row the first half wrote.
+    $batchTwo = [];
+    foreach ($head + ['created_at' => '2026-06-10 12:00:00', 'payment_type' => 'pin'] as $f => $v) {
+        $batchTwo['transactions'][401][$f] = [splitTailEntry(401, $f, $v, $userId)];
+    }
+
+    $touched = [];
+    $applier = app(OpLogEntryApplier::class);
+    $applier->applyCreates($batchOne, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($batchTwo, [], $userId, '2026-06-10 12:00:00', $touched);
+
+    expect($db->connection()->table('op_log_quarantine')->where('reason', 'primary_key_collision')->count())
+        ->toBe(0, 'one create split in two is not two devices minting one id')
+        ->and($db->connection()->table('transactions')->where('id', 401)->value('payment_type'))
+        ->toBe('pin');
+});
