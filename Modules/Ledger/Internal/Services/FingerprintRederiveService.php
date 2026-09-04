@@ -33,6 +33,10 @@ final readonly class FingerprintRederiveService
         $connection = $this->db->connection();
         $targetVersion = $this->fingerprints->version();
 
+        // Filtered and streamed rather than fetched: this ran as a migration,
+        // which a phone applies in full, and reading a whole five-year ledger
+        // of twenty columns at once cost 52 MB against a 128 MB ceiling — most
+        // of it rows already at the target version.
         $rows = $connection->table('transactions')
             ->select([
                 'id',
@@ -58,8 +62,8 @@ final readonly class FingerprintRederiveService
                 'source_row_index',
                 'source_ref',
             ])
-            ->orderBy('id')
-            ->get();
+            ->where('normalization_version', '<', $targetVersion)
+            ->orderBy('id');
 
         /** @var array<string, int> $seen Maps `${user_id}|${fingerprint}` to the first transactions.id that produced it */
         $seen = [];
@@ -68,12 +72,7 @@ final readonly class FingerprintRederiveService
         /** @var list<array{existing_id:int,colliding_id:int,fingerprint:string}> $collisions */
         $collisions = [];
 
-        foreach ($rows as $row) {
-            $existingVersion = self::toInt($row->normalization_version);
-            if ($existingVersion >= $targetVersion) {
-                continue;
-            }
-
+        foreach ($rows->cursor() as $row) {
             $canonical = $this->buildCanonicalFromRow($row, $targetVersion);
             $newFingerprint = $this->fingerprints->compose($canonical);
             $userKey = (string) self::toIntOrNull($row->user_id, 0);

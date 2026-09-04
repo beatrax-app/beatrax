@@ -16,6 +16,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [Ingestion pipeline](ingestion-pipeline.md) | The end-to-end flow from raw source file (CSV / CAMT / MT940 / PDF / `.eml`) to canonical `Transaction` row, including the idempotency contract |
 | [Chain resolution](chain-resolution.md) | PayPal funding chains, ICS bulk-iDEAL settlement chains, the `pair_transaction_id` linkage, and the known-counterparty-IBAN alias bridge |
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the priority fold in which the last matching rule wins, and the receipt-vs-statement enrichment conflict resolver |
+| [A read bounded by how much the user has](reads-bounded-by-the-user.md) | What a five-year ledger costs the reads that have no bound, which whole-table reads are correct as written, and the guard that keeps a new one from landing |
 | [Measuring write cost](measuring-write-cost.md) | Why any bulk-write timing taken inside the test suite looks quadratic, and how to take one that does not |
 | [The Argon2id cost](argon2id-cost.md) | The one work factor every passphrase-derived key is stretched at, how it is pinned, and why the suite is allowed to derive at libsodium's floor |
 | [SQLite write locks](sqlite-write-locks.md) | Why `busy_timeout` cannot save a read-then-write transaction, and the `transaction_mode = IMMEDIATE` that decides who waits |

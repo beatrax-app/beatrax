@@ -14,6 +14,7 @@ use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Tests\Doubles\FakeInboxMessageQuery;
+use Psr\Log\LoggerInterface;
 
 // The handoff ImportRun is anchored on a sha256 of user + hour, and import_runs
 // is UNIQUE (user_id, sha256). Two dispatches inside one hour — a retry, a
@@ -102,6 +103,7 @@ beforeEach(function (): void {
             $this->app->make(EmlBlobStore::class),
             $this->app->make(RecordReceipt::class),
             $this->app->make(ReceiptLedgerBridge::class),
+            $this->app->make(LoggerInterface::class),
         );
     };
 });
