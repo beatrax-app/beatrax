@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
@@ -77,9 +78,9 @@ function tablesWithAnIdScheme(): array
     foreach (rowIdentitySourceFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        if (preg_match_all("/DerivedRowId::for\(\s*'([a-z_]+)'/", $source, $found) !== false) {
-            $named = [...$named, ...$found[1]];
-        }
+        $found = PatternScan::all("/DerivedRowId::for\(\s*'([a-z_]+)'/", $source);
+
+        $named = [...$named, ...$found[1]];
 
         if (str_contains($source, 'DeviceMintedRowId::mint(')) {
             $minting[] = $path;
@@ -94,9 +95,9 @@ function tablesWithAnIdScheme(): array
 
     foreach ($minting as $path) {
         foreach (mintingWindows((string) file_get_contents($path)) as $window) {
-            if (preg_match_all("/table\(\s*'([a-z_]+)'\s*\)|table:\s*'([a-z_]+)'/", $window, $found) !== false) {
-                $named = [...$named, ...array_filter([...$found[1], ...$found[2]])];
-            }
+            $found = PatternScan::all("/table\(\s*'([a-z_]+)'\s*\)|table:\s*'([a-z_]+)'/", $window);
+
+            $named = [...$named, ...array_filter([...$found[1], ...$found[2]])];
 
             foreach ($byModel as $class => $table) {
                 if (preg_match('/\b'.preg_quote($class, '/').'\b/', $window) === 1) {

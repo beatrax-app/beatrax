@@ -219,7 +219,7 @@ function ledgerDayCodeLines(string $path): array
     $source = (string) file_get_contents($path);
 
     if (str_ends_with($path, '.blade.php')) {
-        $source = (string) preg_replace_callback(
+        $source = PatternScan::replaceCallback(
             '/\{\{--.*?--\}\}/s',
             static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
             $source,

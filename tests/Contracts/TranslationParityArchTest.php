@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Translation\MessageSelector;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 
 // Parity is on key paths, not values: a translation intentionally identical to
 // English (a proper noun, a symbol) still passes. Placeholders are checked too —
@@ -72,13 +73,10 @@ function translationParityPlaceholders(string $line, ?string $gluedToken): array
         return str_contains($line, $gluedToken) ? [$gluedToken] : [];
     }
 
-    $tokens = [];
-    if (preg_match_all('/:[a-zA-Z_][a-zA-Z0-9_]*/', $line, $matches) !== false) {
-        $tokens = $matches[0];
-    }
-    if (preg_match_all('/%[sd]/', $line, $formats) !== false) {
-        $tokens = array_merge($tokens, $formats[0]);
-    }
+    $matches = PatternScan::all('/:[a-zA-Z_][a-zA-Z0-9_]*/', $line);
+    $formats = PatternScan::all('/%[sd]/', $line);
+
+    $tokens = array_merge($matches[0], $formats[0]);
 
     // A set, not a multiset: a locale needing three plural segments where
     // English needs two legitimately repeats :count an extra time.
@@ -94,7 +92,7 @@ function translationParityPlaceholders(string $line, ?string $gluedToken): array
 // for :count — "1 payment of €5 due" still reports its leading "1".
 function translationParityWithoutAmounts(string $segment): string
 {
-    return (string) preg_replace(
+    return PatternScan::replace(
         '/\p{Sc}[\s\x{00A0}]*\d[\d.,]*|\d[\d.,]*[\s\x{00A0}]*\p{Sc}/u',
         '',
         $segment
