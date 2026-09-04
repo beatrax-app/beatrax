@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
@@ -39,9 +40,6 @@ function touchCaptionBladeFiles(): array
 }
 
 /**
- * The whole element, closing tag included, because an attribute here holds
- * `$pot->id` and a scan that stopped at the first ">" would cut the tag in half.
- *
  * @return list<array{file: string, line: int, label: string, caption: string}> the two lang keys each call site names
  */
 function touchCaptionCallSites(): array
@@ -51,26 +49,32 @@ function touchCaptionCallSites(): array
     foreach (touchCaptionBladeFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        $matches = PatternScan::setsWithOffsets(
-            '~<x-core::emoji-action\b(.*?)</x-core::emoji-action>~s',
-            $source,
-        );
-
-        foreach ($matches as $match) {
-            $body = $match[1][0];
-            $label = PatternScan::first('~:label="Lang::get\(\'([^\']+)\'\)"~', $body);
-            $caption = PatternScan::first('~:caption="Lang::get\(\'([^\']+)\'\)"~', $body);
+        foreach (MarkupSource::elements($source, 'x-core::emoji-action') as $action) {
+            $label = touchCaptionLangKey($action->attribute(':label'));
+            $caption = touchCaptionLangKey($action->attribute(':caption'));
 
             $sites[] = [
                 'file' => $path,
-                'line' => substr_count(substr($source, 0, (int) $match[0][1]), "\n") + 1,
-                'label' => $label[1] ?? '',
-                'caption' => $caption[1] ?? ($label[1] ?? ''),
+                'line' => $action->line($source),
+                'label' => $label,
+                'caption' => $caption === '' ? $label : $caption,
             ];
         }
     }
 
     return $sites;
+}
+
+/** @return string the lang key a bound attribute names, or '' when it names none */
+function touchCaptionLangKey(?string $expression): string
+{
+    if ($expression === null) {
+        return '';
+    }
+
+    $found = PatternScan::first('~^Lang::get\(\'([^\']+)\'\)$~', trim($expression));
+
+    return $found[1] ?? '';
 }
 
 /** @return list<string> every locale the app ships */
@@ -229,9 +233,16 @@ it('places the tip against the viewport rather than inside what clips it', funct
 it('lets a row of five actions wrap rather than clip its last one', function (): void {
     $blade = (string) file_get_contents(base_path('Modules/Pots/Resources/views/livewire/pots-page.blade.php'));
 
-    $row = PatternScan::first('~<div class="(flex w-full[^"]*)">\s*\{\{--~', $blade);
+    $rows = [];
+    foreach (MarkupSource::elements($blade, 'div') as $element) {
+        $classes = $element->classes();
+        if (array_slice($classes, 0, 2) === ['flex', 'w-full']) {
+            $rows[] = $classes;
+        }
+    }
 
-    expect($row[1] ?? '')->toContain('flex-wrap');
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0])->toContain('flex-wrap');
 });
 
 /** @return string every unlayered `(pointer: coarse)` block in the stylesheet, concatenated */

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -162,7 +163,6 @@ function directionalShareLine(array $tokens, int $index): int
 function directionalBarBindings(): array
 {
     $patterns = [
-        ':value' => '/<x-core::progress-bar\b[^>]*?:value="([^"]*)"/s',
         'aria-valuenow' => '/aria-valuenow="\{\{\s*(.*?)\s*\}\}"/s',
         'width' => '/style="[^"]*width:\s*\{\{\s*(.*?)\s*\}\}%/s',
         'height' => '/style="[^"]*height:\s*\{\{\s*(.*?)\s*\}\}%/s',
@@ -173,6 +173,20 @@ function directionalBarBindings(): array
     foreach (directionalBladeFiles() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
         $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+
+        foreach (MarkupSource::elements($source, 'x-core::progress-bar') as $bar) {
+            $bound = $bar->attribute(':value');
+
+            if ($bound !== null) {
+                $bindings[] = [
+                    'path' => $relative,
+                    'line' => $bar->line($source),
+                    'attribute' => ':value',
+                    'expression' => trim($bound),
+                    'source' => $source,
+                ];
+            }
+        }
 
         foreach ($patterns as $attribute => $pattern) {
             $matches = PatternScan::allWithOffsets($pattern, $source);
