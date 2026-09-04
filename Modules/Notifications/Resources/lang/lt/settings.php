@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Tavo savaitės apžvalga',
+        'label' => 'Tavo apžvalga',
         'help' => 'Kaip dažnai gauni santrauką, kokia padėtis šį laikotarpį.',
         'daily' => 'Kasdien',
         'weekly' => 'Kas savaitę',

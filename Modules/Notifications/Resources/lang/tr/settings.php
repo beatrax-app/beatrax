@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Haftalık durumun',
+        'label' => 'Durumun',
         'help' => 'Bu dönemde durumun nasıl olduğuna dair özeti ne sıklıkta alacağın.',
         'daily' => 'Günlük',
         'weekly' => 'Haftalık',

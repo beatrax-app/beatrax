@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Jūsu nedēļas situācija',
+        'label' => 'Jūsu situācija',
         'help' => 'Cik bieži saņemt kopsavilkumu par to, kā šajā periodā klājas.',
         'daily' => 'Katru dienu',
         'weekly' => 'Reizi nedēļā',

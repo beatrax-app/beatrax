@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'A heti helyzeted',
+        'label' => 'A helyzeted',
         'help' => 'Milyen gyakran kapj összefoglalót arról, hol tartasz ebben az időszakban.',
         'daily' => 'Naponta',
         'weekly' => 'Hetente',

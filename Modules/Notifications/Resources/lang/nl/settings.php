@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Je wekelijkse positie',
+        'label' => 'Je positie',
         'help' => 'Hoe vaak je een samenvatting krijgt van hoe je ervoor staat deze periode.',
         'daily' => 'Dagelijks',
         'weekly' => 'Wekelijks',

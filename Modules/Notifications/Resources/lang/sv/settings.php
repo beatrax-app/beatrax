@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Din veckovisa ställning',
+        'label' => 'Din ställning',
         'help' => 'Hur ofta du får en sammanfattning av läget den här perioden.',
         'daily' => 'Dagligen',
         'weekly' => 'Veckovis',

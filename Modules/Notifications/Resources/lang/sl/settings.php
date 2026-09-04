@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Tvoj tedenski položaj',
+        'label' => 'Tvoj položaj',
         'help' => 'Kako pogosto dobiš povzetek stanja v tem obdobju.',
         'daily' => 'Dnevno',
         'weekly' => 'Tedensko',

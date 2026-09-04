@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Deine wöchentliche Übersicht',
+        'label' => 'Deine Übersicht',
         'help' => 'Wie oft du eine Zusammenfassung bekommst, wie du in diesem Zeitraum dastehst.',
         'daily' => 'Täglich',
         'weekly' => 'Wöchentlich',

@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Viikoittainen tilanteesi',
+        'label' => 'Tilanteesi',
         'help' => 'Kuinka usein saat yhteenvedon tämän jakson tilanteesta.',
         'daily' => 'Päivittäin',
         'weekly' => 'Viikoittain',
