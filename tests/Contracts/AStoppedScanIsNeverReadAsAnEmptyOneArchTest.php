@@ -31,19 +31,27 @@ use Modules\Core\Public\Support\PatternScan;
 // single-shot preg_match reads left raw stop at the first hit; they are held
 // to the two rules below and to the tree-wide one, not to this.
 //
-// Second, the replacers are covered at all. A stripper that gives up answers
-// null; `preg_replace(...) ?? $source` degrades to scanning the unstripped
-// text, which biases toward a FALSE POSITIVE somebody investigates.
-// `(string) preg_replace(...)` and `?? ''` hand the scan an empty subject
-// instead, which is a guaranteed silent green, so those two spellings are the
-// rule and the tolerant one is deliberately left alone.
+// Second, the replacers and the splitter are covered at all. A stripper that
+// gives up answers null; `preg_replace(...) ?? $source` degrades to scanning
+// the unstripped text, which biases toward a FALSE POSITIVE somebody
+// investigates. `(string) preg_replace(...)`, `?? ''`, `(array) preg_split(...)`
+// and `?: []` hand the scan an empty subject instead, which is a guaranteed
+// silent green, so those spellings are the rule and the tolerant one is
+// deliberately left alone. A split that gave up says the input had no parts,
+// and every walk over those parts then finds nothing to report.
 //
 // Third, the walk asserts its own denominator before it reports.
 // @link ../../.docs/conventions/arch-invariants.md#a-walk-that-stops-reading-must-say-so
 
 const STOPPED_SCAN_SEAM = 'Modules/Core/Public/Support/PatternScan.php';
 
-const STOPPED_SCAN_PCRE = ['preg_match_all', 'preg_match', 'preg_replace', 'preg_replace_callback'];
+const STOPPED_SCAN_PCRE = ['preg_match_all', 'preg_match', 'preg_replace', 'preg_replace_callback', 'preg_split'];
+
+// The spellings that turn a give-up into an ordinary empty answer, once the
+// cast in front of the call has been ruled out: `?? ''` and `?: []` and their
+// relatives. `[` is the whole of an empty array literal after the tokeniser
+// drops the whitespace.
+const STOPPED_SCAN_EMPTY_FALLBACKS = ["''", '""', '['];
 
 /** @return list<string> every file the repository's guards are written in */
 function stoppedScanGuardFiles(): array
@@ -155,25 +163,44 @@ function stoppedScanMatcherCalls(array $tokens): array
         $opens = ($previous[0] === null && in_array($previous[1], ['{', '}', ';'], true)) || $previous[0] === T_OPEN_TAG;
         $ends = $after[0] === null && $after[1] === ';';
 
-        $fallback = $tokens[$close + 2] ?? [null, '', 0];
-        $emptied = $previous[0] === T_STRING_CAST
-            || ($after[0] === T_COALESCE && in_array($fallback[1], ["''", '""'], true));
-
         $calls[] = [
             'name' => $tokens[$i][1],
             'line' => $tokens[$i][2],
             'discarded' => $opens && $ends,
-            'emptied' => $emptied,
+            'emptied' => stoppedScanBlanksTheSubject($tokens, $i - 1, $close),
         ];
     }
 
     return $calls;
 }
 
+/**
+ * Whether the call at $before .. $close hands its caller an empty subject when
+ * PCRE gives up: a cast in front of it, or a fallback to an empty literal
+ * behind it. Both spell "there was nothing here" over "this never ran".
+ *
+ * @param  list<array{0: int|null, 1: string, 2: int}>  $tokens
+ */
+function stoppedScanBlanksTheSubject(array $tokens, int $before, int $close): bool
+{
+    if (in_array($tokens[$before][0] ?? null, [T_STRING_CAST, T_ARRAY_CAST], true)) {
+        return true;
+    }
+
+    $after = $tokens[$close + 1] ?? [null, '', 0];
+    $elvis = $after[0] === null && $after[1] === '?' && ($tokens[$close + 2][1] ?? '') === ':';
+
+    if (! $elvis && $after[0] !== T_COALESCE) {
+        return false;
+    }
+
+    return in_array($tokens[$close + ($elvis ? 3 : 2)][1] ?? '', STOPPED_SCAN_EMPTY_FALLBACKS, true);
+}
+
 // A sweep that reads nothing reports the same clean tree as a sweep that found
 // nothing, which is the failure this whole file exists to name. Both counts are
-// therefore asserted before either verdict is read: the walk below sees 209
-// files holding 357 PCRE calls, and the floors sit far enough under those that
+// therefore asserted before either verdict is read: the walk below sees 221
+// files holding 347 PCRE calls, and the floors sit far enough under those that
 // only a broken walk or a broken tokeniser trips them.
 const STOPPED_SCAN_FILE_FLOOR = 150;
 
@@ -248,8 +275,8 @@ it('never turns a scan that gave up into an empty subject', function (): void {
     expect($offenders)->toBe(
         [],
         'These cast a PCRE answer to string or coalesce it to an empty string, so an engine that gave up hands '
-        .'the scan below an empty subject and it reports the file clean. Call PatternScan::replace() or '
-        ."PatternScan::replaceCallback(), which throw instead:\n  ".implode("\n  ", $offenders)
+        .'the scan below an empty subject and it reports the file clean. Call PatternScan::replace(), '
+        ."PatternScan::replaceCallback() or PatternScan::split(), which throw instead:\n  ".implode("\n  ", $offenders)
     );
 });
 
@@ -268,6 +295,24 @@ it('never throws away what a matcher answered', function (): void {
         ."Take the seam's return value instead:\n  ".implode("\n  ", $offenders)
     );
 });
+
+// A guard that cannot go red is a guard that says nothing, and the two verdicts
+// above are read off one boolean each. These are the spellings they were
+// written for, checked against the reader rather than against the tree.
+it('tells a subject that was blanked from one that was read', function (string $body, bool $emptied): void {
+    $calls = stoppedScanMatcherCalls(stoppedScanTokens('<?php '.$body));
+
+    expect($calls)->toHaveCount(1)->and($calls[0]['emptied'])->toBe($emptied);
+})->with([
+    'a string cast' => ['return (string) preg_replace($p, $r, $s);', true],
+    'an array cast' => ['return (array) preg_split($p, $s);', true],
+    'a coalesce to the empty string' => ["return preg_replace(\$p, \$r, \$s) ?? '';", true],
+    'an elvis to the empty array' => ['return preg_split($p, $s) ?: [];', true],
+    'a coalesce to the empty array' => ['return preg_split($p, $s) ?? [];', true],
+    'a coalesce to the subject' => ['return preg_replace($p, $r, $s) ?? $s;', false],
+    'an elvis to a named fallback' => ['return preg_split($p, $s) ?: $parts;', false],
+    'a checked assignment' => ['$x = preg_split($p, $s); return $x === false ? [$s] : $x;', false],
+]);
 
 it('leaves the seam itself the one place the PCRE functions are called raw', function (): void {
     $source = (string) file_get_contents(base_path(STOPPED_SCAN_SEAM));

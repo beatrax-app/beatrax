@@ -52,7 +52,7 @@ function classListsWhere(callable $fails): array
     $offenders = [];
 
     foreach (templateClassAttributes() as $attribute) {
-        $tokens = preg_split('/\s+/', trim($attribute['classes'])) ?: [];
+        $tokens = PatternScan::split('/\s+/', trim($attribute['classes']));
 
         if ($fails($tokens)) {
             $offenders[] = $attribute['file'];

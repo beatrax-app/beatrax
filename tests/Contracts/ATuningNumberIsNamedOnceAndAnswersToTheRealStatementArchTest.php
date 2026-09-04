@@ -232,7 +232,7 @@ function realIcsStatementFacts(): array
     $headerMonth = 2;
 
     $days = [];
-    foreach (preg_split('/\n/', $text) ?: [] as $line) {
+    foreach (PatternScan::split('/\n/', $text) as $line) {
         $trimmed = trim($line);
         if (preg_match('/\s(?:Af|Bij)$/', $trimmed) !== 1) {
             continue;

@@ -95,7 +95,7 @@ function countedNounOffence(string $line): ?string
             continue;
         }
 
-        foreach (preg_split('/\s+/', trim($match[2])) ?: [] as $word) {
+        foreach (PatternScan::split('/\s+/', trim($match[2])) as $word) {
             if (countedNounReadsAsPlural($word)) {
                 return trim($match[0]);
             }
@@ -356,8 +356,8 @@ it('never ships a plural segment the locale can never select', function (): void
 // JavaScript reaches the same property with a `.`, so the walk splits on it too.
 function countedNounIsCountVariable(string $name): bool
 {
-    $reached = preg_split('/->|\?->|\./', $name) ?: [];
-    $words = preg_split('/(?=[A-Z])|_/', (string) end($reached)) ?: [];
+    $reached = PatternScan::split('/->|\?->|\./', $name);
+    $words = PatternScan::split('/(?=[A-Z])|_/', (string) end($reached));
 
     return in_array(mb_strtolower((string) end($words)), COUNTED_NOUN_COUNT_TOKENS, true);
 }

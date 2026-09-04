@@ -301,7 +301,7 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
 
     $onButtons = [];
     foreach (phoneUiTouchControlClassLists() as $classList) {
-        foreach (preg_split('/\s+/', $classList) ?: [] as $class) {
+        foreach (PatternScan::split('/\s+/', $classList) as $class) {
             if (isset($drawnSmall[$class])) {
                 $onButtons[$class] = true;
             }
@@ -438,7 +438,7 @@ function phoneUiClassTokens(string $tag): array
 {
     $tokens = [];
     foreach (phoneUiClassAttributes($tag) as $list) {
-        foreach ((array) preg_split('/\s+/', trim($list)) as $token) {
+        foreach (PatternScan::split('/\s+/', trim($list)) as $token) {
             if (is_string($token) && $token !== '') {
                 $tokens[] = $token;
             }
