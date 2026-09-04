@@ -106,7 +106,7 @@ final class CommunityCorpusQuery
     // Regex rows carry an empty generalized_pattern and are matched only by
     // lookupRegex(), so they are excluded once here rather than per call.
     /**
-     * @return list<array{compiled: string, name: string}>
+     * @return list<array{compiled: string, needle: string, ascii: bool, name: string}>
      */
     private function generalizedRows(?string $region): array
     {
