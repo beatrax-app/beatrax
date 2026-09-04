@@ -17,6 +17,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
@@ -35,6 +36,7 @@ use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
@@ -86,8 +88,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         ScanMessageMapper $mapper,
         JobUserContext $jobUser,
         GraphDeltaWalk $deltaWalk,
+        LoggerInterface $logger,
     ): void {
-        $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
+        $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery, $logger);
         if ($prepared === null) {
             return;
         }
@@ -125,6 +128,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         MimeHeaderParser $mime,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
+        LoggerInterface $logger,
     ): ?PreparedScan {
         $connection = $db->connection();
 
@@ -144,7 +148,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return null;
         }
 
-        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId, $logger);
 
         return new PreparedScan($context, $provider, $senderPatterns, $stateRow);
     }
@@ -252,10 +256,17 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
         try {
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
+        } catch (BoundedReadException $e) {
+            $context->skipOversized($messageId, $e);
+            $rawEml = null;
         } catch (GmailRawDecodeException|MessageUnavailableException) {
             // Permanent for this id. Letting it out would leave the cursor
             // where it was, and every later tick would walk into the same
             // message again — one unfetchable message stalls the mailbox.
+            $rawEml = null;
+        }
+
+        if ($rawEml === null) {
             return;
         }
 
@@ -371,11 +382,15 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $context->storeFetchedMessage(
-            $messageId,
-            $graph->getRawMessage($this->inboxId, $messageId),
-            $mapper->graphMessageInternalDate($msgMeta),
-        );
+        try {
+            $context->storeFetchedMessage(
+                $messageId,
+                $graph->getRawMessage($this->inboxId, $messageId),
+                $mapper->graphMessageInternalDate($msgMeta),
+            );
+        } catch (BoundedReadException $e) {
+            $context->skipOversized($messageId, $e);
+        }
     }
 
     // Laravel calls this as a bare `$command->failed($e)` with no container

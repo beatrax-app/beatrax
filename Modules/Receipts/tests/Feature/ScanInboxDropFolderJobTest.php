@@ -93,10 +93,28 @@ it('processes a dropped .eml file and moves it to processed/{YYYY-MM}/', functio
     )->toBeTrue();
 });
 
+// A file whose size cannot be read is a file whose size is not known, and the
+// guard that skipped its own check on a failed stat read it whole regardless.
+it('quarantines a candidate whose size cannot be determined rather than reading it', function (): void {
+    $files = new Filesystem;
+    $files->ensureDirectoryExists($this->baseDir, 0700, recursive: true);
+
+    // A dangling symlink is listed by the directory walk and stats as false,
+    // which is the shape the drop folder can be handed from outside the app.
+    $sourcePath = $this->baseDir.'/unsizeable.eml';
+    symlink($this->baseDir.'/nothing-is-here', $sourcePath);
+
+    runScanJob($this->user->id);
+
+    $errorPath = $this->baseDir.'/failed/2026-05/unsizeable.eml.error.txt';
+    expect(file_exists($errorPath))->toBeTrue();
+    expect((string) file_get_contents($errorPath))->toContain('its size could not be determined');
+});
+
 it('moves a parser-failing .eml to failed/{YYYY-MM}/ with a sibling .error.txt', function (): void {
-    // Make a file unreadable so $files->get() returns false; the
-    // string-typed __invoke on RecordReceipt then trips a TypeError
-    // which the job's try/catch quarantines via failed/.
+    // Make a file unreadable so the bounded read cannot hand back its bytes;
+    // the refusal it raises instead is what the job's try/catch quarantines
+    // via failed/.
     if (posix_geteuid() === 0) {
         // root bypasses chmod, this test only works as a non-root user.
         $this->markTestSkipped('chmod-based unreadable-file test requires non-root euid.');
