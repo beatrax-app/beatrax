@@ -6,7 +6,9 @@ namespace Modules\Auth\Providers;
 
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
@@ -35,6 +37,7 @@ use Modules\Auth\Internal\Lock\NullKeyCustodian;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Internal\Lock\PwhashLimits;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
@@ -72,6 +75,16 @@ final class AuthServiceProvider extends ServiceProvider
         // Key custody while unlocked. The pass-through default keeps the key
         // in the session; the bundles override it onto the OS keychain.
         $this->app->singleton(KeyCustodian::class, NullKeyCustodian::class);
+
+        // Both the PIN hash and the wrap-key derivation take their Argon2id
+        // cost from here, so the two can never drift apart: an attacker cracks
+        // whichever of them is weaker.
+        $this->app->singleton(
+            PwhashLimits::class,
+            static fn (Application $app): PwhashLimits => PwhashLimits::fromTier(
+                $app->make(Repository::class)->get('auth.app_lock.kdf_tier'),
+            ),
+        );
 
         $this->app->singleton(PinHasher::class);
         $this->app->singleton(AppLockKdf::class);

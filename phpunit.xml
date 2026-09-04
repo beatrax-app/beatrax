@@ -212,6 +212,17 @@
              APP_URL pointed at the dev server. -->
         <env name="APP_URL" value="https://beatrax.test" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!--
+            force="true" so a local .env that names the shipped tier for a
+            device build cannot quietly put the suite back on the moderate
+            Argon2id limits. Every test that sets or checks a PIN derives a
+            key at this cost, and at the shipped one the Auth feature suite
+            spends three quarters of its wall clock inside sodium. Safe because
+            it changes no stored value: config/auth.php still defaults to the
+            moderate tier, a PIN hash carries its own cost parameters and so
+            still verifies, and no fixture ships a wrap key derived here.
+        -->
+        <env name="APP_LOCK_KDF_TIER" value="interactive" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <!--
             force="true" so the suite always runs with the Dev Console off,
