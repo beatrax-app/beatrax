@@ -74,7 +74,7 @@ function filesAScheduledCommandReaches(string $commandString): array
 {
     $name = null;
     foreach (array_keys(Artisan::all()) as $registered) {
-        if (preg_match('/\b'.preg_quote((string) $registered, '/').'\b/', $commandString) === 1) {
+        if (PatternScan::matches('/\b'.preg_quote((string) $registered, '/').'\b/', $commandString)) {
             $name = (string) $registered;
             break;
         }
@@ -95,8 +95,8 @@ function filesAScheduledCommandReaches(string $commandString): array
 
     // One hop is the whole architecture: a scheduled command resolves users and
     // dispatches a job per user, and the job is what writes.
-    preg_match_all('/^use (Modules\\\\[A-Za-z0-9_\\\\]+);$/m', $source, $matches);
-    foreach ($matches[1] as $imported) {
+    $imports = PatternScan::all('/^use (Modules\\\\[A-Za-z0-9_\\\\]+);$/m', $source);
+    foreach ($imports[1] as $imported) {
         if (! class_exists($imported)) {
             continue;
         }
@@ -142,7 +142,7 @@ function guardedTablesWrittenBy(string $source, array $guarded): array
         // An update is only a retention concern when it erases a value: a status
         // flip is a sweep doing its job, a column set back to null is the sweep
         // unwriting something the reader has.
-        if (preg_match('/->update\(\[[^\]]*=>\s*null/s', $window) === 1) {
+        if (PatternScan::matches('/->update\(\[[^\]]*=>\s*null/s', $window)) {
             $hits[] = $table.' update-to-null';
         }
     }
