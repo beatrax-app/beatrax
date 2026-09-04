@@ -7,10 +7,11 @@ namespace Modules\DevMode\Internal\Exceptions;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
-// Never carries the command name for a refusal that did not resolve one: the
-// two 403s answer a name the caller already knows, and echoing an unparsed
-// payload back would put attacker-chosen text on the wire.
-final class CommandRefusedException extends RuntimeException implements WireRefusal
+// Every way a spawn can be turned down, carrying the JSON the runner's fetch()
+// reads. The command name rides along only where one was resolved: the two 403s
+// answer a name the caller already knows, and echoing an unparsed payload back
+// would put attacker-chosen text on the wire.
+final class CommandRefusedException extends RuntimeException
 {
     /**
      * @param  array<string, string>  $payload
@@ -38,6 +39,18 @@ final class CommandRefusedException extends RuntimeException implements WireRefu
     public static function notDestructive(string $command): self
     {
         return new self(['error' => 'not_destructive', 'command' => $command], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    // A platform with no interpreter is a refusal like any other here, so the
+    // endpoints answer one type. The reader's sentence still comes from the
+    // exception that knows the reason, and the Livewire callers keep catching
+    // that one directly.
+    public static function spawningUnavailable(ProcessSpawningUnavailableException $cause): self
+    {
+        return new self(
+            ['error' => ProcessSpawningUnavailableException::WIRE_ERROR, 'message' => $cause->readerMessage()],
+            Response::HTTP_NOT_IMPLEMENTED,
+        );
     }
 
     /**

@@ -11,7 +11,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Actions\SpawnDevCommand;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\CommandRefusedException;
-use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 
 // SAFE tier only. DESTRUCTIVE names are refused rather than handled, so a
 // palette bug that leaks one cannot fire it without the triple gate.
@@ -37,7 +36,7 @@ final readonly class ArtisanSpawnController
 
         try {
             $record = ($this->spawn)($validated['command'] ?? null, $args, $user->id(), CommandTier::Safe);
-        } catch (CommandRefusedException|ProcessSpawningUnavailableException $refusal) {
+        } catch (CommandRefusedException $refusal) {
             return new JsonResponse($refusal->wirePayload(), $refusal->wireStatus());
         }
 

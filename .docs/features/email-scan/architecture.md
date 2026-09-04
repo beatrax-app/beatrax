@@ -263,9 +263,9 @@ at the consent screen itself (e.g. user canceled) arrive via the
 `ConnectInboxFromGrant` exchanges the authorization code for tokens via
 the matched provider wrapper, then persists the inbox row(s) and the
 chmod-600 credentials in two sequential steps: a DB transaction first
-(update the existing inbox row on reconnect, or insert a new `inboxes`
-+ `inbox_scan_state` row pair on first connect), then the credential
-write second. A new inbox without a refresh token is rejected before
+(update the existing inbox row on reconnect, or insert a new
+`inboxes` + `inbox_scan_state` row pair on first connect), then the
+credential write second. A new inbox without a refresh token is rejected before
 either write — Google returns no refresh token when the OAuth consent
 screen is still in "Testing" status, and persisting such an inbox would
 leave it permanently `needs_reauth` on the very first scan. Because the

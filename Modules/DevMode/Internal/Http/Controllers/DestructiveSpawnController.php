@@ -12,7 +12,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Actions\SpawnDevCommand;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\CommandRefusedException;
-use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 use Modules\DevMode\Internal\Support\DevModeSession;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -50,7 +49,7 @@ final readonly class DestructiveSpawnController
 
         try {
             $record = ($this->spawn)($validated['command'] ?? null, $args, $user->id(), CommandTier::Destructive);
-        } catch (CommandRefusedException|ProcessSpawningUnavailableException $refusal) {
+        } catch (CommandRefusedException $refusal) {
             return new JsonResponse($refusal->wirePayload(), $refusal->wireStatus());
         }
 
