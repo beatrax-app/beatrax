@@ -191,3 +191,25 @@ it('builds the same archive on a build without ext-zip', function (): void {
 
     @unlink($zipPath);
 });
+
+// A symlink in an artefact directory is a path out of the tree the reader never
+// put there. Following one would put whatever it points at inside an archive
+// the reader is about to hand somebody.
+it('does not follow a symlink out of an artefact directory', function (): void {
+    $real = plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    $secret = plantExportArtefact('secrets/provider-token.txt', 'a-token-nobody-asked-to-export');
+    symlink($secret, UserDataPathService::appPath('private/imports/1/escape.txt'));
+
+    /** @var ExportEverythingArchive $archive */
+    $archive = $this->app->make(ExportEverythingArchive::class);
+    $zipPath = $archive->build('a-good-passphrase', '2026-09-04-120000');
+
+    $entries = exportArchiveEntries($zipPath);
+
+    expect($entries)->toHaveCount(2)
+        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv')
+        ->and($entries)->not->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/escape.txt')
+        ->and(is_file($real))->toBeTrue();
+
+    @unlink($zipPath);
+});
