@@ -120,10 +120,10 @@ npm run build
 docker compose run --rm php php artisan test --parallel
 
 # Just architectural invariants
-docker compose run --rm php php artisan test --testsuite=Arch
+docker compose run --rm php php artisan test --testsuite=Contracts
 
 # Single file
-docker compose run --rm php php artisan test tests/Contracts/GsdLeakageTest.php
+docker compose run --rm php php artisan test tests/Contracts/CommentPolicyArchTest.php
 
 # Pint formatting check
 docker compose run --rm php vendor/bin/pint --test
