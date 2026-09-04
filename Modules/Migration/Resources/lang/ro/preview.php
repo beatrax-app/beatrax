@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Acest export nu conținea nimic de importat — nu este nimic de confirmat aici.',
 
+    'discarded' => 'Ai renunțat la acest import, așa că nu mai este nimic de previzualizat aici.',
+    'discarded_link' => 'Începe un import nou',
+
     'groups' => [
         'conflict' => 'Necesită decizia ta',
         'extra' => 'Neimportate',

@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Włącz open banking',
         'toggle_connected' => 'Połączono przez Enable Banking. Bank: :bank.',
         'toggle_off_help' => 'Domyślnie wyłączone. Wymaga jednorazowego potwierdzenia i konfiguracji krok po kroku.',
+        'credentials_unreadable' => 'Nie można odczytać danych uwierzytelniających open banking zapisanych na tym urządzeniu, więc Beatrax nie może połączyć się z twoim bankiem.',
+        'credentials_unreadable_next' => 'Przejdź jeszcze raz przez konfigurację krok po kroku, aby je zastąpić. Transakcje już zaimportowane pozostaną bez zmian.',
         'reconfirm_body' => 'Twoje potwierdzenie wygasło, zanim udało się dokończyć łączenie. Potwierdź ponownie, aby dokończyć włączanie open bankingu.',
         'reconfirm_button' => 'Potwierdź ponownie i zakończ',
     ],

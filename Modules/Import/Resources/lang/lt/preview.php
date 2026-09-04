@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Peržiūrėti importo rezultatą',
 
     'expired_html' => 'Peržiūros galiojimas baigėsi. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
+    'unreadable_html' => 'Peržiūros nepavyksta perskaityti. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
 
     'save_name' => 'Išsaugoti pavadinimą',
     'account_name_label' => 'Sąskaitos pavadinimas',

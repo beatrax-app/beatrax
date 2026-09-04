@@ -25,6 +25,7 @@ use Modules\OpenBanking\Internal\Enums\BankChoice;
 use Modules\OpenBanking\Internal\Enums\ConsentStatus;
 use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
 use Modules\OpenBanking\Internal\Enums\WizardStep;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\ManagesGuidedIcsImport;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
@@ -103,6 +104,11 @@ final class OpenBankingSettingsPage extends Component
     public string $syncFlashTone = '';
 
     public ?int $syncReviewImportRunId = null;
+
+    // The credentials live in one file this screen neither writes nor owns, so
+    // an unreadable one is a state the page reports rather than a fault it
+    // raises. Every read of it reaches the reader through refreshState().
+    public bool $credentialsUnreadable = false;
 
     public function mount(
         CurrentUser $currentUser,
@@ -376,7 +382,12 @@ final class OpenBankingSettingsPage extends Component
 
     private function refreshState(CurrentUser $currentUser, OpenBankingConnectionQuery $query): void
     {
-        $view = $query->current($currentUser->user()->id);
+        try {
+            $view = $query->current($currentUser->user()->id);
+        } catch (OpenBankingCredentialsException) {
+            $this->credentialsUnreadable = true;
+            $view = null;
+        }
 
         if ($view === null) {
             $this->enabled = false;

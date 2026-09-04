@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Visa importresultatet',
 
     'expired_html' => 'Förhandsgranskningen har upphört att gälla. <a href="/imports/new" class="underline">Ladda upp filen igen</a> för att försöka på nytt.',
+    'unreadable_html' => 'Förhandsgranskningen går inte att läsa. <a href="/imports/new" class="underline">Ladda upp filen igen</a> för att försöka på nytt.',
 
     'save_name' => 'Spara namnet',
     'account_name_label' => 'Kontonamn',

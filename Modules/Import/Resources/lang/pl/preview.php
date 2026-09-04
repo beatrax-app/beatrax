@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Zobacz wynik importu',
 
     'expired_html' => 'Podgląd wygasł. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
+    'unreadable_html' => 'Nie można odczytać podglądu. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
 
     'save_name' => 'Zapisz nazwę',
     'account_name_label' => 'Nazwa konta',

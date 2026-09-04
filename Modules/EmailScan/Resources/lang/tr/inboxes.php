@@ -40,6 +40,10 @@ return [
 
     'error_detail' => 'Son tarama tamamlanmadı. Şimdi tara seçeneğini deneyin veya bu posta kutusuna yeniden bağlanın.',
     'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bağlantıyı baştan başlat.',
+    // i18n-review: tr · oauth_client_missing — connect_gmail reads "Gmail bağla"
+    // with a lowercase verb, so the button has no standalone name of its own.
+    // This calls it "Bağla düğmesi"; a reader may spell the whole label out.
+    'oauth_client_missing' => 'O posta sağlayıcısı için tek seferlik kurulum bu cihazda tamamlanmadı, bu yüzden bağlanmak için gereken bilgiler henüz yok. Kurulumu bitirmek için yeniden Bağla düğmesine bas.',
     'oauth_no_code' => "Posta sağlayıcın seni Beatrax'ın bitirmek için ihtiyaç duyduğu kod olmadan geri gönderdi, bu yüzden hiçbir posta kutusu bağlanmadı. Bağlantıyı baştan başlat.",
     'oauth_grant_refused' => "Posta sağlayıcın Beatrax'a verilen izni reddetti — süresi dolmuş ya da geri alınmış. Bağlantıyı baştan başlat ve izni ver.",
     'oauth_exchange_failed' => 'Posta sağlayıcın bağlantıyı tamamlamadı, bu yüzden hiçbir posta kutusu eklenmedi. Birkaç dakika sonra tekrar dene.',

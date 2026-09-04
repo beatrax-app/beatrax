@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Poslední skenování se nedokončilo. Zkuste Skenovat nebo tuto schránku připojte znovu.',
     'oauth_state_mismatch' => 'Tento odkaz pro připojení vypršel nebo již byl použit. Začni připojení znovu.',
+    'oauth_client_missing' => 'Jednorázové nastavení pro tohoto poskytovatele pošty není v tomto zařízení dokončené, takže zatím není s čím se připojit. Stiskni znovu Připojit a dokonči ho.',
     'oauth_no_code' => 'Poskytovatel pošty tě vrátil bez kódu, který Beatrax potřebuje k dokončení, takže se nepřipojila žádná schránka. Začni připojení znovu.',
     'oauth_grant_refused' => 'Poskytovatel pošty odmítl oprávnění udělené Beatrax — vypršelo nebo bylo odebráno. Začni připojení znovu a udělej ho.',
     'oauth_exchange_failed' => 'Poskytovatel pošty připojení nedokončil, takže se nepřidala žádná schránka. Zkus to za pár minut znovu.',

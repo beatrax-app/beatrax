@@ -11,6 +11,8 @@ return [
         'toggle_label' => 'Zapnúť open banking',
         'toggle_connected' => 'Pripojené cez Enable Banking. Banka: :bank.',
         'toggle_off_help' => 'Predvolene vypnuté. Vyžaduje jednorazové potvrdenie a sprievodcu nastavením.',
+        'credentials_unreadable' => 'Prihlasovacie údaje pre open banking uložené na tomto zariadení sa nepodarilo prečítať, takže sa Beatrax nedokáže spojiť s tvojou bankou.',
+        'credentials_unreadable_next' => 'Prejdi znova sprievodcu nastavením a nahraď ich. Transakcie, ktoré sú už importované, ostanú nedotknuté.',
         'reconfirm_body' => 'Tvoje potvrdenie expirovalo skôr, než sa podarilo dokončiť pripojenie. Potvrď to znova a dokonči zapnutie open bankingu.',
         'reconfirm_button' => 'Potvrdiť znova a dokončiť',
     ],

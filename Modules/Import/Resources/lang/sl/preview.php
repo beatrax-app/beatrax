@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Poglej rezultat uvoza',
 
     'expired_html' => 'Predogled je potekel. <a href="/imports/new" class="underline">Znova naloži datoteko</a> in poskusi še enkrat.',
+    'unreadable_html' => 'Predogleda ni mogoče prebrati. <a href="/imports/new" class="underline">Znova naloži datoteko</a> in poskusi še enkrat.',
 
     'save_name' => 'Shrani ime',
     'account_name_label' => 'Ime računa',

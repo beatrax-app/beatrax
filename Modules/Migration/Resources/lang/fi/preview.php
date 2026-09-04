@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Tässä viennissä ei ollut mitään tuotavaa — täällä ei ole mitään vahvistettavaa.',
 
+    'discarded' => 'Hylkäsit tämän tuonnin, joten täällä ei ole enää mitään esikatseltavaa.',
+    'discarded_link' => 'Aloita uusi tuonti',
+
     'groups' => [
         'conflict' => 'Vaatii päätöksesi',
         'extra' => 'Ei tuotu',

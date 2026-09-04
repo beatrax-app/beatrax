@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Šiame eksporte nebuvo ko importuoti — čia nėra ką patvirtinti.',
 
+    'discarded' => 'Atmetei šį importą, todėl čia nebėra ko peržiūrėti.',
+    'discarded_link' => 'Pradėti naują importą',
+
     'groups' => [
         'conflict' => 'Reikia tavo sprendimo',
         'extra' => 'Neimportuota',

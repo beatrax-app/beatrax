@@ -71,6 +71,18 @@ final readonly class CounterpartyKey
             : $this->blindIndex->derive(self::DOMAIN_IBAN, $normalized, $userId, ($this->session)());
     }
 
+    // What a screen asks when it is looking a payer up rather than filing one.
+    // Null where forIban() would refuse, so a page reading the ledger back
+    // renders without the link instead of answering a server fault.
+    public function forIbanOrNull(string $iban, int $userId): ?string
+    {
+        $normalized = self::normalizeIban($iban);
+
+        return $normalized === ''
+            ? self::NONE
+            : $this->blindIndex->deriveOrNull(self::DOMAIN_IBAN, $normalized, $userId, ($this->session)());
+    }
+
     // The one spelling of an IBAN this domain hashes. The enable-time sweep
     // re-derives stored IBANs without a session and has to reach the same bytes
     // this does, so the convention lives here rather than in each caller.

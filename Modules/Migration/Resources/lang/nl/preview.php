@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Deze export bevatte niets om te importeren — er valt hier niets te bevestigen.',
 
+    'discarded' => 'Je hebt deze import verworpen, dus er valt hier niets meer te bekijken.',
+    'discarded_link' => 'Begin een nieuwe import',
+
     'groups' => [
         'conflict' => 'Vereist jouw beslissing',
         'extra' => 'Niet geïmporteerd',

@@ -16,6 +16,7 @@ use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
+use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
 
@@ -103,7 +104,14 @@ final class PreviewMigration extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $summary = $builder->forRun($this->runId, $user);
+        // Discarding truncates staging, so a run reached through the back
+        // button has nothing left to preview. An id naming no run at all 404s
+        // on the guard above; this one gets a screen that says which it is.
+        try {
+            $summary = $builder->forRun($this->runId, $user);
+        } catch (MigrationRunNotParsedException) {
+            $summary = null;
+        }
 
         return $views->make('migration::livewire.preview-migration', [
             'run' => $run,

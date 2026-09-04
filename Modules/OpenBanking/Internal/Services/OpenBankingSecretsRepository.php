@@ -149,6 +149,14 @@ class OpenBankingSecretsRepository
         try {
             $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
+            // Logged here rather than left to the handler: the settings page
+            // answers this one on screen now, so nothing above would record
+            // that the file on disk is the part that needs repairing.
+            $this->logger->warning(
+                'OpenBankingSecretsRepository: the secrets file could not be parsed.',
+                ['path' => $absolute],
+            );
+
             throw OpenBankingCredentialsException::unreadable($absolute, $e);
         }
         if (! is_array($decoded)) {

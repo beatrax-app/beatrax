@@ -20,6 +20,9 @@ return [
 
     'nothing_staged' => 'Šajā eksportā nebija nekā, ko importēt — šeit nav ko apstiprināt.',
 
+    'discarded' => 'Jūs atmetāt šo importu, tāpēc šeit vairs nav ko priekšskatīt.',
+    'discarded_link' => 'Sākt jaunu importu',
+
     'groups' => [
         'conflict' => 'Nepieciešams jūsu lēmums',
         'extra' => 'Netiek importēts',

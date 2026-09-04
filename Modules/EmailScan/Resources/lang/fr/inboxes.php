@@ -40,6 +40,7 @@ return [
 
     'error_detail' => "La dernière analyse ne s'est pas terminée. Essayez « Analyser maintenant » ou reconnectez cette boîte.",
     'oauth_state_mismatch' => 'Ce lien de connexion a expiré ou a déjà été utilisé. Recommence la connexion.',
+    'oauth_client_missing' => "La configuration unique de ce fournisseur de messagerie n'est pas terminée sur cet appareil : il n'y a donc encore rien pour établir la connexion. Appuie de nouveau sur Connecter pour finir cette configuration.",
     'oauth_no_code' => "Ton fournisseur de messagerie t'a renvoyé sans le code dont Beatrax a besoin pour terminer : aucune boîte n'a été connectée. Recommence la connexion.",
     'oauth_grant_refused' => "Ton fournisseur de messagerie a refusé l'autorisation accordée à Beatrax — elle a expiré ou a été retirée. Recommence la connexion et accorde-la.",
     'oauth_exchange_failed' => "Ton fournisseur de messagerie n'a pas terminé la connexion : aucune boîte n'a été ajoutée. Réessaie dans quelques minutes.",

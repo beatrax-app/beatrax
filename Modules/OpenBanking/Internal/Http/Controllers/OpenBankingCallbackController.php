@@ -8,9 +8,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\OpenBanking\Internal\Actions\CompleteBankConsent;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final readonly class OpenBankingCallbackController
@@ -20,6 +23,7 @@ final readonly class OpenBankingCallbackController
         private CurrentUser $currentUser,
         private Redirector $redirector,
         private CompleteBankConsent $completeConsent,
+        private LoggerInterface $logger,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
@@ -46,12 +50,28 @@ final readonly class OpenBankingCallbackController
 
             $connectionId = ($this->completeConsent)($userId, is_string($codeRaw) ? $codeRaw : '');
         } catch (RuntimeException $e) {
-            // Every refusal subclasses RuntimeException and carries a
-            // user-facing reason, so one flash handles all of them.
-            return $this->backToSettings('open_banking_failed', $e->getMessage());
+            return $this->backToSettings('open_banking_failed', $this->readerReason($e));
         }
 
         return $this->backToSettings('open_banking_connected', $connectionId);
+    }
+
+    // Most refusals in this flow build their message from Lang, so what they
+    // carry is already the reader's own words. The credentials one does not:
+    // it names the secrets file by absolute path, and this flash renders
+    // verbatim on the settings screen.
+    private function readerReason(RuntimeException $e): string
+    {
+        if ($e instanceof OpenBankingCredentialsException) {
+            $this->logger->warning(
+                'OpenBankingCallbackController: the stored credentials could not be read.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return $e->readerMessage();
+        }
+
+        return $e->getMessage();
     }
 
     private function cancellationMessage(Request $request): ?string

@@ -6077,6 +6077,84 @@ Three details decide the scope:
   class that uses a trait declaring the throw. It guards the boundary, which is
   where both of these landed, and not the whole call graph behind it.
 
+## A condition the screen could have named, answered as a server fault
+
+`AnExpectedConditionIsNotAServerFaultArchTest` guards the *boundary* — a throw
+written in a file under `Http/` — and says plainly that it reads one file at a
+time. Five conditions sat behind that boundary, raised in a pipeline, a cache,
+a secrets file and a codec, and reached the generic handler through a page
+render. Four answered **500**, measured as real GET requests before and after:
+
+| Request | Before | After |
+|---|---|---|
+| `/migrations/{id}/preview` for a discarded run | 500 | 200, naming the discard and linking to a new import |
+| `/imports/{id}/preview` over a malformed cache head | 500 | 200, saying the preview cannot be read |
+| `/calendar` on a request holding no blind-index key | 500 | 200, that one row left unlinked |
+| `/settings/open-banking` over an unparseable secrets file | 500 | 200, naming which credentials to replace |
+
+**The asymmetry is the tell.** One builder, two throws twelve lines apart:
+a run this reader does not have raises `ModelNotFoundException` and Laravel
+answers 404, and a run they discarded raises a bare `RuntimeException` and the
+handler answers 500. The same screen said "gone" for a run that never existed
+and "the server is at fault" for one the reader had thrown away themselves a
+moment earlier. `MigrationResults` had caught it since it was written;
+`PreviewMigration` never had. **A catch present on one of two callers of the
+same builder is the shape to go looking for** — it is a design decision that
+only got made once.
+
+**A lookup has an answer without the key; a write does not.**
+`BlindIndexCodec::derive()` refuses to key when the app-lock key is not held,
+and must: falling back to the plaintext would put a second form of one merchant
+inside the UNIQUE index that decides whether a statement row is a duplicate.
+But the calendar was not filing a payer, it was *looking one up*, and a lookup
+that cannot be keyed matches nothing — which is exactly the answer the same
+loop already gives for a sealed IBAN it cannot open. Only a row whose IBAN sits
+in the column **in the clear** ever reached the digest: `SensitiveColumnCodec`
+blanks anything that looks like ciphertext, and the caller skips an empty
+value. So the two spellings of one unreadable row behaved differently, and the
+plaintext one took the whole month down. `deriveOrNull()` is the read-side
+twin, written beside the `keyHexOrNull()` that had already drawn the same line
+one layer below it.
+
+**The premise named a cause the middleware had ruled out.** The escape analysis
+described that path as "the app lock is engaged, so no blind-index key is held
+while a page renders". It cannot be: `AppLockMiddleware` redirects a locked
+session to the lock screen before any page renders. What produces the 500 is an
+*unlocked* session holding no key. Sending that reader to `/lock` would have
+been the worst answer available — with the lock off, `disable()` has nulled
+`pin_hash`, so the lock screen offers a PIN pad that scores every attempt as a
+failure and signs them out after ten. **Reproduce the state before trusting the
+sentence that describes it.**
+
+**One of the five was not reachable at all.** `CurrencyMismatchException` was
+reported escaping `/recurring` through `Money::plus()` on the last line of
+`monthlyEquivalentTotals()`. It cannot: `CrossCurrencyTotal::withRates()`
+stamps its own `$targetCurrency` on every `ConvertedTotal` it builds, both
+halves are handed the one base currency the method resolved once, and a bucket
+with no rate is left out and named rather than carried at one to one. Measured
+over a real request with JPY, USD and two unrated currencies, `/recurring`
+answers 200 and all three totals come back in EUR. A call-graph edge between a
+throw and a root is a *candidate*, not a defect; what is left behind here is a
+test pinning the invariant, because the day a second currency is threaded into
+either half the page starts answering 500 with nothing else in the way.
+
+**A catch is not an answer until every read is behind it.** The first attempt
+at the import wizard caught the malformed-cache throw around the head read, and
+the page still 500ed: `OwnAccountPrompt` opens the same entry again through
+`getPreview()`, three prompts deep. The escape report named one frame because
+it reports the *shortest* path; the reader meets all of them as one screen. The
+catch belongs around every read that reaches the cache, not around the one the
+trace happened to name.
+
+Two smaller rules earned their keep here. The discarded-run exception's message
+said the run "has not been parsed yet, or parsing failed before staging
+completed" — two causes the `if` above it had already excluded, since it fires
+only where the status *is* `discarded`. And the malformed preview had to get a
+line of its own rather than reuse the expired one: the entry is present and
+will not decode, so "the preview has expired" would have named the one thing
+already ruled out. Both end at the same re-upload, and they are still not the
+same sentence.
+
 ## A pre-setup screen renders the application shell
 
 `tests/Contracts/APreSetupScreenOffersNoWayIntoTheAppArchTest.php`

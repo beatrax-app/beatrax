@@ -11,6 +11,11 @@ return [
         'toggle_label' => 'Ieslēgt atvērto banku saskarni',
         'toggle_connected' => 'Savienots ar :bank, izmantojot Enable Banking.',
         'toggle_off_help' => 'Pēc noklusējuma izslēgts. Nepieciešams vienreizējs apstiprinājums un vadīta iestatīšana.',
+        // i18n-review: lv · page.credentials_unreadable — three genitives stack
+        // before the noun: "atvērtās banku saskarnes piekļuves datus". Whether
+        // the full term belongs here, or the screen already supplies it, is open.
+        'credentials_unreadable' => 'Šajā ierīcē saglabātos atvērtās banku saskarnes piekļuves datus nevar nolasīt, tāpēc Beatrax nevar izveidot savienojumu ar jūsu banku.',
+        'credentials_unreadable_next' => 'Veiciet vadīto iestatīšanu vēlreiz, lai tos aizstātu. Jau importētos darījumus tas neietekmē.',
         'reconfirm_body' => 'Jūsu apstiprinājuma termiņš beidzās, pirms savienojums tika pabeigts. Apstipriniet vēlreiz, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
         'reconfirm_button' => 'Apstiprināt vēlreiz un pabeigt',
     ],

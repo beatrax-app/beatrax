@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Vaata impordi tulemust',
 
     'expired_html' => 'Eelvaade on aegunud. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
+    'unreadable_html' => 'Eelvaadet ei saa lugeda. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
 
     'save_name' => 'Salvesta nimi',
     'account_name_label' => 'Konto nimi',

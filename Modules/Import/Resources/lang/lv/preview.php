@@ -14,6 +14,7 @@ return [
     'already_imported_link' => 'Skatīt importa rezultātu',
 
     'expired_html' => 'Priekšskatījuma termiņš ir beidzies. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
+    'unreadable_html' => 'Priekšskatījumu nevar nolasīt. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
 
     'save_name' => 'Saglabāt nosaukumu',
     'account_name_label' => 'Konta nosaukums',

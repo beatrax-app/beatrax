@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'A legutóbbi vizsgálat nem fejeződött be. Próbálja a Vizsgálat most lehetőséget, vagy csatlakozzon újra ehhez a postafiókhoz.',
     'oauth_state_mismatch' => 'Ez a kapcsolódási hivatkozás lejárt, vagy már felhasználták. Kezdd elölről a csatlakoztatást.',
+    'oauth_client_missing' => 'Ennek a levelezőszolgáltatónak az egyszeri beállítása nincs befejezve ezen az eszközön, így még nincs mivel csatlakozni. Nyomd meg újra a Csatlakoztatás gombot, hogy befejezd.',
     'oauth_no_code' => 'A levelezőszolgáltatód anélkül a kód nélkül küldött vissza, amelyre a Beatraxnak a befejezéshez szüksége van, így egyetlen postafiók sem lett csatlakoztatva. Kezdd elölről a csatlakoztatást.',
     'oauth_grant_refused' => 'A levelezőszolgáltatód elutasította a Beatraxnak adott engedélyt — lejárt vagy visszavonták. Kezdd elölről a csatlakoztatást, és add meg az engedélyt.',
     'oauth_exchange_failed' => 'A levelezőszolgáltatód nem fejezte be a csatlakoztatást, így egyetlen postafiók sem lett hozzáadva. Próbáld újra néhány perc múlva.',

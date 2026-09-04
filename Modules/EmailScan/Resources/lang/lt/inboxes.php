@@ -40,6 +40,7 @@ return [
 
     'error_detail' => 'Paskutinis nuskaitymas nebaigtas. Pabandykite „Nuskaityti dabar“ arba prijunkite šią dėžutę iš naujo.',
     'oauth_state_mismatch' => 'Ši prisijungimo nuoroda nebegalioja arba jau panaudota. Pradėk jungimą iš naujo.',
+    'oauth_client_missing' => 'Vienkartinė šio pašto tiekėjo sąranka šiame įrenginyje nebaigta, todėl kol kas nėra kuo prisijungti. Paspausk Prijungti dar kartą, kad ją užbaigtum.',
     'oauth_no_code' => 'Tavo pašto tiekėjas grąžino tave be kodo, kurio Beatrax reikia užbaigti, todėl nebuvo prijungta jokia dėžutė. Pradėk jungimą iš naujo.',
     'oauth_grant_refused' => 'Tavo pašto tiekėjas atmetė Beatrax suteiktą leidimą — jis baigė galioti arba buvo atšauktas. Pradėk jungimą iš naujo ir suteik jį.',
     'oauth_exchange_failed' => 'Tavo pašto tiekėjas neužbaigė jungimo, todėl nebuvo pridėta jokia dėžutė. Bandyk dar kartą po kelių minučių.',
