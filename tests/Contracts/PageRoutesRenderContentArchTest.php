@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-page-that-renders-the-shell-and-nothing-else
@@ -40,9 +41,7 @@ it('mounts the page component on a settings route', function (string $uri, strin
 it('gives every page a title of its own, not the bare app name', function (string $uri): void {
     $html = (string) test()->get($uri)->getContent();
 
-    $m = PatternScan::first('#<title>(.*?)</title>#s', $html);
-
-    expect(trim($m[1] ?? ''))->not->toBe('Beatrax');
+    expect(RenderedMarkup::of($html)->firstOrFail('title')->text())->not->toBe('Beatrax');
 })->with(['/settings/aliases', '/settings/open-banking']);
 
 // The shape that broke it: layouts.app yields, so a page that names it in the

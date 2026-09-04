@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
+
 // The wizard's nine steps share one URL, so stepping back is not navigation and
 // the platform's back gesture had to be taught to do it: the page names its
 // previous step on the element, pushes a history entry, and the bundle's
@@ -80,17 +82,15 @@ it('keeps that control on the screen rather than only in the tree', function ():
     foreach (gestureBackedStepBlades() as $path) {
         $source = (string) file_get_contents($path);
 
-        if (preg_match('/<button\b[^>]*?wire:click="goToStep\([^>]*?>/s', $source, $m) !== 1) {
-            continue;
-        }
+        foreach (MarkupSource::elements($source, 'button') as $button) {
+            if (! str_starts_with((string) $button->attribute('wire:click'), 'goToStep(')) {
+                continue;
+            }
 
-        if (preg_match('/class="([^"]*)"/', $m[0], $classes) !== 1) {
-            continue;
-        }
-
-        foreach (['sr-only', 'hidden', 'invisible'] as $vanishing) {
-            if (in_array($vanishing, preg_split('/\s+/', trim($classes[1])) ?: [], true)) {
-                $hidden[] = $path.' ('.$vanishing.')';
+            foreach (['sr-only', 'hidden', 'invisible'] as $vanishing) {
+                if (in_array($vanishing, $button->classes(), true)) {
+                    $hidden[] = $path.' ('.$vanishing.')';
+                }
             }
         }
     }
