@@ -109,19 +109,6 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-interaction --no-progress
 
-            # PhpStanBoundaryRuleTest shells out to PHPStan across Modules/ from
-            # inside the suite, so every shard pays for that analysis, not just
-            # the one running the static-analysis job. Cold it is ~125s; with the
-            # result cache restored it is ~3s.
-            - name: Cache PHPStan result cache
-              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-              with:
-                  path: .phpstan-cache
-                  key: phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
-                  restore-keys: |
-                      phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
-                      phpstan-${{ runner.os }}-${{ matrix.php }}-
-
             - name: Set up Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
               with:

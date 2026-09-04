@@ -53,23 +53,14 @@ it('emits zero errors on the good fixture', function (): void {
     expect($output)->not->toContain('Cross-module Internal/Models import forbidden');
 });
 
-it('passes against empty module skeletons at level max', function (): void {
-    $process = new Process([
-        PHP_BINARY,
-        '-d', 'memory_limit=2G',
-        base_path('vendor/bin/phpstan'),
-        'analyse',
-        'Modules',
-        '--no-progress',
-        '--error-format=raw',
-        '--no-ansi',
-        '--memory-limit=1G',
-    ], base_path());
-    // Symfony's 60-second default assumes this analysis has the machine to
-    // itself; under pcov and parallel workers it fails on the clock instead of
-    // on the rule it exists to pin.
-    $process->setTimeout(600);
-    $process->run();
-
-    expect($process->getExitCode())->toBe(0);
-});
+// The third test in this file ran `phpstan analyse Modules` and asserted a zero
+// exit. With no --configuration it picked up phpstan.neon, whose own paths are
+// Modules, app and bootstrap/app.php at the same level with the same rules — so
+// a CLI path argument only NARROWED the CI job's scope, and its error set was a
+// subset of one the `static analysis (PHP 8.5)` job already fails on. It could
+// not go red on its own, it did not test the empty module skeleton its name
+// claimed, and it cost ~125s cold in whichever shard held the Unit suite.
+//
+// The two above are the opposite case and stay: phpstan.neon excludes
+// app/PhpStan/Rules/Fixtures/*, so the CI job never analyses these fixtures and
+// nothing else proves the custom BoundaryRule still fires.
