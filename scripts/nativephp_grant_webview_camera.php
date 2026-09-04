@@ -31,24 +31,26 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
 
 $target = beatraxScaffoldPath('android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt') ?? '';
 
-if (! is_file($target)) {
-    // The native scaffold is generated on demand and is absent from a fresh
-    // checkout; there is nothing to patch until `native:install` has run.
-    fwrite(STDOUT, "nativephp_grant_webview_camera: no Android scaffold yet — skipping.\n");
-    exit(0);
+// A flag, not an exit: the generated scaffold is absent from a fresh checkout
+// but the EDGE renderer below lives in vendor/, which any composer install
+// has. Ending the process here skipped the half that survives a rebuild.
+$shellPresent = is_file($target);
+
+if (! $shellPresent) {
+    fwrite(STDOUT, "nativephp_grant_webview_camera: no Android scaffold yet — skipping that half.\n");
 }
 
-$source = (string) file_get_contents($target);
+$source = $shellPresent ? (string) file_get_contents($target) : '';
 
 $marker = 'onPermissionRequest';
-$shellAlreadyPatched = str_contains($source, $marker);
+$shellAlreadyPatched = $shellPresent && str_contains($source, $marker);
 
 if ($shellAlreadyPatched) {
     fwrite(STDOUT, "nativephp_grant_webview_camera: main shell already patched.\n");
 }
 
 $anchor = "return object : WebChromeClient() {\n";
-if (! str_contains($source, $anchor)) {
+if ($shellPresent && ! str_contains($source, $anchor)) {
     fwrite(STDERR, "nativephp_grant_webview_camera: WebChromeClient anchor not found in {$target}.\n");
     fwrite(STDERR, "The generated shell changed shape; re-check the override before shipping a build.\n");
     exit(1);
@@ -146,7 +148,7 @@ return object : WebChromeClient() {
 
 KOTLIN;
 
-if (! $shellAlreadyPatched) {
+if ($shellPresent && ! $shellAlreadyPatched) {
     $patched = str_replace($anchor, $override, $source);
 
     if (file_put_contents($target, $patched) === false) {
@@ -176,14 +178,15 @@ $edgeTarget = (beatraxMobileVendorPath('nativephp/mobile-ui/resources/android/We
 if (is_file($edgeTarget)) {
     $edgeSource = (string) file_get_contents($edgeTarget);
 
-    if (str_contains($edgeSource, 'onPermissionRequest')) {
+    $edgeAlreadyPatched = str_contains($edgeSource, 'onPermissionRequest');
+
+    if ($edgeAlreadyPatched) {
         fwrite(STDOUT, "nativephp_grant_webview_camera: EDGE renderer already grants video capture.\n");
-        exit(0);
     }
 
     $edgeAnchor = 'private class NoPopupChromeClient : WebChromeClient() {';
 
-    if (! str_contains($edgeSource, $edgeAnchor)) {
+    if (! $edgeAlreadyPatched && ! str_contains($edgeSource, $edgeAnchor)) {
         fwrite(STDERR, "nativephp_grant_webview_camera: NoPopupChromeClient anchor not found.\n");
         exit(1);
     }
@@ -223,14 +226,18 @@ if (is_file($edgeTarget)) {
     }
 KOTLIN;
 
-    $edgePatched = str_replace($edgeAnchor, $edgeOverride, $edgeSource);
+    if (! $edgeAlreadyPatched) {
+        $edgePatched = str_replace($edgeAnchor, $edgeOverride, $edgeSource);
 
-    if (file_put_contents($edgeTarget, $edgePatched) === false) {
-        fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$edgeTarget}.\n");
-        exit(1);
+        if (file_put_contents($edgeTarget, $edgePatched) === false) {
+            fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$edgeTarget}.\n");
+            exit(1);
+        }
+
+        fwrite(STDOUT, "nativephp_grant_webview_camera: EDGE renderer now grants video capture.\n");
     }
-
-    fwrite(STDOUT, "nativephp_grant_webview_camera: EDGE renderer now grants video capture.\n");
+} else {
+    fwrite(STDOUT, "nativephp_grant_webview_camera: no EDGE renderer in vendor — skipping that half.\n");
 }
 
 exit(0);
