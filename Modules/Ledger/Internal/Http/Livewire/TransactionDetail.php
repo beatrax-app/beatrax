@@ -17,6 +17,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
@@ -462,7 +463,7 @@ final class TransactionDetail extends Component
             'attributedGoals' => $goalContributions->forTransaction($currentUser->user(), $this->transactionId),
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('ledger::detail.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('ledger::detail.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

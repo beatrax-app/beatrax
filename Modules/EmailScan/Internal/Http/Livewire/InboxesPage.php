@@ -21,6 +21,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
@@ -419,7 +420,7 @@ final class InboxesPage extends Component
             'connectsHere' => $this->connectsHere,
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('email-scan::inboxes.heading').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('email-scan::inboxes.heading').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

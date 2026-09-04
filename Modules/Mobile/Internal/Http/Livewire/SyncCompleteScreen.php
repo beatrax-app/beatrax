@@ -11,6 +11,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -65,7 +66,7 @@ final class SyncCompleteScreen extends Component
     {
         $view = $views->make('mobile::livewire.sync-complete-screen');
 
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::sync_complete.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::sync_complete.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

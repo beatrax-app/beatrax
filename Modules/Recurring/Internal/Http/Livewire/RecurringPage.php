@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
@@ -61,7 +62,7 @@ final class RecurringPage extends Component
             'today' => $clock->now(),
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('recurring::index.title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('recurring::index.title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

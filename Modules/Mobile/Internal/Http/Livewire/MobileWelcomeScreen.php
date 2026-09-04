@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 
@@ -26,7 +27,7 @@ final class MobileWelcomeScreen extends Component
     {
         $view = $views->make('mobile::livewire.mobile-welcome-screen');
 
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::welcome.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::welcome.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

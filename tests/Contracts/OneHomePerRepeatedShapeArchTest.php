@@ -138,3 +138,82 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
         ...$offenders,
     ]));
 });
+
+// Auth, Pots, Reports and Recurring's detail page carry the suffix inside the
+// translated page_title value itself, in all 26 locales, so the lang tree is
+// out of scope here rather than a second home. Tests are out too: a title
+// assertion that reaches for the constant proves nothing about the render.
+it('spells the brand title suffix once, in the class that owns it', function (): void {
+    $offenders = [];
+
+    foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+        );
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            $path = $file->getPathname();
+            if (! $file->isFile() || ! preg_match('~\.(?:php|blade\.php)$~', $path)) {
+                continue;
+            }
+            if (str_ends_with($path, 'Public/Support/Brand.php') || str_contains($path, '/Resources/lang/')) {
+                continue;
+            }
+            if (str_contains($path, '/tests/')) {
+                continue;
+            }
+
+            $source = (string) file_get_contents($path);
+            if (preg_match_all('~ \xc2\xb7 Beatrax~', $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
+                continue;
+            }
+
+            foreach ($matches[0] as [, $offset]) {
+                $offenders[] = sprintf(
+                    '%s:%d',
+                    str_replace(base_path().'/', '', $path),
+                    substr_count(substr($source, 0, $offset), "\n") + 1,
+                );
+            }
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'Brand::TITLE_SUFFIX is the tail a titled page appends, and Brand::NAME',
+        'is the product name. The name has been restyled once already; these',
+        'write it out again where the next restyle will not find them:',
+        ...$offenders,
+    ]));
+});
+
+it('keeps every consumer of the brand suffix reaching for the class', function (): void {
+    $consumers = [
+        'Modules/Tax/Internal/Http/Livewire/TaxPage.php',
+        'Modules/Shell/Resources/views/dashboard.blade.php',
+        'Modules/Onboarding/Resources/views/layouts/app-wizard.blade.php',
+        'resources/views/components/errors/beatrax-error.blade.php',
+    ];
+
+    $stale = [];
+    foreach ($consumers as $relative) {
+        $path = base_path($relative);
+        if (! is_file($path)) {
+            $stale[] = $relative.'  (file is gone)';
+
+            continue;
+        }
+        if (! str_contains((string) file_get_contents($path), 'Brand::TITLE_SUFFIX')) {
+            $stale[] = $relative.'  (no longer reaches Brand::TITLE_SUFFIX)';
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n", [
+        'The scan above only proves nobody spells the suffix out. These four',
+        'prove the seam is still reached -- one PHP render(), one blade @extends,',
+        'and the two layouts that write a <title> of their own:',
+        ...$stale,
+    ]));
+});

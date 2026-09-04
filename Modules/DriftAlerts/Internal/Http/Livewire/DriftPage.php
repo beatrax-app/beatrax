@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
@@ -282,7 +283,7 @@ final class DriftPage extends Component
                 'pageSize' => $this->pageSize,
             ]);
 
-            $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).Brand::TITLE_SUFFIX]);
 
             return $view;
         }
@@ -351,7 +352,7 @@ final class DriftPage extends Component
             'hasMoreAnomalies' => false,
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).Brand::TITLE_SUFFIX]);
 
         return $view;
     }

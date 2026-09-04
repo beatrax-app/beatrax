@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
@@ -368,7 +369,7 @@ final class OpenBankingSettingsPage extends Component
 
         // layouts.app is a @yield('content') layout: without this extends()
         // the shell rendered an empty <main> and a tab titled just "Beatrax".
-        $view->extends('layouts.app', ['title' => Lang::get('openbanking::messages.page.heading').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('openbanking::messages.page.heading').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Navigation\NavBadgeEvents;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Internal\Enums\NotificationTab;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
@@ -106,7 +107,7 @@ final class NotificationsPage extends Component
             'nextCursor' => $page['nextCursor'],
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('notifications::inbox.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('notifications::inbox.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

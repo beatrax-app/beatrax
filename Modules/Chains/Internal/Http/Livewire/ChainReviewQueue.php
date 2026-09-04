@@ -12,6 +12,7 @@ use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -93,7 +94,7 @@ final class ChainReviewQueue extends Component
             'hintCount' => $hintCount,
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('chains::review.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('chains::review.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -48,7 +49,7 @@ final class ChainHintsQueue extends Component
             'hints' => $hints,
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('chains::hints.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('chains::hints.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
@@ -183,7 +184,7 @@ final class MobileLockScreen extends Component
     {
         $view = $views->make('mobile::livewire.mobile-lock-screen');
 
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::lock.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::lock.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

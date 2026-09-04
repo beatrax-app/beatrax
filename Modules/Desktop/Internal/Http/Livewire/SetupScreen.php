@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
@@ -61,7 +62,7 @@ final class SetupScreen extends Component
             'isPending' => $bootstrap->hasPendingMigrations(),
         ]);
 
-        $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.setup.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.setup.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

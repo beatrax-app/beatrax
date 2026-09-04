@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Tax\Internal\Services\TaxCsvExporter;
@@ -25,10 +26,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 final class TaxPage extends Component
 {
     use HoldsFlashMessage;
-
-    // The window title's tail, separated by a middle dot rather than a dash,
-    // which is what every other titled page here uses.
-    private const string TITLE_SUFFIX = ' · Beatrax';
 
     // 0 means "use the seasonal default", resolved in mount(). #[Url] keeps
     // ?year=2025 deep links and the back button working.
@@ -133,10 +130,10 @@ final class TaxPage extends Component
                 'data' => null,
                 'availableYears' => [],
                 'hasCountry' => false,
-                'documentTitle' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX,
+                'documentTitle' => Lang::get('tax::page.page_title').Brand::TITLE_SUFFIX,
             ]);
 
-            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX]);
+            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').Brand::TITLE_SUFFIX]);
 
             return $view;
         }
@@ -154,7 +151,7 @@ final class TaxPage extends Component
 
         // One string for both the layout's <title> and the blade's re-titling
         // hook, so a switched year cannot leave them naming different years.
-        $documentTitle = Lang::get('tax::page.page_title_year', ['year' => $this->year]).self::TITLE_SUFFIX;
+        $documentTitle = Lang::get('tax::page.page_title_year', ['year' => $this->year]).Brand::TITLE_SUFFIX;
 
         $view = $views->make('tax::livewire.tax-page', [
             'data' => $data,
