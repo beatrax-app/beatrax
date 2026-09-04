@@ -10,6 +10,7 @@ return [
     'new_password' => 'Новий пароль',
     'confirm_new_password' => 'Підтверди новий пароль',
     'submit' => 'Зберегти новий пароль',
+    'sign_out' => 'Вийти',
 
     'error_current_required' => 'Введи свій поточний пароль.',
     'error_current_incorrect' => 'Поточний пароль неправильний.',

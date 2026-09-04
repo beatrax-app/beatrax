@@ -19,6 +19,21 @@ final readonly class ForgetsSpentRecoveryCodes
     // against a synthesised request that looks like a plain GET.
     private const string LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
+    // Everything a page asks for on its own behalf, for the Livewire update's
+    // reason: none of these is a reader going somewhere. The ceremony page
+    // fetches all five itself, so the codes were forgotten before the reader
+    // had finished reading them.
+    /**
+     * @var list<string>
+     */
+    private const array PAGE_SUB_RESOURCE_ROUTES = [
+        'sw',
+        'site.webmanifest',
+        'pwa.icon',
+        'app.icon',
+        'app.splash',
+    ];
+
     public function __construct(private Router $routes) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -37,7 +52,7 @@ final readonly class ForgetsSpentRecoveryCodes
         // on, so it cannot be the request that left the ceremony — and a poll
         // belonging to some other component on the same page would otherwise
         // take the codes out from under a screen still showing them.
-        if ($renewed || $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE)) {
+        if ($renewed || $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE, ...self::PAGE_SUB_RESOURCE_ROUTES)) {
             return $response;
         }
 

@@ -10,6 +10,7 @@ return [
     'new_password' => 'Uus parool',
     'confirm_new_password' => 'Kinnita uus parool',
     'submit' => 'Salvesta uus parool',
+    'sign_out' => 'Logi välja',
 
     'error_current_required' => 'Sisesta oma praegune parool.',
     'error_current_incorrect' => 'Praegune parool on vale.',

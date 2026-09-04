@@ -10,6 +10,7 @@ return [
     'new_password' => 'Ny adgangskode',
     'confirm_new_password' => 'Bekræft ny adgangskode',
     'submit' => 'Gem ny adgangskode',
+    'sign_out' => 'Log ud',
 
     'error_current_required' => 'Indtast din nuværende adgangskode.',
     'error_current_incorrect' => 'Den nuværende adgangskode er forkert.',

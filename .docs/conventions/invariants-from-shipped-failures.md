@@ -5969,6 +5969,53 @@ that calls `exit(0)` between resolving one target and resolving a different
 one. Run against the tree before either fix, it names both scripts; the
 detector is what found the second instance.
 
+## What bounds a build is not what bounds the repository
+
+`tests/Contracts/ADurableDataDirectoryIsNeverShippedInTheBundleArchTest.php`
+
+Both packagers copy the working tree. The desktop walks it with a
+`RecursiveCallbackFilterIterator` and the mobile one shells out to
+`rsync -a --copy-links`, and in each case the only thing standing between a
+developer's working directory and a shipped binary is that shell's
+`cleanup_exclude_files`. `.gitignore` has no part in it. That is what makes the
+failure invisible: the directories are absent from `git status`, so every habit
+built around reading the repository says they are not there.
+
+An earlier round found `storage/app` this way and excluded it. Naming one
+directory is not the same as fixing the rule, and four more were sitting
+outside it:
+
+| shell | directory | what is in it |
+|---|---|---|
+| mobile | `credentials/` | the Android release signing keystore |
+| mobile | `build-secrets/` | iOS signing artifacts |
+| desktop | `.device-test/` | 4,024 files, 1.6 GB of captured application screens |
+| desktop | `.playwright-mcp/` | page snapshots, console logs, screenshots |
+| desktop | `local/` | a manual drop directory for PayPal exports |
+
+The signing material is the serious one, and it is not a hypothetical arriving
+from a developer's machine: `release.yml` decodes the keystore from a
+repository secret into `mobile-app/credentials/app-release-key.jks` and only
+*then* runs the packager, so it is present in the tree at the exact moment the
+bundle is copied.
+
+The packager's own defaults do exclude `*.jks` — but `BundleExclusions::PROJECT`
+is mapped through `fn ($p) => '/'.$p` before it reaches rsync, and a leading
+slash anchors a pattern to the transfer root. `/*.jks` matches a keystore lying
+in the project root and never matched one a single directory down. Verified by
+calling the vendor's own `BundleFileManager::excludes()` and running rsync with
+exactly those 46 patterns over a fixture: a root-level `.jks` was dropped,
+`credentials/app-release-key.jks` was copied.
+
+Two details decide whether a guard for this works. It must ask whether a
+directory's **contents** are in the repository rather than whether the
+directory is ignored — `build-secrets/` tracks a `.gitignore` that ignores
+everything beside it, so it is not an ignored path, while every file that ever
+appears in it is. And a directory that survives must be *classified* rather than
+merely absent from the failure list: `storage/` holds no source either, and the
+honest answer is that the framework needs the tree while `storage/app` is
+excluded by name, which is a sentence someone can check.
+
 ## An expected condition answering as a server fault
 
 `tests/Contracts/AnExpectedConditionIsNotAServerFaultArchTest.php`
@@ -6107,6 +6154,74 @@ line of its own rather than reuse the expired one: the entry is present and
 will not decode, so "the preview has expired" would have named the one thing
 already ruled out. Both end at the same re-upload, and they are still not the
 same sentence.
+
+## A pre-setup screen renders the application shell
+
+`tests/Contracts/APreSetupScreenOffersNoWayIntoTheAppArchTest.php`
+
+`layouts.app` drew the menubar, the sidebar search box and the command palette
+behind `@auth`. Being signed in is not the same question as having an
+application to navigate, and the whole of first run happens signed in: signup
+creates the account and logs the reader straight in, so the recovery-code
+hand-over, the setup wizard, the desktop migration splash and the phone's
+import bootstrap are all authenticated pages. Every one of them that named
+`layouts.app` got the full shell.
+
+Four did. The one that mattered was `/recovery-codes` — the screen the ten
+codes are shown on, once, ever. It rendered a sidebar with twenty-five
+destinations, a search box, a `⌘K` palette and a phone top bar with a hamburger
+and a magnifier, all beside a page whose own copy says the codes will not be
+shown again. Every one of those controls is a way off that screen, and taking
+any of them loses the codes for good. The other three were `/setup` (the
+pending-migrations splash, where the sidebar's nav counts query tables the
+migrations have not created yet), `/mobile/import` and `/change-password` —
+the last of which is only ever reached because the forced-change guard sends a
+partner there on their first sign-in.
+
+Three things kept it invisible. The page returns 200 and looks plausible.
+A route walk that visits `/recovery-codes` without codes in the session is
+redirected onward to the wizard, so the walk records the wizard's chrome and
+files the page as clean. And the drawer and the top bar are a `md:`/`lg:` pair
+— the drawer *is* the static sidebar from 1024px up and the top bar is
+`display: none` there — so a check that looked for one of them passed at the
+width that draws the other.
+
+The seam is `Modules\Core\Public\Support\AppShellVisibility`, asked once by the
+layout, answering from `Modules\Core\Public\Navigation\PreSetupSurface` — the
+roster of routes that are a first-run ceremony rather than a page of the
+application. `Destination` is the roster of places a reader may be sent; this
+is the roster that sends nowhere. The pages keep naming `'layouts.app'`
+verbatim, which matters: five separate rules read that literal out of source to
+decide which pages they apply to, and moving a page onto a different layout to
+strip its chrome would take it out of all five — including the one that checks
+it reserves the notch.
+
+Which is the second half. `.top-bar` reserves and paints `var(--safe-top)` and
+stands in the flow, so a page under one must not pad the top again; a page
+without one must. Taking the bar away turned two of the four into screens with
+no seam reserved at all. `app.css` already had the answer — `.safe-screen`
+pads all four edges and `body:has(.top-bar) .safe-screen` zeroes the top one
+again — so a page whose chrome depends on the route it was reached by can wear
+the class unconditionally and be right in both shapes.
+
+Two smaller things went with the menubar. The palette keybind was left bound
+after the palette stopped being mounted, so `⌘K` dispatched into nothing while
+`⌘.` still navigated to `/dev` — a keyboard way out of a ceremony whose visible
+ways out had just been removed. And the layout mounted five of the
+application's own modals inside `<main>`: a `wire:snapshot` is a bearer token
+for the component it names, so those endpoints were reachable from a screen
+that drew no control for any of them. That last one already had a guard —
+`ForcePasswordChangeMiddleware` exempts by payload rather than by route
+precisely because the exempt page mounted nine components beside the password
+form — which is the tell worth keeping. When a guard has to reason about what a
+page *happens* to mount, the page is mounting the wrong things.
+
+The rule renders every surface the enum names, in the state that reaches it,
+and reads the result with an HTML parser rather than a pattern. It carries
+three defences against going quietly inert: every enum case must resolve to a
+registered route, every case must have a row saying how a test reaches it, and
+an ordinary page must still draw all seven markers — without that last one the
+rule would pass loudest on the day the shell broke everywhere.
 
 ## Related
 
