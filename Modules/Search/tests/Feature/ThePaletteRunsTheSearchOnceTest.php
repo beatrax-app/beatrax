@@ -50,11 +50,20 @@ beforeEach(function (): void {
     ]);
 });
 
-it('resolves the candidate set once per keystroke', function (): void {
+// The match is the restriction now rather than a step of its own, so one search
+// carries it twice: once in the page read and once in the totals read cloned
+// from it. Two searches would put it there four times, which is the doubling
+// this file exists to catch, and the two counts below stay at one either way.
+it('runs one search per keystroke, carrying the match as its restriction', function (): void {
     $statements = paletteKeystrokeSql($this->paletteUser, 'Heijn');
 
     expect(paletteSqlContaining($statements, 'transaction_search_fts MATCH', 'highlight('))
-        ->toHaveCount(1);
+        ->toHaveCount(2);
+
+    // Pinned beside the count above, because that one alone cannot tell a
+    // restriction carried into a second statement from a second search: a
+    // keystroke that searched twice would raise this too.
+    expect(paletteSqlContaining($statements, 'from "transactions"'))->toHaveCount(2);
 });
 
 it('aggregates the currency totals once per keystroke', function (): void {

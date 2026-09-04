@@ -28,6 +28,12 @@ final readonly class EntityNameSearch
 {
     private const int COUNTERPARTY_MATCH_LIMIT = 3;
 
+    // How far ahead of the match limit the walk reads. A keystroke whose
+    // matches are near the front of the table stops inside the first window,
+    // and one that matches nothing pays a statement per window instead of a
+    // single one holding the reader's whole merchant list.
+    private const int COUNTERPARTY_SCAN_CHUNK = 250;
+
     private const int ENTITY_MATCH_LIMIT = 3;
 
     public function __construct(
@@ -55,11 +61,12 @@ final readonly class EntityNameSearch
         ];
     }
 
-    // Fetch the user's counterparties — a naturally small, per-user bounded
-    // set — decrypt display_name per row, and substring-match in PHP; the cap
-    // moves from SQL to PHP because ciphertext has no name predicate to widen,
-    // which is why the reader's word for an app-named row costs no extra read.
+    // The cap lives in PHP because ciphertext has no name predicate SQL can
+    // widen, so the rows arrive id-ordered a window at a time and the break
+    // below abandons the walk. A get() had already paid for the whole table by
+    // then; this pays for the window the third name was found in.
     /**
+     * @link ../../../../.docs/architecture/reads-bounded-by-the-user.md#8--every-counterparty-per-palette-keystroke
      * @link ../../../../.docs/features/counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name
      *
      * @return list<PaletteEntity>
@@ -70,8 +77,8 @@ final readonly class EntityNameSearch
         $rows = $this->db->connection()
             ->table('counterparties')
             ->where('user_id', $user->id)
-            ->orderBy('id')
-            ->get(['id', 'display_name', 'slug', 'metadata']);
+            ->select(['id', 'display_name', 'slug', 'metadata'])
+            ->lazyById(self::COUNTERPARTY_SCAN_CHUNK);
 
         $needle = mb_strtolower($q);
         $results = [];

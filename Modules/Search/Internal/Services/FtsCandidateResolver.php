@@ -15,10 +15,10 @@ use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// The candidate-id half of a search: turn the text query into a bounded
-// id list via FTS5 MATCH, or — for queries too short for FTS5 — the
-// decrypt-then-substring LIKE fallback, plus the highlight/snippet load
-// that reuses the same MATCH expression.
+// The candidate half of a search: narrow the ledger to the rows a text
+// query reaches, via FTS5 MATCH or — for queries too short for FTS5 —
+// the decrypt-then-substring LIKE fallback, plus the highlight/snippet
+// load that reuses the same MATCH expression.
 final readonly class FtsCandidateResolver
 {
     use CoercesScalars;
@@ -41,15 +41,14 @@ final readonly class FtsCandidateResolver
         private EncryptionMigrationService $encryptionService,
     ) {}
 
-    // Returns null for the empty-text (filters-only) branch to signal
-    // "apply no id restriction"; otherwise a bounded matched-id list via
-    // FTS5 MATCH or the LIKE fallback, whose scan runs the caller's
-    // filter routine so it honours the same active filters as the query.
+    // Null for the empty-text (filters-only) branch signals "apply no
+    // restriction". The FTS arm hands back the MATCH itself so the reader's
+    // page stays one statement; only the LIKE fallback materialises ids, and
+    // its scan runs the caller's filters so it narrows by what they narrow by.
     /**
      * @param  Closure(Builder): void  $applyFilters
-     * @return list<int>|null
      */
-    public function resolve(User $user, string $textQuery, Closure $applyFilters): ?array
+    public function resolve(User $user, string $textQuery, Closure $applyFilters): ?CandidateRestriction
     {
         if ($textQuery === '') {
             return null;
@@ -64,7 +63,7 @@ final readonly class FtsCandidateResolver
         $ftsWords = $this->significantFtsWords($searchable);
         $shortWords = $this->shortFtsWords($searchable);
         if (mb_strlen($searchable) < SearchDocumentBody::TRIGRAM_WIDTH || $ftsWords === []) {
-            return $this->likeFallbackIds($user, $searchable, $applyFilters);
+            return CandidateRestriction::ids($this->likeFallbackIds($user, $searchable, $applyFilters));
         }
 
         $query = $this->db->connection()
@@ -82,9 +81,7 @@ final readonly class FtsCandidateResolver
             LikeNeedle::contains($query, 'transaction_search_docs.search_body', $word);
         }
 
-        $rowids = $query->pluck('transaction_search_fts.rowid')->all();
-
-        return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rowids));
+        return CandidateRestriction::subquery($query->select('transaction_search_fts.rowid'));
     }
 
     /**

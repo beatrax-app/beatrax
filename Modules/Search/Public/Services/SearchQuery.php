@@ -17,6 +17,7 @@ use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Search\Internal\Services\CandidateRestriction;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\QueryParser;
@@ -74,11 +75,11 @@ final readonly class SearchQuery
 
         $filters = $this->tokenFilters->merge($user, $filters, $parsedFilters, $base);
 
-        // null means "no text query" (filters-only mode) — the base query
-        // is scoped by user_id + filters directly, with no whereIn over a
-        // materialized id list (avoids the SQLITE_MAX_VARIABLE_NUMBER
-        // crash on full history); the fallback scan reuses applyFilters.
-        $candidateIds = $this->ftsResolver->resolve(
+        // Null means "no text query" (filters-only mode), and the base query is
+        // then scoped by user_id and the filters alone. Anything else narrows
+        // to the text match, which the resolver hands over as a subquery rather
+        // than a list of ids so a common word costs one statement, not 25,000.
+        $candidates = $this->ftsResolver->resolve(
             $user,
             $textQuery,
             function (Builder $candidateQuery) use ($user, $filters, $base): void {
@@ -91,12 +92,12 @@ final readonly class SearchQuery
         // to a parse that could only fail, and the null was read as zero.
         $minor = MoneyInput::tryToMinor(trim($textQuery), $base);
 
-        // The amount-query branch only fires when the text branch
-        // found no candidates — otherwise a bare numeric query like
-        // "2024" would OR in every €2024.00 transaction, conflating
-        // "text contains 2024" with "amount is €2024.00".
-        if ($candidateIds !== null && $candidateIds === [] && $minor !== null) {
-            $candidateIds = self::toIntList(
+        // The amount-query branch only fires when the text branch found no
+        // candidates — otherwise a bare numeric query like "2024" would OR in
+        // every €2024.00 transaction, conflating "text contains 2024" with
+        // "amount is €2024.00". Money parsing is asked first: it costs nothing.
+        if ($candidates !== null && $minor !== null && $candidates->isEmpty()) {
+            $candidates = CandidateRestriction::ids(self::toIntList(
                 $this->db->connection()
                     ->table('transactions')
                     ->where('user_id', $user->id)
@@ -107,10 +108,10 @@ final readonly class SearchQuery
                     })
                     ->pluck('id')
                     ->all(),
-            );
+            ));
         }
 
-        $query = $this->buildBaseQuery($user, $candidateIds);
+        $query = $this->buildBaseQuery($user, $candidates);
 
         $this->applyFilters($query, $user, $filters, $base);
 
@@ -127,7 +128,7 @@ final readonly class SearchQuery
         $sliced = $rows->take($limit)->values();
 
         $highlights = [];
-        if (strlen($textQuery) >= SearchDocumentBody::TRIGRAM_WIDTH && $candidateIds !== null && count($candidateIds) > 0) {
+        if (strlen($textQuery) >= SearchDocumentBody::TRIGRAM_WIDTH && $candidates !== null) {
             $highlights = $this->ftsResolver->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
@@ -180,18 +181,13 @@ final readonly class SearchQuery
         return ['hits' => $hits, 'totalCount' => $page->totalCount];
     }
 
-    /**
-     * @param  list<int>|null  $candidateIds
-     */
-    private function buildBaseQuery(User $user, ?array $candidateIds): Builder
+    private function buildBaseQuery(User $user, ?CandidateRestriction $candidates): Builder
     {
         $query = $this->db->connection()
             ->table('transactions')
             ->where('transactions.user_id', $user->id);
 
-        if ($candidateIds !== null) {
-            $query->whereIn('transactions.id', $candidateIds);
-        }
+        $candidates?->applyTo($query);
 
         $query
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')

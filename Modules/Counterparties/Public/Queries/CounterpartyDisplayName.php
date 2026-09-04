@@ -14,33 +14,47 @@ use stdClass;
 
 final readonly class CounterpartyDisplayName
 {
+    // One id-ordered window of the picker at a time. Small enough that the
+    // rows held alongside the built list stay a rounding error, wide enough
+    // that a household-sized merchant list is still one statement.
+    private const int PICKER_CHUNK = 500;
+
     public function __construct(
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
         private Session $session,
     ) {}
 
+    // Streamed rather than fetched, because the picker this fills already holds
+    // one object per counterparty and the raw result set beside it doubled that
+    // for no reader-visible reason; the keyset walk is what keeps the peak to
+    // one chunk of rows rather than the whole table.
     /**
+     * @link ../../../../.docs/architecture/reads-bounded-by-the-user.md#7--every-counterparty-on-every-transaction-detail-render
+     *
      * @return Collection<int, object{id: int, display_name: string}&stdClass>
      */
     public function forUser(int $userId): Collection
     {
-        $rows = $this->db->connection()
+        $rows = [];
+        $stream = $this->db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)
-            ->orderBy('id')
-            ->get(['id', 'display_name', 'metadata'])
-            ->map(fn (stdClass $row): stdClass => (object) [
+            ->select(['id', 'display_name', 'metadata'])
+            ->lazyById(self::PICKER_CHUNK);
+
+        foreach ($stream as $row) {
+            $rows[] = (object) [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
                 'display_name' => $this->readable($row, $userId),
-            ]);
+            ];
+        }
 
-        return $rows
-            ->sort(static fn (stdClass $a, stdClass $b): int => LocaleCollator::compare(
-                $a->display_name,
-                $b->display_name,
-            ))
-            ->values();
+        /** @var Collection<int, object{id: int, display_name: string}&stdClass> */
+        return new Collection(LocaleCollator::sorted(
+            $rows,
+            static fn (stdClass $row): string => $row->display_name,
+        ));
     }
 
     /**

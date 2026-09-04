@@ -155,6 +155,10 @@ final class LocaleCollator
      */
     private static array $keys = [];
 
+    private static ?Translator $translator = null;
+
+    private static ?Container $translatorFrom = null;
+
     public static function compare(string $a, string $b): int
     {
         $collator = self::collator();
@@ -168,6 +172,52 @@ final class LocaleCollator
         // compare() answers false on a collation failure; treating that as
         // "equal" keeps the sort stable rather than ordering on junk.
         return $order === false ? 0 : $order;
+    }
+
+    // For a list rather than a pair: one collation key per element instead of
+    // one collation per comparison, which is the difference between n and
+    // n·log n calls into ICU on a picker that grows with the ledger.
+    /**
+     * @link ../../../../.docs/architecture/reads-bounded-by-the-user.md#7--every-counterparty-on-every-transaction-detail-render
+     *
+     * @template TValue
+     *
+     * @param  list<TValue>  $values
+     * @param  callable(TValue): string  $label
+     * @return list<TValue>
+     */
+    public static function sorted(array $values, callable $label): array
+    {
+        $collator = self::collator();
+        $locale = Locale::tryFrom(self::locale()) ?? Locale::En;
+
+        // Text ICU cannot read is the whole of what getSortKey() refuses, and
+        // it is exactly what compare() refuses too, so the null below stands
+        // for the false there and the two orderings cannot diverge.
+        $keys = [];
+        foreach ($values as $index => $value) {
+            $text = $label($value);
+
+            if (! $collator instanceof Collator) {
+                $keys[$index] = self::sortKey($text, $locale);
+
+                continue;
+            }
+
+            $keys[$index] = mb_check_encoding($text, 'UTF-8') ? $collator->getSortKey($text) : null;
+        }
+
+        // A key ICU refused stands for compare() answering false, which this
+        // class reads as "equal"; uasort is stable, so such a name keeps the
+        // position it arrived in rather than being filed under an empty key.
+        uasort($keys, static fn (?string $a, ?string $b): int => $a === null || $b === null ? 0 : $a <=> $b);
+
+        $sorted = [];
+        foreach (array_keys($keys) as $index) {
+            $sorted[] = $values[$index];
+        }
+
+        return $sorted;
     }
 
     // Public for the reason Money::formatWithoutIcu() is: this is the arm both
@@ -543,8 +593,19 @@ final class LocaleCollator
         return self::$alphabets[$locale->value];
     }
 
+    // Resolved per comparison, and a sort asks n·log n times: 23,241
+    // container lookups for a two-thousand-name picker, which measured as the
+    // whole of the sort's cost. The instance is held, the locale still read off
+    // it, so a setLocale() mid-request is seen exactly as before.
     private static function locale(): string
     {
-        return Container::getInstance()->make(Translator::class)->getLocale();
+        $container = Container::getInstance();
+
+        if (self::$translatorFrom !== $container) {
+            self::$translatorFrom = $container;
+            self::$translator = $container->make(Translator::class);
+        }
+
+        return self::$translator instanceof Translator ? self::$translator->getLocale() : Locale::En->value;
     }
 }
