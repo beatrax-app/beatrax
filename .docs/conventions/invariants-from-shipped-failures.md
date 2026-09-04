@@ -5743,6 +5743,7 @@ pathological row must not raise on a scan of every description.
 `ssl_version` string fails closed rather than throwing inside a TLS decision.
 `CorpusPatternMatcher::compiles()` uses `=== false` to mean "this pattern does
 not compile", which is the question it is asking.
+
 ## A catch body that says nothing
 
 `tests/Contracts/AnEmptyCatchIsOneSomebodyChoseArchTest.php`
