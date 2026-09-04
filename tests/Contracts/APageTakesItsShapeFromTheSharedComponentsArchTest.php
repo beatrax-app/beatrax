@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 // Twice in one round, a page that declared its own layout drifted away from the
@@ -88,7 +89,7 @@ it('does not let a page write its own h1', function (): void {
     $offenders = [];
 
     foreach (pageTemplates() as $path) {
-        if (preg_match('/<h1[\s>]/', (string) file_get_contents($path)) === 1) {
+        if (MarkupSource::elements((string) file_get_contents($path), 'h1') !== []) {
             $offenders[] = str_replace(base_path().'/', '', $path);
         }
     }

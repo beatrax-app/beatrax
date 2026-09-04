@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupElement;
+use Modules\Core\Public\Support\MarkupSource;
 
 // A control that takes an ARIA role has to carry the state the native element
 // would have supplied for free: a <progress> reports its value unasked, a div
@@ -33,42 +34,26 @@ function ariaCompletenessBladeFiles(): array
     return $files;
 }
 
-// Quote-aware on purpose: Alpine expressions put ">" inside attribute values
-// (x-show="a > b"), and a naive [^>]* would cut the tag in half there.
-/**
- * @return list<array{0: string, 1: int}>
- */
-function ariaCompletenessOpenTags(string $source): array
+function ariaCompletenessHasName(MarkupElement $element): bool
 {
-    $matches = PatternScan::setsWithOffsets(
-        '~<[a-zA-Z][\w:.-]*((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>~s',
-        $source,
-    );
-
-    $tags = [];
-    foreach ($matches as $match) {
-        $tags[] = [$match[1][0], (int) $match[0][1]];
+    foreach (['aria-label', 'aria-labelledby', ':aria-label', ':aria-labelledby'] as $named) {
+        if ($element->hasAttribute($named)) {
+            return true;
+        }
     }
 
-    return $tags;
-}
-
-function ariaCompletenessHasName(string $attributes): bool
-{
-    return str_contains($attributes, 'aria-label=')
-        || str_contains($attributes, 'aria-labelledby=')
-        || str_contains($attributes, ':aria-label=');
+    return false;
 }
 
 /**
- * @return array<string, array{check: callable(string): bool, missing: string}>
+ * @return array<string, array{check: callable(MarkupElement): bool, missing: string}>
  */
 function ariaCompletenessRules(): array
 {
-    $named = static fn (string $a): bool => ariaCompletenessHasName($a);
-    $has = static fn (string ...$needles): callable => static function (string $a) use ($needles): bool {
+    $named = static fn (MarkupElement $element): bool => ariaCompletenessHasName($element);
+    $has = static fn (string ...$needles): callable => static function (MarkupElement $element) use ($needles): bool {
         foreach ($needles as $needle) {
-            if (str_contains($a, $needle)) {
+            if ($element->hasAttribute($needle) || $element->hasAttribute(':'.$needle)) {
                 return true;
             }
         }
@@ -99,28 +84,24 @@ it('gives every ARIA-roled widget the state its native element would have carrie
     foreach (ariaCompletenessBladeFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        foreach (ariaCompletenessOpenTags($source) as [$attributes, $offset]) {
-            if (preg_match('~\brole="([a-z]+)"~', $attributes, $found) !== 1) {
-                continue;
-            }
+        foreach (MarkupSource::tags($source) as $element) {
+            $role = $element->attribute('role');
 
-            $role = $found[1];
-            if (! isset($rules[$role])) {
+            if ($role === null || ! isset($rules[$role])) {
                 continue;
             }
 
             // A role on a hidden element is not announced at all, so there is
             // no name or state for it to be missing.
-            if (str_contains($attributes, 'aria-hidden="true"')) {
+            if ($element->attribute('aria-hidden') === 'true') {
                 continue;
             }
 
-            if (($rules[$role]['check'])($attributes)) {
+            if (($rules[$role]['check'])($element)) {
                 continue;
             }
 
-            $line = substr_count(substr($source, 0, $offset), "\n") + 1;
-            $offenders[] = sprintf('%s:%d — role="%s" without %s', $path, $line, $role, $rules[$role]['missing']);
+            $offenders[] = sprintf('%s:%d — role="%s" without %s', $path, $element->line($source), $role, $rules[$role]['missing']);
         }
     }
 

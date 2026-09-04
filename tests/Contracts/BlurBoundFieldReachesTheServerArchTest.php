@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 /**
@@ -94,18 +95,44 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
 /** @return list<string> */
 function deferredFieldBindings(string $view, string $property): array
 {
-    $matches = PatternScan::sets('/<([\w:.-]+)\b[^>]*?wire:model((?:\.[\w]+)*)=\"([^\"]+)\"/s', $view);
-
     $bindings = [];
-    foreach ($matches as $match) {
-        [, $tag, $modifiers, $target] = $match;
 
-        $isField = in_array($tag, ['input', 'select', 'textarea'], true) || str_starts_with($tag, 'x-core::');
-        if (! $isField || explode('.', $target)[0] !== $property || str_contains($modifiers, 'live')) {
+    foreach (MarkupSource::tags($view) as $element) {
+        $isField = in_array($element->name, ['input', 'select', 'textarea'], true)
+            || str_starts_with($element->name, 'x-core::');
+
+        if (! $isField) {
             continue;
         }
 
-        $bindings[] = $target.($modifiers === '' ? '' : $modifiers);
+        foreach (deferredBindingOn($element->attributes(), $property) as $binding) {
+            $bindings[] = $binding;
+        }
+    }
+
+    return $bindings;
+}
+
+/**
+ * @param  array<string, string>  $attributes
+ * @return list<string>
+ */
+function deferredBindingOn(array $attributes, string $property): array
+{
+    $bindings = [];
+
+    foreach ($attributes as $name => $target) {
+        $modifiers = $name === 'wire:model' ? '' : substr($name, strlen('wire:model'));
+
+        if ($name !== 'wire:model' && ! str_starts_with($name, 'wire:model.')) {
+            continue;
+        }
+
+        if (explode('.', $target)[0] !== $property || str_contains($modifiers, 'live')) {
+            continue;
+        }
+
+        $bindings[] = $target.$modifiers;
     }
 
     return $bindings;

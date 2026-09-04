@@ -9,6 +9,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 
@@ -122,12 +123,11 @@ function tamperedUrlDateProperties(): array
 
         $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
-        $tags = PatternScan::all('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source);
-
-        foreach ($tags[0] as $tag) {
-            $models = PatternScan::all('/wire:model[.\w]*\s*=\s*"([\w]+)"/', $tag);
-            foreach ($models[1] as $model) {
-                $names[] = $model;
+        foreach (MarkupSource::elements($source, 'x-core::date-input') as $element) {
+            foreach ($element->attributes() as $name => $model) {
+                if ($name === 'wire:model' || str_starts_with($name, 'wire:model.')) {
+                    $names[] = $model;
+                }
             }
         }
     }
