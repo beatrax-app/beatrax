@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nouveau mot de passe',
     'confirm_new_password' => 'Confirmer le nouveau mot de passe',
     'submit' => 'Enregistrer le mot de passe',
+    'sign_out' => 'Se déconnecter',
 
     'error_current_required' => 'Saisis ton mot de passe actuel.',
     'error_current_incorrect' => 'Le mot de passe actuel est incorrect.',

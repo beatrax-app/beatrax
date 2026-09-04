@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nieuw wachtwoord',
     'confirm_new_password' => 'Nieuw wachtwoord bevestigen',
     'submit' => 'Nieuw wachtwoord opslaan',
+    'sign_out' => 'Afmelden',
 
     'error_current_required' => 'Voer je huidige wachtwoord in.',
     'error_current_incorrect' => 'Huidig wachtwoord is onjuist.',

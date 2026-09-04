@@ -42,7 +42,23 @@ So the ceremony renews, and everything else does nothing:
 | The Livewire submit that signs up and renders the codes | `renew()` in `render()` | pending |
 | A reload of `/mobile/import` showing the codes again | `renew()` in `render()` | pending |
 | `GET /mobile/recovery-codes/export` (the share sheet) | `renew()` | pending |
+| A sub-resource the ceremony page fetched for itself | nothing, but exempt | pending |
 | Anything else — pairing, the welcome screen, a stray poll | nothing | **forgotten** |
+
+The sub-resource row was not there to begin with, and it cost the desktop
+ceremony everything. A page is not one request: `x-core::pwa-head` asks for the
+manifest, the icon, a PWA icon and the splash, and the layout registers a
+service worker on `load`, which fetches `/sw.js`. All five are routed, all five
+carry the session, and each one aged the flash bag. So the codes were gone a
+moment after the screen finished painting — and the reader who then ticked "I
+have saved these codes somewhere safe" got a 404 and a redirect into the wizard
+instead of the "Continue" they had earned.
+
+The exemption is the same one the Livewire update already had, for the same
+reason written down there: none of these is a reader going somewhere. What made
+it invisible is that no test asks for a page the way a browser does. Every test
+of this ceremony drove the component directly, where sub-resources do not exist,
+and every one of them passed.
 
 The renewal is opt-in, so a new screen that forgets to opt in loses the codes
 early — visibly, on the screen that needed them. The other way round is the

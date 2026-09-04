@@ -10,6 +10,7 @@ return [
     'new_password' => 'Novo geslo',
     'confirm_new_password' => 'Potrdi novo geslo',
     'submit' => 'Shrani novo geslo',
+    'sign_out' => 'Odjavi se',
 
     'error_current_required' => 'Vnesi svoje trenutno geslo.',
     'error_current_incorrect' => 'Trenutno geslo ni pravilno.',

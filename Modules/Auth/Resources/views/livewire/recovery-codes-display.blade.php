@@ -2,12 +2,16 @@
 {{-- The system bars are painted over this screen: without the bottom inset
      the Android navigation bar covers the lower half of "Continue to Beatrax",
      which is the only way off a screen shown exactly once. --}}
-{{-- No top inset, so no .safe-screen: this page renders inside layouts.app's
-     <main>, below a .top-bar that already pads var(--safe-top) and stands in
-     the flow. Padding it again here reserved the status bar twice and pushed
-     the heading down by a second copy of its height. --}}
-<div class="min-h-screen bg-white pb-[calc(3rem+var(--safe-bottom))] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-12 dark:bg-slate-950">
-    <div class="max-w-xl mx-auto px-4 sm:px-6 space-y-6">
+{{-- .safe-screen, all four edges, because no bar is drawn above this screen
+     any more: the menubar and the search box are withheld from a first-run
+     ceremony, so the status bar has nothing else reserving it. The stylesheet
+     zeroes the top inset again for any document that does carry a .top-bar,
+     which is what keeps the class correct in both shapes. The rhythm moves
+     inside onto the column, where it adds to the seam rather than replacing it,
+     and takes the shared step in doing so: the pt-12 it replaces was a band of
+     its own that the mx-auto rule could not see, because pt is not py. --}}
+<div class="safe-screen min-h-screen bg-white dark:bg-slate-950">
+    <div class="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <x-core::page-header
             :title="Lang::get('auth::recovery_codes.title')"
             :subtitle="Lang::get('auth::recovery_codes.subtitle')"

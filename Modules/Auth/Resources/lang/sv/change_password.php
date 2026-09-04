@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nytt lösenord',
     'confirm_new_password' => 'Bekräfta nytt lösenord',
     'submit' => 'Spara nytt lösenord',
+    'sign_out' => 'Logga ut',
 
     'error_current_required' => 'Ange ditt nuvarande lösenord.',
     'error_current_incorrect' => 'Nuvarande lösenord är fel.',

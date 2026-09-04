@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nytt passord',
     'confirm_new_password' => 'Bekreft nytt passord',
     'submit' => 'Lagre nytt passord',
+    'sign_out' => 'Logg ut',
 
     'error_current_required' => 'Skriv inn det nåværende passordet ditt.',
     'error_current_incorrect' => 'Det nåværende passordet er feil.',

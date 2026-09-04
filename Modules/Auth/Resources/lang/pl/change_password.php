@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nowe hasło',
     'confirm_new_password' => 'Potwierdź nowe hasło',
     'submit' => 'Zapisz nowe hasło',
+    'sign_out' => 'Wyloguj się',
 
     'error_current_required' => 'Wpisz swoje obecne hasło.',
     'error_current_incorrect' => 'Obecne hasło jest nieprawidłowe.',

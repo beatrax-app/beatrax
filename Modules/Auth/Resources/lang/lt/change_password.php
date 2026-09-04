@@ -10,6 +10,7 @@ return [
     'new_password' => 'Naujas slaptažodis',
     'confirm_new_password' => 'Patvirtink naują slaptažodį',
     'submit' => 'Išsaugoti naują slaptažodį',
+    'sign_out' => 'Atsijungti',
 
     'error_current_required' => 'Įvesk savo dabartinį slaptažodį.',
     'error_current_incorrect' => 'Dabartinis slaptažodis neteisingas.',

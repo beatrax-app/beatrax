@@ -10,6 +10,7 @@ return [
     'new_password' => 'Uusi salasana',
     'confirm_new_password' => 'Vahvista uusi salasana',
     'submit' => 'Tallenna uusi salasana',
+    'sign_out' => 'Kirjaudu ulos',
 
     'error_current_required' => 'Anna nykyinen salasanasi.',
     'error_current_incorrect' => 'Nykyinen salasana on väärin.',

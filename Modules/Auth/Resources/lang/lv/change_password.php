@@ -10,6 +10,7 @@ return [
     'new_password' => 'Jaunā parole',
     'confirm_new_password' => 'Apstipriniet jauno paroli',
     'submit' => 'Saglabāt jauno paroli',
+    'sign_out' => 'Atteikties',
 
     'error_current_required' => 'Ievadiet savu pašreizējo paroli.',
     'error_current_incorrect' => 'Pašreizējā parole ir nepareiza.',
