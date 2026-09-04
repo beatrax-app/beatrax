@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\SecretFileMode;
 
@@ -46,6 +47,7 @@ final readonly class PreMigrationSnapshot
     public function __construct(
         private FileEncryptor $backupEncryptor,
         private Clock $clock,
+        private OwnerOnlyPath $ownerOnly = new OwnerOnlyPath,
     ) {}
 
     // A targeted sensitive-column snapshot, not a whole-file SQLite copy: only
@@ -53,7 +55,7 @@ final readonly class PreMigrationSnapshot
     public function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
     {
         $dir = UserDataPathService::appPath('sync/backups');
-        @mkdir($dir, SecretFileMode::DIRECTORY, true);
+        $this->ownerOnly->directory($dir);
 
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_premig_'.bin2hex(random_bytes(8)).'.tmp';
 

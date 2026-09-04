@@ -14,6 +14,7 @@ use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
+use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LivewireClientRefusal;
@@ -144,22 +145,12 @@ return Application::configure(basePath: dirname(__DIR__))
             return false;
         });
     })
-    ->booting(function (): void {
-        // Both calls have to land before any provider opens the connection:
+    ->booting(function (Application $app): void {
+        // Has to land before any provider opens the connection:
         // SqliteOptimizationsProvider sets PRAGMA journal_mode on
         // ConnectionEstablished, and Laravel's SQLite connector throws on a
         // missing file rather than creating one. No-ops off device.
-        $dbFile = UserDataPathService::databaseFile();
-        $dbDir = dirname($dbFile);
-        if (! is_dir($dbDir)) {
-            @mkdir($dbDir, 0775, true);
-        }
-        if (! file_exists($dbFile)) {
-            @touch($dbFile);
-            // Owner-only before the migrator writes anything: the usual 0644
-            // umask would expose every balance and account number in plaintext.
-            @chmod($dbFile, 0600);
-        }
+        $app->make(EnsurePrivateDatabaseFile::class)->run();
     })
     ->booted(function (Application $app): void {
         if (! UserDataPathService::isMobileRuntime()) {
