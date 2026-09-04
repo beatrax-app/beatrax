@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\App;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 beforeEach(function (): void {
     $this->chromeUser = User::query()->create([
@@ -40,7 +41,7 @@ it('hands the client a localised name for every chart type', function (): void {
 
     expect($html)->toContain('data-chart-labels=');
 
-    preg_match('/data-chart-labels="([^"]*)"/', (string) $html, $m);
+    $m = PatternScan::first('/data-chart-labels="([^"]*)"/', (string) $html);
     expect($m)->toHaveCount(2);
 
     $labels = json_decode(html_entity_decode($m[1], ENT_QUOTES), true, flags: JSON_THROW_ON_ERROR);

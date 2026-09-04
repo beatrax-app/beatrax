@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
@@ -18,13 +19,12 @@ use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 /** @return string the on-screen text of the amount-preference option carrying $value */
 function amountPreferenceOption(string $html, string $value): string
 {
-    $matched = preg_match(
+    $match = PatternScan::first(
         '/<option\b[^>]*\bvalue="'.preg_quote($value, '/').'"[^>]*>(.*?)<\/option>/s',
         $html,
-        $match,
     );
 
-    expect($matched)->toBe(1, "No amount-preference option rendered for value=\"{$value}\".");
+    expect($match)->toHaveCount(2, "No amount-preference option rendered for value=\"{$value}\".");
 
     return trim(html_entity_decode(strip_tags($match[1]), ENT_QUOTES));
 }

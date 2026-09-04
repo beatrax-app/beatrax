@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\FirstPartySymbols;
 
 /**
@@ -196,16 +197,12 @@ it('names no class that exists in neither Composer root', function (): void {
  */
 function docsSymbolsMentions(string $line): array
 {
-    if (preg_match_all('/`([^`\n]+)`/', $line, $spans) === 0) {
-        return [];
-    }
+    $spans = PatternScan::all('/`([^`\n]+)`/', $line);
 
     $found = [];
 
     foreach ($spans[1] as $span) {
-        if (preg_match_all('/\b([A-Z]\w+)::(\w+)/', $span, $matches, PREG_SET_ORDER) === 0) {
-            continue;
-        }
+        $matches = PatternScan::sets('/\b([A-Z]\w+)::(\w+)/', $span);
 
         foreach ($matches as $match) {
             // ::class is a language construct rather than a member, and no

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 
 // The component listened for `close-sheet`, which nothing in this codebase has
 // ever dispatched; the pages dispatch `modal-close`. So on a phone, saving a
@@ -25,9 +26,9 @@ it('keeps answering close-sheet, so nothing that used it regresses', function ()
 it('scopes both listeners to its own name, so one sheet cannot close another', function (): void {
     $html = Blade::render('<x-core::bottom-sheet name="only-me" title="T">body</x-core::bottom-sheet>');
 
-    $listeners = preg_match_all('/x-on:(?:close-sheet|modal-close)\.window="([^"]+)"/', $html, $matches);
+    $matches = PatternScan::all('/x-on:(?:close-sheet|modal-close)\.window="([^"]+)"/', $html);
 
-    expect($listeners)->toBe(2);
+    expect($matches[0])->toHaveCount(2);
 
     foreach ($matches[1] as $handler) {
         expect($handler)->toContain('detail.name')

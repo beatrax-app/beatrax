@@ -9,6 +9,7 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
@@ -26,7 +27,7 @@ const CONNECTION_TIMESTAMP_PROPERTIES = [
 
 function connectionTimestampsSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"openbanking.open-banking-settings-page"')) {

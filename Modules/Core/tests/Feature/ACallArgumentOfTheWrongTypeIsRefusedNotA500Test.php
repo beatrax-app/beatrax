@@ -7,6 +7,7 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Mechanisms\HandleComponents\HandleComponents;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\LivewireClientRefusal;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
@@ -17,7 +18,7 @@ uses(RefreshDatabase::class);
 
 function callArgumentSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"search.palette-search-endpoint"')) {

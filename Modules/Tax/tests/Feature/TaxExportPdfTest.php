@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Tax\Internal\Services\TaxPdfRenderer;
 use Modules\Tax\Internal\Services\TaxYearQuery;
@@ -210,7 +211,7 @@ it('subtotals the category tables to the deductions figure the summary block sta
     $data = app(TaxYearQuery::class)->forUser($user->id, 2025);
     $html = view('tax::pdf.export', ['year' => 2025, 'data' => $data])->render();
 
-    preg_match_all('#<tr class="subtotal-row">.*?</tr>#s', $html, $rows);
+    $rows = PatternScan::all('#<tr class="subtotal-row">.*?</tr>#s', $html);
 
     expect($rows[0][0] ?? '')->toContain(e(Money::ofMinor(135_544, 'EUR')->format()))
         ->not->toContain(e(Money::ofMinor(155_544, 'EUR')->format()));

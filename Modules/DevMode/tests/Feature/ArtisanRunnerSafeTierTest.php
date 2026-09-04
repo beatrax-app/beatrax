@@ -7,6 +7,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
@@ -314,7 +315,7 @@ it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.a
 
     // dev-shell.blade.php stamps nav-disabled on an entry whose route is not
     // registered, so its absence is the assertion.
-    preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>.*?(Artisan|Audit).*?</a>#s', $html, $matches);
+    $matches = PatternScan::all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>.*?(Artisan|Audit).*?</a>#s', $html);
 
     expect($matches[0])->not->toBeEmpty();
     foreach ($matches[0] as $i => $anchor) {

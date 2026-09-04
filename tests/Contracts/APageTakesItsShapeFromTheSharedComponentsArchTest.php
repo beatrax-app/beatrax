@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Twice in one round, a page that declared its own layout drifted away from the
 // pages either side of it, and neither drift could fail a test.
 //
@@ -102,10 +104,10 @@ it('gives every page container the same vertical rhythm', function (): void {
     $offenders = [];
 
     foreach (pageTemplates() as $path) {
-        preg_match_all('/class="([^"]*\bmx-auto\b[^"]*)"/', (string) file_get_contents($path), $matches);
+        $matches = PatternScan::all('/class="([^"]*\bmx-auto\b[^"]*)"/', (string) file_get_contents($path));
 
         foreach ($matches[1] as $classes) {
-            preg_match_all('/(?:^|\s)(?:sm:)?py-(\d+)/', $classes, $paddings);
+            $paddings = PatternScan::all('/(?:^|\s)(?:sm:)?py-(\d+)/', $classes);
 
             foreach ($paddings[1] as $step) {
                 if ($step !== pageRhythmStep()) {
@@ -145,7 +147,7 @@ it('reads the rhythm off a page root that is not the column', function (): void 
             continue;
         }
 
-        preg_match_all('/(?:^|\s)(?:sm:)?py-(\d+)/', $class[1], $paddings);
+        $paddings = PatternScan::all('/(?:^|\s)(?:sm:)?py-(\d+)/', $class[1]);
 
         foreach ($paddings[1] as $step) {
             if ($step !== pageRhythmStep()) {

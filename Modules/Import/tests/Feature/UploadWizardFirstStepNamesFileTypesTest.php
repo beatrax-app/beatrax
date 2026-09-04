@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Enums\ImportType;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Tests\Helpers\UploadIsolation;
@@ -28,9 +29,10 @@ beforeEach(function (): void {
 it('offers a file type on the first step, never the name of a bank or a card issuer', function (): void {
     $html = Livewire::test(UploadWizard::class)->html();
 
-    expect(preg_match('#<select[^>]*id="importType".*?</select>#s', $html, $select))->toBe(1);
+    $select = PatternScan::first('#<select[^>]*id="importType".*?</select>#s', $html);
+    expect($select)->not->toBe([]);
 
-    preg_match_all('/<option value="([^"]*)"[^>]*>([^<]*)</', $select[0], $options, PREG_SET_ORDER);
+    $options = PatternScan::sets('/<option value="([^"]*)"[^>]*>([^<]*)</', $select[0]);
 
     expect(array_column($options, 1))
         ->toBe(array_column(ImportType::cases(), 'value'));

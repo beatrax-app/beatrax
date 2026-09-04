@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
@@ -25,7 +26,8 @@ it('names a command ArtisanSpawnController will accept', function (): void {
         ENT_QUOTES,
     );
 
-    expect(preg_match("/'\\/dev\\/artisan\\/spawn'.*?command:\\s*'([^']+)'/s", $html, $m))->toBe(1);
+    $m = PatternScan::first("/'\\/dev\\/artisan\\/spawn'.*?command:\\s*'([^']+)'/s", $html);
+    expect($m)->not->toBe([]);
 
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);

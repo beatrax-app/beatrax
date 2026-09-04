@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\MatcherRegistry;
@@ -75,7 +76,7 @@ it('parses a current-generation Dutch PayPal receipt into a ParsedReceiptDto', f
     expect($dto->amountMinor)->toBe(-1299);
     expect($dto->currency)->toBe('EUR');
     expect($dto->referenceId)->toBe('PAYPALTXN17052026');
-    expect(preg_match('/^[A-Z0-9]{17}$/', (string) $dto->referenceId))->toBe(1);
+    expect(PatternScan::matches('/^[A-Z0-9]{17}$/', (string) $dto->referenceId))->toBeTrue();
     expect($dto->ownIban)->toBe('PAYPAL');
     expect($dto->bookedAt->toDateString())->toBe('2026-05-17');
     // bookedAt MUST be normalised to startOfDay so receipt + CSV

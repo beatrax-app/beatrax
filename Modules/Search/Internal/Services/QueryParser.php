@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 // Parses typed token syntax (account:/after:/before:/amount:/category:)
@@ -20,20 +21,20 @@ final class QueryParser
         $filters = [];
         $remainder = $raw;
 
-        $accountCount = preg_match_all('/\baccount:(\S+)/i', $remainder, $accountMatches);
-        if ($accountCount > 0) {
+        $accountMatches = PatternScan::all('/\baccount:(\S+)/i', $remainder);
+        if ($accountMatches[1] !== []) {
             $filters['accounts'] = $accountMatches[1];
             $remainder = (string) preg_replace('/\baccount:\S+/i', '', $remainder);
         }
 
-        $afterCount = preg_match('/\bafter:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder, $afterMatch);
-        if ($afterCount > 0) {
+        $afterMatch = PatternScan::first('/\bafter:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder);
+        if ($afterMatch !== []) {
             $filters['after'] = $afterMatch[1];
             $remainder = (string) preg_replace('/\bafter:\S+/i', '', $remainder);
         }
 
-        $beforeCount = preg_match('/\bbefore:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder, $beforeMatch);
-        if ($beforeCount > 0) {
+        $beforeMatch = PatternScan::first('/\bbefore:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder);
+        if ($beforeMatch !== []) {
             $filters['before'] = $beforeMatch[1];
             $remainder = (string) preg_replace('/\bbefore:\S+/i', '', $remainder);
         }
@@ -43,18 +44,17 @@ final class QueryParser
         // `12.50`, which is a hundredth of the dinar the reader typed.
         $decimals = MoneyInput::decimalPlaces($readerCurrency);
         $figure = '\d+'.($decimals === 0 ? '' : '(?:[.,]\d{1,'.$decimals.'})?');
-        $amountCount = preg_match(
+        $amountMatch = PatternScan::first(
             '/\bamount:([<>]?'.$figure.'(?:-'.$figure.')?)/i',
             $remainder,
-            $amountMatch,
         );
-        if ($amountCount > 0) {
+        if ($amountMatch !== []) {
             $filters['amount'] = $amountMatch[1];
             $remainder = (string) preg_replace('/\bamount:\S+/i', '', $remainder);
         }
 
-        $categoryCount = preg_match('/\bcategory:(\S+)/i', $remainder, $categoryMatch);
-        if ($categoryCount > 0) {
+        $categoryMatch = PatternScan::first('/\bcategory:(\S+)/i', $remainder);
+        if ($categoryMatch !== []) {
             $filters['category'] = $categoryMatch[1];
             $remainder = (string) preg_replace('/\bcategory:\S+/i', '', $remainder);
         }
