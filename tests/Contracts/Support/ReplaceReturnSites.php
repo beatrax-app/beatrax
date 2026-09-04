@@ -9,10 +9,9 @@ use RecursiveIteratorIterator;
 use SplFileInfo;
 
 // Every `preg_replace`/`preg_replace_callback`/`preg_split` call in product
-// code, and what the call site does with the value PCRE handed back. Tokenised
-// rather than matched with a regex, because the thing being looked for is a
-// regex call: a pattern written inside a string, a name inside a comment and a
-// method of the same name all read alike to `grep`.
+// code, and what the call site does with the value PCRE handed back. The walk
+// itself is PcreCallSites; this class is the reading a replacer's answer has
+// to survive.
 /**
  * @link ../../../.docs/conventions/invariants-from-shipped-failures.md#a-replace-that-never-ran-blanks-the-subject
  */
@@ -74,16 +73,16 @@ final class ReplaceReturnSites
      */
     public static function uncheckedIn(string $source): array
     {
-        $tokens = self::significantTokens($source);
+        $tokens = PcreCallSites::significantTokens($source);
         $found = [];
 
         foreach ($tokens as $index => $token) {
-            $open = self::callOpensAt($tokens, $index);
+            $open = PcreCallSites::callOpensAt($tokens, $index, self::SCANNED_FUNCTIONS);
             if ($open === null) {
                 continue;
             }
 
-            $close = self::closingParen($tokens, $open);
+            $close = PcreCallSites::closingParen($tokens, $open);
             if (self::separatesTheFailure($tokens, $index, $close)) {
                 continue;
             }
@@ -91,7 +90,7 @@ final class ReplaceReturnSites
             $found[] = [
                 'line' => $token['line'],
                 'call' => $token['text'],
-                'followedBy' => trim(self::textAt($tokens, $index - 1).' … '.self::textAt($tokens, $close + 1).' '.self::textAt($tokens, $close + 2)),
+                'followedBy' => trim(PcreCallSites::textAt($tokens, $index - 1).' … '.PcreCallSites::textAt($tokens, $close + 1).' '.PcreCallSites::textAt($tokens, $close + 2)),
             ];
         }
 
@@ -104,37 +103,14 @@ final class ReplaceReturnSites
      */
     public static function callsIn(string $source): int
     {
-        $tokens = self::significantTokens($source);
+        $tokens = PcreCallSites::significantTokens($source);
         $calls = 0;
 
         foreach (array_keys($tokens) as $index) {
-            $calls += self::callOpensAt($tokens, $index) === null ? 0 : 1;
+            $calls += PcreCallSites::callOpensAt($tokens, $index, self::SCANNED_FUNCTIONS) === null ? 0 : 1;
         }
 
         return $calls;
-    }
-
-    /**
-     * @param  list<array{id: int|null, text: string, line: int}>  $tokens
-     * @return int|null the index of the call's opening paren
-     */
-    private static function callOpensAt(array $tokens, int $index): ?int
-    {
-        $token = $tokens[$index];
-
-        if ($token['id'] !== T_STRING || ! in_array(strtolower($token['text']), self::SCANNED_FUNCTIONS, true)) {
-            return null;
-        }
-
-        $before = $tokens[$index - 1] ?? null;
-        $namesAMember = $before !== null
-            && (in_array($before['text'], ['->', '?->', '::'], true) || $before['id'] === T_FUNCTION);
-
-        if ($namesAMember || ($tokens[$index + 1]['text'] ?? '') !== '(') {
-            return null;
-        }
-
-        return $index + 1;
     }
 
     /**
@@ -154,7 +130,7 @@ final class ReplaceReturnSites
         return self::fallbackNamesAValue($tokens, $close)
             || self::comparedWithTheFailure($tokens, $index, $close)
             || self::wrappedInATypeTest($tokens, $index)
-            || self::assignedToATestedVariable($tokens, $index, $close);
+            || PcreCallSites::assignedToATestedVariable($tokens, $index, $close, self::testsTheVariable(...));
     }
 
     /**
@@ -162,13 +138,13 @@ final class ReplaceReturnSites
      */
     private static function fallbackNamesAValue(array $tokens, int $close): bool
     {
-        $elvis = self::textAt($tokens, $close + 1) === '?' && self::textAt($tokens, $close + 2) === ':';
+        $elvis = PcreCallSites::textAt($tokens, $close + 1) === '?' && PcreCallSites::textAt($tokens, $close + 2) === ':';
 
-        if (! $elvis && self::textAt($tokens, $close + 1) !== '??') {
+        if (! $elvis && PcreCallSites::textAt($tokens, $close + 1) !== '??') {
             return false;
         }
 
-        $fallback = strtolower(self::textAt($tokens, $close + ($elvis ? 3 : 2)));
+        $fallback = strtolower(PcreCallSites::textAt($tokens, $close + ($elvis ? 3 : 2)));
 
         return ! in_array($fallback, self::EMPTY_FALLBACKS, true);
     }
@@ -178,8 +154,8 @@ final class ReplaceReturnSites
      */
     private static function comparedWithTheFailure(array $tokens, int $index, int $close): bool
     {
-        return self::isComparison(self::textAt($tokens, $close + 1), self::textAt($tokens, $close + 2))
-            || self::isComparison(self::textAt($tokens, $index - 1), self::textAt($tokens, $index - 2));
+        return self::isComparison(PcreCallSites::textAt($tokens, $close + 1), PcreCallSites::textAt($tokens, $close + 2))
+            || self::isComparison(PcreCallSites::textAt($tokens, $index - 1), PcreCallSites::textAt($tokens, $index - 2));
     }
 
     private static function isComparison(string $operator, string $operand): bool
@@ -193,38 +169,8 @@ final class ReplaceReturnSites
      */
     private static function wrappedInATypeTest(array $tokens, int $index): bool
     {
-        return self::textAt($tokens, $index - 1) === '('
-            && in_array(strtolower(self::textAt($tokens, $index - 2)), self::TYPE_TESTS, true);
-    }
-
-    /**
-     * A `$x = preg_replace(…)` says nothing on its own; the reading that
-     * matters is whatever the code does with `$x` afterwards, and that is
-     * routinely a line or two below — often past the `if`/`else` that assigned
-     * it. Bounded by the next `function`, which is where a variable of the same
-     * name stops being this one.
-     *
-     * @param  list<array{id: int|null, text: string, line: int}>  $tokens
-     */
-    private static function assignedToATestedVariable(array $tokens, int $index, int $close): bool
-    {
-        if (self::textAt($tokens, $index - 1) !== '=' || ($tokens[$index - 2]['id'] ?? null) !== T_VARIABLE) {
-            return false;
-        }
-
-        $name = self::textAt($tokens, $index - 2);
-
-        for ($i = $close + 1, $total = count($tokens); $i < $total; $i++) {
-            if (in_array($tokens[$i]['id'], [T_FUNCTION, T_FN], true)) {
-                return false;
-            }
-
-            if ($tokens[$i]['id'] === T_VARIABLE && $tokens[$i]['text'] === $name && self::testsTheVariable($tokens, $i)) {
-                return true;
-            }
-        }
-
-        return false;
+        return PcreCallSites::textAt($tokens, $index - 1) === '('
+            && in_array(strtolower(PcreCallSites::textAt($tokens, $index - 2)), self::TYPE_TESTS, true);
     }
 
     /**
@@ -232,76 +178,18 @@ final class ReplaceReturnSites
      */
     private static function testsTheVariable(array $tokens, int $at): bool
     {
-        if (self::isComparison(self::textAt($tokens, $at + 1), self::textAt($tokens, $at + 2))) {
+        if (self::isComparison(PcreCallSites::textAt($tokens, $at + 1), PcreCallSites::textAt($tokens, $at + 2))) {
             return true;
         }
 
-        if (self::isComparison(self::textAt($tokens, $at - 1), self::textAt($tokens, $at - 2))) {
+        if (self::isComparison(PcreCallSites::textAt($tokens, $at - 1), PcreCallSites::textAt($tokens, $at - 2))) {
             return true;
         }
 
-        if (in_array(self::textAt($tokens, $at + 1), ['??=', '??'], true)) {
+        if (in_array(PcreCallSites::textAt($tokens, $at + 1), ['??=', '??'], true)) {
             return true;
         }
 
         return self::wrappedInATypeTest($tokens, $at);
-    }
-
-    /**
-     * @param  list<array{id: int|null, text: string, line: int}>  $tokens
-     */
-    private static function textAt(array $tokens, int $index): string
-    {
-        return $tokens[$index]['text'] ?? '';
-    }
-
-    /**
-     * @param  list<array{id: int|null, text: string, line: int}>  $tokens
-     */
-    private static function closingParen(array $tokens, int $open): int
-    {
-        $depth = 0;
-
-        for ($i = $open, $total = count($tokens); $i < $total; $i++) {
-            $text = $tokens[$i]['text'];
-
-            if ($text === '(') {
-                $depth++;
-            } elseif ($text === ')') {
-                $depth--;
-                if ($depth === 0) {
-                    return $i;
-                }
-            }
-        }
-
-        return count($tokens) - 1;
-    }
-
-    /**
-     * @return list<array{id: int|null, text: string, line: int}>
-     */
-    private static function significantTokens(string $source): array
-    {
-        $significant = [];
-        $line = 1;
-
-        foreach (token_get_all($source) as $token) {
-            if (is_string($token)) {
-                $significant[] = ['id' => null, 'text' => $token, 'line' => $line];
-
-                continue;
-            }
-
-            $line = $token[2];
-
-            if (in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
-                continue;
-            }
-
-            $significant[] = ['id' => $token[0], 'text' => $token[1], 'line' => $line];
-        }
-
-        return $significant;
     }
 }
