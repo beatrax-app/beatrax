@@ -78,6 +78,19 @@ return [
         // keys. gitignore keeps them out of git; it does not bound a build.
         'storage/app',
 
+        // Device-test and browser-automation output: screenshots of the running
+        // application, page snapshots and console logs, all of them pictures of
+        // a real ledger. 1.6 GB and 4,024 files on the machine this was found
+        // on, copied into the build because neither name matched a pattern.
+        '.device-test',
+        '.playwright-mcp',
+
+        // A manual drop directory for PayPal exports. .gitignore keeps
+        // local/paypal/ present and its contents out of git, nothing in the
+        // application reads it, and what a developer drops there is a real
+        // financial statement.
+        'local',
+
         // Holds the previous build's own app bundle; without this the copy
         // walker recurses into it and shuffles ~6 GB of stale output.
         'nativephp',
