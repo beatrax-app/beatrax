@@ -20,6 +20,7 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -27,6 +28,7 @@ use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
@@ -77,6 +79,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         KnownSenderQuery $senderQuery,
         JobUserContext $jobUser,
+        LoggerInterface $logger,
     ): void {
         // Before any API client runs: they reach OAuthSecretsRepository,
         // which scopes through the guard a worker has nobody bound to.
@@ -93,10 +96,22 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
             ->where('user_id', $this->userId)
             ->get(['id', 'provider']);
 
+        // A quota is spent per provider credential, not per pass. Returning
+        // from handle() on the first throttled inbox meant one busy Gmail
+        // account kept a Microsoft one from ever being walked, and an account
+        // permanently over quota never reached its second inbox at all.
+        $spent = [];
+
         foreach ($inboxRows as $inboxRow) {
             /** @var stdClass $inboxRow */
-            if (! $this->scanInboxRow($inboxRow, $connection, $clock, $gmail, $graph, $allExcludes)) {
-                return;
+            $provider = self::toString($inboxRow->provider ?? null);
+
+            if (isset($spent[$provider])) {
+                continue;
+            }
+
+            if (! $this->scanInboxRow($inboxRow, $connection, $clock, $gmail, $graph, $allExcludes, $logger)) {
+                $spent[$provider] = true;
             }
         }
     }
@@ -137,6 +152,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         GmailApiClientContract $gmail,
         GraphApiClientContract $graph,
         array $allExcludes,
+        LoggerInterface $logger,
     ): bool {
         $inboxId = is_numeric($inboxRow->id) ? (int) $inboxRow->id : 0;
         $provider = is_string($inboxRow->provider) ? $inboxRow->provider : '';
@@ -145,12 +161,23 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
             try {
                 $this->runDiscoveryForInbox($connection, $clock, $gmail, $graph, $inboxId, $provider, $allExcludes);
             } catch (RateLimitedException) {
-                // Retried by tomorrow's tick; discovered_senders has no
-                // per-inbox lifecycle column to transition.
+                // discovered_senders has no per-inbox lifecycle column to
+                // transition, so this line is the only record that the pass
+                // stopped short of the mailbox rather than finding it empty.
+                $logger->warning('DiscoveryScanJob: the provider refused on quota; its remaining inboxes wait for the next tick.', [
+                    'user_id' => $this->userId,
+                    'inbox_id' => $inboxId,
+                    'provider' => $provider,
+                ]);
+
                 return false;
-            } catch (Throwable) {
-                // The caller walks every inbox on the account, so one inbox's
-                // failure must not abort the pass; tomorrow's tick retries it.
+            } catch (Throwable $e) {
+                $logger->warning('DiscoveryScanJob: one inbox refused its discovery pass; the rest of the account still ran.', [
+                    'user_id' => $this->userId,
+                    'inbox_id' => $inboxId,
+                    'provider' => $provider,
+                    ...SafeExceptionContext::describe($e),
+                ]);
             }
         }
 

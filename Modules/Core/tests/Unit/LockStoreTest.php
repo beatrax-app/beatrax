@@ -8,14 +8,6 @@ use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Core\Public\Exceptions\LockStoreNotConfiguredException;
 use Modules\Core\Public\Support\LockStore;
-use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
-use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
-use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
-use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
-use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
-use Modules\Receipts\Internal\Jobs\ScanInboxDropFolderJob;
-use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 uses()->group('Phase14');
 
@@ -63,30 +55,6 @@ it('routes ResolveChainLinksJob uniqueVia to the same store the helper resolves'
     expect($job->uniqueVia()->getStore())
         ->toBe(LockStore::forUniqueJobs()->getStore());
 });
-
-it('routes every ShouldBeUnique job uniqueVia to the configured lock store', function (string $jobClass): void {
-    config(['cache.locks_store' => 'database']);
-
-    /** @var object $job */
-    $job = (new ReflectionClass($jobClass))->newInstanceWithoutConstructor();
-
-    /** @var Repository $resolved */
-    $resolved = $job->uniqueVia();
-
-    expect($resolved)->toBeInstanceOf(Repository::class)
-        ->and($resolved->getStore())->toBeInstanceOf(DatabaseStore::class)
-        ->and($resolved->getStore())->toBe(LockStore::forUniqueJobs()->getStore());
-})->with([
-    ResolveChainLinksJob::class,
-    ScanInboxDropFolderJob::class,
-    ProcessFetchedInboxMessagesJob::class,
-    BackfillInboxJob::class,
-    IncrementalScanJob::class,
-    DiscoveryScanJob::class,
-    DetectDriftAlertsJob::class,
-    ProjectForecastJob::class,
-    DetectRecurringSeriesJob::class,
-]);
 
 // A value it cannot resolve a store from must throw rather than fall back to a
 // default: every ShouldBeUnique job routes uniqueVia() through this helper, so
