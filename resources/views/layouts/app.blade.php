@@ -9,6 +9,16 @@
     // derive them the same way rather than repeating the block inline.
     $chrome = $container->make(\Modules\Core\Public\Support\AppChromeResolver::class)->resolve();
 
+    // Whether this page may draw the menubar and the search affordance at all.
+    // Signed in is not the same as having an application to navigate: signup,
+    // the recovery-code hand-over, the migration splash and the phone's
+    // provisioning all happen signed in, and this block used to ask only
+    // @auth. The whole shell hung off that one answer, so those screens
+    // offered twenty-five destinations and a search box before there was
+    // anything behind them — and, on the one screen the recovery codes are
+    // ever shown, a way off it that loses them for good.
+    $appShell = $container->make(\Modules\Core\Public\Support\AppShellVisibility::class)->visible();
+
     // Chart chrome the ApexCharts helpers in app.js read off <html>: the
     // money axis needs the base currency, and ApexCharts names its own
     // <svg> in English ("donut chart with 14 data series") unless told.
@@ -110,7 +120,13 @@
                 }
             }
         }"
-        x-on:keydown.window="onKey($event)"
+        {{-- Bound only where the palette it opens is mounted. Left bound on a
+             pre-setup screen, Cmd+K dispatched into nothing and Cmd+. still
+             navigated to /dev — a keyboard way out of a ceremony whose visible
+             ways out had just been taken away. --}}
+        @if ($appShell)
+            x-on:keydown.window="onKey($event)"
+        @endif
     >
         @auth
             {{-- max-lg:flex-col — below 1024px the top bar must stack ABOVE main,
@@ -118,23 +134,32 @@
                  out of flow at phone width, so column order is top-bar → main). --}}
             <div class="flex max-lg:flex-col min-h-screen">
                 {{--
-                    Drawer wrapper.
-                    The sidebar is mounted exactly ONCE inside the drawer component.
-                    At >=1024px: .drawer-container is position:static — desktop static sidebar.
-                    At <1024px: slides in as a focus-trapped overlay from the left.
-                    The original @livewire('core.app-sidebar') call is now inside <x-shell::drawer>.
+                    The menubar, in its two forms — the drawer that is the static
+                    sidebar from 1024px up, and the top bar below it. Both are
+                    drawn or neither is: a page that kept one of the pair still
+                    offered the app at the width that drew it, and the width that
+                    did not was the only one anybody looked at.
                 --}}
-                <x-shell::drawer />
-                {{--
-                    Mobile top bar.
-                    CSS-hidden at >=1024px — desktop layout is unchanged.
-                    Inserts before <main> so it stacks above the main content column on mobile.
-                --}}
-                {{-- The palette covers the top bar and carries its own close
-                     control, so it may go inert too. The DRAWER must never
-                     inert it: the scrim is aria-hidden, so the hamburger is a
-                     screen reader's only way back out. --}}
-                <x-core::mobile-top-bar class="top-bar-global" x-bind:inert="$store.overlay.has('palette') || null" />
+                @if ($appShell)
+                    {{--
+                        Drawer wrapper.
+                        The sidebar is mounted exactly ONCE inside the drawer component.
+                        At >=1024px: .drawer-container is position:static — desktop static sidebar.
+                        At <1024px: slides in as a focus-trapped overlay from the left.
+                        The original @livewire('core.app-sidebar') call is now inside <x-shell::drawer>.
+                    --}}
+                    <x-shell::drawer />
+                    {{--
+                        Mobile top bar.
+                        CSS-hidden at >=1024px — desktop layout is unchanged.
+                        Inserts before <main> so it stacks above the main content column on mobile.
+                    --}}
+                    {{-- The palette covers the top bar and carries its own close
+                         control, so it may go inert too. The DRAWER must never
+                         inert it: the scrim is aria-hidden, so the hamburger is a
+                         screen reader's only way back out. --}}
+                    <x-core::mobile-top-bar class="top-bar-global" x-bind:inert="$store.overlay.has('palette') || null" />
+                @endif
                 {{--
                     inert while any overlay covers the page. Both the drawer
                     and the command palette are role=dialog aria-modal=true, and
@@ -158,38 +183,56 @@
                     back out of the drawer.
                 --}}
                 <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
-                    @livewire('core.system-alerts-banner')
-                    @livewire('categorization.rule-form-modal')
-                    @livewire('receipts.receipt-conflict-toast')
-                    @livewire('community.suggest-mapping-modal')
-                    @livewire('email-scan.oauth-client-wizard-modal')
+                    {{-- The application's own machinery, mounted beside every
+                         page that is part of the application. A wire:snapshot is
+                         a bearer token for the component it names, so mounting
+                         these on a screen the reader has not reached the app
+                         through handed out five endpoints the screen has no use
+                         for — and on the migration splash, four of them query
+                         tables the pending migrations have not created yet. A
+                         first-run screen that needs one mounts it itself, which
+                         is what the wizard shell does with the OAuth modal. --}}
+                    @if ($appShell)
+                        @livewire('core.system-alerts-banner')
+                        @livewire('categorization.rule-form-modal')
+                        @livewire('receipts.receipt-conflict-toast')
+                        @livewire('community.suggest-mapping-modal')
+                        @livewire('email-scan.oauth-client-wizard-modal')
+                    @endif
                     @yield('content')
                 </main>
             </div>
-            {{--
-                Global command-palette modal. Mounted
-                once for the entire authenticated session; the body-level
-                Alpine keybind handler above dispatches `palette:open`
-                which the modal listens to. Server-side JSON registry
-                merges nav + dev (SAFE only, devs only) + actions; dev
-                rows are filtered server-side so non-developers never
-                see the labels.
-            --}}
-            @livewire('dev.command-palette-modal')
-            {{-- Search palette endpoint — provides server-backed transaction + entity
-                 hits to the ⌘K palette via $wire.search(q) from palette.js.
-                 Mounted alongside the palette modal so the JS can reach $wire on
-                 every authenticated page. --}}
-            @livewire('search.palette-search-endpoint')
-            {{-- Arg-prompt modal for SAFE-tier commands with args
-                 (config:show, beatrax:reset-password, etc.). The
-                 palette dispatches `command-args:prompt` when the
-                 picked command's CommandSpec carries argsSchema;
-                 the form submits as `spawn-command` so the runner
-                 page's onSpawnCommand listener fires the actual
-                 spawn.  --}}
-            @if (auth()->check() && auth()->user()->is_developer === true)
-                @livewire('dev.command-arg-prompt-modal')
+            {{-- The search affordance, whichever way it is reached. The sidebar
+                 box, the top bar's magnifier and the keybind all dispatch
+                 palette:open, so the palette IS the search on every surface —
+                 which is why a pre-setup screen drops the three of them
+                 together rather than hiding the two it can see. --}}
+            @if ($appShell)
+                {{--
+                    Global command-palette modal. Mounted
+                    once for the entire authenticated session; the body-level
+                    Alpine keybind handler above dispatches `palette:open`
+                    which the modal listens to. Server-side JSON registry
+                    merges nav + dev (SAFE only, devs only) + actions; dev
+                    rows are filtered server-side so non-developers never
+                    see the labels.
+                --}}
+                @livewire('dev.command-palette-modal')
+                {{-- Search palette endpoint — provides server-backed transaction + entity
+                     hits to the ⌘K palette via $wire.search(q) from palette.js.
+                     Mounted alongside the palette modal so the JS can reach $wire on
+                     every authenticated page. --}}
+                @livewire('search.palette-search-endpoint')
+                {{-- Arg-prompt modal for SAFE-tier commands with args
+                     (config:show, beatrax:reset-password, etc.). The
+                     palette dispatches `command-args:prompt` when the
+                     picked command's CommandSpec carries argsSchema;
+                     the form submits as `spawn-command` so the runner
+                     page's onSpawnCommand listener fires the actual
+                     spawn.  --}}
+                @if (auth()->check() && auth()->user()->is_developer === true)
+                    @livewire('dev.command-arg-prompt-modal')
+                @endif
             @endif
 
             <x-core::toast-host />

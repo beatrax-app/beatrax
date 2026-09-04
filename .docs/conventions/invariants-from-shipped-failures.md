@@ -6077,6 +6077,74 @@ Three details decide the scope:
   class that uses a trait declaring the throw. It guards the boundary, which is
   where both of these landed, and not the whole call graph behind it.
 
+## A pre-setup screen renders the application shell
+
+`tests/Contracts/APreSetupScreenOffersNoWayIntoTheAppArchTest.php`
+
+`layouts.app` drew the menubar, the sidebar search box and the command palette
+behind `@auth`. Being signed in is not the same question as having an
+application to navigate, and the whole of first run happens signed in: signup
+creates the account and logs the reader straight in, so the recovery-code
+hand-over, the setup wizard, the desktop migration splash and the phone's
+import bootstrap are all authenticated pages. Every one of them that named
+`layouts.app` got the full shell.
+
+Four did. The one that mattered was `/recovery-codes` — the screen the ten
+codes are shown on, once, ever. It rendered a sidebar with twenty-five
+destinations, a search box, a `⌘K` palette and a phone top bar with a hamburger
+and a magnifier, all beside a page whose own copy says the codes will not be
+shown again. Every one of those controls is a way off that screen, and taking
+any of them loses the codes for good. The other three were `/setup` (the
+pending-migrations splash, where the sidebar's nav counts query tables the
+migrations have not created yet), `/mobile/import` and `/change-password` —
+the last of which is only ever reached because the forced-change guard sends a
+partner there on their first sign-in.
+
+Three things kept it invisible. The page returns 200 and looks plausible.
+A route walk that visits `/recovery-codes` without codes in the session is
+redirected onward to the wizard, so the walk records the wizard's chrome and
+files the page as clean. And the drawer and the top bar are a `md:`/`lg:` pair
+— the drawer *is* the static sidebar from 1024px up and the top bar is
+`display: none` there — so a check that looked for one of them passed at the
+width that draws the other.
+
+The seam is `Modules\Core\Public\Support\AppShellVisibility`, asked once by the
+layout, answering from `Modules\Core\Public\Navigation\PreSetupSurface` — the
+roster of routes that are a first-run ceremony rather than a page of the
+application. `Destination` is the roster of places a reader may be sent; this
+is the roster that sends nowhere. The pages keep naming `'layouts.app'`
+verbatim, which matters: five separate rules read that literal out of source to
+decide which pages they apply to, and moving a page onto a different layout to
+strip its chrome would take it out of all five — including the one that checks
+it reserves the notch.
+
+Which is the second half. `.top-bar` reserves and paints `var(--safe-top)` and
+stands in the flow, so a page under one must not pad the top again; a page
+without one must. Taking the bar away turned two of the four into screens with
+no seam reserved at all. `app.css` already had the answer — `.safe-screen`
+pads all four edges and `body:has(.top-bar) .safe-screen` zeroes the top one
+again — so a page whose chrome depends on the route it was reached by can wear
+the class unconditionally and be right in both shapes.
+
+Two smaller things went with the menubar. The palette keybind was left bound
+after the palette stopped being mounted, so `⌘K` dispatched into nothing while
+`⌘.` still navigated to `/dev` — a keyboard way out of a ceremony whose visible
+ways out had just been removed. And the layout mounted five of the
+application's own modals inside `<main>`: a `wire:snapshot` is a bearer token
+for the component it names, so those endpoints were reachable from a screen
+that drew no control for any of them. That last one already had a guard —
+`ForcePasswordChangeMiddleware` exempts by payload rather than by route
+precisely because the exempt page mounted nine components beside the password
+form — which is the tell worth keeping. When a guard has to reason about what a
+page *happens* to mount, the page is mounting the wrong things.
+
+The rule renders every surface the enum names, in the state that reaches it,
+and reads the result with an HTML parser rather than a pattern. It carries
+three defences against going quietly inert: every enum case must resolve to a
+registered route, every case must have a row saying how a test reaches it, and
+an ordinary page must still draw all seven markers — without that last one the
+rule would pass loudest on the day the shell broke everywhere.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nova lozinka',
     'confirm_new_password' => 'Potvrdi novu lozinku',
     'submit' => 'Sačuvaj novu lozinku',
+    'sign_out' => 'Odjavi se',
 
     'error_current_required' => 'Unesi svoju trenutnu lozinku.',
     'error_current_incorrect' => 'Trenutna lozinka nije tačna.',
