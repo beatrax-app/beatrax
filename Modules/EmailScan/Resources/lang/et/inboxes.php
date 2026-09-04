@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Viimane skannimine ei lõppenud. Proovige „Skanni kohe“ või ühendage see postkast uuesti.',
+    'oauth_state_mismatch' => 'See ühenduslink on aegunud või juba kasutatud. Alusta ühendamist uuesti.',
     'oauth_no_code' => 'Sinu e-posti teenus saatis su tagasi ilma koodita, mida Beatrax lõpetamiseks vajab, seega ühtegi postkasti ei ühendatud. Alusta ühendamist uuesti.',
     'oauth_grant_refused' => 'Sinu e-posti teenus keeldus Beatraxile antud loast — see on aegunud või tagasi võetud. Alusta ühendamist uuesti ja anna luba.',
     'oauth_exchange_failed' => 'Sinu e-posti teenus ei viinud ühendamist lõpuni, seega postkasti ei lisatud. Proovi mõne minuti pärast uuesti.',

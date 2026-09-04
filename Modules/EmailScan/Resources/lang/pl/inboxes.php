@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Ostatnie skanowanie nie zostało ukończone. Spróbuj Skanuj teraz lub połącz tę skrzynkę ponownie.',
+    'oauth_state_mismatch' => 'Ten link połączenia wygasł lub został już użyty. Rozpocznij łączenie od nowa.',
     'oauth_no_code' => 'Dostawca poczty odesłał Cię bez kodu, którego Beatrax potrzebuje do zakończenia, więc żadna skrzynka nie została połączona. Rozpocznij łączenie od nowa.',
     'oauth_grant_refused' => 'Dostawca poczty odrzucił uprawnienie przyznane Beatrax — wygasło albo zostało cofnięte. Rozpocznij łączenie od nowa i przyznaj je.',
     'oauth_exchange_failed' => 'Dostawca poczty nie dokończył łączenia, więc żadna skrzynka nie została dodana. Spróbuj ponownie za kilka minut.',

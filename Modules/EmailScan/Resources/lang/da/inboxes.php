@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Den seneste scanning blev ikke fuldført. Prøv Scan nu, eller forbind denne indbakke igen.',
+    'oauth_state_mismatch' => 'Dette forbindelseslink er udløbet eller allerede brugt. Start forbindelsen forfra.',
     'oauth_no_code' => 'Din mailudbyder sendte dig tilbage uden den kode, Beatrax skal bruge for at afslutte, så ingen postkasse blev forbundet. Start forbindelsen forfra.',
     'oauth_grant_refused' => 'Din mailudbyder afviste den tilladelse, Beatrax havde fået — den er udløbet eller trukket tilbage. Start forbindelsen forfra, og godkend den.',
     'oauth_exchange_failed' => 'Din mailudbyder fuldførte ikke forbindelsen, så ingen postkasse blev tilføjet. Prøv igen om et par minutter.',

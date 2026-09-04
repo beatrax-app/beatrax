@@ -173,11 +173,14 @@ and the assertion — see
   `oauth_reconsent_required`.
   (`tests/Unit/RaiseReconsentAlertOnTokenFailureTest.php`,
   `tests/Feature/InvalidGrantToastTest.php`)
-- **The OAuth callback validates the CSRF state.** A mismatched
-  `state` parameter throws `InvalidStateException`; the surface
-  returns a generic error without revealing which user (if any)
-  the original state belonged to.
-  (`tests/Unit/OAuth/StateMismatchTest.php`)
+- **The OAuth callback validates the CSRF state.** A `state`
+  matching no issued entry sends the reader back to `/inboxes` with
+  `oauth_state_mismatch` flashed — one generic line for a forged
+  value, an expired one and a replayed one alike, revealing nothing
+  about which user (if any) the original belonged to.
+  (`tests/Unit/OAuth/StateMismatchTest.php` for the repository,
+  `tests/Feature/OAuthCallbackGmailTest.php` and
+  `tests/Feature/OAuthCallbackMicrosoftTest.php` for the answer)
 - **Cross-user reads / writes return 404, not 403.** Every Public
   query and action filters by `(id, user_id)`; a foreign user's
   inbox / secret is invisible.
@@ -228,8 +231,8 @@ and the assertion — see
   time** — the safe-write sequence handles it; tests cover the
   scenario (`tests/Feature/OAuthClientWizardSecretsWriteFailedTest.php`).
 - **The OAuth callback arrives with no state row in the
-  repository** — `InvalidStateException` raised; the user sees a
-  generic error page.
+  repository** — the reader lands back on `/inboxes` with the
+  generic line, the same as a second press of a link already spent.
 - **A new inbox added while a scan is mid-flight** — different
   unique keys; no conflict.
 - **A `discovered_senders` row promoted while a scan is reading

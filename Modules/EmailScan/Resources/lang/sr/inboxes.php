@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Poslednje skeniranje nije dovršeno. Pokušajte Skeniraj sada ili ponovo povežite ovo sanduče.',
+    'oauth_state_mismatch' => 'Ova veza za povezivanje je istekla ili je već iskorišćena. Započni povezivanje iznova.',
     'oauth_no_code' => 'Tvoj provajder pošte vratio te bez koda koji je Beatraxu potreban da završi, pa nijedno sanduče nije povezano. Započni povezivanje iznova.',
     'oauth_grant_refused' => 'Tvoj provajder pošte odbio je dozvolu datu Beatraxu — istekla je ili je povučena. Započni povezivanje iznova i odobri je.',
     'oauth_exchange_failed' => 'Tvoj provajder pošte nije završio povezivanje, pa nijedno sanduče nije dodato. Pokušaj ponovo za nekoliko minuta.',

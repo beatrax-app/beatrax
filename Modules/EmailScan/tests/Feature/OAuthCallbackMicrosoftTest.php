@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
-use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -142,18 +142,17 @@ it('OAuth callback (microsoft) happy path inserts inbox + scan_state + saves ref
     expect($mock->lastRedirectUri)->toBe('http://127.0.0.1:'.$expectedPort.'/oauth/callback/microsoft');
 });
 
-it('OAuth callback (microsoft) with mismatched state raises InvalidStateException', function (): void {
+it('OAuth callback (microsoft) with mismatched state sends the reader back with a reason, not a server fault', function (): void {
     $user = ocmUser('mismatch-ms@example.com');
     $this->actingAs($user);
 
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     ocmSeedProviderClient($secrets);
 
-    $this->withoutExceptionHandling();
+    $response = $this->get('/oauth/callback/microsoft?state=not-issued&code=fake');
 
-    expect(function (): void {
-        $this->get('/oauth/callback/microsoft?state=not-issued&code=fake');
-    })->toThrow(InvalidStateException::class);
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed', Lang::get('email-scan::inboxes.oauth_state_mismatch'));
 });
 
 it('OAuth callback (microsoft) with provider error (user canceled at consent) redirects with oauth_canceled flash and inserts no rows', function (): void {

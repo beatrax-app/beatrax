@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Pēdējā skenēšana netika pabeigta. Mēģiniet “Skenēt tagad” vai pievienojiet šo pastkasti atkārtoti.',
+    'oauth_state_mismatch' => 'Šī savienojuma saite ir beigusies vai jau izmantota. Sāciet savienošanu no jauna.',
     'oauth_no_code' => 'Jūsu pasta pakalpojums nosūtīja jūs atpakaļ bez koda, kas Beatrax nepieciešams pabeigšanai, tāpēc neviena pastkaste netika pievienota. Sāciet savienošanu no jauna.',
     'oauth_grant_refused' => 'Jūsu pasta pakalpojums noraidīja Beatrax piešķirto atļauju — tā ir beigusies vai atsaukta. Sāciet savienošanu no jauna un piešķiriet to.',
     'oauth_exchange_failed' => 'Jūsu pasta pakalpojums savienošanu nepabeidza, tāpēc neviena pastkaste netika pievienota. Mēģiniet vēlreiz pēc dažām minūtēm.',

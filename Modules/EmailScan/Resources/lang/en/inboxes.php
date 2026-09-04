@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => "The last scan didn't finish. Try Scan now, or reconnect this inbox.",
+    'oauth_state_mismatch' => 'That connection link has expired or was already used. Start the connection again.',
     'oauth_no_code' => 'Your mail provider sent you back without the code Beatrax needs to finish, so no mailbox was connected. Start the connection again.',
     'oauth_grant_refused' => 'Your mail provider refused the permission Beatrax was granted — it has expired or been withdrawn. Start the connection again and approve it.',
     'oauth_exchange_failed' => 'Your mail provider did not complete the connection, so no mailbox was added. Try again in a few minutes.',

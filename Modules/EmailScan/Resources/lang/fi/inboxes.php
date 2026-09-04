@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Viimeisin skannaus ei valmistunut. Kokeile Skannaa nyt tai yhdistä tämä postilaatikko uudelleen.',
+    'oauth_state_mismatch' => 'Tämä yhteyslinkki on vanhentunut tai jo käytetty. Aloita yhdistäminen alusta.',
     'oauth_no_code' => 'Sähköpostipalvelusi palautti sinut ilman koodia, jota Beatrax tarvitsee viimeistelyyn, joten yhtään postilaatikkoa ei yhdistetty. Aloita yhdistäminen alusta.',
     'oauth_grant_refused' => 'Sähköpostipalvelusi hylkäsi Beatraxille annetun luvan — se on vanhentunut tai peruttu. Aloita yhdistäminen alusta ja myönnä lupa.',
     'oauth_exchange_failed' => 'Sähköpostipalvelusi ei saanut yhdistämistä valmiiksi, joten postilaatikkoa ei lisätty. Yritä uudelleen muutaman minuutin kuluttua.',

@@ -10,7 +10,6 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
@@ -42,6 +41,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Transport\SensitiveTextBudget;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TransactionDetail extends Component
@@ -100,10 +100,10 @@ final class TransactionDetail extends Component
         SavesTransactionSplit $splitter,
     ): void {
         if (TransactionType::tryFrom($newType) === null) {
-            throw new InvalidArgumentException(sprintf(
-                "Invalid transaction type: '%s'",
-                $newType,
-            ));
+            // Only a payload can name a type the picker never offers, and the
+            // refusal names the shape rather than the value: an HttpException
+            // message is the whole body a production build returns.
+            throw new BadRequestHttpException('Call names a transaction type that does not exist.');
         }
 
         $user = $currentUser->user();
