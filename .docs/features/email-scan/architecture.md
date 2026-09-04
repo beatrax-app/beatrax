@@ -733,7 +733,7 @@ whole per-user pass — but it is logged too, through an injected
 `Psr\Log\LoggerInterface` and `SafeExceptionContext::describe()`. The old
 note that it was swallowed "for lack of facade access to `Log` in module
 code" had the rule right and the conclusion wrong: the facade is banned,
-the abstraction is not, and 98 files already inject it.
+the abstraction is not, and well over a hundred files already inject it.
 
 The exclude list combines two sources of "do not surface again": every
 `known_senders` pattern (some full addresses like `paypal.com`, others
