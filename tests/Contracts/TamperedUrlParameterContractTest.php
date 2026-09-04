@@ -10,6 +10,7 @@ use Livewire\Component;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\MarkupSource;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 
 /**
@@ -120,7 +121,7 @@ function tamperedUrlDateProperties(): array
             continue;
         }
 
-        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+        $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         foreach (MarkupSource::elements($source, 'x-core::date-input') as $element) {
             foreach ($element->attributes() as $name => $model) {

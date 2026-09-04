@@ -62,7 +62,7 @@ final class Mt940Rebaser implements RebasesStatementDates
 
         $after = [];
 
-        $rebased = preg_replace_callback(
+        $rebased = $this->rewritten(
             self::BALANCE_LINE,
             function (array $m) use ($shift, &$after): string {
                 $day = $this->asDay($m[3]);
@@ -78,7 +78,7 @@ final class Mt940Rebaser implements RebasesStatementDates
             $contents,
         );
 
-        $rebased = $rebased === null ? null : preg_replace_callback(
+        $rebased = $this->rewritten(
             self::STATEMENT_LINE,
             function (array $m) use ($shift, &$after): string {
                 $value = $this->asDay($m[1]);
@@ -96,10 +96,6 @@ final class Mt940Rebaser implements RebasesStatementDates
             $rebased,
         );
 
-        if ($rebased === null) {
-            throw new StatementRebaseFailed('Could not rewrite the MT940 date fields.');
-        }
-
         return new StatementRebaseResult(
             contents: $rebased,
             format: self::FORMAT,
@@ -110,6 +106,24 @@ final class Mt940Rebaser implements RebasesStatementDates
             newestAfter: $this->extreme($after, earliest: false),
             datesRewritten: count($after),
         );
+    }
+
+    // A give-up leaves the fixture half-rewritten, which is the one outcome a
+    // rebase must not hand back: the dates it did reach would be shifted and
+    // the rest would not. The command catches this and names the fixture, so
+    // the failure reads as a fixture problem rather than a stack trace.
+    /**
+     * @param  callable(array<int|string, string>): string  $shift
+     */
+    private function rewritten(string $pattern, callable $shift, string $subject): string
+    {
+        $rebased = preg_replace_callback($pattern, $shift, $subject);
+
+        if ($rebased === null) {
+            throw new StatementRebaseFailed('Could not rewrite the MT940 date fields.');
+        }
+
+        return $rebased;
     }
 
     private function shiftEntryDate(CarbonImmutable $value, string $monthDay, MonthShift $shift): string

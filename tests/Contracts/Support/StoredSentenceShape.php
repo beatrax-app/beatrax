@@ -107,7 +107,7 @@ final class StoredSentenceShape
         // half — which made every later match on the fragment answer false.
         $words = 0;
         foreach (preg_split('/[\s\x{00A0}]+/u', $text) ?: [] as $part) {
-            $bare = (string) preg_replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', '', $part);
+            $bare = PatternScan::replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', '', $part);
             if (PatternScan::matches('/^[A-Za-z][A-Za-z\'’-]+$/u', $bare)) {
                 $words++;
             }

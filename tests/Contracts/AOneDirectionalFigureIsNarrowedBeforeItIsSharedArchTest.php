@@ -96,7 +96,7 @@ function directionalShareSites(): array
             $sites[] = [
                 'path' => $relative,
                 'line' => directionalShareLine($tokens, $i),
-                'expression' => trim(preg_replace('/\s+/', ' ', $left.' / '.$right) ?? ''),
+                'expression' => trim(PatternScan::replace('/\s+/', ' ', $left.' / '.$right)),
             ];
         }
     }
@@ -172,7 +172,7 @@ function directionalBarBindings(): array
 
     foreach (directionalBladeFiles() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
-        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+        $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         foreach (MarkupSource::elements($source, 'x-core::progress-bar') as $bar) {
             $bound = $bar->attribute(':value');
@@ -334,7 +334,7 @@ function directionalBarFault(array $binding): ?string
         return 'the expression is worked out here rather than handed in';
     }
 
-    $root = (string) preg_replace('/^(\$[A-Za-z_]\w*).*$/', '$1', $expression);
+    $root = PatternScan::replace('/^(\$[A-Za-z_]\w*).*$/', '$1', $expression);
     $assignment = '/(?<![=!<>])'.preg_quote($root, '/').'\s*=(?![=>])/';
 
     if (preg_match($assignment, $binding['source']) === 1) {
