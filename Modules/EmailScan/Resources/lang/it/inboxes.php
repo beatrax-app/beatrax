@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => "L'ultima scansione non è stata completata. Prova «Scansiona ora» o ricollega questa casella.",
+    'oauth_state_mismatch' => 'Questo link di connessione è scaduto o è già stato usato. Ricomincia il collegamento.',
     'oauth_no_code' => 'Il tuo provider di posta ti ha rimandato indietro senza il codice che serve a Beatrax per concludere, quindi non è stata collegata nessuna casella. Ricomincia il collegamento.',
     'oauth_grant_refused' => 'Il tuo provider di posta ha rifiutato il permesso concesso a Beatrax: è scaduto o è stato revocato. Ricomincia il collegamento e concedilo.',
     'oauth_exchange_failed' => 'Il tuo provider di posta non ha completato il collegamento, quindi non è stata aggiunta nessuna casella. Riprova tra qualche minuto.',

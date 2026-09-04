@@ -8,7 +8,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
-use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -47,24 +46,11 @@ function ocgSeedProviderClient(OAuthSecretsRepository $secrets): void
     );
 }
 
-it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh_token + redirects with flash', function (): void {
-    $user = ocgUser('alice@example.com');
-    $this->actingAs($user);
-
-    $secrets = $this->app->make(OAuthSecretsRepository::class);
-    ocgSeedProviderClient($secrets);
-
-    // The mock records the redirectUri so the test can prove it was computed
-    // server-side rather than smuggled in through a query parameter.
-    $fakeToken = new AccessTokenWithEmail(
-        accessToken: 'fake-access-token',
-        refreshToken: 'fake-refresh-token-12345',
-        expiresAt: new DateTimeImmutable('2026-12-31T23:59:59Z'),
-        scope: 'https://www.googleapis.com/auth/gmail.readonly',
-        email: 'alice@example.com',
-    );
-
-    $mock = new class($fakeToken) extends GoogleOAuthProvider
+// Records the redirectUri so a caller can prove it was computed server-side
+// rather than smuggled in through a query parameter.
+function ocgTokenProvider(?AccessTokenWithEmail $token = null): GoogleOAuthProvider
+{
+    return new class($token ?? new AccessTokenWithEmail(accessToken: 'fake-access-token', refreshToken: 'fake-refresh-token-12345', expiresAt: new DateTimeImmutable('2026-12-31T23:59:59Z'), scope: 'https://www.googleapis.com/auth/gmail.readonly', email: 'fixture@example.com')) extends GoogleOAuthProvider
     {
         public ?string $lastRedirectUri = null;
 
@@ -98,6 +84,24 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
             return $this->token->email;
         }
     };
+}
+
+it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh_token + redirects with flash', function (): void {
+    $user = ocgUser('alice@example.com');
+    $this->actingAs($user);
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    ocgSeedProviderClient($secrets);
+
+    $fakeToken = new AccessTokenWithEmail(
+        accessToken: 'fake-access-token',
+        refreshToken: 'fake-refresh-token-12345',
+        expiresAt: new DateTimeImmutable('2026-12-31T23:59:59Z'),
+        scope: 'https://www.googleapis.com/auth/gmail.readonly',
+        email: 'alice@example.com',
+    );
+
+    $mock = ocgTokenProvider($fakeToken);
 
     $this->app->instance(GoogleOAuthProvider::class, $mock);
 
@@ -145,18 +149,67 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
     expect($mock->lastRedirectUri)->toBe('http://127.0.0.1:'.$expectedPort.'/oauth/callback/gmail');
 });
 
-it('OAuth callback with mismatched state raises InvalidStateException', function (): void {
+it('OAuth callback with mismatched state sends the reader back with a reason, not a server fault', function (): void {
     $user = ocgUser('mismatch@example.com');
     $this->actingAs($user);
 
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     ocgSeedProviderClient($secrets);
 
-    $this->withoutExceptionHandling();
+    $response = $this->get('/oauth/callback/gmail?state=not-issued&code=fake');
 
-    expect(function (): void {
-        $this->get('/oauth/callback/gmail?state=not-issued&code=fake');
-    })->toThrow(InvalidStateException::class);
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed', Lang::get('email-scan::inboxes.oauth_state_mismatch'));
+});
+
+it('a state already spent answers the second press the same way as a forged one', function (): void {
+    $user = ocgUser('replay@example.com');
+    $this->actingAs($user);
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    ocgSeedProviderClient($secrets);
+
+    /** @var OAuthStateRepository $stateRepo */
+    $stateRepo = $this->app->make(OAuthStateRepository::class);
+    $state = $stateRepo->issueState('gmail', userId: $user->id);
+    $this->get('/oauth/callback/gmail?state='.$state.'&code=fake');
+
+    $replayed = $this->get('/oauth/callback/gmail?state='.$state.'&code=fake');
+
+    $replayed->assertRedirect(route('inboxes.index'));
+    $replayed->assertSessionHas('oauth_failed', Lang::get('email-scan::inboxes.oauth_state_mismatch'));
+});
+
+it('a callback whose provider client has gone answers the reader, not the handler', function (): void {
+    $user = ocgUser('clientgone@example.com');
+    $this->actingAs($user);
+
+    // No provider client is seeded: the wizard's row is what a connect
+    // requires and this callback never checked for, so a secrets store that
+    // lost it between the two halves of one flow raised out of the action.
+    /** @var OAuthStateRepository $stateRepo */
+    $stateRepo = $this->app->make(OAuthStateRepository::class);
+    $state = $stateRepo->issueState('gmail', userId: $user->id);
+
+    $response = $this->get('/oauth/callback/gmail?state='.$state.'&code=fake-code');
+
+    $response->assertRedirect(route('inboxes.index'));
+    $response->assertSessionHas('oauth_failed', Lang::get('email-scan::inboxes.oauth_not_saved'));
+});
+
+it('keeps the not-found a reconnect raises for an inbox the reader does not have', function (): void {
+    $user = ocgUser('goneinbox@example.com');
+    $this->actingAs($user);
+
+    $secrets = $this->app->make(OAuthSecretsRepository::class);
+    ocgSeedProviderClient($secrets);
+    $this->app->instance(GoogleOAuthProvider::class, ocgTokenProvider());
+
+    /** @var OAuthStateRepository $stateRepo */
+    $stateRepo = $this->app->make(OAuthStateRepository::class);
+    $state = $stateRepo->issueState('gmail', userId: $user->id, existingInboxId: 999999);
+
+    $this->get('/oauth/callback/gmail?state='.$state.'&code=fake-code')->assertNotFound();
 });
 
 it('OAuth callback with provider error (user canceled at consent) redirects with oauth_canceled flash and inserts no rows', function (): void {

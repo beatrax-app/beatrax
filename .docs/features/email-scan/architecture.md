@@ -75,8 +75,8 @@ What the module explicitly does NOT do:
 
 - **Internal/OAuth/** — `GoogleOAuthProvider`,
   `MicrosoftOAuthProvider`, `OAuthStateRepository`, the typed
-  exceptions (`InvalidGrantException`, `InvalidStateException`,
-  `ReconsentRequiredException`, `OAuthExchangeFailed`).
+  exceptions (`InvalidGrantException`, `ReconsentRequiredException`,
+  `OAuthExchangeFailed`).
 - **Internal/Clients/** — `GmailApiClient` +
   `GmailApiClientContract`, `GmailInboxResources` (the authorized
   Gmail resources the client calls through), `GraphApiClient` +
@@ -181,7 +181,8 @@ The OAuth-connect handshake:
   → user grants consent
   → provider redirects to /oauth/callback?code=…&state=…
   → OAuthCallbackController::__invoke
-       → OAuthStateRepository::validate($state) → InvalidStateException
+       → OAuthStateRepository::consumeState($state) → null → back to
+         /inboxes with oauth_state_mismatch flashed
        → ConnectInboxFromGrant
             → provider->exchange($code, $codeVerifier)
             → OAuthSecretsRepository::store(...) (encrypted-at-rest)
@@ -996,14 +997,21 @@ replayed days later).
 Typed exceptions: `InvalidGrantException` (provider returned
 `invalid_grant`, caught by the state machine to transition the inbox to
 `needs_reauth`), `OAuthExchangeFailed` (any other
-`IdentityProviderException`), `InvalidStateException` (OAuth callback
-state mismatch, mapped to HTTP 400 — the CSRF defence for
-`/oauth/callback/{provider}`), and `ReconsentRequiredException`
+`IdentityProviderException`), and `ReconsentRequiredException`
 (carries the typed `(inboxId, userId, provider)` triple so
 `RaiseReconsentAlertOnTokenFailure` can write a scoped `system_alerts`
 row without pulling secrets back off disk). Every one of these
 exception messages carries only the provider's short error string —
 never the request body, never any token payload.
+
+The CSRF defence for `/oauth/callback/{provider}` raises nothing. A
+state matching no issued entry is the ordinary way to reach that URL —
+a link opened twice, a back button, a tab left overnight — so the
+controller flashes `oauth_state_mismatch` and redirects to `/inboxes`,
+the same shape as a consent the reader cancelled. This page claimed a
+mapping to HTTP 400 for the whole time the callback answered 500; see
+[an expected condition answering as a server
+fault](../../conventions/invariants-from-shipped-failures.md#an-expected-condition-answering-as-a-server-fault).
 
 ## Service provider wiring
 

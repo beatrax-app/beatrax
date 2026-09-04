@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Son tarama tamamlanmadı. Şimdi tara seçeneğini deneyin veya bu posta kutusuna yeniden bağlanın.',
+    'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bağlantıyı baştan başlat.',
     'oauth_no_code' => "Posta sağlayıcın seni Beatrax'ın bitirmek için ihtiyaç duyduğu kod olmadan geri gönderdi, bu yüzden hiçbir posta kutusu bağlanmadı. Bağlantıyı baştan başlat.",
     'oauth_grant_refused' => "Posta sağlayıcın Beatrax'a verilen izni reddetti — süresi dolmuş ya da geri alınmış. Bağlantıyı baştan başlat ve izni ver.",
     'oauth_exchange_failed' => 'Posta sağlayıcın bağlantıyı tamamlamadı, bu yüzden hiçbir posta kutusu eklenmedi. Birkaç dakika sonra tekrar dene.',
