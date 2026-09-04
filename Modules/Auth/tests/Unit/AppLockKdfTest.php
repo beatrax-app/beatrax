@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Modules\Auth\Internal\Lock\AppLockKdf;
 
 it('derives a key of exactly SODIUM_CRYPTO_SECRETBOX_KEYBYTES length', function (): void {
-    $kdf = app(AppLockKdf::class);
+    $kdf = new AppLockKdf;
 
     $salt = $kdf->generateSalt();
     $key = $kdf->deriveWrapKey('my-pin', $salt);
@@ -15,7 +15,7 @@ it('derives a key of exactly SODIUM_CRYPTO_SECRETBOX_KEYBYTES length', function 
 });
 
 it('derives the same key from the same PIN and salt', function (): void {
-    $kdf = app(AppLockKdf::class);
+    $kdf = new AppLockKdf;
 
     $salt = $kdf->generateSalt();
     $key1 = $kdf->deriveWrapKey('my-pin', $salt);
@@ -27,7 +27,7 @@ it('derives the same key from the same PIN and salt', function (): void {
 });
 
 it('derives different keys from different salts', function (): void {
-    $kdf = app(AppLockKdf::class);
+    $kdf = new AppLockKdf;
 
     $salt1 = $kdf->generateSalt();
     $salt2 = $kdf->generateSalt();
@@ -40,14 +40,14 @@ it('derives different keys from different salts', function (): void {
 });
 
 it('generates a salt of SODIUM_CRYPTO_PWHASH_SALTBYTES length', function (): void {
-    $kdf = app(AppLockKdf::class);
+    $kdf = new AppLockKdf;
 
     $salt = $kdf->generateSalt();
     expect(strlen($salt))->toBe(SODIUM_CRYPTO_PWHASH_SALTBYTES);
 });
 
 it('generates different salts on each call', function (): void {
-    $kdf = app(AppLockKdf::class);
+    $kdf = new AppLockKdf;
 
     $salt1 = $kdf->generateSalt();
     $salt2 = $kdf->generateSalt();
