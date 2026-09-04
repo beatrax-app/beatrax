@@ -165,7 +165,8 @@ Modules/Core/
   - `EnsureAppKey::run()` — checks sentinel, runs
     `key:generate --force`, writes sentinel. Idempotent on re-run.
 - **Controllers/**
-  - `HealthController::__invoke()` — `/health` endpoint.
+  - `HealthController::__invoke()` — `/health` endpoint; the probe behind it
+    is `Internal/Support/RuntimeHealthSnapshot`.
 - **Http/Livewire/Concerns/**
   - `HoldsFlashMessage` — the `$flashMessage` property every Livewire page
     renders with `@if ($flashMessage !== '')`.

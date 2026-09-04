@@ -8,11 +8,9 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\LockStateManager;
-use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Internal\Actions\EnrolBiometricCredential;
+use Modules\Auth\Internal\Lock\BiometricEnrolmentOutcome;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Navigation\Destination;
@@ -35,7 +33,7 @@ final class WebAuthnBiometricController
         // it, this returns assertion options (unlock an existing one).
         if ($request->query('enroll') === '1') {
             if (! $shield->protectsAtRest()) {
-                return $this->refuseUnshieldedEnrolment();
+                return $this->enrolmentResponse(BiometricEnrolmentOutcome::Unshielded);
             }
 
             $options = $service->creationOptions($user->id, $user->username, $session);
@@ -56,9 +54,7 @@ final class WebAuthnBiometricController
         /** @var array<string, mixed> $assertion */
         $assertion = $request->json()->all();
 
-        $user = $currentUser->user();
-
-        $unlocked = $service->verifyAndRelease($user->id, $assertion, $session);
+        $unlocked = $service->verifyAndRelease($currentUser->user()->id, $assertion, $session);
 
         if ($unlocked) {
             $redirect = $session->pull('url.intended', Destination::Dashboard->urlFrom($urls));
@@ -77,75 +73,34 @@ final class WebAuthnBiometricController
 
     public function enroll(
         Request $request,
-        CurrentUser $currentUser,
-        WebAuthnBiometricService $service,
-        PlatformDetector $detector,
+        EnrolBiometricCredential $enrol,
         Session $session,
-        LockStateManager $lockState,
-        SecretShield $shield,
     ): JsonResponse {
-        if (! $shield->protectsAtRest()) {
-            return $this->refuseUnshieldedEnrolment();
-        }
-
-        $user = $currentUser->user();
-
         /** @var array<string, mixed> $credentialResponse */
         $credentialResponse = $request->json()->all();
 
-        // Through the custodian, so the enrolled biometric wraps the real key
-        // bytes rather than the opaque handle on native bundles.
-        $dataKey = $lockState->heldKey($session);
-        if ($dataKey === null) {
-            return new JsonResponse(['enrolled' => false, 'error' => 'Session not unlocked.'], Response::HTTP_FORBIDDEN);
-        }
-
-        $ua = $request->userAgent() ?? '';
-        $deviceLabel = $detector->detectLabel($ua);
-
-        return $this->recordEnrolment($service, $user, $credentialResponse, $dataKey, $deviceLabel, $session);
+        return $this->enrolmentResponse($enrol($credentialResponse, $request->userAgent() ?? '', $session));
     }
 
-    // Every failure leaves as `enrolled: false` rather than as a throw: the
-    // browser half reads that field and nothing else, so an exception escaping
-    // here is a button that does nothing instead of a message.
-    /**
-     * @param  array<string, mixed>  $credentialResponse
-     */
-    private function recordEnrolment(
-        WebAuthnBiometricService $service,
-        User $user,
-        array $credentialResponse,
-        string $dataKey,
-        string $deviceLabel,
-        Session $session,
-    ): JsonResponse {
-        try {
-            $service->completeEnrollment(
-                $user->id,
-                $user->username,
-                $credentialResponse,
-                $dataKey,
-                $deviceLabel,
-                BiometricDeviceStore::PLATFORM_WEBAUTHN,
-                $session,
-            );
-
-            return new JsonResponse(['enrolled' => true]);
-        } catch (\Throwable) {
-            return new JsonResponse(['enrolled' => false, 'error' => 'Enrollment failed.'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-    }
-
-    // The enrolled row is `secret || wrapped_key` in the same SQLite file as
-    // the ledger, so a shield that leaves those bytes readable turns enrolment
-    // into a plaintext copy of the app-lock data key. Refused here rather than
-    // in the caller, so every route into enrolment is covered.
-    private function refuseUnshieldedEnrolment(): JsonResponse
+    // The unshielded refusal is answered here rather than in the caller, so
+    // both routes into enrolment — the options request and the completion —
+    // report the same thing.
+    private function enrolmentResponse(BiometricEnrolmentOutcome $outcome): JsonResponse
     {
-        return new JsonResponse(
-            ['enrolled' => false, 'error' => 'Biometric key material cannot be protected at rest here.'],
-            Response::HTTP_FORBIDDEN,
-        );
+        return match ($outcome) {
+            BiometricEnrolmentOutcome::Enrolled => new JsonResponse(['enrolled' => true]),
+            BiometricEnrolmentOutcome::Unshielded => new JsonResponse(
+                ['enrolled' => false, 'error' => 'Biometric key material cannot be protected at rest here.'],
+                Response::HTTP_FORBIDDEN,
+            ),
+            BiometricEnrolmentOutcome::SessionLocked => new JsonResponse(
+                ['enrolled' => false, 'error' => 'Session not unlocked.'],
+                Response::HTTP_FORBIDDEN,
+            ),
+            BiometricEnrolmentOutcome::Failed => new JsonResponse(
+                ['enrolled' => false, 'error' => 'Enrollment failed.'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            ),
+        };
     }
 }

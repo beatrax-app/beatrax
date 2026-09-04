@@ -131,7 +131,10 @@ What the module explicitly does NOT do:
 - **Controllers/**
   - `HealthController` — the auth-free `/health` endpoint. Returns
     `{status, app_version, php_version, sqlite_version}` — a flat
-    JSON object with deterministic key order, no timestamp.
+    JSON object with deterministic key order, no timestamp. The reading
+    itself is `Internal/Support/RuntimeHealthSnapshot`, because the
+    version probe opens a connection and a controller does not
+    ([a controller hands the work to an action](../../conventions/a-controller-hands-the-work-to-an-action.md)).
 - **Services/** (continued)
   - `RestoreEncryptedBackup` — mirrors `db:restore`'s safety rails for the
     in-app flow. Ordering is the safety contract: the upload is decrypted
@@ -416,8 +419,9 @@ The `/health` endpoint:
 ```
 GET /health
   → HealthController::__invoke
-      → resolve app_version from NATIVEPHP_APP_VERSION env (fallback 'dev')
-      → SELECT sqlite_version() via injected DatabaseManager
+      → RuntimeHealthSnapshot
+           → resolve app_version from NATIVEPHP_APP_VERSION env (fallback 'dev')
+           → SELECT sqlite_version() via injected DatabaseManager
       → return {status: ok, app_version, php_version, sqlite_version}
 ```
 

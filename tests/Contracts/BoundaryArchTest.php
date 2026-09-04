@@ -207,7 +207,7 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
     // backfill_progress sits on the inboxes table rather than inbox_scan_state,
     // but it is a per-inbox lifecycle signal, so routing it through
     // InboxScanStateMachine keeps the sole-mutator invariant whole. The grep
-    // targets UPDATE only: OAuthCallbackController's first-connect INSERT is legal.
+    // targets UPDATE only: ConnectInboxFromGrant's first-connect INSERT is legal.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
