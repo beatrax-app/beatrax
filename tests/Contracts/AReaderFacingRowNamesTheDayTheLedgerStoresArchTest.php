@@ -453,6 +453,15 @@ function ledgerDayRowParameters(array $paths): array
  * @param  list<string>  $paths
  * @return array{dead: array<string, list<string>>, counted: int}
  */
+// A row built to say the source could not be READ carries no day, no amount and
+// no counterparty, because none was ever established. Reading its nulls as
+// evidence that nothing populates those fields inverts what this guard is for:
+// the offence is a slot for a fact the commit HAS, left empty.
+function ledgerDayRefusesTheRow(string $arguments): bool
+{
+    return preg_match('/\bstatus\s*:\s*[\w\\\\]*PreviewRowStatus::Error\b/', $arguments) === 1;
+}
+
 function ledgerDayNeverPopulatedIn(array $paths): array
 {
     $declared = ledgerDayRowParameters($paths);
@@ -482,12 +491,23 @@ function ledgerDayNeverPopulatedIn(array $paths): array
                 continue;
             }
 
+            $refuses = ledgerDayRefusesTheRow($arguments);
+
             foreach (ledgerDaySplitArguments($arguments) as $argument) {
                 if (preg_match('/^\s*(\w+)\s*:(?!:)(.*)$/s', $argument, $named) !== 1) {
                     continue;
                 }
 
                 $counted++;
+
+                // A null in a row that refuses its source is the absence of a
+                // fact, not an unpopulated slot. Anything it DOES carry — the
+                // reason, the index — still counts, so the same construction
+                // can still be the site that proves a field is populated.
+                if ($refuses && strtolower(trim($named[2])) === 'null') {
+                    continue;
+                }
+
                 $passed[$token[1]][$named[1]][] = [trim($named[2]), $relative.':'.$token[2]];
             }
         }

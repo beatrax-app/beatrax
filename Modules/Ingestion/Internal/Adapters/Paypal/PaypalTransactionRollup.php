@@ -167,6 +167,81 @@ final class PaypalTransactionRollup
         return $this->unreadableRowIndexes;
     }
 
+    // PayPal books each conversion leg in the direction ITS OWN balance moved,
+    // so the euro leg funding an outgoing dollar payment is a credit. One
+    // payment has one direction, the parent's; a leg lends the magnitude and
+    // nothing else.
+
+    // The foreign leg is identified by its currency, never by row order: both
+    // legs of a conversion pair share an event type and a Reference Txn ID.
+    /**
+     * @param  list<array<string, string>>  $children
+     * @return array{0: int, 1: string, 2: ?int, 3: ?string}
+     *
+     * @phpstan-impure
+     */
+    private function withFxLegApplied(array $children, string $language, int $nativeAmountMinor, string $nativeCurrency): array
+    {
+        $parentAmountMinor = $nativeAmountMinor;
+        $settledAmountMinor = null;
+        $settledCurrency = null;
+
+        foreach ($children as $childRow) {
+            $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
+
+            if ($this->events->classify($childEventType, $language) !== PaypalEventAction::ChildFx) {
+                continue;
+            }
+
+            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
+            $childAmountMinor = $this->childLegAmount($childRow, $language, $childCurrency);
+
+            if ($childAmountMinor === null) {
+                continue;
+            }
+
+            if ($childCurrency === Currency::Eur->value && $nativeCurrency !== Currency::Eur->value) {
+                $settledAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
+                $settledCurrency = $childCurrency;
+            } elseif ($childCurrency !== Currency::Eur->value && $nativeCurrency === Currency::Eur->value) {
+                $settledAmountMinor = $nativeAmountMinor;
+                $settledCurrency = $nativeCurrency;
+                $nativeAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
+                $nativeCurrency = $childCurrency;
+            }
+        }
+
+        return [$nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency];
+    }
+
+    // Null drops only the FX child; the parent still emits a DTO, with no FX
+    // pair filled in. The leg is counted because the parent then buckets under
+    // the wrong currency, and a statement whose legs disagree publishes no
+    // balance at all.
+    /**
+     * @param  array<string, string>  $childRow
+     *
+     * @phpstan-impure
+     */
+    private function childLegAmount(array $childRow, string $language, string $childCurrency): ?int
+    {
+        $childGross = $this->columns->value('gross', $language, $childRow);
+
+        try {
+            if ($childGross === null) {
+                throw new InvalidAmountException(
+                    'PayPal conversion leg carries no gross-amount column; an absent column is not an amount of zero.',
+                );
+            }
+
+            return $this->amounts->parseMinor($childGross, $childCurrency);
+        } catch (InvalidAmountException) {
+            $this->unreadableChildLegCount++;
+
+            return null;
+        }
+    }
+
     /**
      * @param  array<string, string>  $parentRow
      * @param  list<array<string, string>>  $children
@@ -184,57 +259,12 @@ final class PaypalTransactionRollup
 
         $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? Currency::Eur->value;
 
-        $nativeAmountMinor = $this->amounts->parseMinor($parentGross, $parentCurrency);
-        $nativeCurrency = $parentCurrency;
-        $settledAmountMinor = null;
-        $settledCurrency = null;
-
-        // PayPal books each conversion leg in the direction ITS OWN balance
-        // moved, so the euro leg funding an outgoing dollar payment is a credit.
-        // One payment has one direction, the parent's; a leg lends the magnitude
-        // and nothing else.
-        $parentAmountMinor = $nativeAmountMinor;
-
-        // The foreign leg is identified by its currency, never by row order: both
-        // legs of a conversion pair share an event type and a Reference Txn ID.
-        foreach ($children as $childRow) {
-            $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
-            $childAction = $this->events->classify($childEventType, $language);
-
-            if ($childAction !== PaypalEventAction::ChildFx) {
-                continue;
-            }
-
-            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
-            $childGross = $this->columns->value('gross', $language, $childRow);
-            try {
-                if ($childGross === null) {
-                    throw new InvalidAmountException(
-                        'PayPal conversion leg carries no gross-amount column; an absent column is not an amount of zero.',
-                    );
-                }
-
-                $childAmountMinor = $this->amounts->parseMinor($childGross, $childCurrency);
-            } catch (InvalidAmountException) {
-                // A malformed child amount drops only the FX child; the parent still
-                // emits a DTO, with no FX pair filled in. The leg is counted because
-                // the parent then buckets under the wrong currency, and a statement
-                // whose legs disagree publishes no balance at all.
-                $this->unreadableChildLegCount++;
-
-                continue;
-            }
-
-            if ($childCurrency === Currency::Eur->value && $nativeCurrency !== Currency::Eur->value) {
-                $settledAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
-                $settledCurrency = $childCurrency;
-            } elseif ($childCurrency !== Currency::Eur->value && $nativeCurrency === Currency::Eur->value) {
-                $settledAmountMinor = $nativeAmountMinor;
-                $settledCurrency = $nativeCurrency;
-                $nativeAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
-                $nativeCurrency = $childCurrency;
-            }
-        }
+        [$nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $this->withFxLegApplied(
+            $children,
+            $language,
+            $this->amounts->parseMinor($parentGross, $parentCurrency),
+            $parentCurrency,
+        );
 
         $bookedAt = $this->dates->parse($this->columns->value('date', $language, $parentRow) ?? '');
 
