@@ -65,8 +65,14 @@ it('formats a chart axis exactly as Money formats the same amount, in every ship
     // ApexCharts calls Intl in the browser; ext-intl answers from the same ICU
     // data, so the axis string can be reproduced here. English-only ICU (the
     // mobile PHP build) cannot, and says so rather than failing on nl.
+    // Dutch ICU writes 1234.5 as "1.234,5" — dot for groups, comma for the
+    // fraction. An English-only build has no nl data, falls back to the root
+    // locale and writes "1,234.5". Both carry a dot, so a predicate asking only
+    // whether a dot is present skips on neither runtime, and the build this
+    // guard exists to excuse got a failure instead. The whole string is what
+    // tells the two apart.
     $probe = new NumberFormatter('nl', NumberFormatter::DECIMAL);
-    if (! str_contains((string) $probe->format(1234.5), '.')) {
+    if ((string) $probe->format(1234.5) !== '1.234,5') {
         $this->markTestSkipped('This runtime ships English-only ICU data, so nl cannot be reproduced here.');
     }
 

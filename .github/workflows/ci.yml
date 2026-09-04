@@ -109,19 +109,6 @@ jobs:
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-interaction --no-progress
 
-            # PhpStanBoundaryRuleTest shells out to PHPStan across Modules/ from
-            # inside the suite, so every shard pays for that analysis, not just
-            # the one running the static-analysis job. Cold it is ~125s; with the
-            # result cache restored it is ~3s.
-            - name: Cache PHPStan result cache
-              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-              with:
-                  path: .phpstan-cache
-                  key: phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
-                  restore-keys: |
-                      phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
-                      phpstan-${{ runner.os }}-${{ matrix.php }}-
-
             - name: Set up Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
               with:
@@ -165,8 +152,22 @@ jobs:
 
             - name: Resolve this shard's testsuites
               id: shard
+              # `set -e` and the emptiness check are both load-bearing, and the
+              # second is the one that matters. Without them a resolver that
+              # exits non-zero leaves `suites` empty, the step still ends on a
+              # successful echo, and the run below becomes
+              # `--parallel --testsuite=""` — which does not fail. It reports
+              # "6 passed" and exits 0, those six being the tests/Helpers files
+              # paratest collects whatever `--testsuite` asks for. The serial
+              # form exits 1 on the same input; only the parallel one CI uses is
+              # silent. A shard would have gone green having tested nothing.
               run: |
+                  set -euo pipefail
                   suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+                  if [ -z "$suites" ]; then
+                      echo "::error::the shard resolver named no testsuite, and a run with none passes."
+                      exit 1
+                  fi
                   echo "suites=$suites" >> "$GITHUB_OUTPUT"
                   echo "shard ${{ matrix.shard }}/3: $suites"
 
@@ -333,10 +334,19 @@ jobs:
                   coverage: none
                   tools: composer:v2
 
+            # `~/.composer/cache` alone was the whole path list, and it does not
+            # exist on the runner — composer keeps its downloads under the XDG
+            # directory. actions/cache found nothing to archive and said so once,
+            # as a warning, in the post-job block nobody reads:
+            # "Path Validation Error: Path(s) specified in the action for caching
+            # do(es) not exist, hence no cache is being saved." So the entry was
+            # never written, and every run missed both the primary key and the
+            # restore-key and installed from cold. vendor/ is what the repo-root
+            # job caches, and that one has been hitting all along.
             - name: Cache Composer packages (mobile-app/ lock file)
               uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
               with:
-                  path: ~/.composer/cache
+                  path: mobile-app/vendor
                   key: composer-mobile-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('mobile-app/composer.lock') }}
                   restore-keys: |
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
@@ -380,6 +390,53 @@ jobs:
               working-directory: mobile-app
               run: php artisan key:generate --ansi
 
+            # DocsNameSymbolsThatExistArchTest reads BOTH Composer roots'
+            # classmaps, because a class one root never loads is still a class
+            # that exists and calling it absent would report every framework
+            # mention on every page. It skips when either is missing — and no
+            # job had both, so it skipped in 100% of runs while reporting green.
+            # This is the only job with mobile-app/ installed, so the repo root
+            # joins it here rather than the credentials going to three more
+            # jobs. The key is the shard jobs', already warm.
+            - name: Cache Composer packages (repo root)
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: |
+                      ~/.composer/cache
+                      vendor
+                  key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      composer-${{ runner.os }}-${{ matrix.php }}-
+
+            - name: Lay down the repo-root environment
+              # Before the install, for the reason the mobile laydown gives: the
+              # post-autoload-dump hook boots the framework, and a boot with no
+              # .env and no writable framework directories fails resolving
+              # `request`.
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  mkdir -p database storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  touch database/database.sqlite
+                  chmod -R u+rwX storage bootstrap/cache
+                  composer install --prefer-dist --no-interaction --no-progress
+                  php artisan key:generate --ansi
+
+            - name: The docs-symbol rule, which needs both Composer roots
+              # Run from the repo root so base_path() resolves both classmaps.
+              # A skip here is a failure: it would mean the rule once again ran
+              # nowhere, which is the state this step exists to end.
+              env:
+                  APP_ENV: testing
+              run: |
+                  set -euo pipefail
+                  out=$(vendor/bin/pest tests/Contracts/DocsNameSymbolsThatExistArchTest.php --colors=never)
+                  echo "$out"
+                  if grep -qiE '[0-9]+ skipped' <<< "$out"; then
+                      echo "::error::the docs-symbol rule skipped, so it ran nowhere in this pipeline."
+                      exit 1
+                  fi
+
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # The mobile shell must never silently pick up a
               # Desktop-coupled provider or route — `Modules\Desktop` has no
@@ -388,6 +445,7 @@ jobs:
               # DesktopServiceProvider.
               working-directory: mobile-app
               run: |
+                  set -euo pipefail
                   php artisan config:clear
                   MODULE_LIST=$(php artisan module:list)
                   echo "$MODULE_LIST"
@@ -396,10 +454,28 @@ jobs:
                       echo "::error::Desktop module leaked into the mobile-app/ shell"
                       exit 1
                   fi
-                  DESKTOP_ROUTES=$(php artisan route:list --name=desktop 2>&1)
-                  if echo "$DESKTOP_ROUTES" | grep -q '^  desktop'; then
+                  # The route half of this check read `route:list --name=desktop`
+                  # and grepped for a line beginning `  desktop`. No line of that
+                  # table ever begins with a route name — the name sits in the
+                  # right-hand column, behind the verb and the URI — so the
+                  # pattern could not match a leak, and the step passed whatever
+                  # the shell had registered. The JSON output names the field.
+                  #
+                  # The count is the positive control: an empty list would clear
+                  # the leak assertion without proving anything, which is the
+                  # shape the grep was already failing in.
+                  ROUTES=$(php artisan route:list --json)
+                  TOTAL=$(printf '%s' "$ROUTES" | jq 'length')
+                  if [ "$TOTAL" -lt 1 ]; then
+                      echo "::error::route:list returned no routes at all, so a leak check against it proves nothing."
+                      exit 1
+                  fi
+                  echo "route:list returned ${TOTAL} routes; checking each for a desktop name or URI."
+                  LEAKED=$(printf '%s' "$ROUTES" | jq -r '
+                      .[] | select(((.name // "") | startswith("desktop")) or ((.uri // "") | startswith("desktop"))) | "\(.uri) -> \(.name // "unnamed")"')
+                  if [ -n "$LEAKED" ]; then
                       echo "::error::Desktop routes leaked into the mobile-app/ shell"
-                      echo "$DESKTOP_ROUTES"
+                      echo "$LEAKED"
                       exit 1
                   fi
 
