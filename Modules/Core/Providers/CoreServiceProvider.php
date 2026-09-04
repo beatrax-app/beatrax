@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Database\Events\MigrationsStarted;
@@ -94,6 +95,14 @@ final class CoreServiceProvider extends ServiceProvider
         // closure) is correct; the backup command, restore command, and
         // freshness probe all inject this service to resolve the backups dir.
         $this->app->singleton(UserDataPathService::class);
+
+        // The 'local' disk is where an uploaded statement is copied, and its
+        // framework default root is storage_path('app/private'). Desktop
+        // remaps storage_path to the writable data directory; mobile does not,
+        // so on a phone that default names the bundle copy an update replaces.
+        $this->app->make(ConfigRepository::class)
+            ->set('filesystems.disks.local.root', UserDataPathService::appPath('private'));
+
         $this->app->singleton(NavCountsService::class);
         $this->app->singleton(MigrationWindow::class);
         $this->app->singleton(RestoreEncryptedBackup::class);
