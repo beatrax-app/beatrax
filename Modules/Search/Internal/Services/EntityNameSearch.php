@@ -63,8 +63,8 @@ final readonly class EntityNameSearch
 
     // The cap lives in PHP because ciphertext has no name predicate SQL can
     // widen, so the rows arrive id-ordered a window at a time and the break
-    // below abandons the walk where a get() had already paid for the whole
-    // table — three names cost three names' worth of reading.
+    // below abandons the walk. A get() had already paid for the whole table by
+    // then; this pays for the window the third name was found in.
     /**
      * @link ../../../../.docs/architecture/reads-bounded-by-the-user.md#8--every-counterparty-per-palette-keystroke
      * @link ../../../../.docs/features/counterparties/resolution-chain.md#the-apps-own-words-for-a-row-it-had-to-name
