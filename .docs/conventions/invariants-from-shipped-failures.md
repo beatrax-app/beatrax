@@ -5969,6 +5969,67 @@ that calls `exit(0)` between resolving one target and resolving a different
 one. Run against the tree before either fix, it names both scripts; the
 detector is what found the second instance.
 
+## An expected condition answering as a server fault
+
+`tests/Contracts/AnExpectedConditionIsNotAServerFaultArchTest.php`
+
+Two conditions a client or the environment triggers in the ordinary course of
+things answered **500**:
+
+- `GET /oauth/callback/gmail?state=forged` — and the same URL replayed after a
+  back button, and the same URL with no query at all. All three measured at 500.
+  A state that matches no issued one is what the CSRF check on an OAuth callback
+  *exists to find*, so the control fired correctly and the reader was shown a
+  crash page in the middle of connecting a mailbox.
+- A `/livewire/update` payload calling `TransactionDetail::reclassify()` with a
+  transaction type outside `TransactionType`. Measured at 500 over a real POST
+  to the update endpoint, not through `Livewire::test()`.
+
+Nothing caught either one, for the same reason the refused-write family above
+went unnoticed: **the tests asserted the exception**. Both OAuth callback tests
+called `withoutExceptionHandling()` and then `expect(...)->toThrow(...)`, which
+is a test that can only ever agree with the throw. The status a browser gets was
+never named in either file, so the suite was green on the exact behaviour that
+was wrong. `Livewire::test()` hides the second one the same way: it runs with
+exception handling off except for `HttpException`, so an assertion on the throw
+passes and the status a browser would get never appears.
+
+The answer is not one answer. A callback reached by a browser navigation has a
+screen to go back to, so it flashes a line and redirects — which is what the
+`OpenBankingCallbackController` beside it already did, and what this controller
+already did for a consent the reader cancelled. A payload naming a type the
+picker never offers has no screen and no reader behind it, so it is a 400 that
+names the shape of the refusal and not the value it stopped on.
+
+What generalises is not the answer but the obligation: **an exception an HTTP
+entry point lets out must carry its own answer.** Three families do —
+`HttpExceptionInterface` carries a status, `HttpResponseException` carries a
+whole response, `ValidationException` carries 422 — and anything else reaches
+the generic handler, which has exactly one thing to say. The guard reads every
+entry point and refuses a throw outside those three. It measures both halves
+through the live handler rather than trusting the class names: each trusted
+family is rendered and asserted under 500, and a bare `RuntimeException` is
+rendered and asserted at 500, so a framework release that stops mapping one of
+them turns the guard red rather than quietly widening it.
+
+Three details decide the scope:
+
+- **The router is only half the boundary.** A component a layout mounts has no
+  route of its own and is still reachable from an update payload, so the guard
+  reads the live router's classes *union* every file under an `Http/` directory
+  — 202 files, against 60 the router names.
+- **A lexical guard reads a catch that is not there.** The first version flagged
+  three throws in `Forecasting`'s `BuildsMutationForms`, all of them correct:
+  the coercion helpers raise for a caller several frames up, and the `try` is
+  around the call rather than around the `throw`. Containment by token range
+  says "unguarded" and is wrong. The guard now walks the intra-file call graph
+  from each `try` block and treats a throw inside a method that block reaches as
+  covered.
+- **What it does not see.** It reads one file at a time, so a throw deep in an
+  action that escapes through a controller is outside it, as is a catch in a
+  class that uses a trait declaring the throw. It guards the boundary, which is
+  where both of these landed, and not the whole call graph behind it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

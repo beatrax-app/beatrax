@@ -39,6 +39,7 @@ return [
     ],
 
     'error_detail' => 'Ultima scanare nu s-a finalizat. Încercați Scanează acum sau reconectează această căsuță.',
+    'oauth_state_mismatch' => 'Acest link de conectare a expirat sau a fost deja folosit. Începe conectarea de la capăt.',
     'oauth_no_code' => 'Furnizorul tău de e-mail te-a trimis înapoi fără codul de care Beatrax are nevoie ca să încheie, așa că nu a fost conectată nicio cutie poștală. Începe conectarea de la capăt.',
     'oauth_grant_refused' => 'Furnizorul tău de e-mail a refuzat permisiunea dată lui Beatrax — a expirat sau a fost retrasă. Începe conectarea de la capăt și acord-o.',
     'oauth_exchange_failed' => 'Furnizorul tău de e-mail nu a încheiat conectarea, așa că nu a fost adăugată nicio cutie poștală. Încearcă din nou peste câteva minute.',
