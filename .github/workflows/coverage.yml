@@ -94,17 +94,6 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      # PhpStanBoundaryRuleTest runs PHPStan over Modules/ from inside the
-      # suite, and under pcov it is slower still. ~125s cold, ~3s warm.
-      - name: Cache PHPStan result cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .phpstan-cache
-          key: phpstan-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
-          restore-keys: |
-            phpstan-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
-            phpstan-coverage-${{ runner.os }}-
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
@@ -128,8 +117,17 @@ jobs:
 
       - name: Resolve this shard's testsuites
         id: shard
+        # An empty resolve is not an error to `php artisan test --parallel`: it
+        # reports "6 passed" and exits 0, so the shard would report a clean
+        # coverage slice built from six tests. Caught here rather than there,
+        # because a thin clover report imports as confidently as a whole one.
         run: |
+          set -euo pipefail
           suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+          if [ -z "$suites" ]; then
+              echo "::error::the shard resolver named no testsuite, and a run with none passes."
+              exit 1
+          fi
           echo "suites=$suites" >> "$GITHUB_OUTPUT"
           echo "shard ${{ matrix.shard }}/3: $suites"
 
