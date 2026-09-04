@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Sinu nädalaülevaade',
+        'label' => 'Sinu ülevaade',
         'help' => 'Kui tihti saad kokkuvõtte sellest, kuidas sel perioodil läheb.',
         'daily' => 'Iga päev',
         'weekly' => 'Iga nädal',

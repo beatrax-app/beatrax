@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Situația ta săptămânală',
+        'label' => 'Situația ta',
         'help' => 'Cât de des primești un rezumat al situației din această perioadă.',
         'daily' => 'Zilnic',
         'weekly' => 'Săptămânal',
