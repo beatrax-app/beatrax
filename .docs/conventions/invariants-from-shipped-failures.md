@@ -15,6 +15,15 @@ widening, or removing. A test does not need to carry its own obituary.
 Every entry below is: what the shape looks like, what it cost, and why nothing
 caught it.
 
+This file is declared `merge=union` in `.gitattributes`, because several
+branches append to it at once and none of them ever removes a line — so every
+pair conflicted and every resolution was "keep both". Union does that
+automatically, and it concatenates the two sides *verbatim*: if your section's
+last line is not blank, it ends up touching the next branch's heading and
+`hygiene / markdown` fails on MD022. **End every new section with a blank
+line**, and re-run `npx markdownlint-cli2 ".docs/**/*.md"` after the last
+rebase rather than when you wrote it — a rebase re-runs the union driver too.
+
 ## A Blade directive inside a component tag
 
 `tests/Contracts/ComponentTagDirectiveArchTest.php`
@@ -5873,6 +5882,71 @@ structural question and gains nothing from a tree: `'<legend class="sr-only">…
 spelling, a CSS rule body. Neither is the reading of a PHP expression a markup
 attribute happens to hold — `:label="Lang::get('…')"` is parsed out of the
 attribute *value* the walk returns, which is where a pattern belongs.
+
+## A flag set but never read back
+
+`Modules/Mobile/tests/Unit/ExcludeDataFromBackupPatchTest.php`
+
+iOS backs up Application Support to iCloud by default, and that is where the
+database, the sync keyring and the staged secrets live. There is no manifest
+flag for it; the exclusion is a per-URL resource value. The generated shell set
+it like this:
+
+```swift
+try FileManager.default.createDirectory(at: destination, …)
+
+var excluded = destination
+var values = URLResourceValues()
+values.isExcludedFromBackup = true
+try excluded.setResourceValues(values)
+} catch {
+    // Handle the error
+}
+```
+
+Two independent failures, and each one alone is enough. The `try` shares the
+`createDirectory` call's catch, so a throw from `setResourceValues` lands in a
+handler written for a failed directory creation — and that handler is the
+vendor's, which handles nothing. And nothing reads the value back, so the code
+only ever establishes that the exclusion was *asked for*.
+
+The distinction is the point: a write that returns without raising has not been
+observed to have taken effect, and a setting whose whole purpose is to keep a
+file out of somebody else's storage is exactly the kind that must be. The cost
+of being wrong is not a degraded feature — it is the entire financial history of
+the device in an iCloud account, with no log line, no failed build and no way
+for the reader to find out. The exclusion now has its own `do`/`catch`, reads
+the value back, and reports either failure through `NSLog`, which is the only
+channel available that early in launch.
+
+## A skip that ended the run instead of its own half
+
+The same script patches two platforms. Its Android half opened by checking for a
+manifest and, not finding one, said so and exited:
+
+```php
+if (! is_file($manifest)) {
+    fwrite(STDOUT, "… no Android scaffold yet — skipping.\n");
+    exit(0);
+}
+```
+
+That `exit(0)` ends the process, not the Android section. A checkout with only
+the iOS scaffold generated therefore received no iCloud exclusion at all, and
+the single line it printed on the way out talked about Android.
+
+What makes this invisible rather than loud is the pair: a zero exit status and a
+plausible message. A build that stops early and says why reads exactly like a
+build that had nothing to do — the log is honest about the half it describes and
+silent about the half it skipped. Neither the exit code nor the message is
+wrong on its own, which is why nothing downstream can catch it.
+
+So the rule is narrower than "prefer early returns". A conditional guarding one
+of several independent units of work must end that unit and no more, which in a
+straight-line script means the units have to be functions before the guard can
+be written correctly. The two halves each answer for themselves now, and the
+test asserts the iOS exclusion still lands when no Android scaffold exists —
+the case that had no coverage precisely because it produced a passing run.
 
 ## Related
 

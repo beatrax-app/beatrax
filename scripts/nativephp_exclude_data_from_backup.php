@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__.'/nativephp_scaffold_root.php';
 
 /*
- * Keep the on-device database out of Google's cloud backup.
+ * Keep the on-device database out of Google's cloud backup and Apple's iCloud.
  *
  * `native:install` generates a manifest carrying android:allowBackup="true"
  * and points it at Android Studio's sample rule files, whose every rule is
@@ -27,68 +27,82 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  * anchor is a hard failure rather than a silent skip.
  */
 
-$root = beatraxScaffoldPath('android/app/src/main') ?? '';
-$manifest = $root.'/AndroidManifest.xml';
+/**
+ * The Android half, in a function so that its absence cannot end the run.
+ *
+ * This was straight-line code ending in exit(0) when there was no manifest,
+ * and a tree with only the iOS scaffold generated therefore got no iCloud
+ * exclusion at all — reported as a success whose one line of output talked
+ * about Android. Each platform now answers only for itself.
+ */
+function beatraxExcludeAndroidFromBackup(string $root): void
+{
+    $manifest = $root.'/AndroidManifest.xml';
+    $source = (string) file_get_contents($manifest);
 
-if (! is_file($manifest)) {
-    fwrite(STDOUT, "nativephp_exclude_data_from_backup: no Android scaffold yet — skipping.\n");
-    exit(0);
-}
+    $androidDone = str_contains($source, 'android:allowBackup="false"');
 
-$source = (string) file_get_contents($manifest);
+    $anchor = 'android:allowBackup="true"';
 
-$androidDone = str_contains($source, 'android:allowBackup="false"');
-
-$anchor = 'android:allowBackup="true"';
-
-if (! $androidDone && ! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_exclude_data_from_backup: allowBackup anchor not found in {$manifest}.\n");
-    fwrite(STDERR, "The generated manifest changed shape; confirm the data directory is still excluded before shipping.\n");
-    exit(1);
-}
-
-// The flag alone, with no comment beside it: an XML comment between an
-// element's attributes is not well-formed, and the manifest merger rejects the
-// whole file. The note goes above the element, where it is legal.
-$replacement = 'android:allowBackup="false"';
-
-if (! $androidDone) {
-    $rewritten = str_replace($anchor, $replacement, $source);
-    $rewritten = str_replace(
-        '    <application',
-        "    <!-- allowBackup false, and the rules below, by\n"
-        ."         scripts/nativephp_exclude_data_from_backup.php — see that file. -->\n"
-        .'    <application',
-        $rewritten,
-    );
-
-    if (file_put_contents($manifest, $rewritten) === false) {
-        fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$manifest}.\n");
+    if (! $androidDone && ! str_contains($source, $anchor)) {
+        fwrite(STDERR, "nativephp_exclude_data_from_backup: allowBackup anchor not found in {$manifest}.\n");
+        fwrite(STDERR, "The generated manifest changed shape; confirm the data directory is still excluded before shipping.\n");
         exit(1);
     }
-}
 
-// Proof, not assumption: an earlier version of this script put the note
-// BETWEEN the application element's attributes, which is not well-formed. The
-// attribute was present and readable, every check for it passed, and Gradle
-// died in the manifest merger with a SAX error nobody could see.
-$reparsed = @simplexml_load_file($manifest);
+    // The flag alone, with no comment beside it: an XML comment between an
+    // element's attributes is not well-formed, and the manifest merger rejects
+    // the whole file. The note goes above the element, where it is legal.
+    $replacement = 'android:allowBackup="false"';
 
-if ($reparsed === false) {
-    fwrite(STDERR, "nativephp_exclude_data_from_backup: {$manifest} is no longer well-formed XML after patching.\n");
+    if (! $androidDone) {
+        $rewritten = str_replace($anchor, $replacement, $source);
+        $rewritten = str_replace(
+            '    <application',
+            "    <!-- allowBackup false, and the rules below, by\n"
+            ."         scripts/nativephp_exclude_data_from_backup.php — see that file. -->\n"
+            .'    <application',
+            $rewritten,
+        );
 
-    foreach (libxml_get_errors() as $error) {
-        fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
+        if (file_put_contents($manifest, $rewritten) === false) {
+            fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$manifest}.\n");
+            exit(1);
+        }
     }
 
-    exit(1);
+    // Proof, not assumption: an earlier version of this script put the note
+    // BETWEEN the application element's attributes, which is not well-formed.
+    // The attribute was present and readable, every check for it passed, and
+    // Gradle died in the manifest merger with a SAX error nobody could see.
+    $reparsed = @simplexml_load_file($manifest);
+
+    if ($reparsed === false) {
+        fwrite(STDERR, "nativephp_exclude_data_from_backup: {$manifest} is no longer well-formed XML after patching.\n");
+
+        foreach (libxml_get_errors() as $error) {
+            fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
+        }
+
+        exit(1);
+    }
+
+    beatraxWriteAndroidBackupRules($root);
+
+    fwrite(STDOUT, $androidDone
+        ? "nativephp_exclude_data_from_backup: Android already patched.\n"
+        : "nativephp_exclude_data_from_backup: Android data directory is out of cloud backup and device transfer.\n");
 }
 
-// The rule files are the device-transfer half. Written whole rather than
-// patched: the generated ones are Android Studio's samples with every rule
-// commented out, so there is no anchor in them worth preserving.
-$rules = [
-    $root.'/res/xml/data_extraction_rules.xml' => <<<'XML'
+/**
+ * The device-transfer half. Written whole rather than patched: the generated
+ * files are Android Studio's samples with every rule commented out, so there
+ * is no anchor in them worth preserving.
+ */
+function beatraxWriteAndroidBackupRules(string $root): void
+{
+    $rules = [
+        $root.'/res/xml/data_extraction_rules.xml' => <<<'XML'
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Written by scripts/nativephp_exclude_data_from_backup.php — see that file. -->
 <data-extraction-rules>
@@ -104,7 +118,7 @@ $rules = [
     </device-transfer>
 </data-extraction-rules>
 XML,
-    $root.'/res/xml/backup_rules.xml' => <<<'XML'
+        $root.'/res/xml/backup_rules.xml' => <<<'XML'
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Written by scripts/nativephp_exclude_data_from_backup.php — see that file.
      Read on API 30 and below, where dataExtractionRules is ignored. -->
@@ -114,23 +128,28 @@ XML,
     <exclude domain="sharedpref" />
 </full-backup-content>
 XML,
-];
+    ];
 
-foreach ($rules as $path => $contents) {
-    if (! is_dir(dirname($path)) && ! mkdir(dirname($path), 0o755, true) && ! is_dir(dirname($path))) {
-        fwrite(STDERR, 'nativephp_exclude_data_from_backup: could not create '.dirname($path).".\n");
-        exit(1);
-    }
+    foreach ($rules as $path => $contents) {
+        if (! is_dir(dirname($path)) && ! mkdir(dirname($path), 0o755, true) && ! is_dir(dirname($path))) {
+            fwrite(STDERR, 'nativephp_exclude_data_from_backup: could not create '.dirname($path).".\n");
+            exit(1);
+        }
 
-    if (file_put_contents($path, $contents."\n") === false) {
-        fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$path}.\n");
-        exit(1);
+        if (file_put_contents($path, $contents."\n") === false) {
+            fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$path}.\n");
+            exit(1);
+        }
     }
 }
 
-fwrite(STDOUT, $androidDone
-    ? "nativephp_exclude_data_from_backup: Android already patched.\n"
-    : "nativephp_exclude_data_from_backup: Android data directory is out of cloud backup and device transfer.\n");
+$androidRoot = beatraxScaffoldPath('android/app/src/main') ?? '';
+
+if ($androidRoot !== '' && is_file($androidRoot.'/AndroidManifest.xml')) {
+    beatraxExcludeAndroidFromBackup($androidRoot);
+} else {
+    fwrite(STDOUT, "nativephp_exclude_data_from_backup: no Android scaffold yet — skipping that half.\n");
+}
 
 // ─── iOS ────────────────────────────────────────────────────────────────────
 // Application Support is backed up to iCloud by default, and that is where the
@@ -145,7 +164,14 @@ if (! is_file($app)) {
 
 $swift = (string) file_get_contents($app);
 
-if (str_contains($swift, 'nativephp_exclude_data_from_backup.php')) {
+// Two markers, because a scaffold patched before the read-back existed carries
+// the first and not the second, and that is the one case that must be upgraded
+// rather than skipped: it is the silent form, which reports nothing when the
+// exclusion does not take.
+$marker = 'nativephp_exclude_data_from_backup.php';
+$readsBack = str_contains($swift, 'isExcludedFromBackupKey');
+
+if (str_contains($swift, $marker) && $readsBack) {
     fwrite(STDOUT, "nativephp_exclude_data_from_backup: iOS already patched.\n");
 
     exit(0);
@@ -160,6 +186,48 @@ $swiftAnchor = <<<'SWIFT'
             )
         } catch {
 SWIFT;
+
+// A scaffold already carrying the silent form is patched against ITS text, not
+// the pristine one: the original anchor is long gone from it, and refusing
+// there would leave the shell that most needs the read-back without it.
+$swiftLegacy = <<<'SWIFT'
+            var excluded = destination
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try excluded.setResourceValues(values)
+SWIFT;
+
+$swiftLegacyUpgraded = <<<'SWIFT'
+            var excluded = destination
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+
+            // Its own do/catch, and the flag is read back rather than trusted:
+            // a throw here would otherwise land in the catch below beside a
+            // failed mkdir, leaving the whole ledger in iCloud with the app
+            // reporting nothing. NSLog is the only channel this early on device.
+            do {
+                try excluded.setResourceValues(values)
+
+                let observed = try excluded.resourceValues(forKeys: [.isExcludedFromBackupKey])
+
+                if observed.isExcludedFromBackup != true {
+                    NSLog("%@", "[Beatrax] [BACKUP] \(destination.path) is still eligible for iCloud backup after the exclusion was set")
+                }
+            } catch {
+                NSLog("%@", "[Beatrax] [BACKUP] could not exclude \(destination.path) from iCloud backup: \(error.localizedDescription)")
+            }
+SWIFT;
+
+if (str_contains($swift, $marker) && str_contains($swift, $swiftLegacy)) {
+    if (file_put_contents($app, str_replace($swiftLegacy, $swiftLegacyUpgraded, $swift)) === false) {
+        fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$app}.\n");
+        exit(1);
+    }
+
+    fwrite(STDOUT, "nativephp_exclude_data_from_backup: iOS exclusion upgraded to report a failure.\n");
+    exit(0);
+}
 
 if (! str_contains($swift, $swiftAnchor)) {
     fwrite(STDERR, "nativephp_exclude_data_from_backup: getAppSupportDir anchor not found in {$app}.\n");
@@ -182,7 +250,22 @@ $swiftPatched = <<<'SWIFT'
             var excluded = destination
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
-            try excluded.setResourceValues(values)
+
+            // Its own do/catch, and the flag is read back rather than trusted:
+            // a throw here would otherwise land in the catch below beside a
+            // failed mkdir, leaving the whole ledger in iCloud with the app
+            // reporting nothing. NSLog is the only channel this early on device.
+            do {
+                try excluded.setResourceValues(values)
+
+                let observed = try excluded.resourceValues(forKeys: [.isExcludedFromBackupKey])
+
+                if observed.isExcludedFromBackup != true {
+                    NSLog("%@", "[Beatrax] [BACKUP] \(destination.path) is still eligible for iCloud backup after the exclusion was set")
+                }
+            } catch {
+                NSLog("%@", "[Beatrax] [BACKUP] could not exclude \(destination.path) from iCloud backup: \(error.localizedDescription)")
+            }
         } catch {
 SWIFT;
 
