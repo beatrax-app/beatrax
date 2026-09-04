@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
+use Psr\Log\LoggerInterface;
 
 // Handles the columns whose foreign key targets their own table. Ordering
 // cannot resolve these — a transfer pair references both ways, so whichever
@@ -35,6 +36,7 @@ final class SelfReferenceDeferral
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly RowOwnership $ownership,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     // Strips the self-referential columns out of an insert payload, nulling
@@ -110,24 +112,37 @@ final class SelfReferenceDeferral
 
     private function repairColumn(string $table, string $column, int $userId): int
     {
+        $repaired = 0;
+
         try {
+            // op_log_entries only ever grows, and this asks it for every value
+            // the column was ever given. Streamed rather than collected, so the
+            // sweep costs a device that has synced for a year what it costs one
+            // set up yesterday; each row is wanted only long enough to read it.
             $named = $this->db->connection()->table('op_log_entries')
                 ->where('user_id', $userId)
                 ->where('table_name', $table)
                 ->where('field', $column)
                 ->whereNotNull('value')
                 ->where('value', '!=', 'null')
-                ->get(['pk', 'value']);
-        } catch (QueryException) {
-            return 0;
-        }
+                ->orderBy('id')
+                ->cursor();
 
-        $repaired = 0;
-
-        foreach ($named as $entry) {
-            if ($this->repairRow($table, $column, $entry, $userId)) {
-                $repaired++;
+            foreach ($named as $entry) {
+                if ($this->repairRow($table, $column, $entry, $userId)) {
+                    $repaired++;
+                }
             }
+        } catch (QueryException $e) {
+            // A link this sweep cannot read stays null, and an unpaired
+            // transfer_out is counted as money leaving the household. Returning
+            // zero on its own said there was nothing to repair, which is the
+            // same answer a clean log gives.
+            $this->logger?->error('SelfReferenceDeferral: the log could not be read to repair a self-reference.', [
+                'table' => $table,
+                'column' => $column,
+                'exception' => $e->getMessage(),
+            ]);
         }
 
         return $repaired;

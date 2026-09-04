@@ -12,6 +12,8 @@ use Modules\Sync\Internal\Merge\SearchDocumentRows;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 
 // transactions.pair_transaction_id is a foreign key onto transactions itself and
 // a transfer pair points both ways, so no insert order satisfies it: whichever
@@ -333,4 +335,44 @@ it('leaves a link alone when the sweep finds the column already filled', functio
     ]);
 
     expect(app(SelfReferenceDeferral::class)->resolveFromHistory($userId))->toBe(0);
+});
+
+it('says so when the log it repairs from cannot be read', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('unreadable-log')->id;
+
+    selfRefUnlock($userId);
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<array{0: mixed, 1: string, 2: array<string, mixed>}> */
+        public array $records = [];
+
+        public function log(mixed $level, string|Stringable $message, array $context = []): void
+        {
+            $this->records[] = [$level, (string) $message, $context];
+        }
+    };
+
+    app()->instance(LoggerInterface::class, $logger);
+
+    // The sweep reads the log to fill a link its own batch could not. Taking
+    // the table away is the one failure that reproduces without a corrupt file:
+    // renamed rather than dropped, and put back before the assertions, so the
+    // worker this test shares is handed the schema it was given.
+    $db->connection()->statement('ALTER TABLE op_log_entries RENAME TO op_log_entries_hidden');
+
+    try {
+        $repaired = app(SelfReferenceDeferral::class)->resolveFromHistory($userId);
+    } finally {
+        $db->connection()->statement('ALTER TABLE op_log_entries_hidden RENAME TO op_log_entries');
+    }
+
+    expect($repaired)->toBe(0, 'nothing can be repaired from a log that cannot be read')
+        ->and($logger->records)->not->toBeEmpty('a sweep that failed must not answer like a clean one');
+
+    expect($logger->records[0][0])->toBe('error')
+        ->and($logger->records[0][1])->toContain('SelfReferenceDeferral')
+        ->and($logger->records[0][2])->toHaveKeys(['table', 'column', 'exception']);
 });
