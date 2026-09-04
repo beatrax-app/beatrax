@@ -13,6 +13,7 @@ use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Support\Lang;
+use Tests\Helpers\CheapKdfCost;
 
 beforeEach(function (): void {
     Storage::fake('livewire-tmp');
@@ -61,7 +62,7 @@ it('says a wrong passphrase in the language the reader is reading, and never tou
     $pdo->exec('CREATE TABLE marker (val TEXT)');
     $pdo->exec("INSERT INTO marker (val) VALUES ('ORIGINAL')");
     (new PDO('sqlite:'.$plain))->exec('CREATE TABLE marker (val TEXT)');
-    (new BackupEncryptor)->encrypt($plain, $enc, 'right-pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($plain, $enc, 'right-pw');
 
     $db = app(DatabaseManager::class);
     Config::set('database.default', 'sqlite');
