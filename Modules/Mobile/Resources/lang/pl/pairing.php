@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Urządzenie sparowane',
     'success_body' => 'To urządzenie jest teraz zaufane. Twoje dane zsynchronizują się po połączeniu.',
+    'encryption_incomplete' => 'Urządzenie zostało sparowane, ale szyfrowanie danych zapisanych na nim nie zostało ukończone. Dane nie są jeszcze przechowywane w postaci zaszyfrowanej.',
     'done' => 'Gotowe',
 
     'errors' => [

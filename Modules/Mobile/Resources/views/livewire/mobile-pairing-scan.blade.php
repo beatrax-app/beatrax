@@ -332,6 +332,15 @@
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::pairing.success_body') }}
             </p>
+            {{-- The pairing stands; what did not finish is this device's own
+                 at-rest encryption. Said here because nothing later re-runs
+                 it: the sync screen's encryption CTA is hidden once sync is
+                 on, so the reader would otherwise never learn of it. --}}
+            @if ($encryptionActivationFailed)
+                <x-core::alert tone="warning" data-testid="pairing-encryption-incomplete">
+                    <p class="text-left">{{ Lang::get('mobile::pairing.encryption_incomplete') }}</p>
+                </x-core::alert>
+            @endif
             <x-core::neutral-button
                 block="full"
                 class="min-h-[44px]"
