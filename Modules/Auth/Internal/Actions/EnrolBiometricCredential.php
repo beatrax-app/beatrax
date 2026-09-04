@@ -39,10 +39,21 @@ final readonly class EnrolBiometricCredential
         // Through the custodian, so the enrolled biometric wraps the real key
         // bytes rather than the opaque handle on native bundles.
         $dataKey = $this->lockState->heldKey($session);
-        if ($dataKey === null) {
-            return BiometricEnrolmentOutcome::SessionLocked;
-        }
 
+        return $dataKey === null
+            ? BiometricEnrolmentOutcome::SessionLocked
+            : $this->record($credentialResponse, $userAgent, $dataKey, $session);
+    }
+
+    /**
+     * @param  array<string, mixed>  $credentialResponse
+     */
+    private function record(
+        array $credentialResponse,
+        string $userAgent,
+        string $dataKey,
+        Session $session,
+    ): BiometricEnrolmentOutcome {
         $user = $this->currentUser->user();
 
         try {
