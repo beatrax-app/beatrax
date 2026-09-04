@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -44,6 +45,8 @@ final class EncodedUploadTransport
     // A multiple of 4, so every slice is a whole number of base64 quanta and
     // decodes standalone.
     private const DECODE_CHUNK = 1 << 19;
+
+    public function __construct(private readonly OwnerOnlyPath $ownerOnly) {}
 
     private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
@@ -144,10 +147,8 @@ final class EncodedUploadTransport
         // bytes are somebody's bank statement, and /tmp is world-traversable
         // at 1777, so the name and size are readable even at 0600.
         $dir = rtrim(UserDataPathService::appPath('tmp-uploads'), '/');
-        @mkdir($dir, 0700, true);
-        @chmod($dir, 0700);
 
-        $path = tempnam($dir, 'beatrax-upload-');
+        $path = $this->ownerOnly->directory($dir) ? tempnam($dir, 'beatrax-upload-') : false;
 
         if ($path === false) {
             throw new HttpException(500, self::STAGING_FAILED_MESSAGE);

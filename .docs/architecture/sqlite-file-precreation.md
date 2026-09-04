@@ -42,12 +42,9 @@ only half-built.
 
 ## What the hook does
 
-```php
-$dbFile = UserDataPathService::databaseFile();
-$dbDir  = dirname($dbFile);
-if (! is_dir($dbDir))      { @mkdir($dbDir, 0775, true); }
-if (! file_exists($dbFile)) { @touch($dbFile); @chmod($dbFile, 0600); }
-```
+Both roots delegate to `Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile`,
+which creates the directory if it is missing and then hands the file to
+[`OwnerOnlyPath`](owner-only-paths.md).
 
 The path comes from
 [`UserDataPathService::databaseFile()`](../features/core/architecture.md), which
@@ -56,15 +53,17 @@ differently per platform: `NATIVEPHP_STORAGE_PATH` on the packaged desktop
 build, the sibling `persisted_data` store on mobile, and the repo tree in local
 development.
 
-The `chmod(0600)` is applied on the desktop root the moment the file is created
-— **before the migrator writes anything into it**. The database holds every
-transaction, balance and account number in plaintext; the process umask would
-otherwise commonly leave it at `0644`, world-readable. The permission is set
-once, at creation, because after that first write there is no moment where the
-file is guaranteed to be empty.
+The file is created owner-only rather than narrowed to it afterwards, and the
+mode is then read back off disk. The database holds every transaction, balance
+and account number in plaintext, and SQLite gives `-wal` and `-shm` the mode of
+the database file they belong to, so this single decision covers the recently
+written pages as well as the committed ones.
 
-The hook fires on **every** boot. That is intentional and harmless: in local
-development the directory and file already exist, so both branches no-op.
+The mode is settled on **every** boot, not only at creation. A database that
+arrives from somewhere else — an unzipped export, a `cp` without `-p`, a file
+manager drag — arrives at `0644`, and the older hook, which only acted when the
+file was absent, never looked at it again. Settling the mode does not require
+the file to be empty; only *seeding* it would.
 
 ## The two callers that depend on it
 
@@ -89,8 +88,13 @@ one difference in emphasis: on mobile the missing piece is usually the
 **directory**, not the file, because `databaseFile()` targets a sibling
 `persisted_data` store that the native layer provisions outside the Laravel
 tree. The failure without it is a one-time, self-healing but noisy cold-boot
-error rather than a hard build abort. Mobile does not chmod the file — the app
-sandbox already isolates it.
+error rather than a hard build abort. The mode is settled there too — the app
+sandbox is the defence that matters on a phone, but the two roots run the same
+code on a desktop developer machine, and one of them silently not doing it is
+how the roots drift apart.
+
+`tests/Contracts/ComposerRootsAgreeArchTest.php` fails if either root brings
+the file into existence without going through `EnsurePrivateDatabaseFile`.
 
 See [mobile architecture](../features/mobile/architecture.md) for how
 `isMobileRuntime()` decides which path `databaseFile()` returns.

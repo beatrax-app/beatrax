@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
@@ -43,6 +44,7 @@ final class EncryptedBackupDownload extends Component
         ResponseFactory $responses,
         ShareSheetExport $shareSheet,
         BackupKeyMaterial $keyMaterial,
+        OwnerOnlyPath $ownerOnly,
     ): ?BinaryFileResponse {
         $this->notice = '';
         $this->error = $this->downloadValidationError($config);
@@ -56,12 +58,14 @@ final class EncryptedBackupDownload extends Component
         // /tmp at 1777). VACUUM INTO creates the file at 0644 via PHP's
         // umask bypass, so the 0700 parent dir is what keeps it private.
         $stagingDir = UserDataPathService::appPath('tmp-backups');
-        @mkdir($stagingDir, 0700, true);
-        @chmod($stagingDir, 0700);
         $plainPath = $stagingDir.DIRECTORY_SEPARATOR.'beatrax-backup-'.$stamp.'-'.bin2hex(random_bytes(4)).'.sqlite';
         $encPath = $plainPath.'.enc';
 
         try {
+            if (! $ownerOnly->directory($stagingDir)) {
+                throw new BackupIoException('The staging directory could not be made owner-only.');
+            }
+
             // Consistent snapshot — VACUUM INTO must not run in a transaction
             // and refuses an existing target, so the unique temp path is fresh.
             $escaped = str_replace("'", "''", $plainPath);
@@ -69,10 +73,13 @@ final class EncryptedBackupDownload extends Component
             if (! is_file($plainPath)) {
                 throw new BackupIoException('The database snapshot was not produced.');
             }
-            // The snapshot is briefly plaintext on disk — lock the file itself
-            // down too (defense in depth on top of the 0700 dir), mirroring
-            // db:backup's chmod 0600.
-            @chmod($plainPath, 0600);
+            // The snapshot is plaintext on disk until the encryptor has run,
+            // and it carries the packed key material — defence in depth on top
+            // of the 0700 staging directory, and a mode that cannot be settled
+            // is a refusal rather than a download.
+            if (! $ownerOnly->file($plainPath)) {
+                throw new BackupIoException('The database snapshot could not be made owner-only.');
+            }
 
             // Before the encrypt, because a snapshot that leaves without it is
             // a copy of ciphertext for anyone whose columns are sealed: the

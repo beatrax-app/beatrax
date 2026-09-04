@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Public\Services;
 
+use Illuminate\Container\Container;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Mobile\Internal\Native\NativeShareSheet;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Throwable;
@@ -134,6 +136,15 @@ class ShareSheetExport
         return new NativeShareSheet;
     }
 
+    // Resolved rather than injected for the same reason nativeSheet() is built
+    // here: a constructor on this class would be shadowed by the subclasses
+    // that stand in for a phone. The container copy carries the logger, so a
+    // mode that will not settle reaches the log instead of a bare null.
+    private function ownerOnly(): OwnerOnlyPath
+    {
+        return Container::getInstance()->make(OwnerOnlyPath::class);
+    }
+
     // Written inside the app's own data directory at 0600, never to shared
     // storage: the share sheet reads it on the user's behalf, so nothing else
     // needs to be able to.
@@ -142,11 +153,13 @@ class ShareSheetExport
         try {
             $path = $this->stagingPath($filename);
 
-            if ($path === null || @file_put_contents($path, $contents) === false) {
+            if ($path === null || ! $this->ownerOnly()->file($path)) {
                 return null;
             }
 
-            @chmod($path, 0600);
+            if (@file_put_contents($path, $contents) === false) {
+                return null;
+            }
 
             return $path;
         } catch (Throwable) {
@@ -166,9 +179,7 @@ class ShareSheetExport
                 return null;
             }
 
-            @chmod($path, 0600);
-
-            return $path;
+            return $this->ownerOnly()->file($path) ? $path : null;
         } catch (Throwable) {
             return null;
         }
@@ -205,11 +216,8 @@ class ShareSheetExport
         }
     }
 
-    // The second is_dir() is not the first one repeated: mkdir() fails with
-    // EEXIST when a racing writer got there in between, and the directory it
-    // lost the race for is exactly the one this needed.
     private function ensureDirectory(string $directory): bool
     {
-        return is_dir($directory) || @mkdir($directory, 0700, true) || is_dir($directory);
+        return $this->ownerOnly()->directory($directory);
     }
 }
