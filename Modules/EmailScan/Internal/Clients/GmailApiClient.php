@@ -10,7 +10,9 @@ use Google\Service\Gmail\History;
 use Google\Service\Gmail\ListHistoryResponse;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
+use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Symfony\Component\HttpFoundation\Response;
@@ -112,7 +114,18 @@ final readonly class GmailApiClient implements GmailApiClientContract
             throw $this->mapProviderFailure($e);
         }
 
-        return self::base64UrlDecode($msg->getRaw());
+        // Decided from the resource's own numbers, before base64UrlDecode
+        // makes three more copies of a body Gmail will carry up to 35 MB
+        // encoded. sizeEstimate is the provider's word for it and the encoded
+        // length is ours; the larger one is the one this device has to hold.
+        $raw = $msg->getRaw();
+        BoundedRead::refuseAbove(
+            'Gmail message '.$providerMessageId,
+            max($msg->getSizeEstimate(), strlen($raw)),
+            UploadLimits::MAX_MESSAGE_BYTES,
+        );
+
+        return self::base64UrlDecode($raw);
     }
 
     /**
