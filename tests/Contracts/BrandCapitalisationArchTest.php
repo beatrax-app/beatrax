@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\PatternScan;
 
 /**
- * DES-R1 — the product name is written "Beatrax" in prose, mid-sentence included.
+ * The product name is written "Beatrax" in prose, mid-sentence included.
  *
  * @link ../../.docs/conventions/00-index.md
  */
