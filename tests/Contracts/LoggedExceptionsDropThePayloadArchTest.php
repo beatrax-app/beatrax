@@ -60,7 +60,7 @@ function loggedExceptionAliases(string $source): array
 function loggedExceptionCatchIsBroad(string $types, array $aliases): bool
 {
     foreach (explode('|', $types) as $declared) {
-        $parts = preg_split('/\s+/', trim($declared)) ?: [];
+        $parts = PatternScan::split('/\s+/', trim($declared));
         $name = ltrim((string) ($parts[0] ?? ''), '\\');
 
         if ($name === '') {

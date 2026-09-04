@@ -96,7 +96,7 @@ it('has every class in a Blade template resolving to a rule', function (): void 
         $attributes = PatternScan::all('/class="([^"{}@]*)"/', $source);
 
         foreach ($attributes[1] as $attribute) {
-            foreach (preg_split('/\s+/', trim($attribute)) ?: [] as $token) {
+            foreach (PatternScan::split('/\s+/', trim($attribute)) as $token) {
                 if (! PatternScan::matches('/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/', $token)) {
                     continue;
                 }

@@ -38,7 +38,7 @@ function safeAreaClassesIn(string $template): array
     $attributes = PatternScan::all('/class="([^"]*)"/', safeAreaMarkup($template));
 
     foreach ($attributes[1] as $attribute) {
-        foreach (preg_split('/\s+/', trim($attribute)) ?: [] as $class) {
+        foreach (PatternScan::split('/\s+/', trim($attribute)) as $class) {
             if ($class !== '') {
                 $classes[] = $class;
             }

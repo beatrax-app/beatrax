@@ -81,7 +81,7 @@ function pollKeepAliveStripComments(string $source): string
 function pollKeepAliveBarePolls(string $source, string $label): array
 {
     $hits = [];
-    $lines = preg_split('/\R/', pollKeepAliveStripComments($source)) ?: [];
+    $lines = PatternScan::split('/\R/', pollKeepAliveStripComments($source));
 
     foreach ($lines as $offset => $line) {
         $matches = PatternScan::sets('/wire:poll((?:\.[A-Za-z0-9-]+)*)/', $line);
