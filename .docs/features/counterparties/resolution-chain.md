@@ -90,9 +90,8 @@ name, then to the IBAN.
 Runs the description through
 `Modules\Import\Public\Services\MerchantNameResolver`, which owns the
 alias and corpus matching. A hit becomes `type = 'merchant'` with
-`merchant_name` set to the resolved name. `merchant_name` is the column
-the garbage collector's alias anchor joins against — see the retention
-rules in [garbage collection](garbage-collection.md).
+`merchant_name` set to the resolved name and kept beside the row's own
+`display_name`; only a merchant row carries one.
 
 `display_name` is the name the row's own file gave it, and only falls
 back to the resolved name when the file named no counterparty. The
@@ -346,7 +345,7 @@ it in triage is the other case, and there the slug moves with the name
 the fresh classification while the stored row kept the first pass's, so
 a row that landed `unknown` never left `CounterpartyTriageQueue` (which
 selects strictly `type='unknown'`) and a row that later resolved to a
-merchant kept the NULL `merchant_name` the garbage collector prunes on.
+merchant kept the NULL `merchant_name` its first pass had written.
 
 Events:
 
@@ -443,8 +442,7 @@ in depth.
   Public/Internal boundary, and the data flow diagrams.
 - [Triage suggestions](triage-suggestions.md) — what happens to the
   `unknown` rows step 7 produces.
-- [Garbage collection](garbage-collection.md) — the retention rules
-  that decide when a resolved row is pruned again.
+- [Retention](retention.md) — why a resolved row is kept for good.
 - [`counterparties.slug` is a cross-platform key](slug-is-a-cross-platform-key.md)
   — why the slugifier transliterates in PHP rather than through the C
   library, and which stored slugs change with it.

@@ -77,10 +77,10 @@ about whether a row is supposed to be sealed.
 `BlindIndexCodec` already made this decision and `SensitiveColumnCodec` simply never got it:
 enrolled plus no key throws `BlindIndexKeyUnavailableException` with the reason "refusing to
 write a plaintext matching key". `SensitiveColumnKeyUnavailableException` is the AEAD half of
-the same rule. Two more call sites had already reached it independently —
-`ReindexSearchCommand` partitions users and skips the ones it cannot key, and
-`CounterpartyGarbageCollectorJob` composes `isEnabled()` with `release() !== null` and drops
-the encrypted half with a log line. The established answer for background work that cannot
+the same rule. Another call site had already reached it independently:
+`ReindexSearchCommand` composes `isEnabled()` with whether this process holds key material
+for the user, partitions on the answer, and leaves the ones it cannot key untouched, naming
+every skipped user in one error line. The established answer for background work that cannot
 reach a key is **do less, and say so**.
 
 Giving background writers a sanctioned key source is the alternative, and it is excluded by

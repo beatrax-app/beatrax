@@ -100,8 +100,8 @@ it('announces every row it deletes from a table that travels', function (): void
         ...$offenders,
         '',
         "Dispatch the table's mutation event with mutationType: 'delete' after the",
-        'write — CounterpartyGarbageCollectorJob::pruneOrphans() is the retention',
-        'sweep that does it. A table that must NOT travel belongs in',
+        'write — PruneNotificationsJob::announce() is the retention sweep that',
+        'does it. A table that must NOT travel belongs in',
         'OpLogBackfiller::DEVICE_LOCAL_TABLES, not in an exception here.',
     ]));
 });

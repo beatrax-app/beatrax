@@ -43,7 +43,6 @@ final class MobileBackgroundSchedule
             'fx.daily-refresh' => 'fx:refresh-rates',
             'recurring.detect' => 'recurring:detect',
             'forecasting.daily-sweep' => 'forecasting:project',
-            'counterparties.gc' => 'counterparties:collect-garbage',
             'notifications.prune' => 'notifications:prune',
             'notifications.daily-triggers' => 'notifications:daily-triggers',
             'notifications.budget-nudges' => 'budgets:emit-nudges',

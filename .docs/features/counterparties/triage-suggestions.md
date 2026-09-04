@@ -182,9 +182,7 @@ rather than a silent one — see [the seam](#the-write-seam) below.
 - **Y — accept.** `CounterpartyTriage::acceptSuggestion()` flips the
   row to `type = 'merchant'` and writes the suggested name to both
   `display_name` and `merchant_name`, encrypting both through the codec
-  exactly as the create path does. Writing `merchant_name` is what
-  anchors the row against `merchant_aliases.friendly_name` for
-  [garbage collection](garbage-collection.md).
+  exactly as the create path does.
 - **N — reject.** Sets `showSuggestion = false` for this card only,
   which hides the banner and leaves the manual-label section. Nothing
   is written; the suggestion returns on a later visit.
@@ -285,5 +283,4 @@ than a post-hydrate filter.
   `unknown` in the first place.
 - [Module architecture](architecture.md) — the surface map and the
   triage keyboard shortcuts.
-- [Garbage collection](garbage-collection.md) — why an accepted
-  suggestion's `merchant_name` matters to retention.
+- [Retention](retention.md) — why a row triage labels is kept for good.

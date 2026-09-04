@@ -4,27 +4,19 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
-use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 use Modules\Ledger\Models\Account;
-use Modules\Ledger\Models\ImportRun;
-use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Public\Events\EntityMutated;
-use Modules\Sync\Public\Events\TransactionMutated;
 
 // upsert() was a firstOrCreate: it wrote on create and never again. The DTO it
 // returned reported the fresh classification while the stored row kept the
 // first pass's, which is a row the triage queue (type='unknown' strictly) can
-// never show as resolved, and a merchant row the garbage collector's
-// null-merchant_name half is free to prune.
+// never show as resolved.
 
 function refreshedUser(string $username): User
 {
@@ -165,86 +157,4 @@ it('says nothing to the peer when the later pass resolves to the same values', f
     $resolver->resolve(refreshedCanonical($user, $account, 'NL91ABNA0417164300', 'OVERBOEKING'), $user);
 
     expect($edits)->toBe(0);
-});
-
-// The garbage collector NULLed the FK and DELETEd the rows through the query
-// builder, announcing neither — so a peer kept counterparties this device had
-// dropped, and transactions still pointing at them.
-it('announces the counterparties it deleted and the links it broke', function (): void {
-    $user = refreshedUser('refreshed-gc');
-    $account = refreshedAccount($user, 'refreshed-gc-asn');
-
-    /** @var Counterparty $orphan */
-    $orphan = Counterparty::query()->create([
-        'user_id' => $user->id,
-        'type' => CounterpartyType::Unknown->value,
-        'slug' => 'gc-orphan',
-        'display_name' => 'GC Orphan',
-        'merchant_name' => null,
-    ]);
-
-    $run = ImportRun::query()->create([
-        'user_id' => $user->id,
-        'source_format' => 'asn-csv',
-        'raw_file_path' => '/tmp/refreshed-gc.csv',
-        'sha256' => hash('sha256', 'refreshed-gc'),
-        'uploaded_at' => CarbonImmutable::now(),
-        'status' => 'previewed',
-    ]);
-
-    /** @var Transaction $tx */
-    $tx = Transaction::query()->create([
-        'user_id' => $user->id,
-        'account_id' => $account->id,
-        'type' => 'expense',
-        'posted_at' => '2023-01-01',
-        'booked_at' => '2023-01-01 12:00:00',
-        'value_date' => '2023-01-01',
-        'amount_minor' => -1000,
-        'currency' => 'EUR',
-        'settled_amount_minor' => -1000,
-        'settled_currency' => 'EUR',
-        'counterparty_name' => 'GC Orphan',
-        'counterparty_normalized' => 'gc-orphan',
-        'normalization_version' => 1,
-        'counterparty_id' => $orphan->id,
-        'source_format' => 'asn-csv',
-        'import_run_id' => $run->id,
-        'source_row_index' => 1,
-        'fingerprint' => str_pad('gcorph', 64, 'g', STR_PAD_LEFT),
-        'fingerprint_version' => 3,
-    ]);
-
-    // The retention window is measured on transactions.created_at, which the
-    // model stamps at now(); the row has to look old for the prune to reach it.
-    DB::table('transactions')
-        ->where('id', $tx->id)
-        ->update(['created_at' => CarbonImmutable::parse('2023-01-01 12:00:00')->toDateTimeString()]);
-
-    $deletes = [];
-    $unlinks = [];
-    $events = app(Dispatcher::class);
-    $events->listen(EntityMutated::class, static function (EntityMutated $event) use (&$deletes): void {
-        if ($event->table === 'counterparties' && $event->mutationType === 'delete') {
-            $deletes[] = $event->pk;
-        }
-    });
-    $events->listen(TransactionMutated::class, static function (TransactionMutated $event) use (&$unlinks): void {
-        $unlinks[] = $event->transactionId;
-    });
-
-    (new CounterpartyGarbageCollectorJob($user->id))->handle(
-        app(DatabaseManager::class),
-        app(Clock::class),
-        null,
-        null,
-        null,
-        null,
-        null,
-        $events,
-    );
-
-    expect(Counterparty::query()->where('id', $orphan->id)->exists())->toBeFalse();
-    expect($deletes)->toBe([$orphan->id]);
-    expect($unlinks)->toBe([$tx->id]);
 });

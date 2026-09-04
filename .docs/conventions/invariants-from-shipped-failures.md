@@ -2731,10 +2731,10 @@ nearest to hand.
 
 `tests/Contracts/ACutoffIsBuiltOnTheClockThatWroteTheColumnArchTest.php` is what
 now holds it. The fix reached `PruneNotificationsJob` and stopped there, even
-though that job's own comment named `CounterpartyGarbageCollectorJob` as sharing
-its retention number — the two spelled the same 365-day rule separately, and one
-of the two spellings asked the wrong clock. They read it from
-`Modules\Core\Public\Support\RetentionWindow` now, which is one expression of
+though that job's own comment named a second daily sweep as sharing its
+retention number — the two spelled the same 365-day rule separately, and one
+of the two spellings asked the wrong clock. What is left of the pair reads it
+from `Modules\Core\Public\Support\RetentionWindow`, which is one expression of
 the number *and* one expression of the frame. The guard walks the backend plus
 the migrations, and refuses any `datetime('now')`, `date('now')` or
 `CURRENT_TIMESTAMP` outside two pinned schema defaults that nothing orders or
@@ -6222,6 +6222,47 @@ three defences against going quietly inert: every enum case must resolve to a
 registered route, every case must have a row saying how a test reaches it, and
 an ordinary page must still draw all seven markers — without that last one the
 rule would pass loudest on the day the shell broke everywhere.
+
+## A sweep decided "nothing points at this" on a quarter of the ledger
+
+`counterparties.gc` ran daily on every device, including the phone. It deleted
+a counterparty when no transaction had pointed at it for 365 days, and NULLed
+`transactions.counterparty_id` on every ledger row that named one it dropped.
+
+The predicate is unanswerable on a local-first device, because each device
+holds a partial replica. "No transaction points at this row" and "the
+transactions that point at this row have not arrived yet" are the same
+observation, and the sweep resolved both towards deleting.
+
+Measured on a paired Mac and iPhone sharing one household ledger: the Mac had
+received 35 of the household's 140 transactions. Against that quarter of the
+ledger 17 counterparties looked unreferenced, and it deleted all 17. On the
+phone 16 of those 17 were referenced — by 52 transactions between them, one
+payee carrying 10. Neither device's op log holds a single counterparty delete,
+because the sweep announced nothing until #274, four days before this was
+written and after every tagged release.
+
+Widening the window would not have helped and neither would narrowing the
+predicate to "no transaction references it at all": on the Mac, none did. The
+window was never the defect. A delete decided on one replica is a delete of
+what another replica is still using, and adding the announcement would have
+propagated it — turning a local divergence into replicated data loss.
+
+The job is gone rather than tightened, and
+`NoScheduledTaskPrunesUserDataArchTest` walks every scheduled command into the
+jobs it dispatches, failing on a `->delete()` against a table of user data or
+an `->update()` that sets a column of one back to `null`. It asserts the table
+names still exist and that the scheduler resolved before it asserts a clean
+result, because a guard that finds nothing must not read as a guard that found
+nothing wrong.
+
+Writing it reproduced that failure mode twice. Its first version exempted
+`notifications` from a list that never contained it, so the one exemption it
+carried was a no-op reading as a decision; and its scan stopped at the first
+`->table('x')` in a file, which reported the notification sweep clean because
+that sweep plucks the ids in one chain and deletes them in the next. Both are
+now asserted against: an exemption has to name a table the guard would
+otherwise have caught, and some scheduled task has to actually prune it.
 
 ## Related
 

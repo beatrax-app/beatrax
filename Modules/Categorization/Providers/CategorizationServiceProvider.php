@@ -66,9 +66,9 @@ final class CategorizationServiceProvider extends ServiceProvider
         $events->listen('eloquent.deleting: Modules\Ledger\Models\Category', [DeactivateRulesOnReferentDelete::class, 'handleCategoryDeleting']);
         $events->listen('eloquent.deleting: Modules\Counterparties\Models\Counterparty', [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyDeleting']);
 
-        // The counterparty garbage collector deletes through the query builder,
-        // so the model event above never fires for the one production path that
-        // deletes a counterparty at all.
+        // A query-builder delete fires no model event, so the arm above cannot
+        // be the only one: a writer that deletes a counterparty announces it,
+        // and this is what that announcement reaches.
         $events->listen(EntityMutated::class, [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyPruned']);
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);

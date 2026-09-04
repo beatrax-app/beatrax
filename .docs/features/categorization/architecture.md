@@ -298,21 +298,27 @@ and touches only `categorization_rules.active`; a global (unowned,
 defensive no-op, since neither module exposes a delete path for a
 global row today.
 
-**The model event alone was not enough for counterparties.**
-`CounterpartyGarbageCollectorJob::pruneOrphans()` is the only thing in
-production that ever deletes a `counterparties` row, and it deletes
-through the query builder — which fires no Eloquent model event at all.
-The `eloquent.deleting` arm was therefore unreachable on a real install:
-only a test calling `$counterparty->delete()` ever entered it, and a
-pruned merchant left its rule active on a dangling id, silently doing
-nothing on every later re-apply while `/rules` still showed it as on.
-`handleCounterpartyPruned()` closes it by listening for the
-`Sync\Public\Events\EntityMutated` announcement that same write already
-makes (`table = 'counterparties'`, `mutationType = 'delete'`), which
-keeps the coupling at the raw table name rather than importing the model.
-Both arms are kept: the model event still covers any future Eloquent
-delete path. `ARulePointingAtAPrunedCounterpartyTest` (in
-`Counterparties`) runs the collector for real and pins the outcome.
+**The model event alone is not enough for counterparties.** Nothing on
+this device deletes a `counterparties` row — retention there is
+indefinite ([counterparty retention](../counterparties/retention.md)) —
+and the deletes that can still reach the table go nowhere near a model:
+the sweep that used to prune them deleted through the query builder,
+and a peer whose build still prunes reaches this device as an op-log row
+`OpLogEntryApplier` writes the same way. A query-builder delete fires no
+Eloquent model event at all, so the `eloquent.deleting` arm never saw
+one on a real install: only a test calling `$counterparty->delete()`
+ever entered it, and a departed merchant left its rule active on a
+dangling id, silently doing nothing on every later re-apply while
+`/rules` still showed it as on. `handleCounterpartyPruned()` closes that
+by listening for the `Sync\Public\Events\EntityMutated` announcement a
+writer of the table makes (`table = 'counterparties'`,
+`mutationType = 'delete'`), which keeps the coupling at the raw table
+name rather than importing the model. Both arms are kept: the model
+event still covers any Eloquent delete path.
+`ARulePointingAtACounterpartyDeletedOnAPeerTest` (in `Counterparties`)
+dispatches that announcement and pins the outcome, including that
+another reader's rule and a rule naming a counterparty nobody deleted
+both stay active.
 
 ## Merchant memory growth
 

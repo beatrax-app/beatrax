@@ -299,7 +299,8 @@ event per returned insight. `forUser()` already excludes any insight the
 user has dismissed, so this job must not re-filter — a second filter here
 would let the notification surface and the card silently drift apart on
 what is "live". Clones `SafetyNetAnomalySweepJob`'s per-user job shape and
-`CounterpartyGarbageCollectorJob`'s `ShouldBeUniqueUntilProcessing` triad.
+its `ShouldBeUniqueUntilProcessing` triad — `uniqueId()`, `uniqueFor()` and
+a `uniqueVia()` on `LockStore::forUniqueJobs()`.
 The job holds one `int $userId` and never batches across users (the
 global `UserScope` does not fire in queue/console context, and
 `SavingsInsightsQuery` is already user-scoped by its own discipline). No
