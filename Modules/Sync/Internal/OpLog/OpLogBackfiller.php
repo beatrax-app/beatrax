@@ -8,12 +8,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
-use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
-use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
-use Modules\Sync\Internal\Exceptions\UnreadableColumnException;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Writes the rows that already existed when sync was switched on into the op
 // log as CREATE_ROW ops. Capture is event-driven, so a device that was used
@@ -51,10 +47,8 @@ final readonly class OpLogBackfiller
         private DatabaseManager $db,
         private CoveredTableOrder $order,
         private MergeRulesRegistry $rules,
-        private SensitiveFieldRegistry $sensitiveFields,
-        private SensitiveColumnCodec $codec,
-        private SessionFactory $session,
         private BackfillProgress $progress,
+        private StoredRowPlaintext $plaintext,
     ) {}
 
     // Returns the number of rows captured. Idempotent row-wise: a row already
@@ -159,7 +153,7 @@ final readonly class OpLogBackfiller
                         continue;
                     }
 
-                    $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
+                    $writer->writeCreateRow($table, $pk, $this->plaintext->fields($table, $fields, $userId));
                     $captured++;
                 }
             });
@@ -317,7 +311,7 @@ final readonly class OpLogBackfiller
                 continue;
             }
 
-            $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
+            $writer->writeCreateRow($table, $pk, $this->plaintext->fields($table, $fields, $userId));
             $captured++;
         }
 
@@ -330,38 +324,6 @@ final readonly class OpLogBackfiller
         }
 
         return $captured;
-    }
-
-    // Sensitive columns are ciphertext AT REST, and OpLogWriter encrypts what
-    // it is handed under a DIFFERENT associated data. Passing the stored
-    // column straight through wrapped a second layer round the first, and the
-    // peer that unwrapped the outer one projected the inner base64 as a name.
-    /**
-     * @param  array<string, mixed>  $fields
-     * @return array<string, mixed>
-     */
-    private function plaintextFields(string $table, array $fields, int $userId): array
-    {
-        $session = ($this->session)();
-
-        foreach ($fields as $field => $value) {
-            if (! is_string($value) || ! $this->sensitiveFields->isSensitive($table, $field)) {
-                continue;
-            }
-
-            $read = $this->codec->decryptValue($table, $field, $value, $userId, $session);
-
-            // `decrypted: false` with the value handed back untouched is the
-            // ordinary pre-encryption row; the codec blanking it instead means
-            // it held ciphertext no epoch in the keyring opens.
-            if (! $read['decrypted'] && $read['value'] !== $value) {
-                throw UnreadableColumnException::duringBackfill($table, $field, $userId);
-            }
-
-            $fields[$field] = $read['value'];
-        }
-
-        return $fields;
     }
 
     /**

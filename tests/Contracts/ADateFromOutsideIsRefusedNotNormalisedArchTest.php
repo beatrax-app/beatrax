@@ -101,7 +101,9 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterAfter = self::supportedDay\(\$this->filterAfter\);/',
+                '/\$this->filterAfter = TransactionFilterInputs::supportedDay\(\$this->filterAfter\);/',
+            ],
+            'Modules/Ledger/Internal/Http/Livewire/Support/TransactionFilterInputs.php' => [
                 "/return SafeDate::dayOrNull\\(\\\$raw\\) === null \\? '' : trim\\(\\\$raw\\);/",
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
@@ -115,7 +117,7 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterBefore = self::supportedDay\(\$this->filterBefore\);/',
+                '/\$this->filterBefore = TransactionFilterInputs::supportedDay\(\$this->filterBefore\);/',
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
                 '/\$before = self::boundDay\(\$filters->before, endOfMonth: true\);/',
@@ -236,7 +238,7 @@ function suppliedDateBindings(array $paths): array
 
     foreach ($paths as $path) {
         $source = (string) file_get_contents($path);
-        $source = (string) preg_replace_callback(
+        $source = PatternScan::replaceCallback(
             '/\{\{--.*?--\}\}/s',
             static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
             $source,
@@ -255,7 +257,7 @@ function suppliedDateBindings(array $paths): array
             $models = PatternScan::all('/wire:model[.\w]*\s*=\s*"([^"]+)"/', $tag);
 
             foreach ($models[1] as $model) {
-                $field = trim((string) preg_replace('/\{\{.*?\}\}/', '*', $model));
+                $field = trim(PatternScan::replace('/\{\{.*?\}\}/', '*', $model));
                 $bindings[$field][] = $relative.':'.$line;
             }
         }

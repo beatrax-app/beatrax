@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Detection;
 
+use Modules\Core\Public\Support\PatternScan;
+
 final readonly class ClusterKeyComposer
 {
     private const int MAX_PART_LENGTH = 60;
@@ -29,7 +31,7 @@ final readonly class ClusterKeyComposer
     private static function normalisePart(string $value): string
     {
         $lower = mb_strtolower($value, 'UTF-8');
-        $hyphenated = (string) preg_replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
+        $hyphenated = PatternScan::replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
         $trimmed = trim($hyphenated, '-');
 
         if (mb_strlen($trimmed, 'UTF-8') > self::MAX_PART_LENGTH) {

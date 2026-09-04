@@ -14,6 +14,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\CommandTier;
 
@@ -55,8 +56,10 @@ final class AuditLogPage extends Component
         $this->before = null;
     }
 
-    public function older(int $oldestRenderedId): void
+    public function older(int|string $oldestRenderedId): void
     {
+        $oldestRenderedId = DerivedRowId::fromWire($oldestRenderedId);
+
         if ($oldestRenderedId > 0) {
             $this->before = $oldestRenderedId;
         }

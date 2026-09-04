@@ -8,14 +8,55 @@ use Modules\Core\Public\Services\UserDataPathService;
 beforeEach(function (): void {
     putenv('NATIVEPHP_STORAGE_PATH');
     putenv('NATIVEPHP_PLATFORM');
+    unset($_SERVER['NATIVEPHP_PLATFORM'], $_ENV['NATIVEPHP_PLATFORM']);
 });
 
 afterEach(function (): void {
     putenv('NATIVEPHP_STORAGE_PATH');
     putenv('NATIVEPHP_PLATFORM');
+    unset($_SERVER['NATIVEPHP_PLATFORM'], $_ENV['NATIVEPHP_PLATFORM']);
 });
 
-it('platform() reads NATIVEPHP_PLATFORM via getenv as a MobilePlatform, returning null when unset', function (): void {
+// Every other test here raises the signal with putenv(), which getenv() can
+// read — so all of them stay green if platformSignal() is reduced to a bare
+// getenv(). The iOS webview slots pass it as a server const and nothing else,
+// so only a superglobal-only case can fail on the read that actually matters.
+it('routes the durable roots into the persisted store when the mobile signal arrives ONLY as a superglobal, the way an iOS webview slot passes it', function (): void {
+    $sandbox = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-sandbox-'.bin2hex(random_bytes(8));
+    mkdir($sandbox, 0700, true);
+
+    $originalBasePath = $this->app->basePath();
+
+    try {
+        $this->app->setBasePath($sandbox);
+
+        $bundleApp = $sandbox.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app';
+        $persistedApp = dirname($sandbox).DIRECTORY_SEPARATOR.'persisted_data'
+            .DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app';
+
+        // Without the signal the durable root IS the bundle, so each case below
+        // proves the superglobal read moved it rather than inheriting a pass
+        // from a persisted_data directory that happened to sit next to the root.
+        expect(getenv('NATIVEPHP_PLATFORM'))->toBeFalse()
+            ->and(UserDataPathService::isMobileRuntime())->toBeFalse()
+            ->and(UserDataPathService::appPath())->toBe($bundleApp);
+
+        foreach (['_SERVER', '_ENV'] as $superglobal) {
+            $GLOBALS[$superglobal]['NATIVEPHP_PLATFORM'] = 'ios';
+
+            expect(UserDataPathService::isMobileRuntime())->toBeTrue()
+                ->and(UserDataPathService::appPath())->toBe($persistedApp)
+                ->and(UserDataPathService::appPath("sync/identity/{$superglobal}.enc"))
+                ->not->toStartWith($sandbox);
+
+            unset($GLOBALS[$superglobal]['NATIVEPHP_PLATFORM']);
+        }
+    } finally {
+        $this->app->setBasePath($originalBasePath);
+    }
+});
+
+it('platform() maps the NATIVEPHP_PLATFORM signal to a MobilePlatform, returning null when unset', function (): void {
     expect(UserDataPathService::platform())->toBeNull();
 
     putenv('NATIVEPHP_PLATFORM=ios');

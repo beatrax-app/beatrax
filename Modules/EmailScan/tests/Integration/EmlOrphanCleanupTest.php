@@ -21,6 +21,7 @@ use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -96,6 +97,7 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
             $this->app->make(KnownSenderQuery::class),
             $this->app->make(JobUserContext::class),
             $this->app->make(GraphDeltaWalk::class),
+            $this->app->make(LoggerInterface::class),
         );
         $this->fail('Expected RuntimeException from injected DB failure');
     } catch (RuntimeException $e) {

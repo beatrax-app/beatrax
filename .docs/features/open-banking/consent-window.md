@@ -38,8 +38,8 @@ caller forgot the second at.
 ## The API
 
 - `ConsentWindow::expiresAfter($issuedAt)` — the expiry to record for a consent
-  granted now. Both `OpenBankingConnectController` (which asks the aggregator for
-  `valid_until`) and `OpenBankingCallbackController` (which records what came
+  granted now. Both `StartBankConsent` (which asks the aggregator for
+  `valid_until`) and `CompleteBankConsent` (which records what came
   back) call it, so the span requested and the span stored cannot drift apart. A
   connection that looks live locally after the bank has revoked it is the failure
   that costs the reader a silent, unexplained sync outage.
@@ -89,7 +89,7 @@ refusal is written onto the row: `OpenBankingSyncRunner` stamps
 cannot drift apart: both are red, both offer the reconnect path, and neither
 surface has to list the cases and remember to add one.
 
-`OpenBankingCallbackController` clears `consent_revoked_at` when a re-link
+`CompleteBankConsent` clears `consent_revoked_at` when a re-link
 succeeds — a fresh consent is exactly what the stamp was waiting for — and its
 compensating rollback restores the prior value if the secrets write then fails.
 

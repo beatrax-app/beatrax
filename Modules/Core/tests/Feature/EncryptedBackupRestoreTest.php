@@ -13,6 +13,7 @@ use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
+use Tests\Helpers\CheapKdfCost;
 
 beforeEach(function (): void {
     Storage::fake('livewire-tmp');
@@ -89,7 +90,7 @@ it('decrypts, integrity-checks, snapshots, then swaps the live SQLite file', fun
     $enc = $base.'-backup.sqlite.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     rbMakeSqlite($backupPlain, 'RESTORED');
-    (new BackupEncryptor)->encrypt($backupPlain, $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($backupPlain, $enc, 'pw');
 
     // Point ONLY the 'sqlite' connection at the temp live file; the test's own
     // sqlite_testing connection (RefreshDatabase) is untouched.
@@ -120,7 +121,7 @@ it('refuses to swap when the passphrase is wrong — the live file is untouched'
     $enc = $base.'-backup.sqlite.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
-    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'right-pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($base.'-backup.sqlite', $enc, 'right-pw');
 
     $db = app(DatabaseManager::class);
     Config::set('database.default', 'sqlite');
@@ -153,7 +154,7 @@ it('refuses a payload that decrypts but will not open as a database', function (
     $enc = $base.'-payload.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     file_put_contents($notADatabase, 'this is not a SQLite file, it is a note');
-    (new BackupEncryptor)->encrypt($notADatabase, $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($notADatabase, $enc, 'pw');
 
     $db = app(DatabaseManager::class);
     Config::set('database.default', 'sqlite');
@@ -214,7 +215,7 @@ it('signs the reader out after a restore, because the identity was replaced too'
     $enc = $base.'-backup.sqlite.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
-    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($base.'-backup.sqlite', $enc, 'pw');
 
     $db = app(DatabaseManager::class);
     Config::set('database.default', 'sqlite');
@@ -252,7 +253,7 @@ it('drops every connection to the live file, not only the one named in config', 
     $enc = $base.'-backup.sqlite.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
-    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($base.'-backup.sqlite', $enc, 'pw');
 
     $db = app(DatabaseManager::class);
     Config::set('database.default', 'sqlite');
@@ -308,7 +309,7 @@ it('does not unlink the WAL sidecars a live connection has mapped', function ():
     $enc = $base.'-backup.sqlite.enc';
     rbMakeSqlite($live, 'ORIGINAL');
     rbMakeSqlite($base.'-backup.sqlite', 'RESTORED');
-    (new BackupEncryptor)->encrypt($base.'-backup.sqlite', $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($base.'-backup.sqlite', $enc, 'pw');
 
     // A resident WAL connection is what creates -shm and keeps it mapped --
     // the state the phone's persistent interpreter is always in.

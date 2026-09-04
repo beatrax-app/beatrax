@@ -199,7 +199,16 @@ jobs:
           # The credential goes in on stdin rather than argv: a token passed as
           # `curl -u` is readable in the process table for the life of the call,
           # and gitleaks flags the pattern for exactly that reason.
+          #
+          # `--retry` alone treats only timeouts and 408/429/5xx as transient,
+          # so it would not have covered the connection reset (exit 35) that
+          # took the security gate down. `--retry-all-errors` does, and here it
+          # cannot swallow a bad response: without `-f` an HTTP status is never
+          # an error to curl, so a 401 still reports and still does not retry.
+          # The call is idempotent, so repeating it costs nothing.
           printf 'user = "%s:"\n' "$SONAR_TOKEN" | curl -sS -X POST --config - \
+            --retry 4 --retry-all-errors --retry-max-time 120 \
+            --connect-timeout 15 --max-time 60 \
             "https://sonarcloud.io/api/autoscan/activation?projectKey=beatrax-app_beatrax&enable=false" \
             -w '\nHTTP %{http_code}\n'
 

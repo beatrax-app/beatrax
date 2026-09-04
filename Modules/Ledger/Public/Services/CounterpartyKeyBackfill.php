@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Sync\Public\Services\BlindIndexCodec;
@@ -364,7 +365,7 @@ final readonly class CounterpartyKeyBackfill
     private static function clusterPart(string $value): string
     {
         $lower = mb_strtolower($value, 'UTF-8');
-        $hyphenated = (string) preg_replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
+        $hyphenated = PatternScan::replace('/[^\p{L}\p{N}&]+/u', '-', $lower);
         $trimmed = trim($hyphenated, '-');
 
         if (mb_strlen($trimmed, 'UTF-8') > self::CLUSTER_PART_MAX_LENGTH) {

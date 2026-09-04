@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Pipeline;
 
 use Generator;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Receipts\Public\Exceptions\MboxReadException;
-use Modules\Receipts\Public\Support\UploadLimits;
 
 // Streaming mboxrd iterator: messages split on lines starting with the
 // literal "From " (stripped); an escaped body line ('>From ') is

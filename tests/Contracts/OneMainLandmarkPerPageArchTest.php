@@ -55,7 +55,7 @@ function mainLandmarkMarkupOf(string $relativePath): string
     $source = (string) file_get_contents(dirname(__DIR__, 2).'/'.$relativePath);
 
     foreach (['/\{\{--.*?--\}\}/s', '/<!--.*?-->/s', '/@php.*?@endphp/s'] as $stripped) {
-        $source = (string) preg_replace($stripped, '', $source);
+        $source = PatternScan::replace($stripped, '', $source);
     }
 
     return $source;

@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Enums\ConflictResolution;
@@ -32,8 +33,10 @@ final class PreviewMigration extends Component
         $this->runId = $id;
     }
 
-    public function resolveConflict(int $conflictId, string $choice, DatabaseManager $db, CurrentUser $currentUser): void
+    public function resolveConflict(int|string $conflictId, string $choice, DatabaseManager $db, CurrentUser $currentUser): void
     {
+        $conflictId = DerivedRowId::fromWire($conflictId);
+
         // Scoped to this run and user, so a forged $conflictId matches zero rows
         // and no-ops. Nothing is applied to the domain until ConfirmMigration.
         $resolution = ConflictResolution::tryFrom($choice);

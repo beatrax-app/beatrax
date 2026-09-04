@@ -22,6 +22,10 @@ final class UserDataPathService
         return base_path();
     }
 
+    // One source, unlike platformSignal() below, because the two variables
+    // arrive by different routes: the desktop shell passes this one in the
+    // spawned process environment, and no mobile shell sets it at all — so
+    // there is no server-const injection for a bare getenv() to miss here.
     private static function storageRoot(): string
     {
         $native = getenv('NATIVEPHP_STORAGE_PATH');

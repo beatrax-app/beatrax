@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Audit;
 
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
+use Modules\DevMode\Internal\Support\RedactedText;
 
 final readonly class RedactionExcerptCap
 {
@@ -33,16 +34,13 @@ final readonly class RedactionExcerptCap
         if ($this->scrubSet !== null) {
             $pattern = $this->scrubSet->compiledPattern();
             if ($pattern !== null) {
-                $replaced = preg_replace($pattern, '[REDACTED]', $scrubbed);
-                if (is_string($replaced)) {
-                    $scrubbed = $replaced;
-                }
+                $scrubbed = RedactedText::orEmpty($pattern, '[REDACTED]', $scrubbed);
             }
         }
 
-        $scrubbed = (string) preg_replace(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $scrubbed);
-        $scrubbed = (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $scrubbed);
-        $scrubbed = (string) preg_replace(self::RECOVERY_CODE_PATTERN, '[REDACTED]', $scrubbed);
+        $scrubbed = RedactedText::orEmpty(self::BEARER_PATTERN, 'Authorization: Bearer [REDACTED]', $scrubbed);
+        $scrubbed = RedactedText::orEmpty(self::JWT_PATTERN, '[JWT_REDACTED]', $scrubbed);
+        $scrubbed = RedactedText::orEmpty(self::RECOVERY_CODE_PATTERN, '[REDACTED]', $scrubbed);
 
         if (strlen($scrubbed) <= $maxBytes) {
             return $scrubbed;

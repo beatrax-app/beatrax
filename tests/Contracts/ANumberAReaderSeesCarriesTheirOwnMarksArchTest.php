@@ -46,7 +46,7 @@ function readerFacingSourceFiles(): array
 function withoutComments(string $source): string
 {
     foreach (['~\{\{--.*?--\}\}~s', '~/\*.*?\*/~s', '~(?<!:)//[^\n]*~'] as $pattern) {
-        $source = (string) preg_replace($pattern, '', $source);
+        $source = PatternScan::replace($pattern, '', $source);
     }
 
     return $source;

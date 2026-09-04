@@ -41,13 +41,34 @@ function modulesMintingDerivedIds(): array
     return array_keys($modules);
 }
 
+// A derived id is a value and it travels: a goal id minted in Goals is rendered
+// in a Ledger blade, and Tax and DevMode mint nothing at all yet write these ids
+// into wire attributes today. Scanning only the minting module opens none of
+// those files, so the scan follows the blades instead of the call sites.
+/** @return list<string> every module that ships blades */
+function modulesShippingViews(): array
+{
+    $modules = [];
+
+    foreach ((new Finder)->directories()->in(base_path('Modules'))->depth(0) as $directory) {
+        if (is_dir($directory->getRealPath().'/Resources/views')) {
+            $modules[] = $directory->getFilename();
+        }
+    }
+
+    sort($modules);
+
+    return $modules;
+}
+
 function phpSourceFiles(): Finder
 {
     return (new Finder)->files()->in(base_path('Modules'))->name('*.php')->notPath('tests');
 }
 
 // Every attribute the browser evaluates as JavaScript, plus the Alpine calls
-// that reach the component the same way.
+// that reach the component the same way, plus the wire actions a blade builds
+// as a string and hands to a component that renders them into its own.
 /** @return list<array{file: string, line: int, attribute: string, argument: string}> */
 function bareIdArgumentsIn(string $module): array
 {
@@ -63,7 +84,7 @@ function bareIdArgumentsIn(string $module): array
         $lines = explode("\n", $file->getContents());
 
         foreach ($lines as $index => $line) {
-            foreach (bareIdEchoesOn($line) as $argument) {
+            foreach ([...bareIdEchoesOn($line), ...bareIdConcatenationsOn($line)] as $argument) {
                 $offenders[] = [
                     'file' => str_replace(base_path().'/', '', $file->getRealPath()),
                     'line' => $index + 1,
@@ -77,61 +98,82 @@ function bareIdArgumentsIn(string $module): array
     return $offenders;
 }
 
-// An argument sitting bare between a delimiter and the next one: a quoted id
-// puts a quote between `(` and `{{`, so quoting is what this stops matching.
+// The first way an id reaches a wire attribute: echoed straight into it, and
+// sitting bare between one delimiter and the next.
 /** @return list<string> */
 function bareIdEchoesOn(string $line): array
 {
     // Scoped to the attribute the browser evaluates, not the whole line: a
     // style or aria-label sitting beside a wire:click echoes values too, and
     // those are not arguments to anything.
-    $attributes = preg_match_all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line, $found) === false
-        ? []
-        : $found[1];
+    $attributes = PatternScan::all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line)[1];
 
     if ($attributes === []) {
         return [];
     }
 
-    $matches = [[], []];
+    $expressions = [];
 
     foreach ($attributes as $value) {
         // Both shapes a value travels in: a positional argument, and a
         // property of an object literal handed to $dispatch.
         $inner = PatternScan::all('/[(,:]\s*\{\{\s*([^}]+?)\s*\}\}\s*[,)}]/', $value);
 
-        $matches[1] = [...$matches[1], ...$inner[1]];
+        $expressions = [...$expressions, ...$inner[1]];
     }
 
-    $found = count($matches[1]);
-
-    $bare = [];
-
-    foreach ($matches[1] as $expression) {
-        if (str_contains($expression, 'Js::from')) {
-            continue;
-        }
-
-        if (preg_match('/(^|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*$/', $expression) === 1) {
-            $bare[] = $expression;
-        }
-    }
-
-    return $bare;
+    return array_values(array_filter($expressions, idBearingExpression(...)));
 }
 
-it('never lets a module that mints derived ids write one as a bare number', function (): void {
-    $minting = modulesMintingDerivedIds();
+// The second way an id reaches a wire attribute, and the one that hid a whole
+// second call site: the blade does not write the attribute, it concatenates the
+// call into a string and hands it to a mounted component that renders it into a
+// wire:click of its own. Every x-core::confirm-strip works this way, so the
+// button that asks the question was quoted and the button that answers it was
+// not — on three pages whose ids are minted past 2^53 today.
+/** @return list<string> */
+function bareIdConcatenationsOn(string $line): array
+{
+    $found = PatternScan::all('/\(\'\s*\.(.+?)\.\s*\'\)/', $line);
 
-    // A scan that matched nothing would pass every assertion below it.
-    expect($minting)->not->toBeEmpty('no module calls DerivedRowId::for — the scan is broken, not the code');
+    return array_values(array_filter(array_map(trim(...), $found[1]), idBearingExpression(...)));
+}
+
+// What both scans are looking for, and what quoting takes away from them: a
+// quote lands between the delimiter and the value, so neither pattern reaches
+// the expression any more. The closing `']` is optional rather than absent: an
+// id read out of an array is written `$row['id']`, and requiring the expression
+// to END on the letters hid every one of those — Forecasting's minted scenario
+// mutations among them.
+function idBearingExpression(string $expression): bool
+{
+    if (str_contains($expression, 'Js::from')) {
+        return false;
+    }
+
+    // A cast is a wrapper, not a different value: `(int) $accountId` is the
+    // account, and an anchor that has to start on the `$` reads straight past
+    // the `(`. `(int) $entry->id` was caught only because `->` gave it a second
+    // way in, which is why the shape looked covered.
+    $operand = trim(PatternScan::replace('/^\(\s*(int|integer|float|double|string|bool|boolean)\s*\)\s*/i', '', $expression));
+
+    return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*(\'\]|"\])?\s*$/', $operand) === 1;
+}
+
+it('never lets a blade write a derived id as a bare number', function (): void {
+    $rendering = modulesShippingViews();
+
+    // Two scans that matched nothing would pass every assertion below them: one
+    // says these ids are minted at all, the other says there are blades to read.
+    expect(modulesMintingDerivedIds())->not->toBeEmpty('no module calls DerivedRowId::for — the scan is broken, not the code');
+    expect($rendering)->not->toBeEmpty('no module ships Resources/views — the scan is broken, not the code');
 
     $offenders = [];
 
-    foreach ($minting as $module) {
+    foreach ($rendering as $module) {
         foreach (bareIdArgumentsIn($module) as $offender) {
-            $offenders[] = $offender['file'].':'.$offender['line'].' passes {{ '.$offender['argument']
-                .' }} unquoted — a derived id past 2^53 is rounded by the browser';
+            $offenders[] = $offender['file'].':'.$offender['line'].' passes '.$offender['argument']
+                .' unquoted — a derived id past 2^53 is rounded by the browser';
         }
     }
 
