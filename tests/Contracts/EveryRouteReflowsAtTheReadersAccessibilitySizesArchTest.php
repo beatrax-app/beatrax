@@ -39,7 +39,7 @@ function accessibilityReflowHasWrappingRow(string $relativePath, string ...$toke
     $source = (string) file_get_contents(base_path($relativePath));
 
     foreach (accessibilityReflowClassAttributes($source) as $classes) {
-        $present = preg_split('/\s+/', trim($classes)) ?: [];
+        $present = PatternScan::split('/\s+/', trim($classes));
         if (in_array('flex-wrap', $present, true) && array_diff($tokens, $present) === []) {
             return true;
         }
@@ -170,7 +170,7 @@ it('caps the three controls whose shrink-0 is load-bearing', function (): void {
         $source = (string) file_get_contents(base_path($path));
         $found = false;
         foreach (accessibilityReflowClassAttributes($source) as $classes) {
-            $present = preg_split('/\s+/', trim($classes)) ?: [];
+            $present = PatternScan::split('/\s+/', trim($classes));
             if (in_array('max-w-full', $present, true) && in_array('shrink-0', $present, true)) {
                 $found = true;
                 break;

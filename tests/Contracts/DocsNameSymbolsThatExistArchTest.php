@@ -57,7 +57,7 @@ it('names no first-party symbol that does not exist', function (): void {
         $prose = docsSymbolsProse((string) file_get_contents($page));
         $label = str_replace(base_path().'/', '', $page);
 
-        foreach (preg_split('/\R/', $prose) ?: [] as $offset => $line) {
+        foreach (PatternScan::split('/\R/', $prose) as $offset => $line) {
             foreach (docsSymbolsMentions($line) as [$class, $member]) {
                 if (! isset($classes[$class]) || FirstPartySymbols::hasMember($classes[$class], $member)) {
                     continue;
@@ -173,7 +173,7 @@ it('names no class that exists in neither Composer root', function (): void {
         $prose = docsSymbolsProse((string) file_get_contents($page));
         $label = str_replace(base_path().'/', '', $page);
 
-        foreach (preg_split('/\R/', $prose) ?: [] as $offset => $line) {
+        foreach (PatternScan::split('/\R/', $prose) as $offset => $line) {
             foreach (docsSymbolsMentions($line) as [$class, $member]) {
                 if (isset($resolvable[$class]) || class_exists($class) || interface_exists($class) || enum_exists($class)) {
                     continue;
