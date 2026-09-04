@@ -131,13 +131,15 @@ layout to render the ⌘K palette and the sidebar nav-list:
   finished_at, cancelled}`.
 - **Internal/Audit/RedactionExcerptCap** — scrubs OAuth-literals +
   Bearer / JWT patterns out of audit excerpts.
-- **Internal/Audit/FinalizeRunAudit** — the hook `ArtisanStreamController`
+- **Internal/Audit/FinalizeRunAudit** — the hook `SettleFinishedRun`
   invokes on the SSE `done` branch: reads the per-run tmp file, caps +
   redacts it, and writes the closing audit row via `AuditWriter`
-  (`SpatieAuditWriter` at runtime). The stream controller marks the run
-  done in `RunRegistry`; this hook is what actually emits the
-  audit-trail row, so every SAFE-tier run that exits cleanly leaves a
-  record. DESTRUCTIVE runs flow through `DestructiveSpawnController`
+  (`SpatieAuditWriter` at runtime). That action marks the run done in
+  `RunRegistry` and decides which exit code is authoritative; this hook
+  is what actually emits the audit-trail row, so every SAFE-tier run
+  that exits cleanly leaves a record. Nothing it does may propagate: it
+  runs inside a live stream, so a failed audit write is logged rather
+  than thrown. DESTRUCTIVE runs flow through `DestructiveSpawnController`
   but their stream still terminates through the same SSE controller
   path, so this hook fires the same way — the per-run tmp file shape
   is tier-agnostic. The spawner uses a single tmp file with
@@ -145,6 +147,15 @@ layout to render the ⌘K palette and the sidebar nav-list:
   this hook treats the entire content as `stdout_excerpt` and leaves
   `error_excerpt` empty; splitting them would require separate tmp
   files.
+- **Internal/Actions/** — `SpawnDevCommand` (tier allow-list, arg
+  validation, spawn, and the `RunRecord` that comes back),
+  `CancelDevCommandRun` (SIGTERM, the grace window, SIGKILL),
+  `SettleFinishedRun` (what a gone PID means), `ReadLogTail` and
+  `ReadLogContextWindow` (the log reads behind `/dev/logs/*`). Every
+  `/dev` route is a thin entry point in front of one of these
+  ([a controller hands the work to an action](../../conventions/a-controller-hands-the-work-to-an-action.md));
+  the SSE pump below is the deliberate exception, because a frame and
+  its flush ARE the response.
 - **Internal/Http/Controllers/ArtisanStreamController** — `GET
   /dev/artisan/stream/{runId}`, the SSE tail of one run's stdout.
   Resolves the cached `RunRecord` via `RunRegistry::find()` and tails
@@ -746,8 +757,8 @@ JWT-shaped tokens out of both the rolling log file and the
   open, including the rows recording another operator's destructive
   runs. Wiping what you cannot read is not a narrower power than
   reading it; the button now takes exactly the rows the page shows.
-- **`LogStreamController`** (on-read) — re-applies the same processor
-  to every chunk returned by `/dev/logs/poll` and `/dev/logs/context`,
+- **`ReadLogTail` / `ReadLogContextWindow`** (on-read) — re-apply the same
+  processor to every chunk returned by `/dev/logs/poll` and `/dev/logs/context`,
   giving belt-and-braces redaction at both write time and read time.
 - **`PushRedactProcessor`** — a Laravel-style "tap class" registered
   into a channel's `tap` array in `config/logging.php`; Laravel

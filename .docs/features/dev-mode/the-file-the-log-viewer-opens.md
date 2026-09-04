@@ -8,7 +8,7 @@ of the three, and on the other two it showed an empty page while the log sat
 beside it.
 
 `ActiveLogFile` is the one place that answers the question. `LogFileStats`,
-`RecentLogEntriesReader` and `LogStreamController` all resolve through it, so
+`RecentLogEntriesReader` and the `/dev/logs` read actions all resolve through it, so
 there is no second opinion to drift.
 
 ## What each build actually writes

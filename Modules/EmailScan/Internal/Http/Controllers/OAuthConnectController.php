@@ -9,35 +9,35 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
-use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
-use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
+use Modules\EmailScan\Internal\Actions\ResolveInboxToReconnect;
+use Modules\EmailScan\Internal\OAuth\MailOAuthProviders;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
-use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// The state and the PKCE verifier are issued here rather than inside the
+// action: they exist only to be read back by the callback request, and the
+// redirect they authorise is this method's return value.
 final readonly class OAuthConnectController
 {
     public function __construct(
-        private GoogleOAuthProvider $googleOAuth,
-        private MicrosoftOAuthProvider $microsoftOAuth,
+        private MailOAuthProviders $providers,
         private OAuthSecretsRepository $secrets,
         private OAuthStateRepository $oauthState,
         private CurrentUser $currentUser,
         private Redirector $redirector,
-        private InboxQuery $inboxQuery,
         private LoopbackRedirectUri $loopback,
+        private ResolveInboxToReconnect $reconnectTarget,
     ) {}
 
     public function __invoke(Request $request, string $provider): RedirectResponse
     {
-        $oauth = match ($provider) {
-            MailProvider::Gmail->value => $this->googleOAuth,
-            MailProvider::Microsoft->value => $this->microsoftOAuth,
-            default => throw new NotFoundHttpException('Unknown provider.'),
-        };
+        $mailProvider = MailProvider::tryFrom($provider);
+        if ($mailProvider === null) {
+            throw new NotFoundHttpException('Unknown provider.');
+        }
 
         if (! $this->secrets->hasProviderClient($provider)) {
             return $this->redirector
@@ -45,28 +45,12 @@ final readonly class OAuthConnectController
                 ->with('oauth_failed', 'Connect your email — finish the OAuth-client wizard first.');
         }
 
-        $existingInboxId = null;
-        $reconnectIdRaw = $request->query('inbox_id');
-        if (is_string($reconnectIdRaw) && $reconnectIdRaw !== '' && ctype_digit($reconnectIdRaw)) {
-            $candidate = (int) $reconnectIdRaw;
-            if ($candidate > 0) {
-                $inbox = $this->inboxQuery->findForUser($candidate, $this->currentUser->user());
-                if ($inbox === null) {
-                    throw new NotFoundHttpException('Inbox not found.');
-                }
-                // A cross-provider reconnect would permanently break the
-                // inbox's next scan.
-                if ($inbox->provider !== $provider) {
-                    throw new NotFoundHttpException('Inbox not found.');
-                }
-                $existingInboxId = $candidate;
-            }
-        }
+        $user = $this->currentUser->user();
+        $existingInboxId = ($this->reconnectTarget)($mailProvider, $user, $request->query('inbox_id'));
 
-        $redirectUri = $this->loopback->forProvider($provider);
-
-        $state = $this->oauthState->issueState($provider, $this->currentUser->user()->id, $existingInboxId);
-        $authorization = $oauth->getAuthorizationUrl($state, $redirectUri);
+        $state = $this->oauthState->issueState($provider, $user->id, $existingInboxId);
+        $authorization = $this->providers->for($mailProvider)
+            ->getAuthorizationUrl($state, $this->loopback->forProvider($provider));
         $this->oauthState->storePkceVerifier($provider, $authorization->pkceVerifier);
 
         return $this->redirector->away($authorization->url);

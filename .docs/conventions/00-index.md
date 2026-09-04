@@ -121,6 +121,9 @@ pass for a clean one.
   three hosted-analysis rules that now fail on the commit rather than on the
   dashboard, why each one reports far less than its name suggests, and how each
   guard was checked against the published figures before it was written
+- [A controller hands the work to an action](a-controller-hands-the-work-to-an-action.md)
+  — the four things a controller is measured on, and the five kinds of code that
+  look like violations, are not, and would be made worse by moving
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

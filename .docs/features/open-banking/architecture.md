@@ -33,12 +33,15 @@ credential exists on disk, until the user completes the consent wizard.
   it here would have authorised a bearer-token request no code path issues —
   at a host the aggregator's own response chooses.
 - **The bank SCA host is validated before the browser is sent to it.**
-  `OpenBankingConnectController` resolves the SCA host from the aggregator's
+  `StartBankConsent` resolves the SCA host from the aggregator's
   `/auth` response and rejects `localhost`, bare single-label hosts, and any
   IP literal in a loopback/link-local/private/reserved range before
   persisting it, then re-validates the consent redirect URL itself (https +
-  host must equal the just-resolved SCA host) before issuing the outward
-  `Redirector::away()`. What that protects is the redirect: an aggregator
+  host must equal the just-resolved SCA host) before handing the URL back to
+  `OpenBankingConnectController` for the outward `Redirector::away()`.
+  Resolving, allow-listing and checking are one decision and stay in one
+  class: a controller holding half of it would be two files agreeing by
+  hand. What that protects is the redirect: an aggregator
   response (or a TLS-defeating MITM) must not be able to point the reader's
   browser at an internal target or turn this into an open redirect.
 - **The RSA private key never leaves the machine.** `EnableBankingJwtSigner`
@@ -81,9 +84,14 @@ shape, adapted for Enable Banking's two-step `/auth` → `/sessions` exchange
 - **CSRF state** (`OpenBankingStateRepository`) is a 64-char random hex
   token stored in the session, bound to the initiating user id, single-use
   (pulled on consume regardless of outcome), compared with `hash_equals`
-  (constant-time), and rejected once older than 10 minutes.
-- **The callback's DB write and the secrets-file write are ordered so a
-  failure can be compensated.** The `open_banking_connections` row is
+  (constant-time), and rejected once older than 10 minutes. Issuing and
+  consuming it stay in the two controllers — the state exists only to be read
+  back by the callback request — while the work either end of it is
+  `StartBankConsent` and `CompleteBankConsent`
+  ([a controller hands the work to an action](../../conventions/a-controller-hands-the-work-to-an-action.md)).
+- **The DB write and the secrets-file write are ordered so a
+  failure can be compensated.** In `CompleteBankConsent`, the
+  `open_banking_connections` row is
   written first (inside a transaction); the chmod-600 secrets write happens
   after. If the secrets write fails, a brand-new row is deleted outright; an
   existing row (re-link) is rolled back to its pre-update
