@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 /**
@@ -54,9 +55,7 @@ function toastDispatchesInMarkup(string $path): array
 
     // Blade is not tokenizable as PHP, and a directive can carry a dispatch in
     // an attribute as easily as in an @php block.
-    if (preg_match_all('/dispatch\(\s*[\'"]('.TOAST_EVENT.'[A-Za-z0-9_.:-]+)[\'"]/', $contents, $matches) === false) {
-        return [];
-    }
+    $matches = PatternScan::all('/dispatch\(\s*[\'"]('.TOAST_EVENT.'[A-Za-z0-9_.:-]+)[\'"]/', $contents);
 
     foreach ($matches[1] as $name) {
         $hits[] = "{$path} dispatches '{$name}'";

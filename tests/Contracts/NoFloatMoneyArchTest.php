@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Transaction;
 
 it('no migration declares REAL or FLOAT on a money column', function (): void {
@@ -74,9 +75,8 @@ it('names every decimal column the schema declares, so a new one cannot be forgo
     foreach ($migrationDirs as $dir) {
         foreach (glob($dir.'/*.php') ?: [] as $file) {
             $contents = (string) file_get_contents($file);
-            if (preg_match_all('/->(?:decimal|unsignedDecimal)\(\s*[\'"](\w+)[\'"]/', $contents, $m) === false) {
-                continue;
-            }
+            $m = PatternScan::all('/->(?:decimal|unsignedDecimal)\(\s*[\'"](\w+)[\'"]/', $contents);
+
             foreach ($m[1] as $column) {
                 $declared[] = $column;
             }

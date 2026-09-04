@@ -170,10 +170,48 @@ disappearing-pin test above, so a pin fails in both directions.
 JIT stack limit on a long template — and every rule that reads its result as a
 count reads that `false` as "nothing matched". A guard which stops reading then
 reports a clean tree, which is worse than no guard: it is a green light nobody
-earned. Every regex-driven rule routes its result through a helper that raises
-with `preg_last_error_msg()` instead, and every walk asserts a floor on what it
-scanned — files, echoes, payload keys — so a scan that ran over nothing fails on
-that assertion rather than on the offender list it never built.
+earned.
+
+`Modules\Core\Public\Support\PatternScan` is the one home for the reading, for
+guards and for production alike, and it raises `PatternScanFailedException`
+naming the pattern and `preg_last_error_msg()` rather than handing back an empty
+answer. The result shape is chosen by which method you call rather than by a
+flags argument — `all()` and `sets()` for pattern and set order,
+`allWithOffsets()` and `setsWithOffsets()` for the same two with offsets,
+`count()` for a tally, `first()` and `matches()` for a single-shot read — because
+the flags are what decide the shape, and naming it is what lets a caller be told
+the type of what it reads. `ARegexThatNeverRanIsNotNoMatchArchTest` holds the
+whole tree to it, accepting `=== 1` and `=== false` beside the seam because both
+spellings separate a give-up from an empty answer.
+
+The replacers are the quieter half of the same defect. A stripper that gives up
+answers `null`, and `(string) preg_replace(…)` turns that into an **empty
+subject** for the scan below it, which then finds nothing and calls the file
+clean — with no count to look wrong. `PatternScan::replace()` and
+`PatternScan::replaceCallback()` throw instead. `preg_replace(…) ?? $source` is
+left alone deliberately: it degrades to scanning the unstripped text, which
+biases toward a false positive somebody investigates rather than a silent green.
+
+`AStoppedScanIsNeverReadAsAnEmptyOneArchTest` holds the guard tree itself to a
+stricter rule than the tree-wide one, because a wrong answer here is a false
+green rather than a bug. It tokenises every file under `tests/Contracts/` and
+`Modules/*/tests/Arch/` and fails on a direct `preg_match_all` call in any form,
+on any PCRE call whose answer is discarded, and on any whose answer is turned
+into an empty subject by a `(string)` cast or a `?? ''`. `preg_match_all` is
+barred outright rather than merely checked because its backtracking accumulates
+across a whole subject, so a file that grows crosses the limit — that is the
+failure this tree has actually shipped, and `=== false` then `continue` is the
+shape it shipped as. The single-shot `preg_match` reads left raw stop at the
+first hit and are held only to the two shared rules. It reads with the tokeniser
+rather than a pattern of its own, because a regex scan of the regex scanners
+would be the very thing it guards against.
+
+It asserts both denominators — the files walked and the calls found — before any
+verdict is read. That rule earns its place: narrowing the walk to a single
+directory leaves the other three rules **green** over sixteen files, which is
+precisely the failure the whole section is about. Beyond it, every walk asserts a
+floor on what it scanned — files, echoes, payload keys — so a scan that ran over
+nothing fails on that assertion rather than on the offender list it never built.
 
 ## Where a rule's rationale lives
 

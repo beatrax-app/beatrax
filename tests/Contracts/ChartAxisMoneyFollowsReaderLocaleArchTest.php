@@ -29,7 +29,7 @@ function chartAxisIcuGlyph(NumberFormatter $formatter, string $currency): string
 {
     $rendered = (string) $formatter->formatCurrency(1, $currency);
 
-    return (string) preg_replace('/[\d\s\x{00A0}\x{202F}.,\-\x{2212}]/u', '', $rendered);
+    return PatternScan::replace('/[\d\s\x{00A0}\x{202F}.,\-\x{2212}]/u', '', $rendered);
 }
 
 it('takes the chart axis money locale from the page language, never from the currency', function (): void {

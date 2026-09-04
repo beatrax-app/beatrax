@@ -106,9 +106,7 @@ function bareIdEchoesOn(string $line): array
     // Scoped to the attribute the browser evaluates, not the whole line: a
     // style or aria-label sitting beside a wire:click echoes values too, and
     // those are not arguments to anything.
-    $attributes = preg_match_all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line, $found) === false
-        ? []
-        : $found[1];
+    $attributes = PatternScan::all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line)[1];
 
     if ($attributes === []) {
         return [];
@@ -136,11 +134,7 @@ function bareIdEchoesOn(string $line): array
 /** @return list<string> */
 function bareIdConcatenationsOn(string $line): array
 {
-    $hit = preg_match_all('/\(\'\s*\.(.+?)\.\s*\'\)/', $line, $found);
-
-    if ($hit === false) {
-        throw new RuntimeException('preg_match_all failed on: '.$line);
-    }
+    $found = PatternScan::all('/\(\'\s*\.(.+?)\.\s*\'\)/', $line);
 
     return array_values(array_filter(array_map(trim(...), $found[1]), idBearingExpression(...)));
 }
@@ -161,7 +155,7 @@ function idBearingExpression(string $expression): bool
     // account, and an anchor that has to start on the `$` reads straight past
     // the `(`. `(int) $entry->id` was caught only because `->` gave it a second
     // way in, which is why the shape looked covered.
-    $operand = trim((string) preg_replace('/^\(\s*(int|integer|float|double|string|bool|boolean)\s*\)\s*/i', '', $expression));
+    $operand = trim(PatternScan::replace('/^\(\s*(int|integer|float|double|string|bool|boolean)\s*\)\s*/i', '', $expression));
 
     return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*(\'\]|"\])?\s*$/', $operand) === 1;
 }

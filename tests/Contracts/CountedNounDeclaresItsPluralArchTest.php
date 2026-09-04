@@ -248,7 +248,7 @@ it('never picks a plural form with a comparison in PHP', function (): void {
         // translation keys. It hard-codes English's two forms into PHP, where
         // no locale's rules can reach it, and reads as deliberate care.
         if (preg_match('/(?:===|!==|==|>|<)\s*1\s*\?[^;]{0,240}?(?:Lang::get|__|trans)\([^;]{0,240}?:\s*(?:Lang::get|__|trans)\(/s', $source, $match) === 1) {
-            $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+            $offenders[] = $file->getRelativePathname().' — '.trim(PatternScan::replace('/\s+/', ' ', $match[0]));
         }
     }
 
@@ -414,7 +414,7 @@ function countedNounNumberBesideLine(string $source, string $call): array
         $matches = PatternScan::sets($pattern, $source);
         foreach ($matches as $match) {
             if (countedNounIsCountVariable($match[1])) {
-                $hits[] = trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+                $hits[] = trim(PatternScan::replace('/\s+/', ' ', $match[0]));
             }
         }
     }
@@ -485,7 +485,7 @@ it('never sets a formatted number beside a translated line', function (): void {
         $matches = PatternScan::sets($pattern, $source);
 
         foreach ($matches as $match) {
-            $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+            $offenders[] = $file->getRelativePathname().' — '.trim(PatternScan::replace('/\s+/', ' ', $match[0]));
         }
     }
 
@@ -585,7 +585,7 @@ it('never assembles a translated line from fragments in the browser', function (
                 continue;
             }
 
-            $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $expression) ?? '');
+            $offenders[] = $file->getRelativePathname().' — '.trim(PatternScan::replace('/\s+/', ' ', $expression));
         }
     }
 
@@ -632,7 +632,7 @@ it('never sets a browser-rendered number beside a line that has no form to choos
 
         foreach ($matches as $match) {
             if (countedNounIsCountVariable($match[1])) {
-                $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
+                $offenders[] = $file->getRelativePathname().' — '.trim(PatternScan::replace('/\s+/', ' ', $match[0]));
             }
         }
     }

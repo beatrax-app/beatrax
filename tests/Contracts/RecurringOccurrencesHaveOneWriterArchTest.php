@@ -57,9 +57,9 @@ function recurringOccurrenceScannedFiles(): array
 // points at the line the write is on.
 function recurringOccurrenceSource(string $source): string
 {
-    return (string) preg_replace_callback(
+    return PatternScan::replaceCallback(
         '#/\*.*?\*/|//[^\n]*#s',
-        static fn (array $m): string => (string) preg_replace('/[^\r\n]/', ' ', $m[0]),
+        static fn (array $m): string => PatternScan::replace('/[^\r\n]/', ' ', $m[0]),
         $source,
     );
 }
