@@ -157,10 +157,11 @@ and only the patched behaviour is missing:
 last case — and the step to run the first time a new patch script lands.
 
 `NativeBuildPatches` re-applies the whole set immediately before `native:run` /
-`native:build`, so a regenerated tree cannot ship without them. Two are listed
-in its `REQUIRED_SCRIPTS` as well — the privacy manifest and the export
-compliance key — because a cosmetic patch that fails is visible on the device
-while those two are invisible until App Store review rejects the build.
+`native:build`, so a regenerated tree cannot ship without them. Three are listed
+in its `REQUIRED_SCRIPTS` as well — the privacy manifest, the export compliance
+key, and the App Store category — because a cosmetic patch that fails is visible
+on the device while those three are invisible until App Store Connect refuses
+the upload.
 
 ### Signed URLs cannot be absolute on iOS
 
