@@ -23,6 +23,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\JobProgressCache;
+use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -68,6 +69,11 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
     public function uniqueFor(): int
     {
         return 600;
+    }
+
+    public function uniqueVia(): Repository
+    {
+        return LockStore::forUniqueJobs();
     }
 
     public static function progressCacheKey(int $userId): string
