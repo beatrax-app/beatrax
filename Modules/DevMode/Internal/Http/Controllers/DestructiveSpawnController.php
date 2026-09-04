@@ -9,30 +9,23 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Actions\SpawnDevCommand;
 use Modules\DevMode\Internal\Enums\CommandTier;
+use Modules\DevMode\Internal\Exceptions\CommandRefusedException;
 use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
-use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
-use Modules\DevMode\Internal\Process\CommandArgValidator;
-use Modules\DevMode\Internal\Process\CommandSpawner;
-use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 use Modules\DevMode\Internal\Support\DevModeSession;
-use Modules\DevMode\Public\Contracts\DevCommandRegistry;
-use Modules\DevMode\Public\Dto\CommandSpec;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 // The only DESTRUCTIVE-tier entry point. All three TripleGateModal gates are
-// re-checked server-side, so a tampered Livewire payload still cannot spawn.
+// re-checked here rather than in the action, so a tampered Livewire payload
+// still cannot spawn and the checks sit where the route can be read beside them.
 final readonly class DestructiveSpawnController
 {
     public function __construct(
-        private CommandSpawner $spawner,
-        private DevCommandRegistry $registry,
-        private RunRegistry $runs,
         private ValidatorFactory $validator,
         private DevModeFlag $devMode,
-        private CommandArgValidator $argValidator,
+        private SpawnDevCommand $spawn,
     ) {}
 
     public function __invoke(
@@ -40,19 +33,8 @@ final readonly class DestructiveSpawnController
         CurrentUser $user,
         Session $session,
     ): JsonResponse {
-        if (! $this->devMode->isOn()) {
-            throw new AccessDeniedHttpException('dev_mode_off');
-        }
-
-        if ($session->get(DevModeSession::ADVANCED_KEY) !== true) {
-            throw new AccessDeniedHttpException('advanced_off');
-        }
-
         $payload = $request->all();
-        $confirmed = $payload['confirmed_typed'] ?? '';
-        if (! is_string($confirmed) || ! hash_equals('Beatrax', $confirmed)) {
-            throw new AccessDeniedHttpException('app_name_mismatch');
-        }
+        $this->assertTripleGate($session, $payload['confirmed_typed'] ?? '');
 
         $validated = $this->validator
             ->make($payload, [
@@ -62,62 +44,34 @@ final readonly class DestructiveSpawnController
             ])
             ->validate();
 
-        $commandRaw = $validated['command'] ?? null;
-
-        // SAFE-tier names are refused rather than run, so neither controller
-        // doubles as a second route to the other tier.
-        $destructiveNames = array_map(
-            static fn (CommandSpec $spec): string => $spec->name,
-            $this->registry->destructive(),
-        );
-
-        $rejection = match (true) {
-            ! is_string($commandRaw) => new JsonResponse(
-                ['error' => 'invalid_command'],
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-            ),
-            ! in_array($commandRaw, $destructiveNames, true) => new JsonResponse(
-                ['error' => 'not_destructive', 'command' => $commandRaw],
-                422,
-            ),
-            default => null,
-        };
-
-        if ($rejection !== null) {
-            return $rejection;
-        }
-
-        // Surviving the match is proof of a string: the first arm refuses every
-        // other shape.
-        $command = $commandRaw;
-
-        $spec = $this->registry->find($command);
-
         $argsRaw = $validated['args'] ?? null;
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
 
-        // Third guard on the args, alongside the command whitelist and
-        // CommandSpawner's escapeshellarg — and the only one before the shell.
-        $this->argValidator->assertValid($spec, $args);
-
         try {
-            $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Destructive);
-        } catch (ProcessSpawningUnavailableException $e) {
-            return new JsonResponse(
-                ['error' => ProcessSpawningUnavailableException::WIRE_ERROR, 'message' => $e->readerMessage()],
-                Response::HTTP_NOT_IMPLEMENTED,
-            );
-        }
-
-        $record = $this->runs->find($runId);
-        if ($record === null) {
-            throw SpawnedRunVanishedException::immediatelyAfterSpawn('DestructiveSpawnController', $runId);
+            $record = ($this->spawn)($validated['command'] ?? null, $args, $user->id(), CommandTier::Destructive);
+        } catch (CommandRefusedException|ProcessSpawningUnavailableException $refusal) {
+            return new JsonResponse($refusal->wirePayload(), $refusal->wireStatus());
         }
 
         return new JsonResponse([
-            'run_id' => $runId,
+            'run_id' => $record->runId,
             'pid' => $record->pid,
         ], 202);
+    }
+
+    private function assertTripleGate(Session $session, mixed $confirmed): void
+    {
+        if (! $this->devMode->isOn()) {
+            throw new AccessDeniedHttpException('dev_mode_off');
+        }
+
+        if ($session->get(DevModeSession::ADVANCED_KEY) !== true) {
+            throw new AccessDeniedHttpException('advanced_off');
+        }
+
+        if (! is_string($confirmed) || ! hash_equals('Beatrax', $confirmed)) {
+            throw new AccessDeniedHttpException('app_name_mismatch');
+        }
     }
 }
