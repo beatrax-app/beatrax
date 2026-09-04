@@ -6,13 +6,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Tests\Support\CaptureSites;
 
 uses(RefreshDatabase::class);
-
-// The two producers that put a row on the wire: an EntityMutated dispatch, and
-// a direct OpLogWriter call from a capture listener. Both name their table as
-// the first named argument, so the match IS the write site.
-const CAPTURE_SITE_PATTERN = "/(?:new EntityMutated\(|->write[A-Za-z]+\()\s*table:\s*'([a-z_]+)'/";
 
 // A table with merge rules but no capture syncs exactly once, in the initial
 // backfill, and then diverges forever: both devices show the same history and
@@ -42,7 +38,7 @@ function referenceDataTables(): array
 // ImportSyncCapture stopped naming its parents: it reads them off the live
 // foreign keys of `transactions`, because the three it used to name by hand
 // left out categories and a peer refused every transaction pointing at one.
-// There is no literal left for the scan above to find, so the same derivation
+// There is no literal left for CaptureSites to find, so the same derivation
 // runs here — restating the list would put the drift back.
 /**
  * @return list<string>
@@ -89,80 +85,12 @@ function uncapturedBacklog(): array
 // derives from (user_id, direction, cluster_counterparty_key, latest_currency)
 // — the tuple the detector's own cadence-flip fallback matches on.
 
-/**
- * @return list<string>
- */
-function capturedTables(): array
-{
-    $found = [];
-
-    foreach ([dirname(__DIR__, 2).'/Internal/Listeners', base_path('Modules')] as $dir) {
-        /** @var iterable<SplFileInfo> $files */
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
-
-        foreach ($files as $file) {
-            if (! $file->isFile() || $file->getExtension() !== 'php') {
-                continue;
-            }
-
-            $source = (string) file_get_contents($file->getPathname());
-
-            if (str_contains($file->getPathname(), '/tests/')) {
-                continue;
-            }
-
-            $isListener = str_contains($file->getPathname(), '/Internal/Listeners/');
-            $isDispatch = str_contains($source, 'new EntityMutated(');
-            // Only callers count: the file defining captureRowsById() also names the
-            // tables it EXCLUDES.
-            $isBulk = str_contains($source, '->captureRowsById(');
-
-            if (! $isListener && ! $isDispatch && ! $isBulk) {
-                continue;
-            }
-
-            // The table name has to be the argument of an actual write, not
-            // merely present somewhere in a file that also happens to contain
-            // one. A bare `table: '…'` anywhere marked the whole table captured,
-            // which is how merchant_aliases passed this gate with a single YAML
-            // insert covering for four uncaptured user-facing writes.
-            $matches = PatternScan::all(CAPTURE_SITE_PATTERN, $source);
-
-            foreach ($matches[1] as $table) {
-                $found[$table] = true;
-            }
-
-            if (! $isBulk) {
-                continue;
-            }
-
-            // Only a list the file actually walks: counting every const array meant a
-            // table struck out of the capture loop still read as captured.
-            $lists = PatternScan::sets("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source);
-
-            foreach ($lists as $list) {
-                if (! str_contains($source, 'foreach (self::'.$list[1])) {
-                    continue;
-                }
-
-                $bulk = PatternScan::all("/'([a-z_]{3,})'/", $list[2]);
-
-                foreach ($bulk[1] as $table) {
-                    $found[$table] = true;
-                }
-            }
-        }
-    }
-
-    return array_keys($found);
-}
-
 it('opens no new capture gap', function (): void {
     $syncable = array_keys(app(MergeRulesRegistry::class)->rules());
 
     $uncaptured = array_values(array_diff(
         $syncable,
-        capturedTables(),
+        CaptureSites::tables(),
         parentsCapturedByDerivation(),
         snapshotOnlyTables(),
         deviceLocalTables(),
@@ -177,7 +105,7 @@ it('opens no new capture gap', function (): void {
 });
 
 it('strikes a table off the backlog as soon as it is captured', function (): void {
-    $closed = array_values(array_intersect(uncapturedBacklog(), capturedTables()));
+    $closed = array_values(array_intersect(uncapturedBacklog(), CaptureSites::tables()));
 
     expect($closed)->toBe([], sprintf(
         "These are captured now — remove them from uncapturedBacklog():\n  - %s",
@@ -190,11 +118,11 @@ it('does not capture a table the merge registry cannot merge', function (): void
 
     // The reverse gap: ops the peer has no rules for are quarantined on
     // arrival, so capture and merge have to agree in both directions.
-    expect(array_values(array_diff(capturedTables(), $syncable)))->toBe([]);
+    expect(array_values(array_diff(CaptureSites::tables(), $syncable)))->toBe([]);
 });
 
 it('never captures a table that is meant to stay on the device', function (): void {
-    $leaked = array_values(array_intersect(deviceLocalTables(), capturedTables()));
+    $leaked = array_values(array_intersect(deviceLocalTables(), CaptureSites::tables()));
 
     expect($leaked)->toBe([], sprintf(
         "These are device-local and the rules screen says so, but something now writes them to the op log:\n  - %s",
@@ -206,7 +134,7 @@ it('never captures a table that is meant to stay on the device', function (): vo
 // containing `new EntityMutated(` also contained its name somewhere — one line
 // satisfying the gate for every write site in the codebase.
 it('counts a table as captured only where a write actually names it', function (string $source, array $expected): void {
-    $matches = PatternScan::all(CAPTURE_SITE_PATTERN, $source);
+    $matches = PatternScan::all(CaptureSites::PATTERN, $source);
 
     expect(array_values(array_unique($matches[1])))->toBe($expected);
 })->with([

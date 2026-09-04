@@ -131,10 +131,6 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 1,
         'why' => 'Aliases enter only when the reader renames a merchant or uploads a YAML, so the ceiling is the alias file they maintain, not the ledger.',
     ],
-    'Modules/Counterparties/Public/Queries/CounterpartyDisplayName.php::counterparties' => [
-        'reads' => 1,
-        'why' => 'KNOWN UNBOUNDED, and the highest rows-times-frequency read found: every counterparty decrypted and locale-sorted on every transaction-detail render; forIds() beside it is the bounded shape.',
-    ],
     'Modules/DriftAlerts/Internal/Jobs/RevivedExpiredDriftSnoozesJob.php::drift_alerts' => [
         'reads' => 1,
         'why' => 'Self-draining: only alerts whose snooze has elapsed, and the loop transitions each one to open, so the set is the reader\'s snoozed series count.',
@@ -190,10 +186,6 @@ const BOUNDED_READ_ALLOWED = [
     'Modules/Search/Internal/Console/ReindexSearchCommand.php::transactions' => [
         'reads' => 1,
         'why' => 'Plucks distinct user_id, and a device file holds one reader; the bulk read thirty lines above it correctly chunks in batches of five hundred.',
-    ],
-    'Modules/Search/Internal/Services/EntityNameSearch.php::counterparties' => [
-        'reads' => 1,
-        'why' => 'KNOWN UNBOUNDED. Every row is materialised and decrypted before the match-limit break can fire, once per command-palette keystroke, to return at most three names.',
     ],
     'Modules/Search/Public/Services/SearchQuery.php::transactions' => [
         'reads' => 1,
@@ -568,7 +560,7 @@ it('does not let the known-unbounded baseline grow', function (): void {
         static fn (array $entry): bool => str_contains($entry['why'], 'KNOWN UNBOUNDED'),
     ));
 
-    expect($known)->toHaveCount(10);
+    expect($known)->toHaveCount(8);
 });
 
 it('gives every allow-list entry a reason somebody can act on', function (): void {

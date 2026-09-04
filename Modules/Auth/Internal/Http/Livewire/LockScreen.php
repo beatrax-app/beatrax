@@ -168,7 +168,6 @@ final class LockScreen extends Component
     {
         $view = $views->make('auth::livewire.lock-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('auth::lock_screen.page_title')]);
 
         return $view;

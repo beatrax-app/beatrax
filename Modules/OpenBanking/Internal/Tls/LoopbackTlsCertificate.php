@@ -6,6 +6,7 @@ namespace Modules\OpenBanking\Internal\Tls;
 
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 
 final readonly class LoopbackTlsCertificate
 {
@@ -15,7 +16,10 @@ final readonly class LoopbackTlsCertificate
 
     private const string KEY_FILE = 'key.pem';
 
-    public function __construct(private string $directory) {}
+    public function __construct(
+        private string $directory,
+        private OwnerOnlyPath $ownerOnly = new OwnerOnlyPath,
+    ) {}
 
     /**
      * @return array{cert: string, key: string}
@@ -32,18 +36,20 @@ final readonly class LoopbackTlsCertificate
         $this->prepareDirectory();
         [$certPem, $keyPem] = $this->generate();
 
+        // Both halves owner-only BEFORE the PEM lands. Written first and
+        // narrowed after, the private key spends the whole write at the umask
+        // default of 0644, and a private key read once is read forever. The
+        // certificate follows it because only this process ever reads either.
+        if (! $this->ownerOnly->file($keyPath) || ! $this->ownerOnly->file($certPath)) {
+            throw LoopbackTlsException::couldNotWriteCertificate($this->directory);
+        }
+
         // Suppressed so the `=== false` checks decide: unsuppressed, Laravel's
         // handler turns the E_WARNING into an ErrorException before either
         // comparison runs, and this guard on key material never fires.
         if (@file_put_contents($certPath, $certPem) === false || @file_put_contents($keyPath, $keyPem) === false) {
             throw LoopbackTlsException::couldNotWriteCertificate($this->directory);
         }
-
-        // Both halves owner-only. The certificate is public material, but only
-        // this process reads it: the serve command passes the path to its own
-        // stream context and the user verifies by fingerprint.
-        @chmod($keyPath, 0600);
-        @chmod($certPath, 0600);
 
         return ['cert' => $certPath, 'key' => $keyPath];
     }
@@ -138,11 +144,9 @@ final readonly class LoopbackTlsCertificate
 
     private function prepareDirectory(): void
     {
-        if (! is_dir($this->directory) && ! @mkdir($this->directory, 0700, true) && ! is_dir($this->directory)) {
+        if (! $this->ownerOnly->directory($this->directory)) {
             throw LoopbackTlsException::couldNotCreateDirectory($this->directory);
         }
-
-        @chmod($this->directory, 0700);
 
         $gitignore = $this->directory.'/.gitignore';
         if (! is_file($gitignore)) {
@@ -155,10 +159,8 @@ final readonly class LoopbackTlsCertificate
         // Beside the certificate rather than /tmp: the content is not secret,
         // but one exempt call site is how the no-/tmp rule erodes.
         $dir = rtrim(UserDataPathService::appPath('tmp-tls'), '/');
-        @mkdir($dir, 0700, true);
-        @chmod($dir, 0700);
 
-        $path = tempnam($dir, 'ob-tls-openssl-');
+        $path = $this->ownerOnly->directory($dir) ? tempnam($dir, 'ob-tls-openssl-') : false;
         if ($path === false) {
             throw LoopbackTlsException::couldNotCreateConfig();
         }

@@ -299,7 +299,6 @@ final class ReportBuilder extends Component
             'availableCounterparties' => $this->availableCounterparties($counterpartyNames, $user->id),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('reports::builder.page_title')]);
 
         return $view;

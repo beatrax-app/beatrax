@@ -18,6 +18,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -208,8 +209,7 @@ final class ReconcilePage extends Component
             'reconciledThrough' => $this->reconciledThrough($connection, $user->id, $ownedAccountId),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('ledger::reconcile.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('ledger::reconcile.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

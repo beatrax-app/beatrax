@@ -11,6 +11,24 @@ Balance comes from .github/test-shard-weights.json, which is only a hint: an
 unlisted suite is assigned a default weight and still runs. Stale weights cost
 a slower shard, never a missing test.
 
+A weight is measured seconds, taken from a real CI run rather than a developer
+machine: the workflow echoes each shard's composition and Pest prints that
+shard's duration, so one run log carries both halves, and cost is attributed
+inside a shard in proportion to test count. Crude within a shard, but it makes
+the shard TOTALS right, which is the thing a wrong set gets wrong; each run
+corrects the previous guess.
+
+Two earlier sets did not work and are worth not repeating. The original tracked
+something close to test count, which runtime does not follow. Replacing it with
+seconds timed on a laptop was worse still -- that machine over-reads any suite
+whose cost is memory-bound, and it moved work onto the shard that was already
+the longest.
+
+Balance only became worth having once the Feature testsuite was split. Before
+that the longest shard could not go below one indivisible ~245s suite, so every
+set of weights landed within about ten seconds of the same floor and the
+exercise was pointless.
+
 The shard totals do not sum to the full-suite total, and that is expected.
 tests/Helpers belongs to the Unit testsuite, but paratest collects it whatever
 `--testsuite` asks for, so its six tests run in every shard rather than only in

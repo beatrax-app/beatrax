@@ -153,11 +153,11 @@ it('keeps the English reader s own word working', function (): void {
 });
 
 // display_name is ciphertext at rest once encryption is on, so the palette
-// cannot match it in SQL and reads the reader's own counterparties whole,
-// matching in PHP. That read is one statement over the reader's own rows and
-// nothing else: resolving the app's word must not add a lookup per row, and it
-// must not widen the scope past the reader.
-it('reads the reader s own counterparties once and no other reader s', function (): void {
+// cannot match it in SQL and matches in PHP instead. Two things about that read
+// are load-bearing: resolving the app's own word must not add a lookup per row,
+// and the scope must not widen past the reader. The rows are the second — 601
+// of them, never the stranger's 400 — and the statements are the first.
+it('reads the reader s own counterparties a window at a time and no other reader s', function (): void {
     ($this->pcwCounterparty)($this->userId, 'unknown', 'unknown', 'Unknown', CounterpartyDefaultName::UNKNOWN);
     ($this->pcwFiller)($this->userId, 600, 'pcw-mine');
 
@@ -170,5 +170,8 @@ it('reads the reader s own counterparties once and no other reader s', function 
         app(EntityNameSearch::class)->query($this->user, 'Onbekend');
     });
 
-    expect($measured)->toBe(['statements' => 1, 'rows' => 601]);
+    // Three windows, not six hundred lookups: the walk is keyset-paged, so the
+    // statement count follows the chunk size and stays flat while the ledger
+    // grows. A per-row lookup would put this in the hundreds.
+    expect($measured)->toBe(['statements' => 3, 'rows' => 601]);
 });

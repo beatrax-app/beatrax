@@ -12,7 +12,9 @@ use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Throwable;
 
@@ -27,6 +29,7 @@ final readonly class RestoreEncryptedBackup
         private Filesystem $files,
         private BackupKeyMaterial $keyMaterial,
         private LiveDatabaseTransplant $transplant,
+        private OwnerOnlyPath $ownerOnly,
     ) {}
 
     /**
@@ -84,7 +87,9 @@ final readonly class RestoreEncryptedBackup
         // The backups directory may not exist yet (a user who has never run a
         // backup), so create it before VACUUM INTO writes the snapshot there.
         $dir = rtrim($this->paths->backups(), '/');
-        $this->files->ensureDirectoryExists($dir, 0700);
+        if (! $this->ownerOnly->directory($dir)) {
+            throw new BackupIoException('The backups directory could not be made owner-only: '.$dir);
+        }
 
         $stamp = $this->clock->now()->format('Y-m-d-His');
         $snapshotPath = $dir.'/pre-restore-'.$stamp.'.sqlite';
@@ -93,7 +98,13 @@ final readonly class RestoreEncryptedBackup
         // VACUUM INTO must not run inside a transaction — SQLite refuses it,
         // so this statement runs standalone, outside any DB transaction.
         $this->db->connection($connection)->statement("VACUUM INTO '{$escaped}'");
-        @chmod($snapshotPath, 0600);
+
+        // The whole database in clear, so a mode that will not settle is a
+        // refused restore rather than a readable copy left in the backups
+        // directory: VACUUM INTO creates its target at the process umask.
+        if (! $this->ownerOnly->file($snapshotPath)) {
+            throw new BackupIoException('The pre-restore snapshot could not be made owner-only: '.$snapshotPath);
+        }
 
         return $snapshotPath;
     }
@@ -128,8 +139,9 @@ final readonly class RestoreEncryptedBackup
     private function tempPath(string $tag): string
     {
         $dir = rtrim(UserDataPathService::appPath('tmp-restore'), '/');
-        $this->files->ensureDirectoryExists($dir, 0700);
-        @chmod($dir, 0700);
+        if (! $this->ownerOnly->directory($dir)) {
+            throw new BackupIoException('The restore staging directory could not be made owner-only: '.$dir);
+        }
 
         return $dir.'/beatrax-restore-'.$tag.'-'.bin2hex(random_bytes(6)).'.sqlite';
     }

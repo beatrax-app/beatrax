@@ -89,26 +89,55 @@ jobs:
           fi
 
       - name: The ruleset's required checks still name jobs that run
-        # A renamed job silently stops being required, which is the
-        # failure this check exists to catch before a release rather than after.
+        # A renamed job silently stops being required and the protection quietly
+        # evaporates. This used to print the list and ask the reader to confirm
+        # by eye, which is not a check: it ended on an echo and passed whatever
+        # the ruleset said, including when it found no ruleset at all and warned
+        # about it on the way to exit 0.
+        #
+        # A context the ruleset requires that nothing reports under is the
+        # silent failure, so the question is which commit to ask. Not the
+        # default branch's tip: shared.yml runs on `pull_request` only, so ten
+        # of the fifteen required contexts never report on a merge commit and
+        # comparing there calls them all missing. The last merged pull request's
+        # head is the commit that ran the whole gate.
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          required=$(gh api "repos/${REPO}/rulesets" --jq \
-            '[.[] | .id] | .[]' 2>/dev/null | while read -r id; do
+          set -euo pipefail
+          required=$(gh api "repos/${REPO}/rulesets" --jq '.[].id' | while read -r id; do
               gh api "repos/${REPO}/rulesets/${id}" --jq \
                 '.rules[]? | select(.type=="required_status_checks")
-                 | .parameters.required_status_checks[]?.context' 2>/dev/null
+                 | .parameters.required_status_checks[]?.context'
             done | sort -u)
           if [ -z "$required" ]; then
-            echo "::warning::no required status checks found on any ruleset — REPO-R8 expects them."
-            exit 0
+            echo "::error::no required status checks on any ruleset; the default branch is unprotected."
+            exit 1
           fi
+
+          head=$(gh api "repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=20" \
+            --jq '[.[] | select(.merged_at != null)][0].head.sha')
+          if [ -z "$head" ] || [ "$head" = "null" ]; then
+            echo "::error::no merged pull request found, so there is no run of the full gate to compare against."
+            exit 1
+          fi
+          reported=$(gh api --paginate "repos/${REPO}/commits/${head}/check-runs" --jq '.check_runs[].name' | sort -u)
+          if [ -z "$reported" ]; then
+            echo "::error::${head} has no check runs at all, so no required context can be confirmed."
+            exit 1
+          fi
+
+          missing=$(comm -23 <(echo "$required") <(echo "$reported"))
           echo "Required checks currently configured:"
           while IFS= read -r check; do echo "  - ${check}"; done <<< "$required"
+          if [ -n "$missing" ]; then
+            echo "::error::these required contexts name nothing that reported on ${head}, so they are required in name only:"
+            while IFS= read -r check; do echo "  - ${check}"; done <<< "$missing"
+            exit 1
+          fi
           echo
-          echo "Confirm by eye that each still names a job in ci.yml / shared.yml."
+          echo "Every required context reported on ${head}."
 
       - name: Next steps
         env:

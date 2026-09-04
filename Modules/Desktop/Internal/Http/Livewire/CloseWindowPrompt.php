@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 
@@ -62,8 +63,7 @@ final class CloseWindowPrompt extends Component
             'modalName' => self::MODAL_NAME,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => $title.' · Beatrax']);
+        $view->extends('layouts.app', ['title' => $title.Brand::TITLE_SUFFIX]);
 
         return $view;
     }

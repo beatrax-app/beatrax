@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Brand')
 @use('Modules\Core\Public\Support\Lang')
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
@@ -34,7 +35,7 @@
         @if (($beatraxEncodedUploads ?? false) === true)
             <meta name="beatrax-upload-transport" content="base64" />
         @endif
-        <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · Beatrax' }}</title>
+        <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').Brand::TITLE_SUFFIX }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets :chrome="$chrome" />
     </head>

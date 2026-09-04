@@ -165,8 +165,12 @@ it('dispatches the per-row and batch events outside any open DB transaction', fu
     expect($batchLevel)->toBe($baseline);
 });
 
+// Copied from the sibling that guards TransactionImported, and the class name
+// came with it: this file's subject is TransactionBatchImported, which was left
+// with no guard on either marker anywhere in the tree while a green test in its
+// own file read as if it had one.
 it('owes its after-commit ordering to the action, not to a framework marker interface', function (): void {
-    expect(new ReflectionClass(TransactionImported::class)->getInterfaceNames())
+    expect(new ReflectionClass(TransactionBatchImported::class)->getInterfaceNames())
         ->not->toContain('Illuminate\\Contracts\\Events\\ShouldHandleEventsAfterCommit')
         ->not->toContain('Illuminate\\Contracts\\Queue\\ShouldQueue');
 });

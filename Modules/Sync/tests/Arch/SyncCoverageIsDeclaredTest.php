@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
+use Modules\Sync\Tests\Support\CaptureSites;
 
 uses(RefreshDatabase::class);
 
@@ -374,11 +375,7 @@ it('gives every exemption a reason', function (): void {
 });
 
 it('never declares a table device-local that something already writes to the op log', function (): void {
-    if (! function_exists('capturedTables')) {
-        test()->markTestSkipped('capturedTables() lives in SyncCaptureCoverageTest; run the Arch directory, not this file alone.');
-    }
-
-    $leaked = array_values(array_intersect(array_keys(deviceLocalByDesignTables()), capturedTables()));
+    $leaked = array_values(array_intersect(array_keys(deviceLocalByDesignTables()), CaptureSites::tables()));
 
     expect($leaked)->toBe([], sprintf(
         'These are declared device-local here and something now captures them, so the two files disagree '
