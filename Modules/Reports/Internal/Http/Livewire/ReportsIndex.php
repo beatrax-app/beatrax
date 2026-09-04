@@ -119,7 +119,6 @@ final class ReportsIndex extends Component
             'pinnedCount' => $rows->filter(static fn ($row): bool => $row->pinned)->count(),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('reports::index.page_title')]);
 
         return $view;

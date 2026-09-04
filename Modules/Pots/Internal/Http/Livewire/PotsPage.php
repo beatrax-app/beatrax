@@ -566,7 +566,6 @@ final class PotsPage extends Component
                 'potsForMove' => [],
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
             $view->extends('layouts.app', ['title' => Lang::get('pots::messages.page_title')]);
 
             return $view;
@@ -604,7 +603,6 @@ final class PotsPage extends Component
             'potsForMove' => $groups,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('pots::messages.page_title')]);
 
         return $view;

@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
@@ -118,8 +119,7 @@ final class SetupProgressScreen extends Component
             'lockUrl' => $urls->route('mobile.lock'),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

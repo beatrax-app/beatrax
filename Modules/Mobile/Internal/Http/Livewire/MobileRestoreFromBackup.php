@@ -12,6 +12,7 @@ use Livewire\WithFileUploads;
 use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
@@ -90,8 +91,7 @@ final class MobileRestoreFromBackup extends Component
     {
         $view = $views->make('mobile::livewire.mobile-restore-from-backup');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::restore.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::restore.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

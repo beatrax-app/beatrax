@@ -19,6 +19,7 @@ use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -240,8 +241,7 @@ final class CalendarPage extends Component
             'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

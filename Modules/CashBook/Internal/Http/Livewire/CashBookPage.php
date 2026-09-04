@@ -23,6 +23,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
@@ -341,8 +342,7 @@ final class CashBookPage extends Component
             'entryCurrency' => $this->entryCurrency($db, $baseCurrency, $user),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

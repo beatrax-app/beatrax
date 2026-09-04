@@ -20,6 +20,7 @@ use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -120,8 +121,7 @@ final class RulesPage extends Component
             'reapplyProgress' => $reapplyInFlight ? $progress : null,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('categorization::rules.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('categorization::rules.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

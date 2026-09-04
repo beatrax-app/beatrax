@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
@@ -56,8 +57,7 @@ final class SchemaIncompleteScreen extends Component
     {
         $view = $views->make('mobile::livewire.schema-incomplete-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::schema.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::schema.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
@@ -208,8 +209,7 @@ final class RecurringReviewPage extends Component
             'today' => $clock->now(),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('recurring::review.title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('recurring::review.title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

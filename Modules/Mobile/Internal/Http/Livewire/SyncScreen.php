@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
@@ -128,8 +129,7 @@ final class SyncScreen extends Component
     {
         $view = $views->make('mobile::livewire.sync-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::sync.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::sync.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

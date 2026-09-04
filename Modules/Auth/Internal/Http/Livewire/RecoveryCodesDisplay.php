@@ -93,7 +93,6 @@ final class RecoveryCodesDisplay extends Component
             'exportUrl' => $nativeExport ? $urls->route($exportRoute) : null,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('auth::recovery_codes.page_title')]);
 
         return $view;

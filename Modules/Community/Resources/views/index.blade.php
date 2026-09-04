@@ -1,6 +1,7 @@
+@use('Modules\Core\Public\Support\Brand')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\ProjectLinks')
-@extends('layouts.app', ['title' => Lang::get('community::index.page_title').' · Beatrax'])
+@extends('layouts.app', ['title' => Lang::get('community::index.page_title').Brand::TITLE_SUFFIX])
 
 {{--
     The Community hub.

@@ -1,5 +1,8 @@
 parameters:
-    level: 0
+    # Level 5 rather than 0: an undefined method on anything but $this is only
+    # reported from level 2, and a wrong argument type only from level 5, so
+    # the BadPageLayoutFixture proves nothing below it.
+    level: 5
     paths:
         - app/PhpStan/Rules/Fixtures
     reportUnmatchedIgnoredErrors: false
@@ -10,6 +13,16 @@ parameters:
         - '#unknown class Modules\\Ledger\\Internal\\Casts\\MoneyMinorCast#'
         - '#unknown class Modules\\Ledger\\Public\\Contracts\\RecordsTransactions#'
         - '#unknown class Modules\\Ledger\\Models\\Transaction#'
+        # This config deliberately loads no larastan, so the Eloquent builder
+        # contract arrives without the @template larastan gives it and the
+        # boundary fixture's own @return reads as over-specified.
+        - '#interface Illuminate\\Contracts\\Database\\Eloquent\\Builder is not generic#'
 
 rules:
     - App\PhpStan\Rules\BoundaryRule
+
+services:
+    -
+        class: App\PhpStan\Reflection\PageLayoutMacrosExtension
+        tags:
+            - phpstan.broker.methodsClassReflectionExtension

@@ -112,7 +112,6 @@ final class ChangePasswordPage extends Component
     {
         $view = $views->make('auth::livewire.change-password-page');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('auth::change_password.page_title')]);
 
         return $view;

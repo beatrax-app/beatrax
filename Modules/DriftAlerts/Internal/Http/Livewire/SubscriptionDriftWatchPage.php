@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Dto\SubscriptionDriftRow;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
@@ -28,8 +29,7 @@ final class SubscriptionDriftWatchPage extends Component
             'monthlyTotal' => $query->monthlyTotalFor($user, $rows),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::watch.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::watch.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

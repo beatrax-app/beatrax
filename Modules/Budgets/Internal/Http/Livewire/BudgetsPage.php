@@ -18,6 +18,7 @@ use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
@@ -325,8 +326,7 @@ final class BudgetsPage extends Component
                 'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').Brand::TITLE_SUFFIX]);
 
             return $view;
         }
@@ -393,8 +393,7 @@ final class BudgetsPage extends Component
             'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }
