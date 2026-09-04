@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Uređaj je uparen',
     'success_body' => 'Ovaj uređaj je sada pouzdan. Podaci će se sinkronizirati čim se povežeš.',
+    'encryption_incomplete' => 'Uređaj je uparen, no šifriranje podataka pohranjenih na njemu nije dovršeno. Podaci se još ne pohranjuju šifrirani.',
     'done' => 'Gotovo',
 
     'errors' => [

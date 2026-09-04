@@ -200,8 +200,7 @@ final readonly class OpLogEntryApplier
         // and the sum only means anything once that is settled.
         $reason = match (true) {
             ! $this->ownershipAdmits($table, $payload, $userId, $pk) => QuarantineReason::CrossUser,
-            $this->splitOverfill->refuses($table, $pk, $payload) => QuarantineReason::SplitWouldOverfillTransaction,
-            default => null,
+            default => $this->splitOverfill->reasonToRefuse($table, $pk, $payload),
         };
 
         if ($reason !== null) {

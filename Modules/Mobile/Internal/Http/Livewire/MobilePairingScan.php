@@ -26,6 +26,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
 use Modules\Mobile\Internal\Http\PairingEntryUrl;
+use Modules\Mobile\Internal\Pairing\PairingEncryptionActivation;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Enums\PairingSide;
@@ -100,6 +101,13 @@ final class MobilePairingScan extends Component
     public string $importDesktopDeviceId = '';
 
     public bool $awaitingPeer = false;
+
+    // Non-blocking: the pairing itself succeeded, so this raises a notice on
+    // the success step rather than undoing a ceremony. #[Locked] because a
+    // client that could clear it would be silencing the one thing on screen
+    // that says this device's data is not protected.
+    #[Locked]
+    public bool $encryptionActivationFailed = false;
 
     // #[Locked] — this is what the confirmation digest is taken from, so an
     // unlocked property would let the client decide what its own tap is bound
@@ -447,14 +455,13 @@ final class MobilePairingScan extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
+        // This edge is crossed once per ceremony, and no screen the phone
+        // offers afterwards re-enters migrate(): the encryption CTA is hidden
+        // the moment sync is on, and enableSync() returns early. So a failure
+        // swallowed here is one nothing later comes back to.
         if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
-            try {
-                $migrationService->migrate($currentUser->user(), $session);
-            } catch (Throwable) {
-                // Best-effort: the pairing is already recorded, and the
-                // encryption row keeps rendering its own state until a
-                // later pass succeeds.
-            }
+            $this->encryptionActivationFailed = ! (new PairingEncryptionActivation($logger))
+                ->activated($migrationService, $currentUser->user(), $session);
         }
 
         // The phone sends too. A device that only ever received left the

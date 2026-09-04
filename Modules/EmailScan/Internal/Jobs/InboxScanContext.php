@@ -7,8 +7,10 @@ namespace Modules\EmailScan\Internal\Jobs;
 use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\ParsedMessageHeaders;
@@ -26,7 +28,7 @@ final readonly class InboxScanContext
         private EmlBlobStore $blobStore,
         private MimeHeaderParser $mime,
         private int $userId,
-        private LoggerInterface $logger,
+        public LoggerInterface $logger,
     ) {}
 
     // One message this device will not hold whole is one message skipped, not
@@ -84,6 +86,39 @@ final readonly class InboxScanContext
             ->where('inbox_id', $this->inboxId)
             ->where('provider_message_id', $messageId)
             ->exists();
+    }
+
+    // The cursor advances past a message the provider handed over and this
+    // device could not read, so without this row the loss is an absence —
+    // indistinguishable from an id the walk never saw. Written as skipped, it
+    // is a message the reader can be shown and alreadyIndexed() can answer on.
+    public function recordUndecodableMessage(string $messageId, Throwable $failure): void
+    {
+        $now = $this->clock->now();
+        $stamp = $now->toDateTimeString();
+
+        // No sender, no subject and no blob: the bytes those come from are
+        // exactly what could not be decoded, and nothing from the payload may
+        // be guessed at here.
+        $this->connection->table('inbox_messages')->insertOrIgnore([
+            'user_id' => $this->userId,
+            'inbox_id' => $this->inboxId,
+            'provider_message_id' => $messageId,
+            'internal_date' => Instant::appLocal($now->toDateTimeImmutable()),
+            'sender_email' => '',
+            'sender_name' => null,
+            'subject' => null,
+            'status' => InboxMessageStatus::Skipped->value,
+            'fetched_at' => $stamp,
+            'created_at' => $stamp,
+            'updated_at' => $stamp,
+        ]);
+
+        $this->logger->warning('EmailScan: a fetched message could not be decoded and was skipped.', [
+            'inbox_id' => $this->inboxId,
+            'provider_message_id' => $messageId,
+            ...SafeExceptionContext::describe($failure),
+        ]);
     }
 
     // Split from storeParsedMessage so a caller that has to gate on the

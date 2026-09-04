@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Dispositivo vinculado',
     'success_body' => 'Este dispositivo ya es de confianza. Tus datos se sincronizarán en cuanto te conectes.',
+    'encryption_incomplete' => 'El dispositivo está emparejado, pero el cifrado de los datos guardados en él no se completó. Todavía no se guardan cifrados.',
     'done' => 'Hecho',
 
     'errors' => [

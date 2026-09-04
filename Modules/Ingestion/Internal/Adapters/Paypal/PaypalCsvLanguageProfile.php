@@ -18,7 +18,8 @@ final readonly class PaypalCsvLanguageProfile
 
     // Detection passes when every token in a locale's list is present (order-insensitive).
     // "Reference Txn ID" is never localised, so it discriminates against a non-PayPal
-    // CSV that happens to ship a "Datum" column.
+    // CSV that happens to ship a "Datum" column. "Bruto" is here because a file
+    // without it read every payment as zero and reported a clean import.
     /**
      * @var array<string, list<string>>
      */
@@ -29,6 +30,7 @@ final readonly class PaypalCsvLanguageProfile
             'Tijdzone',
             'Omschrijving',
             'Valuta',
+            'Bruto',
             'Transactiereferentie',
             'Reference Txn ID',
         ],

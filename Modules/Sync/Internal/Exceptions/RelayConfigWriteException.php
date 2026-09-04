@@ -21,4 +21,12 @@ final class RelayConfigWriteException extends RuntimeException
     {
         return new self("Cannot write relay config to: {$path}");
     }
+
+    // Refused rather than written over: both setters rewrite the whole file, so
+    // a body that will not parse is the endpoint or the pin this write is about
+    // to replace with a blank.
+    public static function couldNotReadBeforeWriting(string $path): self
+    {
+        return new self("Cannot read the relay config already at {$path} — refusing to overwrite it with a blank field.");
+    }
 }

@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Apparaat gekoppeld',
     'success_body' => 'Dit apparaat wordt nu vertrouwd. Je gegevens worden gesynchroniseerd zodra je verbinding maakt.',
+    'encryption_incomplete' => 'Het apparaat is gekoppeld, maar het versleutelen van de gegevens op dit apparaat is niet afgerond. De gegevens worden nog niet versleuteld opgeslagen.',
     'done' => 'Klaar',
 
     'errors' => [
