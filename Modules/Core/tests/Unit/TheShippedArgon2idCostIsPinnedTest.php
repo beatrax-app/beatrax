@@ -98,3 +98,42 @@ it('ships exactly one implementation of the cost contract', function (): void {
 
     expect($implementations)->toBe(['Modules/Core/Internal/Encryption/ProductionKdfCost.php']);
 });
+
+it('lets no second class name a derivation cost of its own', function (): void {
+    // The test above asks who implements the contract, which a second cost
+    // only answers to if it was written as one. A rival abstraction under any
+    // other name -- a value object, a static factory, a constant on the class
+    // that derives -- has to name these constants to set a cost, so this asks
+    // the question the other one cannot: who spends Argon2id work here at all.
+    $repoRoot = dirname((string) realpath(base_path('Modules')));
+    $namers = [];
+
+    foreach (['Modules', 'app'] as $directory) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($repoRoot.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            $path = $file->getPathname();
+
+            if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
+                continue;
+            }
+
+            if (preg_match('/SODIUM_CRYPTO_PWHASH_(?:OPS|MEM)LIMIT_/', (string) file_get_contents($path)) === 1) {
+                $namers[] = str_replace($repoRoot.'/', '', $path);
+            }
+        }
+    }
+
+    sort($namers);
+
+    // BackupEncryptor is the second entry on purpose: its constants are the
+    // ceiling it refuses a backup header above, not a cost it derives at, and
+    // that bound must hold still if the shipped cost ever rises.
+    expect($namers)->toBe([
+        'Modules/Core/Internal/Encryption/ProductionKdfCost.php',
+        'Modules/Core/Public/Services/BackupEncryptor.php',
+    ]);
+});
