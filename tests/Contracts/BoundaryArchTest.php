@@ -2129,6 +2129,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Ledger/tests/Feature/RecordTransactionsEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Migration/tests/Contracts/MigrationImportBaselineRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'Modules/Migration/tests/Contracts/MigrationSourceMapRegistryColumnsTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'Modules/Mobile/tests/Feature/AResumedTrustGateStillNamesBothDevicesTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/ImportWizardRecoveryDownloadTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',

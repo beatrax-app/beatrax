@@ -193,6 +193,11 @@ final class MobilePairingScan extends Component
             $this->importResponderTokenHash = $inFlight['token_hash'];
             $this->importDesktopDeviceId = $inFlight['peer_device_id'];
 
+            // Only submitCode() set these, and a resume does not go through it,
+            // so the trust gate asked a reader to confirm a pairing between two
+            // blanks — while the desktop beside it named both devices.
+            $this->hydrateDeviceNames($gateway, $devices, $userId);
+
             return;
         }
 
