@@ -35,6 +35,7 @@ use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
@@ -86,8 +87,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         ScanMessageMapper $mapper,
         JobUserContext $jobUser,
         GraphDeltaWalk $deltaWalk,
+        LoggerInterface $logger,
     ): void {
-        $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
+        $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery, $logger);
         if ($prepared === null) {
             return;
         }
@@ -125,6 +127,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         MimeHeaderParser $mime,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
+        LoggerInterface $logger,
     ): ?PreparedScan {
         $connection = $db->connection();
 
@@ -144,7 +147,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return null;
         }
 
-        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId, $logger);
 
         return new PreparedScan($context, $provider, $senderPatterns, $stateRow);
     }
@@ -252,10 +255,17 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
         try {
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
-        } catch (GmailRawDecodeException|MessageUnavailableException) {
-            // Permanent for this id. Letting it out would leave the cursor
-            // where it was, and every later tick would walk into the same
-            // message again — one unfetchable message stalls the mailbox.
+        } catch (MessageUnavailableException) {
+            // Gmail no longer holds the message the cursor named, so there is
+            // nothing here to lose and nothing to write down; letting it out
+            // would stall the cursor behind an id that will never resolve.
+            return;
+        } catch (GmailRawDecodeException $e) {
+            // Bytes this device received and could not read, which is a loss
+            // and not an absence. The cursor moves past it either way, so the
+            // skip is recorded before the walk goes on without it.
+            $context->recordUndecodableMessage($messageId, $e);
+
             return;
         }
 
@@ -263,11 +273,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         // carry no address, so the allow-list can only be applied once the
         // bytes are in hand — before anything reaches disk or the index.
         $headers = $context->parseHeaders($rawEml, null);
-        if (! $mapper->matchesAnyPattern($headers->senderEmail, $senderPatterns)) {
-            return;
+        if ($mapper->matchesAnyPattern($headers->senderEmail, $senderPatterns)) {
+            $context->storeParsedMessage($messageId, $rawEml, $headers);
         }
-
-        $context->storeParsedMessage($messageId, $rawEml, $headers);
     }
 
     /**
