@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /** @return list<string> the scripts that patch the generated native project */
 function scaffoldPatchScripts(): array
 {
@@ -102,4 +104,136 @@ it('still finds this repository own scaffold', function (): void {
 
     expect($resolved)->toBeString()
         ->and(is_file($resolved.'/AndroidManifest.xml'))->toBeTrue();
+});
+
+// A patch script that resolves two independent targets — a generated scaffold
+// file and a vendor source, or one platform and the other — must not let the
+// first one's absence end the process. `nativephp_grant_webview_camera.php`
+// did, and the half it skipped was the vendor patch, the only one that
+// survives a rebuild; `nativephp_exclude_data_from_backup.php` did, and the
+// half it skipped was the iCloud exclusion for the whole ledger. Both reported
+// success in a line naming the other platform.
+it('ends a missing-target skip at its own half rather than the whole run', function (): void {
+    $scripts = glob(scaffoldScriptsDirectory().DIRECTORY_SEPARATOR.'nativephp_*.php') ?: [];
+
+    // Counted first: a resolver that found nothing would otherwise report a
+    // clean tree, which is the same silence this rule exists to catch.
+    expect($scripts)->not->toBeEmpty();
+
+    $offenders = [];
+    $examined = 0;
+
+    foreach ($scripts as $path) {
+        $lines = explode("\n", (string) file_get_contents($path));
+
+        $targets = [];
+        $exits = [];
+
+        foreach ($lines as $number => $line) {
+            $resolved = PatternScan::first("/beatrax(?:ScaffoldPath|MobileVendorPath)\\(\s*'([^']+)'/", $line);
+
+            if ($resolved !== []) {
+                $targets[] = [$number, $resolved[1]];
+            }
+
+            if (PatternScan::matches('/^\s*exit\(0\);/', $line)) {
+                $exits[] = $number;
+            }
+        }
+
+        $first = $targets[0] ?? null;
+        $later = array_values(array_filter($targets, fn (array $t): bool => $first !== null && $t[1] !== $first[1]));
+
+        if ($first === null || $later === []) {
+            continue;
+        }
+
+        $examined++;
+
+        foreach ($exits as $exit) {
+            if ($exit > $first[0] && $exit < $later[0][0]) {
+                $offenders[] = basename($path).':'.($exit + 1);
+
+                break;
+            }
+        }
+    }
+
+    expect($examined)->toBeGreaterThan(1)
+        ->and($offenders)->toBe([], implode("\n  ", array_merge(
+            ['A skip guarding one target must end that half, not the process.',
+                'These scripts exit(0) between resolving one target and resolving a different one,',
+                'so the later half is silently skipped whenever the earlier one is absent:'],
+            $offenders,
+        )));
+});
+
+/**
+ * @return array<string, string> patch scripts deliberately in no build chain,
+ *                               each mapped to why
+ */
+function scaffoldScriptsInNoChain(): array
+{
+    return [
+        // Superseded by nativephp_developer_id_signing.php, which pins an
+        // explicit mac.identity. Kept for local unsigned development builds
+        // and recorded as such in .docs/features/desktop/build-prebuild-hooks.md.
+        'nativephp_force_adhoc_signing' => 'kept for local unsigned development builds',
+    ];
+}
+
+// A script that is on disk and in no chain never runs, and nothing says so:
+// the build is green, the patch simply is not applied, and what ships differs
+// from what the repository appears to do. The list->disk direction was already
+// checked; this is disk->list, which is the direction a newly added script
+// goes missing in.
+it('runs every patch script from some chain, or names why it does not', function (): void {
+    $directory = scaffoldScriptsDirectory();
+
+    $onDisk = array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        glob($directory.DIRECTORY_SEPARATOR.'nativephp_*.php') ?: [],
+    );
+
+    // Counted before anything is subtracted, so a resolver that found no
+    // scripts cannot report a fully covered tree.
+    expect($onDisk)->toHaveCount(count($onDisk))->and($onDisk)->not->toBeEmpty();
+
+    // Read as text, not executed: config/nativephp.php calls env() and the
+    // runner is a script with side effects, so enumerating them by running
+    // them would invoke the build behaviour under test.
+    $invoked = [];
+
+    foreach ([$directory.'/nativephp_patch_all.php', dirname($directory).'/config/nativephp.php'] as $chain) {
+        if (! is_file($chain)) {
+            continue;
+        }
+
+        foreach (PatternScan::all('/nativephp_[a-z0-9_]+/', (string) file_get_contents($chain))[0] as $name) {
+            $invoked[$name] = true;
+        }
+    }
+
+    expect($invoked)->not->toBeEmpty();
+
+    // Neither is a patch: one is the runner, the other the shared resolver.
+    $notPatches = ['nativephp_patch_all', 'nativephp_scaffold_root'];
+    $pinned = scaffoldScriptsInNoChain();
+
+    $orphans = array_values(array_filter(
+        $onDisk,
+        static fn (string $name): bool => ! isset($invoked[$name])
+            && ! in_array($name, $notPatches, true)
+            && ! array_key_exists($name, $pinned),
+    ));
+
+    // A pin that no longer names an uninvoked script is the same silence one
+    // level up, so it fails too rather than rotting into a name nobody checks.
+    $stale = array_values(array_filter(
+        array_keys($pinned),
+        static fn (string $name): bool => ! in_array($name, $onDisk, true) || isset($invoked[$name]),
+    ));
+
+    expect($orphans)->toBe([], 'in no build chain and unexplained: '.implode(', ', $orphans))
+        ->and($stale)->toBe([], 'pinned as unchained but now absent or invoked: '.implode(', ', $stale));
 });
