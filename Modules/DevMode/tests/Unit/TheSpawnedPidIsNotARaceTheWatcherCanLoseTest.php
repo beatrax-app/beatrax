@@ -26,8 +26,12 @@ it('reads the pid back even when the watcher is slow to emit it', function (): v
     expect($process->isSuccessful())->toBeTrue();
     expect(trim($process->getOutput()))->toMatch('/^\d+$/');
 
+    // Waiting on the value rather than on the file: `echo $? > path` creates
+    // the sidecar and writes the digits into it as two steps, so a wait that
+    // ends at is_file() can read it empty -- which read() answers null for,
+    // and null is what a dropped pid answers too.
     $deadline = microtime(true) + 10.0;
-    while (! is_file($exitPath) && microtime(true) < $deadline) {
+    while (RunExitCodeFile::read($outPath) === null && microtime(true) < $deadline) {
         usleep(20_000);
     }
 
