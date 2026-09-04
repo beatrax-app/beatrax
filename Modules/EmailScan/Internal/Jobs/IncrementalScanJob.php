@@ -17,6 +17,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
@@ -255,17 +256,23 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
         try {
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
+        } catch (BoundedReadException $e) {
+            $context->skipOversized($messageId, $e);
+            $rawEml = null;
         } catch (MessageUnavailableException) {
             // Gmail no longer holds the message the cursor named, so there is
             // nothing here to lose and nothing to write down; letting it out
             // would stall the cursor behind an id that will never resolve.
-            return;
+            $rawEml = null;
         } catch (GmailRawDecodeException $e) {
             // Bytes this device received and could not read, which is a loss
             // and not an absence. The cursor moves past it either way, so the
             // skip is recorded before the walk goes on without it.
             $context->recordUndecodableMessage($messageId, $e);
+            $rawEml = null;
+        }
 
+        if ($rawEml === null) {
             return;
         }
 
@@ -379,11 +386,15 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $context->storeFetchedMessage(
-            $messageId,
-            $graph->getRawMessage($this->inboxId, $messageId),
-            $mapper->graphMessageInternalDate($msgMeta),
-        );
+        try {
+            $context->storeFetchedMessage(
+                $messageId,
+                $graph->getRawMessage($this->inboxId, $messageId),
+                $mapper->graphMessageInternalDate($msgMeta),
+            );
+        } catch (BoundedReadException $e) {
+            $context->skipOversized($messageId, $e);
+        }
     }
 
     // Laravel calls this as a bare `$command->failed($e)` with no container

@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\Connection;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\InboxMessageStatus;
+use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
@@ -29,6 +30,21 @@ final readonly class InboxScanContext
         private int $userId,
         public LoggerInterface $logger,
     ) {}
+
+    // One message this device will not hold whole is one message skipped, not
+    // a failed scan: a refusal let out of the walk leaves the cursor where it
+    // was, and every later tick walks back into the same message.
+    public function skipOversized(string $messageId, BoundedReadException $refusal): void
+    {
+        $this->logger->warning(
+            'EmailScan: skipped a message larger than this device reads whole.',
+            [
+                'inbox_id' => $this->inboxId,
+                'provider_message_id' => $messageId,
+                'message' => $refusal->getMessage(),
+            ],
+        );
+    }
 
     public function userId(): int
     {
