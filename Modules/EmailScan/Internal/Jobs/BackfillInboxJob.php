@@ -87,6 +87,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         KnownSenderQuery $senderQuery,
         JobUserContext $jobUser,
         GraphDeltaWalk $deltaWalk,
+        LoggerInterface $logger,
     ): void {
         $connection = $db->connection();
 
@@ -128,7 +129,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         // but a crafted POST may carry an out-of-range value.
         $window = max(1, min(12, $this->windowMonths));
 
-        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId, $logger);
 
         // The default arm is unreachable while the inboxes CHECK trigger
         // pair holds; it surfaces bypassed data without retrying forever.
@@ -276,7 +277,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
             return true;
-        } catch (InvalidStateTransitionException) {
+        } catch (InvalidStateTransitionException $e) {
+            // BackfillWindowModal answers these states in the modal rather than
+            // dispatching, so arriving here is the race it cannot close — and
+            // a reader whose modal closed on a backfill that never started.
+            $context->logger->warning('BackfillInboxJob: the scan state machine refused the opening transition, so no backfill ran.', [
+                'inbox_id' => $this->inboxId,
+                'refused_transition' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }
