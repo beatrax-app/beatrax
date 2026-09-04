@@ -52,8 +52,10 @@ it('leaves no preg_match whose answer cannot tell a failed scan from an empty on
         'Two written forms are accepted instead, and only these two, because both separate',
         'the failure from the empty answer: `=== 1` / `!== 1` (exactly one match; anything',
         'else, failure included, is not a match) and `=== false` / `!== false` (the failure',
-        'itself, handled). `> 0`, `=== 0`, `(bool)`, `!` and a bare `if` all fold false into',
-        'the answer, and a discarded return folds it into $matches.',
+        'itself, handled). Either may sit against the call or against a variable the call',
+        'was assigned to, up to the end of the function. `> 0`, `=== 0`, `(bool)`, `!` and a',
+        'bare `if` all fold false into the answer, and a discarded return folds it into',
+        '$matches.',
     ]));
 });
 
@@ -87,12 +89,30 @@ it('finds the shape it was written for and leaves the two checked forms alone', 
     'a count above zero' => ['return preg_match_all($p, $s, $m) > 0;', true],
     'a count against zero' => ['return preg_match_all($p, $s, $m) === 0;', true],
     'an unchecked assignment' => ['$n = preg_match($p, $s, $m); return $m;', true],
+    'an assignment read only for truth' => ['$n = preg_match($p, $s, $m); if ($n) { return $m; } return null;', true],
+    'an assignment compared above zero' => ['$n = preg_match_all($p, $s, $m); if ($n > 0) { return $m; } return null;', true],
+    'an assignment whose only reader is the next function' => [
+        'function a() { $n = preg_match($p, $s, $m); return $m; } function b(int $n): bool { return $n === 1; }',
+        true,
+    ],
     'an argument to an assertion' => ['expect(preg_match($p, $s))->toBe(1);', true],
     'exactly one match' => ['if (preg_match($p, $s, $m) === 1) { return $m[1]; }', false],
     'not exactly one match' => ['if (preg_match($p, $s) !== 1) { return null; }', false],
     'the failure itself' => ['if (preg_match_all($p, $s, $m) === false) { throw new RuntimeException("x"); }', false],
     'the failure, negated' => ['if (preg_match_all($p, $s, $m) !== false) { return $m; }', false],
     'the same comparison written the other way round' => ['if (1 === preg_match($p, $s, $m)) { return $m; }', false],
+    'the failure, assigned and raised on a line below' => [
+        '$found = preg_match($p, $s); if ($found === false) { throw new RuntimeException("x"); } return $found === 1;',
+        false,
+    ],
+    'the count, assigned and raised on a line below' => [
+        '$hit = preg_match_all($p, $s, $m); if ($hit === false) { throw new RuntimeException("x"); } return $m[1];',
+        false,
+    ],
+    'a match count assigned and compared with one below' => [
+        '$n = preg_match($p, $s, $m); if ($n === 1) { return $m; } return null;',
+        false,
+    ],
     'a method that happens to share the name' => ['return $this->preg_match($p, $s);', false],
     'the name inside a string' => ['$hint = "call preg_match here";', false],
     'the name inside a comment' => ['// preg_match($p, $s, $m); is what this used to do', false],
