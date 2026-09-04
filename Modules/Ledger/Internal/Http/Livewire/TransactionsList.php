@@ -11,8 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Support\DerivedRowId;
-use Modules\Core\Public\Support\SafeDate;
+use Modules\Ledger\Internal\Http\Livewire\Support\TransactionFilterInputs;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
 use Modules\Ledger\Internal\Support\TransactionListViewData;
@@ -174,35 +173,20 @@ final class TransactionsList extends Component
         $this->resetPagination();
     }
 
-    // The account and category chips removed themselves with a PHP expression —
-    // `array_filter($filterAccounts, fn($id) => …)` — written into an attribute
-    // the browser evaluates as JavaScript, where `fn($id) =>` is a syntax error.
-    // Both close buttons threw in Alpine's evaluator and did nothing at all,
-    // on the one panel whose whole purpose is inviting a filter to be dropped.
+    // The chips removed themselves with a PHP expression — `array_filter($a,
+    // fn($id) => …)` — written into an attribute the browser evaluates as
+    // JavaScript, where `fn($id) =>` is a syntax error. Both close buttons
+    // threw in Alpine's evaluator and did nothing at all.
     public function removeAccountFilter(int|string $accountId): void
     {
-        $this->filterAccounts = self::withoutId($this->filterAccounts, $accountId);
+        $this->filterAccounts = TransactionFilterInputs::withoutId($this->filterAccounts, $accountId);
         $this->resetPagination();
     }
 
     public function removeCategoryFilter(int|string $categoryId): void
     {
-        $this->filterCategories = self::withoutId($this->filterCategories, $categoryId);
+        $this->filterCategories = TransactionFilterInputs::withoutId($this->filterCategories, $categoryId);
         $this->resetPagination();
-    }
-
-    // resetPagination() is called by hand rather than left to updated(): that
-    // hook fires for a property the wire writes, and these two are written by a
-    // method instead.
-    /**
-     * @param  list<int>  $ids
-     * @return list<int>
-     */
-    private static function withoutId(array $ids, int|string $removed): array
-    {
-        $target = DerivedRowId::fromWire($removed);
-
-        return array_values(array_filter($ids, static fn (int $id): bool => $id !== $target));
     }
 
     // Search and every filter are wire:model.live, so refining one re-ran the
@@ -216,6 +200,9 @@ final class TransactionsList extends Component
         }
     }
 
+    // resetPagination() is called by hand rather than left to updated(): that
+    // hook fires for a property the wire writes, and these two are written by a
+    // method instead.
     private function resetPagination(): void
     {
         $this->cursorId = null;
@@ -258,22 +245,14 @@ final class TransactionsList extends Component
     // property instead, both readers see the same filter.
     private function normaliseFilters(): void
     {
-        $this->filterAccounts = self::positiveIds($this->filterAccounts);
-        $this->filterCategories = self::positiveIds($this->filterCategories);
-        $this->filterCounterparties = self::positiveIds($this->filterCounterparties);
-        $this->filterAfter = self::supportedDay($this->filterAfter);
-        $this->filterBefore = self::supportedDay($this->filterBefore);
+        $this->filterAccounts = TransactionFilterInputs::positiveIds($this->filterAccounts);
+        $this->filterCategories = TransactionFilterInputs::positiveIds($this->filterCategories);
+        $this->filterCounterparties = TransactionFilterInputs::positiveIds($this->filterCounterparties);
+        $this->filterAfter = TransactionFilterInputs::supportedDay($this->filterAfter);
+        $this->filterBefore = TransactionFilterInputs::supportedDay($this->filterBefore);
     }
 
     // ?before=2026 is not a wider filter, it is a string the DATE comparison
-    // read lexically: 187 rows all dated 2026 came back as none, under a chip
-    // printing "Before 2026" and a count claiming a filter was applied. The
-    // picker and every preset emit a day, so anything else is a bad link.
-    private static function supportedDay(string $raw): string
-    {
-        return SafeDate::dayOrNull($raw) === null ? '' : trim($raw);
-    }
-
     // Captures $fullHistory on entry so clearSearch() can restore the view
     // the user was in, rather than whatever the search happened to span.
     private function renderSearch(
@@ -408,30 +387,6 @@ final class TransactionsList extends Component
 
     // array<array-key, mixed> deliberately: ?account[]= is reader-supplied, so
     // the declared list<int> describes what the rail sends, not what arrives.
-    // A non-numeric member is dropped rather than cast, since (int) 'abc' is
-    // the same 0 an unselected option sends, which would narrow to nothing.
-    /**
-     * @param  array<array-key, mixed>  $ids
-     * @return list<int>
-     */
-    private static function positiveIds(array $ids): array
-    {
-        $clean = [];
-
-        foreach ($ids as $id) {
-            if (! is_numeric($id)) {
-                continue;
-            }
-
-            $numeric = (int) $id;
-            if ($numeric > 0) {
-                $clean[] = $numeric;
-            }
-        }
-
-        return $clean;
-    }
-
     // appendedCursorIds stops a re-render at the same cursor appending the
     // same rows twice, which Livewire does whenever any property changes.
     /**
