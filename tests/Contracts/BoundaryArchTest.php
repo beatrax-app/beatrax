@@ -208,7 +208,7 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
     // backfill_progress sits on the inboxes table rather than inbox_scan_state,
     // but it is a per-inbox lifecycle signal, so routing it through
     // InboxScanStateMachine keeps the sole-mutator invariant whole. The grep
-    // targets UPDATE only: OAuthCallbackController's first-connect INSERT is legal.
+    // targets UPDATE only: ConnectInboxFromGrant's first-connect INSERT is legal.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
@@ -2341,6 +2341,12 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
         'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
+        // The subprocess that builds a phone's first-launch schema drives the
+        // production first-launch class itself, since a copy of it here would
+        // stop proving anything the moment the real one changed. There is no
+        // Public seam: nothing outside the mobile shell may start a migration.
+        'tests/Support/first-launch-schema-probe.php -> Modules\\Mobile\\Internal\\Boot\\MobileFirstLaunchBootstrap',
+        'tests/Support/first-launch-schema-probe.php -> Modules\\Mobile\\Internal\\Boot\\SchemaCompletionMarker',
         // The fixture rebaser and the importer must read a two-digit year the
         // same way, and the only honest proof runs the real parser over the
         // rebased line. SwiftDate carries the rule; the parser around it stays

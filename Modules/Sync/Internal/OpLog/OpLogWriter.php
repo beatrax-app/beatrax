@@ -18,8 +18,13 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use RuntimeException;
 
-final readonly class OpLogWriter
+final readonly class OpLogWriter implements OpCaptureSink
 {
+    // The field a tombstone occupies. Named rather than repeated because the
+    // deferred queue records the same coordinate for a delete it could not
+    // sign, and two spellings of it would be two different coordinates.
+    public const string TOMBSTONE_FIELD = '__tombstone__';
+
     // Always-JSON wire contract: PHP null maps to SQL NULL (the
     // clear/tombstone sentinel); all other values are
     // json_encode($rawValue, JSON_THROW_ON_ERROR) — NEVER json_encode(null),
@@ -207,7 +212,7 @@ final readonly class OpLogWriter
 
     public function writeDelete(string $table, int|string $pk): void
     {
-        $this->writeEntry($table, $pk, '__tombstone__', null, OpType::DeleteTombstone);
+        $this->writeEntry($table, $pk, self::TOMBSTONE_FIELD, null, OpType::DeleteTombstone);
     }
 
     // Called once in __construct. Prevents clock rewind on restart: the next

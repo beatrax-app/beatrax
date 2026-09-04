@@ -131,7 +131,10 @@ What the module explicitly does NOT do:
 - **Controllers/**
   - `HealthController` — the auth-free `/health` endpoint. Returns
     `{status, app_version, php_version, sqlite_version}` — a flat
-    JSON object with deterministic key order, no timestamp.
+    JSON object with deterministic key order, no timestamp. The reading
+    itself is `Internal/Support/RuntimeHealthSnapshot`, because the
+    version probe opens a connection and a controller does not
+    ([a controller hands the work to an action](../../conventions/a-controller-hands-the-work-to-an-action.md)).
 - **Services/** (continued)
   - `RestoreEncryptedBackup` — mirrors `db:restore`'s safety rails for the
     in-app flow. Ordering is the safety contract: the upload is decrypted
@@ -416,8 +419,9 @@ The `/health` endpoint:
 ```
 GET /health
   → HealthController::__invoke
-      → resolve app_version from NATIVEPHP_APP_VERSION env (fallback 'dev')
-      → SELECT sqlite_version() via injected DatabaseManager
+      → RuntimeHealthSnapshot
+           → resolve app_version from NATIVEPHP_APP_VERSION env (fallback 'dev')
+           → SELECT sqlite_version() via injected DatabaseManager
       → return {status: ok, app_version, php_version, sqlite_version}
 ```
 
@@ -460,6 +464,13 @@ run: `encrypt()` uses `MODERATE` (0.75 s, 256 MiB) and `encryptWithKey()` uses
 `(1, 8 KiB)`, and `encryptWithParams()` is private, so those two are the only
 headers Beatrax has ever produced. A header past `MODERATE` was not written
 here, and is refused as a format error rather than derived.
+
+`MAX_OPSLIMIT`/`MAX_MEMLIMIT` are fixed constants rather than a reading of the
+injected `Modules\Core\Public\Contracts\KdfCost`, which the test suite lowers
+to libsodium's floor: a backup written at the shipped cost has to keep opening
+under a process deriving at a cheaper one, so this ceiling must not follow the
+write cost down. The shipped cost, and how it is pinned, is
+[The Argon2id cost, and why the suite does not pay it](../../architecture/argon2id-cost.md).
 
 Quantum safety: this scheme is post-quantum secure by construction
 because it is purely symmetric — there is no public-key/asymmetric

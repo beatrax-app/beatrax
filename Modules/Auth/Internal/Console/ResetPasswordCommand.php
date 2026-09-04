@@ -7,6 +7,7 @@ namespace Modules\Auth\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Auth\Public\Support\Username;
@@ -26,6 +27,7 @@ class ResetPasswordCommand extends Command
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
         private readonly SessionRevoker $sessions,
+        private readonly AppLockProvisioner $provisioner,
     ) {
         parent::__construct();
     }
@@ -66,6 +68,12 @@ class ResetPasswordCommand extends Command
                 'password' => $this->hasher->make($password),
                 'force_password_change_at_next_login' => true,
             ]);
+
+        // This road holds no old password to unwrap with, so the app-lock
+        // recovery wrap cannot be carried over. Stamped rather than left to
+        // fail on the day a forgotten PIN needs it — the lock screen offers
+        // that road by name.
+        $this->provisioner->markRecoveryWrapStale($user->id);
 
         // The escape hatch is reached when the account is already out of
         // reach, so whatever still holds it goes with the old password.

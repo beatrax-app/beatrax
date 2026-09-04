@@ -35,7 +35,10 @@ function filesThatCouldNameTheDatabaseClock(): array
             new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
         ) as $file) {
             $path = $file->getPathname();
-            if ($file->isFile() && str_ends_with($path, '.php') && str_contains(strtolower($path), 'migrations/')) {
+            // Leading slash: unanchored, this matched every file in a checkout
+            // whose own directory happened to end in the word, and the guard then
+            // reported two Core TESTS as offenders on one machine and not another.
+            if ($file->isFile() && str_ends_with($path, '.php') && str_contains(strtolower($path), '/migrations/')) {
                 $paths[] = $path;
             }
         }

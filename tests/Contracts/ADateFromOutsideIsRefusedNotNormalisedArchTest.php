@@ -101,7 +101,9 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterAfter = self::supportedDay\(\$this->filterAfter\);/',
+                '/\$this->filterAfter = TransactionFilterInputs::supportedDay\(\$this->filterAfter\);/',
+            ],
+            'Modules/Ledger/Internal/Http/Livewire/Support/TransactionFilterInputs.php' => [
                 "/return SafeDate::dayOrNull\\(\\\$raw\\) === null \\? '' : trim\\(\\\$raw\\);/",
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
@@ -115,7 +117,7 @@ const SUPPLIED_DATE_FIELDS = [
         'sites' => 2,
         'refusals' => [
             'Modules/Ledger/Internal/Http/Livewire/TransactionsList.php' => [
-                '/\$this->filterBefore = self::supportedDay\(\$this->filterBefore\);/',
+                '/\$this->filterBefore = TransactionFilterInputs::supportedDay\(\$this->filterBefore\);/',
             ],
             'Modules/Search/Public/Services/SearchQuery.php' => [
                 '/\$before = self::boundDay\(\$filters->before, endOfMonth: true\);/',

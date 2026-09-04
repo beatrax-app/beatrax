@@ -13,6 +13,8 @@ use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
+use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Psr\Log\LoggerInterface;
@@ -31,6 +33,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
         private LoggerInterface $log,
         private Container $container,
         private CoveredTableOrder $tableOrder,
+        private BackfillProgress $progress,
     ) {}
 
     public function capture(ImportRun $importRun, User $user): void
@@ -155,18 +158,33 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     }
 
     // Null when there is no usable device identity — sync off, or the app
-    // locked. The write still happened; it travels on the next backfill.
+    // locked. "It travels on the next backfill" was the standing excuse and
+    // there was no next backfill: one is only opened at sync-enable and at
+    // pairing, so an import done while locked reached a peer never.
     private function writerOrNull(User $user): ?OpLogWriter
     {
         try {
             return $this->container->make(OpLogWriter::class);
         } catch (Throwable $e) {
-            $this->log->debug('ImportSyncCapture: no op-log writer available; nothing captured.', [
+            $this->oweABackfill($user->id);
+
+            $this->log->debug('ImportSyncCapture: no op-log writer available; a backfill is owed instead.', [
                 'userId' => $user->id,
                 'exception' => $e::class,
             ]);
 
             return null;
+        }
+    }
+
+    // The whole-database walk rather than a per-row queue, because this path
+    // captures rows by id in a dependency order and re-deriving that later is
+    // the walk. A device that never enabled sync is left alone: it owes no
+    // peer anything, and enabling sync captures everything it holds.
+    private function oweABackfill(int $userId): void
+    {
+        if ($this->container->make(DeviceIdentityLoader::class)->exists($userId)) {
+            $this->progress->open($userId);
         }
     }
 

@@ -16,16 +16,16 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Ingestion\Public\Enums\SourceFormat;
-use Modules\Receipts\Internal\Exceptions\InboxDropScanException;
 use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
-use Modules\Receipts\Public\Support\UploadLimits;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -90,7 +90,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
 
         foreach ($this->topLevelCandidates($files, $baseDir) as $path) {
             try {
-                if (! $this->recordCandidate($files, $recordReceipt, $mboxIterator, $bridge, $userRow, $path, $importRunId)) {
+                if (! $this->recordCandidate($recordReceipt, $mboxIterator, $bridge, $userRow, $path, $importRunId)) {
                     // Unknown extension on a top-level file — leave it
                     // alone; don't move and don't error.
                     continue;
@@ -106,7 +106,6 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
     // .mbox streams each contained message. Returns false for an
     // unrecognised extension so the caller leaves the file untouched.
     private function recordCandidate(
-        Filesystem $files,
         RecordReceipt $recordReceipt,
         MboxIterator $mboxIterator,
         ReceiptLedgerBridge $bridge,
@@ -117,7 +116,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return match ($ext) {
-            'eml' => $this->recordEmlFile($recordReceipt, $bridge, $files, $user, $path, $importRunId),
+            'eml' => $this->recordEmlFile($recordReceipt, $bridge, $user, $path, $importRunId),
             'mbox' => $this->recordMboxFile($recordReceipt, $bridge, $mboxIterator, $user, $path, $importRunId),
             default => false,
         };
@@ -126,17 +125,13 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
     private function recordEmlFile(
         RecordReceipt $recordReceipt,
         ReceiptLedgerBridge $bridge,
-        Filesystem $files,
         User $user,
         string $path,
         ?int &$importRunId,
     ): bool {
-        $size = @filesize($path);
-        if ($size !== false && $size > UploadLimits::MAX_MESSAGE_BYTES) {
-            throw InboxDropScanException::emlTooLarge(basename($path));
-        }
+        $eml = BoundedRead::file(basename($path), $path, UploadLimits::MAX_MESSAGE_BYTES);
 
-        $outcome = ($recordReceipt)($files->get($path), $user, basename($path));
+        $outcome = ($recordReceipt)($eml, $user, basename($path));
         $this->bridgeOutcome($bridge, $outcome, $user, $importRunId, SourceFormat::Eml);
 
         return true;

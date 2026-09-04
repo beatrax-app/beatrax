@@ -13,7 +13,7 @@ matching rule wins.** A rule with `priority` 10 overrides a rule with
 
 ## Selecting and ordering the rules
 
-`RuleEngine::match()` reads the candidate set with:
+`ActiveRuleSet` reads the candidate set that `RuleEngine::match()` walks, with:
 
     ->where('user_id', $user->id)
     ->where('active', true)
@@ -130,9 +130,15 @@ nothing — so the guard is on emptiness, never on parseability.
 
 ## Ordering actions within a rule
 
-`RuleEngine::actionsFor()` reads a fired rule's actions ordered by
-`position`, then `id`. As with rules, the `id` tiebreak matters because
-`position` has no write-layer uniqueness.
+`ActiveRuleSet::actionsByRule()` reads every active rule's actions in one
+query ordered by `position`, then `id`, and groups them under their owning
+rule. As with rules, the `id` tiebreak matters because `position` has no
+write-layer uniqueness.
+
+They are read once for the life of the set rather than once per fired rule:
+matching runs per transaction, so a query per rule per row cost 282.9 queries
+for every row of a re-apply. See
+[a read bounded by how much the user has](../../architecture/reads-bounded-by-the-user.md).
 
 ## Last writer wins
 

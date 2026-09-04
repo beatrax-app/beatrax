@@ -20,6 +20,7 @@ use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -38,14 +39,14 @@ final class RulesPage extends Component
         $this->dispatch('rule-form:open');
     }
 
-    public function openEditModal(int $ruleId): void
+    public function openEditModal(int|string $ruleId): void
     {
-        $this->dispatch('rule-form:open', ruleId: $ruleId);
+        $this->dispatch('rule-form:open', ruleId: DerivedRowId::fromWire($ruleId));
     }
 
-    public function confirmDelete(int $ruleId): void
+    public function confirmDelete(int|string $ruleId): void
     {
-        $this->confirmingDeleteId = $ruleId;
+        $this->confirmingDeleteId = DerivedRowId::fromWire($ruleId);
     }
 
     public function cancelDelete(): void
@@ -53,12 +54,12 @@ final class RulesPage extends Component
         $this->confirmingDeleteId = null;
     }
 
-    public function deleteRule(int $ruleId, CurrentUser $currentUser, DeleteCategorizationRule $delete): void
+    public function deleteRule(int|string $ruleId, CurrentUser $currentUser, DeleteCategorizationRule $delete): void
     {
         // A tampered Livewire payload would otherwise surface as a 500; the
         // action's own ownership guard is the real boundary.
         try {
-            ($delete)($currentUser->user(), $ruleId);
+            ($delete)($currentUser->user(), DerivedRowId::fromWire($ruleId));
         } catch (NotFoundHttpException) {
             $this->confirmingDeleteId = null;
             $this->flashMessage = Lang::get('categorization::rules.flash_not_found');

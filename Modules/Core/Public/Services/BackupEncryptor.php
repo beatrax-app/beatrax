@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Services;
 
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Contracts\KdfCost;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -21,6 +22,10 @@ final class BackupEncryptor implements FileEncryptor
     // ceiling is a hang and an OOM budget. Bounded by what this application can
     // WRITE rather than by what libsodium will accept: nothing here produces
     // more than MODERATE, so a header asking for more is not one of ours.
+
+    // Fixed here rather than read off the injected cost: a file written at the
+    // shipped cost must still open under a suite deriving at a cheaper one, so
+    // this bound must not move when that one does.
     /**
      * @link ../../../../.docs/features/core/architecture.md#the-argon2id-parameters-a-backup-header-may-ask-for
      */
@@ -35,6 +40,8 @@ final class BackupEncryptor implements FileEncryptor
 
     private const int KEY_MEMLIMIT = 8192;
 
+    public function __construct(private readonly KdfCost $cost) {}
+
     /**
      * @throws BackupIoException on I/O failure
      * @throws SodiumException on a crypto failure (should not happen for valid input)
@@ -45,8 +52,8 @@ final class BackupEncryptor implements FileEncryptor
             $plainPath,
             $encPath,
             $passphrase,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
+            $this->cost->opslimit(),
+            $this->cost->memlimit(),
         );
     }
 

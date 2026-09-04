@@ -6,12 +6,15 @@ namespace Modules\Sync\Internal\Http\Livewire\Concerns;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 trait ManagesDeviceRenaming
 {
-    public function startRename(int $deviceId): void
+    public function startRename(int|string $deviceId): void
     {
+        $deviceId = DerivedRowId::fromWire($deviceId);
+
         $this->renamingDeviceId = $deviceId;
         $this->renameValue = $this->currentNameFor($deviceId);
     }

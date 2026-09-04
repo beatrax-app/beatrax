@@ -335,7 +335,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Receipts/Public/Pipeline/FileDropEmlBlobStore.php',
         'Modules/Receipts/Public/Pipeline/ParsedMimeMessage.php',
         'Modules/Receipts/Public/Services/ReceiptConflictQuery.php',
-        'Modules/Receipts/Public/Support/UploadLimits.php',
         'Modules/Recurring/Public/Actions/ApproveRecurringSeries.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesName.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesVarianceTolerance.php',
