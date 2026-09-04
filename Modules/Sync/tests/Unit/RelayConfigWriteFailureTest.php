@@ -86,3 +86,55 @@ it('refuses to report a saved token it could not write', function (): void {
 
     @rmdir($dir.DIRECTORY_SEPARATOR.'sync-relay-token.json');
 });
+
+// Both setters rewrite the WHOLE file, so each carries the other's field
+// forward by reading it back first. That read folded "absent" and "will not
+// parse" into one null, and the writer then wrote the fold: a torn relay.json
+// cost a pinned relay its pin, which is the only thing verifying the
+// certificate the relay presents.
+function tornRelayConfig(): string
+{
+    $path = UserDataPathService::appPath('sync/relay.json');
+    mkdir(dirname($path), 0700, true);
+    file_put_contents($path, '{"endpoint":"https://relay.example/ws","pin":"AAAABBBBCCCC');
+
+    return $path;
+}
+
+it('refuses to save an endpoint over a pin it could not read', function (): void {
+    $path = tornRelayConfig();
+    $before = (string) file_get_contents($path);
+
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    expect(fn () => $config->setEndpointUrl('https://relay.example/other'))
+        ->toThrow(RelayConfigWriteException::class, 'refusing to overwrite it with a blank field')
+        ->and((string) file_get_contents($path))->toBe($before);
+});
+
+it('refuses to save a pin over an endpoint it could not read', function (): void {
+    $path = tornRelayConfig();
+    $before = (string) file_get_contents($path);
+
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    expect(fn () => $config->setPin('DDDDEEEEFFFF'))
+        ->toThrow(RelayConfigWriteException::class, 'refusing to overwrite it with a blank field')
+        ->and((string) file_get_contents($path))->toBe($before);
+});
+
+// The refusal must not cost the ordinary path: a readable file still carries
+// the field the setter is not writing.
+it('carries the other field forward when the stored config reads', function (): void {
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    $config->setEndpointUrl('https://relay.example/ws');
+    $config->setPin('AAAABBBBCCCC');
+    $config->setEndpointUrl('https://relay.example/moved');
+
+    expect($config->pin())->toBe('AAAABBBBCCCC')
+        ->and($config->endpointUrl())->toBe('https://relay.example/moved');
+});
