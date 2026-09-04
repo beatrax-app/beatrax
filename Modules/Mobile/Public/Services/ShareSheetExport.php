@@ -153,11 +153,11 @@ class ShareSheetExport
         try {
             $path = $this->stagingPath($filename);
 
-            if ($path === null || ! $this->ownerOnly()->file($path)) {
-                return null;
-            }
-
-            if (@file_put_contents($path, $contents) === false) {
+            // Short-circuit order is the point: the file is made owner-only
+            // before a byte of it exists, not narrowed once it is all there.
+            if ($path === null
+                || ! $this->ownerOnly()->file($path)
+                || @file_put_contents($path, $contents) === false) {
                 return null;
             }
 
