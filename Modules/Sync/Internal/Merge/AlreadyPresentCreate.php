@@ -45,7 +45,7 @@ final readonly class AlreadyPresentCreate
             // transport that splits one row's ops across two frames makes the
             // second half look exactly like that. Returning here without it
             // dropped every column the first half did not carry.
-            $this->tail->fill($table, $pk, $payload, $userId);
+            $this->tail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
 
             return true;
         }

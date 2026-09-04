@@ -16,7 +16,12 @@ use Illuminate\Database\QueryException;
  */
 final class SplitCreateTail
 {
-    private const array WRITTEN_FROM_THE_ENVELOPE_NOT_THE_WIRE = ['id', 'user_id', 'created_at', 'updated_at'];
+    private const array WRITTEN_FROM_THE_ENVELOPE_NOT_THE_WIRE = ['id', 'user_id'];
+
+    // Only correctable while they still hold the value seed() invented from
+    // the op's HLC. A birth time that came off the wire is the peer's answer
+    // and a later half of the same create must not move it.
+    private const array SEEDED_WHEN_THE_WIRE_CARRIED_NONE = ['created_at', 'updated_at'];
 
     /** @var array<string, array<string, mixed>> */
     private array $defaults = [];
@@ -33,7 +38,7 @@ final class SplitCreateTail
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function fill(string $table, int|string $pk, array $payload, int $userId): void
+    public function fill(string $table, int|string $pk, array $payload, int $userId, ?string $seededTime = null): void
     {
         $stored = $this->storedRow($table, $pk);
 
@@ -45,6 +50,14 @@ final class SplitCreateTail
 
         foreach ($payload as $column => $value) {
             if ($value === null || in_array($column, self::WRITTEN_FROM_THE_ENVELOPE_NOT_THE_WIRE, true)) {
+                continue;
+            }
+
+            if (in_array($column, self::SEEDED_WHEN_THE_WIRE_CARRIED_NONE, true)) {
+                if ($seededTime !== null && self::asText($stored[$column] ?? null) === $seededTime) {
+                    $absent[$column] = $value;
+                }
+
                 continue;
             }
 

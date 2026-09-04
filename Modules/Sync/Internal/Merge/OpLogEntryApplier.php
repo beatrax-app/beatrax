@@ -365,7 +365,7 @@ final readonly class OpLogEntryApplier
         $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
 
         if ($payload !== null) {
-            $this->splitTail->fill($table, $pk, $payload, $userId);
+            $this->splitTail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
         }
 
         return false;

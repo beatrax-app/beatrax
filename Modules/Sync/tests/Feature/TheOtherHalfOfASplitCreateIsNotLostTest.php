@@ -149,5 +149,62 @@ it('does not call the rest of a create a collision when it seeded the birth time
     expect($db->connection()->table('op_log_quarantine')->where('reason', 'primary_key_collision')->count())
         ->toBe(0, 'one create split in two is not two devices minting one id')
         ->and($db->connection()->table('transactions')->where('id', 401)->value('payment_type'))
-        ->toBe('pin');
+        ->toBe('pin')
+        // And the invented birth time gives way to the one the peer actually
+        // sent. Left alone it survives every later sync, and the lists that
+        // order by created_at put the row in the wrong place forever.
+        ->and($db->connection()->table('transactions')->where('id', 401)->value('created_at'))
+        ->toBe('2026-06-10 12:00:00');
+});
+
+it('never moves a birth time that came off the wire', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = (int) splitTailUser('split-wire-time')->id;
+
+    test()->actingAs(User::query()->findOrFail($userId));
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+    app(GdkKeyringService::class)->generateAndPersist($userId, $session);
+
+    $accountId = (int) $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId, 'name' => 'Main', 'slug' => 'main-'.$userId, 'kind' => 'checking',
+        'iban' => 'NL00WIRE'.str_pad((string) $userId, 10, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+    $runId = (int) $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId, 'source_format' => 'demo', 'raw_file_path' => 'i.csv',
+        'sha256' => str_repeat('c', 64), 'uploaded_at' => '2026-06-01 00:00:00',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+
+    $head = [
+        'account_id' => $accountId, 'type' => 'expense', 'posted_at' => '2026-06-10',
+        'booked_at' => '2026-06-10 12:00:00', 'value_date' => '2026-06-10',
+        'amount_minor' => -700, 'currency' => 'EUR', 'settled_amount_minor' => -700,
+        'settled_currency' => 'EUR', 'counterparty_normalized' => 'wire',
+        'normalization_version' => 3, 'source_format' => 'demo', 'import_run_id' => $runId,
+        'source_row_index' => 4, 'fingerprint' => str_repeat('3', 64), 'fingerprint_version' => 3,
+        'status' => 'cleared', 'created_at' => '2026-06-10 09:00:00',
+    ];
+
+    $first = [];
+    foreach ($head as $f => $v) {
+        $first['transactions'][402][$f] = [splitTailEntry(402, $f, $v, $userId)];
+    }
+
+    $second = [];
+    foreach ($head + ['created_at' => '2026-06-10 23:59:59'] as $f => $v) {
+        $second['transactions'][402][$f] = [splitTailEntry(402, $f, $v, $userId)];
+    }
+
+    $touched = [];
+    $applier = app(OpLogEntryApplier::class);
+    $applier->applyCreates($first, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($second, [], $userId, '2026-06-10 12:00:00', $touched);
+
+    // The stored time came off the wire, so it is the peer's answer and not
+    // this device's guess. A second create carrying a different one is a real
+    // disagreement for the collision check, never something to overwrite.
+    expect($db->connection()->table('transactions')->where('id', 402)->value('created_at'))
+        ->toBe('2026-06-10 09:00:00');
 });
