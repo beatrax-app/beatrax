@@ -8,6 +8,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
+use Modules\Sync\Internal\Merge\SearchDocumentRows;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
@@ -125,7 +126,7 @@ it('applies a mutually-referencing transfer pair without a foreign-key failure',
     selfRefUnlock($userId);
     $accountId = selfRefAccount($db, $userId);
 
-    $touched = [];
+    $touched = new SearchDocumentRows($db);
 
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
@@ -164,7 +165,7 @@ it('leaves a self-reference null when its target never arrives', function (): vo
     // never will be, which must cost 251 its link and nothing more.
     unset($creates['transactions'][295]);
 
-    $touched = [];
+    $touched = new SearchDocumentRows($db);
 
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);

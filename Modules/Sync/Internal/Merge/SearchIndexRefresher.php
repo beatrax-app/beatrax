@@ -8,10 +8,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
-// Brings the full-text index back in line with the rows a replay changed. A
-// different subsystem from the applier: that one merges op-log entries into
-// their tables, this re-derives an index from the result. Nothing here can
-// fail the replay — a stale index recovers, a half-applied replay does not.
+// Brings the full-text index back in line with the rows a replay changed —
+// which rows those are, and which document each belongs to, is SearchDocumentRows'
+// answer. Nothing here can fail the replay: a stale index recovers on the next
+// write, a half-applied replay does not.
 final readonly class SearchIndexRefresher
 {
     private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';
@@ -21,21 +21,13 @@ final readonly class SearchIndexRefresher
         private ?SearchIndexWriterContract $searchWriter = null,
     ) {}
 
-    /**
-     * @param  list<int>  $touchedTransactionIds
-     * @param  list<int>  $tombstonedTransactionIds
-     */
-    public function refresh(
-        array $touchedTransactionIds,
-        array $tombstonedTransactionIds,
-        int $userId,
-        string $now,
-    ): void {
+    public function refresh(SearchDocumentRows $documents, int $userId, string $now): void
+    {
         if ($this->searchWriter === null) {
             return;
         }
 
-        foreach ($touchedTransactionIds as $txId) {
+        foreach ($documents->touched() as $txId) {
             try {
                 $this->searchWriter->upsertForTransaction($txId, $userId);
             } catch (\Throwable) {
@@ -43,7 +35,9 @@ final readonly class SearchIndexRefresher
             }
         }
 
-        foreach ($tombstonedTransactionIds as $txId) {
+        // Rebuilds first, drops second: a transaction both rebuilt and deleted
+        // in one replay has to end up gone, not re-indexed.
+        foreach ($documents->tombstoned() as $txId) {
             try {
                 $this->searchWriter->deleteForTransaction($txId, $userId);
             } catch (\Throwable) {
