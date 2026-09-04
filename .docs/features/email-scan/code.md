@@ -42,7 +42,6 @@ Modules/EmailScan/
 │   │   ├── AccessTokenWithEmail.php
 │   │   ├── InboxConnectionResult.php
 │   │   ├── InvalidGrantException.php
-│   │   ├── InvalidStateException.php
 │   │   ├── ReconsentRequiredException.php
 │   │   └── OAuthExchangeFailed.php
 │   ├── Clients/

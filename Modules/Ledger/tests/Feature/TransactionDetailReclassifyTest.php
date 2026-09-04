@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -156,7 +157,7 @@ it('crossUser404 — User B cannot reclassify User A\'s transaction', function (
     expect($tx->type)->toBe('income');
 })->group('phase-4');
 
-it('rejectsInvalidType — calling reclassify with an out-of-allow-list type raises InvalidArgumentException', function (): void {
+it('rejectsInvalidType — calling reclassify with an out-of-allow-list type is refused as a bad request', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'expense',
         'amount_minor' => -1000,
@@ -164,16 +165,15 @@ it('rejectsInvalidType — calling reclassify with an out-of-allow-list type rai
         'booked_at' => '2026-05-10 12:00:00',
     ]);
 
-    expect(
-        fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-            ->call('reclassify', 'bogus_type'),
-    )->toThrow(InvalidArgumentException::class);
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('reclassify', 'bogus_type')
+        ->assertStatus(SymfonyResponse::HTTP_BAD_REQUEST);
 
     $tx->refresh();
     expect($tx->type)->toBe('expense');
 })->group('phase-4');
 
-it('emptyTypeIsNoOp — passing an empty string produces no DB write and raises InvalidArgumentException', function (): void {
+it('emptyTypeIsNoOp — passing an empty string produces no DB write and is refused as a bad request', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'expense',
         'amount_minor' => -1000,
@@ -182,10 +182,9 @@ it('emptyTypeIsNoOp — passing an empty string produces no DB write and raises 
     ]);
 
     // The Save button is disabled in the UI; the action guards anyway.
-    expect(
-        fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-            ->call('reclassify', ''),
-    )->toThrow(InvalidArgumentException::class);
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('reclassify', '')
+        ->assertStatus(SymfonyResponse::HTTP_BAD_REQUEST);
 
     $tx->refresh();
     expect($tx->type)->toBe('expense');
