@@ -159,6 +159,19 @@ final class SplitCreateTail
         return $columns;
     }
 
+    // Asked before a create is judged incomplete: a row already here means the
+    // op naming it is the second half of a split create, not a broken one.
+    public function rowIsHere(string $table, int|string $pk, int $userId): bool
+    {
+        try {
+            $query = $this->db->connection()->table($table)->where('id', $pk);
+
+            return $this->ownership->scopeToUser($query, $table, $userId)->exists();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     // SQLite hands a schema default back as its literal text, quotes and all,
     // while the stored value comes back typed; comparing both as trimmed text
     // is what makes 'unknown' and "'unknown'" the same answer.

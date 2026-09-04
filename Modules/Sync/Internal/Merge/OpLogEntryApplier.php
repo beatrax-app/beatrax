@@ -327,7 +327,9 @@ final readonly class OpLogEntryApplier
     // A CreateRow needs every required column, minus the ones
     // buildCreatePayload() seeds itself: a table naming `id` as required asked
     // for a field the backfill never emits, so every row of it was discarded
-    // as incomplete on arrival rather than written.
+    // as incomplete on arrival rather than written. A row already here is the
+    // second half of a create the transport split, and carries the columns the
+    // first half missed — quarantining it lost their only carrier.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
@@ -340,8 +342,14 @@ final readonly class OpLogEntryApplier
             return true;
         }
 
-        if ($this->rowIsHere($table, $pk, $userId)) {
-            return $this->carryTheTail($table, $pk, $fields, $userId, $now);
+        if ($this->splitTail->rowIsHere($table, $pk, $userId)) {
+            $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+            if ($payload !== null) {
+                $this->splitTail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
+            }
+
+            return false;
         }
 
         $firstField = reset($fields);
@@ -351,35 +359,6 @@ final readonly class OpLogEntryApplier
         }
 
         return false;
-    }
-
-    // Nothing keeps one row's create ops inside a single transport frame, so
-    // the half that lands second names a row that is already here and carries
-    // required columns it was never going to repeat. Calling that incomplete
-    // quarantined the only carrier of the columns the first half missed.
-    /**
-     * @param  array<string, list<OpLogEntry>>  $fields
-     */
-    private function carryTheTail(string $table, int|string $pk, array $fields, int $userId, string $now): bool
-    {
-        $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
-
-        if ($payload !== null) {
-            $this->splitTail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
-        }
-
-        return false;
-    }
-
-    private function rowIsHere(string $table, int|string $pk, int $userId): bool
-    {
-        try {
-            $query = $this->db->connection()->table($table)->where('id', $pk);
-
-            return $this->ownership->scopeToUser($query, $table, $userId)->exists();
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     // A CreateRow op may legitimately carry a 'user_id' field, and the resolve
