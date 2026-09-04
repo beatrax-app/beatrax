@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Translation\MessageSelector;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -55,19 +56,6 @@ function countedNounIsCountToken(string $name): bool
         || countedNounReadsAsPlural($name);
 }
 
-// preg_match_all answers false when the engine gives up -- a backtrack limit, a
-// JIT stack limit on a long template -- and every rule in this file reads its
-// answer as "nothing matched". A guard that stops reading has to say so: a
-// silent false here is a clean tree reported over a scan that never ran.
-function countedNounScanned(int|false $matched, string $what): int
-{
-    if ($matched === false) {
-        throw new RuntimeException('the counted-noun '.$what.' scan stopped reading: '.preg_last_error_msg());
-    }
-
-    return $matched;
-}
-
 /**
  * @param  array<array-key, mixed>  $translations
  * @return array<string, string>
@@ -90,7 +78,7 @@ function countedNounStrings(array $translations, string $prefix = ''): array
 /** @return string|null the offending fragment, or null when the line is clean */
 function countedNounOffence(string $line): ?string
 {
-    countedNounScanned(preg_match_all('/:([a-zA-Z_][a-zA-Z0-9_]*)((?:\s+[A-Za-z][\w\'\/-]*){1,3})/', $line, $matches, PREG_SET_ORDER), 'lang line');
+    $matches = PatternScan::sets('/:([a-zA-Z_][a-zA-Z0-9_]*)((?:\s+[A-Za-z][\w\'\/-]*){1,3})/', $line);
 
     foreach ($matches as $match) {
         if (! countedNounIsCountToken($match[1])) {
@@ -222,7 +210,7 @@ it('reads every pluralised line through Lang::choice', function (): void {
 
     foreach (countedNounCallSites() as $file) {
         $source = (string) $file->getContents();
-        countedNounScanned(preg_match_all("/(?:Lang::get|__|@lang|trans)\(\s*'([^']+)'/", $source, $matches), 'call site key');
+        $matches = PatternScan::all("/(?:Lang::get|__|@lang|trans)\(\s*'([^']+)'/", $source);
 
         foreach ($matches[1] as $key) {
             if (array_key_exists($key, $pluralised)) {
@@ -394,14 +382,14 @@ const COUNTED_NOUN_GAP = '(?:[^<>"{}]{0,16}|[ \t\r\n]*<\/[a-zA-Z][a-zA-Z0-9]*>[ 
 function countedNounTranslatedVariables(string $source, string $call): string
 {
     $names = [];
-    countedNounScanned(preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*'.$call.'/', $source, $direct), 'held line');
+    $direct = PatternScan::all('/\$([A-Za-z_]\w*)\s*=\s*'.$call.'/', $source);
     $names = $direct[1];
 
     // An array of translated lines walked by foreach is the same variable one
     // hop later, and is how a breakdown line gets assembled a part at a time.
-    countedNounScanned(preg_match_all('/\$([A-Za-z_]\w*)\s*=\s*\[[^;]*?'.$call.'[^;]*?\];/s', $source, $arrays), 'held line array');
+    $arrays = PatternScan::all('/\$([A-Za-z_]\w*)\s*=\s*\[[^;]*?'.$call.'[^;]*?\];/s', $source);
     foreach ($arrays[1] as $array) {
-        countedNounScanned(preg_match_all('/foreach\s*\(\s*\$'.preg_quote($array, '/').'\s+as\s+(?:\$\w+\s*=>\s*)?\$(\w+)\s*\)/', $source, $loops), 'held line loop');
+        $loops = PatternScan::all('/foreach\s*\(\s*\$'.preg_quote($array, '/').'\s+as\s+(?:\$\w+\s*=>\s*)?\$(\w+)\s*\)/', $source);
         $names = array_merge($names, $loops[1]);
     }
 
@@ -423,7 +411,7 @@ function countedNounNumberBesideLine(string $source, string $call): array
 
     $hits = [];
     foreach ($patterns as $pattern) {
-        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'number beside line');
+        $matches = PatternScan::sets($pattern, $source);
         foreach ($matches as $match) {
             if (countedNounIsCountVariable($match[1])) {
                 $hits[] = trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
@@ -494,7 +482,7 @@ it('never sets a formatted number beside a translated line', function (): void {
     foreach (countedNounCallSites() as $file) {
         $files++;
         $source = (string) $file->getContents();
-        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'formatted number beside line');
+        $matches = PatternScan::sets($pattern, $source);
 
         foreach ($matches as $match) {
             $offenders[] = $file->getRelativePathname().' — '.trim(preg_replace('/\s+/', ' ', $match[0]) ?? '');
@@ -579,7 +567,7 @@ const COUNTED_NOUN_JS_NUMBER = '[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*';
 /** @return list<string> every Alpine expression attribute value in $source */
 function countedNounAlpineExpressions(string $source): array
 {
-    countedNounScanned(preg_match_all('/'.COUNTED_NOUN_ALPINE_ATTRIBUTE.'/', $source, $matches), 'Alpine attribute');
+    $matches = PatternScan::all('/'.COUNTED_NOUN_ALPINE_ATTRIBUTE.'/', $source);
 
     return $matches[1];
 }
@@ -593,7 +581,7 @@ it('never assembles a translated line from fragments in the browser', function (
             $expressions++;
 
             $pattern = '/(?:\+\s*\'?\s*'.COUNTED_NOUN_JS_LINE.')|(?:'.COUNTED_NOUN_JS_LINE.'\s*\'?\s*\+)/';
-            if (countedNounScanned(preg_match_all($pattern, $expression, $matches), 'browser line glue') === 0) {
+            if (PatternScan::count($pattern, $expression) === 0) {
                 continue;
             }
 
@@ -640,7 +628,7 @@ it('never sets a browser-rendered number beside a line that has no form to choos
     foreach (countedNounCallSites() as $file) {
         $files++;
         $source = (string) $file->getContents();
-        countedNounScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'browser number beside line');
+        $matches = PatternScan::sets($pattern, $source);
 
         foreach ($matches as $match) {
             if (countedNounIsCountVariable($match[1])) {

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners\Concerns;
 
-use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpCaptureSink;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 use Modules\Sync\Public\Events\GoalMutated;
 
 trait CapturesGoalMutations
 {
-    private function handleGoalContributionDelete(GoalContributionMutated $event, OpLogWriter $writer): void
+    private function handleGoalContributionDelete(GoalContributionMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'goal_contributions',
@@ -18,7 +18,7 @@ trait CapturesGoalMutations
         );
     }
 
-    private function handleGoalContributionCreate(GoalContributionMutated $event, OpLogWriter $writer): void
+    private function handleGoalContributionCreate(GoalContributionMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'goal_contributions',
@@ -27,7 +27,7 @@ trait CapturesGoalMutations
         );
     }
 
-    private function handleGoalCreate(GoalMutated $event, OpLogWriter $writer): void
+    private function handleGoalCreate(GoalMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'goals',
@@ -39,7 +39,7 @@ trait CapturesGoalMutations
     // An edit writes one op per touched column rather than a whole row, so
     // two devices renaming and re-dating the same goal both keep their change
     // instead of the later write replacing the earlier wholesale.
-    private function handleGoalEdit(GoalMutated $event, OpLogWriter $writer): void
+    private function handleGoalEdit(GoalMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -51,7 +51,7 @@ trait CapturesGoalMutations
         }
     }
 
-    private function handleGoalDelete(GoalMutated $event, OpLogWriter $writer): void
+    private function handleGoalDelete(GoalMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'goals',

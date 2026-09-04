@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 
 beforeEach(function (): void {
@@ -28,12 +29,7 @@ beforeEach(function (): void {
  */
 function paletteRowTags(string $html): array
 {
-    preg_match_all(
-        '~<([a-zA-Z][\w:.-]*)((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>~s',
-        $html,
-        $matches,
-        PREG_SET_ORDER
-    );
+    $matches = PatternScan::sets('~<([a-zA-Z][\w:.-]*)((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>~s', $html);
 
     $rows = [];
     foreach ($matches as $match) {

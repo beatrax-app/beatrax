@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsAmountParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
@@ -165,8 +166,8 @@ it('discards card-number text from the per-transaction block before writing rawP
         $block = $dto->rawPayload['extractedText'] ?? '';
         expect($block)->toBeString();
         /** @var string $block */
-        expect((bool) preg_match('/\*{4}-\*{4}-\*{4}-/u', $block))->toBeFalse();
-        expect((bool) preg_match('/\d{12,}/', $block))->toBeFalse();
+        expect(PatternScan::matches('/\*{4}-\*{4}-\*{4}-/u', $block))->toBeFalse();
+        expect(PatternScan::matches('/\d{12,}/', $block))->toBeFalse();
     }
 })->group('phase-3');
 

@@ -305,6 +305,13 @@ platform biometrics. Both gate access to a per-session **data key** that
 downstream encryption features (base-currency FX, at-rest field encryption)
 read through `AppLockKeyService::release()`/`withhold()`.
 
+Both the PIN verifier (`PinHasher`) and the wrap key (`AppLockKdf`) derive at
+the one work factor the whole application shares, injected as
+`Modules\Core\Public\Contracts\KdfCost` — 256 MiB and three passes in a shipped
+install, libsodium's floor under the test suite. The parameters, the tests that
+pin them, and why the substitution cannot be reached in production are
+[The Argon2id cost, and why the suite does not pay it](../../architecture/argon2id-cost.md).
+
 ### Key-wrapping model
 
 `AppLockProvisioner::enable()` double-wraps a 32-byte data key under a single
@@ -573,7 +580,7 @@ sessions of one account — the ordinary shape here, the desktop bundle
 plus a browser tab — every session wrote it and every session read it,
 and activity in one held the other's idle timer open indefinitely. The
 column is still written on every passing request, because
-`LockEngageController`'s unlock grace window and the client's own timer
+`EngageAppLock`'s unlock grace window and the client's own timer
 read it; only the idle DECISION moved into the session. A session with no
 stamp of its own yet falls back to the column, which is what the request
 right after a sign-in does.
@@ -623,11 +630,14 @@ never veiled and never locked**, enforced at two levels:
   `AppLockClientConfig::idleTimeoutMs()`). When it is absent the store
   registers neither the idle watcher nor the `visibilitychange` / `blur`
   veil-and-grace listeners, so `_serverLock()` is never reached.
-- **Server.** `LockEngageController` calls
-  `AppLockClientConfig::isEnabled()` and returns `204` without touching
-  the session when the lock is off. This is the authoritative check: a
-  stale tab left open from before the lock was disabled, a second
-  window, or a replayed request must not be able to strand the session.
+- **Server.** `AppLockLiveness::isArmed()` asks
+  `AppLockClientConfig::isEnabled()`, and both `EngageAppLock` and
+  `RecordAppBackgrounded` return without touching the session when the lock
+  is off — the route answers `204` either way. This is the authoritative
+  check: a stale tab left open from before the lock was disabled, a second
+  window, or a replayed request must not be able to strand the session. It
+  is written once because two endpoints ask it, and the two answers drifting
+  apart is the bug.
 
 `AppLockClientConfig` is the single place either layer asks whether a
 lock exists, so the two checks cannot drift apart.

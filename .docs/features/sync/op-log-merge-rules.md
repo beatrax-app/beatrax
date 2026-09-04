@@ -323,6 +323,37 @@ streams the rows through a cursor instead of fetching them: the fetched form and
 entries used to stand at the same time, which put twice the log in memory for the length of
 one query, on the device with the smallest ceiling of any that runs this.
 
+## The tables a search document is built from
+
+`SearchIndexWriter::upsertForTransaction()` composes one row of
+`transaction_search_docs` from **two** tables, not one:
+
+| table | what it contributes |
+|---|---|
+| `transactions` | `counterparty_name`, `description` |
+| `tax_transaction_tags` | `note` |
+
+A replay that marked only `transactions` rows dirty therefore left the index
+stale whenever a tag arrived on its own. Measured across two paired devices:
+17 of 147 bodies on the receiving device were missing their tax-note segment,
+while `tax_transaction_tags` itself had synced perfectly — same 17 rows, same
+ids, every note present. Search found the note on one device and silently
+found nothing on the other.
+
+`SearchDocumentRows` holds the mapping from a changed row to the document(s)
+it belongs to, and two rules that are easy to get backwards:
+
+- **Resolve before deleting.** A row that is not the transaction itself names
+  one in a column; once it is gone there is nothing left to resolve it by.
+- **A child row's delete rebuilds, it does not tombstone.** Deleting the
+  transaction takes its document with it. Deleting a tag leaves the
+  transaction behind, so its document is rebuilt without the note. Treating
+  the two the same way drops a live transaction out of search entirely.
+
+`ASearchDocumentIsRebuiltForEveryTableItReadsTest` derives the expected source
+list from what `SearchIndexWriter` actually queries, so a third source table
+breaks the test rather than going silently unindexed.
+
 ## Self-referential columns are written last
 
 `transactions.pair_transaction_id` and `categories.parent_id` point at their own table.

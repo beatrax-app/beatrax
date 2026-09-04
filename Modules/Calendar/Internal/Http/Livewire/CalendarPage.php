@@ -20,6 +20,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Brand;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
@@ -128,8 +129,9 @@ final class CalendarPage extends Component
         $this->dispatch('open-sheet', name: 'day-detail');
     }
 
-    public function toggleEntriesAccount(int $accountId, DatabaseManager $db, CurrentUser $currentUser): void
+    public function toggleEntriesAccount(int|string $accountId, DatabaseManager $db, CurrentUser $currentUser): void
     {
+        $accountId = DerivedRowId::fromWire($accountId);
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
         if (! in_array($accountId, $ownedIds, true)) {
@@ -144,8 +146,9 @@ final class CalendarPage extends Component
         }
     }
 
-    public function toggleBalanceAccount(int $accountId, DatabaseManager $db, CurrentUser $currentUser): void
+    public function toggleBalanceAccount(int|string $accountId, DatabaseManager $db, CurrentUser $currentUser): void
     {
+        $accountId = DerivedRowId::fromWire($accountId);
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
         if (! in_array($accountId, $ownedIds, true)) {

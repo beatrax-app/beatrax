@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-native-post-form-in-the-mobile-shell
  */
@@ -39,9 +41,7 @@ it('routes every plain POST form through the fetch submitter', function (): void
 
         // Livewire owns its own submits via wire:submit and never issues a
         // native form POST, so only forms declaring method="POST" are in scope.
-        if (! preg_match_all('/<form\b[^>]*method="POST"[^>]*>/i', $contents, $matches)) {
-            continue;
-        }
+        $matches = PatternScan::all('/<form\b[^>]*method="POST"[^>]*>/i', $contents);
 
         foreach ($matches[0] as $tag) {
             if (! str_contains($tag, 'beatraxSubmitPostForm')) {

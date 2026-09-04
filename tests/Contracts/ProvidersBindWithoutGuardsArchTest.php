@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A class_exists() guard around a binding says the class might not be there.
 // For a first-party class in the module doing the binding, that is never true,
 // and the guard is worse than redundant: a typo in the name, or a class that
@@ -25,18 +27,16 @@ function guardedFirstPartyBindings(): array
         // The guard names the class the way the file does — usually the short
         // name an import brought in — so the imports are what say whether it
         // is ours or a vendor package's.
-        preg_match_all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $contents, $imports);
+        $imports = PatternScan::all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $contents);
         $qualify = [];
         foreach ($imports[1] as $fqcn) {
             $parts = explode('\\', $fqcn);
             $qualify[end($parts)] = $fqcn;
         }
 
-        preg_match_all(
+        $matches = PatternScan::sets(
             '/(?:class_exists|interface_exists)\(\s*\\\\?([A-Za-z0-9_\\\\]+)(::class)?/',
             $contents,
-            $matches,
-            PREG_SET_ORDER,
         );
 
         foreach ($matches as $match) {

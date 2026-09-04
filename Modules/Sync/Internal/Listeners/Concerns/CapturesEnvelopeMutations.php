@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners\Concerns;
 
-use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpCaptureSink;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
 trait CapturesEnvelopeMutations
 {
-    private function handleEnvelopeAssignmentEdit(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeAssignmentEdit(EnvelopeAssignmentMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -23,7 +23,7 @@ trait CapturesEnvelopeMutations
         }
     }
 
-    private function handleEnvelopeAssignmentDelete(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeAssignmentDelete(EnvelopeAssignmentMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'envelope_assignments',
@@ -31,7 +31,7 @@ trait CapturesEnvelopeMutations
         );
     }
 
-    private function handleEnvelopeAssignmentCreate(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeAssignmentCreate(EnvelopeAssignmentMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'envelope_assignments',
@@ -40,7 +40,7 @@ trait CapturesEnvelopeMutations
         );
     }
 
-    private function handleEnvelopeMoveEdit(EnvelopeMoveMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeMoveEdit(EnvelopeMoveMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -52,7 +52,7 @@ trait CapturesEnvelopeMutations
         }
     }
 
-    private function handleEnvelopeMoveDelete(EnvelopeMoveMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeMoveDelete(EnvelopeMoveMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'envelope_moves',
@@ -60,7 +60,7 @@ trait CapturesEnvelopeMutations
         );
     }
 
-    private function handleEnvelopeMoveCreate(EnvelopeMoveMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeMoveCreate(EnvelopeMoveMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'envelope_moves',
@@ -69,7 +69,7 @@ trait CapturesEnvelopeMutations
         );
     }
 
-    private function handleEnvelopeSettingEdit(EnvelopeSettingMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeSettingEdit(EnvelopeSettingMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -81,7 +81,7 @@ trait CapturesEnvelopeMutations
         }
     }
 
-    private function handleEnvelopeSettingDelete(EnvelopeSettingMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeSettingDelete(EnvelopeSettingMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'envelope_settings',
@@ -89,7 +89,7 @@ trait CapturesEnvelopeMutations
         );
     }
 
-    private function handleEnvelopeSettingCreate(EnvelopeSettingMutated $event, OpLogWriter $writer): void
+    private function handleEnvelopeSettingCreate(EnvelopeSettingMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'envelope_settings',

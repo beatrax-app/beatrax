@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Goals\Internal\Http\Livewire\GoalsPage;
 use Modules\Goals\Models\Goal;
 
@@ -29,8 +30,8 @@ function goalPhoneRowMarkup(string $html): string
 /** @return array{name: string, block: string} the name's own class list and that of the block it sits in */
 function goalPhoneNameClassLists(string $row): array
 {
-    preg_match('/<div\b[^>]*\bclass="([^"]*)"/', $row, $block);
-    preg_match('/<p\b[^>]*\bclass="([^"]*primary[^"]*)"/', $row, $name);
+    $block = PatternScan::first('/<div\b[^>]*\bclass="([^"]*)"/', $row);
+    $name = PatternScan::first('/<p\b[^>]*\bclass="([^"]*primary[^"]*)"/', $row);
 
     return ['name' => $name[1] ?? '', 'block' => $block[1] ?? ''];
 }
@@ -92,8 +93,7 @@ it('lets a long goal name wrap rather than cutting it at the ellipsis', function
 
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    expect(preg_match('/\.card-list-item \.primary \{[^}]*line-clamp:\s*2/s', $css))->toBe(
-        1,
+    expect(PatternScan::matches('/\.card-list-item \.primary \{[^}]*line-clamp:\s*2/s', $css))->toBeTrue(
         'Nothing clamps the goal name, so a name with no end wraps down the page instead of taking two '
         .'lines and stopping.',
     );

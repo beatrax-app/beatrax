@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Navigation\NavBadgeEvents;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
 
@@ -125,7 +126,7 @@ it('keeps the marks outside the anchor they sit beside', function (): void {
 
     $html = Livewire::actingAs($user)->test(NotificationsPage::class)->html();
 
-    preg_match_all('~<a\b.*?</a>~s', $html, $anchors);
+    $anchors = PatternScan::all('~<a\b.*?</a>~s', $html);
 
     expect($anchors[0])->not->toBe([]);
 
@@ -144,8 +145,8 @@ it('lets the row wrap rather than squeeze its marks to the touch floor', functio
 
     $html = Livewire::actingAs($user)->test(NotificationsPage::class)->html();
 
-    preg_match('~<div class="(flex flex-wrap[^"]*rounded-lg[^"]*)"~', $html, $row);
-    preg_match('~<div class="(ml-auto flex[^"]*)"~', $html, $group);
+    $row = PatternScan::first('~<div class="(flex flex-wrap[^"]*rounded-lg[^"]*)"~', $html);
+    $group = PatternScan::first('~<div class="(ml-auto flex[^"]*)"~', $html);
 
     expect($row[1] ?? '')->toContain('flex-wrap')
         ->and($group[1] ?? '')->toContain('shrink-0')

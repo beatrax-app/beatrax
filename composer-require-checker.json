@@ -76,6 +76,7 @@
         "Symfony\\Component\\Console\\Input\\ArrayInput",
         "Symfony\\Component\\Console\\Output\\BufferedOutput",
         "test",
+        "Tests\\Helpers\\CheapKdfCost",
         "Tests\\Helpers\\CssRule",
         "Tests\\Helpers\\FailingStream",
         "Tests\\Helpers\\LiveSqliteConnection",

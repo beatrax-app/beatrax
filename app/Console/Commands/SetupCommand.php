@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Setup\DatabaseProbe;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
+use Modules\Core\Public\Support\PatternScan;
 use PDOException;
 
 use function Laravel\Prompts\confirm;
@@ -210,7 +211,7 @@ final class SetupCommand extends Command
             return '';
         }
 
-        if (preg_match('/[\s#"\'$\\\\]/', $value) === 0) {
+        if (! PatternScan::matches('/[\s#"\'$\\\\]/', $value)) {
             return $value;
         }
 

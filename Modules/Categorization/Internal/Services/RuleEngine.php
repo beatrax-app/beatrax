@@ -6,23 +6,18 @@ namespace Modules\Categorization\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
-use Illuminate\Database\DatabaseManager;
-use Modules\Categorization\Models\RuleAction;
 use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
 final readonly class RuleEngine
 {
-    use CoercesScalars;
-
     public function __construct(
-        private DatabaseManager $db,
+        private ActiveRuleSet $rules,
         private BaseCurrency $baseCurrency,
     ) {}
 
@@ -33,73 +28,30 @@ final readonly class RuleEngine
      */
     public function match(RuleMatchInput $tx, User $user): array
     {
-        $connection = $this->db->connection();
         $readerCurrency = $this->baseCurrency->forUser($user);
-
-        /** @var iterable<stdClass> $rules */
-        $rules = $connection
-            ->table('categorization_rules')
-            ->where('user_id', $user->id)
-            ->where('active', true)
-            ->orderBy('priority')
-            ->orderBy('id')
-            ->get(['id', 'priority', 'combinator']);
 
         $matched = [];
 
-        foreach ($rules as $rule) {
-            $ruleId = self::toInt($rule->id);
-            $priority = self::toInt($rule->priority);
-            $combinator = RuleCombinator::coerce(is_string($rule->combinator) ? $rule->combinator : null);
-
-            /** @var iterable<stdClass> $conditions */
-            $conditions = $connection
-                ->table('rule_conditions')
-                ->where('rule_id', $ruleId)
-                ->orderBy('id')
-                ->get();
-
-            $results = [];
-            foreach ($conditions as $condition) {
-                $results[] = $this->conditionMatches($condition, $tx, $readerCurrency);
-            }
-
-            $fires = $combinator === RuleCombinator::All
-                ? ($results !== [] && ! in_array(false, $results, true))
-                : in_array(true, $results, true);
-
-            if ($fires) {
-                $matched[] = new MatchedRule($ruleId, $priority, $this->actionsFor($ruleId));
+        foreach ($this->rules->forUser($user->id) as $rule) {
+            if ($this->fires($rule, $tx, $readerCurrency)) {
+                $matched[] = new MatchedRule($rule->ruleId, $rule->priority, $rule->actions);
             }
         }
 
         return $matched;
     }
 
-    // Raw query builder rather than the Eloquent RuleAction builder, to
-    // avoid a larastan strict-rules dynamic-call warning. The id tiebreak
-    // matters because `position` carries no write-layer uniqueness.
-    /**
-     * @return list<RuleAction>
-     */
-    private function actionsFor(int $ruleId): array
+    private function fires(ActiveRule $rule, RuleMatchInput $tx, string $readerCurrency): bool
     {
-        /** @var iterable<stdClass> $rows */
-        $rows = $this->db->connection()
-            ->table('rule_actions')
-            ->where('rule_id', $ruleId)
-            ->orderBy('position')
-            ->orderBy('id')
-            ->get();
+        $results = [];
 
-        $actions = [];
-        foreach ($rows as $row) {
-            /** @var array<string, mixed> $attributes */
-            $attributes = get_object_vars($row);
-            $actions[] = (new RuleAction)->newFromBuilder($attributes);
+        foreach ($rule->conditions as $condition) {
+            $results[] = $this->conditionMatches($condition, $tx, $readerCurrency);
         }
 
-        return $actions;
+        return $rule->combinator === RuleCombinator::All
+            ? ($results !== [] && ! in_array(false, $results, true))
+            : in_array(true, $results, true);
     }
 
     private function conditionMatches(stdClass $condition, RuleMatchInput $tx, string $readerCurrency): bool

@@ -190,11 +190,13 @@ final class GoalsPage extends Component
         $this->archivingGoalId = 0;
     }
 
-    public function archive(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
+    public function archive(CurrentUser $currentUser, GoalWriter $writer, int|string $goalId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $goalId = DerivedRowId::fromWire($goalId);
 
         $writer->archive($currentUser->user(), $goalId);
         $this->archivingGoalId = 0;

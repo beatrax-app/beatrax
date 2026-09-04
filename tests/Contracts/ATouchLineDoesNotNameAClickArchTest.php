@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Arr;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -55,8 +56,7 @@ it('never leaves a click inside a line named for touch', function (): void {
 
             $checked++;
 
-            // preg_match returns false on error, which must not read as a pass.
-            if (preg_match('/'.$stem.'/iu', $value) !== 0) {
+            if (PatternScan::matches('/'.$stem.'/iu', $value)) {
                 $offenders[] = str_replace(base_path().'/', '', $file)." [{$key}] ".$value;
             }
         }

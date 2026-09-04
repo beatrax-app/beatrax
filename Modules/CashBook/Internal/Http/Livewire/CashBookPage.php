@@ -24,6 +24,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Brand;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Core\Public\Support\SafeDate;
@@ -173,9 +174,9 @@ final class CashBookPage extends Component
         $this->toast(Lang::get('cashbook::cash-book.toast.added'));
     }
 
-    public function confirmDelete(int $transactionId): void
+    public function confirmDelete(int|string $transactionId): void
     {
-        $this->deletingEntryId = $transactionId;
+        $this->deletingEntryId = DerivedRowId::fromWire($transactionId);
     }
 
     public function cancelDelete(): void
@@ -184,13 +185,15 @@ final class CashBookPage extends Component
     }
 
     public function delete(
-        int $transactionId,
+        int|string $transactionId,
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
         SearchIndexWriterContract $searchIndex,
         DependentRowCascade $cascade,
     ): void {
+        $transactionId = DerivedRowId::fromWire($transactionId);
+
         // Only the entry confirmDelete() was asked about, which the lock on
         // deletingEntryId is what makes true: the id has to have arrived on an
         // earlier request, so this compares against a server-written value.

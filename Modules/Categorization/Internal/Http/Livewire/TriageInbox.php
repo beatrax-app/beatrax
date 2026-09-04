@@ -15,6 +15,7 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Community\Public\Services\CommunitySettings;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Ledger\Public\Support\SplitLegs;
 
 // The cursor is a (posted_at, id) pair so rows sharing a posted_at value
@@ -34,9 +35,9 @@ final class TriageInbox extends Component
 
     public ?string $cursorPostedAt = null;
 
-    public function selectForRow(int $transactionId, ?int $categoryId): void
+    public function selectForRow(int|string $transactionId, ?int $categoryId): void
     {
-        $this->pending[$transactionId] = $categoryId;
+        $this->pending[DerivedRowId::fromWire($transactionId)] = $categoryId;
     }
 
     // Empty body: the listener existing is what makes Livewire render again
@@ -49,9 +50,9 @@ final class TriageInbox extends Component
         $this->pending = [];
     }
 
-    public function loadMore(int $nextCursorId, ?string $nextCursorPostedAt = null): void
+    public function loadMore(int|string $nextCursorId, ?string $nextCursorPostedAt = null): void
     {
-        $this->cursorId = $nextCursorId;
+        $this->cursorId = DerivedRowId::fromWire($nextCursorId);
         $this->cursorPostedAt = $nextCursorPostedAt;
     }
 

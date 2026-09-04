@@ -15,6 +15,7 @@ use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Sync\Public\Services\PortableKeyMaterial;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Tests\Helpers\CheapKdfCost;
 
 // A user with encryption at rest keeps their notes, descriptions,
 // counterparty names and IBANs as ciphertext in the database, and the only
@@ -171,7 +172,7 @@ it('restores an archive that carries no keyring at all', function (): void {
     $plain = $this->base.'-legacy.sqlite';
     bkmSealedLedgerAt($plain, 1, 771122);
     $archive = $plain.'.enc';
-    (new BackupEncryptor)->encrypt($plain, $archive, 'a-good-passphrase');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($plain, $archive, 'a-good-passphrase');
 
     bkmSealedLedgerAt($this->live, 1, 5);
     bkmPointLiveAt($this->live);

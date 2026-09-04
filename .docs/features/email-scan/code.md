@@ -31,11 +31,16 @@ Modules/EmailScan/
 │       ├── OAuthSecretsRepository.php
 │       └── SecretsWriteFailed.php
 ├── Internal/
+│   ├── Actions/
+│   │   ├── ConnectInboxFromGrant.php
+│   │   └── ResolveInboxToReconnect.php
 │   ├── OAuth/
 │   │   ├── GoogleOAuthProvider.php
 │   │   ├── MicrosoftOAuthProvider.php
 │   │   ├── OAuthStateRepository.php
+│   │   ├── MailOAuthProviders.php
 │   │   ├── AccessTokenWithEmail.php
+│   │   ├── InboxConnectionResult.php
 │   │   ├── InvalidGrantException.php
 │   │   ├── InvalidStateException.php
 │   │   ├── ReconsentRequiredException.php

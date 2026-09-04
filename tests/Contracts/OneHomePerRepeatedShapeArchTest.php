@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A bare CarbonImmutable::parse() flattened to a day is the same shape whether
 // or not it reaches for SafeDate first, so both spellings are scanned. Homes
 // below flatten a value that cannot be blank, which is what SafeDate guards.
@@ -49,9 +51,7 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
             $source = (string) file_get_contents($path);
 
             foreach ($shapes as $shape) {
-                if (preg_match_all($shape, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-                    continue;
-                }
+                $matches = PatternScan::allWithOffsets($shape, $source);
 
                 foreach ($matches[0] as [$hit, $offset]) {
                     $offenders[] = sprintf(
@@ -109,7 +109,7 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
         /** @var SplFileInfo $file */
         foreach ($iterator as $file) {
             $path = $file->getPathname();
-            if (! $file->isFile() || ! preg_match('~\.(?:php|blade\.php)$~', $path)) {
+            if (! $file->isFile() || ! PatternScan::matches('~\.(?:php|blade\.php)$~', $path)) {
                 continue;
             }
             if (str_ends_with($path, 'Public/Enums/SnoozeWindow.php')) {
@@ -117,7 +117,7 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
             }
 
             $source = (string) file_get_contents($path);
-            preg_match_all('~\{\{--.*?--\}\}|/\*\*.*?\*/|/\*.*?\*/|//[^\n]*~s', $source, $comments, PREG_OFFSET_CAPTURE);
+            $comments = PatternScan::allWithOffsets('~\{\{--.*?--\}\}|/\*\*.*?\*/|/\*.*?\*/|//[^\n]*~s', $source);
 
             foreach ($comments[0] as [$comment, $offset]) {
                 if (str_contains($comment, '1w') && str_contains($comment, '3m')) {

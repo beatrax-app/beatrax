@@ -8,6 +8,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Laravel\Horizon\HorizonServiceProvider;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 
@@ -178,7 +179,7 @@ it('renders the Horizon sidebar nav item WITHOUT nav-disabled when the dev.horiz
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Horizon[\s\S]*?</a>#', $html, $matches);
+    $matches = PatternScan::all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Horizon[\s\S]*?</a>#', $html);
 
     expect($matches[0])->not->toBeEmpty('Horizon sidebar entry should render when dev.horizon is registered');
     foreach ($matches[1] as $classes) {

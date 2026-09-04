@@ -19,6 +19,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Brand;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -100,8 +101,10 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    public function startEdit(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
+    public function startEdit(int|string $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
     {
+        $aliasId = DerivedRowId::fromWire($aliasId);
+
         $row = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -160,8 +163,10 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    public function saveAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Dispatcher $events, MerchantNameResolver $resolver): void
+    public function saveAlias(int|string $aliasId, CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Dispatcher $events, MerchantNameResolver $resolver): void
     {
+        $aliasId = DerivedRowId::fromWire($aliasId);
+
         $value = trim($this->editingPattern);
         if ($value === '') {
             $this->flashMessage = Lang::get('import::aliases.errors.pattern_empty');
@@ -221,8 +226,10 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = Lang::get('import::aliases.flash.updated');
     }
 
-    public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Dispatcher $events, MerchantNameResolver $resolver): void
+    public function deleteAlias(int|string $aliasId, CurrentUser $currentUser, DatabaseManager $db, Dispatcher $events, MerchantNameResolver $resolver): void
     {
+        $aliasId = DerivedRowId::fromWire($aliasId);
+
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)

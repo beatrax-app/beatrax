@@ -6,19 +6,16 @@ namespace Modules\DevMode\Internal\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Actions\CancelDevCommandRun;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The PID comes from the cached RunRecord, never the request body: otherwise a
-// forged runId would SIGTERM an arbitrary process.
 final readonly class ArtisanCancelController
 {
-    private const int SIGTERM_GRACE_SECONDS = 3;
-
     public function __construct(
         private RunRegistry $registry,
+        private CancelDevCommandRun $cancel,
     ) {}
 
     public function __invoke(string $runId, CurrentUser $user): JsonResponse
@@ -32,43 +29,8 @@ final readonly class ArtisanCancelController
             throw new AccessDeniedHttpException('cross_user_cancel_forbidden');
         }
 
-        if (! extension_loaded('posix')) {
-            throw new HttpException(500, 'posix_required_for_cancel');
-        }
-
-        if (! $this->stillRunning($record->pid)) {
-            $this->registry->markCancelled($runId);
-
-            return new JsonResponse(null, 204);
-        }
-
-        @posix_kill($record->pid, SIGTERM);
-
-        // Blocking the HTTP request through the grace period buys the SSE
-        // liveness check a PID that is actually gone by the time it looks.
-        $deadline = microtime(true) + self::SIGTERM_GRACE_SECONDS;
-        while (microtime(true) < $deadline) {
-            if (! $this->stillRunning($record->pid)) {
-                break;
-            }
-            usleep(100_000);
-        }
-
-        if ($this->stillRunning($record->pid)) {
-            @posix_kill($record->pid, SIGKILL);
-            usleep(200_000);
-        }
-
-        $this->registry->markCancelled($runId);
+        ($this->cancel)($record);
 
         return new JsonResponse(null, 204);
-    }
-
-    /**
-     * @phpstan-impure
-     */
-    private function stillRunning(int $pid): bool
-    {
-        return posix_kill($pid, 0);
     }
 }

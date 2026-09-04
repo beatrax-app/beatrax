@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Community\Public\Enums\CommunitySetting;
+use Modules\Core\Public\Support\PatternScan;
 
 // The panel that writes `users.community_settings` and the consumers that gate
 // on it sit in different modules, so a key spelled as a literal on either side
@@ -50,13 +51,7 @@ function settingKeyLiteralHits(string $path, string $source, string $key): array
         '/\[\s*([\'"])'.$quoted.'\1\s*\]/',
         '/array_key_exists\(\s*([\'"])'.$quoted.'\1/',
     ] as $pattern) {
-        $matched = preg_match($pattern, $source);
-        // A guard that stopped reading answers "clean" for every file after it,
-        // so a backtrack limit has to fail the run rather than pass it.
-        if ($matched === false || preg_last_error() !== PREG_NO_ERROR) {
-            return [str_replace(base_path().'/', '', $path).' — regex aborted on '.$key];
-        }
-        if ($matched === 1) {
+        if (PatternScan::matches($pattern, $source)) {
             return [str_replace(base_path().'/', '', $path).' — '.$key];
         }
     }

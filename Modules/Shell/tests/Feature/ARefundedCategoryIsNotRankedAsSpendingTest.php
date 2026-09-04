@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
@@ -114,14 +115,10 @@ function refundRankingCard(string $html): string
  */
 function refundRankingBars(string $html): array
 {
-    $found = preg_match_all(
+    $matches = PatternScan::sets(
         '/role="progressbar"\s+aria-valuenow="([^"]*)"\s+aria-valuemin="0"\s+aria-valuemax="([^"]*)"(.*?)style="width:\s*([0-9.]+)%/s',
         $html,
-        $matches,
-        PREG_SET_ORDER,
     );
-
-    expect($found)->not->toBeFalse('the rendered markup could not be read for bars');
 
     return array_map(
         static fn (array $bar): array => ['now' => (float) $bar[1], 'max' => (float) $bar[2], 'width' => (float) $bar[4]],
