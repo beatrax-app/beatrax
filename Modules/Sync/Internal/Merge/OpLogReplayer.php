@@ -111,7 +111,7 @@ final readonly class OpLogReplayer
             new PriorAuthorship($db, new DeviceRegistryService($db)),
         );
         $ownership = new RowOwnership($db);
-        $splitTail = new SplitCreateTail($db, $ownership);
+        $splitTail = new SplitCreateTail($db, $ownership, $this->resolveFromContainer(LoggerInterface::class));
         $this->pairCascade = new TransferPairCascade($db, new PairUnlinker($db));
         // Ahead of the applier because the applier needs it, and built for the
         // same reason the ordering below is: the container answers null for a

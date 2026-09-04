@@ -44,13 +44,13 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'The banner is mounted on every page, so two tabs dismiss one alert and the second click names a row already retired.',
         ],
+        'Modules/DevMode/Internal/Actions/SettleFinishedRun.php' => [
+            'count' => 1,
+            'why' => 'It wraps the logger call that IS the report of a failure; nothing is left to try, and the only other channel is a live SSE stream a rethrow would kill.',
+        ],
         'Modules/DevMode/Internal/Audit/SpatieAuditWriter.php' => [
             'count' => 1,
             'why' => 'A console or queue caller has no authenticated user; the audit row is written without a causer rather than dropped.',
-        ],
-        'Modules/DevMode/Internal/Http/Controllers/ArtisanStreamController.php' => [
-            'count' => 1,
-            'why' => 'This catch IS the report of a failure, and the only other channel is a live SSE stream a rethrow would kill.',
         ],
         'Modules/DevMode/Internal/Logging/LogFileStats.php' => [
             'count' => 1,
