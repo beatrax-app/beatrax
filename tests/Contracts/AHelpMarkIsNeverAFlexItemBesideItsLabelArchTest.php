@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The mark is lifted onto the cap height of the text beside it by an offset
 // written in that text's own units, which only works while the mark and the
 // label resolve to one font-size. A flex row breaks both halves at once: the
@@ -43,14 +45,10 @@ function helpMarkParents(string $source): array
     );
 
     $void = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
-    $matched = preg_match_all(
+    $tags = PatternScan::setsWithOffsets(
         '~<(/?)([a-zA-Z][-a-zA-Z0-9:.]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)(/?)>~s',
         $source,
-        $tags,
-        PREG_SET_ORDER | PREG_OFFSET_CAPTURE,
     );
-
-    expect($matched)->not->toBeFalse('The tag scan gave up on this file, so its answer would be a guess.');
 
     $stack = [];
     $parents = [];
@@ -80,7 +78,7 @@ function helpMarkParents(string $source): array
             continue;
         }
 
-        preg_match('/class="([^"]*)"/', $tag[3][0], $class);
+        $class = PatternScan::first('/class="([^"]*)"/', $tag[3][0]);
         $stack[] = ['tag' => $name, 'class' => $class[1] ?? ''];
     }
 
@@ -118,5 +116,5 @@ it('never writes a help mark as a flex item beside the label it explains', funct
 it('gives the column header a size of its own, since the mark inside it inherits one', function (): void {
     $th = (string) file_get_contents(base_path('Modules/Core/Resources/views/components/th.blade.php'));
 
-    expect(preg_match('/\btext-(xs|sm|base|md|lg|xl)\b/', $th))->toBe(1);
+    expect(PatternScan::matches('/\btext-(xs|sm|base|md|lg|xl)\b/', $th))->toBeTrue();
 });

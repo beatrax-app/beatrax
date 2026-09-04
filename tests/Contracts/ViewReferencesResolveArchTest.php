@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
+use Modules\Core\Public\Support\PatternScan;
 
 // A composer bound to a view that does not exist never throws — it simply
 // never fires. Five of them named the deleted top-nav and sat inert for a
@@ -101,9 +102,7 @@ function viewReferencesIn(string $path, array $patterns): array
     $found = [];
 
     foreach ($patterns as [$pattern, $group]) {
-        if (preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-            continue;
-        }
+        $matches = PatternScan::allWithOffsets($pattern, $source);
 
         /** @var array{0: string, 1: int} $match */
         foreach ($matches[$group] as $match) {

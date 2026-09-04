@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use Modules\Core\Public\Support\PatternScan;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
@@ -50,10 +51,10 @@ final class ColourPairs
     {
         $pairs = [];
 
-        preg_match_all('/@php\b(?:.*?)@endphp|<\?php(?:.*?)\?>|@php\((?:.*?)\)/s', $source, $islands, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        $islands = PatternScan::setsWithOffsets('/@php\b(?:.*?)@endphp|<\?php(?:.*?)\?>|@php\((?:.*?)\)/s', $source);
 
         foreach ($islands as $island) {
-            preg_match_all('/\'([^\']*)\'|"([^"]*)"/', (string) $island[0][0], $strings, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+            $strings = PatternScan::setsWithOffsets('/\'([^\']*)\'|"([^"]*)"/', (string) $island[0][0]);
 
             foreach ($strings as $string) {
                 $literal = ($string[1][0] ?? '') !== '' ? (string) $string[1][0] : (string) ($string[2][0] ?? '');
@@ -242,7 +243,7 @@ final class ColourPairs
      */
     private static function attributes(string $source): array
     {
-        preg_match_all('/(?<![-:\w])style="([^"]*)"/s', $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        $matches = PatternScan::setsWithOffsets('/(?<![-:\w])style="([^"]*)"/s', $source);
 
         return array_map(static fn (array $match): array => [
             'line' => substr_count(substr($source, 0, (int) $match[0][1]), "\n") + 1,
@@ -314,7 +315,7 @@ final class ColourPairs
      */
     private static function variants(string $attribute): array
     {
-        preg_match_all('/\{\{(.*?)\}\}/s', $attribute, $regions, PREG_SET_ORDER);
+        $regions = PatternScan::sets('/\{\{(.*?)\}\}/s', $attribute);
 
         if ($regions === []) {
             return [$attribute];
@@ -322,7 +323,7 @@ final class ColourPairs
 
         $branches = [];
         foreach ($regions as $region) {
-            preg_match_all("/'([^']*)'/", $region[1], $literals);
+            $literals = PatternScan::all("/'([^']*)'/", $region[1]);
             $branches[] = $literals[1] === [] ? [self::UNKNOWABLE] : $literals[1];
         }
 
@@ -389,7 +390,7 @@ final class ColourPairs
      */
     private static function rules(string $css, array $night): array
     {
-        preg_match_all('/([^{}]*)\{([^{}]*)\}/s', $css, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        $matches = PatternScan::setsWithOffsets('/([^{}]*)\{([^{}]*)\}/s', $css);
 
         $rules = [];
         foreach ($matches as $match) {
@@ -473,7 +474,7 @@ final class ColourPairs
      */
     private static function darkMediaRegions(string $css): array
     {
-        preg_match_all('/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*\{/i', $css, $opens, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        $opens = PatternScan::setsWithOffsets('/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*\{/i', $css);
 
         $regions = [];
         foreach ($opens as $open) {

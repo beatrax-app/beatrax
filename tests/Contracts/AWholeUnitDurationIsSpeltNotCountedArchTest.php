@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Modules/Core/Public/Enums/Duration names the three whole-unit durations that
 // otherwise recur as bare second counts, and its seconds() is the only place
 // the conversion is done. The literals kept coming back anyway — a TTL of
@@ -87,13 +89,7 @@ it('reaches for the enum wherever a whole-unit duration is named', function (): 
         }
 
         $source = (string) file_get_contents($path);
-        $found = preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
-
-        // preg_match_all returns false on a backtrack limit, and a guard that
-        // stopped reading must say so rather than report nothing.
-        if ($found === false) {
-            throw new RuntimeException($relative.': the duration scan failed — '.preg_last_error_msg());
-        }
+        $matches = PatternScan::sets($pattern, $source);
 
         foreach ($matches as $match) {
             if (preg_match('/'.DURATION_NAME_EXCLUSIONS.'/i', $match['name']) === 1) {
@@ -115,11 +111,7 @@ it('converts minutes to milliseconds through the enum rather than by hand', func
 
         // `* 60 * 1000` and `* 60_000` are the same minute, spelled twice. Both
         // were in the app-lock idle window, in three files, in two spellings.
-        $found = preg_match_all('/\*\s*(?:60\s*\*\s*1000|60_?000)\b/', $source, $matches);
-
-        if ($found === false) {
-            throw new RuntimeException('the millisecond scan failed — '.preg_last_error_msg());
-        }
+        $found = PatternScan::count('/\*\s*(?:60\s*\*\s*1000|60_?000)\b/', $source);
 
         if ($found > 0) {
             $offenders[] = str_replace(base_path().'/', '', $path).' — '.$found.' hand-written minute-to-millisecond conversion(s)';

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A colour value resolved to sRGB, in either theme, so a contrast ratio can be
 // computed from the number rather than guessed from the text. A regex over
 // `oklch(0.514 0.222 16.935)` reads 0.514 as a red channel and produces
@@ -158,7 +160,7 @@ final class ThemeColour
      */
     private static function declarations(string $body): array
     {
-        preg_match_all('/(--color-[a-z0-9-]+)\s*:\s*([^;]+);/i', $body, $matches, PREG_SET_ORDER);
+        $matches = PatternScan::sets('/(--color-[a-z0-9-]+)\s*:\s*([^;]+);/i', $body);
 
         $declared = [];
         foreach ($matches as $match) {

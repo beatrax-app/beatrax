@@ -89,14 +89,13 @@ final readonly class OpLogEntryApplier
     /**
      * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $creates
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
-     * @param  list<int>  $touchedTransactionIds
      */
     public function applyCreates(
         array $creates,
         array $tombstones,
         int $userId,
         string $now,
-        array &$touchedTransactionIds,
+        SearchDocumentRows $documents,
     ): void {
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
         $deferred = [];
@@ -110,7 +109,7 @@ final readonly class OpLogEntryApplier
                     $tombstones[$table][$pk] ?? null,
                     $userId,
                     $now,
-                    $touchedTransactionIds,
+                    $documents,
                 );
 
                 if ($selfRefs !== []) {
@@ -126,7 +125,6 @@ final readonly class OpLogEntryApplier
     // self-referential columns it could not carry at insert time.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
-     * @param  list<int>  $touchedTransactionIds
      * @return array<string, mixed>
      */
     private function applyCreatedRow(
@@ -136,7 +134,7 @@ final readonly class OpLogEntryApplier
         ?OpLogEntry $tomb,
         int $userId,
         string $now,
-        array &$touchedTransactionIds,
+        SearchDocumentRows $documents,
     ): array {
         $payload = $this->admissiblePayload($table, $pk, $fields, $tomb, $userId, $now);
 
@@ -160,7 +158,7 @@ final readonly class OpLogEntryApplier
             return [];
         }
 
-        $this->trackTransaction($table, $pk, $touchedTransactionIds);
+        $documents->rowWritten($table, $pk, $userId);
 
         return $selfRefs;
     }
@@ -410,7 +408,6 @@ final readonly class OpLogEntryApplier
      * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
      * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes
-     * @param  list<int>  $touchedTransactionIds
      */
     public function applyFieldMerges(
         array $candidatesByField,
@@ -418,7 +415,7 @@ final readonly class OpLogEntryApplier
         int $userId,
         string $now,
         array &$pendingDeletes,
-        array &$touchedTransactionIds,
+        SearchDocumentRows $documents,
     ): void {
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
@@ -434,7 +431,7 @@ final readonly class OpLogEntryApplier
                     $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now);
                 }
 
-                $this->trackTransaction($table, $pk, $touchedTransactionIds);
+                $documents->rowWritten($table, $pk, $userId);
             }
         }
     }
@@ -536,16 +533,15 @@ final readonly class OpLogEntryApplier
     /**
      * @param  array<string, array<int|string, OpLogEntry>>  $pendingDeletes  Children-first table order.
      * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
-     * @param  list<int>  $tombstonedTransactionIds
      */
     public function applyDeletions(
         array $pendingDeletes,
         int $userId,
         string $now,
         array &$pairCascades,
-        array &$tombstonedTransactionIds,
+        SearchDocumentRows $documents,
     ): void {
-        /** @var list<array{table: string, pk: int|string, tomb: OpLogEntry}> $refused */
+        /** @var list<array{table: string, pk: int|string, tomb: OpLogEntry, documents: list<int>}> $refused */
         $refused = [];
 
         foreach ($pendingDeletes as $table => $pks) {
@@ -556,19 +552,24 @@ final readonly class OpLogEntryApplier
 
                 $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
 
+                // Asked while the row is still here: a tax tag names its
+                // transaction in a column, and the delete below is the last
+                // moment anything can read it.
+                $composed = $documents->documentsOf($table, $pk, $userId);
+
                 if ($this->deleteRow($table, $pk, $userId)) {
-                    $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
+                    $documents->rowDeleted($table, $composed);
 
                     continue;
                 }
 
-                $refused[] = ['table' => $table, 'pk' => $pk, 'tomb' => $tomb];
+                $refused[] = ['table' => $table, 'pk' => $pk, 'tomb' => $tomb, 'documents' => $composed];
             }
         }
 
         foreach ($refused as $blocked) {
             if ($this->deleteRow($blocked['table'], $blocked['pk'], $userId)) {
-                $this->trackTransaction($blocked['table'], $blocked['pk'], $tombstonedTransactionIds);
+                $documents->rowDeleted($blocked['table'], $blocked['documents']);
 
                 continue;
             }
@@ -613,18 +614,6 @@ final readonly class OpLogEntryApplier
             return true;
         } catch (QueryException) {
             return false;
-        }
-    }
-
-    // FTS5 freshness tracking is confined to the base `transactions` table
-    // with an integer pk; other tables never feed the search index.
-    /**
-     * @param  list<int>  $ids
-     */
-    private function trackTransaction(string $table, int|string $pk, array &$ids): void
-    {
-        if ($table === 'transactions' && is_int($pk)) {
-            $ids[] = $pk;
         }
     }
 

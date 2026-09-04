@@ -9,6 +9,7 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
@@ -20,7 +21,7 @@ uses(RefreshDatabase::class);
 
 function enabledFlagSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"auth.app-lock-settings-section"')) {

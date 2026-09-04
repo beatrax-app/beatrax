@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-second-root-element-in-a-livewire-view
  */
@@ -19,7 +21,7 @@ function rootTagsOf(string $source): array
     $roots = [];
     $void = ['br', 'hr', 'img', 'input', 'meta', 'link', 'source', 'track', 'wbr', 'area', 'base', 'col', 'embed', 'param'];
 
-    preg_match_all('#<(/?)([a-zA-Z][a-zA-Z0-9:-]*)([^>]*)>#s', $stripped, $tags, PREG_SET_ORDER);
+    $tags = PatternScan::sets('#<(/?)([a-zA-Z][a-zA-Z0-9:-]*)([^>]*)>#s', $stripped);
 
     foreach ($tags as $tag) {
         [$whole, $closing, $name, $attrs] = $tag;

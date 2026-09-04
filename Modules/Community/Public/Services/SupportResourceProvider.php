@@ -7,6 +7,7 @@ namespace Modules\Community\Public\Services;
 use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Internal\Support\RecipientAddress;
 use Modules\Community\Public\Dto\SupportResource;
+use Modules\Core\Public\Support\PatternScan;
 
 final class SupportResourceProvider
 {
@@ -254,8 +255,7 @@ final class SupportResourceProvider
         // distinguish "Albert Heijn Premium" from plain "Albert Heijn".
         $lowered = mb_strtolower(trim($name));
         $stripped = preg_replace('/\b(b\.?v\.?|n\.?v\.?|inc|ltd|gmbh|ab|sa|plc)\b/u', ' ', $lowered) ?? $lowered;
-        preg_match_all('/[\p{L}\p{N}]+/u', $stripped, $matches);
 
-        return $matches[0];
+        return PatternScan::all('/[\p{L}\p{N}]+/u', $stripped)[0];
     }
 }

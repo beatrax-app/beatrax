@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/00-index.md
  */
@@ -79,9 +81,7 @@ it('writes the GitHub origin once, in ProjectLinks', function (): void {
         }
 
         $source = (string) file_get_contents($repoRoot.'/'.$relative);
-        if (preg_match_all(PROJECT_LINKS_ORIGIN_PATTERN, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-            continue;
-        }
+        $matches = PatternScan::allWithOffsets(PROJECT_LINKS_ORIGIN_PATTERN, $source);
 
         foreach ($matches[0] as [, $offset]) {
             $offenders[] = $relative.':'.(substr_count(substr($source, 0, $offset), "\n") + 1);
@@ -142,9 +142,7 @@ it('never points a Beatrax link at an org that does not host it', function (): v
     $offenders = [];
     foreach (projectLinksScannedFiles() as $relative) {
         $source = (string) file_get_contents($repoRoot.'/'.$relative);
-        if (preg_match_all(PROJECT_LINKS_ANY_ORG_PATTERN, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-            continue;
-        }
+        $matches = PatternScan::allWithOffsets(PROJECT_LINKS_ANY_ORG_PATTERN, $source);
 
         foreach ($matches[1] as $index => [$org]) {
             if ($org === PROJECT_LINKS_ORG) {

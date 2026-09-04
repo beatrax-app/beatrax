@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-browser-global-in-a-wireclick-expression
  */
@@ -22,7 +24,7 @@ it('never reaches for a browser global from a wire: expression', function (): vo
 
         // wire:click, wire:submit, wire:change … the whole family shares the
         // $wire scope.
-        preg_match_all('/wire:[a-z.]+(?:\.[a-z]+)*="([^"]*)"/', $source, $matches);
+        $matches = PatternScan::all('/wire:[a-z.]+(?:\.[a-z]+)*="([^"]*)"/', $source);
 
         foreach ($matches[1] as $expression) {
             if (preg_match('/\b(document|window|navigator|localStorage|sessionStorage)\s*\./', $expression) === 1) {

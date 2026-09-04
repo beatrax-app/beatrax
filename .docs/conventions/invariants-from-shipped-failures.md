@@ -5650,6 +5650,70 @@ leave the page naming the reader's own rows exactly as often as the page with no
 parameter at all. A 500 and a neighbour's row were already covered; a list that
 is simply *wrong* was not.
 
+## A regex that never ran, read as no match
+
+`preg_match()` and `preg_match_all()` return `false` when PCRE stops part-way —
+a JIT stack, backtrack or recursion limit, or a subject whose encoding the
+pattern cannot read — and they leave the `$matches` array **empty** when they
+do. So the shape is a call whose return is thrown away, followed by a read of
+`$matches`:
+
+```php
+preg_match_all($pattern, $subject, $matches);
+foreach ($matches[0] as $hit) { … }
+```
+
+Both halves of that are silent. `false` is not an exception, `$matches[0]` is
+`[]` either way, and nothing anywhere records that the scan was abandoned. The
+call site has no way left to tell "the tree is clean" from "the reader gave up
+before it got there". Measured rather than assumed: at
+`pcre.backtrack_limit=1000`, `preg_match_all('/(a+)+$/', str_repeat('a', 40).'b',
+$m)` returns `false`, `preg_last_error_msg()` says `Backtrack limit exhausted`,
+and `$m[0]` is `[]` — the same value a clean scan of a clean file produces.
+
+It has cost twice here. An architecture guard hit the JIT stack limit on a large
+subject and reported the wrong answer; separately, a `<[^>]*>` tag strip spilled
+every Alpine `x-data` body into "visible text" and produced 75 false positives,
+which is the same lesson from the other side — a regex over structured input is
+often the wrong instrument, and its failures do not announce themselves.
+
+The false-green direction is the one that matters. A guard that finds nothing
+because it never looked is indistinguishable, in CI, from a guard that looked and
+found nothing — and every *other* defect that guard exists to catch rides through
+behind it.
+
+Nothing caught it because there was nothing to catch. Static analysis sees a
+legal call; the formatter sees well-formed code; the suite sees a passing test.
+`preg_match` is one of very few functions in the language whose failure value is
+also a plausible success value, and PHP has no unused-return-value diagnostic
+that would have asked.
+
+Counted across `Modules/`, `app/`, `tests/`, `database/` and `scripts/`: 996
+calls to the two functions, of which 412 read the answer in a position where
+`false` cannot be told from no-match, and 199 of those threw the return away
+entirely and then read `$matches`. Only 13 were production code — the rest were
+tests and architecture guards, which is exactly the wrong place for it. The
+remaining 542 already compared identically against `1`, which is why the shape
+survived review for so long: the correct form was the common one.
+
+So the reading has one home, `Modules\Core\Public\Support\PatternScan`, whose
+every method runs the scan and raises `PatternScanFailedException` naming the
+pattern and what PCRE said. `ARegexThatNeverRanIsNotNoMatchArchTest` tokenises
+the tree — with `token_get_all()`, not a regex, since a pattern inside a string,
+a name inside a comment and a method that happens to share the name all read
+alike to `grep` — and accepts exactly two written forms beside the seam:
+`=== 1` / `!== 1`, and `=== false` / `!== false`. Both separate the failure from
+the empty answer. `> 0`, `=== 0`, `(bool)`, `!` and a bare `if` all fold `false`
+into the answer, and a discarded return folds it into `$matches`.
+
+Three sites keep the tolerant reading deliberately, and say so where they sit.
+`CorpusPatternMatcher` runs corpus-supplied patterns under a lowered backtrack
+budget and logs a failure as a non-match, because the corpus is data and one
+pathological row must not raise on a scan of every description.
+`RelayClient::backendHonorsPinning()` reads `=== 1` so an unreadable
+`ssl_version` string fails closed rather than throwing inside a TLS decision.
+`CorpusPatternMatcher::compiles()` uses `=== false` to mean "this pattern does
+not compile", which is the question it is asking.
 ## A catch body that says nothing
 
 `tests/Contracts/AnEmptyCatchIsOneSomebodyChoseArchTest.php`

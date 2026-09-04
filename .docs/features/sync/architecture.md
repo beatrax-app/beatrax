@@ -509,6 +509,12 @@ itself into the log, in slices that commit as they go and resume across
 requests: [Capturing the history that predates
 sync](pre-sync-history-capture.md).
 
+A mutation raised by a process holding no signing key — a scheduled command,
+`sync:serve`, a queue worker, or any screen behind an engaged app-lock — is
+recorded as a coordinate and replayed from the live row on the next request that
+can sign: [A mutation a keyless process cannot
+sign](a-mutation-a-keyless-process-cannot-sign.md).
+
 ### When two devices name one row (`Internal\Merge\AlreadyPresentCreate`)
 
 A `create_row` whose insert the database refuses as already present is one of
@@ -638,11 +644,27 @@ are named there rather than quietly passing — the three rule tables, which nev
 travel in either direction, and `transaction_splits`, which needs a decision
 about the *set* of legs rather than one row's id.
 
-Both id kinds run past 2<sup>53</sup>, so ids in those modules reach the browser
-**quoted** and come back through `DerivedRowId::fromWire()`.
+Both id kinds run past 2<sup>53</sup>, so these ids reach the browser **quoted**
+and come back through `DerivedRowId::fromWire()`.
 `ADerivedIdNeverReachesTheBrowserAsANumberArchTest` covers both, and is
-deliberately coarse: it flags every bare id in a module that mints any, small
-autoincrements included, because a blade cannot tell them apart by eye.
+deliberately coarse twice over. It flags every bare id in **every** module that
+ships blades, small autoincrements included: a blade cannot tell the two apart
+by eye, and a minted id is a value that travels — a goal id is rendered in a
+Ledger blade, and Tax and DevMode mint nothing at all yet write these ids into
+wire attributes. And it reads two shapes, because there are two ways an id
+reaches a wire attribute: echoed straight into a `wire:`, `x-on:` or `@`
+attribute, and concatenated into the call string a blade hands to a mounted
+component that renders it into a `wire:click` of its own. Every
+`x-core::confirm-strip` works the second way, which is how Goals, Pots and
+Reports came to quote the button that ASKS the question and leave the button
+that ANSWERS it bare.
+
+What it counts as an id is the name the expression ends on, and three ways of
+writing the same value used to slip past that: `$txId` (the anchor admitted no
+`$`), `$m['id']` (the anchor had to end on the letters, and a subscript closes
+on `']`) and `(int) $accountId` (a cast in front, which only `$entry->id` ever
+survived because `->` gave it a second way in). A ternary between two ids would
+still slip; nothing writes one.
 
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 

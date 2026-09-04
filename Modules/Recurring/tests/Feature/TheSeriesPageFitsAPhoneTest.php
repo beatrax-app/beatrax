@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Models\RecurringSeries;
@@ -119,7 +120,8 @@ it('declares the y axis that carries the money formatter', function (): void {
         ->assertOk()
         ->getContent();
 
-    expect(preg_match('/data-options=("|\')([^"\']*)\1/u', $content, $matches))->toBe(1);
+    $matches = PatternScan::first('/data-options=("|\')([^"\']*)\1/u', $content);
+    expect($matches)->not->toBeEmpty();
 
     /** @var array<string, mixed> $parsed */
     $parsed = json_decode(html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'), true);

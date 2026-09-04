@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 
 // The affordance this replaces is the `title` attribute, which fires on hover
 // and nothing else: measured on an iPhone 12 mini and a Galaxy S24 Ultra, no
@@ -53,7 +54,7 @@ it('draws its mark as a glyph and not as a picture', function (): void {
     expect($html)->toContain('>?</span>')
         ->and($html)->not->toContain("\u{FE0F}");
 
-    expect(preg_match('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $html))->toBe(0);
+    expect(PatternScan::matches('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/u', $html))->toBeFalse();
 });
 
 it('gives the panel an accessible name taken from the label it was opened for', function (): void {

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-middleware-registered-on-one-root-only
  */
@@ -11,10 +13,9 @@ function registeredCoreMiddleware(string $bootstrapPath): array
 {
     $contents = (string) file_get_contents($bootstrapPath);
 
-    preg_match_all(
+    $imports = PatternScan::all(
         '/use Modules\\\\Core\\\\Internal\\\\Http\\\\Middleware\\\\(\w+);/',
         $contents,
-        $imports,
     );
 
     // An import alone proves nothing — the class has to reach the stack as

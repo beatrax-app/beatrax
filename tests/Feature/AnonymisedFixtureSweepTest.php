@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 
 // The `integration` case shells out to the real pdftotext; a host without
@@ -15,7 +16,7 @@ it('the redacted ICS text fixture contains zero 12-digit-or-longer runs', functi
         throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
     }
 
-    $hits = preg_match_all('/[0-9]{12,}/', $contents);
+    $hits = PatternScan::count('/[0-9]{12,}/', $contents);
 
     expect($hits)->toBe(0,
         'Committed ICS text fixture must contain zero 12+ contiguous digit runs '
@@ -29,8 +30,7 @@ it('the redacted ICS text fixture contains zero IBAN-shaped tokens other than th
         throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
     }
 
-    $hits = [];
-    preg_match_all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $contents, $hits);
+    $hits = PatternScan::all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $contents);
 
     foreach ($hits[0] as $match) {
         expect($match)->toBe('NL95BANK0000000000',
@@ -59,7 +59,7 @@ it('the redacted ICS text fixture contains a card-number placeholder', function 
         throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
     }
 
-    expect(preg_match('/\*\*\*\*-\*\*\*\*-\*\*\*\*-/', $contents))->toBe(1,
+    expect(PatternScan::matches('/\*\*\*\*-\*\*\*\*-\*\*\*\*-/', $contents))->toBeTrue(
         'Committed ICS text fixture must contain the canonical card-number '
         .'placeholder ****-****-****-XXXX.'
     );
@@ -73,13 +73,12 @@ it('the tiny synthetic ICS PDF, after pdftotext extraction, contains zero PII-sh
     $extractor = new PdfTextExtractor;
     $extracted = $extractor->extract($fixtureTinyPdf);
 
-    expect(preg_match_all('/[0-9]{12,}/', $extracted))->toBe(0,
+    expect(PatternScan::count('/[0-9]{12,}/', $extracted))->toBe(0,
         'pdftotext output for the tiny synthetic PDF must contain zero '
         .'12+ contiguous digit runs.'
     );
 
-    $hits = [];
-    preg_match_all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $extracted, $hits);
+    $hits = PatternScan::all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $extracted);
     foreach ($hits[0] as $match) {
         expect($match)->toBe('NL95BANK0000000000',
             'pdftotext output for the tiny synthetic PDF must only contain the '

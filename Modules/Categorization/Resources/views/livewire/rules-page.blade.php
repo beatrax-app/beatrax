@@ -152,19 +152,19 @@
                                 :cancel-label="Lang::get('categorization::rules.cancel')"
                                 :confirm-label="Lang::get('categorization::rules.delete_yes')"
                                 cancel="cancelDelete"
-                                :confirm="'deleteRule('.$rule->id.')'"
+                                :confirm="'deleteRule(\''.$rule->id.'\')'"
                             />
                         @else
                             <div class="flex items-center justify-end gap-2">
                                 <button
                                     type="button"
-                                    wire:click="openEditModal({{ $rule->id }})"
+                                    wire:click="openEditModal('{{ $rule->id }}')"
                                     aria-label="{{ Lang::get('categorization::rules.edit_aria', ['priority' => $rule->priority]) }}"
                                     class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >{{ Lang::get('categorization::rules.edit') }}</button>
                                 <button
                                     type="button"
-                                    wire:click="confirmDelete({{ $rule->id }})"
+                                    wire:click="confirmDelete('{{ $rule->id }}')"
                                     aria-label="{{ Lang::get('categorization::rules.delete_aria', ['priority' => $rule->priority]) }}"
                                     class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:text-rose-500 dark:hover:bg-rose-950"
                                 >{{ Lang::get('categorization::rules.delete') }}</button>

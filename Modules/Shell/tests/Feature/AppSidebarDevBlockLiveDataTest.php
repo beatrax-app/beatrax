@@ -6,6 +6,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Shell\Internal\Http\Livewire\AppSidebar;
 
 function sidebarLiveUser(bool $isDeveloper, string $username = 'sidebar-live-fixture'): User
@@ -50,7 +51,7 @@ it('renders the worker delta when the heartbeat cache key is present and fresh',
 
     // Allow a 0..7s window — the test runtime can drift a couple of
     // seconds between the cache write and the render.
-    $matched = (bool) preg_match('/Worker (\d|[1-9]\d)\s*s ago/', $html);
+    $matched = PatternScan::matches('/Worker (\d|[1-9]\d)\s*s ago/', $html);
     expect($matched)->toBeTrue('Sidebar Dev block must render "Worker Ns ago" with a numeric delta when the heartbeat cache key is fresh.');
 });
 

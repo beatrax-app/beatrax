@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 
@@ -41,7 +42,7 @@ function primaryTriageUnknown(int $userId, string $slug, ?string $iban = null): 
 /** @return list<string> every <button> element inside the triage card, markup and all */
 function primaryTriageButtons(string $html): array
 {
-    preg_match_all('~<button\b.*?</button>~s', $html, $found);
+    $found = PatternScan::all('~<button\b.*?</button>~s', $html);
 
     return $found[0];
 }
@@ -96,7 +97,7 @@ it('puts every action on the card content edge, at full width', function (): voi
 
     // The hand-styled block that opted out of the grid: seven elements carried
     // an inline flex / padding / border of their own, and nothing shared an edge.
-    preg_match('~<fieldset class="triage-decide".*?</fieldset>~s', $html, $decide);
+    $decide = PatternScan::first('~<fieldset class="triage-decide".*?</fieldset>~s', $html);
     expect($decide)->not->toBe([]);
     expect($decide[0])->not->toContain('style="flex')
         ->and($decide[0])->not->toContain('flex: 1 1 240px')

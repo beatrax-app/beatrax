@@ -20,6 +20,7 @@ use Modules\Core\Public\Support\LivewireClientRefusal;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
+use Modules\Mobile\Internal\Boot\SchemaCompletionMarker;
 use Modules\Mobile\Internal\Http\Middleware\ForgetGuardsBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\ForgetStaleLivewireHeaderBetweenRequests;
 use Modules\Mobile\Internal\Http\Middleware\ForgetStaleSessionBetweenRequests;
@@ -31,6 +32,7 @@ use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
 use Modules\Notifications\Internal\Http\Middleware\RunDeferredNotificationPasses;
 use Modules\Sync\Internal\Http\Middleware\CarriesPendingPairingFrames;
+use Modules\Sync\Internal\Http\Middleware\DrainsDeferredOpCaptures;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -104,6 +106,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // process with an empty session, so a request is the only thing
             // here that ever holds the key its notification writes need.
             RunDeferredNotificationPasses::class,
+            // Terminate-time for the same reason, one door along: the phone's
+            // own writes are captured by a listener that cannot sign outside a
+            // request either, so this is where they reach the log.
+            DrainsDeferredOpCaptures::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -217,7 +223,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         } catch (Throwable $e) {
             // Non-fatal: a boot-time hook that throws takes the whole shell down,
-            // and the app has to open before anything can be repaired.
+            // and the app has to open before anything can be repaired. It has to
+            // open on the screen that SAYS so, though - runPendingMigrations()
+            // raises this itself, and the three calls above it cannot.
+            SchemaCompletionMarker::raise();
+
             $app->make(LoggerInterface::class)->error(
                 'Mobile first-launch migrate-on-launch failed non-fatally.',
                 ['exception' => $e],

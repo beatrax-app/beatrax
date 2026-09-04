@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
 // The Filters button moved onto the search box's own line, which is a flex row
@@ -48,7 +49,7 @@ it('hides the phone button from a wrapper rather than from the button', function
         base_path('Modules/Ledger/Resources/views/livewire/partials/search-toolbar.blade.php'),
     );
 
-    preg_match_all('/class="([^"]*\bsrch-filters-btn\b[^"]*)"/', $blade, $matches);
+    $matches = PatternScan::all('/class="([^"]*\bsrch-filters-btn\b[^"]*)"/', $blade);
 
     expect($matches[1])->toHaveCount(1)
         ->and($matches[1][0])->not->toContain('md:hidden');
