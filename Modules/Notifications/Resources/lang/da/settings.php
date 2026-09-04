@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Din ugentlige status',
+        'label' => 'Din status',
         'help' => 'Hvor ofte du får en opsummering af, hvordan det står til i denne periode.',
         'daily' => 'Dagligt',
         'weekly' => 'Ugentligt',

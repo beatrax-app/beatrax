@@ -23,7 +23,7 @@ return [
     ],
 
     'digest' => [
-        'label' => 'Twoja tygodniowa sytuacja',
+        'label' => 'Twoja sytuacja',
         'help' => 'Jak często dostajesz podsumowanie sytuacji w bieżącym okresie.',
         'daily' => 'Codziennie',
         'weekly' => 'Co tydzień',
