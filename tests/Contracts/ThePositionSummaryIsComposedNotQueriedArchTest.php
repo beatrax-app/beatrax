@@ -73,7 +73,7 @@ it('reaches the database through no connection, builder or facade of its own', f
     // the same clean tree a clean tree reports.
     expect(count($sources))->toBeGreaterThanOrEqual(5);
 
-    $reachers = [];
+    $reachingTheDatabase = [];
 
     foreach ($sources as $path) {
         $source = positionComposedStripped($path);
@@ -87,13 +87,13 @@ it('reaches the database through no connection, builder or facade of its own', f
             .'|->(?:select|where|order|group|having|join)Raw\s*\(/',
             $source,
         )) {
-            $reachers[] = positionComposedRelative($path);
+            $reachingTheDatabase[] = positionComposedRelative($path);
         }
     }
 
-    expect($reachers)->toBe([], implode("\n", [
+    expect($reachingTheDatabase)->toBe([], implode("\n", [
         'These compose the position from a query of their own rather than from a neighbour:',
-        ...$reachers,
+        ...$reachingTheDatabase,
         '',
         'The position exists so that one figure answers every surface. A raw read',
         'copies a neighbour\'s rules instead of asking for them, and the copy stops',
