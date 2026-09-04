@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\RowHistoryPolicy;
+use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
@@ -61,6 +62,12 @@ final readonly class HistoryReprojector
         // reasons that are not recoverable never reach the pass below, so this
         // is the only thing that ever clears one.
         $this->clearSettled($userId);
+
+        // Before the early returns, because a history with nothing left to
+        // replay is exactly the one whose links are ready to close: a transfer
+        // pair is stripped before its insert and written back per batch, and an
+        // import spanning several sessions ends one with the partner to come.
+        $this->container->make(SelfReferenceDeferral::class)->resolveFromHistory($userId);
 
         $rows = $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint);
         if ($rows === []) {
@@ -229,7 +236,11 @@ final readonly class HistoryReprojector
         $rows = [];
         $seen = [];
 
-        foreach ($query->get(['table_name', 'pk']) as $row) {
+        // Streamed, not fetched: this is the one query in the class with no
+        // limit, and a limit is the wrong bound for it — the caller stamps the
+        // pass window closed afterwards, so a truncated pass puts its own
+        // remainder permanently outside the next one's `created_at >` filter.
+        foreach ($query->select(['table_name', 'pk'])->cursor() as $row) {
             $table = is_string($row->table_name ?? null) ? $row->table_name : '';
             $pk = isset($row->pk) && (is_string($row->pk) || is_numeric($row->pk)) ? (string) $row->pk : '';
             if ($table === '' || $pk === '' || isset($seen[$table.':'.$pk])) {
