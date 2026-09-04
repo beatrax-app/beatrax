@@ -21,6 +21,7 @@ use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -100,6 +101,7 @@ it('keeps the configured busy_timeout in force through every per-page transactio
         $this->app->make(KnownSenderQuery::class),
         $this->app->make(JobUserContext::class),
         $this->app->make(GraphDeltaWalk::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     // No write path may re-issue the pragma: one that does lowers the timeout

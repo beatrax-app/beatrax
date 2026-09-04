@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
@@ -18,6 +20,7 @@ use Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob;
 use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Tests\Doubles\FakeInboxMessageQuery;
+use Psr\Log\LoggerInterface;
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -105,6 +108,7 @@ it('transitions one PayPal receipt to parsed, one login notice to skipped, one u
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
         $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     $rows = DB::table('inbox_messages')->where('user_id', $this->fixtureUser->id)->orderBy('id')->get();
@@ -115,6 +119,70 @@ it('transitions one PayPal receipt to parsed, one login notice to skipped, one u
     expect($rows[2]->status)->toBe('unmatched');
 
     expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(1);
+});
+
+// The .eml on disk is exactly the size the sender of that mail chose. Reading
+// it whole to find out is the fatal; the fixture here is a receipt that parses
+// into a transaction, so a run that produced one read bytes it should not have.
+it('refuses a stored message past the ceiling and never hands its bytes to the parser', function (): void {
+    Log::spy();
+
+    DB::table('inboxes')->insert([
+        'user_id' => $this->fixtureUser->id,
+        'provider' => 'gmail',
+        'email' => 'cardholder@gmail.test',
+        'created_at' => '2026-05-17 00:00:00',
+        'updated_at' => '2026-05-17 00:00:00',
+    ]);
+    $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
+
+    $internalDate = new DateTimeImmutable('2026-05-17T09:42:13+02:00');
+    $seed = $this->seedInboxRowAndBlob;
+    $row = $seed(
+        $this->fixtureUser->id,
+        $inboxId,
+        'rcpt-oversized',
+        'service@paypal.com',
+        'Je ontvangstbewijs',
+        $internalDate,
+        (string) file_get_contents(__DIR__.'/../fixtures/paypal/current-receipt.eml'),
+    );
+
+    // Grown past the ceiling by seeking rather than writing: the size the
+    // reader has to trust is real, the disk cost of the fixture is not.
+    /** @var EmlBlobStore $blobs */
+    $blobs = app(EmlBlobStore::class);
+    $blobPath = $blobs->pathFor($this->fixtureUser->id, $inboxId, $internalDate, 'rcpt-oversized');
+    $handle = fopen($blobPath, 'r+b');
+    fseek($handle, UploadLimits::MAX_MESSAGE_BYTES);
+    fwrite($handle, "\n");
+    fclose($handle);
+    clearstatcache(true, $blobPath);
+    expect(filesize($blobPath))->toBeGreaterThan(UploadLimits::MAX_MESSAGE_BYTES);
+
+    $this->app->instance(
+        InboxMessageQuery::class,
+        new FakeInboxMessageQuery([$row], $this->app->make(DatabaseManager::class)),
+    );
+
+    $job = new ProcessFetchedInboxMessagesJob($this->fixtureUser->id);
+    $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        $this->app->make(Filesystem::class),
+        $this->app->make(InboxMessageQuery::class),
+        $this->app->make(EmlBlobStore::class),
+        $this->app->make(RecordReceipt::class),
+        $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
+    );
+
+    expect(DB::table('inbox_messages')->where('id', $row->id)->value('status'))->toBe('unmatched');
+    expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
+    expect(DB::table('file_imports')->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(static fn (string $message): bool => str_contains($message, 'refused to read a stored message whole'));
 });
 
 it('does not touch rows whose userId mismatches the job target (cross-user defence)', function (): void {
@@ -150,6 +218,7 @@ it('does not touch rows whose userId mismatches the job target (cross-user defen
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
         $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     $row = DB::table('inbox_messages')->where('user_id', $otherUser->id)->first();
@@ -216,6 +285,7 @@ it('marks a fetched row unmatched when its blob is missing (re-fetch, not phanto
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
         $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     expect(DB::table('inbox_messages')->where('id', $rowId)->value('status'))->toBe('unmatched');
@@ -256,6 +326,7 @@ it('lands a Google Play receipt in the ledger once its synthetic account exists'
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
         $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     $account = Account::query()
@@ -301,6 +372,7 @@ it('records a parsed receipt but writes no transaction while the reader has not 
         $this->app->make(EmlBlobStore::class),
         $this->app->make(RecordReceipt::class),
         $this->app->make(ReceiptLedgerBridge::class),
+        $this->app->make(LoggerInterface::class),
     );
 
     expect(DB::table('inbox_messages')->where('id', $row->id)->value('status'))->toBe('parsed');
