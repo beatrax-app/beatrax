@@ -51,14 +51,14 @@
                                 <div class="inline-flex overflow-hidden rounded-md border border-slate-200 text-xs font-medium dark:border-slate-700" role="group" aria-label="{{ Lang::get('migration::preview.keep_or_take_aria', ['label' => $item['label']]) }}">
                                     <button
                                         type="button"
-                                        wire:click="resolveConflict({{ $item['id'] }}, '{{ ConflictResolution::KeepLocal->value }}')"
+                                        wire:click="resolveConflict('{{ $item['id'] }}', '{{ ConflictResolution::KeepLocal->value }}')"
                                         class="px-3 py-1.5 {{ $item['resolution'] === ConflictResolution::KeepLocal->value ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
                                     >
                                         {{ Lang::get('migration::preview.keep_local') }}
                                     </button>
                                     <button
                                         type="button"
-                                        wire:click="resolveConflict({{ $item['id'] }}, '{{ ConflictResolution::TakeSource->value }}')"
+                                        wire:click="resolveConflict('{{ $item['id'] }}', '{{ ConflictResolution::TakeSource->value }}')"
                                         class="px-3 py-1.5 {{ $item['resolution'] === ConflictResolution::TakeSource->value ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300' }}"
                                     >
                                         {{ Lang::get('migration::preview.take_source') }}
