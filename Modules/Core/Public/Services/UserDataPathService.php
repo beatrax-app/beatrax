@@ -22,6 +22,14 @@ final class UserDataPathService
         return base_path();
     }
 
+    // The application's own .env, which is where key:generate writes. It is
+    // not user data, but this class is the sole sanctioned caller of
+    // base_path(), so resolving it anywhere else is a boundary violation.
+    public static function environmentFile(): string
+    {
+        return self::projectRoot().DIRECTORY_SEPARATOR.'.env';
+    }
+
     // One source, unlike platformSignal() below, because the two variables
     // arrive by different routes: the desktop shell passes this one in the
     // spawned process environment, and no mobile shell sets it at all — so
