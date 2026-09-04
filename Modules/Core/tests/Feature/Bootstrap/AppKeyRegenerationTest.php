@@ -7,6 +7,7 @@ use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
+use Psr\Log\AbstractLogger;
 
 beforeEach(function (): void {
     // A fresh temp dir per test, with the env var restored in afterEach so
@@ -15,6 +16,20 @@ beforeEach(function (): void {
     $this->tempRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'ensure-app-key-'.bin2hex(random_bytes(6));
     mkdir($this->tempRoot, 0755, true);
     putenv('NATIVEPHP_STORAGE_PATH='.$this->tempRoot);
+
+    // A .env of its own, because the action now reads the key back from the
+    // file: the shipped key is what a fresh install starts with, and whether
+    // it is still there afterwards is the only thing that answers the question.
+    $this->shippedKey = 'base64:'.base64_encode(random_bytes(32));
+    $this->envFile = $this->tempRoot.DIRECTORY_SEPARATOR.'.env';
+    file_put_contents($this->envFile, "APP_NAME=Beatrax\nAPP_KEY={$this->shippedKey}\n");
+
+    $this->app->useEnvironmentPath($this->tempRoot);
+    $this->app->loadEnvironmentFrom('.env');
+
+    // key:generate replaces the line matching the key currently in config, not
+    // any APP_KEY line, so a fresh install is only simulated once the two agree.
+    $this->app->make(ConfigRepository::class)->set('app.key', $this->shippedKey);
 });
 
 afterEach(function (): void {
@@ -46,6 +61,17 @@ afterEach(function (): void {
     }
 });
 
+function appKeyWrittenIn(string $envFile): ?string
+{
+    if (! is_file($envFile)) {
+        return null;
+    }
+
+    preg_match('/^APP_KEY=(.*)$/m', (string) file_get_contents($envFile), $matched);
+
+    return $matched === [] ? null : trim($matched[1]);
+}
+
 // A spy kernel so `key:generate` is counted, never run against the real .env.
 /**
  * @return ConsoleKernel
@@ -64,9 +90,16 @@ function ensureAppKeySpyKernel(): object
 
         public function terminate($input, $status): void {}
 
+        /** @var null|callable(): void */
+        public $onCall = null;
+
         public function call($command, array $parameters = [], $outputBuffer = null): int
         {
             $this->calls[] = [$command, $parameters];
+
+            if ($this->onCall !== null) {
+                ($this->onCall)();
+            }
 
             return 0;
         }
@@ -99,7 +132,12 @@ it('invokes key:generate --force and creates the sentinel when absent', function
     $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
     expect(file_exists($sentinel))->toBeFalse();
 
-    $action = new EnsureAppKey($paths, $kernel);
+    $kernel->onCall = fn () => file_put_contents(
+        $this->envFile,
+        "APP_NAME=Beatrax\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\n",
+    );
+
+    $action = new EnsureAppKey($paths, $kernel, $this->app);
     $action->run();
 
     expect($kernel->calls)->toHaveCount(1);
@@ -119,7 +157,7 @@ it('is a no-op when the sentinel already exists', function (): void {
 
     $existingAppKey = $config->get('app.key');
 
-    $action = new EnsureAppKey($paths, $kernel);
+    $action = new EnsureAppKey($paths, $kernel, $this->app);
     $action->run();
 
     expect($kernel->calls)->toBe([]);
@@ -132,7 +170,12 @@ it('is idempotent across successive calls — exactly one invocation, one sentin
 
     $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
 
-    $action = new EnsureAppKey($paths, $kernel);
+    $kernel->onCall = fn () => file_put_contents(
+        $this->envFile,
+        "APP_NAME=Beatrax\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\n",
+    );
+
+    $action = new EnsureAppKey($paths, $kernel, $this->app);
     $action->run();
     $action->run();
     $action->run();
@@ -161,4 +204,68 @@ it('FirstLaunchBootstrap chain leaves the sentinel present and APP_KEY non-empty
     $bootstrap->runPendingMigrations();
 
     expect(is_file($sentinel))->toBeTrue();
+});
+
+// The failure this exists for. Laravel's key:generate does not check
+// file_put_contents and returns success either way, so a read-only .env -- a
+// signed application bundle, an install under Program Files, a mounted
+// AppImage -- is indistinguishable from a rotation that worked.
+it('does not stamp the sentinel when the key never reached the file', function (): void {
+    $paths = $this->app->make(UserDataPathService::class);
+    $kernel = ensureAppKeySpyKernel();
+    $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
+
+    // The spy writes nothing, which is exactly what a failed write leaves.
+    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action->run();
+
+    expect($kernel->calls)->toHaveCount(1)
+        ->and(file_exists($sentinel))->toBeFalse()
+        ->and(appKeyWrittenIn($this->envFile))->toBe($this->shippedKey);
+});
+
+// Without the sentinel the next launch tries again, which is the whole point:
+// a rotation that could not happen must not be recorded as one that did.
+it('tries again on the next launch after a write that did not land', function (): void {
+    $paths = $this->app->make(UserDataPathService::class);
+    $kernel = ensureAppKeySpyKernel();
+
+    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action->run();
+    $action->run();
+
+    expect($kernel->calls)->toHaveCount(2);
+});
+
+// The real command against a real read-only file, so the claim about
+// key:generate's behaviour is measured here rather than asserted.
+it('leaves the shipped key in place, and says so, when the file cannot be written', function (): void {
+    $paths = $this->app->make(UserDataPathService::class);
+    $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
+
+    chmod($this->envFile, 0o444);
+    expect(is_writable($this->envFile))->toBeFalse();
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<string> */
+        public array $errors = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            if ($level === 'error') {
+                $this->errors[] = (string) $message;
+            }
+        }
+    };
+
+    $action = new EnsureAppKey($paths, $this->app->make(ConsoleKernel::class), $this->app, $logger);
+    @$action->run();
+
+    expect(appKeyWrittenIn($this->envFile))->toBe($this->shippedKey)
+        ->and(file_exists($sentinel))->toBeFalse()
+        ->and($logger->errors)->not->toBeEmpty()
+        ->and($logger->errors[0])->toContain('still using the key shipped in the bundle');
+
+    chmod($this->envFile, 0o644);
 });
