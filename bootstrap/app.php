@@ -14,7 +14,7 @@ use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
-use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LivewireClientRefusal;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -124,22 +124,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return false;
         });
     })
-    ->booting(function (): void {
-        /**
-         * @link ../.docs/architecture/sqlite-file-precreation.md
-         */
+    ->booting(function (Application $app): void {
         // The empty file must exist before provider boot opens the connection,
         // and must NEVER be seeded or migrated here.
-        $dbFile = UserDataPathService::databaseFile();
-        $dbDir = dirname($dbFile);
-        if (! is_dir($dbDir)) {
-            @mkdir($dbDir, 0775, true);
-        }
-        if (! file_exists($dbFile)) {
-            @touch($dbFile);
-            // Owner-only before the migrator writes anything: the usual 0644
-            // umask would expose every balance and account number in plaintext.
-            @chmod($dbFile, 0600);
-        }
+        $app->make(EnsurePrivateDatabaseFile::class)->run();
     })
     ->create();

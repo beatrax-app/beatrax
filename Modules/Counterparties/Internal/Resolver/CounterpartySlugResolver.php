@@ -7,6 +7,7 @@ namespace Modules\Counterparties\Internal\Resolver;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\UniqueSlug;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Normalizer;
@@ -101,7 +102,7 @@ final readonly class CounterpartySlugResolver
     public static function slugify(string $value): string
     {
         $lower = strtolower(self::toAscii($value));
-        $cleaned = preg_replace('/[^a-z0-9]+/', '-', $lower) ?? '';
+        $cleaned = PatternScan::replace('/[^a-z0-9]+/', '-', $lower);
         $trimmed = trim($cleaned, '-');
 
         if ($trimmed === '') {
@@ -128,7 +129,7 @@ final readonly class CounterpartySlugResolver
         $base = is_string($decomposed) ? $decomposed : $substituted;
         $withoutMarks = preg_replace(self::INVISIBLE, '', $base) ?? $base;
 
-        return preg_replace_callback('/[^\x00-\x7F]/u', self::expand(...), $withoutMarks) ?? '';
+        return PatternScan::replaceCallback('/[^\x00-\x7F]/u', self::expand(...), $withoutMarks);
     }
 
     // Anything with no ASCII spelling becomes a separator rather than nothing.

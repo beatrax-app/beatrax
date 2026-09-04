@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Modules\Core\Public\Services\UserDataPathService;
 use Psr\Log\LoggerInterface;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -49,6 +50,7 @@ final class EncodedUploadTransport
     private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
     public function __construct(
+        private readonly OwnerOnlyPath $ownerOnly,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -149,8 +151,6 @@ final class EncodedUploadTransport
         // bytes are somebody's bank statement, and /tmp is world-traversable
         // at 1777, so the name and size are readable even at 0600.
         $dir = rtrim(UserDataPathService::appPath('tmp-uploads'), '/');
-        @mkdir($dir, 0700, true);
-        @chmod($dir, 0700);
 
         $path = $this->stagedPath($dir);
 
@@ -175,6 +175,10 @@ final class EncodedUploadTransport
     // the path it hands back is. The stray file is removed, not left at 1777.
     private function stagedPath(string $dir): string
     {
+        if (! $this->ownerOnly->directory($dir)) {
+            $this->refuseStaging('the staging directory could not be narrowed to its owner');
+        }
+
         $path = @tempnam($dir, 'beatrax-upload-');
 
         if ($path === false) {

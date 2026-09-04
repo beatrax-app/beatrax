@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // PayPal names its exports in the account holder's own language, so "Rapport
 // Transactiegegevens" is what a Dutch account calls the report and nothing a
 // Belgian, German or Estonian reader will ever see on their screen. The wizard
@@ -54,7 +56,7 @@ function wizardLinesIn(string $file): array
 /** the line with every lang="nl"-tagged element removed, which is what a reader hears untagged */
 function outsideDutchMarkup(string $line): string
 {
-    return (string) preg_replace('/<([a-z]+)[^>]*\blang="nl"[^>]*>.*?<\/\1>/su', '', $line);
+    return PatternScan::replace('/<([a-z]+)[^>]*\blang="nl"[^>]*>.*?<\/\1>/su', '', $line);
 }
 
 it('never asks a reader to look for a Dutch report name without saying it is Dutch', function (): void {

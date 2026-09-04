@@ -5743,6 +5743,58 @@ that helper blind to the PHP inside one. And a pinned entry that no longer names
 an empty catch fails too: a list that may rot into names nobody checks is the
 same silence one level up.
 
+## A replace that never ran blanks the subject
+
+`preg_replace()` and `preg_replace_callback()` return `null`, and `preg_split()`
+returns `false`, on the same limits that make `preg_match` return `false` — a
+JIT stack, backtrack or recursion limit, or a subject the pattern's encoding
+cannot read. Unlike the matchers, the failure value here is *not* a plausible
+success value, so the give-up is knowable at every call site. The cost is that
+the two shortest ways to read it throw that knowledge away:
+
+```php
+$clean = (string) preg_replace('/<script.*?<\/script>/s', '', $html);
+$parts = preg_split('/\r?\n/', $text) ?: [];
+```
+
+`(string) null` is `''`. So the first line does not fail to clean the subject —
+**it deletes it**, and every reader downstream is handed an empty document that
+looks exactly like a document with nothing in it. The second reads a give-up as
+"this input had no parts". Both are silent, and both are the same false-green
+shape as the matcher case: a step that gave up reports the tidiest possible
+answer.
+
+Counted across `Modules/`, `app/`, `database/`, `routes/`, `config/`,
+`bootstrap/`, `tests/`, `scripts/` and the `mobile-app/` Composer root by
+parsing every file and classifying each call by what its parent AST node does
+with the return: **294** calls. 94 written `(string) preg_replace(…)`, 19
+written `?? ''`, 27 written `?: []`, 1 written `(array) preg_split(…)`, 42
+assigned or passed on with nothing testing them — and 111 already separating the
+failure, of which **87 fall back to their own subject**.
+
+That last number is the distinction worth keeping. `preg_replace(…) ?? $subject`
+degrades to the text *uncleaned*, which a scan downstream reads as a false
+positive somebody investigates. `(string)` degrades to no text at all, which
+reads as a clean answer nobody looks at twice. The two are not variants of one
+mistake; one of them is the safe direction.
+
+The reading has the same home as the matchers, `PatternScan::replace()`,
+`::replaceCallback()` and `::split()`, each raising `PatternScanFailedException`
+naming the pattern and what PCRE said.
+`AReplaceThatNeverRanBlanksTheSubjectArchTest` tokenises product code and
+refuses a `(string)` or `(array)` cast on the call, and `?? ''` / `?? []` /
+`?? null` / `?: []` behind it. It accepts a fallback that names a real value,
+`=== null` / `=== false`, `is_string()` / `is_array()`, and `??=`.
+
+Three readings keep the tolerant one on purpose and say so where they sit.
+`RedactedText::orEmpty()` is the one place in `DevMode` that reads a give-up as
+"emptied": a redactor must neither raise nor hand back what it was asked to
+remove, and losing the excerpt is survivable where shipping the secret is not.
+`RelayTlsMaterial::pemToDer()` returns an empty DER so an unreadable pin fails
+the comparison closed rather than throwing out of a TLS handshake.
+`Mt940Rebaser` raises `StatementRebaseFailed` instead, because the command that
+calls it turns that into a message naming the fixture.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Sync\Public\Services\PortableKeyMaterial;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -80,6 +81,7 @@ function bkmDownloadArchive(): string
         app(ResponseFactory::class),
         app(ShareSheetExport::class),
         app(BackupKeyMaterial::class),
+        app(OwnerOnlyPath::class),
     );
 
     expect($component->error)->toBe('');

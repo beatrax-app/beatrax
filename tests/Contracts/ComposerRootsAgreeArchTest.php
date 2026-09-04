@@ -140,8 +140,8 @@ it('creates the SQLite file owner-only from both Composer roots', function (): v
     foreach (composerRootBootstraps() as $path) {
         $source = (string) file_get_contents(base_path($path));
 
-        expect(str_contains($source, 'chmod($dbFile, 0600)'))->toBeTrue(
-            "{$path} touches the database file into existence without narrowing its mode, so the umask decides who can read the ledger.",
+        expect(str_contains($source, 'EnsurePrivateDatabaseFile::class'))->toBeTrue(
+            "{$path} brings the database file into existence without EnsurePrivateDatabaseFile, so nothing verifies that the umask did not leave the ledger readable.",
         );
     }
 });

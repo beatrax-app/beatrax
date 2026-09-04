@@ -135,7 +135,7 @@ it('reads the rhythm off a page root that is not the column', function (): void 
             continue;
         }
 
-        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+        $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         if (preg_match('/<([a-zA-Z][a-zA-Z0-9:.-]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>/', $source, $tag) !== 1) {
             continue;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
+use Psr\Log\LoggerInterface;
+
 // The one place an inbound pairing frame is applied, whichever road it arrived
 // by: the idempotency and fail-closed rules here are the handshake's whole
 // security posture, and two transports with a copy each would drift apart.
@@ -12,7 +14,10 @@ namespace Modules\Sync\Internal\Pairing;
  */
 final readonly class PairingFrameApplier
 {
-    public function __construct(private PairingTokenService $tokenService) {}
+    public function __construct(
+        private PairingTokenService $tokenService,
+        private ?LoggerInterface $logger = null,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $frame
@@ -28,7 +33,7 @@ final readonly class PairingFrameApplier
             PairingFrameType::Confirm => $this->applyConfirm($userId, $frame),
             // A frame this build does not know how to apply. Refusing it is
             // terminal for the sender and tells a prober nothing.
-            null => PairingFrameOutcome::Refused,
+            null => $this->refuse('the frame carries no type this build applies'),
         };
     }
 
@@ -43,14 +48,14 @@ final readonly class PairingFrameApplier
         $responderKx = self::stringField($frame, 'responder_x25519_pub_hex');
 
         if ($tokenHash === null || $responderDeviceId === null || $responderEd === null || $responderKx === null) {
-            return PairingFrameOutcome::Refused;
+            return $this->refuse('the responder-accept frame is missing a required field');
         }
 
         // The device id arrives from an untrusted frame. Reject anything that
         // is not a UUIDv4 (DeviceIdentityService's format) before it is
         // persisted or signed over.
         if (! self::isValidDeviceId($responderDeviceId)) {
-            return PairingFrameOutcome::Refused;
+            return $this->refuse('the responder-accept frame carries a malformed device id');
         }
 
         // applyResponderAccept() never defers — it either binds (or
@@ -64,7 +69,9 @@ final readonly class PairingFrameApplier
             self::stringField($frame, 'responder_name') ?? '',
         );
 
-        return $bound === false ? PairingFrameOutcome::Refused : PairingFrameOutcome::Applied;
+        return $bound === false
+            ? $this->refuse('the responder accept could not be bound to its row')
+            : PairingFrameOutcome::Applied;
     }
 
     /**
@@ -78,11 +85,11 @@ final readonly class PairingFrameApplier
         $sigHex = self::stringField($frame, 'sig_hex');
 
         if ($tokenHash === null || $confirmingDeviceId === null || $peerDeviceId === null || $sigHex === null) {
-            return PairingFrameOutcome::Refused;
+            return $this->refuse('the confirm frame is missing a required field');
         }
 
         if (! self::isValidDeviceId($confirmingDeviceId) || ! self::isValidDeviceId($peerDeviceId)) {
-            return PairingFrameOutcome::Refused;
+            return $this->refuse('the confirm frame carries a malformed device id');
         }
 
         $result = $this->tokenService->applyPeerConfirm($userId, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
@@ -92,6 +99,17 @@ final readonly class PairingFrameApplier
             $result->isDeferred() => PairingFrameOutcome::Deferred,
             default => PairingFrameOutcome::Applied,
         };
+    }
+
+    // Both roads drop a refused frame where it stands, and the pull road has
+    // already retired it from the sender's outbox by then, so an unlogged
+    // refusal is a handshake that stops with nothing to read anywhere. The
+    // gate is named alone: the frame's own fields are pairing material.
+    private function refuse(string $gate): PairingFrameOutcome
+    {
+        $this->logger?->warning('PairingFrameApplier: refused an inbound pairing frame.', ['gate' => $gate]);
+
+        return PairingFrameOutcome::Refused;
     }
 
     /**

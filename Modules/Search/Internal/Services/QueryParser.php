@@ -24,19 +24,19 @@ final class QueryParser
         $accountMatches = PatternScan::all('/\baccount:(\S+)/i', $remainder);
         if ($accountMatches[1] !== []) {
             $filters['accounts'] = $accountMatches[1];
-            $remainder = (string) preg_replace('/\baccount:\S+/i', '', $remainder);
+            $remainder = PatternScan::replace('/\baccount:\S+/i', '', $remainder);
         }
 
         $afterMatch = PatternScan::first('/\bafter:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder);
         if ($afterMatch !== []) {
             $filters['after'] = $afterMatch[1];
-            $remainder = (string) preg_replace('/\bafter:\S+/i', '', $remainder);
+            $remainder = PatternScan::replace('/\bafter:\S+/i', '', $remainder);
         }
 
         $beforeMatch = PatternScan::first('/\bbefore:(\d{4}-\d{2}(?:-\d{2})?)/i', $remainder);
         if ($beforeMatch !== []) {
             $filters['before'] = $beforeMatch[1];
-            $remainder = (string) preg_replace('/\bbefore:\S+/i', '', $remainder);
+            $remainder = PatternScan::replace('/\bbefore:\S+/i', '', $remainder);
         }
 
         // A bound written past the fraction this token's regex allowed was
@@ -50,16 +50,16 @@ final class QueryParser
         );
         if ($amountMatch !== []) {
             $filters['amount'] = $amountMatch[1];
-            $remainder = (string) preg_replace('/\bamount:\S+/i', '', $remainder);
+            $remainder = PatternScan::replace('/\bamount:\S+/i', '', $remainder);
         }
 
         $categoryMatch = PatternScan::first('/\bcategory:(\S+)/i', $remainder);
         if ($categoryMatch !== []) {
             $filters['category'] = $categoryMatch[1];
-            $remainder = (string) preg_replace('/\bcategory:\S+/i', '', $remainder);
+            $remainder = PatternScan::replace('/\bcategory:\S+/i', '', $remainder);
         }
 
-        $textQuery = trim((string) preg_replace('/\s{2,}/', ' ', $remainder));
+        $textQuery = trim(PatternScan::replace('/\s{2,}/', ' ', $remainder));
 
         return [
             'textQuery' => $textQuery,

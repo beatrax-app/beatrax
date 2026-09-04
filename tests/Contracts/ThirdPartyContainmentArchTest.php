@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-dependency-reached-from-nine-places
  */
@@ -182,9 +184,7 @@ function thirdPartyPrefixesIn(string $relativePath, array $installed): array
     // namespace, and a class name escaped for JavaScript splits into one bogus
     // prefix per segment.
     $found = [];
-    if (preg_match_all('/\\\\?\b([A-Z][A-Za-z0-9_]*(?:\\\\[A-Z][A-Za-z0-9_]*)*)\\\\(?=[A-Za-z_])/', $stripped, $matches) === false) {
-        return [];
-    }
+    $matches = PatternScan::all('/\\\\?\b([A-Z][A-Za-z0-9_]*(?:\\\\[A-Z][A-Za-z0-9_]*)*)\\\\(?=[A-Za-z_])/', $stripped);
 
     foreach ($matches[1] as $referenced) {
         foreach ($installed as $prefix) {

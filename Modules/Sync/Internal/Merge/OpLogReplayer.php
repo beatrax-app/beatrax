@@ -111,6 +111,7 @@ final readonly class OpLogReplayer
             new PriorAuthorship($db, new DeviceRegistryService($db)),
         );
         $ownership = new RowOwnership($db);
+        $splitTail = new SplitCreateTail($db, $ownership);
         $this->pairCascade = new TransferPairCascade($db, new PairUnlinker($db));
         // Ahead of the applier because the applier needs it, and built for the
         // same reason the ordering below is: the container answers null for a
@@ -123,13 +124,15 @@ final readonly class OpLogReplayer
             $quarantine,
             $ownership,
             new SuppliedDateGate($db),
-            new SelfReferenceDeferral($db, $ownership),
+            new SelfReferenceDeferral($db, $ownership, $this->resolveFromContainer(LoggerInterface::class)),
+            $splitTail,
             $this->pairCascade,
             new PeerRowAliases($db, $this->tableOrder),
             new AlreadyPresentCreate(
                 new PeerRowAliases($db, $this->tableOrder),
                 new CreateRowCollision($db, $sensitiveFields),
                 $quarantine,
+                $splitTail,
                 $this->resolveFromContainer(LoggerInterface::class),
             ),
             new SuppliedCreationTime($db),
