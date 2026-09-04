@@ -178,6 +178,18 @@ return [
         // gitignore keeps them out of git; it does not bound a build.
         'storage/app',
 
+        // The Android release signing keystore. release.yml decodes it from a
+        // repository secret into credentials/ and only then runs the packager,
+        // so it is present in the tree at the moment the bundle is copied. The
+        // vendor's own '*.jks' default is anchored to the project root and
+        // never matched it one directory down.
+        'credentials',
+
+        // iOS signing artifacts, written here by scripts/create-ios-signing.sh.
+        // The directory itself is tracked and only its contents are gitignored,
+        // which is what kept it out of every check that reasoned about git.
+        'build-secrets',
+
         // Vite's dev-server marker. `public/` is a symlink to the repo root's,
         // so running the desktop dev server writes this file straight into the
         // mobile bundle's view of it — and Laravel then emits every asset URL

@@ -5969,6 +5969,53 @@ that calls `exit(0)` between resolving one target and resolving a different
 one. Run against the tree before either fix, it names both scripts; the
 detector is what found the second instance.
 
+## What bounds a build is not what bounds the repository
+
+`tests/Contracts/ADurableDataDirectoryIsNeverShippedInTheBundleArchTest.php`
+
+Both packagers copy the working tree. The desktop walks it with a
+`RecursiveCallbackFilterIterator` and the mobile one shells out to
+`rsync -a --copy-links`, and in each case the only thing standing between a
+developer's working directory and a shipped binary is that shell's
+`cleanup_exclude_files`. `.gitignore` has no part in it. That is what makes the
+failure invisible: the directories are absent from `git status`, so every habit
+built around reading the repository says they are not there.
+
+An earlier round found `storage/app` this way and excluded it. Naming one
+directory is not the same as fixing the rule, and four more were sitting
+outside it:
+
+| shell | directory | what is in it |
+|---|---|---|
+| mobile | `credentials/` | the Android release signing keystore |
+| mobile | `build-secrets/` | iOS signing artifacts |
+| desktop | `.device-test/` | 4,024 files, 1.6 GB of captured application screens |
+| desktop | `.playwright-mcp/` | page snapshots, console logs, screenshots |
+| desktop | `local/` | a manual drop directory for PayPal exports |
+
+The signing material is the serious one, and it is not a hypothetical arriving
+from a developer's machine: `release.yml` decodes the keystore from a
+repository secret into `mobile-app/credentials/app-release-key.jks` and only
+*then* runs the packager, so it is present in the tree at the exact moment the
+bundle is copied.
+
+The packager's own defaults do exclude `*.jks` — but `BundleExclusions::PROJECT`
+is mapped through `fn ($p) => '/'.$p` before it reaches rsync, and a leading
+slash anchors a pattern to the transfer root. `/*.jks` matches a keystore lying
+in the project root and never matched one a single directory down. Verified by
+calling the vendor's own `BundleFileManager::excludes()` and running rsync with
+exactly those 46 patterns over a fixture: a root-level `.jks` was dropped,
+`credentials/app-release-key.jks` was copied.
+
+Two details decide whether a guard for this works. It must ask whether a
+directory's **contents** are in the repository rather than whether the
+directory is ignored — `build-secrets/` tracks a `.gitignore` that ignores
+everything beside it, so it is not an ignored path, while every file that ever
+appears in it is. And a directory that survives must be *classified* rather than
+merely absent from the failure list: `storage/` holds no source either, and the
+honest answer is that the framework needs the tree while `storage/app` is
+excluded by name, which is a sentence someone can check.
+
 ## An expected condition answering as a server fault
 
 `tests/Contracts/AnExpectedConditionIsNotAServerFaultArchTest.php`
