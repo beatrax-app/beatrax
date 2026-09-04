@@ -57,6 +57,12 @@ enum QuarantineReason: string
     // split the same transaction while apart sends a whole second set.
     case SplitWouldOverfillTransaction = 'split_would_overfill_transaction';
 
+    // The gate above could not read one of the two amounts it compares. Folded
+    // into a number it read as legs that fit, which admitted the money the gate
+    // exists to stop; recoverable because the read is the only thing that
+    // failed and a later pass takes it again.
+    case SplitSumUnreadable = 'split_sum_unreadable';
+
     // The two a key arriving later can undo. Kept apart from recoverable()
     // below because a screen reports these as "waiting for a key", and a row
     // held for any other reason must never be given that cause.
@@ -89,6 +95,6 @@ enum QuarantineReason: string
      */
     public static function recoverable(): array
     {
-        return [...self::keyRecoverable(), self::MissingReference->value];
+        return [...self::keyRecoverable(), self::MissingReference->value, self::SplitSumUnreadable->value];
     }
 }

@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Dispozitiv împerecheat',
     'success_body' => 'Acest dispozitiv este acum de încredere. Datele tale se vor sincroniza imediat ce te conectezi.',
+    'encryption_incomplete' => 'Dispozitivul este asociat, dar criptarea datelor stocate pe el nu s-a finalizat. Datele nu sunt încă stocate criptat.',
     'done' => 'Gata',
 
     'errors' => [

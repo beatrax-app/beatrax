@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Naprava je seznanjena',
     'success_body' => 'Tej napravi je zdaj zaupano. Podatki se bodo sinhronizirali, ko se povežeš.',
+    'encryption_incomplete' => 'Naprava je seznanjena, vendar šifriranje podatkov, shranjenih v njej, ni bilo dokončano. Podatki še niso shranjeni šifrirano.',
     'done' => 'Končano',
 
     'errors' => [

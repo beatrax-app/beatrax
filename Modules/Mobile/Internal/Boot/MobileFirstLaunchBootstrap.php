@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Boot;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Public\Services\UserDataPathService;
+use Psr\Log\LoggerInterface;
 
 final readonly class MobileFirstLaunchBootstrap
 {
@@ -14,6 +15,7 @@ final readonly class MobileFirstLaunchBootstrap
         private Migrator $migrator,
         private UserDataPathService $paths,
         private DatabaseManager $db,
+        private LoggerInterface $logger,
     ) {}
 
     // Routed through UserDataPathService so this stays the single
@@ -84,9 +86,26 @@ final readonly class MobileFirstLaunchBootstrap
             // throws leaves what it applied behind and no retry undoes it.
             // Recorded, because a half-built schema otherwise opens the app
             // and looks healthy until the first tap answers 500.
-            $this->hasPendingMigrations()
-                ? SchemaCompletionMarker::raise()
-                : SchemaCompletionMarker::clear();
+            $this->recordSchemaCompletion();
+        }
+    }
+
+    // A marker that could not be written is the same failure one launch later,
+    // and the only place that blind spot is named: this process refuses from
+    // memory, and nothing else would ever say the next one cannot.
+    private function recordSchemaCompletion(): void
+    {
+        if (! $this->hasPendingMigrations()) {
+            SchemaCompletionMarker::clear();
+
+            return;
+        }
+
+        if (! SchemaCompletionMarker::raise()) {
+            $this->logger->warning(
+                'MobileFirstLaunchBootstrap: the schema-incomplete marker could not be written — this launch refuses from memory, the next one will open over a half-built schema.',
+                ['marker_directory_writable' => is_writable(dirname(SchemaCompletionMarker::path()))],
+            );
         }
     }
 
