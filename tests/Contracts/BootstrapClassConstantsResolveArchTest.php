@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // `mobile-app/bootstrap/app.php` is outside PHPStan's `paths` on purpose (it
 // names classes that exist only in `mobile-app/vendor`), and no test boots it,
 // so a constant renamed out from under it reaches the phone as a blank screen
@@ -12,7 +14,7 @@ function classConstantReferences(string $bootstrapPath): array
 {
     $contents = (string) file_get_contents($bootstrapPath);
 
-    preg_match_all('/^use\s+([\w\\\\]+);$/m', $contents, $imports);
+    $imports = PatternScan::all('/^use\s+([\w\\\\]+);$/m', $contents);
 
     $shortToFqcn = [];
     foreach ($imports[1] as $fqcn) {
@@ -22,7 +24,7 @@ function classConstantReferences(string $bootstrapPath): array
 
     // `::class` is a magic constant every class answers, and `::name(` is a
     // method call — neither can be resolved with `constant()`.
-    preg_match_all('/\b(\w+)::([A-Z][A-Z0-9_]*)\b(?!\s*\()/', $contents, $uses, PREG_SET_ORDER);
+    $uses = PatternScan::sets('/\b(\w+)::([A-Z][A-Z0-9_]*)\b(?!\s*\()/', $contents);
 
     $found = [];
     foreach ($uses as [, $short, $constant]) {

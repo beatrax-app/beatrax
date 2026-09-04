@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Public\Support\LivewireClientRefusal;
+use Modules\Core\Public\Support\PatternScan;
 
 // The sibling file covers the `updates` half of a payload. The `calls` half had
 // no mapping at all: naming a method the component does not have, and calling
@@ -32,7 +33,9 @@ function refusedCallSnapshot(): string
 {
     $html = Livewire::test(SystemAlertsBanner::class)->html();
 
-    expect(preg_match('/wire:snapshot="([^"]*)"/', $html, $matches))->toBe(1);
+    $matches = PatternScan::first('/wire:snapshot="([^"]*)"/', $html);
+
+    expect($matches)->not->toBeEmpty();
 
     return html_entity_decode($matches[1], ENT_QUOTES);
 }

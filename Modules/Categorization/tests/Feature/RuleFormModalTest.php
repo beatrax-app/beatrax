@@ -12,6 +12,7 @@ use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
 
@@ -538,7 +539,7 @@ it('never offers two options that read the same in any locale', function (): voi
         base_path('Modules/Categorization/Resources/views/livewire/rule-form-modal.blade.php')
     );
 
-    preg_match('/<select\s+wire:model\.live="conditions\.\{\{ \$i \}\}\.field".*?<\/select>/s', $blade, $select);
+    $select = PatternScan::first('/<select\s+wire:model\.live="conditions\.\{\{ \$i \}\}\.field".*?<\/select>/s', $blade);
     expect($select)->not->toBeEmpty();
 
     // The select renders RuleFormModal::fieldOptions(), which the /rules

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Ledger\Models\Account;
@@ -120,7 +121,7 @@ it('prices a triage row at what the account paid, not what the merchant charged'
     cpFxTransaction($user, $account, $unknown, $run);
 
     $html = (string) Livewire::actingAs($user)->test(CounterpartyTriage::class)->html();
-    preg_match('/triage-tx__amount"[^>]*>(.*?)<\/span>/s', $html, $matches);
+    $matches = PatternScan::first('/triage-tx__amount"[^>]*>(.*?)<\/span>/s', $html);
     $rendered = html_entity_decode(trim($matches[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
     expect($rendered)->toBe(Money::ofMinor(FX_SETTLED_MINOR, Currency::Eur->value)->format());

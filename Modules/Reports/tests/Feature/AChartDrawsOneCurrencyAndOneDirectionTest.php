@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -109,7 +110,7 @@ function acdMovement(User $user, string $type, int $minor, string $currency, ?in
  */
 function acdChartOptions(string $html): array
 {
-    preg_match('/data-options="([^"]*)"/', $html, $matches);
+    $matches = PatternScan::first('/data-options="([^"]*)"/', $html);
     /** @var array<string, mixed> $decoded */
     $decoded = json_decode(html_entity_decode($matches[1] ?? '{}', ENT_QUOTES), true) ?? [];
 

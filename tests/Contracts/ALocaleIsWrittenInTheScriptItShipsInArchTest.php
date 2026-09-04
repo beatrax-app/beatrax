@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 
 // A locale ships in one script, and the enum is where that is decided: the
 // comment on Locale::Sr says Serbian ships in Latin, and twenty-six lines
@@ -86,17 +87,10 @@ function localeScriptFiles(string $locale): array
     return array_values($files);
 }
 
-// preg_match_all answers false when the engine gives up — a backtrack limit, a
-// JIT stack limit on a long line — and a caller reading that as zero reports a
-// clean file over a scan that never ran. This tree has been bitten by exactly
-// that, so a false here throws instead of passing for the wrong reason.
 /** @return list<string> the distinct letters of $script appearing in $text */
 function localeScriptLettersIn(string $script, string $text): array
 {
-    $matched = preg_match_all(LOCALE_SCRIPT_PATTERNS[$script], $text, $matches);
-    if ($matched === false) {
-        throw new RuntimeException('the '.$script.' scan stopped reading: '.preg_last_error_msg());
-    }
+    $matches = PatternScan::all(LOCALE_SCRIPT_PATTERNS[$script], $text);
 
     return array_values(array_unique($matches[0]));
 }

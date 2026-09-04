@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
 // The one rule in the app that asks for emoji presentation named no font, so it
@@ -24,7 +25,7 @@ it('names a colour emoji face for every platform on the mark that asks for one',
     expect($rule)->not->toBe('', 'No rule declares '.EMOJI_MARK_SELECTOR.'.')
         ->and($rule)->toContain('font-family: var(--font-emoji);');
 
-    preg_match('/--font-emoji:([^;]+);/', $this->css, $declaration);
+    $declaration = PatternScan::first('/--font-emoji:([^;]+);/', $this->css);
 
     expect($declaration)->not->toBeEmpty('The --font-emoji token is gone, so the mark names a family nothing defines.');
 
@@ -42,7 +43,7 @@ it('names a colour emoji face for every platform on the mark that asks for one',
 it('leaves no rule asking for emoji presentation from a stack that has no emoji in it', function (): void {
     $css = (string) preg_replace('~/\*.*?\*/~s', '', $this->css);
 
-    preg_match_all('/([^{}]+)\{([^{}]*font-variant-emoji\s*:\s*emoji[^{}]*)\}/', $css, $matches, PREG_SET_ORDER);
+    $matches = PatternScan::sets('/([^{}]+)\{([^{}]*font-variant-emoji\s*:\s*emoji[^{}]*)\}/', $css);
 
     expect($matches)->not->toBeEmpty('No rule asks for emoji presentation at all — the mark has lost its own rule.');
 

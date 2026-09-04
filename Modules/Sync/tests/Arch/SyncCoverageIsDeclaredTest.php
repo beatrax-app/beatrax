@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 
@@ -277,7 +278,7 @@ function syncCoverageUserFacingWritersOf(string $table): array
 
         $source = (string) file_get_contents($path);
 
-        preg_match_all("/table\('".$table."'\)(.*?);/s", $source, $statements);
+        $statements = PatternScan::all("/table\('".$table."'\)(.*?);/s", $source);
 
         foreach ($statements[1] as $tail) {
             if (preg_match('/->\s*(insert|insertGetId|insertOrIgnore|insertUsing|update|updateOrInsert|upsert|delete|forceDelete|truncate|increment|decrement)\s*\(/', $tail) !== 1) {

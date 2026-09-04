@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 use Tests\Contracts\Support\MoneySourceShape;
 
@@ -162,7 +163,7 @@ it('adds a map keyed by currency only where that is a decision somebody made', f
             BackendSourceFiles::codeTokens($path),
         ));
 
-        $counted += preg_match_all('/array_sum\s*\(/', $source);
+        $counted += PatternScan::count('/array_sum\s*\(/', $source);
 
         if (preg_match('/array_sum\s*\(\s*\$[A-Za-z_>\-\[\]\'\w]*currenc\w*/i', $source) !== 1) {
             continue;

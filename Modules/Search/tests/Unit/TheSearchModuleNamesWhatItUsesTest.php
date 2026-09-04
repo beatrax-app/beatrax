@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Search\Internal\Services\PaletteSectionComposer;
 use Modules\Search\Internal\Services\SearchDocumentBody;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
@@ -59,7 +60,9 @@ function searchModuleUnusedImports(string $path): array
 {
     $source = searchModuleSourceWithoutProse($path);
 
-    if (preg_match_all('/^use\s+([^;]+);$/m', $source, $matches, PREG_SET_ORDER) === 0) {
+    $matches = PatternScan::sets('/^use\s+([^;]+);$/m', $source);
+
+    if ($matches === []) {
         return [];
     }
 

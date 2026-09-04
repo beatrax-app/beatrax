@@ -6,6 +6,7 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
+use Modules\Core\Public\Support\PatternScan;
 
 // Both writes below are correctly REFUSED already. What was wrong is the shape
 // of the refusal: a tampered client payload came back as a server fault, which
@@ -24,7 +25,8 @@ function tamperedSnapshot(): string
 {
     $html = Livewire::test(AutoImportSettingsSection::class)->html();
 
-    expect(preg_match('/wire:snapshot="([^"]*)"/', $html, $matches))->toBe(1);
+    $matches = PatternScan::first('/wire:snapshot="([^"]*)"/', $html);
+    expect($matches)->toHaveCount(2);
 
     return html_entity_decode($matches[1], ENT_QUOTES);
 }

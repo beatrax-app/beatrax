@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // layouts.app already wraps the page in a <main>, so a view mounted inside it
 // that opens its own ships two unlabelled "main" regions for a screen reader to
 // choose between, and a nesting the HTML spec does not allow.
@@ -77,6 +79,6 @@ it('opens a main landmark only where the view is the page root', function (): vo
 it('keeps every pinned page root real, so the list cannot outlive its files', function (): void {
     foreach (MAIN_LANDMARK_PAGE_ROOTS as $blade) {
         expect(file_exists(dirname(__DIR__, 2).'/'.$blade))->toBeTrue();
-        expect(preg_match('/<main[\s>]/', mainLandmarkMarkupOf($blade)))->toBe(1);
+        expect(PatternScan::matches('/<main[\s>]/', mainLandmarkMarkupOf($blade)))->toBeTrue();
     }
 });

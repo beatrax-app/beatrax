@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
@@ -125,7 +126,7 @@ function capturedTables(): array
             // one. A bare `table: '…'` anywhere marked the whole table captured,
             // which is how merchant_aliases passed this gate with a single YAML
             // insert covering for four uncaptured user-facing writes.
-            preg_match_all(CAPTURE_SITE_PATTERN, $source, $matches);
+            $matches = PatternScan::all(CAPTURE_SITE_PATTERN, $source);
 
             foreach ($matches[1] as $table) {
                 $found[$table] = true;
@@ -137,14 +138,14 @@ function capturedTables(): array
 
             // Only a list the file actually walks: counting every const array meant a
             // table struck out of the capture loop still read as captured.
-            preg_match_all("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
+            $lists = PatternScan::sets("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source);
 
             foreach ($lists as $list) {
                 if (! str_contains($source, 'foreach (self::'.$list[1])) {
                     continue;
                 }
 
-                preg_match_all("/'([a-z_]{3,})'/", $list[2], $bulk);
+                $bulk = PatternScan::all("/'([a-z_]{3,})'/", $list[2]);
 
                 foreach ($bulk[1] as $table) {
                     $found[$table] = true;
@@ -205,7 +206,7 @@ it('never captures a table that is meant to stay on the device', function (): vo
 // containing `new EntityMutated(` also contained its name somewhere — one line
 // satisfying the gate for every write site in the codebase.
 it('counts a table as captured only where a write actually names it', function (string $source, array $expected): void {
-    preg_match_all(CAPTURE_SITE_PATTERN, $source, $matches);
+    $matches = PatternScan::all(CAPTURE_SITE_PATTERN, $source);
 
     expect(array_values(array_unique($matches[1])))->toBe($expected);
 })->with([

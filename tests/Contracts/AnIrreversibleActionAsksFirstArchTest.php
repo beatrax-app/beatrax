@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Illuminate\Contracts\Translation\Translator;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/which-actions-ask-before-they-act.md
@@ -124,25 +125,6 @@ function confirmationShapeBladeFiles(): array
     return $files;
 }
 
-// preg_match_all answers false on a JIT stack limit rather than raising, and a
-// guard reading that false as "nothing matched" reports the opposite of the
-// truth on exactly the largest files. Every scan below goes through here.
-/**
- * @return list<array<int, array{0: string, 1: int}>>
- */
-function confirmationShapeMatches(string $pattern, string $subject, string $path): array
-{
-    $matches = [];
-    $count = preg_match_all($pattern, $subject, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
-
-    if ($count === false || preg_last_error() !== PREG_NO_ERROR) {
-        throw new RuntimeException('Scanning '.$path.' failed: '.preg_last_error_msg());
-    }
-
-    /** @var list<array<int, array{0: string, 1: int}>> $matches */
-    return $matches;
-}
-
 /** @return string the repo-relative file and line an offset falls on */
 function confirmationShapeWhere(string $path, string $source, int $offset): string
 {
@@ -186,12 +168,12 @@ it('spells no confirmation a fourth way', function (): void {
     foreach ($files as $path) {
         $source = (string) file_get_contents($path);
 
-        foreach (confirmationShapeMatches('~window\.confirm\b~', $source, $path) as $match) {
+        foreach (PatternScan::setsWithOffsets('~window\.confirm\b~', $source) as $match) {
             $handRolled[] = confirmationShapeWhere($path, $source, $match[0][1]).' — window.confirm';
         }
 
-        foreach (confirmationShapeMatches(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source, $path) as $handler) {
-            if (confirmationShapeMatches('~(?<![\w.$])confirm\s*\(~', $handler[1][0], $path) === []) {
+        foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
+            if (PatternScan::setsWithOffsets('~(?<![\w.$])confirm\s*\(~', $handler[1][0]) === []) {
                 continue;
             }
 
@@ -217,10 +199,10 @@ it('reaches no destructive action through an Alpine handler, where none of the t
     foreach ($files as $path) {
         $source = (string) file_get_contents($path);
 
-        foreach (confirmationShapeMatches(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source, $path) as $handler) {
+        foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
             $handlers++;
 
-            foreach (confirmationShapeMatches('~\$wire\.(?:call\(\s*[\'"])?([A-Za-z_]\w*)~', $handler[1][0], $path) as $call) {
+            foreach (PatternScan::setsWithOffsets('~\$wire\.(?:call\(\s*[\'"])?([A-Za-z_]\w*)~', $handler[1][0]) as $call) {
                 $method = $call[1][0];
 
                 if (! in_array($method, $pinned, true) && ! confirmationShapeIsDestructive($method)) {

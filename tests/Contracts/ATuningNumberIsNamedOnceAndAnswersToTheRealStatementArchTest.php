@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Chains\Public\Support\StatementDueDate;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfExtractionMap;
 
 // Two numbers deciding when a card statement is due were measured against a
@@ -178,7 +179,9 @@ function tuningNumbersIn(array $paths): array
 
     foreach ($paths as $path) {
         $source = (string) file_get_contents($path);
-        if (preg_match_all('/const\s+(?:int|float|string|array|bool)?\s*([A-Z][A-Z0-9_]*)\s*=\s*([^;]+);/', $source, $matches, PREG_SET_ORDER) === 0) {
+        $matches = PatternScan::sets('/const\s+(?:int|float|string|array|bool)?\s*([A-Z][A-Z0-9_]*)\s*=\s*([^;]+);/', $source);
+
+        if ($matches === []) {
             continue;
         }
 
@@ -222,7 +225,9 @@ function realIcsStatementFacts(): array
     // The header date carries the year the undated transaction rows belong to,
     // and a row naming a month later than the header's is the tail of the
     // previous year — the same roll the adapter applies.
-    expect(preg_match('/(\d{1,2})\s+februari\s+(\d{4})/', $text, $header))->toBe(1);
+    $header = PatternScan::first('/(\d{1,2})\s+februari\s+(\d{4})/', $text);
+
+    expect($header)->not->toBeEmpty();
     $headerYear = (int) $header[2];
     $headerMonth = 2;
 
@@ -249,7 +254,9 @@ function realIcsStatementFacts(): array
     // parser that stops recognising the paragraph fails here too.
     $pattern = '/'.preg_quote(IcsPdfExtractionMap::MIN_DUE_PARAGRAPH, '/')
         .'[^\n]*?(\d{1,2})\s+maart\s+(\d{4})/u';
-    expect(preg_match($pattern, $text, $due))->toBe(1);
+    $due = PatternScan::first($pattern, $text);
+
+    expect($due)->not->toBeEmpty();
 
     return [
         'periodStart' => $days[0] ?? '',

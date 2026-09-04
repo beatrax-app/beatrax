@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
@@ -40,7 +41,7 @@ it('persists source_ref as the parent Transaction ID on every imported row', fun
         expect($row->source_ref)->toBeString();
         expect($row->source_ref)->not->toBe('');
         // The redaction script pads Transaction IDs to `O-<17-digit-counter>`.
-        expect((bool) preg_match('/^O-\d{17}$/', (string) $row->source_ref))->toBeTrue();
+        expect(PatternScan::matches('/^O-\d{17}$/', (string) $row->source_ref))->toBeTrue();
     }
 })->group('phase-4');
 

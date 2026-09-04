@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -49,7 +50,7 @@ it('spawns cache:clear and writes stdout into a per-run tmp file', function (): 
     $runId = $spawner->start('cache:clear', [], 99, CommandTier::Safe);
 
     expect($runId)->toBeString();
-    expect(preg_match('/^[0-9a-f-]{36}$/', $runId))->toBe(1);
+    expect(PatternScan::matches('/^[0-9a-f-]{36}$/', $runId))->toBeTrue();
 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
