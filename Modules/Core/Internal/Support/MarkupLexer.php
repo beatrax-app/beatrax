@@ -67,7 +67,7 @@ final class MarkupLexer
         $character = $source[$at];
 
         if ($character === '"' || $character === "'") {
-            return self::pastQuote($source, $character, $at, $length);
+            return self::pastQuote($source, $character, $at);
         }
 
         if ($character === '{') {
@@ -77,7 +77,7 @@ final class MarkupLexer
         return $character === '@' ? self::pastDirective($source, $at, $length) : null;
     }
 
-    public static function pastQuote(string $source, string $quote, int $at, int $length): int
+    public static function pastQuote(string $source, string $quote, int $at): int
     {
         $closed = strpos($source, $quote, $at + 1);
 
@@ -276,7 +276,7 @@ final class MarkupLexer
         $character = $source[$at];
 
         if ($character === '"' || $character === "'") {
-            return self::pastQuote($source, $character, $at, $length);
+            return self::pastQuote($source, $character, $at);
         }
 
         if ($character !== '/') {

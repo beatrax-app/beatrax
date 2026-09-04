@@ -78,7 +78,11 @@ final class MarkupSource
                 continue;
             }
 
-            $depth += $token->closing ? -1 : ($token->empty ? 0 : 1);
+            $depth += match (true) {
+                $token->closing => -1,
+                $token->empty => 0,
+                default => 1,
+            };
 
             if ($depth === 0) {
                 return substr($source, $open->end + 1, $token->start - $open->end - 1);
