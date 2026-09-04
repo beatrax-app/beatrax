@@ -6,10 +6,10 @@ namespace Modules\Core\Public\Support;
 
 use Modules\Core\Public\Exceptions\PatternScanFailedException;
 
-// `preg_match_all` returns false on a PCRE limit and leaves the match array
-// empty, so a scan that never ran and a scan that found nothing are the same
-// two values at the call site. An architecture guard that hit the JIT stack
-// limit reported a clean tree; this is the one reading that cannot.
+// A scan that never ran and a scan that found nothing are the same two values
+// at the call site: `preg_match_all` returns false and leaves the match array
+// empty, `preg_replace` returns null so a cast blanks the subject, and
+// `preg_split` returns false so a coalesce reads as "this input had no parts".
 /**
  * @link ../../../../.docs/conventions/invariants-from-shipped-failures.md#a-regex-that-never-ran-read-as-no-match
  */
@@ -91,18 +91,70 @@ final class PatternScan
         return $matches;
     }
 
+    /**
+     * @param  string|list<string>  $pattern
+     * @param  string|list<string>  $replacement
+     */
+    public static function replace(string|array $pattern, string|array $replacement, string $subject): string
+    {
+        $replaced = preg_replace($pattern, $replacement, $subject);
+
+        if ($replaced === null || preg_last_error() !== PREG_NO_ERROR) {
+            throw self::gaveUp($pattern);
+        }
+
+        return $replaced;
+    }
+
+    /**
+     * @param  callable(array<int|string, string>): string  $replacement
+     */
+    public static function replaceCallback(string $pattern, callable $replacement, string $subject): string
+    {
+        $replaced = preg_replace_callback($pattern, $replacement, $subject);
+
+        if ($replaced === null || preg_last_error() !== PREG_NO_ERROR) {
+            throw self::gaveUp($pattern);
+        }
+
+        return $replaced;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function split(string $pattern, string $subject): array
+    {
+        $parts = preg_split($pattern, $subject);
+
+        if ($parts === false || preg_last_error() !== PREG_NO_ERROR) {
+            throw self::gaveUp($pattern);
+        }
+
+        return $parts;
+    }
+
     // The error code is read as well as the return, because the two answer
-    // different questions: false says PCRE gave up, and a non-zero code says
-    // which limit it gave up on — the difference between a pattern to rewrite
-    // and a subject too large for the ini bound the run was given.
+    // different questions: the null or false says PCRE gave up, and a non-zero
+    // code says which limit it gave up on — the difference between a pattern to
+    // rewrite and a subject too large for the ini bound the run was given.
     private static function tally(int|false $result, string $pattern): int
     {
-        $code = preg_last_error();
-
-        if ($result === false || $code !== PREG_NO_ERROR) {
-            throw new PatternScanFailedException($pattern, preg_last_error_msg());
+        if ($result === false || preg_last_error() !== PREG_NO_ERROR) {
+            throw self::gaveUp($pattern);
         }
 
         return $result;
+    }
+
+    /**
+     * @param  string|list<string>  $pattern
+     */
+    private static function gaveUp(string|array $pattern): PatternScanFailedException
+    {
+        return new PatternScanFailedException(
+            is_array($pattern) ? implode(', ', $pattern) : $pattern,
+            preg_last_error_msg(),
+        );
     }
 }
