@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Tests\Helpers\CheapKdfCost;
 use Tests\Helpers\LiveSqliteConnection;
 
 // SQLite here runs in WAL mode, so the live file is only half the database:
@@ -105,7 +106,7 @@ it('an encrypted restore survives the same held reader', function (): void {
 
     $held = heldWalDatabase($live);
     markerDatabase($source, 'RESTORED');
-    (new BackupEncryptor)->encrypt($source, $source.'.enc', 'a-good-passphrase');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($source, $source.'.enc', 'a-good-passphrase');
 
     LiveSqliteConnection::pointAt($this->app, $live);
 

@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Modules\Core\Public\Contracts\KdfCost;
+
 // libsodium rather than password_hash(), so sodium stays the single crypto
-// dependency. The MODERATE limits must track AppLockKdf's: an attacker cracks
-// whichever of the two is weaker.
+// dependency. The cost is the same injected one AppLockKdf derives at, and
+// must stay so: an attacker cracks whichever of the two is weaker.
 final class PinHasher
 {
+    public function __construct(private readonly KdfCost $cost) {}
+
+    // The parameters go into the returned string, so a hash written at one
+    // cost still verifies after the shipped cost is raised.
     public function hash(string $pin): string
     {
         return sodium_crypto_pwhash_str(
             $pin,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
+            $this->cost->opslimit(),
+            $this->cost->memlimit(),
         );
     }
 
