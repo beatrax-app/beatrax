@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 it('names every Sync class it binds by ::class, with no runtime-built name and no existence guard', function (): void {
     $path = base_path('Modules/Sync/Providers/SyncServiceProvider.php');
     $source = (string) file_get_contents($path);
@@ -11,10 +13,10 @@ it('names every Sync class it binds by ::class, with no runtime-built name and n
     // installed under mobile-app/vendor alone. Every name here is first-party
     // and reachable from both Composer roots, so each guard is dead code that
     // silently drops a binding the moment a namespace is mistyped.
-    preg_match_all('~(?:class|interface)_exists\s*\(~', $source, $guards);
+    $guards = PatternScan::all('~(?:class|interface)_exists\s*\(~', $source);
     expect($guards[0])->toBe([], 'the provider guards a class that cannot be missing');
 
-    preg_match_all("~'((?:Modules|Native|Beatrax)\\\\\\\\[^']*)'~", $source, $literals);
+    $literals = PatternScan::all("~'((?:Modules|Native|Beatrax)\\\\\\\\[^']*)'~", $source);
     expect($literals[1])->toBe([], 'the provider builds a class name as a string instead of using ::class');
 
     expect($source)->not->toContain('singletonIfExists', 'the guarded-binding helper outlived its guards');
@@ -23,7 +25,7 @@ it('names every Sync class it binds by ::class, with no runtime-built name and n
 it('has every Sync class its provider imports on disk in this Composer root', function (): void {
     $source = (string) file_get_contents(base_path('Modules/Sync/Providers/SyncServiceProvider.php'));
 
-    preg_match_all('~^use (Modules\\\\[A-Za-z0-9_\\\\]+);$~m', $source, $imports);
+    $imports = PatternScan::all('~^use (Modules\\\\[A-Za-z0-9_\\\\]+);$~m', $source);
     expect($imports[1])->not->toBeEmpty();
 
     $missing = array_values(array_filter(

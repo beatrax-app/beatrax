@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 // Spend is signed on purpose: a refund is counted beside the expense it
@@ -174,11 +175,7 @@ function directionalBarBindings(): array
         $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         foreach ($patterns as $attribute => $pattern) {
-            $found = preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE);
-
-            // False is the engine giving up, not a file with no bars in it, and
-            // read as the latter it is a silent green over whatever it skipped.
-            expect($found)->not->toBeFalse($relative.' could not be read for '.$attribute);
+            $matches = PatternScan::allWithOffsets($pattern, $source);
 
             foreach ($matches[1] as $index => $captured) {
                 $bindings[] = [

@@ -109,23 +109,7 @@ final class CorpusPatternMatcher
     {
         $delimited = $this->compiledRegex($body, $original);
 
-        if ($delimited === null) {
-            return false;
-        }
-
-        $result = $this->matchWithinBudget($delimited, $haystack);
-        if ($result === false) {
-            // Compiled clean in the guard yet failed here: the backtrack
-            // budget tripped. Logged so a pathological corpus entry stays
-            // visible rather than silently never matching.
-            $this->logger->warning('CorpusPatternMatcher: regex match failed, treated as non-match.', [
-                'pattern' => $original,
-            ]);
-
-            return false;
-        }
-
-        return $result === 1;
+        return $delimited !== null && $this->matchWithinBudget($delimited, $haystack, $original);
     }
 
     // The length cap and the compile probe read the pattern alone, while a
@@ -146,13 +130,24 @@ final class CorpusPatternMatcher
     }
 
     // Lowers pcre.backtrack_limit for the duration and restores it after, so
-    // the bound holds whatever php.ini says.
-    private function matchWithinBudget(string $delimited, string $haystack): int|false
+    // the bound holds whatever php.ini says. A row that exhausts the budget is
+    // logged and read as a non-match rather than raising: the corpus is data,
+    // and one pathological entry must not stop a scan of every description.
+    private function matchWithinBudget(string $delimited, string $haystack, string $original): bool
     {
         $previousLimit = ini_set('pcre.backtrack_limit', (string) self::PCRE_BACKTRACK_BUDGET);
 
         try {
-            return @preg_match($delimited, $haystack);
+            $matched = @preg_match($delimited, $haystack) === 1;
+
+            if (preg_last_error() !== PREG_NO_ERROR) {
+                $this->logger->warning('CorpusPatternMatcher: regex match failed, treated as non-match.', [
+                    'pattern' => $original,
+                    'reason' => preg_last_error_msg(),
+                ]);
+            }
+
+            return $matched;
         } finally {
             if ($previousLimit !== false) {
                 ini_set('pcre.backtrack_limit', $previousLimit);

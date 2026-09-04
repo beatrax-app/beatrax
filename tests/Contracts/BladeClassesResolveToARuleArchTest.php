@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A class written in a Blade template that matches no rule anywhere renders
 // unstyled: the element is in the DOM, the route answers 200, every assertion
 // passes, and the reader sees a broken control. Found on a real phone, where
@@ -25,7 +27,7 @@ function builtCssClassNames(): array
     $names = [];
     foreach ($built as $file) {
         $css = (string) file_get_contents($file);
-        preg_match_all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $css, $matches);
+        $matches = PatternScan::all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $css);
         foreach ($matches[1] as $name) {
             $names[$name] = true;
         }
@@ -43,9 +45,9 @@ function bladeScopedClassNames(array $blades): array
     $names = [];
     foreach ($blades as $path) {
         $source = (string) file_get_contents($path);
-        preg_match_all('/<style[^>]*>(.*?)<\/style>/s', $source, $blocks);
+        $blocks = PatternScan::all('/<style[^>]*>(.*?)<\/style>/s', $source);
         foreach ($blocks[1] as $block) {
-            preg_match_all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $block, $matches);
+            $matches = PatternScan::all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $block);
             foreach ($matches[1] as $name) {
                 $names[$name] = true;
             }
@@ -91,11 +93,11 @@ it('has every class in a Blade template resolving to a rule', function (): void 
 
         // Only fully static attributes: one holding a Blade expression can
         // name a class this scan has no way to evaluate.
-        preg_match_all('/class="([^"{}@]*)"/', $source, $attributes);
+        $attributes = PatternScan::all('/class="([^"{}@]*)"/', $source);
 
         foreach ($attributes[1] as $attribute) {
             foreach (preg_split('/\s+/', trim($attribute)) ?: [] as $token) {
-                if (! preg_match('/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/', $token)) {
+                if (! PatternScan::matches('/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/', $token)) {
                     continue;
                 }
                 if (isset($defined[$token])) {

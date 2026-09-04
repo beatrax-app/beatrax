@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @return array<string, string>
@@ -13,7 +14,7 @@ function appMarkAttributes(string $template): array
 
     expect($html)->toContain('<img');
 
-    preg_match_all('/([a-zA-Z-]+)="([^"]*)"/', $html, $matches, PREG_SET_ORDER);
+    $matches = PatternScan::sets('/([a-zA-Z-]+)="([^"]*)"/', $html);
 
     $attributes = [];
     foreach ($matches as $match) {

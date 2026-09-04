@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DriftAlerts\Public\Http\Livewire\SavingsInsightsCard;
 
 // Measured at 390px: the Greek "Δες φθηνότερα προγράμματα" beside a zero-basis
@@ -65,9 +66,9 @@ function savingsRowClassLists(string $html): array
 
     $markup = substr($html, $open, $close - $open);
 
-    preg_match('/<li\b[^>]*\bclass="([^"]*)"/', $markup, $rowMatch);
-    preg_match('/<p\b[^>]*\bclass="([^"]*)"/', $markup, $messageMatch);
-    preg_match('/<div\b[^>]*\bclass="([^"]*)"/', $markup, $actionsMatch);
+    $rowMatch = PatternScan::first('/<li\b[^>]*\bclass="([^"]*)"/', $markup);
+    $messageMatch = PatternScan::first('/<p\b[^>]*\bclass="([^"]*)"/', $markup);
+    $actionsMatch = PatternScan::first('/<div\b[^>]*\bclass="([^"]*)"/', $markup);
 
     return [
         'row' => $rowMatch[1] ?? '',
@@ -87,9 +88,11 @@ function savingsFlexBasisPx(string $utility): float
 
     $css = (string) file_get_contents($built[0]);
 
-    expect(preg_match('/--spacing:\s*([0-9.]+)rem/', $css, $spacing))->toBe(1);
-    expect(preg_match('/\.'.preg_quote($utility, '/').'\{flex-basis:calc\(var\(--spacing\) \* ([0-9.]+)\)\}/', $css, $steps))->toBe(
-        1,
+    $spacing = PatternScan::first('/--spacing:\s*([0-9.]+)rem/', $css);
+    expect($spacing)->not->toBe([]);
+    $steps = PatternScan::first('/\.'.preg_quote($utility, '/').'\{flex-basis:calc\(var\(--spacing\) \* ([0-9.]+)\)\}/', $css);
+    expect($steps)->not->toBe(
+        [],
         $utility.' resolves to no flex-basis rule in the compiled stylesheet.',
     );
 
@@ -123,7 +126,7 @@ it('gives the message a column floor the action label cannot take from it', func
         .$classes['row'],
     );
 
-    preg_match('/\bbasis-([0-9]+)\b/', $classes['message'], $basis);
+    $basis = PatternScan::first('/\bbasis-([0-9]+)\b/', $classes['message']);
 
     expect($basis)->not->toBe(
         [],

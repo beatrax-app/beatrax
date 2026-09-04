@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 // `DerivedRowId::for()` mints a 63-bit id so two devices agree on a detector's
@@ -118,11 +119,7 @@ function bareIdEchoesOn(string $line): array
     foreach ($attributes as $value) {
         // Both shapes a value travels in: a positional argument, and a
         // property of an object literal handed to $dispatch.
-        $hit = preg_match_all('/[(,:]\s*\{\{\s*([^}]+?)\s*\}\}\s*[,)}]/', $value, $inner);
-
-        if ($hit === false) {
-            throw new RuntimeException('preg_match_all failed on: '.$value);
-        }
+        $inner = PatternScan::all('/[(,:]\s*\{\{\s*([^}]+?)\s*\}\}\s*[,)}]/', $value);
 
         $expressions = [...$expressions, ...$inner[1]];
     }

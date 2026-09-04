@@ -10,6 +10,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\StoredCopy;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 
@@ -126,7 +127,7 @@ it('reads worker heartbeat from cache and renders the relative timestamp (or NOT
     $response->assertOk();
     $html = (string) $response->getContent();
     expect($html)->toContain('ttl 60 s');
-    expect(preg_match('/\d+\s*s\s+ago/', $html))->toBe(1, 'Expected "N s ago" relative-time label for a fresh heartbeat.');
+    expect(PatternScan::matches('/\d+\s*s\s+ago/', $html))->toBeTrue('Expected "N s ago" relative-time label for a fresh heartbeat.');
 });
 
 it('renders queue count tiles (pending / failed / batches) sourced from the framework queue tables', function (): void {
@@ -165,9 +166,9 @@ it('renders queue count tiles (pending / failed / batches) sourced from the fram
     expect($html)->toContain('data-testid="queue-tile-failed"');
     expect($html)->toContain('data-testid="queue-tile-batches"');
     // The `[\s\S]*?` hops the span tags between the testid and the number.
-    expect(preg_match('#data-testid="queue-tile-pending"[\s\S]*?>2<#', $html))->toBe(1);
-    expect(preg_match('#data-testid="queue-tile-failed"[\s\S]*?>1<#', $html))->toBe(1);
-    expect(preg_match('#data-testid="queue-tile-batches"[\s\S]*?>1<#', $html))->toBe(1);
+    expect(PatternScan::matches('#data-testid="queue-tile-pending"[\s\S]*?>2<#', $html))->toBeTrue();
+    expect(PatternScan::matches('#data-testid="queue-tile-failed"[\s\S]*?>1<#', $html))->toBeTrue();
+    expect(PatternScan::matches('#data-testid="queue-tile-batches"[\s\S]*?>1<#', $html))->toBeTrue();
 });
 
 it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs card and links to /dev/audit?command=…', function (): void {

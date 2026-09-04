@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The dashboard header is a nowrap flex row: a text-3xl month name on the left
 // and a shrink-0 "‹ Today ›" stepper on the right. shrink-0 is deliberate — the
 // glyphs must keep their tap targets — so the row has to stack rather than
@@ -28,7 +30,7 @@ it('leaves the stepper unshrinkable, and lets it take a second row', function ()
         base_path('Modules/Shell/Resources/views/livewire/dashboard.blade.php')
     );
 
-    preg_match_all('/class="([^"]*)"/', $blade, $matches);
+    $matches = PatternScan::all('/class="([^"]*)"/', $blade);
 
     $stepper = array_values(array_filter(
         $matches[1],

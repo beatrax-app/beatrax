@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 use Tests\Contracts\Support\FirstPartySymbols;
 
@@ -42,9 +43,7 @@ function commentSymbolsLines(string $source): array
  */
 function commentSymbolsMentions(string $line): array
 {
-    if (preg_match_all('/\b([A-Z]\w+)::(\w+)/', $line, $matches, PREG_SET_ORDER) === 0) {
-        return [];
-    }
+    $matches = PatternScan::sets('/\b([A-Z]\w+)::(\w+)/', $line);
 
     $found = [];
 

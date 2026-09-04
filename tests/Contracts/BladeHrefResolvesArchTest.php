@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Routing\Router;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/architecture/module-boundaries.md
@@ -61,9 +62,7 @@ it('points every hand-written href at a path this application serves', function 
     foreach (bladeHrefFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        if (preg_match_all('/href="(\/[a-z0-9\/_-]*)"/i', $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-            continue;
-        }
+        $matches = PatternScan::allWithOffsets('/href="(\/[a-z0-9\/_-]*)"/i', $source);
 
         /** @var array{0: string, 1: int} $match */
         foreach ($matches[1] as $index => $match) {

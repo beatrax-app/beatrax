@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
 
@@ -52,8 +53,8 @@ it('paginates user A at 25 rows and excludes user B rows entirely', function ():
     // Count distinct row indices: the pattern string appears twice per row
     // (read-only column + wire:confirm payload), so raw matches double-count.
     $html = (string) $component->html();
-    preg_match_all('/USERA-RAW-(\d{2})/', $html, $matchesA);
-    preg_match_all('/USERB-RAW-(\d{2})/', $html, $matchesB);
+    $matchesA = PatternScan::all('/USERA-RAW-(\d{2})/', $html);
+    $matchesB = PatternScan::all('/USERB-RAW-(\d{2})/', $html);
 
     $distinctA = array_unique($matchesA[1]);
     $distinctB = array_unique($matchesB[1]);

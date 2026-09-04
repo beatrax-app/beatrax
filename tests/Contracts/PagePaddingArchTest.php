@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#px-8-page-padding-on-a-phone
  */
@@ -54,7 +56,7 @@ it('never starts a page shell wider than px-4 on a phone', function (): void {
         // having no column at all: `max-w-5xl mx-auto px-6` puts the width
         // first, and /settings/aliases shipped the 24px phone gutter this rule
         // exists to forbid while the rule reported green.
-        preg_match_all('/class="[^"]*\bmx-auto\b[^"]*"/', $source, $matches);
+        $matches = PatternScan::all('/class="[^"]*\bmx-auto\b[^"]*"/', $source);
 
         $columns += count($matches[0]);
 

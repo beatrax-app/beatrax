@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Calendar\Internal\Services\CalendarMonthWindow;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 const CHF_TODAY = '2026-06-12';
 
@@ -29,7 +30,7 @@ function chfFloorMonth(): CarbonImmutable
 // their own, so the opening tag is addressable without depending on the classes.
 function chfNavButton(string $html, string $action): string
 {
-    preg_match('~<button\s[^>]*wire:click="'.$action.'"[^>]*>~', $html, $matches);
+    $matches = PatternScan::first('~<button\s[^>]*wire:click="'.$action.'"[^>]*>~', $html);
 
     return $matches[0] ?? '';
 }

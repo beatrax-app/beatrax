@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#two-phone-constraints-and-three-dialog-naming-failures
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-guard-that-lists-element-names-misses-the-one-nobody-listed
@@ -72,18 +74,10 @@ function phoneUiCoarsePointerBlocks(): array
     return $blocks;
 }
 
-// A match count of false is not "nothing found", it is "stopped reading", and
+// A null replacement is not "nothing to change", it is "stopped reading", and
 // this file has already shipped a guard that reported the opposite of the truth
-// after PCRE gave up on a long block. Every pattern here answers through these.
-function phoneUiMatched(string $reading, int|false $count): int
-{
-    if ($count === false || preg_last_error() !== PREG_NO_ERROR) {
-        throw new RuntimeException($reading.' stopped reading: '.preg_last_error_msg());
-    }
-
-    return $count;
-}
-
+// after PCRE gave up on a long block. Every substitution here answers through
+// this.
 function phoneUiReplaced(string $reading, ?string $out): string
 {
     if ($out === null || preg_last_error() !== PREG_NO_ERROR) {
@@ -117,7 +111,7 @@ function phoneUiBladeViews(): array
 function phoneUiMarkupOnly(string $blade): string
 {
     foreach (['/\{\{--.*?--\}\}/s', '/@php\b.*?@endphp/s', '/@props\s*\(\[.*?\]\)/s', '/<!--.*?-->/s'] as $pattern) {
-        phoneUiMatched('view scrub', preg_match_all($pattern, $blade, $found, PREG_OFFSET_CAPTURE));
+        $found = PatternScan::allWithOffsets($pattern, $blade);
         foreach ($found[0] as [$text, $at]) {
             $blank = phoneUiReplaced('blanking', preg_replace('/[^\n]/', ' ', $text));
             $blade = substr_replace($blade, $blank, $at, strlen($text));
@@ -216,16 +210,16 @@ function phoneUiTouchControlClassLists(): array
 /** @return list<string> the class lists an element declares, merged ones included */
 function phoneUiClassAttributes(string $tag): array
 {
-    phoneUiMatched('class attribute', preg_match_all('/(?<![-:\w])class="([^"]*)"/s', $tag, $literal));
+    $literal = PatternScan::all('/(?<![-:\w])class="([^"]*)"/s', $tag);
 
     $lists = [];
     foreach ($literal[1] as $list) {
         $lists[] = phoneUiReplaced('class echo', preg_replace('/\{\{.*?\}\}/s', ' ', $list));
     }
 
-    phoneUiMatched('tag echo', preg_match_all('/\{\{(.*?)\}\}/s', $tag, $echoes));
+    $echoes = PatternScan::all('/\{\{(.*?)\}\}/s', $tag);
     foreach ($echoes[1] as $php) {
-        phoneUiMatched('echo string', preg_match_all("/'([^']*)'/s", $php, $strings));
+        $strings = PatternScan::all("/'([^']*)'/s", $php);
         $lists = array_merge($lists, $strings[1]);
     }
 
@@ -304,8 +298,8 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
     foreach ($files as $path) {
         $blade = (string) file_get_contents($path);
 
-        preg_match_all('/open-sheet[\'"]?\s*,\s*\{?\s*name\s*:\s*[\'"]([a-z0-9-]+)[\'"]/', $blade, $dispatched);
-        preg_match_all('/<x-core::bottom-sheet\s+name=["\']([a-z0-9-]+)["\']/', $blade, $declared);
+        $dispatched = PatternScan::all('/open-sheet[\'"]?\s*,\s*\{?\s*name\s*:\s*[\'"]([a-z0-9-]+)[\'"]/', $blade);
+        $declared = PatternScan::all('/<x-core::bottom-sheet\s+name=["\']([a-z0-9-]+)["\']/', $blade);
 
         foreach (array_unique($dispatched[1]) as $name) {
             if (! in_array($name, $declared[1], true)) {
@@ -324,15 +318,16 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
     $css = phoneUiUnlayeredCss();
 
     $drawnSmall = [];
-    preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $css, $rules, PREG_SET_ORDER);
+    $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $css);
     foreach ($rules as $rule) {
         $selector = trim($rule['selector']);
-        if (! preg_match('/^\.([a-zA-Z0-9_-]+)$/', $selector, $name)) {
+        $name = PatternScan::first('/^\.([a-zA-Z0-9_-]+)$/', $selector);
+        if ($name === []) {
             continue;
         }
 
-        preg_match('/(?<![a-z-])width:\s*(\d+)px/', $rule['body'], $width);
-        preg_match('/(?<![a-z-])height:\s*(\d+)px/', $rule['body'], $height);
+        $width = PatternScan::first('/(?<![a-z-])width:\s*(\d+)px/', $rule['body']);
+        $height = PatternScan::first('/(?<![a-z-])height:\s*(\d+)px/', $rule['body']);
 
         $sizes = array_map(intval(...), array_column([$width, $height], 1));
         if ($sizes !== [] && min($sizes) < 44) {
@@ -374,7 +369,7 @@ function phoneUiCoarse44pxSelectors(): array
     foreach (phoneUiCoarsePointerBlocks() as $block) {
         $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
 
-        preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block, $rules, PREG_SET_ORDER);
+        $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block);
         foreach ($rules as $rule) {
             if (preg_match('/(?<![a-z-])(?:min-)?height:\s*44px/', $rule['body']) !== 1) {
                 continue;
@@ -417,7 +412,7 @@ function phoneUiCoarseRuleBodies(string $selector): array
     foreach (phoneUiCoarsePointerBlocks() as $block) {
         $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
 
-        preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block, $rules, PREG_SET_ORDER);
+        $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block);
         foreach ($rules as $rule) {
             foreach (explode(',', $rule['selector']) as $part) {
                 if (trim((string) preg_replace('/\s+/', ' ', $part)) === $selector) {
@@ -501,7 +496,7 @@ const PHONE_UI_FLOW_BREAKS = 'address|article|aside|blockquote|button|dd|details
 function phoneUiCssLengths(string $css): array
 {
     $lengths = [];
-    phoneUiMatched('custom properties', preg_match_all('/(--[a-z0-9-]+):\s*([^;}]+)[;}]/', $css, $found, PREG_SET_ORDER));
+    $found = PatternScan::sets('/(--[a-z0-9-]+):\s*([^;}]+)[;}]/', $css);
     foreach ($found as $property) {
         $px = phoneUiPixels($property[2], []);
         if ($px !== null) {
@@ -538,14 +533,14 @@ function phoneUiSelfSizingClasses(string $css): array
     $lengths = phoneUiCssLengths($css);
     $classes = [];
 
-    phoneUiMatched('rules', preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/s', $css, $rules, PREG_SET_ORDER));
+    $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/s', $css);
     foreach ($rules as $rule) {
         if (! phoneUiRuleClearsTheFloor($rule['body'], $lengths)) {
             continue;
         }
 
         foreach (explode(',', $rule['selector']) as $selector) {
-            phoneUiMatched('selector classes', preg_match_all('/\.([a-zA-Z_][a-zA-Z0-9_-]*)/', $selector, $named));
+            $named = PatternScan::all('/\.([a-zA-Z_][a-zA-Z0-9_-]*)/', $selector);
             foreach ($named[1] as $class) {
                 $classes[$class] = true;
             }
@@ -661,7 +656,8 @@ function phoneUiInsideTableCell(string $before): bool
 function phoneUiFollowsText(string $before): bool
 {
     $from = 0;
-    if (phoneUiMatched('block elements', preg_match_all('#</?(?:'.PHONE_UI_FLOW_BREAKS.')\b[^>]*>#s', $before, $blocks, PREG_OFFSET_CAPTURE)) > 0) {
+    $blocks = PatternScan::allWithOffsets('#</?(?:'.PHONE_UI_FLOW_BREAKS.')\b[^>]*>#s', $before);
+    if ($blocks[0] !== []) {
         $last = end($blocks[0]);
         $from = $last[1] + strlen($last[0]);
     }

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 it('defines every class a Blade applies out of a family app.css names', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    preg_match_all('~\.([a-z][a-z0-9]*(?:-[a-z0-9]+)*)~', $css, $cssMatches);
+    $cssMatches = PatternScan::all('~\.([a-z][a-z0-9]*(?:-[a-z0-9]+)*)~', $css);
     /** @var array<string,int> $defined */
     $defined = array_flip(array_values(array_unique($cssMatches[1])));
     $definedNames = array_keys($defined);
@@ -30,7 +32,7 @@ it('defines every class a Blade applies out of a family app.css names', function
     $offenders = [];
     foreach ($blades as $path) {
         $source = (string) file_get_contents($path);
-        preg_match_all('~\bclass="([^"]*)"~', $source, $attributes, PREG_OFFSET_CAPTURE);
+        $attributes = PatternScan::allWithOffsets('~\bclass="([^"]*)"~', $source);
 
         foreach ($attributes[1] as [$value, $offset]) {
             // Interpolated halves are dropped rather than guessed at: a token

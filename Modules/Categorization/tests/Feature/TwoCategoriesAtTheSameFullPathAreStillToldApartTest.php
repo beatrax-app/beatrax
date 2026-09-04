@@ -6,6 +6,7 @@ use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Category;
 
 // Qualifying a leaf with its group answers "Groceries" against
@@ -91,8 +92,7 @@ it('keeps the picker in the order the query asked for', function (): void {
 it('gives the rule builder no two options that read the same', function (): void {
     $html = Livewire::test(RuleFormModal::class)->assertOk()->html();
 
-    $found = preg_match_all('/<option value="(\d+)">([^<]*)<\/option>/', $html, $matches, PREG_SET_ORDER);
-    expect($found)->not->toBeFalse();
+    $matches = PatternScan::sets('/<option value="(\d+)">([^<]*)<\/option>/', $html);
 
     $labels = [];
     foreach ($matches as $match) {

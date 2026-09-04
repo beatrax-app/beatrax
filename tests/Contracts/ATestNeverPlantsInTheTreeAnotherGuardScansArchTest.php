@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // OneSpellingPerSyntheticIbanArchTest proved its own guard by writing a probe
 // into Modules/Core/Internal/. Alone that is correct. Under --parallel, every
 // other guard enumerating Modules/ could list the probe and then find it
@@ -56,11 +58,7 @@ function plantTargetOf(string $argument, array $assigned): ?string
 /** @return array<string, string> variable name => the repo-relative path it was assigned */
 function basePathAssignments(string $source): array
 {
-    $matched = preg_match_all('/\$(\w+)\s*=\s*[^;\n]*base_path\(\s*[\'"]([^\'"$]*)/', $source, $matches, PREG_SET_ORDER);
-
-    if ($matched === false) {
-        throw new RuntimeException('the assignment scan stopped reading; its answer means nothing');
-    }
+    $matches = PatternScan::sets('/\$(\w+)\s*=\s*[^;\n]*base_path\(\s*[\'"]([^\'"$]*)/', $source);
 
     $assigned = [];
 
@@ -74,16 +72,10 @@ function basePathAssignments(string $source): array
 /** @return list<string> one line per write, naming the file, its line and the root it plants in */
 function plantsInGuardedRoots(string $label, string $source): array
 {
-    $matched = preg_match_all(
+    $matches = PatternScan::setsWithOffsets(
         '/\b(file_put_contents|mkdir|touch|copy|rename|symlink)\s*\(\s*([^,)]+)/',
         $source,
-        $matches,
-        PREG_SET_ORDER | PREG_OFFSET_CAPTURE,
     );
-
-    if ($matched === false) {
-        throw new RuntimeException('the write scan stopped reading; its answer means nothing');
-    }
 
     $assigned = basePathAssignments($source);
     $offenders = [];

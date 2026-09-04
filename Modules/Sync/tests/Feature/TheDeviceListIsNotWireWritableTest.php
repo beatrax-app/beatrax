@@ -7,6 +7,7 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
@@ -18,7 +19,7 @@ uses(RefreshDatabase::class);
 
 function deviceListSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"sync.devices-and-sync-settings-section"')) {
@@ -81,7 +82,7 @@ it('throws rather than accepting a write to the device list', function (): void 
 // The neighbour that already survived it, kept in the same file so the two
 // answers cannot drift apart again without one of them failing here.
 it('leaves the peer list beside it answering the same payload', function (): void {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $this->get('/data-devices')->assertOk()->getContent(), $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $this->get('/data-devices')->assertOk()->getContent());
 
     $peerSnapshot = null;
     foreach ($matches[1] as $encoded) {

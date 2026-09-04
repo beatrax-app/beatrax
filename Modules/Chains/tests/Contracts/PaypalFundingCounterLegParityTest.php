@@ -8,6 +8,7 @@ use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -104,7 +105,7 @@ it('keeps the counter-leg query out of PaypalFundingResolver and inside Transfer
         .'A second copy of that query inside Chains is how the two drifted apart the first time.',
     );
 
-    preg_match_all('/private function (\w*[Pp]artner\w*)\s*\(/', $source, $ownPartnerLookups);
+    $ownPartnerLookups = PatternScan::all('/private function (\w*[Pp]artner\w*)\s*\(/', $source);
 
     expect($ownPartnerLookups[1])->toBe(
         [],

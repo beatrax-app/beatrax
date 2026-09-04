@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -157,8 +158,8 @@ it('never persists card-number text into transactions.raw_payload', function ():
         $extracted = $payload['extractedText'] ?? '';
         expect($extracted)->toBeString();
         /** @var string $extracted */
-        expect((bool) preg_match('/\*{4}-\*{4}-\*{4}-/u', $extracted))->toBeFalse();
-        expect((bool) preg_match('/\d{12,}/', $extracted))->toBeFalse();
+        expect(PatternScan::matches('/\*{4}-\*{4}-\*{4}-/u', $extracted))->toBeFalse();
+        expect(PatternScan::matches('/\d{12,}/', $extracted))->toBeFalse();
     }
 })->group('phase-3');
 

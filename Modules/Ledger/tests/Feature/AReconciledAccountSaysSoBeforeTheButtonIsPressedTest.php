@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\ReconcilePage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Currency;
@@ -20,7 +21,7 @@ use Modules\Ledger\Public\Enums\ClearedStatus;
 
 function reconciledAccountCompleteButton(string $html): string
 {
-    preg_match('/<button\b[^>]*wire:click="confirmReconcile"[^>]*>/', $html, $found);
+    $found = PatternScan::first('/<button\b[^>]*wire:click="confirmReconcile"[^>]*>/', $html);
 
     return $found[0] ?? '';
 }
@@ -120,7 +121,7 @@ it('says why Complete is unavailable rather than sitting greyed out', function (
 
     $button = reconciledAccountCompleteButton($html);
 
-    preg_match('/aria-describedby="([^"]+)"/', $button, $describedBy);
+    $describedBy = PatternScan::first('/aria-describedby="([^"]+)"/', $button);
 
     expect($describedBy[1] ?? '')->not->toBe('', 'The disabled Complete button names no reason.');
     expect(str_contains($html, 'id="'.$describedBy[1].'"'))

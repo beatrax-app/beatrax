@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -218,9 +219,9 @@ it('states the same upload maximum as the client and both native shells', functi
     };
 
     foreach ($declared as $file => $pattern) {
-        $matched = preg_match($pattern, (string) file_get_contents($repoRoot($file)), $found);
+        $found = PatternScan::first($pattern, (string) file_get_contents($repoRoot($file)));
 
-        expect($matched)->toBe(1, "{$file} must still declare the upload maximum in whole megabytes");
+        expect($found)->not->toBe([], "{$file} must still declare the upload maximum in whole megabytes");
         expect((int) $found[1])->toBe($advertised, "{$file} states a different maximum than the transport enforces");
     }
 });
