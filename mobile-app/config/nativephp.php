@@ -97,8 +97,25 @@ return [
      * permissions, this key is NOT auto-provided by any installed plugin
      * and must be declared here.
      */
+    /*
+     * The camera and Face ID strings arrive from mobile-scanner and
+     * mobile-biometrics and describe NativePHP's demo app, not this one: one
+     * says the app scans barcodes, which it has never done. Both are restated
+     * here because IOSPluginCompiler applies app-level entries last, so this
+     * is the only place that wins a key collision with a plugin. The
+     * biometric-vault plugin already carried a Beatrax Face ID string and
+     * silently lost it to mobile-biometrics.
+     *
+     * LSApplicationCategoryType rides in the same array despite the key's
+     * name: getAppInfoPlistOverrides() returns it verbatim into the plist and
+     * is documented as app-level Info.plist overrides. App Store Connect
+     * refuses a submission with no category.
+     */
     'permissions' => [
         'NSLocalNetworkUsageDescription' => 'Beatrax uses your local network to sync your finances directly with your other Beatrax devices — nothing ever leaves your home network for this.',
+        'NSCameraUsageDescription' => 'Beatrax uses the camera to scan the pairing code shown on your other device. Nothing is photographed or stored.',
+        'NSFaceIDUsageDescription' => 'Beatrax uses Face ID to unlock your finances and release the key your data is encrypted with.',
+        'LSApplicationCategoryType' => 'public.app-category.finance',
     ],
 
     /*
