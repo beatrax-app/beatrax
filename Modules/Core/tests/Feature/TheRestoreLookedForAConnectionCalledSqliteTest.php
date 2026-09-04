@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Config;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Tests\Helpers\CheapKdfCost;
 
 // The desktop shell registers its database under the connection name
 // `nativephp` and makes that the default; the connection literally called
@@ -38,7 +39,7 @@ it('restores into the database the shell actually opened', function (): void {
     shellSqlite($live, 'ORIGINAL');
     shellSqlite($decoy, 'NEVER-OPENED');
     shellSqlite($plain, 'RESTORED');
-    (new BackupEncryptor)->encrypt($plain, $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($plain, $enc, 'pw');
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -75,7 +76,7 @@ it('still refuses when the default connection is not SQLite at all', function ()
     $plain = $base.'-backup.sqlite';
     $enc = $base.'-backup.sqlite.enc';
     shellSqlite($plain, 'RESTORED');
-    (new BackupEncryptor)->encrypt($plain, $enc, 'pw');
+    (new BackupEncryptor(new CheapKdfCost))->encrypt($plain, $enc, 'pw');
 
     Config::set('database.default', 'pgsql');
 

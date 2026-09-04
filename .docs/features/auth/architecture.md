@@ -305,6 +305,13 @@ platform biometrics. Both gate access to a per-session **data key** that
 downstream encryption features (base-currency FX, at-rest field encryption)
 read through `AppLockKeyService::release()`/`withhold()`.
 
+Both the PIN verifier (`PinHasher`) and the wrap key (`AppLockKdf`) derive at
+the one work factor the whole application shares, injected as
+`Modules\Core\Public\Contracts\KdfCost` — 256 MiB and three passes in a shipped
+install, libsodium's floor under the test suite. The parameters, the tests that
+pin them, and why the substitution cannot be reached in production are
+[The Argon2id cost, and why the suite does not pay it](../../architecture/argon2id-cost.md).
+
 ### Key-wrapping model
 
 `AppLockProvisioner::enable()` double-wraps a 32-byte data key under a single
