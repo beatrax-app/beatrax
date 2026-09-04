@@ -6,23 +6,19 @@ namespace App\PhpStan\Reflection;
 
 use PHPStan\Reflection\ClassMemberReflection;
 use PHPStan\Reflection\ClassReflection;
-use PHPStan\Reflection\FunctionVariant;
 use PHPStan\Reflection\MethodReflection;
-use PHPStan\Reflection\ParameterReflection;
+use PHPStan\Reflection\ParametersAcceptor;
 use PHPStan\TrinaryLogic;
-use PHPStan\Type\Generic\TemplateTypeMap;
 use PHPStan\Type\Type;
 
+// PageLayoutMacroSignatures declares the signature; this moves it onto the
+// class the call site actually holds, so an error names
+// Illuminate\Contracts\View\View::extends() and not a helper nobody imported.
 final class PageLayoutMacro implements MethodReflection
 {
-    /**
-     * @param  list<ParameterReflection>  $parameters
-     */
     public function __construct(
         private readonly ClassReflection $declaringClass,
-        private readonly string $name,
-        private readonly array $parameters,
-        private readonly Type $returnType,
+        private readonly MethodReflection $signature,
     ) {}
 
     public function getDeclaringClass(): ClassReflection
@@ -30,32 +26,29 @@ final class PageLayoutMacro implements MethodReflection
         return $this->declaringClass;
     }
 
-    // larastan's own macro reflection reports a closure macro as static, which
-    // turns every correct call into a staticMethod.dynamicCall. View::macro()
-    // binds its closure to the view instance.
     public function isStatic(): bool
     {
-        return false;
+        return $this->signature->isStatic();
     }
 
     public function isPrivate(): bool
     {
-        return false;
+        return $this->signature->isPrivate();
     }
 
     public function isPublic(): bool
     {
-        return true;
+        return $this->signature->isPublic();
     }
 
     public function getDocComment(): ?string
     {
-        return null;
+        return $this->signature->getDocComment();
     }
 
     public function getName(): string
     {
-        return $this->name;
+        return $this->signature->getName();
     }
 
     public function getPrototype(): ClassMemberReflection
@@ -64,48 +57,40 @@ final class PageLayoutMacro implements MethodReflection
     }
 
     /**
-     * @return list<FunctionVariant>
+     * @return list<ParametersAcceptor>
      */
     public function getVariants(): array
     {
-        return [
-            new FunctionVariant(
-                TemplateTypeMap::createEmpty(),
-                null,
-                $this->parameters,
-                false,
-                $this->returnType,
-            ),
-        ];
+        return $this->signature->getVariants();
     }
 
     public function isDeprecated(): TrinaryLogic
     {
-        return TrinaryLogic::createNo();
+        return $this->signature->isDeprecated();
     }
 
     public function getDeprecatedDescription(): ?string
     {
-        return null;
+        return $this->signature->getDeprecatedDescription();
     }
 
     public function isFinal(): TrinaryLogic
     {
-        return TrinaryLogic::createNo();
+        return $this->signature->isFinal();
     }
 
     public function isInternal(): TrinaryLogic
     {
-        return TrinaryLogic::createNo();
+        return $this->signature->isInternal();
     }
 
     public function getThrowType(): ?Type
     {
-        return null;
+        return $this->signature->getThrowType();
     }
 
     // The macro mutates the view's layout configuration, so discarding the
-    // returned $this is the normal call shape rather than a dead expression.
+    // returned view is the normal call shape rather than a dead expression.
     public function hasSideEffects(): TrinaryLogic
     {
         return TrinaryLogic::createYes();
