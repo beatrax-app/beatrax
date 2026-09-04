@@ -25,7 +25,7 @@ function safeAreaTemplates(): Finder
 // is the opposite of what every arm here is for.
 function safeAreaMarkup(string $contents): string
 {
-    return preg_replace('/\{\{--.*?--\}\}/s', '', $contents) ?? '';
+    return PatternScan::replace('/\{\{--.*?--\}\}/s', '', $contents);
 }
 
 /**
@@ -57,7 +57,7 @@ function safeAreaClassesIn(string $template): array
  */
 function safeAreaClassEdges(): array
 {
-    $css = (string) preg_replace(
+    $css = PatternScan::replace(
         '#/\*.*?\*/#s',
         '',
         (string) file_get_contents(base_path('resources/css/app.css')),
@@ -119,14 +119,14 @@ it('keeps the seam those templates depend on', function (): void {
     // Whitespace-insensitive: the declaration is the invariant, not the
     // formatting. A byte-exact match failed all four edges on a reformat and
     // reported it as the seam having been lost.
-    $collapsed = preg_replace('/\s+/', '', $css) ?? '';
+    $collapsed = PatternScan::replace('/\s+/', '', $css);
 
     $missing = [];
 
     foreach (['top', 'bottom', 'left', 'right'] as $edge) {
         $rule = "--safe-{$edge}: max(env(safe-area-inset-{$edge}, 0px), var(--inset-{$edge}, 0px))";
 
-        if (! str_contains($collapsed, (string) preg_replace('/\s+/', '', $rule))) {
+        if (! str_contains($collapsed, PatternScan::replace('/\s+/', '', $rule))) {
             $missing[] = $rule;
         }
     }
@@ -146,11 +146,11 @@ it('keeps the seam those templates depend on', function (): void {
 // slid its own heading up under the clock and the two rendered on top of each
 // other — at rest the same screen measured correctly.
 it('paints the strip .safe-screen only reserves', function (): void {
-    $collapsed = preg_replace(
+    $collapsed = PatternScan::replace(
         '/\s+/',
         '',
         (string) file_get_contents(base_path('resources/css/app.css')),
-    ) ?? '';
+    );
 
     $missing = array_values(array_filter(
         ['.safe-screen::before{', 'position:fixed', 'height:var(--safe-top)'],

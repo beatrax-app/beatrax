@@ -30,7 +30,7 @@ final class ThemeColour
     public static function tokens(string $theme): array
     {
         if (self::$tokens === []) {
-            $css = (string) preg_replace('#/\*.*?\*/#s', '', (string) file_get_contents(base_path('resources/css/app.css')));
+            $css = PatternScan::replace('#/\*.*?\*/#s', '', (string) file_get_contents(base_path('resources/css/app.css')));
 
             $light = [];
             foreach (self::blocks($css, ['@theme', ':root']) as $body) {
@@ -250,7 +250,7 @@ final class ThemeColour
         $length = strlen($digits);
 
         if ($length === 3 || $length === 4) {
-            $digits = (string) preg_replace('/(.)/', '$1$1', $digits);
+            $digits = PatternScan::replace('/(.)/', '$1$1', $digits);
             $length *= 2;
         }
 
@@ -272,7 +272,7 @@ final class ThemeColour
     private static function fromFunction(string $name, string $arguments): ?array
     {
         [$body, $alphaText] = array_pad(self::split($arguments, '/'), 2, null);
-        $parts = self::split((string) preg_replace('/\s*,\s*/', ' ', (string) $body), ' ');
+        $parts = self::split(PatternScan::replace('/\s*,\s*/', ' ', (string) $body), ' ');
 
         if ($alphaText !== null) {
             $parts[] = $alphaText;
@@ -331,7 +331,7 @@ final class ThemeColour
             return (float) substr($text, 0, -1) / 100 * $full;
         }
 
-        $text = (string) preg_replace('/deg$/i', '', $text);
+        $text = PatternScan::replace('/deg$/i', '', $text);
 
         return (float) $text;
     }

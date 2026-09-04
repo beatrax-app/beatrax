@@ -91,6 +91,10 @@ final class PatternScan
         return $matches;
     }
 
+    // The quieter half of the same failure. A caller writing
+    // `(string) preg_replace(…)` turns a give-up into an EMPTY subject, and
+    // whatever scans that subject next reports nothing found — a defect with
+    // no count to look wrong.
     /**
      * @param  string|list<string>  $pattern
      * @param  string|list<string>  $replacement

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-inline-font-size-below-16px
  */
@@ -51,9 +53,7 @@ it('never sizes a form control inline below the iOS auto-zoom threshold', functi
     foreach (inlineFontSizeCandidateViews() as $view) {
         $body = (string) file_get_contents($view);
 
-        if (preg_match_all('/<(input|textarea|select)\b[^>]*?style="([^"]*)"/si', $body, $matches, PREG_SET_ORDER) === false) {
-            continue;
-        }
+        $matches = PatternScan::sets('/<(input|textarea|select)\b[^>]*?style="([^"]*)"/si', $body);
 
         foreach ($matches as $match) {
             if (preg_match('/font-size:\s*([^;"]+)/i', $match[2], $size) !== 1) {

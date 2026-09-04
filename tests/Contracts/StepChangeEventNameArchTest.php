@@ -56,7 +56,7 @@ function stepChangeNamesInMarkup(string $path): array
 {
     // Blade is not tokenizable as PHP, and a directive can carry an event name
     // in an attribute as easily as in an @php block.
-    $contents = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+    $contents = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
     $hits = [];
 
     $matches = PatternScan::all('/[\'"]([A-Za-z0-9_.:-]+)[\'"]/', $contents);

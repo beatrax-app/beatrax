@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Facades\Blade;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 
 // TranslationParityArchTest asks whether the locales agree, and
 // EveryTranslatedLineReachesAReaderArchTest whether anything renders a declared
@@ -90,12 +91,8 @@ const CALL_SITE_KEY_SCAN_FLOOR = 1000;
  */
 function callSiteKeyMatches(string $pattern, string $source): array
 {
-    if (preg_match_all($pattern, $source, $matches) === false) {
-        throw new RuntimeException('the translation-key scan stopped reading: '.preg_last_error_msg());
-    }
-
     /** @var list<string> $found */
-    $found = $matches[1];
+    $found = PatternScan::all($pattern, $source)[1];
 
     return $found;
 }

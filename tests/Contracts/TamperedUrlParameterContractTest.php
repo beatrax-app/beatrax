@@ -120,7 +120,7 @@ function tamperedUrlDateProperties(): array
             continue;
         }
 
-        $source = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
+        $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         $tags = PatternScan::all('/<x-core::date-input\b(?:[^>"]|"[^"]*")*>/', $source);
 

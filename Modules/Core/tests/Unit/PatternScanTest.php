@@ -74,6 +74,26 @@ it('raises from every reading, so no caller has an unchecked door', function (st
         ->toThrow(PatternScanFailedException::class);
 })->with(['matches', 'count', 'first', 'firstWithOffsets', 'all', 'allWithOffsets', 'sets', 'setsWithOffsets']);
 
+// The dataset above is written out by hand, because the readings it drives all
+// take (pattern, subject) and the rewriters do not. A reading added later would
+// not join it on its own, and the case would keep its name while covering less
+// than it says. This asks the class what it offers instead of trusting a list.
+it('accounts for every public reading, so a new one cannot arrive untested', function (): void {
+    $offered = array_map(
+        static fn (ReflectionMethod $method): string => $method->getName(),
+        (new ReflectionClass(PatternScan::class))->getMethods(ReflectionMethod::IS_PUBLIC),
+    );
+
+    sort($offered);
+
+    // Two lists, because they are tested two ways: the readings by the dataset
+    // above, the rewriters by the cases below it, which pass a replacement.
+    expect($offered)->toBe([
+        'all', 'allWithOffsets', 'count', 'first', 'firstWithOffsets', 'matches',
+        'replace', 'replaceCallback', 'sets', 'setsWithOffsets', 'split',
+    ]);
+});
+
 it('reads an ordinary subject the way the function it replaces does', function (): void {
     expect(PatternScan::matches('/\d+/', 'a1b'))->toBeTrue()
         ->and(PatternScan::matches('/\d+/', 'abc'))->toBeFalse()
@@ -90,6 +110,10 @@ it('hands back the offsets the offset readings ask for', function (): void {
         ->and(PatternScan::setsWithOffsets('/b/', 'abcb')[1][0])->toBe(['b', 3]);
 });
 
+// A rewrite that gives up answers null, and `(string) null` is `''`. The
+// subject handed to whatever scans next is then empty, so it finds nothing and
+// calls the file clean — the same defect as a wrong match count, and quieter,
+// because there is no count to look wrong.
 it('raises rather than blanking the subject when a replace stops part-way', function (): void {
     ini_set('pcre.backtrack_limit', '1000');
 

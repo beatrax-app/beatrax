@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 // A migration establishes state once, for the rows that existed when it ran.
@@ -164,17 +165,15 @@ function classesMigrationsExecute(array $paths): array
         $relative = str_replace(base_path().'/', '', $path);
 
         $imports = [];
-        if (preg_match_all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $source, $useMatches) !== false) {
-            foreach ($useMatches[1] as $import) {
-                $short = substr((string) strrchr('\\'.$import, '\\'), 1);
-                $imports[$short] = $import;
-            }
+        $useMatches = PatternScan::all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $source);
+
+        foreach ($useMatches[1] as $import) {
+            $short = substr((string) strrchr('\\'.$import, '\\'), 1);
+            $imports[$short] = $import;
         }
 
         $calls = implode('|', MIGRATION_EXECUTION_CALLS);
-        if (preg_match_all('/(?:'.$calls.')\(\s*([A-Za-z0-9_\\\\]+)::class/', $source, $matches) === false) {
-            continue;
-        }
+        $matches = PatternScan::all('/(?:'.$calls.')\(\s*([A-Za-z0-9_\\\\]+)::class/', $source);
 
         foreach ($matches[1] as $name) {
             $fqcn = $imports[$name] ?? ltrim($name, '\\');
@@ -262,9 +261,7 @@ function perUserSweepGates(array $paths): array
                 continue;
             }
 
-            if (preg_match_all('/\b(?:or)?[Ww]hereNull\(\s*\'(\w+)\'/', $statement, $matches) === false) {
-                continue;
-            }
+            $matches = PatternScan::all('/\b(?:or)?[Ww]hereNull\(\s*\'(\w+)\'/', $statement);
 
             foreach ($matches[1] as $column) {
                 $gates[$column][] = $relative;

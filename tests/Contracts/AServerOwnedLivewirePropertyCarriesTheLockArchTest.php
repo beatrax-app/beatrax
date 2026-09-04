@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\WireCallableMethods;
 
 /**
@@ -156,9 +157,8 @@ function clientBoundPropertyNames(): array
 
             $source = (string) file_get_contents($path);
             foreach (SERVER_OWNED_BINDING_PATTERNS as $pattern) {
-                if (preg_match_all($pattern, $source, $matches) === false) {
-                    continue;
-                }
+                $matches = PatternScan::all($pattern, $source);
+
                 foreach ($matches[1] as $name) {
                     $names[$name] = true;
                 }

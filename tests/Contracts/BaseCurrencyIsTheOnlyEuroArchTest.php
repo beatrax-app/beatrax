@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  */
@@ -118,7 +120,7 @@ function euroLiteralPhpLines(string $source): array
  */
 function euroLiteralBladeLines(string $source): array
 {
-    $source = (string) preg_replace_callback(
+    $source = PatternScan::replaceCallback(
         '/\{\{--.*?--\}\}/s',
         static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
         $source,
