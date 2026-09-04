@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Backup;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Internal\Storage\UserDataLocations;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
-use Modules\Core\Public\Services\UserDataLocations;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use Throwable;
-use ZipArchive;
 
 /**
  * @link ../../../../.docs/features/core/one-export-action.md
@@ -26,6 +25,7 @@ final readonly class ExportEverythingArchive
         private FileEncryptor $encryptor,
         private BackupKeyMaterial $keyMaterial,
         private OwnerOnlyPath $ownerOnly,
+        private ArchiveWriterFactory $writers,
     ) {}
 
     // The database goes in encrypted and the source documents go in as they
@@ -105,30 +105,21 @@ final readonly class ExportEverythingArchive
      */
     private function pack(string $zipPath, string $encrypted, string $backupEntry): void
     {
-        $zip = new ZipArchive;
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new BackupIoException('The export archive could not be opened for writing.');
-        }
-
-        if (! $zip->addFile($encrypted, $backupEntry)) {
-            $zip->close();
-
-            throw new BackupIoException('The encrypted database could not be added to the archive.');
-        }
+        $writer = $this->writers->make();
+        $writer->open($zipPath);
+        $writer->addFile($encrypted, $backupEntry);
 
         foreach (UserDataLocations::artefacts() as $key => $directory) {
-            $this->addDirectory($zip, $directory, 'artefacts/'.$key);
+            $this->addDirectory($writer, $directory, 'artefacts/'.$key);
         }
 
-        if (! $zip->close()) {
-            throw new BackupIoException('The export archive could not be written.');
-        }
+        $writer->finish();
     }
 
     // An artefact directory the reader never populated simply is not there, and
     // an export that refused over a missing folder would be an export nobody
     // with only bank imports could ever take.
-    private function addDirectory(ZipArchive $zip, string $directory, string $entryPrefix): void
+    private function addDirectory(ArchiveWriter $writer, string $directory, string $entryPrefix): void
     {
         if (! is_dir($directory)) {
             return;
@@ -145,7 +136,7 @@ final readonly class ExportEverythingArchive
             }
 
             $relative = substr($entry->getPathname(), strlen($directory) + 1);
-            $zip->addFile($entry->getPathname(), $entryPrefix.'/'.str_replace(DIRECTORY_SEPARATOR, '/', $relative));
+            $writer->addFile($entry->getPathname(), $entryPrefix.'/'.str_replace(DIRECTORY_SEPARATOR, '/', $relative));
         }
     }
 }

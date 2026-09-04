@@ -8,7 +8,9 @@ use Illuminate\Config\Repository;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Core\Internal\Backup\BackupPassphrase;
 use Modules\Core\Internal\Backup\ExportEverythingArchive;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
@@ -21,14 +23,14 @@ use Throwable;
 
 final class ExportEverythingDownload extends Component
 {
-    private const int MIN_PASSPHRASE_LENGTH = 8;
-
     public string $passphrase = '';
 
     public string $confirmPassphrase = '';
 
+    #[Locked]
     public string $error = '';
 
+    #[Locked]
     public string $notice = '';
 
     public function export(
@@ -100,7 +102,7 @@ final class ExportEverythingDownload extends Component
     private function validationError(Repository $config): string
     {
         return match (true) {
-            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => Lang::choice('core::backup.errors.passphrase_min', self::MIN_PASSPHRASE_LENGTH, ['min' => self::MIN_PASSPHRASE_LENGTH]),
+            strlen($this->passphrase) < BackupPassphrase::MIN_LENGTH => Lang::choice('core::backup.errors.passphrase_min', BackupPassphrase::MIN_LENGTH, ['min' => BackupPassphrase::MIN_LENGTH]),
             $this->passphrase !== $this->confirmPassphrase => Lang::get('core::backup.errors.passphrase_mismatch'),
             ! SqliteDatabase::isSqliteBuild($config) => Lang::get('core::backup.errors.download_sqlite_only'),
             default => '',

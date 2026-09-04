@@ -44,6 +44,36 @@ back in a form they cannot. An export that does that is not portability.
 The page says both things plainly rather than leaving the reader to infer
 them (`core::help.export_passphrase_hint`).
 
+## The phone has no `ext-zip`
+
+The NativePHP mobile PHP build ships without `ext-zip` — `#undef HAVE_ZIP` on
+both iOS and Android — so `new ZipArchive` there is a bare `Error`, not a
+catchable failure. `Migration` already met this on the read side; see
+[reading a ZIP where there is no `ext-zip`](../migration/reading-a-zip-without-ext-zip.md).
+Writing needed the same seam in the other direction, and it matters more here:
+the phone can be the only device a household owns, so an export it cannot take
+is not a degraded export, it is none.
+
+`ArchiveWriterFactory` is the one place that asks. It answers with an
+`ArchiveWriter`:
+
+- `ZipArchiveWriter` — the extension, wherever it exists.
+- `NativeZipWriter` — a writer in PHP for where it does not. It streams each
+  entry through `deflate_init(ZLIB_ENCODING_RAW)`/`deflate_add()` and hashes it
+  through `hash_init('crc32b')`, both `ext-zlib` and core, both present on the
+  phone. Sizes are unknown until an entry is written, so the local header goes
+  down with placeholders and is patched by seeking back — a data descriptor
+  would work too, but a seekable output file makes the simpler shape available.
+
+`NativeZipWriter` implements no ZIP64, so any entry or offset that would exceed
+a four-byte field, and any archive over `0xFFFF` entries, is refused with a
+`BackupIoException` naming the limit rather than written as an archive that
+opens and then reads short.
+
+The proof that it is a real ZIP is not the shape of the code: the test writes
+one and opens it with `ext-zip`, asserting every entry's bytes match the source,
+and verifies it again with the system `unzip -t`.
+
 ## The staging discipline
 
 Identical to `EncryptedBackupDownload`, and for the same reasons:

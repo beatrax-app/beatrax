@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
+use Modules\Core\Internal\Storage\UserDataLocations;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Services\UserDataLocations;
 
 function hdlUser(bool $isDeveloper, string $username): User
 {

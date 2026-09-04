@@ -7,7 +7,7 @@ namespace Modules\Core\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
-use Modules\Core\Public\Services\UserDataLocations;
+use Modules\Core\Internal\Storage\UserDataLocations;
 
 final class HelpDataLocations extends Component
 {

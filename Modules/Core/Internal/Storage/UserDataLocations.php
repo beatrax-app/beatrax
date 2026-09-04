@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Services;
+namespace Modules\Core\Internal\Storage;
+
+use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * @link ../../../../.docs/features/core/durable-user-data-paths.md
+ * @link ../../../../.docs/features/core/one-export-action.md
  */
 final class UserDataLocations
 {

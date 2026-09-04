@@ -2,9 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Internal\Backup\ArchiveWriterFactory;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\ExportEverythingArchive;
-use Modules\Core\Public\Services\UserDataLocations;
+use Modules\Core\Internal\Storage\UserDataLocations;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -149,6 +154,40 @@ it('exports for a reader who has imported nothing at all', function (): void {
     $zipPath = $archive->build('a-good-passphrase', '2026-09-04-120000');
 
     expect(exportArchiveEntries($zipPath))->toBe(['beatrax-backup-2026-09-04-120000.sqlite.enc']);
+
+    @unlink($zipPath);
+});
+
+// The phone's PHP build carries no ext-zip, so the export runs through the
+// native writer there and nowhere else. Building with the answer a phone gives
+// is the only way that branch is reached on a machine that has the extension.
+it('builds the same archive on a build without ext-zip', function (): void {
+    plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    plantExportArtefact('inbox/1/7/2026/09/a-receipt.eml', "Subject: Your receipt\r\n\r\nThanks.\r\n");
+
+    $archive = new ExportEverythingArchive(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(FileEncryptor::class),
+        $this->app->make(BackupKeyMaterial::class),
+        $this->app->make(OwnerOnlyPath::class),
+        new ArchiveWriterFactory(zipExtensionAvailable: false),
+    );
+
+    $zipPath = $archive->build('a-good-passphrase', '2026-09-04-120000');
+
+    $entries = exportArchiveEntries($zipPath);
+
+    expect($entries)->toHaveCount(3)
+        ->and($entries)->toContain('beatrax-backup-2026-09-04-120000.sqlite.enc')
+        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv')
+        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_MAIL.'/1/7/2026/09/a-receipt.eml');
+
+    $zip = new ZipArchive;
+    expect($zip->open($zipPath))->toBeTrue();
+    $extracted = $zip->getFromName('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv');
+    $zip->close();
+
+    expect($extracted)->toBe("date,amount\n2026-03-01,-12.50\n");
 
     @unlink($zipPath);
 });
