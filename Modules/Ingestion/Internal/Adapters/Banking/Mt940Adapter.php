@@ -152,7 +152,12 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $state->balanceTagSeen = true;
-        $state->closingBalance = $this->parseBalance($content) ?? $state->closingBalance;
+        // Assigned, never coalesced: the tag is here, so a null is "this close
+        // could not be read", and letting the page before stand in for it puts
+        // an intermediate figure on the statement as its own final balance.
+        $balance = $this->parseBalance($content);
+        $state->closingBalance = $balance;
+        $state->closingBalanceUnreadable = $balance === null;
         $state->firstStatementFrozen = $endsStatement;
     }
 

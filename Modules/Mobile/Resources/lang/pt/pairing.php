@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Dispositivo emparelhado',
     'success_body' => 'Este dispositivo passa a ser de confiança. Os teus dados sincronizam assim que ligares.',
+    'encryption_incomplete' => 'O dispositivo está emparelhado, mas a cifragem dos dados guardados nele não foi concluída. Os dados ainda não são guardados cifrados.',
     'done' => 'Concluído',
 
     'errors' => [

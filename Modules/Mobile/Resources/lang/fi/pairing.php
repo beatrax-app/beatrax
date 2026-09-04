@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Laitepari muodostettu',
     'success_body' => 'Tämä laite on nyt luotettu. Tietosi synkronoituvat heti, kun yhteys muodostuu.',
+    'encryption_incomplete' => 'Laite on paritettu, mutta siihen tallennettujen tietojen salaus ei valmistunut. Tietoja ei säilytetä vielä salattuina.',
     'done' => 'Valmis',
 
     'errors' => [

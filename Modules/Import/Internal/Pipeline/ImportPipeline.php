@@ -32,6 +32,7 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\NamesAFormatMismatch;
+use Modules\Ingestion\Public\Contracts\NamesRowsItCouldNotRead;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
@@ -190,6 +191,14 @@ final readonly class ImportPipeline
             $fileFailureRowIndex = $rowsWritten === 0 ? null : $rowsWritten;
         }
 
+        // Added after the read rather than during it, because the adapters that
+        // report these dropped the rows before they yielded their first. The
+        // file-failure index above is the row the read stopped on, so these are
+        // counted past it and never mistaken for where it stopped.
+        foreach ($this->unreadableRowIndexes($run->sourceFormat) as $unreadableIndex) {
+            $writer->addRow(self::unreadableRow($unreadableIndex));
+        }
+
         return [
             'head' => $writer->finish(
                 array_values($unknownIbans),
@@ -269,6 +278,27 @@ final readonly class ImportPipeline
         );
     }
 
+    // A source row that never became a SourceTransactionDto at all: there is no
+    // day, no amount and no counterparty to put beside it, and its own file is
+    // where the reader goes to find it. Without a row of its own the screen
+    // counts a shorter file than the one that was uploaded.
+    private static function unreadableRow(int $rowIndex): PreviewRowDto
+    {
+        return new PreviewRowDto(
+            rowIndex: $rowIndex,
+            status: PreviewRowStatus::Error,
+            accountId: null,
+            postedAt: null,
+            counterpartyName: null,
+            counterpartyIban: null,
+            description: null,
+            amountMinor: null,
+            currency: null,
+            error: ImportFailureReason::RowUnreadable->label(),
+            errorReason: ImportFailureReason::RowUnreadable,
+        );
+    }
+
     private static function failedRow(SourceTransactionDto $source, ?int $accountId, ImportFailureReason $reason, ?string $detail = null): PreviewRowDto
     {
         return new PreviewRowDto(
@@ -320,6 +350,20 @@ final readonly class ImportPipeline
                 ? null
                 : $this->merchantNameResolver->resolve($rowDescription, $user->id),
         );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function unreadableRowIndexes(string $sourceFormat): array
+    {
+        if (! in_array($sourceFormat, $this->adapters->supportedFormats(), strict: true)) {
+            return [];
+        }
+
+        $adapter = $this->adapters->for($sourceFormat);
+
+        return $adapter instanceof NamesRowsItCouldNotRead ? $adapter->unreadableRowIndexes() : [];
     }
 
     /**

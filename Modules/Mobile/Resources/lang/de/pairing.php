@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Gerät gekoppelt',
     'success_body' => 'Diesem Gerät wird jetzt vertraut. Deine Daten werden synchronisiert, sobald du dich verbindest.',
+    'encryption_incomplete' => 'Das Gerät ist gekoppelt, aber die Verschlüsselung der darauf gespeicherten Daten wurde nicht abgeschlossen. Die Daten sind noch nicht im Ruhezustand verschlüsselt.',
     'done' => 'Fertig',
 
     'errors' => [

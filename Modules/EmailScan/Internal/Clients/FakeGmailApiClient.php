@@ -25,6 +25,9 @@ final class FakeGmailApiClient implements GmailApiClientContract
     /** @var list<string> */
     private array $unavailableMessageIds = [];
 
+    /** @var list<string> */
+    private array $undecodableMessageIds = [];
+
     /** @var array{history: list<array<string, mixed>>, historyId: ?string}|null */
     private ?array $queuedHistoryResponse = null;
 
@@ -106,6 +109,12 @@ final class FakeGmailApiClient implements GmailApiClientContract
         if (in_array($providerMessageId, $this->unavailableMessageIds, strict: true)) {
             throw new MessageUnavailableException(
                 "FakeGmailApiClient: message {$providerMessageId} is no longer available on inbox {$inboxId}.",
+            );
+        }
+
+        if (in_array($providerMessageId, $this->undecodableMessageIds, strict: true)) {
+            throw new GmailRawDecodeException(
+                'FakeGmailApiClient: failed to base64url-decode message raw payload.',
             );
         }
 
@@ -218,6 +227,14 @@ final class FakeGmailApiClient implements GmailApiClientContract
     public function simulateMissingMessage(string $providerMessageId): void
     {
         $this->unavailableMessageIds[] = $providerMessageId;
+    }
+
+    // The other half of that pair, and not the same fact: the payload arrived
+    // and base64UrlDecode() refused it, so the bytes were received and lost
+    // rather than never handed over.
+    public function simulateUndecodableMessage(string $providerMessageId): void
+    {
+        $this->undecodableMessageIds[] = $providerMessageId;
     }
 
     public function simulateRateLimit(int $inboxId, int $retryAfterSeconds = 2): void

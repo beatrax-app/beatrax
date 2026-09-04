@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Seade on seotud',
     'success_body' => 'See seade on nüüd usaldusväärne. Sinu andmed sünkroonitakse, kui ühenduse lood.',
+    'encryption_incomplete' => 'Seade on seotud, kuid sellesse salvestatud andmete krüptimine ei jõudnud lõpule. Andmeid ei hoita veel krüptitult.',
     'done' => 'Valmis',
 
     'errors' => [

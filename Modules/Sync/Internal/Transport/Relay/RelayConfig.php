@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
+use Throwable;
 
 final class RelayConfig
 {
@@ -132,35 +133,12 @@ final class RelayConfig
     // Passing null or empty string clears the endpoint (reverts to "not
     // configured"). Non-HTTPS URLs are stored but flagged insecure.
     /**
-     * @throws RelayConfigWriteException on an I/O failure
+     * @throws RelayConfigWriteException on an I/O failure, or when the pin this
+     *                                   write would carry forward cannot be read
      */
     public function setEndpointUrl(?string $url): void
     {
-        $path = UserDataPathService::appPath(self::CONFIG_SUB);
-        $dir = dirname($path);
-
-        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
-            throw RelayConfigWriteException::couldNotCreateDirectory($dir);
-        }
-
-        // Keep any pin already stored: setEndpointUrl() is also how a peer
-        // records an endpoint it just learned, and dropping the pin here
-        // would silently downgrade a pinned relay to unverified. An
-        // unreadable config must not pre-empt the write error below.
-        try {
-            $existingPin = $this->pin() ?? '';
-        } catch (\Throwable) {
-            $existingPin = '';
-        }
-
-        $data = ['endpoint' => $url ?? '', 'pin' => $existingPin];
-        $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
-
-        // Suppressed so the `=== false` check decides; unsuppressed the
-        // E_WARNING becomes an ErrorException first and the guard never ran.
-        if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw RelayConfigWriteException::couldNotWrite($path);
-        }
+        $this->rewrite(['endpoint' => $url ?? '', 'pin' => $this->storedValue('pin')]);
     }
 
     // The peer's pinned SPKI key, learned out-of-band from the QR. Present
@@ -178,7 +156,57 @@ final class RelayConfig
         return is_string($pin) && $pin !== '' ? $pin : null;
     }
 
+    /**
+     * @throws RelayConfigWriteException on an I/O failure, or when the endpoint
+     *                                   this write would carry forward cannot be read
+     */
     public function setPin(?string $pin): void
+    {
+        $this->rewrite(['endpoint' => $this->storedValue('endpoint'), 'pin' => $pin ?? '']);
+    }
+
+    // Both setters rewrite the WHOLE file, so each carries the other's field
+    // forward. Absent and unparseable are one answer to a reader and two to a
+    // writer: a torn relay.json blanked the pin, which is the only thing
+    // verifying the certificate the relay presents.
+    /**
+     * @throws RelayConfigWriteException when the stored file exists and will not read
+     */
+    private function storedValue(string $key): string
+    {
+        $path = UserDataPathService::appPath(self::CONFIG_SUB);
+
+        // is_file, not file_exists: a DIRECTORY standing where the config
+        // belongs carries no field forward and is the write failure rewrite()
+        // reports a moment later, under the name a reader can act on.
+        if (! is_file($path)) {
+            return '';
+        }
+
+        // The read is unsuppressed, so a file present but unreadable raises
+        // rather than answering null. Both roads lead to the same refusal, and
+        // callers of these setters are declared to expect only this type.
+        try {
+            $data = $this->readJsonObject($path);
+        } catch (Throwable) {
+            throw RelayConfigWriteException::couldNotReadBeforeWriting($path);
+        }
+
+        if ($data === null) {
+            throw RelayConfigWriteException::couldNotReadBeforeWriting($path);
+        }
+
+        $value = $data[$key] ?? null;
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * @param  array<string, string>  $data
+     *
+     * @throws RelayConfigWriteException on an I/O failure
+     */
+    private function rewrite(array $data): void
     {
         $path = UserDataPathService::appPath(self::CONFIG_SUB);
         $dir = dirname($path);
@@ -187,9 +215,10 @@ final class RelayConfig
             throw RelayConfigWriteException::couldNotCreateDirectory($dir);
         }
 
-        $data = ['endpoint' => $this->endpointUrl() ?? '', 'pin' => $pin ?? ''];
         $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 
+        // Suppressed so the `=== false` check decides; unsuppressed the
+        // E_WARNING becomes an ErrorException first and the guard never ran.
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
             throw RelayConfigWriteException::couldNotWrite($path);
         }
