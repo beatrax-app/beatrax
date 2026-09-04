@@ -10,6 +10,7 @@ return [
     'new_password' => 'Nové heslo',
     'confirm_new_password' => 'Potvrď nové heslo',
     'submit' => 'Uložiť nové heslo',
+    'sign_out' => 'Odhlásiť sa',
 
     'error_current_required' => 'Zadaj svoje súčasné heslo.',
     'error_current_incorrect' => 'Súčasné heslo nie je správne.',

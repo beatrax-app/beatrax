@@ -10,6 +10,7 @@ return [
     'new_password' => 'Neues Passwort',
     'confirm_new_password' => 'Neues Passwort bestätigen',
     'submit' => 'Neues Passwort speichern',
+    'sign_out' => 'Abmelden',
 
     'error_current_required' => 'Gib dein aktuelles Passwort ein.',
     'error_current_incorrect' => 'Aktuelles Passwort ist falsch.',

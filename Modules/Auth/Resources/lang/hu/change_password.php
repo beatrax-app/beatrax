@@ -10,6 +10,7 @@ return [
     'new_password' => 'Új jelszó',
     'confirm_new_password' => 'Új jelszó megerősítése',
     'submit' => 'Új jelszó mentése',
+    'sign_out' => 'Kijelentkezés',
 
     'error_current_required' => 'Add meg a jelenlegi jelszavad.',
     'error_current_incorrect' => 'A jelenlegi jelszó helytelen.',

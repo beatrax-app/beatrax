@@ -87,15 +87,13 @@ it('reserves the system bars around the screen the codes are shown on once', fun
 
     $html = (string) Livewire::test(RecoveryCodesDisplay::class)->html();
 
-    // --safe-*, not env(safe-area-inset-*): the Android shell leaves env() at
-    // zero and injects --inset-* onto :root, which --safe-* reads through max().
-    expect($html)->toContain('var(--safe-bottom)')
-        ->and($html)->toContain('var(--safe-left)')
-        ->and($html)->toContain('var(--safe-right)')
-        // Three edges, not four. This screen renders inside layouts.app's
-        // <main>, under a .top-bar that already pads var(--safe-top) and sits
-        // in the flow, so a top inset here reserves the status bar twice.
-        ->and($html)->not->toContain('var(--safe-top)');
+    // All four edges now, from .safe-screen rather than from insets typed onto
+    // the element: no menubar is drawn above a first-run ceremony, so nothing
+    // else reserves the status bar. The stylesheet zeroes the top inset again
+    // for any document that does carry a .top-bar, and it is the stylesheet
+    // that reads --safe-*, which the Android shell fills where env() is zero.
+    expect($html)->toContain('safe-screen')
+        ->and($html)->not->toContain('var(--safe-');
 });
 
 it('leaves the iOS download to the WebView, which the shell saves through the system share sheet', function (): void {

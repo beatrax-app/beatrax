@@ -10,6 +10,7 @@ return [
     'new_password' => 'Нова парола',
     'confirm_new_password' => 'Потвърди новата парола',
     'submit' => 'Запази новата парола',
+    'sign_out' => 'Изход',
 
     'error_current_required' => 'Въведи текущата си парола.',
     'error_current_incorrect' => 'Текущата парола е грешна.',
