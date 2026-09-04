@@ -347,11 +347,11 @@ final readonly class GraphApiClient implements GraphApiClientContract
         // A page is tens of kilobytes at $top=100, so the ceiling is headroom
         // rather than a constraint — but the length is still the far end's to
         // choose, and json_decode holds the parsed copy alongside the string.
-        $body = BoundedRead::stream('Graph response from '.$url, $response->getBody(), UploadLimits::MAX_MESSAGE_BYTES);
+        $json = BoundedRead::stream('Graph response from '.$url, $response->getBody(), UploadLimits::MAX_MESSAGE_BYTES);
 
         try {
             /** @var mixed $decoded */
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: failed to decode Graph response JSON ('.$e->getMessage().').',
