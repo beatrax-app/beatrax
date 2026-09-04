@@ -18,7 +18,10 @@ final class PaypalTransactionRollup
 
     private int $orphanChildCount = 0;
 
-    private int $skippedMalformedRowCount = 0;
+    /** @var list<int> */
+    private array $unreadableRowIndexes = [];
+
+    private int $unreadableChildLegCount = 0;
 
     public function __construct(
         private readonly PaypalCsvEventTypeMap $events,
@@ -35,13 +38,16 @@ final class PaypalTransactionRollup
     {
         $this->skippedHoldCount = 0;
         $this->orphanChildCount = 0;
-        $this->skippedMalformedRowCount = 0;
+        $this->unreadableRowIndexes = [];
+        $this->unreadableChildLegCount = 0;
 
         $surviving = $this->filterSurviving($rawRows, $language);
         [$parents, $childrenByParent] = $this->partitionParents($surviving, $language);
 
-        // A malformed parent amount drops the whole logical-payment group and bumps
-        // the malformed-row counter instead of raising.
+        // A malformed parent amount drops the whole logical-payment group rather
+        // than raising, so one unreadable cell does not refuse the export. The
+        // group keeps its place in the sequence: closed over, the indexes read
+        // as a whole file and the preview has nothing to hang the loss on.
         /** @var list<SourceTransactionDto> $rolledUp */
         $rolledUp = [];
         $canonicalIndex = 0;
@@ -53,10 +59,17 @@ final class PaypalTransactionRollup
             try {
                 $rolledUp[] = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
             } catch (InvalidAmountException|InvalidDateException) {
-                $this->skippedMalformedRowCount++;
-
-                continue;
+                $this->unreadableRowIndexes[] = $canonicalIndex;
             }
+
+            $canonicalIndex++;
+        }
+
+        // A dropped conversion leg is discovered inside a payment that goes on
+        // to emit, so its slot is taken after the payments rather than among
+        // them; what matters is that the file accounts for it at all.
+        for ($leg = 0; $leg < $this->unreadableChildLegCount; $leg++) {
+            $this->unreadableRowIndexes[] = $canonicalIndex;
             $canonicalIndex++;
         }
 
@@ -146,18 +159,29 @@ final class PaypalTransactionRollup
         return $this->orphanChildCount;
     }
 
-    public function skippedMalformedRowCount(): int
+    /**
+     * @return list<int>
+     */
+    public function unreadableRowIndexes(): array
     {
-        return $this->skippedMalformedRowCount;
+        return $this->unreadableRowIndexes;
     }
 
     /**
      * @param  array<string, string>  $parentRow
      * @param  list<array<string, string>>  $children
+     *
+     * @phpstan-impure
      */
     private function buildDto(array $parentRow, array $children, string $language, int $canonicalIndex): SourceTransactionDto
     {
-        $parentGross = $this->columns->value('gross', $language, $parentRow) ?? '0,00';
+        $parentGross = $this->columns->value('gross', $language, $parentRow);
+        if ($parentGross === null) {
+            throw new InvalidAmountException(
+                'PayPal payment row carries no gross-amount column; an absent column is not an amount of zero.',
+            );
+        }
+
         $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? Currency::Eur->value;
 
         $nativeAmountMinor = $this->amounts->parseMinor($parentGross, $parentCurrency);
@@ -182,13 +206,21 @@ final class PaypalTransactionRollup
             }
 
             $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
-            $childGross = $this->columns->value('gross', $language, $childRow) ?? '0,00';
+            $childGross = $this->columns->value('gross', $language, $childRow);
             try {
+                if ($childGross === null) {
+                    throw new InvalidAmountException(
+                        'PayPal conversion leg carries no gross-amount column; an absent column is not an amount of zero.',
+                    );
+                }
+
                 $childAmountMinor = $this->amounts->parseMinor($childGross, $childCurrency);
             } catch (InvalidAmountException) {
                 // A malformed child amount drops only the FX child; the parent still
-                // emits a DTO, with no FX pair filled in.
-                $this->skippedMalformedRowCount++;
+                // emits a DTO, with no FX pair filled in. The leg is counted because
+                // the parent then buckets under the wrong currency, and a statement
+                // whose legs disagree publishes no balance at all.
+                $this->unreadableChildLegCount++;
 
                 continue;
             }
