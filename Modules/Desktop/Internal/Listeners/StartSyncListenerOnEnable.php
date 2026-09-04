@@ -71,7 +71,19 @@ final readonly class StartSyncListenerOnEnable
         // An unlocked request is the only context that can open the sealed identity;
         // the daemon cannot read it itself, so it is handed over here or the
         // listener answers handshakes with no key at all.
-        $this->listener->startIfEnabled($this->environmentFor($event->userId) ?? []);
+        $environment = $this->environmentFor($event->userId);
+
+        // The request that turns sync ON is unlocked by definition, so an
+        // identity that will not open here is a failure and not the locked
+        // state the empty array stands for. Spawning on it starts a daemon
+        // that refuses every peer, which on screen is sync that never begins.
+        if ($environment === null) {
+            $this->log->warning('StartSyncListenerOnEnable: refused to start the listener without an identity', [
+                'user_id' => $event->userId,
+            ]);
+        } else {
+            $this->listener->startIfEnabled($environment);
+        }
 
         // Pairing frames only travel over the relay, so the very next thing the user
         // does — pair a phone — would have no transport.
