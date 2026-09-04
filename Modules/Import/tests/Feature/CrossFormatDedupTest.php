@@ -14,7 +14,6 @@ beforeEach(function (): void {
     $this->importer = $this->app->make(RunsImports::class);
     $this->csvFixture = base_path('tests/fixtures/asn-cross-format/february.csv');
     $this->camtFixture = base_path('tests/fixtures/asn-cross-format/february.camt053.xml');
-    $this->mt940Fixture = base_path('tests/fixtures/asn-cross-format/february.mt940.sta');
     $this->expectedTransactionCount = 72;
 });
 
@@ -81,31 +80,10 @@ it('same_format_replay: re-importing CAMT after CAMT produces zero new rows and 
     expect($second->enriched)->toBe(0);
 })->group('phase-2');
 
-it('mt940_then_camt053: every overlapping row drops as duplicate (no enrichment)', function (): void {
-    if (! file_exists($this->mt940Fixture)) {
-        $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
-    }
-
-    $this->importer->runAndConfirm($this->mt940Fixture, 'mt940', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
-
-    expect($second->inserted)->toBe(0);
-    expect($second->enriched)->toBe(0);
-    expect($second->duplicates)->toBeGreaterThan(0);
-})->group('phase-2');
-
-it('camt053_then_mt940: every overlapping row drops as duplicate', function (): void {
-    if (! file_exists($this->mt940Fixture)) {
-        $this->markTestSkipped('No same-period MT940 export available from ASN — see asn-cross-format/README.md');
-    }
-
-    $this->importer->runAndConfirm($this->camtFixture, 'camt053', $this->fixtureUser);
-    $second = $this->importer->runAndConfirm($this->mt940Fixture, 'mt940', $this->fixtureUser);
-
-    expect($second->inserted)->toBe(0);
-    expect($second->enriched)->toBe(0);
-    expect($second->duplicates)->toBeGreaterThan(0);
-})->group('phase-2');
+// The MT940 half of this matrix is not written down as a skipped test: ASN no
+// longer offers MT940 downloads, so the same-period fixture cannot be obtained
+// and a permanently skipped test reads as a covered case. The reason it stays
+// unwritten lives in tests/fixtures/asn-cross-format/README.md.
 
 it('preview-only flow surfaces every cross-statement collision as duplicate', function (): void {
     $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
