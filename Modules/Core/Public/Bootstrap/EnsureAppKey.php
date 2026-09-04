@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Bootstrap;
 
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
-use Illuminate\Contracts\Foundation\Application;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\PatternScan;
 use Psr\Log\LoggerInterface;
@@ -17,8 +16,11 @@ final readonly class EnsureAppKey
     public function __construct(
         private UserDataPathService $paths,
         private ConsoleKernel $artisan,
-        private Application $app,
         private ?LoggerInterface $logger = null,
+        // Resolved rather than injected as the application: Larastan models
+        // environmentFilePath() as static, so calling it on the container is
+        // an error at level 10. Nothing in this repository moves the file.
+        private ?string $environmentFile = null,
     ) {}
 
     public function run(): void
@@ -40,7 +42,7 @@ final readonly class EnsureAppKey
         if ($this->appKeyOnDisk() === $before) {
             $this->logger?->error(
                 'EnsureAppKey: the application key was not written, so this installation is still using the key shipped in the bundle.',
-                ['environment_file' => $this->app->environmentFilePath()],
+                ['environment_file' => $this->environmentFile()],
             );
 
             return;
@@ -57,9 +59,14 @@ final readonly class EnsureAppKey
         file_put_contents($sentinel, '');
     }
 
+    private function environmentFile(): string
+    {
+        return $this->environmentFile ?? base_path('.env');
+    }
+
     private function appKeyOnDisk(): ?string
     {
-        $path = $this->app->environmentFilePath();
+        $path = $this->environmentFile();
 
         if (! is_file($path)) {
             return null;

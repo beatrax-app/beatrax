@@ -137,7 +137,7 @@ it('invokes key:generate --force and creates the sentinel when absent', function
         "APP_NAME=Beatrax\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\n",
     );
 
-    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
     $action->run();
 
     expect($kernel->calls)->toHaveCount(1);
@@ -157,7 +157,7 @@ it('is a no-op when the sentinel already exists', function (): void {
 
     $existingAppKey = $config->get('app.key');
 
-    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
     $action->run();
 
     expect($kernel->calls)->toBe([]);
@@ -175,7 +175,7 @@ it('is idempotent across successive calls — exactly one invocation, one sentin
         "APP_NAME=Beatrax\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\n",
     );
 
-    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
     $action->run();
     $action->run();
     $action->run();
@@ -193,6 +193,15 @@ it('FirstLaunchBootstrap chain leaves the sentinel present and APP_KEY non-empty
 
     $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
     expect(file_exists($sentinel))->toBeFalse();
+
+    // Bound explicitly: without it the container resolves the default,
+    // base_path('.env'), and this test would rotate the key of the checkout
+    // it is running in.
+    $this->app->bind(EnsureAppKey::class, fn ($app) => new EnsureAppKey(
+        $app->make(UserDataPathService::class),
+        $app->make(ConsoleKernel::class),
+        environmentFile: $this->envFile,
+    ));
 
     $bootstrap = $this->app->make(FirstLaunchBootstrap::class);
 
@@ -216,7 +225,7 @@ it('does not stamp the sentinel when the key never reached the file', function (
     $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
 
     // The spy writes nothing, which is exactly what a failed write leaves.
-    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
     $action->run();
 
     expect($kernel->calls)->toHaveCount(1)
@@ -230,7 +239,7 @@ it('tries again on the next launch after a write that did not land', function ()
     $paths = $this->app->make(UserDataPathService::class);
     $kernel = ensureAppKeySpyKernel();
 
-    $action = new EnsureAppKey($paths, $kernel, $this->app);
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
     $action->run();
     $action->run();
 
@@ -259,7 +268,7 @@ it('leaves the shipped key in place, and says so, when the file cannot be writte
         }
     };
 
-    $action = new EnsureAppKey($paths, $this->app->make(ConsoleKernel::class), $this->app, $logger);
+    $action = new EnsureAppKey($paths, $this->app->make(ConsoleKernel::class), $logger, $this->envFile);
     @$action->run();
 
     expect(appKeyWrittenIn($this->envFile))->toBe($this->shippedKey)
