@@ -17,9 +17,9 @@ final readonly class EnsureAppKey
         private UserDataPathService $paths,
         private ConsoleKernel $artisan,
         private ?LoggerInterface $logger = null,
-        // Resolved rather than injected as the application: Larastan models
-        // environmentFilePath() as static, so calling it on the container is
-        // an error at level 10. Nothing in this repository moves the file.
+        // Resolved through the path service rather than the container:
+        // Larastan models environmentFilePath() as static, and base_path()
+        // outside UserDataPathService is a boundary violation.
         private ?string $environmentFile = null,
     ) {}
 
@@ -61,7 +61,7 @@ final readonly class EnsureAppKey
 
     private function environmentFile(): string
     {
-        return $this->environmentFile ?? base_path('.env');
+        return $this->environmentFile ?? UserDataPathService::environmentFile();
     }
 
     private function appKeyOnDisk(): ?string

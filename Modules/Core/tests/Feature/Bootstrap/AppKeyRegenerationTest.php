@@ -6,6 +6,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Psr\Log\AbstractLogger;
 
@@ -67,7 +68,7 @@ function appKeyWrittenIn(string $envFile): ?string
         return null;
     }
 
-    preg_match('/^APP_KEY=(.*)$/m', (string) file_get_contents($envFile), $matched);
+    $matched = PatternScan::first('/^APP_KEY=(.*)$/m', (string) file_get_contents($envFile));
 
     return $matched === [] ? null : trim($matched[1]);
 }
