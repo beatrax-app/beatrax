@@ -177,7 +177,7 @@ function eventChannelNameOf(array $constants, ?string $argument): ?string
         return null;
     }
 
-    $short = (string) preg_replace('/^.*\\\\/', '', $argument);
+    $short = PatternScan::replace('/^.*\\\\/', '', $argument);
 
     return $constants[$argument] ?? $constants[$short] ?? null;
 }
@@ -278,7 +278,7 @@ function eventChannelPhpHits(string $path, array $constants, bool $listening): a
             continue;
         }
 
-        $short = (string) preg_replace('/^.*\\\\/', '', $token[1]);
+        $short = PatternScan::replace('/^.*\\\\/', '', $token[1]);
 
         if ($listening && $short === 'On' && in_array($token[0], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
             $name = eventChannelNameOf($constants, eventChannelArguments($tokens, $index)[0] ?? null);
@@ -388,11 +388,11 @@ function eventChannelMarkupCode(string $path): string
     $blank = static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n"));
 
     $contents = (string) file_get_contents($path);
-    $contents = (string) preg_replace_callback('/\{\{--.*?--\}\}/s', $blank, $contents);
-    $contents = (string) preg_replace_callback('#/\*.*?\*/#s', $blank, $contents);
+    $contents = PatternScan::replaceCallback('/\{\{--.*?--\}\}/s', $blank, $contents);
+    $contents = PatternScan::replaceCallback('#/\*.*?\*/#s', $blank, $contents);
 
     // `(?<![:\w])` keeps the `//` of an https:// URL out of it.
-    return (string) preg_replace('#(?<![:\w])//[^\n]*#', '', $contents);
+    return PatternScan::replace('#(?<![:\w])//[^\n]*#', '', $contents);
 }
 
 /**

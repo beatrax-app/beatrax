@@ -64,9 +64,7 @@ function capturedCreatePhpFiles(string $root): array
 function capturedCreateKeys(string $source, string $opener): array
 {
     $keys = [];
-    if (preg_match_all($opener, $source, $matches, PREG_OFFSET_CAPTURE) === false) {
-        return [];
-    }
+    $matches = PatternScan::allWithOffsets($opener, $source);
 
     foreach ($matches[0] as [$text, $offset]) {
         $start = $offset + strlen($text) - 1;

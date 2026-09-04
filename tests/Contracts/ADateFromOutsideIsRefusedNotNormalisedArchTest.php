@@ -236,7 +236,7 @@ function suppliedDateBindings(array $paths): array
 
     foreach ($paths as $path) {
         $source = (string) file_get_contents($path);
-        $source = (string) preg_replace_callback(
+        $source = PatternScan::replaceCallback(
             '/\{\{--.*?--\}\}/s',
             static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
             $source,
@@ -255,7 +255,7 @@ function suppliedDateBindings(array $paths): array
             $models = PatternScan::all('/wire:model[.\w]*\s*=\s*"([^"]+)"/', $tag);
 
             foreach ($models[1] as $model) {
-                $field = trim((string) preg_replace('/\{\{.*?\}\}/', '*', $model));
+                $field = trim(PatternScan::replace('/\{\{.*?\}\}/', '*', $model));
                 $bindings[$field][] = $relative.':'.$line;
             }
         }
