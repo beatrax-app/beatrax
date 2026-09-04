@@ -547,7 +547,7 @@ function commentPolicyLineCommentBlocks(string $path): array
 // "PHPStan" — and an exemption here is silent, so those lines were invisible to
 // M1 through M4 rather than reported. Every real directive is `@var`,
 // `@codeCoverageIgnore`, or a tool name followed by `-` or `:`.
-/** @return bool whether the comment text is a machine directive exempt from M1-M4 */
+/** @return bool whether the comment text is a machine directive the style rules exempt */
 function commentPolicyIsDirective(string $text): bool
 {
     return preg_match(
@@ -596,9 +596,9 @@ const COMMENT_POLICY_STANDARDS_NAMES = [
     'BCP-47', 'PSR-3', 'PSR-4', 'PSR-12', 'R-7', 'API-28',
 ];
 
-// Not a name at all: a regex character class whose middle reads as NP-Z2. The
-// exemption is the exact literal rather than a hole in the pattern, so a real
-// identifier standing next to one still trips.
+// Not a name at all: a regex character class whose middle reads like an
+// identifier. The exemption is the exact literal rather than a hole in the
+// pattern, so a real identifier standing next to one still trips.
 const COMMENT_POLICY_LITERAL_EXEMPTIONS = [
     '[A-NP-Z2-9]',
 ];
@@ -664,16 +664,35 @@ function commentPolicyTestNames(string $path): array
     return $names;
 }
 
-// Every identifier shape this repo actually mints: D-06 and T-05-12 (one
-// letter), WR-11 and GOV-R12 (several), F3-R36 (letter then digit). The
-// one-letter form demands two digits so N-1 and R-7 stay prose. Phase, Wave
-// and friends are provenance whatever number follows them. One pattern serves
-// every rule below — a test name and a comment ban the same thing, and the two
-// drifted apart once already.
+// One body serves every rule below — a test name and a comment ban the same
+// thing, and the two have now drifted apart twice: once on the pattern, once
+// on which files they read. The shapes it must and must not catch are listed
+// as data in the test under it, where they are checked rather than described.
+const COMMENT_POLICY_IDENTIFIER_BODY = '\b(?:[A-Z]{2,6}\d{0,2}|[A-Z]\d{1,2})-[A-Z]{0,2}\d{1,3}\b'
+    .'|\b[A-Z]-(?:[A-Z]{1,2}\d{1,3}|\d{2,3})\b';
+
+const COMMENT_POLICY_IDENTIFIER_TOKENS = '/'.COMMENT_POLICY_IDENTIFIER_BODY.'/';
+
 const COMMENT_POLICY_BANNED_TOKENS = '/\b(TODO|FIXME|HACK|XXX|@todo)\b'
-    .'|\b(?:[A-Z]{2,6}\d{0,2}|[A-Z]\d{1,2})-[A-Z]{0,2}\d{1,3}\b'
-    .'|\b[A-Z]-(?:[A-Z]{1,2}\d{1,3}|\d{2,3})\b'
+    .'|'.COMMENT_POLICY_IDENTIFIER_BODY
     .'|(?i:\b(?:Phase|Wave|Plan|Pitfall|Req|Issue|UAT)\s+#?\d)/';
+
+it('reads every identifier shape this repository mints and leaves the prose forms alone', function (): void {
+    $identifiers = ['D-06', 'T-05-12', 'WR-11', 'GOV-R12', 'F3-R36'];
+    $prose = ['N-1', 'R-7', 'SHA-256', 'BCP-47', 'API-28'];
+
+    expect($identifiers)->not->toBe([])->and($prose)->not->toBe([]);
+
+    foreach ($identifiers as $identifier) {
+        expect(PatternScan::matches(COMMENT_POLICY_IDENTIFIER_TOKENS, $identifier))
+            ->toBeTrue($identifier.' is a shape this repository mints and the pattern must read it as one');
+    }
+
+    foreach ($prose as $word) {
+        expect(PatternScan::matches(COMMENT_POLICY_IDENTIFIER_TOKENS, commentPolicyWithoutStandards($word)))
+            ->toBeFalse($word.' is prose or a standards name and the pattern must leave it alone');
+    }
+});
 
 it('has no banned deferral or provenance tokens in comments (M5)', function (): void {
     $hits = [];
@@ -819,8 +838,12 @@ it('reads NEON and YAML comments without tripping on quoted hashes or URL fragme
 // A test name is read at a failure, where the useful thing to know is what
 // broke — not which requirement row the test traces back to.
 it('has no requirement identifiers in test names', function (): void {
+    $files = commentPolicyTestFiles();
+
+    expect($files)->not->toBe([]);
+
     $hits = [];
-    foreach (commentPolicyTestFiles() as $path) {
+    foreach ($files as $path) {
         foreach (commentPolicyTestNames($path) as $entry) {
             $ids = commentPolicyRequirementIds($entry['name']);
             if ($ids !== []) {
@@ -829,6 +852,40 @@ it('has no requirement identifiers in test names', function (): void {
         }
     }
     expect($hits)->toBe([], "A test name says what the test proves, never which requirement it traces to — identifiers belong in the commit trailer and the PR body. Offenders:\n  ".implode("\n  ", $hits));
+});
+
+// The same ban reached test NAMES and not test COMMENTS, because the walk it
+// used is built on the style-rule walk, which drops tests so an explanatory
+// line in one stays free. Only the identifier half crosses: a comment in a test
+// may still name the deferral words it is describing.
+it('has no requirement identifiers in test comments', function (): void {
+    $files = commentPolicyTestFiles();
+
+    expect($files)->not->toBe([]);
+
+    $hits = [];
+
+    foreach ($files as $path) {
+        foreach (token_get_all((string) file_get_contents($path)) as $token) {
+            if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            $matches = PatternScan::all(
+                COMMENT_POLICY_IDENTIFIER_TOKENS,
+                commentPolicyWithoutStandards($token[1]),
+            );
+
+            /** @var list<string> $ids */
+            $ids = $matches[0];
+
+            if ($ids !== []) {
+                $hits[] = str_replace(base_path().'/', '', $path).':'.$token[2].' → '.implode(', ', $ids);
+            }
+        }
+    }
+
+    expect($hits)->toBe([], "A comment in a test says what the test proves, never which requirement it traces to — identifiers belong in the commit trailer and the PR body. Offenders:\n  ".implode("\n  ", $hits));
 });
 
 it('has no informative /* */ block comments (M3)', function (): void {

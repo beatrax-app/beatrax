@@ -100,9 +100,10 @@ function listenerOver(Container $container, array &$calls): SyncCaptureListener
     );
 }
 
-// E1-R18 is the rule this file exists for, and deferring must not become a new
-// way to break it: the listener runs inside the request that saved the row, so
-// a queue insert that fails has to end here rather than in the reader's edit.
+// A capture that cannot run must never reach the reader, and deferring must not
+// become a new way to break that: the listener runs inside the request that
+// saved the row, so a queue insert that fails has to end here rather than in
+// the reader's edit.
 it('does not fail the user\'s save when even the deferral cannot be built', function (): void {
     $calls = [];
     $listener = listenerOver(unresolvableContainer(), $calls);
