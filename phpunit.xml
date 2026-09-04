@@ -41,12 +41,9 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
             <directory>Modules/Anomaly/tests/Feature</directory>
-            <directory>Modules/Core/tests/Feature</directory>
             <directory>Modules/Goals/tests/Feature</directory>
-            <directory>Modules/Ledger/tests/Feature</directory>
             <directory>Modules/Pots/tests/Feature</directory>
             <directory>Modules/Ingestion/tests/Feature</directory>
-            <directory>Modules/Import/tests/Feature</directory>
             <directory>Modules/Categorization/tests/Feature</directory>
             <directory>Modules/Community/tests/Feature</directory>
             <directory>Modules/Counterparties/tests/Feature</directory>
@@ -71,6 +68,27 @@
             <directory>Modules/Shell/tests/Feature</directory>
             <directory>Modules/Notifications/tests/Feature</directory>
             <directory>Modules/Position/tests/Feature</directory>
+        </testsuite>
+        <!-- Lifted out of the generic Feature suite because a testsuite is the
+             smallest thing the shard resolver can move, and Feature was one
+             indivisible block of 945 files: the longest shard could never go
+             below it however the weights were set. These three are its heaviest
+             members, and splitting them follows what the file already does for
+             every other heavy module — Auth, EmailScan, OpenBanking and Chains
+             all have their own Feature suite for the same reason.
+
+             Each directory is claimed by exactly one suite, which is what keeps
+             the "Cannot add file ... as it was already added" warning away; a
+             run carrying that warning exits 1 with nothing failing. Verified by
+             running the three together: 1431 passed, no warning. -->
+        <testsuite name="CoreFeature">
+            <directory suffix="Test.php">./Modules/Core/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="ImportFeature">
+            <directory suffix="Test.php">./Modules/Import/tests/Feature</directory>
+        </testsuite>
+        <testsuite name="LedgerFeature">
+            <directory suffix="Test.php">./Modules/Ledger/tests/Feature</directory>
         </testsuite>
         <testsuite name="Contracts">
             <directory>tests/Contracts</directory>
