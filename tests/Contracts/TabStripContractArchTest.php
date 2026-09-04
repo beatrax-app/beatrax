@@ -45,7 +45,7 @@ function tabStripBladeFiles(): array
  */
 function tabStripOpenTags(string $source): array
 {
-    $source = (string) preg_replace_callback(
+    $source = PatternScan::replaceCallback(
         '~@\w+\s*\((?:[^()]|\([^()]*\))*\)~',
         static fn (array $m): string => str_repeat(' ', strlen($m[0])),
         $source,
