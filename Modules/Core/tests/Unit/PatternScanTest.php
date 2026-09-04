@@ -30,8 +30,15 @@ it('leaves a failed scan looking exactly like an empty one when the return is di
     $matches = [];
     $gaveUp = @preg_match_all(PATTERN_SCAN_RUNAWAY, patternScanUnmatchableSubject(), $matches) === false;
 
+    // Read on the next statement rather than inside the expectation below.
+    // preg_last_error() reports the last preg call made anywhere in the
+    // process, and an assertion runs patterns of its own; under coverage that
+    // instrumentation was enough to answer PREG_NO_ERROR for a scan that had
+    // plainly given up, failing this case on the coverage shard alone.
+    $error = preg_last_error();
+
     expect($gaveUp)->toBeTrue()
-        ->and(preg_last_error())->not->toBe(PREG_NO_ERROR)
+        ->and($error)->not->toBe(PREG_NO_ERROR)
         ->and($matches[0])->toBe([]);
 });
 
