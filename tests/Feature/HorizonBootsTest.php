@@ -9,8 +9,9 @@ use Predis\Client as PredisClient;
 
 // The missing-Redis case is an explicit skip predicate, never a
 // swallow-on-throw around the body: swallowing turned "the container is not
-// running" into a silent pass. A CI grep gate reads this file's literal text
-// and trips if that pattern reappears.
+// running" into a silent pass. Nothing enforces that but the reader — this note
+// used to claim a CI grep gate read the file's literal text and tripped if the
+// pattern came back, and no such gate has ever existed in the tree.
 function isRedisReachable(string $host, int $port): bool
 {
     $errno = 0;
