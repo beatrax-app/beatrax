@@ -19,6 +19,7 @@ use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
@@ -87,6 +88,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         KnownSenderQuery $senderQuery,
         JobUserContext $jobUser,
         GraphDeltaWalk $deltaWalk,
+        LoggerInterface $logger,
     ): void {
         $connection = $db->connection();
 
@@ -128,7 +130,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         // but a crafted POST may carry an out-of-range value.
         $window = max(1, min(12, $this->windowMonths));
 
-        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId, $logger);
 
         // The default arm is unreachable while the inboxes CHECK trigger
         // pair holds; it surfaces bypassed data without retrying forever.
@@ -374,7 +376,29 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             return 1;
         }
 
-        $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $extractInternalDate($msgMeta));
+        return $this->storeOrSkip($context, $messageId, $fetchRawEml, $extractInternalDate($msgMeta));
+    }
+
+    // One message this device will not hold whole is one message skipped, not
+    // a failed backfill: a refusal let out of the walk abandons every page
+    // after it and leaves the run in error over a single mailbox item.
+    /**
+     * @param  Closure(string): string  $fetchRawEml
+     * @return int 1 once the message is indexed, 0 for one refused as oversized
+     */
+    private function storeOrSkip(
+        InboxScanContext $context,
+        string $messageId,
+        Closure $fetchRawEml,
+        ?DateTimeImmutable $internalDate,
+    ): int {
+        try {
+            $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $internalDate);
+        } catch (BoundedReadException $e) {
+            $context->skipOversized($messageId, $e);
+
+            return 0;
+        }
 
         return 1;
     }

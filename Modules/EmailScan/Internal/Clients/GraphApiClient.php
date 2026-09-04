@@ -12,7 +12,9 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\Exceptions\ProviderTransportException;
 use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
@@ -125,7 +127,15 @@ final readonly class GraphApiClient implements GraphApiClientContract
             );
         }
 
-        return (string) $response->getBody();
+        // Content-Length settles it before a byte of the body is taken; a
+        // response that declares nothing is read a chunk at a time and dropped
+        // the moment it passes the ceiling. Casting the body to string instead
+        // let the mailbox decide how much of this device's heap to spend.
+        return BoundedRead::stream(
+            'Graph message '.$providerMessageId,
+            $response->getBody(),
+            UploadLimits::MAX_MESSAGE_BYTES,
+        );
     }
 
     /**
@@ -334,9 +344,14 @@ final readonly class GraphApiClient implements GraphApiClientContract
             );
         }
 
+        // A page is tens of kilobytes at $top=100, so the ceiling is headroom
+        // rather than a constraint — but the length is still the far end's to
+        // choose, and json_decode holds the parsed copy alongside the string.
+        $body = BoundedRead::stream('Graph response from '.$url, $response->getBody(), UploadLimits::MAX_MESSAGE_BYTES);
+
         try {
             /** @var mixed $decoded */
-            $decoded = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: failed to decode Graph response JSON ('.$e->getMessage().').',

@@ -179,6 +179,48 @@ Its one honest blind spot: a chain assembled across two variables
 (`$q = DB::table('transactions')…;` then `$q->get();`) is invisible to it, because
 the table name and the terminal are in different statements.
 
+## The other axis: a read bounded by how much the sender sent
+
+Everything above bounds a read by *row count*. The same ceiling is reached a
+second way, in *bytes*, whenever one object is materialised whole and its length
+was chosen by somebody outside this device: a `.eml` dropped into the watched
+folder, a raw message fetched from Gmail or Microsoft Graph. Gmail alone carries
+attachments up to about 25 MB, ~35 MB once base64-encoded, and the base64url
+decode held three further copies of that before the plaintext existed.
+
+The measurement that mattered was not a timing. It was that the doors were
+inconsistent: `ScanInboxDropFolderJob` checked `filesize()` against a cap while
+`ProcessFetchedInboxMessagesJob`, reading the same kind of file for the same
+parser, checked nothing — and the cap that did exist was skipped outright when
+`filesize()` answered `false`, which is the case where the size is least known.
+
+`Modules\Core\Public\Support\BoundedRead` is the single door now:
+
+- `refuseAbove()` — a size the sender states, checked before the bytes exist.
+  This is what Gmail's `sizeEstimate` is read into, ahead of the decode.
+- `file()` — stat, refuse, read at most the ceiling plus one byte, refuse again.
+  A stat that fails refuses the file rather than waving it through, and the
+  second check closes the window in which the file grows between the two.
+- `stream()` — `Content-Length` where the response declares one, otherwise the
+  body a chunk at a time, abandoned the moment the running total passes the
+  ceiling.
+- `head()` — for a reader that only wants the front of a body (a provider's
+  error message). It declines to hold the rest rather than refusing the whole,
+  because losing a diagnosis is worse than truncating it.
+
+The ceiling is `Modules\Core\Public\Support\UploadLimits::MAX_MESSAGE_BYTES`,
+one number for every entry point, because a message EmailScan accepts is a
+message Receipts has to read back off disk afterwards.
+
+A refusal is scoped to the one message: `InboxScanContext::skipOversized()` logs
+it and the walk continues. Letting it out left the cursor where it was, so every
+later tick walked into the same message again.
+
+`tests/Contracts/BoundedMessageReadArchTest.php` is the guard — it scans the
+provider clients and the two consuming job directories for a whole body reaching
+one PHP string (`(string) $response->getBody()`, `file_get_contents(`,
+`$files->get(`) and fails on a hit that is not routed through the seam.
+
 ## Related
 
 - [Measuring write cost](measuring-write-cost.md) — why a bulk timing from the test suite is wrong.

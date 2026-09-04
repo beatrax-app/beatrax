@@ -11,6 +11,7 @@ use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailInboxResources;
@@ -147,6 +148,19 @@ it('raises a dedicated decode failure when Gmail returns a non-base64url raw pay
 
     expect(fn () => $client->getRawMessage(1, 'm1'))
         ->toThrow(GmailRawDecodeException::class, 'failed to base64url-decode');
+});
+
+// base64UrlDecode makes three more copies of the payload before the plaintext
+// exists, so the ceiling has to be read off the resource rather than off the
+// decode. The raw here is one no decode would accept: getting the size refusal
+// instead of the decode failure is what says nothing tried to decode it.
+it('refuses a Gmail message whose stated size is past the ceiling, before decoding a byte', function (): void {
+    $client = ($this->makeClient)([
+        gmailJson(['id' => 'm1', 'raw' => '@@not-base64url@@', 'sizeEstimate' => 26 * 1024 * 1024]),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'm1'))
+        ->toThrow(BoundedReadException::class, 'is past the 26214400-byte ceiling');
 });
 
 // Headers only, never a body byte. A hit with no parseable From header is
