@@ -6,6 +6,8 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Psr\Log\LoggerInterface;
 
 // The other half of a create the transport split. Nothing keeps one row's
 // create ops inside a single frame, so the half that lands second names a row
@@ -29,6 +31,7 @@ final class SplitCreateTail
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly RowOwnership $ownership,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     // Fills only the columns the stored row never received — still holding the
@@ -102,10 +105,16 @@ final class SplitCreateTail
 
         try {
             $this->ownership->scopeToUser($query, $table, $userId)->update($values);
-        } catch (QueryException) {
-            // A foreign key whose target has not landed yet, which the next
-            // half of the same history brings. The row is already applied and
-            // usable, so this costs the column and never the replay.
+        } catch (QueryException $e) {
+            // Usually a foreign key whose target has not landed yet. The row
+            // is already applied and usable, so the replay goes on — but what
+            // is lost is the whole tail, the columns the first half never
+            // carried, and nothing comes back for it. So it is said out loud.
+            $this->logger?->error('SplitCreateTail: the second half of a create could not be written.', [
+                'table' => $table,
+                'columns' => array_keys($values),
+                ...SafeExceptionContext::describe($e),
+            ]);
         }
     }
 
