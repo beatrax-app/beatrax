@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 // A class written in a Blade template that matches no rule anywhere renders
@@ -45,9 +46,8 @@ function bladeScopedClassNames(array $blades): array
     $names = [];
     foreach ($blades as $path) {
         $source = (string) file_get_contents($path);
-        $blocks = PatternScan::all('/<style[^>]*>(.*?)<\/style>/s', $source);
-        foreach ($blocks[1] as $block) {
-            $matches = PatternScan::all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $block);
+        foreach (MarkupSource::elements($source, 'style') as $block) {
+            $matches = PatternScan::all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', (string) $block->inner);
             foreach ($matches[1] as $name) {
                 $names[$name] = true;
             }

@@ -5715,6 +5715,84 @@ pathological row must not raise on a scan of every description.
 `CorpusPatternMatcher::compiles()` uses `=== false` to mean "this pattern does
 not compile", which is the question it is asking.
 
+## A guard that reads HTML with a regex
+
+`<form\b[^>]*method="POST"[^>]*>` cannot cross a `>`, and an attribute value is
+full of them: `x-show="count > 3"`, `@class(['on' => $active])`,
+`{{ $attributes->merge([...]) }}`, `wire:model="rows.{{ $row->id }}"`. The tag is
+read half-way, the pattern either fails to match or matches a different span, and
+the guard reports nothing wrong with a file it never finished reading.
+
+Measured over the 274 Blade views in this tree: **325 of 1966** `button`, `a`,
+`form`, `div`, `input` and `select` start tags across **116 files** end somewhere
+other than where `[^>]*` puts them. Three guards were answering the wrong
+question because of it:
+
+- `VisibleLabelInAccessibleNameArchTest` saw **45** of the **105** aria-labelled
+  buttons and links in the tree. It had a `continue` for the case, saying so:
+  "an attribute holding inline JS spills its tail into `$inner`". Everything that
+  spilled was skipped, silently.
+- `ComponentTagDirectiveArchTest` exists to catch `@if` inside a component tag,
+  which Blade emits as raw HTML so the component never renders. A tag holding
+  both `:tone="$level > 2 ? …"` and `@if(...)` was read up to the first `>` and
+  flagged **nothing**.
+- `AnIconOnlyActionSaysItsVerbOnTouchArchTest` matched
+  `<x-core::emoji-action …>…</x-core::emoji-action>`, so a self-closing
+  `<x-core::emoji-action … />` with an unresolvable label was invisible to it.
+
+The same shape appears in rendered-response assertions, where a lazy or greedy
+run reaches past the element it named: `data-testid="queue-tile-pending"[\s\S]*?`
+followed by a digit is satisfied by that digit anywhere further down the page,
+and `<fieldset>.*name="unsplit-survivor".*</fieldset>` only asks whether both
+strings exist between the first `<fieldset>` and the last `</fieldset>`.
+
+### Two readings, because Blade is not a document
+
+An HTML5 parser is the right instrument for a **rendered response** and the wrong
+one for **template source**, and the difference is measurable rather than
+stylistic. Given
+
+```blade
+<table><thead><tr>@foreach ($cols as $c)<x-core::th>{{ $c }}</x-core::th>@endforeach</tr></thead></table>
+<input type="text" @class(['a' => $x]) value="{{ $v }}">
+```
+
+`Dom\HTMLDocument` foster-parents the `<x-core::th>` **out of the table** — the
+tree-construction rules move anything that is not `<th>`/`<td>`/`<tr>` out of a
+row — and loses the `<input>` entirely, spilling the rest of `@class([...])` into
+text. A table guard run over that tree would report a table with no header cells,
+which is a false red on markup that is correct.
+
+So the seam has two faces:
+
+- `Modules\Core\Public\Support\MarkupSource` reads **template source**. It is a
+  character walk, not a pattern: quotes, `{{ }}` and `{!! !!}` echoes, `{{-- --}}`
+  and `<!-- -->` comments, `@directive(...)` arguments, `@php … @endphp` bodies and
+  `<script>`/`<style>` content are all stepped over, and a closing tag is matched
+  through nesting rather than taken as the first one that appears.
+- `Modules\Core\Public\Support\RenderedMarkup` reads a **response body** with
+  `Dom\HTMLDocument` and answers CSS selectors, so containment is a tree question
+  and `<tbody>` exists whether or not the template wrote it.
+
+### Both fail loudly
+
+`MarkupSource` raises `MarkupParseFailedException` on a start tag with no `>` and
+on an attribute value with no closing quote, and `MarkupElement::inner` is
+**null**, never `''`, when the closing tag never arrived — an element whose
+content is unknown must not read as an element with no content. `RenderedMarkup`
+raises on an empty document, on bytes that are not UTF-8 (an HTML5 parse never
+reports failure; it guesses an encoding and yields `html`/`head`/`body` for any
+input at all), and `firstOrFail()` raises rather than returning null.
+
+### What is deliberately still a regex
+
+A guard asking whether an exact literal appears in a file is not asking a
+structural question and gains nothing from a tree: `'<legend class="sr-only">…'`,
+`window.beatraxSubmitPostForm`, `@media (pointer: coarse)`, a `wire:model.blur`
+spelling, a CSS rule body. Neither is the reading of a PHP expression a markup
+attribute happens to hold — `:label="Lang::get('…')"` is parsed out of the
+attribute *value* the walk returns, which is where a pattern belongs.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

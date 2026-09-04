@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
+
 // Five ordinary pages sized their own title with an inline font-size, and two of
 // them chose --text-xl. On the phone /reports and /counterparties wore a heading
 // visibly smaller than the thirty-three pages either side of them, which reads
@@ -22,8 +24,10 @@ it('does not let a page set its own title size in a style attribute', function (
 
             $source = (string) file_get_contents($path);
 
-            if (preg_match('/<h1[^>]*style="[^"]*font-size/i', $source) === 1) {
-                $offenders[] = str_replace(base_path().'/', '', $path);
+            foreach (MarkupSource::elements($source, 'h1') as $heading) {
+                if (str_contains(strtolower((string) $heading->attribute('style')), 'font-size')) {
+                    $offenders[] = str_replace(base_path().'/', '', $path);
+                }
             }
         }
     }
