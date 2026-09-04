@@ -134,6 +134,26 @@ function privateKeyEgressBodyLines(string $pem): array
     return $lines;
 }
 
+// A JSON body escapes every forward slash, and a base64 line usually carries
+// one, so a PEM sent through the `json` option matches none of the per-line
+// needles. The reader answers on the unescaped copy too, or a leak the encoder
+// reshaped reads as a clean request.
+/** @param  list<string>  $needles */
+function privateKeyEgressCarriesKeyMaterial(string $wire, array $needles): bool
+{
+    $forms = [$wire, str_replace('\\/', '/', $wire)];
+
+    foreach ($forms as $form) {
+        foreach ($needles as $needle) {
+            if (str_contains($form, $needle)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 it('hands the aggregator a token signed by the key and never the key itself', function (): void {
     $privateKeyPem = privateKeyEgressFreshPem();
     $callPaths = privateKeyEgressCallPaths();
@@ -175,12 +195,8 @@ it('hands the aggregator a token signed by the key and never the key itself', fu
 
         $wire = $request->getMethod().' '.$request->getUri()."\n".$headers."\n".(string) $request->getBody();
 
-        foreach (['PRIVATE KEY', $privateKeyPem, ...$bodyLines] as $needle) {
-            if (str_contains($wire, $needle)) {
-                $leaked[] = $request->getMethod().' '.$request->getUri()->getPath();
-
-                break;
-            }
+        if (privateKeyEgressCarriesKeyMaterial($wire, ['PRIVATE KEY', $privateKeyPem, ...$bodyLines])) {
+            $leaked[] = $request->getMethod().' '.$request->getUri()->getPath();
         }
     }
 
@@ -195,8 +211,12 @@ it('hands the aggregator a token signed by the key and never the key itself', fu
         ."the token. These requests carried key material:\n  ".implode("\n  ", $leaked),
     );
 
-    // The same reader over a request that does carry it, so an empty leak list
-    // is never mistaken for a check that stopped reading.
-    $violatingWire = "POST /auth\n\n".json_encode(['client_key' => $privateKeyPem], JSON_THROW_ON_ERROR);
-    expect(str_contains($violatingWire, $bodyLines[0]))->toBeTrue();
+    // The same reader over requests that do carry it, so an empty leak list is
+    // never mistaken for a check that stopped reading. The JSON form is the one
+    // a leak would really take, and it is the one plain matching misses.
+    $rawWire = "POST /auth\n\n".$privateKeyPem;
+    $jsonWire = "POST /auth\n\n".json_encode(['client_key' => $privateKeyPem], JSON_THROW_ON_ERROR);
+
+    expect(privateKeyEgressCarriesKeyMaterial($rawWire, [$bodyLines[0]]))->toBeTrue()
+        ->and(privateKeyEgressCarriesKeyMaterial($jsonWire, [$bodyLines[0]]))->toBeTrue();
 });
