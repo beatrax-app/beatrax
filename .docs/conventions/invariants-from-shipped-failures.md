@@ -5679,7 +5679,6 @@ that helper blind to the PHP inside one. And a pinned entry that no longer names
 an empty catch fails too: a list that may rot into names nobody checks is the
 same silence one level up.
 
-
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
