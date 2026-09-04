@@ -23,11 +23,6 @@ use Throwable;
  */
 final readonly class DrainsDeferredOpCaptures extends AfterResponseMiddleware
 {
-    // Matched to the pre-sync capture beside it: a queue only empties as fast
-    // as requests arrive, and a screen polling every second should buy a tick
-    // without buying one per poll.
-    private const int TICK_INTERVAL_SECONDS = 2;
-
     private const string THROTTLE_KEY = 'sync:deferred-op-capture-drain:';
 
     // The queue reader is safe to hold — it reaches the database and the clock,
@@ -68,7 +63,7 @@ final readonly class DrainsDeferredOpCaptures extends AfterResponseMiddleware
             return;
         }
 
-        if (! $this->cache->add(self::THROTTLE_KEY.$userId, true, self::TICK_INTERVAL_SECONDS)) {
+        if (! $this->cache->add(self::THROTTLE_KEY.$userId, true, TailSweepInterval::SECONDS)) {
             return;
         }
 
