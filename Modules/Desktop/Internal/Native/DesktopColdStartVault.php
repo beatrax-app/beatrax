@@ -7,6 +7,7 @@ namespace Modules\Desktop\Internal\Native;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Native\Desktop\System;
 
 // A Touch ID prompt only yields a bool, so the data key is wrapped by the shared
@@ -20,6 +21,7 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         private NativeBiometricUnlock $biometrics,
         private BiometricKeyBlobCodec $codec,
         private System $system,
+        private OwnerOnlyPath $ownerOnly,
     ) {}
 
     public function isAvailable(): bool
@@ -109,24 +111,15 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         return UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::FILE_PREFIX.$userId.'.bin';
     }
 
-    // chmod runs before any content lands, so the wrapped key is never briefly
-    // world-readable.
+    // Both modes are settled and verified before a byte lands, and a path that
+    // cannot be made owner-only is refused: an enrollment reported over a
+    // readable key is worse than no enrollment, because the lock screen then
+    // stops asking for the code that would have protected it.
     private function writePrivate(string $path, string $contents): bool
     {
-        $directory = dirname($path);
-
-        // Suppressed so the guard can decide: unsuppressed, Laravel's error handler
-        // turns the E_WARNING into an ErrorException before mkdir() returns, and
-        // enroll() throws out of a method whose contract is to answer false.
-        if (! is_dir($directory) && ! @mkdir($directory, 0700, true) && ! is_dir($directory)) {
+        if (! $this->ownerOnly->directory(dirname($path)) || ! $this->ownerOnly->file($path)) {
             return false;
         }
-
-        if (! is_file($path)) {
-            @touch($path);
-        }
-
-        @chmod($path, 0600);
 
         return @file_put_contents($path, $contents, LOCK_EX) !== false;
     }

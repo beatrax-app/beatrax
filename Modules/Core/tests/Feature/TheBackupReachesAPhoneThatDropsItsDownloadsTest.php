@@ -14,6 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
@@ -127,6 +128,7 @@ function backupDownloadFor(EncryptedBackupDownload $component, ShareSheetExport 
         app(ResponseFactory::class),
         $shareSheet,
         app(BackupKeyMaterial::class),
+        app(OwnerOnlyPath::class),
     );
 }
 

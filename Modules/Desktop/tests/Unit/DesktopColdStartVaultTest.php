@@ -6,6 +6,7 @@ use Illuminate\Config\Repository;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Native\Desktop\Facades\System as SystemFacade;
@@ -46,6 +47,7 @@ function coldStartVault(bool $available = true, bool $prompted = true): DesktopC
         new NativeBiometricUnlock(new Repository(['nativephp-internal' => ['running' => $available]])),
         new BiometricKeyBlobCodec(new AppLockKeyWrap),
         $system,
+        new OwnerOnlyPath,
     );
 }
 
@@ -125,6 +127,7 @@ it('refuses to enroll when safeStorage returns nothing', function (?string $refu
         new NativeBiometricUnlock(new Repository(['nativephp-internal' => ['running' => true]])),
         new BiometricKeyBlobCodec(new AppLockKeyWrap),
         $system,
+        new OwnerOnlyPath,
     );
 
     expect($vault->enroll(COLD_START_USER_ID, random_bytes(32)))->toBeFalse()
@@ -187,4 +190,31 @@ it('refuses to enroll when the secrets directory cannot be created', function ()
     expect(coldStartVault()->enroll(COLD_START_USER_ID, random_bytes(32)))->toBeFalse();
 
     @unlink($dir);
+});
+
+// Every other secret on this machine shares the directory — the relay token,
+// the drain secret, the loopback TLS key — so a tree left readable by whoever
+// created it first is an enumeration of all of them, and an enrollment that
+// only ever created the directory would never narrow one it inherited.
+it('narrows a secrets directory that already existed wider', function (): void {
+    $secrets = UserDataPathService::secretsPath();
+    mkdir($secrets, 0755, true);
+    chmod($secrets, 0755);
+
+    coldStartVault()->enroll(COLD_START_USER_ID, random_bytes(32));
+
+    clearstatcache(true, $secrets);
+
+    expect((int) fileperms($secrets) & 0777)->toBe(0700)
+        ->and((int) fileperms(coldStartKeyFile()) & 0777)->toBe(0600);
+});
+
+// A write may succeed on a path a chmod cannot touch, and /dev/null is the one
+// such path every POSIX machine has. Reported as enrolled, the lock screen
+// stops asking for the code that was protecting the key it just published.
+it('refuses to report an enrollment it could not make owner-only', function (): void {
+    mkdir(UserDataPathService::secretsPath(), 0700, true);
+    symlink('/dev/null', coldStartKeyFile());
+
+    expect(coldStartVault()->enroll(COLD_START_USER_ID, random_bytes(32)))->toBeFalse();
 });

@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\SecretFileMode;
 use Modules\EmailScan\Public\Exceptions\EmlBlobWriteException;
 use Throwable;
@@ -23,6 +24,7 @@ final readonly class EmlBlobStore
     public function __construct(
         private Filesystem $files,
         private UserDataPathService $paths,
+        private OwnerOnlyPath $ownerOnly,
     ) {}
 
     public function pathFor(
@@ -145,7 +147,7 @@ final readonly class EmlBlobStore
             && str_starts_with($current, $root)
             && is_dir(rtrim($current, DIRECTORY_SEPARATOR))
         ) {
-            @chmod(rtrim($current, DIRECTORY_SEPARATOR), SecretFileMode::DIRECTORY);
+            $this->ownerOnly->directory(rtrim($current, DIRECTORY_SEPARATOR));
             $parent = dirname(rtrim($current, DIRECTORY_SEPARATOR));
             if ($parent === rtrim($current, DIRECTORY_SEPARATOR)) {
                 break;

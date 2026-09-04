@@ -19,6 +19,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [A read bounded by how much the user has](reads-bounded-by-the-user.md) | What a five-year ledger costs the reads that have no bound, which whole-table reads are correct as written, and the guard that keeps a new one from landing |
 | [Measuring write cost](measuring-write-cost.md) | Why any bulk-write timing taken inside the test suite looks quadratic, and how to take one that does not |
 | [The Argon2id cost](argon2id-cost.md) | The one work factor every passphrase-derived key is stretched at, how it is pinned, and why the suite is allowed to derive at libsodium's floor |
+| [Owner-only paths](owner-only-paths.md) | Why a discarded `chmod` is a mode nobody set, the one seam that settles and then verifies it, and what each caller does with a refusal |
 | [SQLite write locks](sqlite-write-locks.md) | Why `busy_timeout` cannot save a read-then-write transaction, and the `transaction_mode = IMMEDIATE` that decides who waits |
 | [Navigation destinations](navigation-destinations.md) | The one vocabulary of user-facing screens, why it lives in `Core` rather than `Shell`, and the invariant that keeps the shell a sink |
 | [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) | Table-by-table layout grouped by owning module, the trust-boundary columns, and the state-machine sole-mutator rule |

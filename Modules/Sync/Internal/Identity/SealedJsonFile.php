@@ -8,7 +8,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
-use Modules\Core\Public\Support\SecretFileMode;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 // A whole-file secret encrypted at rest, read and written through one staging
@@ -20,7 +20,10 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
  */
 final readonly class SealedJsonFile
 {
-    public function __construct(private FileEncryptor $encryptor) {}
+    public function __construct(
+        private FileEncryptor $encryptor,
+        private OwnerOnlyPath $ownerOnly = new OwnerOnlyPath,
+    ) {}
 
     // Never sys_get_temp_dir(): /tmp is world-traversable at mode 1777, so a
     // decrypted key-file staged there is readable by any local account for as
@@ -110,7 +113,7 @@ final readonly class SealedJsonFile
     private function stagingPath(string $sealedPath, string $tmpPrefix): string
     {
         $directory = dirname($sealedPath);
-        @mkdir($directory, SecretFileMode::DIRECTORY, true);
+        $this->ownerOnly->directory($directory);
 
         return $directory.DIRECTORY_SEPARATOR.$tmpPrefix.bin2hex(random_bytes(8)).'.tmp';
     }

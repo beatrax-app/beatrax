@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 // put() writes a sibling .tmp, fsyncs, narrows it to 0600 and renames over the
@@ -12,7 +13,7 @@ use Modules\EmailScan\Public\Services\EmlBlobStore;
 // half-written blob is indistinguishable from a complete one on the next scan.
 function ebsWriteStore(): EmlBlobStore
 {
-    return new EmlBlobStore(new Filesystem, new UserDataPathService);
+    return new EmlBlobStore(new Filesystem, new UserDataPathService, new OwnerOnlyPath);
 }
 
 function ebsTempTarget(): string
