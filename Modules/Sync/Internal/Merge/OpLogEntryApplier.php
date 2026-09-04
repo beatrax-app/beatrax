@@ -325,11 +325,9 @@ final readonly class OpLogEntryApplier
     }
 
     // A CreateRow needs every required column, minus the ones
-    // buildCreatePayload() seeds itself: a table naming `id` as required asked
-    // for a field the backfill never emits, so every row of it was discarded
-    // as incomplete on arrival rather than written. A row already here is the
-    // second half of a create the transport split, and carries the columns the
-    // first half missed — quarantining it lost their only carrier.
+    // buildCreatePayload() seeds itself. A row already here is the second half
+    // of a create the transport split and carries what the first half missed,
+    // so quarantining it loses their only carrier.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
