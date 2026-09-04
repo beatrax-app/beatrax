@@ -283,12 +283,14 @@ row of it that has since been closed:
 | `Modules/Search/Internal/Console/ReindexSearchCommand.php` | the bulk read, `chunk(500)`, with an OOM comment | the `distinct()->pluck()` thirty lines above |
 | `Modules/Receipts/Internal/Jobs/ScanInboxDropFolderJob.php` | `filesize()` checked against a cap before the read | the identical read in `ProcessFetchedInboxMessagesJob` |
 
-## The reads with no bound at all: ten, now seven
+## The reads with no bound at all: ten, now seven, plus one newly named
 
 Named here rather than fixed, so the next pass starts from a list instead of a
 grep. Ranked by rows times how often the path runs. Numbers 1, 2 and 10 of the
 original ten are struck through: they were the subject of the pass above, and
 `BoundedReadArchTest` no longer carries an allow-list entry for the first two.
+Number 11 is new — found while measuring 10, and left for a pass that measures
+the page it sits on rather than the scan underneath it.
 
 1. ~~`CounterpartyDisplayName::forUser()`~~ — **fixed**: a keyset walk, and one
    collation key per name rather than one collation per pair. 109.7 ms → 20.9 ms.
@@ -309,11 +311,21 @@ original ten are struck through: they were the subject of the pass above, and
    by a manual dismiss.
 9. `EnvelopePeriodRekeyer` (assignments and moves) — the whole envelope history,
    read when the reader changes the budget month start day.
-10. ~~`MysteryMerchantsPage`~~ — **fixed**, and the figure it was filed under was
-    the wrong one. 4.14 ms per row is what a reader who named their country pays;
-    the default install names none, scans every region's patterns at once, and
-    paid 143.5 ms per row. Now 1.27 ms. The scan still reaches every row the
-    reader owns, which is deliberate — see above.
+10. ~~`MysteryMerchantsPage`~~'s corpus match — **fixed**, and the figure it was
+    filed under was the wrong one. 4.14 ms per row is what a reader who named
+    their country pays; the default install names none, scans every region's
+    patterns at once, and paid 143.5 ms per row. Now 1.27 ms. The scan still
+    reaches every row the reader owns, which is deliberate — see above.
+11. `MerchantNameResolver::resolve()` issues **two queries per unresolved row**
+    — `users.community_settings` and the corpus exact lookup — which the same
+    page render multiplies by the whole ledger: 50,000 statements at 25,000
+    rows. Measured, not fixed. The obvious memo has a trap in it:
+    `CommunitySettings::enabled()` refuses to cache **by design**, because an
+    opt-out answered from a cache no sync write can drop is an opt-out that
+    keeps sharing after the reader switched it off. A memo scoped to one render
+    is compatible with that and a memo on the singleton resolver is not, so the
+    fix belongs in the page rather than under it — and belongs in a pass that
+    measures the page end to end, which this one did not.
 
 ## The guard
 
