@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Process;
 use Modules\Core\Public\Services\UserDataPathService;
 
 // storage/app is where UserDataPathService keeps durable user data: the sync
@@ -83,4 +84,135 @@ it('keeps durable user data out of every shipped bundle', function (): void {
 // exclusion honest rather than merely present.
 it('excludes the directory the path service actually resolves to', function (): void {
     expect(UserDataPathService::appPath('sync'))->toEndWith('storage/app/sync');
+});
+
+/**
+ * @return array<string, string> shell label => the root that shell packages
+ */
+function bundleShellRoots(): array
+{
+    return array_map(
+        static fn (string $config): string => dirname($config, 2),
+        bundleConfigFiles(),
+    );
+}
+
+/** @return list<string> the shell's own cleanup_exclude_files */
+function bundleExcludedPaths(string $config): array
+{
+    return (require $config)['cleanup_exclude_files'] ?? [];
+}
+
+/**
+ * Both packagers match a top-level name the same way: the desktop walker runs
+ * fnmatch on the relative path, and rsync treats a leading slash as anchored to
+ * the transfer root and a bare pattern as matching at any depth.
+ *
+ * @param  list<string>  $patterns
+ */
+function bundleExcludesEntry(array $patterns, string $entry): bool
+{
+    foreach ($patterns as $pattern) {
+        if (fnmatch($pattern, $entry) || fnmatch(ltrim($pattern, '/'), $entry)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Whether a directory's CONTENTS are absent from the repository, which makes
+ * whatever sits in it at build time a working artifact rather than source.
+ *
+ * A placeholder is not content: build-secrets/ tracks a .gitignore that ignores
+ * everything beside it, so asking git whether the directory is ignored answers
+ * no while every file that ever appears in it is.
+ */
+function bundleDirectoryHoldsNoSource(string $root, string $entry): bool
+{
+    $result = Process::path($root)->run(['git', 'ls-files', '--', $entry]);
+
+    if (! $result->successful()) {
+        return false;
+    }
+
+    $tracked = array_filter(explode("\n", trim($result->output())));
+
+    foreach ($tracked as $file) {
+        if (! in_array(basename($file), ['.gitignore', '.gitkeep', '.gitattributes'], true)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @return array<string, array<string, string>> shell => directory => why it may
+ *                                              reach the bundle unexcluded
+ */
+function bundleDirectoriesAllowedThrough(): array
+{
+    return [
+        'desktop' => [
+            'vendor' => 'the application cannot boot without it',
+            // Laravel will not boot without the tree, and the one part of it
+            // that holds durable user data, storage/app, is excluded by name
+            // and asserted separately above.
+            'storage' => 'the framework needs the tree; storage/app is excluded on its own',
+        ],
+        'mobile' => [
+            'vendor' => 'the application cannot boot without it',
+            'nativephp' => "the packager's own defaults exclude it, and it is the copy target",
+            'tests' => "excluded at any depth by the packager's own defaults",
+            '.phpunit.cache' => "excluded at any depth by the packager's own defaults",
+            'nativephp-plugins' => 'first-party plugin source the built app loads',
+            'storage' => 'the framework needs the tree; storage/app is excluded on its own',
+        ],
+    ];
+}
+
+// The earlier fix named one directory. The rule behind it is wider: anything
+// whose contents git never sees is a working artifact, and the packager copies
+// the working tree. Two signing directories and 1.6 GB of captured application
+// screens were sitting outside the one name that had been fixed.
+it('excludes every working directory whose contents are not in the repository', function (): void {
+    $roots = bundleShellRoots();
+    $configs = bundleConfigFiles();
+    $allowed = bundleDirectoriesAllowedThrough();
+
+    expect($roots)->toHaveCount(2);
+
+    $shipping = [];
+    $examined = 0;
+
+    foreach ($roots as $shell => $root) {
+        $patterns = bundleExcludedPaths($configs[$shell]);
+
+        foreach (scandir($root) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..' || ! is_dir($root.'/'.$entry)) {
+                continue;
+            }
+
+            if (bundleExcludesEntry($patterns, $entry) || isset($allowed[$shell][$entry])) {
+                continue;
+            }
+
+            $examined++;
+
+            if (bundleDirectoryHoldsNoSource($root, $entry)) {
+                $shipping[] = $shell.':'.$entry;
+            }
+        }
+    }
+
+    // A run that classified nothing would report a clean tree, which is the
+    // answer a correctly excluded tree gives.
+    expect($examined)->toBeGreaterThan(0)
+        ->and($shipping)->toBe([], implode("\n  ", array_merge(
+            ['These directories hold no source and are copied into a shipped bundle.',
+                'Exclude them in that shell\'s cleanup_exclude_files, or declare why they belong:'],
+            $shipping,
+        )));
 });
