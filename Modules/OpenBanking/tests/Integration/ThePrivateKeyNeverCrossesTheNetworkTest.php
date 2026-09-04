@@ -134,6 +134,30 @@ function privateKeyEgressBodyLines(string $pem): array
     return $lines;
 }
 
+/**
+ * Whether a wire carries any of the needles.
+ *
+ * A JSON body escapes / as \/ and base64 is full of them, so a raw substring
+ * search reads a key encoded into a JSON field as absent. The wire is
+ * unescaped before it is read, and the control below goes through this same
+ * function rather than repeating the search — the two disagreeing is what
+ * made this test fail on 18% of freshly generated keys.
+ *
+ * @param  list<string>  $needles
+ */
+function privateKeyEgressCarries(string $wire, array $needles): bool
+{
+    $searchable = str_replace('\\/', '/', $wire);
+
+    foreach ($needles as $needle) {
+        if (str_contains($searchable, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 it('hands the aggregator a token signed by the key and never the key itself', function (): void {
     $privateKeyPem = privateKeyEgressFreshPem();
     $callPaths = privateKeyEgressCallPaths();
@@ -175,12 +199,8 @@ it('hands the aggregator a token signed by the key and never the key itself', fu
 
         $wire = $request->getMethod().' '.$request->getUri()."\n".$headers."\n".(string) $request->getBody();
 
-        foreach (['PRIVATE KEY', $privateKeyPem, ...$bodyLines] as $needle) {
-            if (str_contains($wire, $needle)) {
-                $leaked[] = $request->getMethod().' '.$request->getUri()->getPath();
-
-                break;
-            }
+        if (privateKeyEgressCarries($wire, ['PRIVATE KEY', $privateKeyPem, ...$bodyLines])) {
+            $leaked[] = $request->getMethod().' '.$request->getUri()->getPath();
         }
     }
 
@@ -196,7 +216,9 @@ it('hands the aggregator a token signed by the key and never the key itself', fu
     );
 
     // The same reader over a request that does carry it, so an empty leak list
-    // is never mistaken for a check that stopped reading.
+    // is never mistaken for a check that stopped reading. Encoded the way a
+    // real leak would travel -- into a JSON field, slashes escaped -- because
+    // that is the form the previous reader could not see.
     $violatingWire = "POST /auth\n\n".json_encode(['client_key' => $privateKeyPem], JSON_THROW_ON_ERROR);
-    expect(str_contains($violatingWire, $bodyLines[0]))->toBeTrue();
+    expect(privateKeyEgressCarries($violatingWire, $bodyLines))->toBeTrue();
 });
