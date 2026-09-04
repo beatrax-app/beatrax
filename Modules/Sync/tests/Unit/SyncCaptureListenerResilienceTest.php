@@ -7,7 +7,9 @@ use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
+use Modules\Sync\Internal\OpLog\OpCaptureSinkFactory;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\SyncOffOpSink;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
@@ -82,56 +84,28 @@ function capturingLogger(array &$calls): LoggerInterface
 
 // A bare container, which is what a device that has not finished pairing
 // effectively has: OpLogWriter needs a device id, a user id and key material
-// as constructor primitives, so resolving it throws rather than returning a
-// half-built writer.
+// as constructor primitives, so resolving it throws — and so does the queue
+// behind it, since a container this empty can build nothing at all.
 function unresolvableContainer(): Container
 {
     return new IlluminateContainer;
 }
 
-it('does not fail the user\'s save when the device cannot capture yet', function (): void {
+function listenerOver(Container $container, array &$calls): SyncCaptureListener
+{
+    return new SyncCaptureListener(
+        new OpCaptureSinkFactory($container, capturingLogger($calls)),
+        capturingLogger($calls),
+        new MergeRulesRegistry,
+    );
+}
+
+// E1-R18 is the rule this file exists for, and deferring must not become a new
+// way to break it: the listener runs inside the request that saved the row, so
+// a queue insert that fails has to end here rather than in the reader's edit.
+it('does not fail the user\'s save when even the deferral cannot be built', function (): void {
     $calls = [];
-    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls), new MergeRulesRegistry);
-
-    $listener->handle(new TransactionMutated(
-        transactionId: 42,
-        userId: 1,
-        mutationType: 'edit',
-        dirtyFields: ['amount_minor' => 1000],
-    ));
-
-    expect($calls)->toHaveCount(1)
-        ->and($calls[0]['level'])->toBe('debug')
-        ->and($calls[0]['message'])->toContain('capture failed');
-});
-
-it('does not fail a split save either', function (): void {
-    $calls = [];
-    $listener = new SyncCaptureListener(unresolvableContainer(), capturingLogger($calls), new MergeRulesRegistry);
-
-    $listener->handleSplit(new TransactionSplitMutated(
-        splitId: 7,
-        transactionId: 42,
-        userId: 1,
-        mutationType: 'edit',
-        dirtyFields: ['amount_minor' => 500],
-    ));
-
-    expect($calls)->toHaveCount(1)
-        ->and($calls[0]['level'])->toBe('debug')
-        ->and($calls[0]['message'])->toContain('split capture failed');
-});
-
-// The other half of the contract: quiet about a device that simply has no
-// writer, loud about a writer that has one and still could not use it.
-it('still reports a genuine capture failure at error level', function (): void {
-    $calls = [];
-    $container = new IlluminateContainer;
-    $container->bind(OpLogWriter::class, function (): OpLogWriter {
-        throw new RuntimeException('the op-log write itself failed');
-    });
-
-    $listener = new SyncCaptureListener($container, capturingLogger($calls), new MergeRulesRegistry);
+    $listener = listenerOver(unresolvableContainer(), $calls);
 
     $listener->handle(new TransactionMutated(
         transactionId: 42,
@@ -145,14 +119,56 @@ it('still reports a genuine capture failure at error level', function (): void {
         ->and($calls[0]['message'])->toContain('capture failed');
 });
 
-// Reaching the unknown-mutationType arm needs make(OpLogWriter) to succeed, and
-// that class is final with twelve dependencies, so the container hands back a
-// placeholder. Sound only because that arm never touches the writer: route the
-// writer through it and the TypeError becomes an error line the level test fails on.
+it('does not fail a split save either', function (): void {
+    $calls = [];
+    $listener = listenerOver(unresolvableContainer(), $calls);
+
+    $listener->handleSplit(new TransactionSplitMutated(
+        splitId: 7,
+        transactionId: 42,
+        userId: 1,
+        mutationType: 'edit',
+        dirtyFields: ['amount_minor' => 500],
+    ));
+
+    expect($calls)->toHaveCount(1)
+        ->and($calls[0]['level'])->toBe('error')
+        ->and($calls[0]['message'])->toContain('split capture failed');
+});
+
+// Sync being off and the app being locked no longer arrive here at all — the
+// sink factory answers both — so there is no quiet arm left to hide behind and
+// every remaining path through report() is a mutation nobody will ever send.
+it('reports a genuine capture failure at error level', function (): void {
+    $calls = [];
+    $container = new IlluminateContainer;
+    $container->bind(OpLogWriter::class, function (): OpLogWriter {
+        throw new RuntimeException('the op-log write itself failed');
+    });
+
+    $listener = listenerOver($container, $calls);
+
+    $listener->handle(new TransactionMutated(
+        transactionId: 42,
+        userId: 1,
+        mutationType: 'edit',
+        dirtyFields: ['amount_minor' => 1000],
+    ));
+
+    expect($calls)->toHaveCount(1)
+        ->and($calls[0]['level'])->toBe('error')
+        ->and($calls[0]['message'])->toContain('capture failed');
+});
+
+// Reaching the unknown-mutationType arm needs the sink resolution to succeed,
+// and OpLogWriter is final with thirteen dependencies — so the container hands
+// back the one sink that needs none. Sound only because that arm never writes:
+// route a write through it and the count this test makes goes to two.
 function placeholderWriterContainer(): Container
 {
+    $calls = [];
     $container = new IlluminateContainer;
-    $container->bind(OpLogWriter::class, fn (): object => new stdClass);
+    $container->bind(OpLogWriter::class, fn (): SyncOffOpSink => new SyncOffOpSink(capturingLogger($calls)));
 
     return $container;
 }
@@ -163,7 +179,7 @@ function placeholderWriterContainer(): Container
 // warn, and let the user's save stand.
 it('warns rather than throws on a mutation type it does not recognise', function (Closure $dispatch): void {
     $calls = [];
-    $listener = new SyncCaptureListener(placeholderWriterContainer(), capturingLogger($calls), new MergeRulesRegistry);
+    $listener = listenerOver(placeholderWriterContainer(), $calls);
 
     $dispatch($listener);
 
