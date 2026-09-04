@@ -53,15 +53,17 @@ final readonly class NativeBuildPatches
         'nativephp_ios_local_network_discovery.php',
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
+        'nativephp_ios_app_category.php',
         'nativephp_dedupe_background_task_identifiers.php',
     ];
 
     // A cosmetic patch that fails degrades to the unpatched shell, which is
-    // visible on the device. These two are invisible until App Store review
-    // rejects the build, so they stop it here instead.
+    // visible on the device. These three are invisible until App Store Connect
+    // rejects the upload, so they stop it here instead.
     private const array REQUIRED_SCRIPTS = [
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
+        'nativephp_ios_app_category.php',
     ];
 
     public function __construct(
