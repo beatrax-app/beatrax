@@ -6,6 +6,7 @@ namespace Modules\DevMode\Internal\Actions;
 
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\CommandRefusedException;
+use Modules\DevMode\Internal\Exceptions\ProcessSpawningUnavailableException;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
 use Modules\DevMode\Internal\Process\CommandArgValidator;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -36,7 +37,14 @@ final readonly class SpawnDevCommand
         // CommandSpawner's escapeshellarg — and the only one before the shell.
         $this->argValidator->assertValid($this->registry->find($name), $args);
 
-        $runId = $this->spawner->start($name, $args, $callerUserId, $tier);
+        // iOS embeds PHP with no interpreter binary on disk, so start() can
+        // never spawn there. Normalised into the one refusal type both spawn
+        // endpoints answer, rather than left to reach them as a 500.
+        try {
+            $runId = $this->spawner->start($name, $args, $callerUserId, $tier);
+        } catch (ProcessSpawningUnavailableException $e) {
+            throw CommandRefusedException::spawningUnavailable($e);
+        }
 
         $record = $this->runs->find($runId);
         if ($record === null) {
