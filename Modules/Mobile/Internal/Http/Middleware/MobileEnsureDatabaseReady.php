@@ -12,6 +12,9 @@ use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Boot\SchemaCompletionMarker;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * @link ../../../../../.docs/features/mobile/architecture.md#a-half-built-schema-outranks-every-route-exemption
+ */
 final readonly class MobileEnsureDatabaseReady
 {
     // Every route here runs before any user account exists on this
@@ -55,6 +58,19 @@ final readonly class MobileEnsureDatabaseReady
         'livewire.preview-file',
     ];
 
+    // The incomplete screen itself, the Livewire round trip its retry button
+    // makes, and the artefacts the lock layout renders it inside. Everything
+    // else is a screen reading tables that may not be there.
+    /** @var array<int, string> */
+    private const array REACHABLE_ON_A_HALF_BUILT_SCHEMA = [
+        'mobile.database-incomplete',
+        'site.webmanifest',
+        'pwa.icon',
+        'app.icon',
+        'app.splash',
+        'locale.switch',
+    ];
+
     public function __construct(
         private MobileFirstLaunchBootstrap $bootstrap,
         private UrlGenerator $urls,
@@ -62,24 +78,37 @@ final readonly class MobileEnsureDatabaseReady
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $this->isExempt($request)) {
-            // Ahead of the fresh-install check: a run that died partway still
-            // created `users`, so an empty table reads as "new phone" and the
-            // welcome screen opens over a schema missing everything after it.
-            // A marker, not a question to the migrator — this runs every request.
-            if (SchemaCompletionMarker::isRaised()) {
-                return new RedirectResponse($this->urls->route('mobile.database-incomplete'));
-            }
+        // Ahead of the exemption list, not behind it: those routes are exempt
+        // because they run before a user account exists, which is a different
+        // thing from running before the TABLES do. Behind it, the welcome
+        // screen opened over thirteen tables of a hundred and two.
+        if (SchemaCompletionMarker::isRaised() && ! $this->survivesAHalfBuiltSchema($request)) {
+            return new RedirectResponse($this->urls->route('mobile.database-incomplete'));
+        }
 
-            if ($this->bootstrap->isFreshInstall()) {
-                return new RedirectResponse($this->urls->route('mobile.welcome'));
-            }
+        // A run that died partway still created `users`, so an empty table
+        // reads as "new phone" — which is why the marker above is asked first.
+        if (! $this->isExempt($request) && $this->bootstrap->isFreshInstall()) {
+            return new RedirectResponse($this->urls->route('mobile.welcome'));
         }
 
         /** @var Response $response */
         $response = $next($request);
 
         return $response;
+    }
+
+    private function survivesAHalfBuiltSchema(Request $request): bool
+    {
+        $name = $request->route()?->getName();
+        if (! is_string($name)) {
+            return false;
+        }
+
+        return array_any(
+            self::REACHABLE_ON_A_HALF_BUILT_SCHEMA,
+            fn (string $route): bool => str_starts_with($name, $route),
+        ) || $this->matchesExemptSuffix($name);
     }
 
     private function isExempt(Request $request): bool
