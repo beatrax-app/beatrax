@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 
 // The all-caught-up card owns the only h2 on this page, so with work still in
@@ -40,7 +41,7 @@ function triageHeadingUnknown(int $userId, string $slug, string $iban): void
 /** @return list<int> heading levels in document order */
 function triageHeadingLevels(string $html): array
 {
-    preg_match_all('/<h([1-6])[\s>]/i', $html, $m);
+    $m = PatternScan::all('/<h([1-6])[\s>]/i', $html);
 
     return array_map(intval(...), $m[1]);
 }

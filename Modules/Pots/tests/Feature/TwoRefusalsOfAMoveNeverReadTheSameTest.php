@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -98,8 +99,8 @@ function trnPot(int $userId, int $accountId, string $name, string $currency): Po
 // one sentence however they were routed.
 function trnRefusalText(string $html): string
 {
-    $count = preg_match_all('/<p\b[^>]*text-rose-600[^>]*>(.*?)<\/p>/s', $html, $matches);
-    expect($count)->toBeGreaterThan(0, 'the page rendered no refusal at all');
+    $matches = PatternScan::all('/<p\b[^>]*text-rose-600[^>]*>(.*?)<\/p>/s', $html);
+    expect(count($matches[0]))->toBeGreaterThan(0, 'the page rendered no refusal at all');
 
     $seen = [];
     foreach ($matches[1] as $paragraph) {

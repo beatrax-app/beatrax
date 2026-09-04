@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 
@@ -68,16 +69,16 @@ it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBa
         // A hypothetical future call site:
         $this->postJson('payments', $body);
         PHP;
-    expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $violatingSample))->toBe(1);
+    expect(PatternScan::matches(AIS_ONLY_FORBIDDEN_PATTERN, $violatingSample))->toBeTrue();
 
     $violatingPisSample = 'Extend this client for PIS support once the user opts in.';
-    expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $violatingPisSample))->toBe(1);
+    expect(PatternScan::matches(AIS_ONLY_FORBIDDEN_PATTERN, $violatingPisSample))->toBeTrue();
 
     $violatingInitiationSample = 'Add payment-initiation support behind a future flag.';
-    expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $violatingInitiationSample))->toBe(1);
+    expect(PatternScan::matches(AIS_ONLY_FORBIDDEN_PATTERN, $violatingInitiationSample))->toBeTrue();
 
     $safeSample = 'GET /accounts/{uid}/transactions and /accounts/{uid}/balances only.';
-    expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $safeSample))->toBe(0);
+    expect(PatternScan::matches(AIS_ONLY_FORBIDDEN_PATTERN, $safeSample))->toBeFalse();
 });
 
 it('emits only a strict subset of {balances, transactions, accounts} from EnableBankingAccessScope::toArray()', function (): void {
@@ -115,11 +116,12 @@ it('builds the /auth access body only from EnableBankingAccessScope::toArray(), 
 
     // Isolate initiateAuth()'s body so a match elsewhere in the file
     // (e.g. a docblock mentioning "access") can't produce a false pass.
-    expect(preg_match(
+    $matches = PatternScan::first(
         '/function\s+initiateAuth\s*\([^)]*\)\s*:\s*array\s*\{(.*?)\n    \}/s',
         $source,
-        $matches,
-    ))->toBe(1, 'Could not locate EnableBankingHttpClient::initiateAuth() to inspect its body.');
+    );
+
+    expect($matches)->not->toBe([], 'Could not locate EnableBankingHttpClient::initiateAuth() to inspect its body.');
 
     $body = $matches[1];
 

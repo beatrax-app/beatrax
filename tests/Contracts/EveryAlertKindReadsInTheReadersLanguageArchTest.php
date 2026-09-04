@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Support\PatternScan;
 
 // The banner picks its copy per alert kind and falls through to the row's own
 // `message` column for a kind it does not know. That column holds whatever
@@ -105,7 +106,9 @@ it('backs each of those cases with a key every locale carries', function (): voi
         'Modules/Core/Resources/views/livewire/partials/system-alert-message.blade.php',
     ));
 
-    expect(preg_match_all("/core::alerts\.messages\.([a-z0-9_]+)/", $blade, $matches))->toBeGreaterThan(0);
+    $matches = PatternScan::all("/core::alerts\.messages\.([a-z0-9_]+)/", $blade);
+
+    expect(count($matches[1]))->toBeGreaterThan(0);
 
     $keys = array_values(array_unique($matches[1]));
     sort($keys);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 
 /** @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md */
@@ -35,29 +36,29 @@ function sensitiveColumnGuardScanContents(string $contents, array $columns): arr
     foreach ($columns as $col) {
         $q = preg_quote($col, '/');
 
-        if (preg_match('/->where(?:In)?\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
+        if (PatternScan::matches('/->where(?:In)?\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
             $hits[] = "{$col}: where/whereIn predicate";
         }
-        if (preg_match('/->orderBy(?:Desc)?\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
+        if (PatternScan::matches('/->orderBy(?:Desc)?\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
             $hits[] = "{$col}: orderBy";
         }
-        if (preg_match('/->groupBy\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
+        if (PatternScan::matches('/->groupBy\(\s*[\'"]'.$q.'[\'"]/', $contents)) {
             $hits[] = "{$col}: groupBy";
         }
-        if (preg_match('/->on\([^)]*'.$q.'[^)]*\)/', $contents)) {
+        if (PatternScan::matches('/->on\([^)]*'.$q.'[^)]*\)/', $contents)) {
             $hits[] = "{$col}: join ->on()";
         }
-        if (preg_match('/whereRaw\([^)]*'.$q.'[^)]*LIKE/i', $contents)) {
+        if (PatternScan::matches('/whereRaw\([^)]*'.$q.'[^)]*LIKE/i', $contents)) {
             $hits[] = "{$col}: whereRaw(...LIKE)";
         }
-        if (preg_match('/json_decode\([^)]*'.$q.'/', $contents)) {
+        if (PatternScan::matches('/json_decode\([^)]*'.$q.'/', $contents)) {
             $hits[] = "{$col}: json_decode";
         }
-        if (preg_match_all('/->(update|insert)\s*\(([\s\S]{0,600}?)\)\s*;/', $contents, $matches)) {
-            foreach ($matches[2] as $i => $block) {
-                if (preg_match('/[\'"]'.$q.'[\'"]\s*=>/', $block)) {
-                    $hits[] = "{$col}: raw {$matches[1][$i]}()";
-                }
+
+        $writes = PatternScan::all('/->(update|insert)\s*\(([\s\S]{0,600}?)\)\s*;/', $contents);
+        foreach ($writes[2] as $i => $block) {
+            if (PatternScan::matches('/[\'"]'.$q.'[\'"]\s*=>/', $block)) {
+                $hits[] = "{$col}: raw {$writes[1][$i]}()";
             }
         }
     }
@@ -99,7 +100,7 @@ function sensitiveColumnGuardProductionFiles(): array
  */
 function sensitiveColumnGuardReasonColumns(string $reason): array
 {
-    preg_match_all('/\b[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\b/', $reason, $matches);
+    $matches = PatternScan::all('/\b[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\b/', $reason);
 
     return array_values(array_unique($matches[0]));
 }

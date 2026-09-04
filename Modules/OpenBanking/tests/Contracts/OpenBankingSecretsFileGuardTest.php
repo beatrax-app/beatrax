@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Comments are stripped before matching, or this file's own prose and the
 // repository's docblocks would trip the rule they describe.
 
@@ -93,8 +95,8 @@ it('never reads a credential field via a DatabaseManager/Eloquent surface outsid
             }
         }
         PHP;
-    expect(preg_match($dbIndicatorPattern, $violatingSample))->toBe(1);
-    expect(preg_match($credentialFieldPattern, $violatingSample))->toBe(1);
+    expect(PatternScan::matches($dbIndicatorPattern, $violatingSample))->toBeTrue();
+    expect(PatternScan::matches($credentialFieldPattern, $violatingSample))->toBeTrue();
 });
 
 it('forbids any OpenBanking migration from adding a secret column', function (): void {
@@ -117,8 +119,8 @@ it('forbids any OpenBanking migration from adding a secret column', function ():
     );
 
     $violatingMigrationSample = "\$table->string('application_id')->nullable();";
-    expect(preg_match($forbiddenPattern, $violatingMigrationSample))->toBe(1);
+    expect(PatternScan::matches($forbiddenPattern, $violatingMigrationSample))->toBeTrue();
 
     $safeMigrationSample = "\$table->string('institution_id')->nullable();";
-    expect(preg_match($forbiddenPattern, $safeMigrationSample))->toBe(0);
+    expect(PatternScan::matches($forbiddenPattern, $safeMigrationSample))->toBeFalse();
 });

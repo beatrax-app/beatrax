@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Two pages draw their rows twice — once for the phone, once for the desktop —
 // and a media query hides whichever list the viewport is not. A row action that
 // arms a state ($archivingPotId, $archivingGoalId) therefore has to have its
@@ -19,13 +21,7 @@ const BREAKPOINT_SPLIT_STYLE = '~\.([a-z][a-z0-9]*)-desktop-list \{ display: non
  */
 function armedRowGatesIn(string $blade, int $from, int $to): array
 {
-    $found = preg_match_all('~@if \(\$(\w+) === \$\w+->id\)~', $blade, $m, PREG_OFFSET_CAPTURE);
-
-    // preg_match_all returns false on a backtrack or JIT stack limit, and a
-    // guard that stopped reading must say so rather than report an empty set.
-    if ($found === false) {
-        throw new RuntimeException('the gate scan failed: '.preg_last_error_msg());
-    }
+    $m = PatternScan::allWithOffsets('~@if \(\$(\w+) === \$\w+->id\)~', $blade);
 
     $gates = [];
 

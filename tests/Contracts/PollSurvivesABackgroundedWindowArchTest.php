@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  */
@@ -82,9 +84,7 @@ function pollKeepAliveBarePolls(string $source, string $label): array
     $lines = preg_split('/\R/', pollKeepAliveStripComments($source)) ?: [];
 
     foreach ($lines as $offset => $line) {
-        if (preg_match_all('/wire:poll((?:\.[A-Za-z0-9-]+)*)/', $line, $matches, PREG_SET_ORDER) === 0) {
-            continue;
-        }
+        $matches = PatternScan::sets('/wire:poll((?:\.[A-Za-z0-9-]+)*)/', $line);
 
         foreach ($matches as $match) {
             if (! str_contains($match[1], '.keep-alive')) {
@@ -106,7 +106,7 @@ it('keeps every poll alive behind a backgrounded window', function (): void {
     foreach ($files as $path) {
         $source = (string) file_get_contents($path);
         $label = str_replace(base_path().'/', '', $path);
-        $polls += preg_match_all('/wire:poll/', pollKeepAliveStripComments($source));
+        $polls += PatternScan::count('/wire:poll/', pollKeepAliveStripComments($source));
 
         foreach (pollKeepAliveBarePolls($source, $label) as $hit) {
             $hits[] = $hit;

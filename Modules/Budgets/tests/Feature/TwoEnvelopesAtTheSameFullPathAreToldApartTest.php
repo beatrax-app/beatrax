@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Category;
 
 // Two envelopes at one path is the grid's worst case: the row carries a money
@@ -52,9 +53,9 @@ beforeEach(function (): void {
  */
 function envelopePathAccessibleNames(string $html, string $prefix): array
 {
-    $found = preg_match_all('/aria-label="'.preg_quote($prefix, '/').' ([^"]+)"/', $html, $matches);
+    $matches = PatternScan::all('/aria-label="'.preg_quote($prefix, '/').' ([^"]+)"/', $html);
 
-    return $found === false ? [] : $matches[1];
+    return $matches[1];
 }
 
 it('gives the two envelopes different accessible names on their money inputs', function (): void {
@@ -70,8 +71,7 @@ it('gives the two envelopes different accessible names on their money inputs', f
 it('tells the two apart in the move-money destination list', function (): void {
     $html = Livewire::test(BudgetsPage::class)->call('openMove', $this->seeded->id)->html();
 
-    $found = preg_match_all('/<option value="(\d+)">([^<]+)<\/option>/', $html, $matches, PREG_SET_ORDER);
-    expect($found)->not->toBeFalse();
+    $matches = PatternScan::sets('/<option value="(\d+)">([^<]+)<\/option>/', $html);
 
     $labels = [];
     foreach ($matches as $match) {
@@ -91,8 +91,8 @@ it('leaves the envelope the reader always had under its own bare name', function
         $rowStart = strpos($html, 'wire:key="envelope-row-'.$categoryId.'"');
         expect($rowStart)->not->toBeFalse();
 
-        $matched = preg_match('/aria-label="Assigned for ([^"]+)"/', substr($html, (int) $rowStart), $found);
-        expect($matched)->toBe(1);
+        $found = PatternScan::first('/aria-label="Assigned for ([^"]+)"/', substr($html, (int) $rowStart));
+        expect($found)->not->toBeEmpty();
 
         return $found[1];
     };

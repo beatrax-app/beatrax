@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
@@ -25,10 +26,9 @@ use Modules\Ledger\Models\Account;
  */
 function renderedCardDates(string $html): array
 {
-    preg_match_all(
+    $matches = PatternScan::all(
         '/data-testid="tx-card-\d+".*?<p class="secondary[^"]*">(.*?)<\/p>/s',
         $html,
-        $matches,
     );
 
     return array_map(

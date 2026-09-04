@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 
 it('carries the visible label of every date and time field into the name it computes (WCAG 2.5.3)', function (): void {
     // A <label for="…"> cannot name a <button>, so the pickers build their name
@@ -70,7 +71,7 @@ it('carries the visible label of every date and time field into the name it comp
     foreach ($blades as $path) {
         $source = (string) file_get_contents($path);
 
-        preg_match_all('~<label\b([^>]*\bfor="([^"]+)"[^>]*)>(.*?)</label>~s', $source, $labelMatches, PREG_SET_ORDER);
+        $labelMatches = PatternScan::sets('~<label\b([^>]*\bfor="([^"]+)"[^>]*)>(.*?)</label>~s', $source);
         $labels = [];
         foreach ($labelMatches as $label) {
             $text = $resolveText($label[3]);
@@ -83,11 +84,9 @@ it('carries the visible label of every date and time field into the name it comp
             continue;
         }
 
-        preg_match_all(
+        $tags = PatternScan::setsWithOffsets(
             '~<x-core::(date|time)-input\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*?)/?>~s',
             $source,
-            $tags,
-            PREG_SET_ORDER | PREG_OFFSET_CAPTURE,
         );
 
         foreach ($tags as $tag) {

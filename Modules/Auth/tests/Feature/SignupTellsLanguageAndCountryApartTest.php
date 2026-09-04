@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Core\Public\Services\LocaleNegotiator;
+use Modules\Core\Public\Support\PatternScan;
 
 // The register page now carries both pickers, and "Nederlands" and "Nederland"
 // differ by two letters. Whatever tells them apart has to be on the screen.
@@ -32,7 +33,7 @@ it('spells out what each of the two changes', function (): void {
 it('shows no flag on either picker', function (): void {
     $html = Livewire::test(SignupPage::class)->html();
 
-    expect(preg_match(SIGNUP_CARRIES_NO_FLAG, $html))->toBe(0);
+    expect(PatternScan::matches(SIGNUP_CARRIES_NO_FLAG, $html))->toBeFalse();
 });
 
 // Both labels are visible ones, not sr-only: the language switcher hides its
@@ -71,7 +72,7 @@ it('puts both pickers ahead of the button that leaves the screen', function (): 
 it('gives each picker its own card rather than sharing one box', function (): void {
     $html = Livewire::test(SignupPage::class)->html();
 
-    $cards = preg_match_all('/<div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">/', $html);
+    $cards = PatternScan::count('/<div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">/', $html);
 
     expect($cards)->toBe(2);
 });

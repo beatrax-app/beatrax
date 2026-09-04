@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 // op_log_quarantine carries no BelongsToUser global scope, so nothing but the
 // panel's own query keeps one user's rows off another's screen. These go through
@@ -94,8 +95,7 @@ it('renders the 7-day count correctly in the console pane header (rose when >0)'
     expect($html)->toContain('data-testid="quarantine-count"');
     // The count cell is styled rose whenever it is above zero.
     expect($html)->toContain('#fca5a5');
-    expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*2 skipped ops\s*<#s', $html))->toBe(
-        1,
+    expect(PatternScan::matches('#data-testid="quarantine-count"[^>]*>\s*2 skipped ops\s*<#s', $html))->toBeTrue(
         'Expected "2 skipped ops" inside data-testid="quarantine-count" element.'
     );
 });
@@ -113,8 +113,7 @@ it('reads the count label in the singular at exactly one skipped op', function (
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*1 skipped op\s*<#s', $html))->toBe(
-        1,
+    expect(PatternScan::matches('#data-testid="quarantine-count"[^>]*>\s*1 skipped op\s*<#s', $html))->toBeTrue(
         'Expected "1 skipped op" inside data-testid="quarantine-count" element.'
     );
 });
@@ -139,8 +138,7 @@ it('renders the calm empty state when the acting user has zero quarantine rows',
 
     // The count cell is styled emerald at zero.
     expect($html)->toContain('#6ee7b7');
-    expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*0 skipped ops\s*<#s', $html))->toBe(
-        1,
+    expect(PatternScan::matches('#data-testid="quarantine-count"[^>]*>\s*0 skipped ops\s*<#s', $html))->toBeTrue(
         'Expected "0 skipped ops" inside data-testid="quarantine-count" element.'
     );
 });
@@ -168,7 +166,7 @@ it('table honours the same 7-day window as the header — old rows do not render
     expect($html)->toContain('data-testid="sync-health-empty-state"');
     expect($html)->not->toContain('data-testid="sync-health-table"');
     expect($html)->not->toContain('device-ancient');
-    expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*0 skipped ops\s*<#s', $html))->toBe(1);
+    expect(PatternScan::matches('#data-testid="quarantine-count"[^>]*>\s*0 skipped ops\s*<#s', $html))->toBeTrue();
 });
 
 it('returns 404 from /dev/sync-health for a non-developer (EnsureDeveloperMode gate)', function (): void {

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A create payload is written by hand beside the insert it describes, and the
 // two drift: envelope_moves shipped a `memo` the reader typed straight into
 // the insert and never into the event, so the memo reached no other device.
@@ -72,7 +74,7 @@ function capturedCreateKeys(string $source, string $opener): array
         for ($i = $start; $i < strlen($source); $i++) {
             $depth += $source[$i] === '[' ? 1 : ($source[$i] === ']' ? -1 : 0);
             if ($depth === 0) {
-                preg_match_all("/'([a-z_][a-z0-9_]*)'\s*=>/", substr($source, $start, $i - $start + 1), $found);
+                $found = PatternScan::all("/'([a-z_][a-z0-9_]*)'\s*=>/", substr($source, $start, $i - $start + 1));
                 $keys = [...$keys, ...$found[1]];
                 break;
             }

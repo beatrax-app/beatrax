@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -268,7 +269,7 @@ it('namesTheUnsplitSurvivorRadioGroupAndFormatsItsAmountsThroughMoney', function
 
     // Without the legend a screen reader reads each radio with no question.
     expect($html)->toContain('<legend class="sr-only">Category to keep</legend>');
-    expect(preg_match('/<fieldset>.*name="unsplit-survivor".*<\/fieldset>/s', $html))->toBe(1);
+    expect(PatternScan::matches('/<fieldset>.*name="unsplit-survivor".*<\/fieldset>/s', $html))->toBeTrue();
 
     // Money::format(), not a literal € glued to the raw input string — hence
     // the non-breaking space ICU puts after the symbol.

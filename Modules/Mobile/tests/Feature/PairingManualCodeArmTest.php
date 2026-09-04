@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -143,7 +144,7 @@ it('offers the typed-code arm while importing, not only outside import', functio
     expect($armAt)->not->toBeFalse('the typed-code control is gone entirely');
 
     $before = substr($blade, 0, (int) $armAt);
-    preg_match_all('/@unless\s*\(([^)]*)\)|@endunless/', $before, $prior, PREG_SET_ORDER);
+    $prior = PatternScan::sets('/@unless\s*\(([^)]*)\)|@endunless/', $before);
 
     $stack = [];
     foreach ($prior as $directive) {

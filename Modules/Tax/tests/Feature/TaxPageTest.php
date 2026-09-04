@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 use Modules\Tax\Internal\Support\TaxYearBounds;
@@ -351,7 +352,7 @@ it('prints the section income beside its deductions subtotal rather than inside 
     // The section header alone, not the whole page: both figures also appear in
     // the year strip above it and in the rows below it, so asserting either is
     // merely present proves nothing about the header that names this category.
-    preg_match('#<summary[^>]*class="tax-section-header.*?</summary>#s', $html, $header);
+    $header = PatternScan::first('#<summary[^>]*class="tax-section-header.*?</summary>#s', $html);
 
     expect($header)->not->toBeEmpty()
         ->and($header[0])->toContain(e(Money::ofMinor(135_544, 'EUR')->format()))

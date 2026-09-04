@@ -8,6 +8,7 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Public\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Forecasting\Public\Http\Livewire\OpeningBalanceEditor;
@@ -68,7 +69,7 @@ function denomSeries(DatabaseManager $db, int $userId): int
 // forgery: the checksum is the server's, and only `updates` is the client's.
 function denomSnapshot(string $pageHtml, string $component): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"'.$component.'"')) {
