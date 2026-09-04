@@ -167,3 +167,73 @@ it('ends a missing-target skip at its own half rather than the whole run', funct
             $offenders,
         )));
 });
+
+/**
+ * @return array<string, string> patch scripts deliberately in no build chain,
+ *                               each mapped to why
+ */
+function scaffoldScriptsInNoChain(): array
+{
+    return [
+        // Superseded by nativephp_developer_id_signing.php, which pins an
+        // explicit mac.identity. Kept for local unsigned development builds
+        // and recorded as such in .docs/features/desktop/build-prebuild-hooks.md.
+        'nativephp_force_adhoc_signing' => 'kept for local unsigned development builds',
+    ];
+}
+
+// A script that is on disk and in no chain never runs, and nothing says so:
+// the build is green, the patch simply is not applied, and what ships differs
+// from what the repository appears to do. The list->disk direction was already
+// checked; this is disk->list, which is the direction a newly added script
+// goes missing in.
+it('runs every patch script from some chain, or names why it does not', function (): void {
+    $directory = scaffoldScriptsDirectory();
+
+    $onDisk = array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        glob($directory.DIRECTORY_SEPARATOR.'nativephp_*.php') ?: [],
+    );
+
+    // Counted before anything is subtracted, so a resolver that found no
+    // scripts cannot report a fully covered tree.
+    expect($onDisk)->toHaveCount(count($onDisk))->and($onDisk)->not->toBeEmpty();
+
+    // Read as text, not executed: config/nativephp.php calls env() and the
+    // runner is a script with side effects, so enumerating them by running
+    // them would invoke the build behaviour under test.
+    $invoked = [];
+
+    foreach ([$directory.'/nativephp_patch_all.php', dirname($directory).'/config/nativephp.php'] as $chain) {
+        if (! is_file($chain)) {
+            continue;
+        }
+
+        foreach (PatternScan::all('/nativephp_[a-z0-9_]+/', (string) file_get_contents($chain))[0] as $name) {
+            $invoked[$name] = true;
+        }
+    }
+
+    expect($invoked)->not->toBeEmpty();
+
+    // Neither is a patch: one is the runner, the other the shared resolver.
+    $notPatches = ['nativephp_patch_all', 'nativephp_scaffold_root'];
+    $pinned = scaffoldScriptsInNoChain();
+
+    $orphans = array_values(array_filter(
+        $onDisk,
+        static fn (string $name): bool => ! isset($invoked[$name])
+            && ! in_array($name, $notPatches, true)
+            && ! array_key_exists($name, $pinned),
+    ));
+
+    // A pin that no longer names an uninvoked script is the same silence one
+    // level up, so it fails too rather than rotting into a name nobody checks.
+    $stale = array_values(array_filter(
+        array_keys($pinned),
+        static fn (string $name): bool => ! in_array($name, $onDisk, true) || isset($invoked[$name]),
+    ));
+
+    expect($orphans)->toBe([], 'in no build chain and unexplained: '.implode(', ', $orphans))
+        ->and($stale)->toBe([], 'pinned as unchained but now absent or invoked: '.implode(', ', $stale));
+});
