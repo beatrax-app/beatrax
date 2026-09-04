@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
 
 // A card's sparkline is scaled against its own tallest bar. That maximum is a
@@ -135,7 +136,7 @@ it('draws every bar against the card s own tallest month', function () use ($ssc
 
     $html = (string) Livewire::actingAs($user)->test(CounterpartyIndex::class)->html();
 
-    preg_match_all('/class="bar ?[^"]*"\s+style="height: (\d+)%;"/', $html, $matches);
+    $matches = PatternScan::all('/class="bar ?[^"]*"\s+style="height: (\d+)%;"/', $html);
 
     // Buckets are oldest-first over twelve months, the last being the month
     // in progress: −70.00 at index 4, −40.00 at 7, −10.00 at 10, and the
@@ -167,7 +168,7 @@ it('keeps a card with no activity at all at zero rather than dividing by it', fu
 
     $html = (string) Livewire::actingAs($user)->test(CounterpartyIndex::class)->html();
 
-    preg_match_all('/class="bar ?[^"]*"\s+style="height: (\d+)%;"/', $html, $matches);
+    $matches = PatternScan::all('/class="bar ?[^"]*"\s+style="height: (\d+)%;"/', $html);
 
     expect($matches[1])->toBe(['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']);
 });

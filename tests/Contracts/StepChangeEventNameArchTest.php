@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 /**
@@ -58,7 +59,7 @@ function stepChangeNamesInMarkup(string $path): array
     $contents = (string) preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
     $hits = [];
 
-    preg_match_all('/[\'"]([A-Za-z0-9_.:-]+)[\'"]/', $contents, $matches);
+    $matches = PatternScan::all('/[\'"]([A-Za-z0-9_.:-]+)[\'"]/', $contents);
 
     foreach (array_unique($matches[1]) as $name) {
         if (stepChangeMeansTheSameThing($name)) {

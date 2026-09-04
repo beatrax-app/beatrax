@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Translation\Translator;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/which-actions-ask-before-they-act.md
@@ -47,11 +48,9 @@ function toastOnlyCalls(): array
 
         // `->toast(` only: the `WithUndo` suffix is what carries the button, so
         // the boundary after "toast" is the whole distinction being drawn.
-        preg_match_all(
+        $matches = PatternScan::setsWithOffsets(
             '~->toast\(\s*Lang::(?:get|choice)\(\s*\'([^\']+)\'~',
             $source,
-            $matches,
-            PREG_SET_ORDER | PREG_OFFSET_CAPTURE
         );
 
         foreach ($matches as $match) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
+use Modules\Core\Public\Support\PatternScan;
 
 beforeEach(function (): void {
     $this->user = makeCommunityTestUser('shared-list-settings-user');
@@ -22,13 +23,13 @@ it('renders all three toggles with Toggle 3 disabled and a version-agnostic inli
     // A role="switch" button now, not a styled checkbox: these are on/off
     // settings and a screen reader has to announce them as one thing.
     expect($html)->toContain('id="toggle-update-on-updates"');
-    expect(preg_match('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
-    expect(preg_match('/<button[^>]*role="switch"[^>]*id="toggle-update-on-updates"/i', $html))->toBe(1);
+    expect(PatternScan::matches('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBeTrue();
+    expect(PatternScan::matches('/<button[^>]*role="switch"[^>]*id="toggle-update-on-updates"/i', $html))->toBeTrue();
 
     // The note must promise a future activation without naming a version:
     // no `N.M` shape may appear anywhere in the rendered panel.
     expect($html)->toContain('Activates with a future app update');
-    expect(preg_match('/\b\d+\.\d+/', $html))->toBe(0);
+    expect(PatternScan::matches('/\b\d+\.\d+/', $html))->toBeFalse();
 });
 
 it('persists Toggle 1 (useSharedList) state to users.community_settings on toggle', function (): void {

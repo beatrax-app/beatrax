@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Fourteen rules asked for `var(--color-muted, oklch(60% 0 0))` and nine for
 // `var(--color-accent, …)`. Neither token has ever existed: the real names are
 // --color-text-muted and --color-blue. Every one of those rules silently took
@@ -17,8 +19,8 @@ function colourTokensInStylesheet(): array
 {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    preg_match_all('/^\s*(--color-[a-z0-9-]+)\s*:/mi', $css, $defined);
-    preg_match_all('/var\(\s*(--color-[a-z0-9-]+)/i', $css, $referenced);
+    $defined = PatternScan::all('/^\s*(--color-[a-z0-9-]+)\s*:/mi', $css);
+    $referenced = PatternScan::all('/var\(\s*(--color-[a-z0-9-]+)/i', $css);
 
     return [array_values(array_unique($defined[1])), array_values(array_unique($referenced[1]))];
 }

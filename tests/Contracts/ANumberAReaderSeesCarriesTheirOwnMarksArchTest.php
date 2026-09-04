@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // number_format() and toFixed() write the C locale's marks whatever language the
 // page is in. The nav badge shortened 1200 to "1.2k" and the onboarding chip
 // sized a file "1,023 KB", both of which a Dutch reader parses as a thousand
@@ -23,7 +25,7 @@ function readerFacingSourceFiles(): array
         foreach ($walk as $file) {
             $path = $file->getPathname();
 
-            if (! preg_match('/\.(php|blade\.php|js)$/', $path) || str_contains($path, '/tests/')) {
+            if (! PatternScan::matches('/\.(php|blade\.php|js)$/', $path) || str_contains($path, '/tests/')) {
                 continue;
             }
 

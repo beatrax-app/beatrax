@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The chain link's signature hash is composed in two places: the resolver that
 // mints it, and the enable-time sweep that rewrites it when the matching key it
 // is built from changes. They cannot share a helper — a sweep in Ledger reaching
@@ -16,7 +18,9 @@ function chainSignatureExpression(string $relativePath): string
     $root = dirname((string) realpath(base_path('Modules')));
     $source = (string) file_get_contents($root.'/'.$relativePath);
 
-    expect(preg_match('/function signatureHash\([^)]*\)[^{]*\{\s*(.+?)\s*\}/s', $source, $m))->toBe(1, $relativePath);
+    $m = PatternScan::first('/function signatureHash\([^)]*\)[^{]*\{\s*(.+?)\s*\}/s', $source);
+
+    expect($m)->not->toBeEmpty($relativePath);
 
     /** @var array<int, string> $m */
     return preg_replace('/\s+/', ' ', $m[1]) ?? '';

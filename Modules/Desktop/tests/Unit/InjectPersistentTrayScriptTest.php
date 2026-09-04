@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The script patches NativePHP's Electron entrypoint to build the macOS
 // menu-bar Tray in the main process: the `MenuBar` facade couples its items to
 // a focused BrowserWindow, so "Open Beatrax" dies once the window is closed.
@@ -166,19 +168,11 @@ it('binds every identifier the injected block calls a method on', function (): v
 
     [$patched] = injectPersistentTray($upstream);
 
-    $receivers = preg_match_all('/(?<![\w$.])([a-z][\w$]*)\.[\w$]+\s*\(/', $patched, $called);
-    $declarations = preg_match_all(
+    $called = PatternScan::all('/(?<![\w$.])([a-z][\w$]*)\.[\w$]+\s*\(/', $patched);
+    $declared = PatternScan::sets(
         '/(?:import\s+([\w$]+)\s+from|import\s*\{([^}]+)\}\s*from|(?:const|let|var|function)\s+([\w$]+))/',
         $patched,
-        $declared,
-        PREG_SET_ORDER,
     );
-
-    // preg_match_all returns false on a backtrack/JIT limit, and an unchecked
-    // false degrades into an empty match set — a silent pass over the very
-    // thing this asserts.
-    expect($receivers)->not->toBeFalse();
-    expect($declarations)->not->toBeFalse();
 
     $bound = [];
     foreach ($declared as $match) {

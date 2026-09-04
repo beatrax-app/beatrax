@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
-use RuntimeException;
+use Modules\Core\Public\Support\PatternScan;
 
 // Reads a write payload the way the column will: what is the VALUE under this
 // key, and is any part of it a sentence somebody typed in English rather than
@@ -80,7 +80,7 @@ final class StoredSentenceShape
     public static function writesToATable(string $source): bool
     {
         foreach (self::WRITE_CALLS as $call) {
-            if (self::matched(preg_match('/(?:->|\?->|::)'.$call.'\s*\(/', $source), 'write call') === 1) {
+            if (PatternScan::matches('/(?:->|\?->|::)'.$call.'\s*\(/', $source)) {
                 return true;
             }
         }
@@ -98,7 +98,7 @@ final class StoredSentenceShape
 
         // A key, a slug, a column, an enum value, a route, a format string:
         // all lower case with no letters standing apart as words.
-        if (self::matched(preg_match('/^[a-z0-9_.:\/|%-]+$/', $text), 'machine word') === 1) {
+        if (PatternScan::matches('/^[a-z0-9_.:\/|%-]+$/', $text)) {
             return null;
         }
 
@@ -108,7 +108,7 @@ final class StoredSentenceShape
         $words = 0;
         foreach (preg_split('/[\s\x{00A0}]+/u', $text) ?: [] as $part) {
             $bare = (string) preg_replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', '', $part);
-            if (self::matched(preg_match('/^[A-Za-z][A-Za-z\'’-]+$/u', $bare), 'word') === 1) {
+            if (PatternScan::matches('/^[A-Za-z][A-Za-z\'’-]+$/u', $bare)) {
                 $words++;
             }
         }
@@ -117,7 +117,7 @@ final class StoredSentenceShape
         // punctuation a label leads into — "Goal: " — is the same thing with
         // its second half in a variable; one bare word is a brand, a code or a
         // heading the caller cannot be told apart from either.
-        $punctuated = self::matched(preg_match('/[:—–(]/u', $text), 'lead-in') === 1;
+        $punctuated = PatternScan::matches('/[:—–(]/u', $text);
 
         if ($words >= 2 || ($words === 1 && $punctuated && mb_strlen($text) >= 4)) {
             return '"'.$text.'"';
@@ -217,16 +217,5 @@ final class StoredSentenceShape
         }
 
         return null;
-    }
-
-    // preg_match answers false when the engine gives up, and every caller here
-    // reads that as "no match" — a clean tree reported over a scan that stopped.
-    private static function matched(int|false $result, string $what): int
-    {
-        if ($result === false) {
-            throw new RuntimeException('the stored-sentence '.$what.' scan stopped reading: '.preg_last_error_msg());
-        }
-
-        return $result;
     }
 }

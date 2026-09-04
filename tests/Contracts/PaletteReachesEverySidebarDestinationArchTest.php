@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\Shell\Public\Navigation\AppNavigation;
 
@@ -38,13 +39,13 @@ function sidebarDestinationIds(): array
 {
     $byName = destinationIdsByCaseName();
 
+    $matches = PatternScan::all('/Destination::([A-Za-z][A-Za-z0-9]*)/', sidebarTemplateSource());
+
     $ids = [];
-    if (preg_match_all('/Destination::([A-Za-z][A-Za-z0-9]*)/', sidebarTemplateSource(), $matches) !== 0) {
-        foreach (array_unique($matches[1]) as $caseName) {
-            $id = $byName[$caseName] ?? null;
-            if ($id !== null) {
-                $ids[] = $id;
-            }
+    foreach (array_unique($matches[1]) as $caseName) {
+        $id = $byName[$caseName] ?? null;
+        if ($id !== null) {
+            $ids[] = $id;
         }
     }
     sort($ids);
@@ -105,10 +106,8 @@ it('sends every sidebar row through the shared navigation roster', function (): 
     // Sign out posts a form; it is an action, not a place.
     $allowed = ['logout'];
 
-    $named = [];
-    if (preg_match_all('/route\(\s*[\'"]([^\'"]+)[\'"]/', $source, $matches) !== 0) {
-        $named = array_values(array_unique($matches[1]));
-    }
+    $matches = PatternScan::all('/route\(\s*[\'"]([^\'"]+)[\'"]/', $source);
+    $named = array_values(array_unique($matches[1]));
 
     $direct = array_values(array_diff($named, $allowed));
     expect($direct)->toBe([], "A sidebar row names a route directly instead of a Destination, so nothing can check it reaches the palette:\n  ".implode("\n  ", $direct));

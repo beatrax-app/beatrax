@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Support\PatternScan;
 
 it('preserves the operator-facing contract of operator-recovery.md backups + recovery sections', function (): void {
     /** @var Filesystem $files */
@@ -41,11 +42,11 @@ it('preserves the operator-facing contract of operator-recovery.md backups + rec
     expect(str_contains($contents, '.planning/'))
         ->toBeFalse('operator-recovery.md must not reference the GSD .planning/ tree.');
 
-    expect(preg_match('/\bPhase \d{1,2}\b/', $contents))
-        ->toBe(0, 'operator-recovery.md must not embed phase labels — docs describe current state.');
+    expect(PatternScan::matches('/\bPhase \d{1,2}\b/', $contents))
+        ->toBeFalse('operator-recovery.md must not embed phase labels — docs describe current state.');
 
-    expect(preg_match('/D-\d{4}/', $contents))
-        ->toBe(0, 'operator-recovery.md must not embed four-digit decision IDs (D-####) — docs describe current state.');
+    expect(PatternScan::matches('/D-\d{4}/', $contents))
+        ->toBeFalse('operator-recovery.md must not embed four-digit decision IDs (D-####) — docs describe current state.');
 
     expect(substr_count($contents, 'cp database.sqlite'))
         ->toBe(1, 'cp database.sqlite must appear exactly once in operator-recovery.md (inside the DO NOT subsection).');

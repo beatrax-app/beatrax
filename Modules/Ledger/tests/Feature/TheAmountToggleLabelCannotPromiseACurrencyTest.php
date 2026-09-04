@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\CurrencyView;
@@ -22,9 +23,9 @@ const AMOUNT_TOGGLE_MIN_SHARED_TOKEN = 4;
 /** @return string the on-screen text of the segmented option carrying $value */
 function amountToggleLabel(string $html, string $value): string
 {
-    $matched = preg_match('/<ui-radio\b[^>]*\bvalue="'.preg_quote($value, '/').'"[^>]*>(.*?)<\/ui-radio>/s', $html, $match);
+    $match = PatternScan::first('/<ui-radio\b[^>]*\bvalue="'.preg_quote($value, '/').'"[^>]*>(.*?)<\/ui-radio>/s', $html);
 
-    expect($matched)->toBe(1, "No segmented option rendered for value=\"{$value}\".");
+    expect($match)->not->toBe([], "No segmented option rendered for value=\"{$value}\".");
 
     return trim(strip_tags($match[1]));
 }
@@ -32,9 +33,9 @@ function amountToggleLabel(string $html, string $value): string
 /** @return string the accessible name the segmented group announces */
 function amountToggleGroupName(string $html): string
 {
-    $matched = preg_match('/<ui-radio-group\b[^>]*\baria-label="([^"]*)"/', $html, $match);
+    $match = PatternScan::first('/<ui-radio-group\b[^>]*\baria-label="([^"]*)"/', $html);
 
-    expect($matched)->toBe(1, 'The segmented group renders no accessible name at all.');
+    expect($match)->not->toBe([], 'The segmented group renders no accessible name at all.');
 
     return html_entity_decode($match[1], ENT_QUOTES);
 }

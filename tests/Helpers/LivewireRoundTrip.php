@@ -7,6 +7,7 @@ namespace Tests\Helpers;
 use Illuminate\Foundation\Testing\TestCase;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use RuntimeException;
 
 // Replays a rendered page's own component snapshot back through the Livewire
@@ -56,7 +57,7 @@ final class LivewireRoundTrip
     // than by position - the layout's chrome components render first.
     public static function snapshotFor(string $pageHtml, string $component): string
     {
-        preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+        $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
 
         foreach ($matches[1] as $encoded) {
             $snapshot = html_entity_decode($encoded, ENT_QUOTES);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 
 // The mark is lifted by half the cap height of ITS OWN font, so the label and
 // the mark have to resolve to one font-size or the lift aims at the wrong text.
@@ -56,7 +57,7 @@ it('leaves the heading itself with no size of its own, so the two cannot drift',
 
     $heading = $xpath->query('//h1')?->item(0);
     expect($heading)->toBeInstanceOf(DOMElement::class);
-    expect(preg_match('/\btext-(xs|sm|base|md|lg|xl|2xl|3xl)\b/', $heading->getAttribute('class')))->toBe(0);
+    expect(PatternScan::matches('/\btext-(xs|sm|base|md|lg|xl|2xl|3xl)\b/', $heading->getAttribute('class')))->toBeFalse();
 });
 
 // Measured at 411px: the Turkish recurring title is one line wide and the mark

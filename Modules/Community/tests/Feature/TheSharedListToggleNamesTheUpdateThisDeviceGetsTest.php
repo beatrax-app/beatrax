@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
+use Modules\Core\Public\Support\PatternScan;
 
 // "every time Beatrax updates itself" is the desktop's electron-updater chain,
 // and every listener in it returns early on a mobile runtime. A phone is
@@ -42,7 +43,7 @@ it('leaves the toggle disabled and version-agnostic on both platforms', function
 
         $html = Livewire::test(SharedListSettingsPanel::class)->html();
 
-        expect(preg_match('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1)
-            ->and(preg_match('/\b\d+\.\d+/', $html))->toBe(0);
+        expect(PatternScan::matches('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBeTrue()
+            ->and(PatternScan::matches('/\b\d+\.\d+/', $html))->toBeFalse();
     }
 });

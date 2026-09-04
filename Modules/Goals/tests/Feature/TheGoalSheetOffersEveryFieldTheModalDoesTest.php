@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Goals\Internal\Http\Livewire\GoalsPage;
 use Modules\Ledger\Models\Account;
 use Modules\Pots\Models\Pot;
@@ -19,7 +20,7 @@ function goalFormFields(string $blade, string $marker, string $end): array
     $to = strpos($blade, $end, $from);
     expect($to)->not->toBeFalse();
 
-    preg_match_all('/wire:model(?:\.[a-z]+)*="([a-zA-Z0-9_.]+)"/', substr($blade, $from, $to - $from), $m);
+    $m = PatternScan::all('/wire:model(?:\.[a-z]+)*="([a-zA-Z0-9_.]+)"/', substr($blade, $from, $to - $from));
 
     return array_values(array_unique($m[1]));
 }

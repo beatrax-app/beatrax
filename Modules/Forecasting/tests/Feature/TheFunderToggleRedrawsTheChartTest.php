@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
@@ -113,7 +114,8 @@ it('redraws the chart payload when the toggle is pressed', function (): void {
     expect($after)->not->toBe($before);
 
     $optionsOf = static function (string $html): string {
-        expect(preg_match('/data-options="([^"]*)"/', $html, $matches))->toBe(1);
+        $matches = PatternScan::first('/data-options="([^"]*)"/', $html);
+        expect($matches)->not->toBe([]);
 
         return $matches[1];
     };

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -58,12 +59,7 @@ beforeEach(function (): void {
 function previewDateCells(string $html): array
 {
     $cells = [];
-    preg_match_all(
-        '#<tr[^>]*data-row-index="(\d+)"[^>]*>\s*<td[^>]*>(.*?)</td>#s',
-        $html,
-        $matches,
-        PREG_SET_ORDER,
-    );
+    $matches = PatternScan::sets('#<tr[^>]*data-row-index="(\d+)"[^>]*>\s*<td[^>]*>(.*?)</td>#s', $html);
 
     foreach ($matches as $match) {
         $cells[(int) $match[1]] = trim(html_entity_decode(strip_tags($match[2])));

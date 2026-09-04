@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 // Two pickers on one screen that both list places. The country decides which
@@ -45,7 +46,7 @@ it('says what each picker affects, and what it does not', function (): void {
 it('shows no flag anywhere on the settings screen', function (): void {
     $html = Livewire::test(SettingsPage::class)->html();
 
-    expect(preg_match(SETTINGS_CARRIES_NO_FLAG, $html))->toBe(0);
+    expect(PatternScan::matches(SETTINGS_CARRIES_NO_FLAG, $html))->toBeFalse();
 });
 
 it('initialises the country from the user row and persists a change', function (): void {

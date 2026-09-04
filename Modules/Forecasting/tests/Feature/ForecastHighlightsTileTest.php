@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Chains\Models\CardStatement;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -422,7 +423,7 @@ it('keeps the display line to the figure and moves the words beneath it', functi
     // tile grew to five lines and 200px, one word of "Lowest in 30 days"
     // per line, beside a net-worth card that shows label, figure, meta.
     $tile = mb_substr($body, (int) mb_strpos($body, 'Forecast highlights'));
-    preg_match('/<p class="[^"]*text-3xl[^"]*"[^>]*>\s*(.*?)\s*<\/p>/s', $tile, $matches);
+    $matches = PatternScan::first('/<p class="[^"]*text-3xl[^"]*"[^>]*>\s*(.*?)\s*<\/p>/s', $tile);
     expect(trim(html_entity_decode($matches[1] ?? '')))->toBe('€300.00');
 
     $response->assertSeeText('Lowest in 30 days');

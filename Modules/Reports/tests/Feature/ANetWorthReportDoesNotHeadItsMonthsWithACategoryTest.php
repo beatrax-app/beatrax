@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
@@ -32,7 +33,7 @@ function nwhUser(): User
 
 function nwhFirstColumnHeading(string $html): string
 {
-    preg_match('/<th\b[^>]*>(.*?)<\/th>/s', $html, $matches);
+    $matches = PatternScan::first('/<th\b[^>]*>(.*?)<\/th>/s', $html);
 
     return trim(strip_tags($matches[1] ?? ''));
 }

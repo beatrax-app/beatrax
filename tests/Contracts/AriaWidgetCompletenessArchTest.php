@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A control that takes an ARIA role has to carry the state the native element
 // would have supplied for free: a <progress> reports its value unasked, a div
 // with role="progressbar" and no aria-valuenow announces nothing. Presence only
@@ -38,11 +40,9 @@ function ariaCompletenessBladeFiles(): array
  */
 function ariaCompletenessOpenTags(string $source): array
 {
-    preg_match_all(
+    $matches = PatternScan::setsWithOffsets(
         '~<[a-zA-Z][\w:.-]*((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>~s',
         $source,
-        $matches,
-        PREG_SET_ORDER | PREG_OFFSET_CAPTURE
     );
 
     $tags = [];

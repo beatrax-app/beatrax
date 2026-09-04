@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
@@ -36,13 +37,12 @@ it('takes the chart axis money locale from the page language, never from the cur
 
     // The locale is the first argument to the currency formatter the helper
     // installs on every y-axis.
-    $found = preg_match(
+    $call = PatternScan::first(
         '/new Intl\.NumberFormat\(\s*(?<locale>[^,]+),\s*\{\s*style: \'currency\'/',
-        $source,
-        $call
+        $source
     );
 
-    expect($found)->toBe(1, 'The chart helper no longer formats its axis as currency at all.');
+    expect($call)->not->toBe([], 'The chart helper no longer formats its axis as currency at all.');
 
     $argument = trim($call['locale']);
 
@@ -53,7 +53,7 @@ it('takes the chart axis money locale from the page language, never from the cur
         "The axis locale must be the page language, the way Money::format() is.\nGot: ".$argument
     );
 
-    expect(preg_match('/MONEY_LOCALES|moneyLocale/i', $source))->toBe(
+    expect(PatternScan::count('/MONEY_LOCALES|moneyLocale/i', $source))->toBe(
         0,
         'A currency-to-locale table is back in resources/js/app.js. The currency '.
         'says WHAT is drawn; the reader\'s locale says HOW, and a table keyed by '.

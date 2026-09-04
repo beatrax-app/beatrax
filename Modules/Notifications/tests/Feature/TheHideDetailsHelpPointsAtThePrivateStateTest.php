@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
@@ -79,10 +80,10 @@ it('renders the switch the help describes in the state the help advises', functi
 
     expect($html)->toContain(e(Lang::get('notifications::settings.hide_details.help')));
 
-    $found = preg_match('/<button\b[^>]*aria-label="'.preg_quote(e($label), '/').'"[^>]*>/', $html, $matches);
+    $matches = PatternScan::first('/<button\b[^>]*aria-label="'.preg_quote(e($label), '/').'"[^>]*>/', $html);
 
-    expect($found)->toBe(
-        1,
+    expect($matches)->not->toBe(
+        [],
         'No switch in the rendered settings section carries the hide-details label as its accessible name, so nothing pins the help to the control it describes.',
     );
 

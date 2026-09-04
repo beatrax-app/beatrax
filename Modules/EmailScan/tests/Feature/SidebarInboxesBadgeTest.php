@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 
 // The composer must resolve ViewFactoryContract through the container, never
 // the global view() helper — the repo-wide DI-only invariant.
@@ -151,7 +152,7 @@ it('does not use the view() global helper inside EmailScanServiceProvider', func
 
     // Only the bare call-site form is forbidden; a ViewFactoryContract type
     // reference is fine.
-    $matched = preg_match_all('/(?<![A-Za-z0-9_>])view\s*\(\s*[\'"]/', (string) $stripped);
+    $matched = PatternScan::count('/(?<![A-Za-z0-9_>])view\s*\(\s*[\'"]/', (string) $stripped);
     expect($matched)->toBe(0);
 });
 

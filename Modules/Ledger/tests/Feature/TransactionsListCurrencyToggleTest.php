@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -41,7 +42,7 @@ it('defaults the currency property to the user default_currency_view preference 
 // contradicted the moment a row settled in something else.
 it('reads the same on the base-currency toggle whatever the reader reports in', function (): void {
     $labelOf = static function (string $html): string {
-        preg_match('/<ui-radio\b[^>]*\bvalue="eur_only"[^>]*>(.*?)<\/ui-radio>/s', $html, $match);
+        $match = PatternScan::first('/<ui-radio\b[^>]*\bvalue="eur_only"[^>]*>(.*?)<\/ui-radio>/s', $html);
 
         return trim(strip_tags($match[1] ?? ''));
     };

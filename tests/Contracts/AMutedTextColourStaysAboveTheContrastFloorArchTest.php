@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Measured on the desktop app at 1280 with the WCAG formula, colours resolved
 // through a canvas because Tailwind v4 emits oklch(). Three pairings were below
 // the 4.5:1 floor for normal text no matter which route they appeared on, so
@@ -30,7 +32,7 @@ function templateClassAttributes(): array
                 continue;
             }
 
-            preg_match_all('/class="([^"]*)"/', (string) file_get_contents($path), $matches);
+            $matches = PatternScan::all('/class="([^"]*)"/', (string) file_get_contents($path));
 
             foreach ($matches[1] as $classes) {
                 $found[] = ['file' => str_replace(base_path().'/', '', $path), 'classes' => $classes];

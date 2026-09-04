@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 
 // The suite runs from both roots, so base_path() is not one place — the same
@@ -67,10 +68,9 @@ function patchScriptsInRunner(): array
 
     expect($runner)->toBeReadableFile();
 
-    preg_match_all(
+    $matches = PatternScan::all(
         "/'(nativephp_[a-z0-9_]+)'/",
         (string) file_get_contents($runner),
-        $matches,
     );
 
     /** @var list<string> $names */

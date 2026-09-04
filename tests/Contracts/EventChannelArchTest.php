@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 // A dispatch names its listener in a string, and nothing joins the two. A name
@@ -146,9 +147,7 @@ function eventChannelConstants(array $paths): array
             : basename($path, '.php');
 
         $pattern = '/const\s+(?:string\s+)?([A-Z][A-Z0-9_]*)\s*=\s*[\'"]([^\'"]*)[\'"]/';
-        if (preg_match_all($pattern, $contents, $hits, PREG_SET_ORDER) === 0) {
-            continue;
-        }
+        $hits = PatternScan::sets($pattern, $contents);
 
         foreach ($hits as $hit) {
             $constants[$class.'::'.$hit[1]] = $hit[2];
@@ -359,9 +358,7 @@ function eventChannelListenersArray(array $tokens): array
 function eventChannelBladeConstantHits(string $contents, array $constants): array
 {
     $pattern = '/x-on:\{\{\s*((?:[A-Za-z_\\\\][A-Za-z0-9_\\\\]*)::[A-Za-z][A-Za-z0-9_]*)\s*\}\}((?:\.[A-Za-z0-9_-]+)*)/';
-    if (preg_match_all($pattern, $contents, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) === 0) {
-        return [];
-    }
+    $matches = PatternScan::setsWithOffsets($pattern, $contents);
 
     $hits = [];
 
@@ -426,9 +423,8 @@ function eventChannelMarkupHits(string $path, bool $listening, array $constants)
     $hits = $listening && $blade ? eventChannelBladeConstantHits($contents, $constants) : [];
 
     foreach ($patterns as $pattern) {
-        if (preg_match_all($pattern, $contents, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) === 0) {
-            continue;
-        }
+        $matches = PatternScan::setsWithOffsets($pattern, $contents);
+
         foreach ($matches as $match) {
             $name = $listening && $blade ? eventChannelAlpineName($match[1][0]) : $match[1][0];
             $hits[] = [$name, substr_count($contents, "\n", 0, $match[0][1]) + 1];

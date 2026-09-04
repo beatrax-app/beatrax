@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The soft keyboard offsets the visual viewport and leaves the layout viewport
 // alone, so a sticky header sits above the visible area while the reader types.
 // The wizard takes typed amounts on its starting-balance cards and was the one
@@ -13,7 +15,7 @@ function wizardLayoutViewportTag(): string
 {
     $layout = (string) file_get_contents(base_path('Modules/Onboarding/Resources/views/layouts/app-wizard.blade.php'));
 
-    preg_match('/<meta name="viewport"[^>]*>/', $layout, $tag);
+    $tag = PatternScan::first('/<meta name="viewport"[^>]*>/', $layout);
 
     return $tag[0] ?? '';
 }
