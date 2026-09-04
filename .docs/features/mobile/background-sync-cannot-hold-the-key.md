@@ -308,6 +308,14 @@ even when it can seal nothing, and that is deliberate: the claim gates the
 replay a claim of its own would only add a second key to keep in step for work
 that is already idempotent.
 
+### Change capture was behind the same wall
+
+`SyncCaptureListener` resolved `OpLogWriter` lazily and logged the refusal at
+debug — 4,925 lines in one real log, every one a mutation no peer ever received.
+The repair is the same shape as this section's and is argued on its own page:
+[A mutation a keyless process cannot
+sign](../sync/a-mutation-a-keyless-process-cannot-sign.md).
+
 ### What is not fixed here, and why not
 
 `forecasting:project`, `recurring:detect` and `open-banking:sync-due` are left

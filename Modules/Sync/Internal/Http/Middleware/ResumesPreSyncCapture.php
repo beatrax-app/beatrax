@@ -23,11 +23,6 @@ use Throwable;
  */
 final readonly class ResumesPreSyncCapture extends AfterResponseMiddleware
 {
-    // Short, because a capture only finishes as fast as requests arrive: at
-    // one slice per tick a two-year ledger is minutes of ordinary use, not
-    // days. Long enough that a screen polling every second buys one slice.
-    private const int TICK_INTERVAL_SECONDS = 2;
-
     private const string THROTTLE_KEY = 'sync:pre-sync-capture:';
 
     // The progress reader is safe to hold — it reaches the database and the
@@ -69,7 +64,7 @@ final readonly class ResumesPreSyncCapture extends AfterResponseMiddleware
             return;
         }
 
-        if (! $this->cache->add(self::THROTTLE_KEY.$userId, true, self::TICK_INTERVAL_SECONDS)) {
+        if (! $this->cache->add(self::THROTTLE_KEY.$userId, true, TailSweepInterval::SECONDS)) {
             return;
         }
 

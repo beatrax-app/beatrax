@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Listeners\Concerns;
 
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
-use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpCaptureSink;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 
 trait CapturesReportAndNotificationMutations
 {
-    private function handleSavedReportEdit(SavedReportMutated $event, OpLogWriter $writer): void
+    private function handleSavedReportEdit(SavedReportMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -23,7 +23,7 @@ trait CapturesReportAndNotificationMutations
         }
     }
 
-    private function handleSavedReportDelete(SavedReportMutated $event, OpLogWriter $writer): void
+    private function handleSavedReportDelete(SavedReportMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'saved_reports',
@@ -31,7 +31,7 @@ trait CapturesReportAndNotificationMutations
         );
     }
 
-    private function handleSavedReportCreate(SavedReportMutated $event, OpLogWriter $writer): void
+    private function handleSavedReportCreate(SavedReportMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'saved_reports',
@@ -40,7 +40,7 @@ trait CapturesReportAndNotificationMutations
         );
     }
 
-    private function handleNotificationEdit(NotificationMutated $event, OpLogWriter $writer): void
+    private function handleNotificationEdit(NotificationMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -56,7 +56,7 @@ trait CapturesReportAndNotificationMutations
     // does not announce is undone the moment a peer replays its own history of
     // the row — which is what the registry's _delete_wins rule is there to
     // settle.
-    private function handleNotificationDelete(NotificationMutated $event, OpLogWriter $writer): void
+    private function handleNotificationDelete(NotificationMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeDelete(
             table: 'notifications',
@@ -68,7 +68,7 @@ trait CapturesReportAndNotificationMutations
     // autoincrement surrogate — it is a deterministic sha256 digest, so it
     // MUST be carried as an explicit field or a fresh device's
     // insertOrIgnore would silently drop the row (see MergeRulesRegistry).
-    private function handleNotificationCreate(NotificationMutated $event, OpLogWriter $writer): void
+    private function handleNotificationCreate(NotificationMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'notifications',
@@ -77,7 +77,7 @@ trait CapturesReportAndNotificationMutations
         );
     }
 
-    private function handleNotificationPreferenceEdit(NotificationPreferenceMutated $event, OpLogWriter $writer): void
+    private function handleNotificationPreferenceEdit(NotificationPreferenceMutated $event, OpCaptureSink $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
             $writer->writeSet(
@@ -89,7 +89,7 @@ trait CapturesReportAndNotificationMutations
         }
     }
 
-    private function handleNotificationPreferenceCreate(NotificationPreferenceMutated $event, OpLogWriter $writer): void
+    private function handleNotificationPreferenceCreate(NotificationPreferenceMutated $event, OpCaptureSink $writer): void
     {
         $writer->writeCreateRow(
             table: 'notification_preferences',
