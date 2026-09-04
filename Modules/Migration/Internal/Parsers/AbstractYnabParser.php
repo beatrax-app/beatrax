@@ -368,8 +368,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      */
     private function signedMinor(array $row, string $currency): int
     {
-        $outflow = $this->amounts->parse($row['Outflow'] ?? '', $currency) ?? 0;
-        $inflow = $this->amounts->parse($row['Inflow'] ?? '', $currency) ?? 0;
+        $outflow = $this->amounts->requireMinor($row['Outflow'] ?? '', 'Register.csv Outflow', $currency);
+        $inflow = $this->amounts->requireMinor($row['Inflow'] ?? '', 'Register.csv Inflow', $currency);
 
         return $inflow > 0 ? $inflow : -$outflow;
     }
