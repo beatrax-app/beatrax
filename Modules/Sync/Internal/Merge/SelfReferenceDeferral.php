@@ -91,6 +91,75 @@ final class SelfReferenceDeferral
         $this->pending = $stillWaiting;
     }
 
+    // A backfill spanning several sync sessions gets a fresh instance for each
+    // one, so the carry above cannot see a partner that landed after the last
+    // session ended. Every create still says what it named, which turns the
+    // repair into a query over the log rather than state to keep alive.
+    public function resolveFromHistory(int $userId): int
+    {
+        $repaired = 0;
+
+        foreach (self::SELF_REFERENCES as $table => $columns) {
+            foreach ($columns as $column) {
+                $repaired += $this->repairColumn($table, $column, $userId);
+            }
+        }
+
+        return $repaired;
+    }
+
+    private function repairColumn(string $table, string $column, int $userId): int
+    {
+        try {
+            $named = $this->db->connection()->table('op_log_entries')
+                ->where('user_id', $userId)
+                ->where('table_name', $table)
+                ->where('field', $column)
+                ->whereNotNull('value')
+                ->where('value', '!=', 'null')
+                ->get(['pk', 'value']);
+        } catch (QueryException) {
+            return 0;
+        }
+
+        $repaired = 0;
+
+        foreach ($named as $entry) {
+            if ($this->repairRow($table, $column, $entry, $userId)) {
+                $repaired++;
+            }
+        }
+
+        return $repaired;
+    }
+
+    // Only a column still empty is filled. A row whose link is already set was
+    // either resolved in its own batch or written by somebody, and neither is
+    // this sweep's to overwrite.
+    private function repairRow(string $table, string $column, \stdClass $entry, int $userId): bool
+    {
+        $target = json_decode(is_string($entry->value) ? $entry->value : '', true);
+        $pk = $entry->pk;
+
+        if ((! is_int($target) && ! is_string($target)) || (! is_int($pk) && ! is_string($pk))) {
+            return false;
+        }
+
+        $empty = $this->ownership->scopeToUser(
+            $this->db->connection()->table($table)->where('id', $pk)->whereNull($column),
+            $table,
+            $userId,
+        )->exists();
+
+        if (! $empty || $this->resolvableTargets($table, [$column => $target], $userId) === []) {
+            return false;
+        }
+
+        $this->write($table, $pk, [$column => $target], $userId);
+
+        return true;
+    }
+
     /**
      * @param  array<string, mixed>  $values
      */
