@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Routing\Router;
 use Livewire\Livewire;
@@ -212,13 +213,13 @@ function xuiTransaction(
     ]);
 }
 
-function xuiRecurringSeries(DatabaseManager $db, int $userId, string $name): int
+function xuiRecurringSeries(DatabaseManager $db, int $userId, string $name, string $state = 'approved'): int
 {
     return $db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $userId,
         'direction' => 'expense',
         'detected_name' => $name,
-        'state' => 'approved',
+        'state' => $state,
         'cadence' => 'monthly',
         'latest_amount_minor' => -2599,
         'latest_currency' => 'EUR',
@@ -265,6 +266,52 @@ function xuiMigrationRun(DatabaseManager $db, int $userId, string $originalFilen
     ]);
 
     return $runId;
+}
+
+function xuiImportRun(DatabaseManager $db, int $userId, string $rawFileName): int
+{
+    $suffix = bin2hex(random_bytes(4));
+
+    return (int) $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/'.$rawFileName,
+        'sha256' => hash('sha256', 'xui-import-'.$suffix),
+        'uploaded_at' => '2026-05-19 00:00:00',
+        'confirmed_at' => '2026-05-19 00:00:00',
+        'status' => 'confirmed',
+        'inserted_count' => 3,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+}
+
+// inbox_scan_state travels with the row: the inboxes page reads the pair, and
+// an inbox without its state renders as a half-built card rather than the
+// listing the probe is trying to read.
+function xuiInbox(DatabaseManager $db, int $userId, string $email): int
+{
+    $id = (int) $db->connection()->table('inboxes')->insertGetId([
+        'user_id' => $userId,
+        'provider' => 'gmail',
+        'email' => $email,
+        'backfill_window_months' => 3,
+        'backfill_progress' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $db->connection()->table('inbox_scan_state')->insert([
+        'user_id' => $userId,
+        'inbox_id' => $id,
+        'folder' => 'INBOX',
+        'status' => 'idle',
+        'retry_attempts' => 0,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    return $id;
 }
 
 function xuiAccount(DatabaseManager $db, int $userId, string $name): int
@@ -1146,6 +1193,97 @@ it('does not bleed the owner open-banking connection into the partner settings s
         ->assertDontSee('Owner Secret Bank Name');
 });
 
+it('returns 404 (never 403) when the partner requests the owner import results', function (): void {
+    $runId = xuiImportRun($this->db, $this->owner->id, 'owner-statement.csv');
+
+    // The owner's own 200 is the control group: without it a 404 could as
+    // easily mean the run does not render at all, and the probe would pass
+    // against an app that leaks.
+    $this->actingAs($this->owner)->get("/imports/{$runId}")->assertOk();
+
+    $response = $this->actingAs($this->partner)->get("/imports/{$runId}");
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+});
+
+it('returns 404 (never 403) when the partner requests the owner import preview', function (): void {
+    $runId = xuiImportRun($this->db, $this->owner->id, 'owner-statement.csv');
+
+    $response = $this->actingAs($this->partner)->get("/imports/{$runId}/preview");
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+});
+
+it('renders /imports/new for any authenticated user — no per-entity id, no data to leak', function (): void {
+    $this->actingAs($this->partner)->get('/imports/new')->assertOk();
+});
+
+it('does not bleed the owner inbox into the partner inboxes page', function (): void {
+    xuiInbox($this->db, $this->owner->id, 'owner-secret-inbox@example.com');
+    xuiInbox($this->db, $this->partner->id, 'partner-visible-inbox@example.com');
+
+    $this->actingAs($this->partner)
+        ->get('/inboxes')
+        ->assertOk()
+        ->assertSee('partner-visible-inbox@example.com')
+        ->assertDontSee('owner-secret-inbox@example.com');
+});
+
+it('does not bleed the owner series into the partner recurring index', function (): void {
+    xuiRecurringSeries($this->db, $this->partner->id, 'Partner Subscription');
+
+    $this->actingAs($this->partner)
+        ->get('/recurring')
+        ->assertOk()
+        ->assertSee('Partner Subscription')
+        ->assertDontSee('Owner Subscription');
+});
+
+it('does not bleed the owner series into the partner recurring review queue', function (): void {
+    xuiRecurringSeries($this->db, $this->owner->id, 'Owner Pending Series', 'pending');
+    xuiRecurringSeries($this->db, $this->partner->id, 'Partner Pending Series', 'pending');
+
+    $this->actingAs($this->partner)
+        ->get('/recurring/review')
+        ->assertOk()
+        ->assertSee('Partner Pending Series')
+        ->assertDontSee('Owner Pending Series');
+});
+
+it('does not bleed the owner data into the partner chains review queue', function (): void {
+    $this->actingAs($this->partner)
+        ->get('/chains/review')
+        ->assertOk()
+        ->assertDontSee('OWNER MERCHANT BV');
+});
+
+it('does not bleed the owner series into the partner drift index', function (): void {
+    $this->actingAs($this->partner)
+        ->get('/drift')
+        ->assertOk()
+        ->assertDontSee('Owner Subscription');
+});
+
+it('does not bleed the owner spend into the partner forecast page', function (): void {
+    $this->actingAs($this->partner)
+        ->get('/forecast')
+        ->assertOk()
+        ->assertDontSee('OWNER MERCHANT BV');
+});
+
+it('returns 404 when a developer who is not the account owner opens the manage-user page', function (): void {
+    // is_developer is self-settable from /settings, so the developer middleware
+    // is not the boundary on this route -- AccountOwner is. Promoting the
+    // partner clears the middleware, leaving that check as the only guard.
+    $this->partner->forceFill(['is_developer' => true])->save();
+
+    $this->actingAs($this->partner)
+        ->get('/settings/users/owner')
+        ->assertNotFound();
+});
+
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
     /** @var Router $router */
     $router = $this->app->make(Router::class);
@@ -1182,5 +1320,202 @@ it('covers or allow-lists every auth-gated GET route — regression guard', func
     expect($uncovered)->toBe(
         [],
         "Every auth-gated GET route needs a cross-user probe case or an allow-list entry. Uncovered:\n  ".implode("\n  ", $uncovered),
+    );
+});
+
+// A name in ISOLATION_ROUTE_COVERED is a claim about a probe, not the probe:
+// imports.preview and imports.results were listed the day the matrix was
+// written and no request reached either for the three months after. Each entry
+// here is instead a route whose parameter addresses no user row, and says why.
+/**
+ * @var array<string, string>
+ */
+const ISOLATION_PARAM_ROUTE_EXCLUSIONS = [
+    'dev.queue.tab' => '{tab} is a pending|failed|batches view selector, held by the route regex and re-validated against QueueInspectorPage::TABS. It addresses no row.',
+    'dev.artisan.stream' => '{runId} is an unguessable cache-backed UUID whose owner check answers 403 by design, because a 404 hides nothing an enumerable id would. Probed by ArtisanStreamReconnectTest.',
+    'oauth.callback' => '{provider} is the gmail|microsoft enum. The cross-user vector is the state nonce, which lives in the initiating session and is probed by the EmailScan state-mismatch tests.',
+    'oauth.connect' => '{provider} is the gmail|microsoft enum. The cross-user vector is the inbox_id query parameter, probed in EmailScan by OAuthConnectControllerTest and CrossUserInboxIsolationTest; both need that module Internal OAuth doubles, which this module may not import.',
+];
+
+// Read from tokens rather than matched with a regex: PHP interpolation and
+// concatenation both defeat a pattern over source text, and a guard that
+// mis-reads its own evidence reports the wrong answer in whichever direction
+// the mistake happens to fall.
+/**
+ * @return list<string>
+ */
+function xuiProbedPaths(): array
+{
+    $tokens = token_get_all((string) file_get_contents(__FILE__));
+    $total = count($tokens);
+    $paths = [];
+
+    for ($i = 0; $i < $total; $i++) {
+        $token = $tokens[$i];
+        if (! is_array($token) || $token[0] !== T_STRING || $token[1] !== 'get') {
+            continue;
+        }
+
+        $before = $i - 1;
+        while ($before >= 0 && is_array($tokens[$before]) && $tokens[$before][0] === T_WHITESPACE) {
+            $before--;
+        }
+
+        $operator = $tokens[$before] ?? null;
+        if (! is_array($operator) || $operator[0] !== T_OBJECT_OPERATOR) {
+            continue;
+        }
+
+        $path = xuiCallPath($tokens, $i + 1, $total);
+        if ($path !== null) {
+            $paths[] = $path;
+        }
+    }
+
+    return array_values(array_unique($paths));
+}
+
+// Every dynamic segment collapses to "1": the router only has to recognise the
+// shape, and a numeric placeholder also satisfies the whereNumber constraints
+// the id routes carry.
+/**
+ * @param  array<int, array{0: int, 1: string, 2: int}|string>  $tokens
+ */
+function xuiCallPath(array $tokens, int $start, int $total): ?string
+{
+    while ($start < $total && is_array($tokens[$start]) && $tokens[$start][0] === T_WHITESPACE) {
+        $start++;
+    }
+
+    if (($tokens[$start] ?? null) !== '(') {
+        return null;
+    }
+
+    $depth = 0;
+    $path = '';
+    $dynamic = false;
+
+    for ($i = $start; $i < $total; $i++) {
+        $token = $tokens[$i];
+
+        if ($token === '(') {
+            $depth++;
+
+            continue;
+        }
+
+        if ($token === ')') {
+            $depth--;
+
+            if ($depth === 0) {
+                break;
+            }
+
+            continue;
+        }
+
+        if (! is_array($token)) {
+            continue;
+        }
+
+        if ($token[0] === T_CONSTANT_ENCAPSED_STRING) {
+            $path .= substr($token[1], 1, -1);
+            $dynamic = false;
+
+            continue;
+        }
+
+        if ($token[0] === T_ENCAPSED_AND_WHITESPACE) {
+            $path .= $token[1];
+            $dynamic = false;
+
+            continue;
+        }
+
+        if ($token[0] === T_VARIABLE && ! $dynamic) {
+            $path .= '1';
+            $dynamic = true;
+        }
+    }
+
+    $path = explode('?', $path)[0];
+
+    return str_starts_with($path, '/') ? $path : null;
+}
+
+/**
+ * @param  list<string>  $paths
+ * @return list<string>
+ */
+function xuiProbedRouteNames(Router $router, array $paths): array
+{
+    $names = [];
+
+    foreach ($paths as $path) {
+        try {
+            $route = $router->getRoutes()->match(Request::create($path, 'GET'));
+        } catch (Throwable) {
+            continue;
+        }
+
+        $name = $route->getName();
+        if ($name !== null) {
+            $names[] = $name;
+        }
+    }
+
+    return array_values(array_unique($names));
+}
+
+it('reads its own probe requests — a guard that cannot parse its evidence proves nothing', function (): void {
+    $paths = xuiProbedPaths();
+
+    expect($paths)->toContain('/transactions/1');
+    expect($paths)->toContain('/migrations/1/preview');
+    expect($paths)->toContain('/imports/1');
+    expect($paths)->toContain('/counterparties/owner-secret-counterparty');
+
+    // The negative half: a parser that returned every string it saw would
+    // satisfy the assertions above and make the guard below vacuous.
+    expect($paths)->not->toContain('/dev/queue/pending');
+});
+
+it('probes every parameterised auth-gated GET route as the wrong user, or says why it holds no row', function (): void {
+    /** @var Router $router */
+    $router = $this->app->make(Router::class);
+
+    $probed = xuiProbedRouteNames($router, xuiProbedPaths());
+    $unprobed = [];
+
+    /** @var RoutingRoute $route */
+    foreach ($router->getRoutes() as $route) {
+        if (! in_array('GET', $route->methods(), true)) {
+            continue;
+        }
+
+        if (! in_array('auth', $route->gatherMiddleware(), true)) {
+            continue;
+        }
+
+        if (! str_contains($route->uri(), '{')) {
+            continue;
+        }
+
+        $name = $route->getName() ?? $route->uri().' (unnamed)';
+
+        if (in_array($name, $probed, true)) {
+            continue;
+        }
+
+        if (array_key_exists($name, ISOLATION_PARAM_ROUTE_EXCLUSIONS)) {
+            continue;
+        }
+
+        $unprobed[] = $name;
+    }
+
+    expect($unprobed)->toBe(
+        [],
+        "A parameterised auth-gated GET route addresses a row by id, so it needs a probe in this file that really requests it as the wrong user, or an ISOLATION_PARAM_ROUTE_EXCLUSIONS entry saying why it holds no user row. Unprobed:\n  ".implode("\n  ", $unprobed),
     );
 });
