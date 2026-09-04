@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\LocaleCollator;
 
 // compare() answers one pair, so sorting n names collated n·log n times and
@@ -50,7 +51,7 @@ it('orders a list exactly as the pairwise comparator does, in every shipped loca
     $translator = app('translator');
     $previous = $translator->getLocale();
 
-    foreach (Modules\Core\Public\Enums\Locale::cases() as $locale) {
+    foreach (Locale::cases() as $locale) {
         $translator->setLocale($locale->value);
 
         $pairwise = collationSample();
