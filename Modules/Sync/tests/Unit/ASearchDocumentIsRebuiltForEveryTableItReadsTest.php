@@ -22,7 +22,12 @@ function tablesTheSearchWriterComposesFrom(): array
 
     expect($source)->toBeString();
 
-    preg_match_all("/->table\('([a-z_]+)'\)/", (string) $source, $matches);
+    // Written as one statement so the answer is read where it is produced: a
+    // give-up leaves $matches empty, which would name no tables and let the
+    // case below agree that every table it reads is covered.
+    if (preg_match_all("/->table\('([a-z_]+)'\)/", (string) $source, $matches) === false) {
+        throw new RuntimeException('the writer could not be scanned: '.preg_last_error_msg());
+    }
 
     // The destination is not a source: the writer reads it only to compare the
     // body it is about to store against the one already there.
