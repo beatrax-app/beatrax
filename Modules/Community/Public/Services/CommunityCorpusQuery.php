@@ -22,7 +22,7 @@ final class CommunityCorpusQuery
     // truncated the corpus in bundled-file order rather than sampling it: once
     // the corpus outgrew the cap, every country past it stopped resolving.
     /**
-     * @var array<string, list<array{compiled: string, name: string}>>
+     * @var array<string, list<array{compiled: string, needle: string, ascii: bool, name: string}>>
      */
     private array $generalizedRows = [];
 
@@ -53,9 +53,25 @@ final class CommunityCorpusQuery
     // one and the scan can still short-circuit. `Albert Heijn 1042` matched both
     // the Czech `albert` and the Dutch `albert heijn`, and file-sort order handed
     // it to whichever seeded first.
+    /**
+     * @link ../../../../.docs/architecture/reads-bounded-by-the-user.md#6--the-corpus-scan-a-reader-who-named-no-country-pays
+     */
     public function lookupGeneralized(string $rawDescription, ?string $region = null): ?string
     {
+        // Asked once here rather than once per corpus row: matchesCompiled()
+        // puts the same question to the same haystack every time round the
+        // scan, and a haystack that is not UTF-8 answers no to all of them.
+        if ($rawDescription === '' || ! mb_check_encoding($rawDescription, 'UTF-8')) {
+            return null;
+        }
+
+        $carriesAFoldedLetter = self::carriesAFoldedAsciiLetter($rawDescription);
+
         foreach ($this->generalizedRows($region) as $row) {
+            if ($row['ascii'] && ! $carriesAFoldedLetter && stripos($rawDescription, $row['needle']) === false) {
+                continue;
+            }
+
             // Whole token, not any substring: a bare search matched the corpus
             // token OBI inside "mobiel". The match is case-insensitive, so the
             // haystack is not lowered first.
@@ -65,6 +81,15 @@ final class CommunityCorpusQuery
         }
 
         return null;
+    }
+
+    // The compiled pattern is a preg_quote'd literal between two lookarounds,
+    // so a match REQUIRES the needle verbatim and stripos is a sound filter,
+    // not a guess — except that /iu folds these two onto plain s and k, which
+    // stripos does not. A haystack holding either skips the filter entirely.
+    private static function carriesAFoldedAsciiLetter(string $haystack): bool
+    {
+        return str_contains($haystack, "\u{017F}") || str_contains($haystack, "\u{212A}");
     }
 
     public function lookupRegex(string $rawDescription, ?string $region = null): ?string
@@ -81,7 +106,7 @@ final class CommunityCorpusQuery
     // Regex rows carry an empty generalized_pattern and are matched only by
     // lookupRegex(), so they are excluded once here rather than per call.
     /**
-     * @return list<array{compiled: string, name: string}>
+     * @return list<array{compiled: string, needle: string, ascii: bool, name: string}>
      */
     private function generalizedRows(?string $region): array
     {
@@ -118,7 +143,7 @@ final class CommunityCorpusQuery
     // per description scanned. A needle that compiles to null never matches.
     /**
      * @param  list<array{needle: string, name: string}>  $rows
-     * @return list<array{compiled: string, name: string}>
+     * @return list<array{compiled: string, needle: string, ascii: bool, name: string}>
      */
     private static function compiled(array $rows): array
     {
@@ -128,7 +153,12 @@ final class CommunityCorpusQuery
             if ($pattern === null) {
                 continue;
             }
-            $compiled[] = ['compiled' => $pattern, 'name' => $row['name']];
+            $compiled[] = [
+                'compiled' => $pattern,
+                'needle' => $row['needle'],
+                'ascii' => preg_match('/[^\x00-\x7F]/', $row['needle']) !== 1,
+                'name' => $row['name'],
+            ];
         }
 
         return $compiled;
