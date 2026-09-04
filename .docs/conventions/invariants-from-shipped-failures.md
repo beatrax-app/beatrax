@@ -5678,6 +5678,7 @@ out of a Blade `@php` block, because a Blade file carries no opening tag and
 that helper blind to the PHP inside one. And a pinned entry that no longer names
 an empty catch fails too: a list that may rot into names nobody checks is the
 same silence one level up.
+
 ## A regex that never ran, read as no match
 
 `preg_match()` and `preg_match_all()` return `false` when PCRE stops part-way —
