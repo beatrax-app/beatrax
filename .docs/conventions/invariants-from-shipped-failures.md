@@ -5744,35 +5744,6 @@ pathological row must not raise on a scan of every description.
 `CorpusPatternMatcher::compiles()` uses `=== false` to mean "this pattern does
 not compile", which is the question it is asking.
 
-## A catch body that says nothing
-
-`tests/Contracts/AnEmptyCatchIsOneSomebodyChoseArchTest.php`
-
-The shape behind most of what this tree has shipped and had to fix. A capture
-listener caught a binding failure, logged it at debug and dropped the mutation —
-4,925 user changes never reached the other device. A merge strategy skipped null
-entries and returned an empty set, so two devices disagreed permanently. A CLI
-password reset stranded the app-lock recovery wrap and raised no alert, closing
-the recovery road the lock screen advertises. In each one the catch body carried
-no throw, no report, no log above debug and nothing a reader could see.
-
-Tolerating a failure is frequently the correct answer here, and the twenty-odd
-sites the guard lists are all cases where it is: a row that vanished between
-render and click is already in the state the click asked for, an FTS-freshness
-hiccup must never break merge determinism, and a `SystemAlert` write failing
-must not re-break a passphrase change that has already committed. What none of
-those excuse is a *new* one arriving unnoticed, which is why the list is pinned
-with a reason per entry rather than left to review.
-
-Three details decide whether the guard works at all. It strips comments before
-scanning, because every body it finds holds a comment and nothing else — a scan
-that counted prose as a statement would report a clean tree. It lifts the PHP
-out of a Blade `@php` block, because a Blade file carries no opening tag and
-`token_get_all` reads all of it as inline HTML, which makes any guard built on
-that helper blind to the PHP inside one. And a pinned entry that no longer names
-an empty catch fails too: a list that may rot into names nobody checks is the
-same silence one level up.
-
 ## A replace that never ran blanks the subject
 
 `preg_replace()` and `preg_replace_callback()` return `null`, and `preg_split()`
