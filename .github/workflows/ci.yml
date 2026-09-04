@@ -390,6 +390,53 @@ jobs:
               working-directory: mobile-app
               run: php artisan key:generate --ansi
 
+            # DocsNameSymbolsThatExistArchTest reads BOTH Composer roots'
+            # classmaps, because a class one root never loads is still a class
+            # that exists and calling it absent would report every framework
+            # mention on every page. It skips when either is missing — and no
+            # job had both, so it skipped in 100% of runs while reporting green.
+            # This is the only job with mobile-app/ installed, so the repo root
+            # joins it here rather than the credentials going to three more
+            # jobs. The key is the shard jobs', already warm.
+            - name: Cache Composer packages (repo root)
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: |
+                      ~/.composer/cache
+                      vendor
+                  key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      composer-${{ runner.os }}-${{ matrix.php }}-
+
+            - name: Lay down the repo-root environment
+              # Before the install, for the reason the mobile laydown gives: the
+              # post-autoload-dump hook boots the framework, and a boot with no
+              # .env and no writable framework directories fails resolving
+              # `request`.
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  mkdir -p database storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  touch database/database.sqlite
+                  chmod -R u+rwX storage bootstrap/cache
+                  composer install --prefer-dist --no-interaction --no-progress
+                  php artisan key:generate --ansi
+
+            - name: The docs-symbol rule, which needs both Composer roots
+              # Run from the repo root so base_path() resolves both classmaps.
+              # A skip here is a failure: it would mean the rule once again ran
+              # nowhere, which is the state this step exists to end.
+              env:
+                  APP_ENV: testing
+              run: |
+                  set -euo pipefail
+                  out=$(vendor/bin/pest tests/Contracts/DocsNameSymbolsThatExistArchTest.php --colors=never)
+                  echo "$out"
+                  if grep -qiE '[0-9]+ skipped' <<< "$out"; then
+                      echo "::error::the docs-symbol rule skipped, so it ran nowhere in this pipeline."
+                      exit 1
+                  fi
+
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # The mobile shell must never silently pick up a
               # Desktop-coupled provider or route — `Modules\Desktop` has no
