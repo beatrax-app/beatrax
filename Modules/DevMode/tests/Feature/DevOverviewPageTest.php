@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Core\Public\Support\StoredCopy;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 
@@ -162,13 +163,15 @@ it('renders queue count tiles (pending / failed / batches) sourced from the fram
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    expect($html)->toContain('data-testid="queue-tile-pending"');
-    expect($html)->toContain('data-testid="queue-tile-failed"');
-    expect($html)->toContain('data-testid="queue-tile-batches"');
-    // The `[\s\S]*?` hops the span tags between the testid and the number.
-    expect(PatternScan::matches('#data-testid="queue-tile-pending"[\s\S]*?>2<#', $html))->toBeTrue();
-    expect(PatternScan::matches('#data-testid="queue-tile-failed"[\s\S]*?>1<#', $html))->toBeTrue();
-    expect(PatternScan::matches('#data-testid="queue-tile-batches"[\s\S]*?>1<#', $html))->toBeTrue();
+    // Read inside the tile rather than from the testid onwards: a lazy any-character
+    // hop was satisfied by the first "2" in any element further down the page, so a
+    // tile showing the wrong figure passed on a number belonging to something else.
+    $page = RenderedMarkup::of($html);
+
+    foreach (['pending' => '2', 'failed' => '1', 'batches' => '1'] as $tile => $figure) {
+        expect($page->firstOrFail(sprintf('[data-testid="queue-tile-%s"] span:last-child', $tile))->text())
+            ->toBe($figure, 'the '.$tile.' tile must show its own count');
+    }
 });
 
 it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs card and links to /dev/audit?command=…', function (): void {

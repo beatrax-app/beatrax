@@ -26,7 +26,7 @@ function commentSymbolsLines(string $source): array
             continue;
         }
 
-        foreach (preg_split('/\R/', $token[1]) ?: [] as $offset => $line) {
+        foreach (PatternScan::split('/\R/', $token[1]) as $offset => $line) {
             $lines[$token[2] + $offset] = $line;
         }
     }

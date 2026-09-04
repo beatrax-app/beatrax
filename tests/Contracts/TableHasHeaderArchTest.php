@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupSource;
 
 // A data table without header cells announces every cell as bare text, so a
 // screen reader cannot say which column a figure belongs to. Sonar's S5256
@@ -49,22 +49,19 @@ it('gives every table a header source', function (): void {
     foreach (tableHeaderBladeFiles() as $path) {
         $source = tableHeaderStripComments((string) file_get_contents($path));
 
-        $matches = PatternScan::allWithOffsets('/<table\b/', $source);
-
-        foreach ($matches[0] as $match) {
-            $start = (int) $match[1];
-            $close = strpos($source, '</table>', $start);
-            $body = substr($source, $start, $close === false ? null : $close - $start);
+        foreach (MarkupSource::elements($source, 'table') as $table) {
+            $body = $table->inner;
 
             // Any of the three ways this codebase supplies header cells: a
             // literal <th>, the shared component, or the data-table head slot.
-            $hasHeader = preg_match('/<th[\s>]/', $body) === 1
-                || str_contains($body, 'x-core::th')
-                || str_contains($body, '$head');
+            $hasHeader = $body !== null && (
+                MarkupSource::elements($body, 'th') !== []
+                || MarkupSource::elements($body, 'x-core::th') !== []
+                || str_contains($body, '$head')
+            );
 
             if (! $hasHeader) {
-                $line = substr_count(substr($source, 0, $start), "\n") + 1;
-                $offenders[] = str_replace(dirname(__DIR__, 2).'/', '', $path).':'.$line;
+                $offenders[] = str_replace(dirname(__DIR__, 2).'/', '', $path).':'.$table->line($source);
             }
         }
     }

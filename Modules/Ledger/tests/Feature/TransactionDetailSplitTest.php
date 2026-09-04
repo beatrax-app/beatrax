@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -269,7 +269,15 @@ it('namesTheUnsplitSurvivorRadioGroupAndFormatsItsAmountsThroughMoney', function
 
     // Without the legend a screen reader reads each radio with no question.
     expect($html)->toContain('<legend class="sr-only">Category to keep</legend>');
-    expect(PatternScan::matches('/<fieldset>.*name="unsplit-survivor".*<\/fieldset>/s', $html))->toBeTrue();
+    // Greedy `.*` ran from the first <fieldset> to the last </fieldset> in the
+    // document, so the radio only had to exist somewhere on the page. This
+    // asks the question the rule means: it is inside that fieldset.
+    $owning = array_filter(
+        RenderedMarkup::of($html)->all('fieldset'),
+        static fn (RenderedMarkup $fieldset): bool => $fieldset->has('input[name="unsplit-survivor"]'),
+    );
+
+    expect($owning)->toHaveCount(1);
 
     // Money::format(), not a literal € glued to the raw input string — hence
     // the non-breaking space ICU puts after the symbol.

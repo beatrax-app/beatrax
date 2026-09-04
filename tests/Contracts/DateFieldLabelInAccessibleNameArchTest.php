@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Modules\Core\Public\Support\Lang;
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupSource;
+use Modules\Core\Public\Support\RenderedMarkup;
 
 it('carries the visible label of every date and time field into the name it computes (WCAG 2.5.3)', function (): void {
     // A <label for="…"> cannot name a <button>, so the pickers build their name
@@ -21,31 +22,23 @@ it('carries the visible label of every date and time field into the name it comp
     };
 
     $accessibleName = static function (string $html, string $buttonId): string {
-        $document = new DOMDocument;
-        $loaded = @$document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
-        expect($loaded)->toBeTrue('the rendered picker must parse as HTML');
+        $document = RenderedMarkup::of($html);
+        $button = $document->firstOrFail(sprintf('button[id="%s"]', $buttonId));
+        $labelledBy = trim((string) $button->attribute('aria-labelledby'));
 
-        $xpath = new DOMXPath($document);
-        $button = $xpath->query(sprintf('//button[@id="%s"]', $buttonId))->item(0);
-        expect($button)->toBeInstanceOf(DOMElement::class, 'the picker must expose a button carrying fieldId');
-
-        /** @var DOMElement $button */
-        $labelledBy = trim($button->getAttribute('aria-labelledby'));
         if ($labelledBy !== '') {
             $parts = [];
-            foreach (preg_split('~\s+~', $labelledBy) ?: [] as $id) {
-                $node = $xpath->query(sprintf('//*[@id="%s"]', $id))->item(0);
-                if ($node !== null) {
-                    $parts[] = trim($node->textContent);
-                }
+            foreach (explode(' ', $labelledBy) as $id) {
+                $node = $id === '' ? null : $document->first(sprintf('[id="%s"]', $id));
+                $parts[] = $node?->text() ?? '';
             }
 
             return trim(implode(' ', array_filter($parts, static fn (string $p): bool => $p !== '')));
         }
 
-        $ariaLabel = trim($button->getAttribute('aria-label'));
+        $ariaLabel = trim((string) $button->attribute('aria-label'));
 
-        return $ariaLabel !== '' ? $ariaLabel : trim($button->textContent);
+        return $ariaLabel !== '' ? $ariaLabel : $button->text();
     };
 
     $blades = [];
@@ -71,12 +64,12 @@ it('carries the visible label of every date and time field into the name it comp
     foreach ($blades as $path) {
         $source = (string) file_get_contents($path);
 
-        $labelMatches = PatternScan::sets('~<label\b([^>]*\bfor="([^"]+)"[^>]*)>(.*?)</label>~s', $source);
         $labels = [];
-        foreach ($labelMatches as $label) {
-            $text = $resolveText($label[3]);
-            if ($text !== null) {
-                $labels[$label[2]] = $text;
+        foreach (MarkupSource::elements($source, 'label') as $label) {
+            $for = $label->attribute('for');
+            $text = $for === null || $label->inner === null ? null : $resolveText($label->inner);
+            if ($for !== null && $text !== null) {
+                $labels[$for] = $text;
             }
         }
 
@@ -84,32 +77,31 @@ it('carries the visible label of every date and time field into the name it comp
             continue;
         }
 
-        $tags = PatternScan::setsWithOffsets(
-            '~<x-core::(date|time)-input\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*?)/?>~s',
-            $source,
-        );
-
-        foreach ($tags as $tag) {
-            $offset = $tag[0][1];
-            $kind = $tag[1][0];
-            $attributes = $tag[2][0];
-
-            if (preg_match('~\bfield-id="([^"]+)"~', $attributes, $fieldId) !== 1) {
-                continue;
+        $tags = [];
+        foreach (['date', 'time'] as $kind) {
+            foreach (MarkupSource::elements($source, 'x-core::'.$kind.'-input') as $element) {
+                $tags[] = [$kind, $element];
             }
-            if (! array_key_exists($fieldId[1], $labels)) {
+        }
+
+        foreach ($tags as [$kind, $element]) {
+            $fieldId = $element->attribute('field-id');
+
+            if ($fieldId === null || ! array_key_exists($fieldId, $labels)) {
                 continue;
             }
 
+            $bound = $element->attribute(':aria-label');
             $ariaLabel = null;
-            if (preg_match("~\\s:aria-label=\"Lang::get\\(\\s*'([^']+)'\\s*\\)\"~", $attributes, $bound) === 1) {
-                $ariaLabel = (string) Lang::get($bound[1]);
-            } elseif (preg_match('~\s:aria-label="([^"]+)"~', $attributes) === 1) {
+
+            if ($bound !== null && preg_match("~^Lang::get\\(\\s*'([^']+)'\\s*\\)$~", trim($bound), $key) === 1) {
+                $ariaLabel = (string) Lang::get($key[1]);
+            } elseif ($bound !== null) {
                 // A bound expression this file cannot evaluate is left to the
                 // caller: it is already naming the field deliberately.
                 continue;
-            } elseif (preg_match('~\saria-label="([^"{}]+)"~', $attributes, $literal) === 1) {
-                $ariaLabel = $literal[1];
+            } elseif (($literal = $element->attribute('aria-label')) !== null && preg_match('~[{}]~', $literal) !== 1) {
+                $ariaLabel = $literal;
             }
 
             $probe = 'accname-probe';
@@ -123,13 +115,12 @@ it('carries the visible label of every date and time field into the name it comp
             $name = $accessibleName($rendered, $probe);
             $checked++;
 
-            if (! str_contains($name, $labels[$fieldId[1]])) {
-                $line = substr_count(substr($source, 0, $offset), "\n") + 1;
+            if (! str_contains($name, $labels[$fieldId])) {
                 $offenders[] = sprintf(
                     '%s:%d  visible label "%s" — computed name "%s"',
                     str_replace(base_path().'/', '', $path),
-                    $line,
-                    $labels[$fieldId[1]],
+                    $element->line($source),
+                    $labels[$fieldId],
                     $name,
                 );
             }
@@ -158,12 +149,8 @@ it('names each open calendar and clock after its own field, not after every othe
             $label,
         ));
 
-        $document = new DOMDocument;
-        @$document->loadHTML('<?xml encoding="UTF-8">'.$rendered, LIBXML_NOERROR | LIBXML_NOWARNING);
-        $dialog = (new DOMXPath($document))->query('//*[@role="dialog"]')->item(0);
+        $dialog = RenderedMarkup::of($rendered)->firstOrFail('[role="dialog"]');
 
-        expect($dialog)->toBeInstanceOf(DOMElement::class, 'the picker must expose its popover as a dialog');
-        /** @var DOMElement $dialog */
-        expect($dialog->getAttribute('aria-label'))->toBe($label);
+        expect($dialog->attribute('aria-label'))->toBe($label);
     }
 });

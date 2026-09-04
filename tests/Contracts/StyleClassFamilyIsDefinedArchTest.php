@@ -39,7 +39,7 @@ it('defines every class a Blade applies out of a family app.css names', function
             // assembled at render time is not a literal this file can resolve.
             $literal = preg_replace('~\{\{.*?\}\}|\{!!.*?!!\}~s', ' ', $value) ?? $value;
 
-            foreach (preg_split('~\s+~', trim($literal)) ?: [] as $token) {
+            foreach (PatternScan::split('~\s+~', trim($literal)) as $token) {
                 if ($token === '' || isset($defined[$token])) {
                     continue;
                 }

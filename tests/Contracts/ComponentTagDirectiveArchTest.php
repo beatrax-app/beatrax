@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupSource;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-blade-directive-inside-a-component-tag
@@ -43,17 +43,16 @@ it('never puts a Blade directive inside a component tag', function (): void {
             continue;
         }
 
-        // Opening component tags only, up to the first `>`. Non-greedy so a
-        // later tag on the same file cannot swallow the text between them.
-        $matches = PatternScan::allWithOffsets('/<x-[a-zA-Z0-9_.:-]+((?:[^>])*?)\/?>/s', $source);
-
-        foreach ($matches[1] as $index => $attributes) {
-            if (preg_match('/@(if|unless|else|elseif|endif|endunless|foreach|endforeach|for|endfor|isset|empty)\b/', (string) $attributes[0]) !== 1) {
+        foreach (MarkupSource::tags($source) as $element) {
+            if (! str_starts_with($element->name, 'x-')) {
                 continue;
             }
 
-            $line = substr_count(substr($source, 0, (int) $matches[0][$index][1]), "\n") + 1;
-            $offenders[] = str_replace(base_path().'/', '', $path).':'.$line;
+            if (preg_match('/@(if|unless|else|elseif|endif|endunless|foreach|endforeach|for|endfor|isset|empty)\b/', $element->startTag) !== 1) {
+                continue;
+            }
+
+            $offenders[] = str_replace(base_path().'/', '', $path).':'.$element->line($source);
         }
     }
 

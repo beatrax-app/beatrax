@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A hundred and forty-five English headings are written as sentences and six were
 // written as titles, two of them on one screen: "Data & Devices" over "App lock".
 // The nav labels are in scope because a test already requires /drift's title and
@@ -54,7 +56,7 @@ it('writes an English heading as a sentence, the way a hundred and forty-five of
         foreach (englishHeadings($file) as $key => $value) {
             // A separator starts a new phrase, so the word after one is at the
             // front of its own label: "Queue :queue · Worker :worker" is two.
-            $words = preg_split('/\s+/', trim($value)) ?: [];
+            $words = PatternScan::split('/\s+/', trim($value));
             $opensPhrase = true;
 
             foreach ($words as $word) {

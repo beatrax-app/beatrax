@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // An `i18n-review:` marker is a question left for a native reader: the line was
 // written by somebody who could reason about the grammar but could not settle
 // the register, and it names the locale and the key it is asking about. There
@@ -102,7 +104,7 @@ it('leaves every review marker naming the locale it sits in and a key that is st
         $lines = include $marker['file'];
         $known = i18nKnownKeys($lines);
 
-        foreach (preg_split('/\s*,\s*/', $marker['keys']) ?: [] as $key) {
+        foreach (PatternScan::split('/\s*,\s*/', $marker['keys']) as $key) {
             // A trailing `.*` marks a group the question covers as a whole.
             $key = rtrim(trim($key), '.*');
 
