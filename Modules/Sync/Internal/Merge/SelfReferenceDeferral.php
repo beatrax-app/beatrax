@@ -119,12 +119,16 @@ final class SelfReferenceDeferral
             // the column was ever given. Streamed rather than collected, so the
             // sweep costs a device that has synced for a year what it costs one
             // set up yesterday; each row is wanted only long enough to read it.
+            // The two columns stay named: cursor() takes no column list of
+            // its own, and a bare stream would widen every row to the whole
+            // entry, encrypted value and all, to read a pk and a target.
             $named = $this->db->connection()->table('op_log_entries')
                 ->where('user_id', $userId)
                 ->where('table_name', $table)
                 ->where('field', $column)
                 ->whereNotNull('value')
                 ->where('value', '!=', 'null')
+                ->select(['pk', 'value'])
                 ->orderBy('id')
                 ->cursor();
 
