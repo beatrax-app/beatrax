@@ -14,9 +14,9 @@ use Tests\Contracts\Support\FirstPartySymbols;
 // rather than dropped so a reported line number still points at the real line.
 function docsSymbolsProse(string $source): string
 {
-    $blanked = (string) preg_replace_callback(
+    $blanked = PatternScan::replaceCallback(
         '/```.*?```/s',
-        static fn (array $m): string => (string) preg_replace('/[^\r\n]/', ' ', $m[0]),
+        static fn (array $m): string => PatternScan::replace('/[^\r\n]/', ' ', $m[0]),
         $source,
     );
 

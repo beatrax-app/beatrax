@@ -68,9 +68,8 @@ function alertKindLiteralsWrittenInProduction(): array
         ];
 
         foreach ($patterns as $pattern) {
-            if (preg_match_all($pattern, $source, $matches) === false) {
-                continue;
-            }
+            $matches = PatternScan::all($pattern, $source);
+
             foreach ($matches[1] as $kind) {
                 $kinds[] = $kind;
             }

@@ -42,13 +42,13 @@ function shellInboundReferences(array $paths): array
         }
 
         $source = str_ends_with($path, '.blade.php')
-            ? preg_replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path))
+            ? PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path))
             : implode('', array_map(
                 static fn (array|string $token): string => is_array($token) ? $token[1] : $token,
                 BackendSourceFiles::codeTokens($path),
             ));
 
-        $normalised = str_replace('\\\\', '\\', (string) $source);
+        $normalised = str_replace('\\\\', '\\', $source);
         $matches = PatternScan::all('/Modules\\\\Shell\\\\[A-Za-z0-9_\\\\]+/', $normalised);
 
         foreach (array_unique($matches[0]) as $symbol) {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\QueryException;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-exception-message-logged-from-a-broad-catch
@@ -42,9 +43,7 @@ function loggedExceptionAliases(string $source): array
 {
     $aliases = [];
 
-    if (preg_match_all('/^use\s+([\w\\\\]+)(?:\s+as\s+(\w+))?;/mi', $source, $matches, PREG_SET_ORDER) === false) {
-        return [];
-    }
+    $matches = PatternScan::sets('/^use\s+([\w\\\\]+)(?:\s+as\s+(\w+))?;/mi', $source);
 
     foreach ($matches as $match) {
         $fqcn = $match[1];
@@ -92,9 +91,7 @@ function loggedExceptionCatches(string $source): array
 {
     $catches = [];
 
-    if (preg_match_all('/catch\s*\(([^)]*?)\)\s*\{/', $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) === false) {
-        return [];
-    }
+    $matches = PatternScan::setsWithOffsets('/catch\s*\(([^)]*?)\)\s*\{/', $source);
 
     foreach ($matches as $match) {
         $start = (int) $match[0][1] + strlen($match[0][0]);
@@ -139,9 +136,7 @@ function loggedExceptionSinks(string $body, bool $isCommand): array
     $pattern = '/(?:'.implode('|', $receivers).')\s*(?:->|::)\s*(?:'.$levels.'|line|warn)\s*\(/';
     $sinks = [];
 
-    if (preg_match_all($pattern, $body, $matches, PREG_OFFSET_CAPTURE) === false) {
-        return [];
-    }
+    $matches = PatternScan::allWithOffsets($pattern, $body);
 
     foreach ($matches[0] as $match) {
         $start = (int) $match[1] + strlen((string) $match[0]);
@@ -174,7 +169,7 @@ function loggedExceptionWithoutNarrowedReads(string $args, array $aliases): stri
 {
     $pattern = '/\$(\w+)\s+instanceof\s+([\w\\\\]+)\s*\?\s*\$\1->getMessage\(\)/';
 
-    return (string) preg_replace_callback(
+    return PatternScan::replaceCallback(
         $pattern,
         static fn (array $match): string => loggedExceptionCatchIsBroad($match[2], $aliases) ? $match[0] : '',
         $args,

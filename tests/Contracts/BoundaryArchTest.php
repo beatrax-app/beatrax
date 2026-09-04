@@ -1654,7 +1654,7 @@ it('evaluates notification-delivery suppression (quiet hours + per-trigger toggl
 /** @return string the source with every comment blanked out, line offsets intact */
 function boundaryBlankComments(string $source): string
 {
-    return (string) preg_replace_callback(
+    return PatternScan::replaceCallback(
         '#/\*.*?\*/|//[^\n]*#s',
         static function (array $match): string {
             $newlines = substr_count($match[0], "\n");
@@ -1954,7 +1954,7 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
     // line-keyed pin fails on any edit above a write, which in a tree this busy
     // trains people to re-pin without reading.
     $describe = static function (string $entry) use ($found): string {
-        $lines = $found[(string) preg_replace('/ \d+$/', '', $entry)] ?? [];
+        $lines = $found[PatternScan::replace('/ \d+$/', '', $entry)] ?? [];
 
         return $entry.($lines === [] ? '' : ' (now at line '.implode(', ', $lines).')');
     };

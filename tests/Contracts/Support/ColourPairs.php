@@ -131,7 +131,7 @@ final class ColourPairs
                 $colours = array_intersect_key($properties, array_flip(['background', 'background-color', 'color']));
 
                 if ($properties === [] || implode('', $colours) !== str_replace(self::UNKNOWABLE, '', implode('', $colours))) {
-                    $opaque[] = "{$path}:{$attribute['line']}  ".preg_replace('/\s+/', ' ', trim($attribute['style']));
+                    $opaque[] = "{$path}:{$attribute['line']}  ".PatternScan::replace('/\s+/', ' ', trim($attribute['style']));
                 }
             }
         }
@@ -267,7 +267,7 @@ final class ColourPairs
 
         $stops = [];
         foreach (self::split($gradient[1], ',') as $stop) {
-            $stop = (string) preg_replace('/\s+-?[0-9.]+(%|[a-z]+)\s*$/i', '', trim($stop));
+            $stop = PatternScan::replace('/\s+-?[0-9.]+(%|[a-z]+)\s*$/i', '', trim($stop));
             $resolved = self::colour($stop, $theme);
 
             if ($resolved !== null) {
@@ -377,9 +377,9 @@ final class ColourPairs
 
     private static function blankComments(string $source): string
     {
-        return (string) preg_replace_callback(
+        return PatternScan::replaceCallback(
             '#/\*.*?\*/#s',
-            static fn (array $comment): string => (string) preg_replace('/[^\n]/', ' ', $comment[0]),
+            static fn (array $comment): string => PatternScan::replace('/[^\n]/', ' ', $comment[0]),
             $source
         );
     }
@@ -400,7 +400,7 @@ final class ColourPairs
                 $inNight = $inNight || ($at >= $region[0] && $at < $region[1]);
             }
 
-            $selector = (string) preg_replace('/\s+/', ' ', trim((string) $match[1][0]));
+            $selector = PatternScan::replace('/\s+/', ' ', trim((string) $match[1][0]));
 
             $rules[] = [
                 'selector' => $selector,

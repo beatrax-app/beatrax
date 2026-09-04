@@ -7,6 +7,7 @@ namespace Tests\Contracts\Support;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Public\Support\PatternScan;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionClass;
@@ -128,9 +129,7 @@ final class WireCallableMethods
                         continue;
                     }
 
-                    if (preg_match_all('/[A-Za-z_][A-Za-z0-9_]*/', (string) file_get_contents($path), $matches) === false) {
-                        continue;
-                    }
+                    $matches = PatternScan::all('/[A-Za-z_][A-Za-z0-9_]*/', (string) file_get_contents($path));
 
                     foreach ($matches[0] as $name) {
                         $names[$name] = true;
@@ -157,9 +156,7 @@ final class WireCallableMethods
             $source = (string) file_get_contents($path);
 
             foreach (['/(?:->|::)\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(/', '/[\'"]([A-Za-z_][A-Za-z0-9_]*)[\'"]/'] as $pattern) {
-                if (preg_match_all($pattern, $source, $matches) === false) {
-                    continue;
-                }
+                $matches = PatternScan::all($pattern, $source);
 
                 foreach ($matches[1] as $name) {
                     $names[$name] = true;

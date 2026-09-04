@@ -82,3 +82,26 @@ it('hands back the offsets the offset readings ask for', function (): void {
         ->and(PatternScan::allWithOffsets('/b/', 'abcb')[0])->toBe([['b', 1], ['b', 3]])
         ->and(PatternScan::setsWithOffsets('/b/', 'abcb')[1][0])->toBe(['b', 3]);
 });
+
+// A rewrite that gives up answers null, and `(string) null` is `''`. The
+// subject handed to whatever scans next is then empty, so it finds nothing and
+// calls the file clean — the same defect as a wrong match count, and quieter,
+// because there is no count to look wrong.
+it('raises rather than blanking the subject when a rewrite stops reading', function (string $method, mixed $replacement): void {
+    ini_set('pcre.backtrack_limit', '1000');
+
+    $call = [PatternScan::class, $method];
+    expect(is_callable($call))->toBeTrue();
+
+    expect(fn () => $call(PATTERN_SCAN_RUNAWAY, $replacement, patternScanUnmatchableSubject()))
+        ->toThrow(PatternScanFailedException::class);
+})->with([
+    'a literal replacement' => ['replace', ''],
+    'a computed replacement' => ['replaceCallback', fn (): string => ''],
+]);
+
+it('rewrites an ordinary subject the way the function it replaces does', function (): void {
+    expect(PatternScan::replace('/\d+/', 'n', 'a1b22c'))->toBe('anbnc')
+        ->and(PatternScan::replace('/nope/', 'x', 'abc'))->toBe('abc')
+        ->and(PatternScan::replaceCallback('/\d/', fn (array $m): string => $m[0].$m[0], 'a1b'))->toBe('a11b');
+});

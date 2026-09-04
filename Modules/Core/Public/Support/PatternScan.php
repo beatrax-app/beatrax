@@ -91,6 +91,23 @@ final class PatternScan
         return $matches;
     }
 
+    // The quieter half of the same failure. A caller writing
+    // `(string) preg_replace(…)` turns a give-up into an EMPTY subject, and
+    // whatever scans that subject next reports nothing found — a defect with
+    // no count to look wrong.
+    public static function replace(string $pattern, string $replacement, string $subject): string
+    {
+        return self::rewritten(preg_replace($pattern, $replacement, $subject), $pattern);
+    }
+
+    /**
+     * @param  callable(array<int|string, string>): string  $replacement
+     */
+    public static function replaceCallback(string $pattern, callable $replacement, string $subject): string
+    {
+        return self::rewritten(preg_replace_callback($pattern, $replacement, $subject), $pattern);
+    }
+
     // The error code is read as well as the return, because the two answer
     // different questions: false says PCRE gave up, and a non-zero code says
     // which limit it gave up on — the difference between a pattern to rewrite
@@ -100,6 +117,15 @@ final class PatternScan
         $code = preg_last_error();
 
         if ($result === false || $code !== PREG_NO_ERROR) {
+            throw new PatternScanFailedException($pattern, preg_last_error_msg());
+        }
+
+        return $result;
+    }
+
+    private static function rewritten(?string $result, string $pattern): string
+    {
+        if ($result === null || preg_last_error() !== PREG_NO_ERROR) {
             throw new PatternScanFailedException($pattern, preg_last_error_msg());
         }
 

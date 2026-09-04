@@ -85,9 +85,7 @@ function bareIdEchoesOn(string $line): array
     // Scoped to the attribute the browser evaluates, not the whole line: a
     // style or aria-label sitting beside a wire:click echoes values too, and
     // those are not arguments to anything.
-    $attributes = preg_match_all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line, $found) === false
-        ? []
-        : $found[1];
+    $attributes = PatternScan::all('/(?:wire:[\w.:-]+|x-on:[\w.:-]+|@[\w.:-]+)="([^"]*)"/', $line)[1];
 
     if ($attributes === []) {
         return [];

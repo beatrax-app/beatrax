@@ -55,7 +55,7 @@ function bladeSpeakingFiles(): Finder
 // read as copy the template speaks.
 function bladeSpeakingSource(string $source): string
 {
-    return (string) preg_replace('/\{\{--.*?--\}\}/s', '', $source);
+    return PatternScan::replace('/\{\{--.*?--\}\}/s', '', $source);
 }
 
 /** @return list<string> the quoted literals inside this template's echoes */
@@ -72,7 +72,7 @@ function bladeSpeakingEchoLiterals(string $source, int &$echoes): array
         // A date pattern is letters and spaces and nothing else — 'd M Y' and
         // 'F Y' are indistinguishable from copy by their characters alone. They
         // are told apart by what they are an argument TO, which is exact.
-        $expression = (string) preg_replace(
+        $expression = PatternScan::replace(
             '/(?:->|::|\b)(?:translatedFormat|isoFormat|format|date)\s*\(([^()]*)\)/i',
             '',
             $expression,
