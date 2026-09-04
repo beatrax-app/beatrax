@@ -27,6 +27,11 @@ final class Mt940StatementAccumulator
     // no currency can only be reported as a tag that never came.
     public bool $balanceTagSeen = false;
 
+    // A closing tag arrived that could not be read, which is not the same fact
+    // as no closing tag at all. Published to the statement so the absent
+    // balance is on the record as unreadable rather than as never stated.
+    public bool $closingBalanceUnreadable = false;
+
     // Set at the first closing balance: later statements in a multi-statement
     // file stop overwriting header fields but keep streaming their entries.
     public bool $firstStatementFrozen = false;
@@ -48,6 +53,9 @@ final class Mt940StatementAccumulator
         $extras = [StatementExtraKey::StatementId->value => $this->statementId];
         if ($this->multiStatement) {
             $extras[StatementExtraKey::MultiStatement->value] = true;
+        }
+        if ($this->closingBalanceUnreadable) {
+            $extras[StatementExtraKey::ClosingBalanceUnreadable->value] = true;
         }
 
         return new StatementSummaryData(
