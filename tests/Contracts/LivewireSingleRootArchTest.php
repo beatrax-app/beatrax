@@ -12,10 +12,10 @@ use Modules\Core\Public\Support\PatternScan;
 function rootTagsOf(string $source): array
 {
     // Blade comments, directives and PHP blocks are not elements.
-    $stripped = (string) preg_replace('/\{\{--.*?--\}\}/s', '', $source);
-    $stripped = (string) preg_replace('/@(php|use|verbatim).*?@end\1/s', '', $stripped);
-    $stripped = (string) preg_replace('/^\s*@[a-zA-Z]+.*$/m', '', $stripped);
-    $stripped = (string) preg_replace('/<\?php.*?\?>/s', '', $stripped);
+    $stripped = PatternScan::replace('/\{\{--.*?--\}\}/s', '', $source);
+    $stripped = PatternScan::replace('/@(php|use|verbatim).*?@end\1/s', '', $stripped);
+    $stripped = PatternScan::replace('/^\s*@[a-zA-Z]+.*$/m', '', $stripped);
+    $stripped = PatternScan::replace('/<\?php.*?\?>/s', '', $stripped);
 
     $depth = 0;
     $roots = [];

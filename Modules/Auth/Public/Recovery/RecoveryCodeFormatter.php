@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Public\Recovery;
 
 use Modules\Auth\Public\Support\Username;
+use Modules\Core\Public\Support\PatternScan;
 
 final class RecoveryCodeFormatter
 {
@@ -27,7 +28,7 @@ final class RecoveryCodeFormatter
     // saved, and naming a different file than the one written is worse.
     public function usernameSlug(string $username): string
     {
-        $slug = (string) preg_replace('/[^a-z0-9._-]+/', '-', Username::normalize($username));
+        $slug = PatternScan::replace('/[^a-z0-9._-]+/', '-', Username::normalize($username));
         $slug = trim($slug, '-.');
 
         return $slug === '' ? 'account' : mb_substr($slug, 0, Username::MAX_LENGTH);

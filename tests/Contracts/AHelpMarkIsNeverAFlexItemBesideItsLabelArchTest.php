@@ -38,7 +38,7 @@ function helpMarkBlades(): array
 /** @return list<array{line: int, tag: string, class: string}> */
 function helpMarkParents(string $source): array
 {
-    $source = (string) preg_replace_callback(
+    $source = PatternScan::replaceCallback(
         '~\{\{--.*?--\}\}~s',
         static fn (array $match): string => str_repeat(' ', strlen($match[0])),
         $source,

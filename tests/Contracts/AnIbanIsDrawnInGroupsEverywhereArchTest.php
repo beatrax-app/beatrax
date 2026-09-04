@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // An IBAN has no break opportunity of its own, so any column narrow enough
 // splits it mid-identifier. Core::Iban is the one place that decides the
 // presentation, and the reason this rule exists is that routing four render
@@ -30,9 +32,7 @@ it('draws every IBAN it echoes through the one seam that groups it', function ()
         // Echoes only, and only where the IBAN is the WHOLE value. An IBAN
         // passed to in_array() or to a mask is an argument, not something the
         // reader sees, and grouping it there would break the comparison.
-        if (preg_match_all('/\{\{(?!--)\s*(\$[\w>\-\[\]\']*?[Ii]ban)\s*\}\}/', $source, $matches, PREG_OFFSET_CAPTURE) === false) {
-            throw new RuntimeException('The IBAN scan stopped reading '.$path);
-        }
+        $matches = PatternScan::allWithOffsets('/\{\{(?!--)\s*(\$[\w>\-\[\]\']*?[Ii]ban)\s*\}\}/', $source);
 
         foreach ($matches[1] as $match) {
             $raw[] = str_replace(base_path().'/', '', $path)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Logging;
 
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
+use Modules\DevMode\Internal\Support\RedactedText;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
@@ -96,18 +97,15 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
         if ($this->scrubSet !== null) {
             $pattern = $this->scrubSet->compiledPattern();
             if ($pattern !== null) {
-                $replaced = preg_replace($pattern, '[REDACTED]', $text);
-                if (is_string($replaced)) {
-                    $text = $replaced;
-                }
+                $text = RedactedText::orEmpty($pattern, '[REDACTED]', $text);
             }
         }
 
         foreach (self::VALUE_PATTERNS as $pattern => $replacement) {
-            $text = (string) preg_replace($pattern, $replacement, $text);
+            $text = RedactedText::orEmpty($pattern, $replacement, $text);
         }
 
-        return (string) preg_replace(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
+        return RedactedText::orEmpty(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
     }
 
     private function isSecretKey(int|string $key): bool

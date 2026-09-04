@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Which surface a control opens is a viewport decision: a bottom sheet below
 // 768px, the modal above it. A component that also announces `modal-show` from
 // the server makes that decision a second time and gets it wrong on a phone --
@@ -36,9 +38,7 @@ function sheetNamesOpenedInBlades(): array
     foreach (everyModuleBlade() as $blade) {
         $source = (string) file_get_contents($blade);
 
-        if (preg_match_all("/open-sheet['\"]?\s*,\s*\{\s*name:\s*'([a-z0-9-]+)'/", $source, $matches) === false) {
-            continue;
-        }
+        $matches = PatternScan::all("/open-sheet['\"]?\s*,\s*\{\s*name:\s*'([a-z0-9-]+)'/", $source);
 
         foreach ($matches[1] as $name) {
             $names[] = $name;
@@ -67,9 +67,7 @@ it('never announces a modal from the server for a name that also opens as a shee
 
         $source = (string) file_get_contents($path);
 
-        if (preg_match_all("/dispatch\(\s*'modal-show'\s*,\s*name:\s*'([a-z0-9-]+)'/", $source, $matches) === false) {
-            continue;
-        }
+        $matches = PatternScan::all("/dispatch\(\s*'modal-show'\s*,\s*name:\s*'([a-z0-9-]+)'/", $source);
 
         foreach ($matches[1] as $name) {
             if (in_array($name, $sheets, true)) {

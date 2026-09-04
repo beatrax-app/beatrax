@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Csv;
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\CurrencyScale;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -28,7 +29,7 @@ final class GenericCsvAmountParser
 
         $thousands = $decimalSeparator === ',' ? '.' : ',';
         $raw = str_replace([$thousands, ' ', "\u{00A0}"], '', $raw);
-        $raw = preg_replace('/[^0-9'.preg_quote($decimalSeparator, '/').'+-]/u', '', $raw) ?? '';
+        $raw = PatternScan::replace('/[^0-9'.preg_quote($decimalSeparator, '/').'+-]/u', '', $raw);
 
         if (str_starts_with($raw, '-')) {
             $negative = true;

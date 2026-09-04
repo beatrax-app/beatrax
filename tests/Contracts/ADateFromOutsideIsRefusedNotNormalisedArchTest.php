@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\MarkupSource;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeDate;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -236,7 +237,7 @@ function suppliedDateBindings(array $paths): array
 
     foreach ($paths as $path) {
         $source = (string) file_get_contents($path);
-        $source = (string) preg_replace_callback(
+        $source = PatternScan::replaceCallback(
             '/\{\{--.*?--\}\}/s',
             static fn (array $m): string => str_repeat("\n", substr_count($m[0], "\n")),
             $source,
@@ -252,7 +253,7 @@ function suppliedDateBindings(array $paths): array
                     continue;
                 }
 
-                $field = trim((string) preg_replace('/\{\{.*?\}\}/', '*', $model));
+                $field = trim(PatternScan::replace('/\{\{.*?\}\}/', '*', $model));
                 $bindings[$field][] = $relative.':'.$element->line($source);
             }
         }

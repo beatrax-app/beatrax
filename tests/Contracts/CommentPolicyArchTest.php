@@ -1033,7 +1033,7 @@ function commentPolicyHeadingSlugs(string $page): array
         // it drops leaves its surrounding spaces behind, so an em dash yields
         // a DOUBLE hyphen, and runs of spaces are never collapsed.
         $text = strtolower(str_replace('`', '', $m[1]));
-        $slugs[] = str_replace(' ', '-', (string) preg_replace('/[^a-z0-9 _\-]/', '', $text));
+        $slugs[] = str_replace(' ', '-', PatternScan::replace('/[^a-z0-9 _\-]/', '', $text));
     }
 
     return $slugs;

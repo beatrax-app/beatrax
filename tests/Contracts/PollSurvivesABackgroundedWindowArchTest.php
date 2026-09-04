@@ -68,9 +68,9 @@ function pollKeepAliveWalk(string $directory): array
  */
 function pollKeepAliveStripComments(string $source): string
 {
-    return (string) preg_replace_callback(
+    return PatternScan::replaceCallback(
         '/\{\{--.*?--\}\}/s',
-        static fn (array $match): string => (string) preg_replace('/[^\r\n]/', ' ', $match[0]),
+        static fn (array $match): string => PatternScan::replace('/[^\r\n]/', ' ', $match[0]),
         $source,
     );
 }
