@@ -6,6 +6,7 @@ use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository as CacheRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Desktop\Internal\Listeners\StartSyncListenerOnEnable;
 use Modules\Desktop\Internal\Native\RelayListenerProcess;
 use Modules\Desktop\Internal\Native\SyncListenerProcess;
@@ -76,7 +77,7 @@ it('refuses to spawn the listener when the identity will not open, and says so',
             $logger,
         ),
         $this->app,
-        app(Modules\Core\Public\Contracts\CurrentUser::class),
+        app(CurrentUser::class),
         $logger,
     );
 
