@@ -115,13 +115,10 @@ final class SelfReferenceDeferral
         $repaired = 0;
 
         try {
-            // op_log_entries only ever grows, and this asks it for every value
-            // the column was ever given. Streamed rather than collected, so the
-            // sweep costs a device that has synced for a year what it costs one
-            // set up yesterday; each row is wanted only long enough to read it.
-            // The two columns stay named: cursor() takes no column list of
-            // its own, and a bare stream would widen every row to the whole
-            // entry, encrypted value and all, to read a pk and a target.
+            // op_log_entries only ever grows, so this is streamed rather than
+            // collected: the sweep costs a device that has synced for a year
+            // what it costs one set up yesterday. The columns stay named
+            // because cursor() takes none, and a bare stream widens the row.
             $named = $this->db->connection()->table('op_log_entries')
                 ->where('user_id', $userId)
                 ->where('table_name', $table)
