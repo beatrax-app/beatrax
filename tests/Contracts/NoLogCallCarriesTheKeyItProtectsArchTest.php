@@ -64,7 +64,7 @@ it('hands no key material to a logger, at any level and in any context', functio
     // is barred as a whole object and allowed by its id, which is the half of
     // it that identifies the key rather than being it.
     $named = [
-        '/\$\w*(?:[Kk]ey[Hh]ex|[Rr]aw\w*[Kk]ey|raw_key|kek|[Pp]assphrase|[Ss]ecret[Kk]ey|secret_key'
+        '/\$\w*(?:[Kk]ey[Hh]ex|[Rr]aw\w*[Kk]ey|raw_key|kek|[Pp]assphrase|(?i:secretkey)|secret_key'
             .'|[Dd]ata[Kk]ey|data_key|[Ww]rapped(?:Bin|Key)|[Bb]lind[Ii]ndex[Kk]ey|[Kk]eyring)\b/',
         '/\$\w*[Ee]poch\b(?!->epoch(?:Id|_id))/',
         '/[\'"](?:key_hex|keyHex|raw_key|rawKey|kek|passphrase|data_key|dataKey|secret_key|secretKey'
