@@ -150,14 +150,17 @@ function bareIdConcatenationsOn(string $line): array
 
 // What both scans are looking for, and what quoting takes away from them: a
 // quote lands between the delimiter and the value, so neither pattern reaches
-// the expression any more.
+// the expression any more. The closing `']` is optional rather than absent: an
+// id read out of an array is written `$row['id']`, and requiring the expression
+// to END on the letters hid every one of those — Forecasting's minted scenario
+// mutations among them.
 function idBearingExpression(string $expression): bool
 {
     if (str_contains($expression, 'Js::from')) {
         return false;
     }
 
-    return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*$/', $expression) === 1;
+    return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*(\'\]|"\])?\s*$/', $expression) === 1;
 }
 
 it('never lets a blade write a derived id as a bare number', function (): void {
