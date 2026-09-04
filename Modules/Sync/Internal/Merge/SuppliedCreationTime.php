@@ -48,6 +48,21 @@ final class SuppliedCreationTime
         return $payload;
     }
 
+    // The value seed() would write for these ops, so a later half of the same
+    // create can recognise a birth time this device invented rather than read
+    // it as a second row wearing the same id.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    public static function seededValueFor(array $fields): ?string
+    {
+        $earliest = self::earliestOf($fields);
+
+        return $earliest === null
+            ? null
+            : CarbonImmutable::createFromTimestampMs($earliest)->toDateTimeString();
+    }
+
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */

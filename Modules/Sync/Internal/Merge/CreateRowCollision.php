@@ -33,14 +33,40 @@ final readonly class CreateRowCollision
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function contradicts(string $table, int|string $pk, array $payload): bool
+    public function contradicts(string $table, int|string $pk, array $payload, ?string $seededCreatedAt = null): bool
     {
         $stored = $this->storedRow($table, $pk);
 
-        if ($stored === null || ! $this->differs($table, 'created_at', $payload, $stored)) {
+        if ($stored === null || ! $this->birthTimesDisagree($table, $payload, $stored, $seededCreatedAt)) {
             return false;
         }
 
+        return $this->anyOtherColumnDisagrees($table, $payload, $stored);
+    }
+
+    // A row whose first half carried no birth time was given one from the op's
+    // HLC. That value is this device's invention, so reading it back as the
+    // peer's claim turns the REST of the same create into a second row wearing
+    // one id.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $stored
+     */
+    private function birthTimesDisagree(string $table, array $payload, array $stored, ?string $seededCreatedAt): bool
+    {
+        if ($seededCreatedAt !== null && self::asText($stored['created_at'] ?? null) === $seededCreatedAt) {
+            return false;
+        }
+
+        return $this->differs($table, 'created_at', $payload, $stored);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $stored
+     */
+    private function anyOtherColumnDisagrees(string $table, array $payload, array $stored): bool
+    {
         foreach (array_keys($payload) as $column) {
             if (! in_array($column, self::NOT_COMPARED, true) && $this->differs($table, $column, $payload, $stored)) {
                 return true;

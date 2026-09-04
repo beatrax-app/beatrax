@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Enums\PairingSide;
+use Psr\Log\LoggerInterface;
 
 final readonly class PeerConfirmVerifier
 {
@@ -16,6 +17,7 @@ final readonly class PeerConfirmVerifier
         private DatabaseManager $db,
         private Clock $clock,
         private DeviceKeySigner $deviceKeySigner,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
@@ -38,17 +40,41 @@ final readonly class PeerConfirmVerifier
             ->where('expires_at', '>', Instant::zulu($now))
             ->first();
 
-        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
+        if ($row === null) {
+            $this->refused('no live pairing row holds this token');
+
             return null;
         }
 
+        if (! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
+            $this->refused('the located row disagrees about the token hash');
+
+            return null;
+        }
+
+        return $this->contextForAddressedFrame($row, $userId, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
+    }
+
+    // The gates that need a known local side, split from the ones that locate
+    // the row: which side this device owns decides which peer columns the
+    // signature check reads, so it is established before that check exists.
+    private function contextForAddressedFrame(
+        \stdClass $row,
+        int $userId,
+        string $tokenHash,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): ?PeerConfirmContext {
         $localSide = $this->localSideForAddressedFrame($row, $userId, $peerDeviceId);
 
-        // $localSide is checked here rather than inside the callee so the
-        // signature check below is never reached without a known local side —
-        // the peer columns it reads are chosen by that side.
-        if ($localSide === null
-            || ! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
+        if ($localSide === null) {
+            $this->refused('the frame is not addressed to this device');
+
+            return null;
+        }
+
+        if (! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
             return null;
         }
 
@@ -85,45 +111,100 @@ final readonly class PeerConfirmVerifier
         string $peerDeviceId,
         string $sigHex,
     ): bool {
-        $peerBoundDeviceId = $this->peerSideColumn($row, $localSide, 'device_id');
-        $peerPublicKeyHex = $this->peerSideColumn($row, $localSide, 'ed25519_pub_hex');
-
-        // The confirming device is the peer side; the frame's peer_device_id is
-        // THIS device. Bind both sealing keys as THIS row holds them, so a relay
-        // that swapped the peer's X25519 makes this reconstruction diverge from
-        // what the honest peer signed — the verify below then fails.
-        $confirmingDeviceKxHex = $this->peerSideColumn($row, $localSide, 'x25519_pub_hex');
-        $peerDeviceKxHex = $this->localSideColumn($row, $localSide, 'x25519_pub_hex');
+        $bound = $this->keysThisRowBound($row, $localSide);
 
         // A frame purporting to be from some other device id is rejected even
         // before touching sodium.
+        if ($bound === null) {
+            $this->refused('this row never bound a key for one of the two sides');
+
+            return false;
+        }
+
+        if (! hash_equals($bound['peerDeviceId'], $confirmingDeviceId)) {
+            $this->refused('the frame claims a device id this row never bound');
+
+            return false;
+        }
+
+        return $this->signatureMatchesBoundKey($bound, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex);
+    }
+
+    // The confirming device is the peer side; the frame's peer_device_id is
+    // THIS device. Both sealing keys are read as THIS row holds them, so a
+    // relay that swapped the peer's X25519 makes the reconstruction below
+    // diverge from what the honest peer signed.
+    /**
+     * @return array{peerDeviceId: string, peerPublicKeyHex: string, confirmingKx: string, peerKx: string}|null
+     */
+    private function keysThisRowBound(\stdClass $row, PairingSide $localSide): ?array
+    {
+        $peerBoundDeviceId = $this->peerSideColumn($row, $localSide, 'device_id');
+        $peerPublicKeyHex = $this->peerSideColumn($row, $localSide, 'ed25519_pub_hex');
+        $confirmingDeviceKxHex = $this->peerSideColumn($row, $localSide, 'x25519_pub_hex');
+        $peerDeviceKxHex = $this->localSideColumn($row, $localSide, 'x25519_pub_hex');
+
         if ($peerBoundDeviceId === null
             || $peerPublicKeyHex === null
             || $confirmingDeviceKxHex === null
-            || $peerDeviceKxHex === null
-            || ! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
-            return false;
+            || $peerDeviceKxHex === null) {
+            return null;
         }
 
+        return [
+            'peerDeviceId' => $peerBoundDeviceId,
+            'peerPublicKeyHex' => $peerPublicKeyHex,
+            'confirmingKx' => $confirmingDeviceKxHex,
+            'peerKx' => $peerDeviceKxHex,
+        ];
+    }
+
+    // Deliberately NOT verifyAny() against a legacy no-X25519 payload:
+    // accepting the old shape would re-open the sealing-key substitution this
+    // closes. A cross-version pairing fails closed and retries once both
+    // devices update — no persistent trust state is stranded.
+    /**
+     * @param  array{peerDeviceId: string, peerPublicKeyHex: string, confirmingKx: string, peerKx: string}  $bound
+     */
+    private function signatureMatchesBoundKey(
+        array $bound,
+        string $tokenHash,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): bool {
         try {
-            $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($peerPublicKeyHex);
+            $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($bound['peerPublicKeyHex']);
         } catch (InvalidPublicKeyException) {
+            $this->refused('the peer public key bound to this row will not decode');
+
             return false;
         }
 
-        // Deliberately NOT verifyAny() against a legacy no-X25519 payload:
-        // accepting the old shape would re-open the sealing-key substitution
-        // this closes. A cross-version pairing fails closed and retries once
-        // both devices update — no persistent trust state is stranded.
         $message = PairingFrame::confirmSigningMessage(
             $tokenHash,
             $confirmingDeviceId,
             $peerDeviceId,
-            $confirmingDeviceKxHex,
-            $peerDeviceKxHex,
+            $bound['confirmingKx'],
+            $bound['peerKx'],
         );
 
-        return $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin);
+        if (! $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin)) {
+            $this->refused('the signature does not match the key this row bound');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Every refusal here is fail-closed and terminal, and no road that carries
+    // a frame reports one, so a handshake that stops on a real device leaves
+    // nothing to read. The gate is named; no device id, key or token joins it,
+    // because none of those belongs in a log file.
+    private function refused(string $gate): void
+    {
+        $this->logger?->warning('PeerConfirmVerifier: refused a peer confirm.', ['gate' => $gate]);
     }
 
     // Reads one of the peer side's columns — whichever side the local device
