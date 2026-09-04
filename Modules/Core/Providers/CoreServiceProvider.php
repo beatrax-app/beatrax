@@ -20,6 +20,7 @@ use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
+use Modules\Core\Internal\Encryption\ProductionKdfCost;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
 use Modules\Core\Internal\Http\Livewire\SafeEnumSynth;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
@@ -31,6 +32,7 @@ use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Contracts\KdfCost;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
@@ -62,6 +64,11 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(BootProbeState::class);
         $this->app->register(HealthCheckServiceProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
+
+        // Unconditional, and the only binding of this contract anywhere: the
+        // suite replaces the instance from Tests\TestCase, so no environment
+        // check exists here that a deployed install could ever satisfy.
+        $this->app->singleton(KdfCost::class, ProductionKdfCost::class);
 
         // Bound to the interface so callers that translate a libsodium
         // failure into their own type can be driven from a test.
