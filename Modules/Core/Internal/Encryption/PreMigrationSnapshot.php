@@ -64,7 +64,11 @@ final readonly class PreMigrationSnapshot
                 sprintf('sync/backups/pre-encryption-%d-%s.enc', $userId, $this->clock->now()->format('YmdHis_u')),
             );
 
-            $this->backupEncryptor->encrypt($tmpPlainPath, $encPath, $kek);
+            // The KEK is already a uniformly random data key, so the
+            // passphrase path's Argon2 stretch buys nothing and costs ~500ms
+            // on a device mid-migration. restoreFromSnapshot() still reads
+            // through decrypt(), which takes its cost from the header.
+            $this->backupEncryptor->encryptWithKey($tmpPlainPath, $encPath, $kek);
 
             return $encPath;
         } finally {
