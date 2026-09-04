@@ -24,6 +24,7 @@ final readonly class OpLogEntryApplier
         private RowOwnership $ownership,
         private SuppliedDateGate $suppliedDates,
         private SelfReferenceDeferral $selfReferences,
+        private SplitCreateTail $splitTail,
         private TransferPairCascade $pairCascade,
         private PeerRowAliases $aliases,
         private AlreadyPresentCreate $alreadyPresent,
@@ -185,7 +186,7 @@ final readonly class OpLogEntryApplier
         string $now,
     ): ?array {
         $refused = ($tomb !== null && $this->tombstoneWins($tomb, $fields))
-            || ! $this->createRowComplete($table, $fields, $now);
+            || ! $this->createRowComplete($table, $pk, $fields, $userId, $now);
 
         $payload = $refused ? null : $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
 
@@ -322,19 +323,29 @@ final readonly class OpLogEntryApplier
     }
 
     // A CreateRow needs every required column, minus the ones
-    // buildCreatePayload() seeds itself: a table naming `id` as required asked
-    // for a field the backfill never emits, so every row of it was discarded
-    // as incomplete on arrival rather than written.
+    // buildCreatePayload() seeds itself. A row already here is the second half
+    // of a create the transport split and carries what the first half missed,
+    // so quarantining it loses their only carrier.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function createRowComplete(string $table, array $fields, string $now): bool
+    private function createRowComplete(string $table, int|string $pk, array $fields, int $userId, string $now): bool
     {
         $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
         $missing = array_diff($required, array_keys($fields));
 
         if ($missing === []) {
             return true;
+        }
+
+        if ($this->splitTail->rowIsHere($table, $pk, $userId)) {
+            $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+            if ($payload !== null) {
+                $this->splitTail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
+            }
+
+            return false;
         }
 
         $firstField = reset($fields);
