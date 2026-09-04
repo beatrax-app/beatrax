@@ -62,9 +62,8 @@ final readonly class TransferPairCascade
     // null on the rows that lost their partner.
     /**
      * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
-     * @param  list<int>  $touchedTransactionIds
      */
-    public function apply(array $pairCascades, int $userId, string $now, array &$touchedTransactionIds): void
+    public function apply(array $pairCascades, int $userId, string $now, SearchDocumentRows $documents): void
     {
         foreach ($pairCascades as $cascade) {
             $deletedType = TransactionType::tryFrom($cascade['deletedType']);
@@ -77,7 +76,7 @@ final readonly class TransferPairCascade
             }
 
             $this->persistCascadeOp($cascade['partnerId'], $newType->value, $cascade, $userId, $now);
-            $touchedTransactionIds[] = $cascade['partnerId'];
+            $documents->transactionWritten($cascade['partnerId']);
         }
     }
 
