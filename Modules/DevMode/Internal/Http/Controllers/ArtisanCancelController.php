@@ -36,7 +36,7 @@ final readonly class ArtisanCancelController
             throw new HttpException(500, 'posix_required_for_cancel');
         }
 
-        if (! posix_kill($record->pid, 0)) {
+        if (! $this->stillRunning($record->pid)) {
             $this->registry->markCancelled($runId);
 
             return new JsonResponse(null, 204);
@@ -48,15 +48,13 @@ final readonly class ArtisanCancelController
         // liveness check a PID that is actually gone by the time it looks.
         $deadline = microtime(true) + self::SIGTERM_GRACE_SECONDS;
         while (microtime(true) < $deadline) {
-            /** @phpstan-ignore-next-line booleanNot.alwaysFalse — the posix_kill stub is typed as always-true */
-            if (! posix_kill($record->pid, 0)) {
+            if (! $this->stillRunning($record->pid)) {
                 break;
             }
             usleep(100_000);
         }
 
-        /** @phpstan-ignore-next-line if.alwaysTrue — the posix_kill stub is typed as always-true */
-        if (posix_kill($record->pid, 0)) {
+        if ($this->stillRunning($record->pid)) {
             @posix_kill($record->pid, SIGKILL);
             usleep(200_000);
         }
@@ -64,5 +62,13 @@ final readonly class ArtisanCancelController
         $this->registry->markCancelled($runId);
 
         return new JsonResponse(null, 204);
+    }
+
+    /**
+     * @phpstan-impure
+     */
+    private function stillRunning(int $pid): bool
+    {
+        return posix_kill($pid, 0);
     }
 }

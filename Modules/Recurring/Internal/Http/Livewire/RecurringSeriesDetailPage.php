@@ -86,7 +86,6 @@ final class RecurringSeriesDetailPage extends Component
             'counterpartyLink' => $counterpartyLink,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('recurring::detail.page_title', ['name' => $series->displayName()])]);
 
         return $view;

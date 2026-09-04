@@ -62,7 +62,6 @@ final class CloseWindowPrompt extends Component
             'modalName' => self::MODAL_NAME,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => $title.' · Beatrax']);
 
         return $view;

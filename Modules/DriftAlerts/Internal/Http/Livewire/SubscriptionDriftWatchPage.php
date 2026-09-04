@@ -28,7 +28,6 @@ final class SubscriptionDriftWatchPage extends Component
             'monthlyTotal' => $query->monthlyTotalFor($user, $rows),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::watch.page_title').' · Beatrax']);
 
         return $view;

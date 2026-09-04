@@ -57,7 +57,6 @@ final class FileStagingPage extends Component
             'emptyBody' => Lang::get('desktop::screens.staging.empty_body'),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.staging.page_title').' · Beatrax']);
 
         return $view;

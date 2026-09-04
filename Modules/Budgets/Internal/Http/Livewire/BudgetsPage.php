@@ -325,7 +325,6 @@ final class BudgetsPage extends Component
                 'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
             $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
 
             return $view;
@@ -393,7 +392,6 @@ final class BudgetsPage extends Component
             'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
 
         return $view;

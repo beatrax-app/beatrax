@@ -118,7 +118,6 @@ final class SetupProgressScreen extends Component
             'lockUrl' => $urls->route('mobile.lock'),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · Beatrax']);
 
         return $view;

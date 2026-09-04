@@ -338,7 +338,6 @@ final class CashBookPage extends Component
             'entryCurrency' => $this->entryCurrency($db, $baseCurrency, $user),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').' · Beatrax']);
 
         return $view;

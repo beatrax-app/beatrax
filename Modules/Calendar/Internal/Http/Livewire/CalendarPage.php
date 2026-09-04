@@ -237,7 +237,6 @@ final class CalendarPage extends Component
             'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · Beatrax']);
 
         return $view;

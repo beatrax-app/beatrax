@@ -276,3 +276,16 @@ parameters:
 
 rules:
     - App\PhpStan\Rules\BoundaryRule
+
+services:
+    # Livewire's SupportPageComponents adds `extends()` to Illuminate\View\View
+    # at boot. Every full-page component calls it through the
+    # Illuminate\Contracts\View\View the view factory is declared to return,
+    # and larastan's macro reflection reaches an Illuminate\Contracts interface
+    # only by resolving it from the container -- which the view contract has no
+    # binding for. Declaring the one macro this project calls keeps the call
+    # genuinely analysed rather than suppressed at all fifty sites.
+    -
+        class: App\PhpStan\Reflection\PageLayoutMacrosExtension
+        tags:
+            - phpstan.broker.methodsClassReflectionExtension

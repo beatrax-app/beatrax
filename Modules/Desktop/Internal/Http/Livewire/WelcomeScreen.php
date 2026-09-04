@@ -28,7 +28,6 @@ final class WelcomeScreen extends Component
     {
         $view = $views->make('desktop::welcome');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.welcome.page_title').' · Beatrax']);
 
         return $view;

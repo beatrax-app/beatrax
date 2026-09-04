@@ -700,7 +700,6 @@ final class MobilePairingScan extends Component
             'entryNotice' => $this->entryArmNotice($typedCodeCanFindPeer),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);
 
         return $view;

@@ -208,7 +208,6 @@ final class ReconcilePage extends Component
             'reconciledThrough' => $this->reconciledThrough($connection, $user->id, $ownedAccountId),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('ledger::reconcile.page_title').' · Beatrax']);
 
         return $view;

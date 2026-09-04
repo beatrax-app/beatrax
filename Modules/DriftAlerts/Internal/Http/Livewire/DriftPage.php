@@ -282,7 +282,6 @@ final class DriftPage extends Component
                 'pageSize' => $this->pageSize,
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
             $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
 
             return $view;
@@ -352,7 +351,6 @@ final class DriftPage extends Component
             'hasMoreAnomalies' => false,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get($this->activeType()->screenNameKey()).' · Beatrax']);
 
         return $view;

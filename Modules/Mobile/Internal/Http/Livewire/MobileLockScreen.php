@@ -183,7 +183,6 @@ final class MobileLockScreen extends Component
     {
         $view = $views->make('mobile::livewire.mobile-lock-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::lock.page_title').' · Beatrax']);
 
         return $view;

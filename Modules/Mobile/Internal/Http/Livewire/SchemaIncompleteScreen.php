@@ -56,7 +56,6 @@ final class SchemaIncompleteScreen extends Component
     {
         $view = $views->make('mobile::livewire.schema-incomplete-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::schema.page_title').' · Beatrax']);
 
         return $view;

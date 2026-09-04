@@ -357,7 +357,6 @@ final class MobileImportBootstrap extends Component
             'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('mobile::import.page_title').' · Beatrax']);
 
         return $view;

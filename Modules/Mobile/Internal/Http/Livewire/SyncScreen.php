@@ -128,7 +128,6 @@ final class SyncScreen extends Component
     {
         $view = $views->make('mobile::livewire.sync-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('mobile::sync.page_title').' · Beatrax']);
 
         return $view;

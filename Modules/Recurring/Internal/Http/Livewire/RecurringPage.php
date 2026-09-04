@@ -61,7 +61,6 @@ final class RecurringPage extends Component
             'today' => $clock->now(),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('recurring::index.title').' · Beatrax']);
 
         return $view;

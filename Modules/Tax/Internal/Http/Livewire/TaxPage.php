@@ -136,7 +136,6 @@ final class TaxPage extends Component
                 'documentTitle' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX,
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
             $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').self::TITLE_SUFFIX]);
 
             return $view;
@@ -164,7 +163,6 @@ final class TaxPage extends Component
             'documentTitle' => $documentTitle,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => $documentTitle]);
 
         return $view;

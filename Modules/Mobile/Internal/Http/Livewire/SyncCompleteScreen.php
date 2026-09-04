@@ -65,7 +65,6 @@ final class SyncCompleteScreen extends Component
     {
         $view = $views->make('mobile::livewire.sync-complete-screen');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::sync_complete.page_title').' · Beatrax']);
 
         return $view;

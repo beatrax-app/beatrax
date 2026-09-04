@@ -48,7 +48,6 @@ final class ChainHintsQueue extends Component
             'hints' => $hints,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('chains::hints.page_title').' · Beatrax']);
 
         return $view;

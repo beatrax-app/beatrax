@@ -119,7 +119,6 @@ final class RulesPage extends Component
             'reapplyProgress' => $reapplyInFlight ? $progress : null,
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('categorization::rules.page_title').' · Beatrax']);
 
         return $view;

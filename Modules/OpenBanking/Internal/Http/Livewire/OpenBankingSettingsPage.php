@@ -368,7 +368,6 @@ final class OpenBankingSettingsPage extends Component
 
         // layouts.app is a @yield('content') layout: without this extends()
         // the shell rendered an empty <main> and a tab titled just "Beatrax".
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('openbanking::messages.page.heading').' · Beatrax']);
 
         return $view;

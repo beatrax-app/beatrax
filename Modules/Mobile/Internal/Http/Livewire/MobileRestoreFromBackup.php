@@ -90,7 +90,6 @@ final class MobileRestoreFromBackup extends Component
     {
         $view = $views->make('mobile::livewire.mobile-restore-from-backup');
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('mobile::restore.page_title').' · Beatrax']);
 
         return $view;

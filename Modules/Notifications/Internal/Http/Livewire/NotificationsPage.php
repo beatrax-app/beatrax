@@ -106,7 +106,6 @@ final class NotificationsPage extends Component
             'nextCursor' => $page['nextCursor'],
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('notifications::inbox.page_title').' · Beatrax']);
 
         return $view;
