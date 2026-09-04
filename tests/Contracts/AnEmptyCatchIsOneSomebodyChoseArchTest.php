@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 /**
@@ -132,14 +133,10 @@ function catchScanTokens(string $path): array
         return BackendSourceFiles::codeTokens($path);
     }
 
-    $blocks = [];
-
-    // preg_match_all answers false on a backtrack or recursion limit, and a
-    // guard that reads that as "no blocks here" reports a clean tree it never
-    // scanned. It is the failure this whole guard is about, one level up.
-    if (preg_match_all('/@php\b(?!\s*\()(.*?)@endphp/s', (string) file_get_contents($path), $blocks) === false) {
-        throw new RuntimeException('Could not read the @php blocks of '.$path.': '.preg_last_error_msg());
-    }
+    // The seam raises when PCRE gives up, which here would otherwise read as
+    // "this template holds no @php blocks" — the failure this whole guard is
+    // about, one level up.
+    $blocks = PatternScan::all('/@php\b(?!\s*\()(.*?)@endphp/s', (string) file_get_contents($path));
 
     return array_values(array_filter(
         token_get_all('<?php '.implode(";\n", $blocks[1])),
