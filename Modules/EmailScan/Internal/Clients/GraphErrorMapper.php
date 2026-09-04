@@ -6,6 +6,8 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\BoundedRead;
+use Modules\Core\Public\Support\FileHead;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Psr\Http\Message\ResponseInterface;
@@ -44,7 +46,14 @@ final readonly class GraphErrorMapper
         }
 
         $status = $response->getStatusCode();
-        $safeBodyMessage = $this->extractErrorMessage((string) $response->getBody());
+
+        // The status decides which exception this becomes; the body only
+        // supplies the sentence. A gateway in front of Graph can answer a
+        // failure with megabytes, and casting the whole of it to a string
+        // spent the heap on text that was about to be capped anyway.
+        $safeBodyMessage = $this->extractErrorMessage(
+            BoundedRead::head($response->getBody(), FileHead::BYTES),
+        );
 
         return match (true) {
             in_array($status, self::THROTTLING_STATUSES, strict: true) => new RateLimitedException(

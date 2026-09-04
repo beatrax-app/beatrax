@@ -63,6 +63,7 @@
         "nativephp/desktop": "^2.2",
         "nwidart/laravel-modules": "^13.0",
         "psr/http-client": "^1.0.3",
+        "psr/http-message": "^2.0",
         "psr/log": "^3.0",
         "ramsey/uuid": "^4.9.3",
         "revolt/event-loop": "^1.0.9",
