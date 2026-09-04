@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/architecture/navigation-destinations.md
  */
@@ -59,9 +61,7 @@ it('appends a query parameter through route() rather than gluing it on afterward
         $scanned++;
 
         foreach ([ROUTE_QUERY_CONCAT_PATTERN, ROUTE_QUERY_BLADE_PATTERN] as $pattern) {
-            if (preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-                continue;
-            }
+            $matches = PatternScan::allWithOffsets($pattern, $source);
 
             /** @var array{0: string, 1: int} $match */
             foreach ($matches[0] as $match) {

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-blade-directive-inside-a-component-tag
  */
@@ -43,7 +45,7 @@ it('never puts a Blade directive inside a component tag', function (): void {
 
         // Opening component tags only, up to the first `>`. Non-greedy so a
         // later tag on the same file cannot swallow the text between them.
-        preg_match_all('/<x-[a-zA-Z0-9_.:-]+((?:[^>])*?)\/?>/s', $source, $matches, PREG_OFFSET_CAPTURE);
+        $matches = PatternScan::allWithOffsets('/<x-[a-zA-Z0-9_.:-]+((?:[^>])*?)\/?>/s', $source);
 
         foreach ($matches[1] as $index => $attributes) {
             if (preg_match('/@(if|unless|else|elseif|endif|endunless|foreach|endforeach|for|endfor|isset|empty)\b/', (string) $attributes[0]) !== 1) {

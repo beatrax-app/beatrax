@@ -328,8 +328,8 @@ final readonly class SyncCaptureListener
 
     // Routes NotificationMutated events to the OpLogWriter with table:
     // 'notifications'. `notificationId` is a deterministic sha256 STRING pk
-    // (OpLogEntry::$pk is already typed int|string). Only 'create' and
-    // 'edit' are routed — notifications has no delete mutation path here.
+    // (OpLogEntry::$pk is already typed int|string), so the same fact derives
+    // the same id on both devices and a tombstone names the peer's row too.
     public function handleNotificationMutated(NotificationMutated $event): void
     {
         try {
@@ -338,6 +338,7 @@ final readonly class SyncCaptureListener
             match ($event->mutationType) {
                 'edit' => $this->handleNotificationEdit($event, $writer),
                 'create' => $this->handleNotificationCreate($event, $writer),
+                'delete' => $this->handleNotificationDelete($event, $writer),
                 default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'notificationId' => $event->notificationId,

@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -156,8 +157,8 @@ function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float
     }
 
     $lastEventId = 0;
-    if (preg_match_all('/^id:\s*(\d+)/m', $body, $matches) > 0) {
-        $lastIds = $matches[1];
+    $lastIds = PatternScan::all('/^id:\s*(\d+)/m', $body)[1];
+    if ($lastIds !== []) {
         $lastEventId = (int) end($lastIds);
     }
 
@@ -240,10 +241,7 @@ it('honors ?from= for page-refresh-reconnect — second handle observes only lat
 
     expect($secondCapture['body'])->toContain('event: done');
 
-    $lines = [];
-    if (preg_match_all('/data:\s*\{"line":"(line-\d+)/m', $secondCapture['body'], $m) > 0) {
-        $lines = $m[1];
-    }
+    $lines = PatternScan::all('/data:\s*\{"line":"(line-\d+)/m', $secondCapture['body'])[1];
     foreach (['line-1', 'line-2'] as $alreadySeen) {
         // Timing-tolerant: only assert on a line the cut actually contained.
         if (str_contains($firstHandleBytes, $alreadySeen.\PHP_EOL)) {

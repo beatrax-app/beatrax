@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 // The header held one nowrap row at every width, with the stepper shrink-0 so
 // its glyphs keep their tap targets. English's "August 2026" fitted; nothing
@@ -38,7 +39,7 @@ it('stacks the title and the month stepper until there is room for both', functi
 it('leaves the stepper unshrinkable, and lets it take a second row', function (): void {
     $html = Livewire::test(BudgetsPage::class)->html();
 
-    preg_match_all('/class="([^"]*)"/', $html, $matches);
+    $matches = PatternScan::all('/class="([^"]*)"/', $html);
 
     $stepper = array_values(array_filter(
         $matches[1],

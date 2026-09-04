@@ -6,6 +6,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Routing\Router;
 use Illuminate\View\Factory as ViewFactory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -34,7 +35,7 @@ function safeAreaClassesIn(string $template): array
 {
     $classes = [];
 
-    preg_match_all('/class="([^"]*)"/', safeAreaMarkup($template), $attributes);
+    $attributes = PatternScan::all('/class="([^"]*)"/', safeAreaMarkup($template));
 
     foreach ($attributes[1] as $attribute) {
         foreach (preg_split('/\s+/', trim($attribute)) ?: [] as $class) {
@@ -66,7 +67,7 @@ function safeAreaClassEdges(): array
     // front of it is a real selector rather than an @media or @layer head.
     // Comments go first: they sit between the previous rule and this one, so
     // they land inside the selector capture and no rule looks like a class.
-    preg_match_all('/([^{}]+)\{([^{}]*)\}/s', $css, $rules, PREG_SET_ORDER);
+    $rules = PatternScan::sets('/([^{}]+)\{([^{}]*)\}/s', $css);
 
     $map = [];
 
@@ -303,7 +304,7 @@ it('takes all four edges from .safe-screen rather than typing them onto an eleme
     $offenders = [];
 
     foreach (safeAreaTemplates() as $file) {
-        preg_match_all('/class="([^"]*)"/', safeAreaMarkup((string) $file->getContents()), $attributes);
+        $attributes = PatternScan::all('/class="([^"]*)"/', safeAreaMarkup((string) $file->getContents()));
 
         foreach ($attributes[1] as $attribute) {
             $inline = array_filter(

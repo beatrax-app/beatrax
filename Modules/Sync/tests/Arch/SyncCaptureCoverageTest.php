@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Tests\Support\CaptureSites;
@@ -133,7 +134,7 @@ it('never captures a table that is meant to stay on the device', function (): vo
 // containing `new EntityMutated(` also contained its name somewhere — one line
 // satisfying the gate for every write site in the codebase.
 it('counts a table as captured only where a write actually names it', function (string $source, array $expected): void {
-    preg_match_all(CaptureSites::PATTERN, $source, $matches);
+    $matches = PatternScan::all(CaptureSites::PATTERN, $source);
 
     expect(array_values(array_unique($matches[1])))->toBe($expected);
 })->with([

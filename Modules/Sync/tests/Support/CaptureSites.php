@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Tests\Support;
 
+use Modules\Core\Public\Support\PatternScan;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -58,7 +59,7 @@ final class CaptureSites
                 // one. A bare `table: '…'` anywhere marked the whole table captured,
                 // which is how merchant_aliases passed this gate with a single YAML
                 // insert covering for four uncaptured user-facing writes.
-                preg_match_all(self::PATTERN, $source, $matches);
+                $matches = PatternScan::all(self::PATTERN, $source);
 
                 foreach ($matches[1] as $table) {
                     $found[$table] = true;
@@ -70,14 +71,14 @@ final class CaptureSites
 
                 // Only a list the file actually walks: counting every const array meant a
                 // table struck out of the capture loop still read as captured.
-                preg_match_all("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
+                $lists = PatternScan::sets("/const (?:array\\s+)?([A-Z_]+) = \[([^\]]*)\];/", $source);
 
                 foreach ($lists as $list) {
                     if (! str_contains($source, 'foreach (self::'.$list[1])) {
                         continue;
                     }
 
-                    preg_match_all("/'([a-z_]{3,})'/", $list[2], $bulk);
+                    $bulk = PatternScan::all("/'([a-z_]{3,})'/", $list[2]);
 
                     foreach ($bulk[1] as $table) {
                         $found[$table] = true;

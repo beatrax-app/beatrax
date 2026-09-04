@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
@@ -44,7 +45,7 @@ function potShapeFixture(string $accountCurrency): array
 
 function potAmountBox(string $html, string $fieldId): string
 {
-    preg_match('/<input[^>]*id="'.preg_quote($fieldId, '/').'"[^>]*>/', $html, $found);
+    $found = PatternScan::first('/<input[^>]*id="'.preg_quote($fieldId, '/').'"[^>]*>/', $html);
 
     expect($found)->not->toBe([], 'no amount box rendered for '.$fieldId);
 

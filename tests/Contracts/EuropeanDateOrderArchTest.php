@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#month-first-dates-in-a-dutch-ui
@@ -17,7 +18,7 @@ it('never formats a date month-first', function (): void {
         foreach ($files as $file) {
             $path = $file->getPathname();
 
-            if (! $file->isFile() || ! preg_match('/\.(php|blade\.php)$/', $path)) {
+            if (! $file->isFile() || ! PatternScan::matches('/\.(php|blade\.php)$/', $path)) {
                 continue;
             }
 
@@ -29,7 +30,7 @@ it('never formats a date month-first', function (): void {
 
             // M/F is the month, j/d the day. A pattern that opens with the
             // month and then names the day is US order.
-            preg_match_all("/translatedFormat\('([^']+)'\)/", $source, $matches);
+            $matches = PatternScan::all("/translatedFormat\('([^']+)'\)/", $source);
 
             foreach ($matches[1] as $pattern) {
                 if (preg_match('/^[MF][^jd]*[jd]/', $pattern) === 1) {
@@ -55,7 +56,7 @@ it('routes every locale-native short date through the one place that corrects it
         foreach ($files as $file) {
             $path = $file->getPathname();
 
-            if (! $file->isFile() || ! preg_match('/\.(php|blade\.php)$/', $path)) {
+            if (! $file->isFile() || ! PatternScan::matches('/\.(php|blade\.php)$/', $path)) {
                 continue;
             }
 

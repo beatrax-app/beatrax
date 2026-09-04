@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/00-index.md
  */
@@ -232,32 +234,32 @@ function commentPolicyBladeComments(string $path): array
     $source = (string) file_get_contents($path);
     $comments = [];
 
-    if (preg_match_all('/\{\{--.*?--\}\}/s', $source, $matches, PREG_OFFSET_CAPTURE) !== 0) {
-        /** @var array{0: string, 1: int} $match */
-        foreach ($matches[0] as $match) {
-            $comments[] = [
-                'line' => substr_count(substr($source, 0, $match[1]), "\n") + 1,
-                'text' => $match[0],
-            ];
-        }
+    $matches = PatternScan::allWithOffsets('/\{\{--.*?--\}\}/s', $source);
+
+    /** @var array{0: string, 1: int} $match */
+    foreach ($matches[0] as $match) {
+        $comments[] = [
+            'line' => substr_count(substr($source, 0, $match[1]), "\n") + 1,
+            'text' => $match[0],
+        ];
     }
 
     $islands = '/@php\b(?<body>.*?)@endphp|<\?php(?<php>.*?)\?>|<script\b[^>]*>(?<js>.*?)<\/script>/si';
-    if (preg_match_all($islands, $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) !== 0) {
-        foreach ($matches as $match) {
-            foreach (['body', 'php', 'js'] as $group) {
-                /** @var array{0: string, 1: int}|null $island */
-                $island = $match[$group] ?? null;
-                if ($island === null || $island[1] < 0) {
-                    continue;
-                }
-                $before = substr_count(substr($source, 0, $island[1]), "\n");
-                foreach (commentPolicyScanComments($island[0]) as $comment) {
-                    $comments[] = [
-                        'line' => $before + $comment['line'],
-                        'text' => $comment['text'],
-                    ];
-                }
+    $matches = PatternScan::setsWithOffsets($islands, $source);
+
+    foreach ($matches as $match) {
+        foreach (['body', 'php', 'js'] as $group) {
+            /** @var array{0: string, 1: int}|null $island */
+            $island = $match[$group] ?? null;
+            if ($island === null || $island[1] < 0) {
+                continue;
+            }
+            $before = substr_count(substr($source, 0, $island[1]), "\n");
+            foreach (commentPolicyScanComments($island[0]) as $comment) {
+                $comments[] = [
+                    'line' => $before + $comment['line'],
+                    'text' => $comment['text'],
+                ];
             }
         }
     }
@@ -495,9 +497,7 @@ function commentPolicyConfigComments(string $path): array
         return commentPolicyHashComments($source);
     }
 
-    if (preg_match_all('/<!--.*?-->/s', $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-        return [];
-    }
+    $matches = PatternScan::allWithOffsets('/<!--.*?-->/s', $source);
 
     $comments = [];
     /** @var array{0: string, 1: int} $match */
@@ -616,10 +616,9 @@ function commentPolicyWithoutStandards(string $text): string
 /** @return list<string> the requirement identifiers a test name carries, if any */
 function commentPolicyRequirementIds(string $name): array
 {
-    preg_match_all(
+    $matches = PatternScan::all(
         COMMENT_POLICY_BANNED_TOKENS,
         commentPolicyWithoutStandards($name),
-        $matches,
     );
 
     /** @var list<string> $ids */
@@ -952,8 +951,8 @@ function commentPolicyDocsLinkTargets(string $path): array
     $source = preg_replace('/^```.*?^```/ms', '', $source) ?? $source;
     $source = preg_replace('/`[^`\n]*`/', '', $source) ?? $source;
 
-    preg_match_all('/!?\[[^\]]*\]\(([^)\s]+)\)/', $source, $inline);
-    preg_match_all('/^\[[^\]]+\]:\s*(\S+)/m', $source, $reference);
+    $inline = PatternScan::all('/!?\[[^\]]*\]\(([^)\s]+)\)/', $source);
+    $reference = PatternScan::all('/^\[[^\]]+\]:\s*(\S+)/m', $source);
 
     $targets = [];
     /** @var string $target */
@@ -974,9 +973,8 @@ it('has every @link .md target resolving to a real .docs file (M6)', function ()
             if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
                 continue;
             }
-            if (preg_match_all('/@link\s+(\S+\.md)/', $token[1], $m) === 0) {
-                continue;
-            }
+            $m = PatternScan::all('/@link\s+(\S+\.md)/', $token[1]);
+
             foreach ($m[1] as $target) {
                 $resolved = realpath(dirname($path).'/'.$target);
                 if ($resolved === false || ! is_file($resolved)) {
@@ -1053,9 +1051,8 @@ it('has every #fragment in a doc link naming a heading that exists (M6)', functi
             if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
                 continue;
             }
-            if (preg_match_all('/@link\s+(\S+\.md#\S+)/', $token[1], $m) === 0) {
-                continue;
-            }
+            $m = PatternScan::all('/@link\s+(\S+\.md#\S+)/', $token[1]);
+
             foreach ($m[1] as $target) {
                 [$file, $anchor] = explode('#', $target, 2);
                 $resolved = realpath(dirname($path).'/'.$file);

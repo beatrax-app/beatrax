@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Core\Public\Support\LivewireClientRefusal;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
@@ -35,7 +36,7 @@ final class ReaderlessCallProbe extends Component
 
 function importRetrySnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"mobile.import-bootstrap"')) {

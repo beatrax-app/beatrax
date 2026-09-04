@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Illuminate\Routing\Route;
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -971,20 +972,14 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
 
     $classStringsOf = static function (string $contents): array {
         $strings = [];
-        if (preg_match_all('/class\s*=\s*"([^"]*)"/', $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all('/class\s*=\s*"([^"]*)"/', $contents)[1] as $s) {
+            $strings[] = $s;
         }
-        if (preg_match_all("/class\s*=\s*'([^']*)'/", $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all("/class\s*=\s*'([^']*)'/", $contents)[1] as $s) {
+            $strings[] = $s;
         }
-        if (preg_match_all('/@class\s*\(\s*\[(.*?)\]\s*\)/s', $contents, $m) > 0) {
-            foreach ($m[1] as $s) {
-                $strings[] = $s;
-            }
+        foreach (PatternScan::all('/@class\s*\(\s*\[(.*?)\]\s*\)/s', $contents)[1] as $s) {
+            $strings[] = $s;
         }
 
         return $strings;
@@ -1698,9 +1693,8 @@ function boundaryTableOwnership(): array
         $source = boundaryBlankComments((string) file_get_contents($path));
 
         foreach ($createdBy as $pattern) {
-            if (preg_match_all($pattern, $source, $found) === 0) {
-                continue;
-            }
+            $found = PatternScan::all($pattern, $source);
+
             foreach ($found[1] as $table) {
                 $table = strtolower($table);
                 if (! in_array($module, $creators[$table] ?? [], true)) {
@@ -1709,11 +1703,11 @@ function boundaryTableOwnership(): array
             }
         }
 
-        if (preg_match_all($alteredBy, $source, $found) > 0) {
-            foreach ($found[1] as $table) {
-                if (! in_array($module, $altered[$table] ?? [], true)) {
-                    $altered[$table][] = $module;
-                }
+        $found = PatternScan::all($alteredBy, $source);
+
+        foreach ($found[1] as $table) {
+            if (! in_array($module, $altered[$table] ?? [], true)) {
+                $altered[$table][] = $module;
             }
         }
     }
@@ -1829,27 +1823,27 @@ function boundaryCrossModuleTableWrites(array $owner): array
 
         $source = boundaryBlankComments((string) file_get_contents($path));
 
-        if (preg_match_all($tableReference, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
-            foreach ($found[0] as $index => [, $offset]) {
-                $table = $found[1][$index][0];
-                if (($owner[$table] ?? $module) === $module) {
-                    continue;
-                }
-                if (array_intersect(boundaryChainMethods($source, $offset), $writeMethods) === []) {
-                    continue;
-                }
-                $hits[] = [$relative, substr_count($source, "\n", 0, $offset) + 1, $table];
+        $found = PatternScan::allWithOffsets($tableReference, $source);
+
+        foreach ($found[0] as $index => [, $offset]) {
+            $table = $found[1][$index][0];
+            if (($owner[$table] ?? $module) === $module) {
+                continue;
             }
+            if (array_intersect(boundaryChainMethods($source, $offset), $writeMethods) === []) {
+                continue;
+            }
+            $hits[] = [$relative, substr_count($source, "\n", 0, $offset) + 1, $table];
         }
 
-        if (preg_match_all($rawStatement, $source, $found, PREG_OFFSET_CAPTURE) > 0) {
-            foreach ($found[1] as $index => [$table]) {
-                $table = strtolower($table);
-                if (($owner[$table] ?? $module) === $module) {
-                    continue;
-                }
-                $hits[] = [$relative, substr_count($source, "\n", 0, $found[0][$index][1]) + 1, $table];
+        $found = PatternScan::allWithOffsets($rawStatement, $source);
+
+        foreach ($found[1] as $index => [$table]) {
+            $table = strtolower($table);
+            if (($owner[$table] ?? $module) === $module) {
+                continue;
             }
+            $hits[] = [$relative, substr_count($source, "\n", 0, $found[0][$index][1]) + 1, $table];
         }
     }
 
@@ -2091,14 +2085,6 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Feature/TheSettingsCopyOfTheAmountToggleCannotDriftTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
         'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
         'Modules/Desktop/tests/Feature/AutoUpdate/UpdateFeedSmokeTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
@@ -2285,6 +2271,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/CounterpartyFilterTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
+        'Modules/Sync/tests/Feature/APrunedNotificationIsRetiredOnThePeerTooTest.php -> Modules\\Notifications\\Internal\\Jobs\\PruneNotificationsJob',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
         'Modules/Sync/tests/Feature/MerchantAliasEditsMustLeaveTheDeviceTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
@@ -2319,12 +2306,15 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // second copy in the test: a column added there without an announcing
         // writer is exactly what this guard exists to catch, and a hardcoded
         // list would go quiet the moment the two drifted.
+        'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
         // parser that stops recognising the paragraph fails there too. Spelling
         // the literal a second time in the test would break exactly that link.
         'tests/Contracts/ATuningNumberIsNamedOnceAndAnswersToTheRealStatementArchTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfExtractionMap',
+        'tests/Contracts/AUniqueJobTakesItsLockWhereTheAppKeepsLocksArchTest.php -> Modules\\Categorization\\Internal\\Jobs\\ReapplyRulesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
@@ -2399,11 +2389,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
                 continue;
             }
 
-            preg_match_all(
+            $imports = PatternScan::sets(
                 '/^use\s+(?:function\s+)?(Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+)/m',
                 $contents,
-                $imports,
-                PREG_SET_ORDER,
             );
             foreach ($imports as $import) {
                 if ($import[2] === $owner) {
@@ -2414,11 +2402,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
 
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
             $stripped = preg_replace('/^use\s+[^\n]*$/m', '', $stripped) ?? $stripped;
-            preg_match_all(
+            $inline = PatternScan::sets(
                 '/Modules\\\\([A-Za-z0-9_]+)\\\\Internal\\\\[A-Za-z0-9_\\\\]+/',
                 $stripped,
-                $inline,
-                PREG_SET_ORDER,
             );
             foreach ($inline as $reference) {
                 if ($reference[1] !== $owner) {
@@ -2510,7 +2496,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
 
     $providers = [];
     foreach (glob(base_path('Modules/*/Providers/*.php')) ?: [] as $providerPath) {
-        preg_match('#^Modules/([^/]+)/#', str_replace(base_path().'/', '', $providerPath), $providerModule);
+        $providerModule = PatternScan::first('#^Modules/([^/]+)/#', str_replace(base_path().'/', '', $providerPath));
         $providers[] = [$providerModule[1], (string) file_get_contents($providerPath)];
     }
 
@@ -2528,7 +2514,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         if (! str_contains($relative, '/Resources/')) {
             continue;
         }
-        preg_match('#^Modules/([^/]+)/#', $relative, $ownerMatch);
+        $ownerMatch = PatternScan::first('#^Modules/([^/]+)/#', $relative);
         $owner = $ownerMatch[1];
         $contents = (string) file_get_contents($file->getPathname());
 
@@ -2536,17 +2522,15 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         // wraps onto its own line whenever it carries arguments — the alias through
         // the <livewire:...> tag, and the class itself for full-page components.
         $aliases = [];
-        preg_match_all('/@livewire\s*\(\s*[\'"]([A-Za-z0-9._-]+)[\'"]/', $contents, $found);
+        $found = PatternScan::all('/@livewire\s*\(\s*[\'"]([A-Za-z0-9._-]+)[\'"]/', $contents);
         $aliases = array_merge($aliases, $found[1]);
-        preg_match_all('/<livewire:([A-Za-z0-9._-]+)/', $contents, $found);
+        $found = PatternScan::all('/<livewire:([A-Za-z0-9._-]+)/', $contents);
         $aliases = array_merge($aliases, $found[1]);
 
         $targets = [];
-        preg_match_all(
+        $classMounts = PatternScan::sets(
             '/@livewire\s*\(\s*\\\\?Modules\\\\([A-Za-z0-9_]+)\\\\([A-Za-z0-9_\\\\]+)::class/',
             $contents,
-            $classMounts,
-            PREG_SET_ORDER,
         );
         foreach ($classMounts as $classMount) {
             $targets[] = [$classMount[1], $classMount[1].'\\'.$classMount[2]];

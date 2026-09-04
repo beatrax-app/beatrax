@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A too-broad `identity:` match anywhere in the electron-builder config would
 // skip the patch while the `mac:` block still lacks the key, silently letting
 // the next macOS build re-acquire the partial-signing bug.
@@ -15,7 +17,7 @@ it('skips the patch only when the mac: { ... } block itself contains identity:',
         }
         JS;
 
-    expect(preg_match($pattern, $alreadyPatched))->toBe(1);
+    expect(PatternScan::matches($pattern, $alreadyPatched))->toBeTrue();
 });
 
 it('does NOT skip when a sibling block has identity: but the mac: block does not', function (): void {
@@ -32,7 +34,7 @@ it('does NOT skip when a sibling block has identity: but the mac: block does not
         }
         JS;
 
-    expect(preg_match($pattern, $appxHasIdentity))->toBe(0);
+    expect(PatternScan::matches($pattern, $appxHasIdentity))->toBeFalse();
 });
 
 it('does NOT skip when a publish-config block has identity:', function (): void {
@@ -47,7 +49,7 @@ it('does NOT skip when a publish-config block has identity:', function (): void 
         }
         JS;
 
-    expect(preg_match($pattern, $publishHasIdentity))->toBe(0);
+    expect(PatternScan::matches($pattern, $publishHasIdentity))->toBeFalse();
 });
 
 it('does NOT skip when only a JS comment outside the mac block mentions identity:', function (): void {
@@ -60,7 +62,7 @@ it('does NOT skip when only a JS comment outside the mac block mentions identity
         }
         JS;
 
-    expect(preg_match($pattern, $onlyCommentIdentity))->toBe(0);
+    expect(PatternScan::matches($pattern, $onlyCommentIdentity))->toBeFalse();
 });
 
 it('does NOT skip when the mac: block is empty / lacks identity:', function (): void {
@@ -73,7 +75,7 @@ it('does NOT skip when the mac: block is empty / lacks identity:', function (): 
         }
         JS;
 
-    expect(preg_match($pattern, $macWithoutIdentity))->toBe(0);
+    expect(PatternScan::matches($pattern, $macWithoutIdentity))->toBeFalse();
 });
 
 function loadIdempotencyRegex(): string
