@@ -21,6 +21,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Identity\DeviceProvisioningOutcome;
@@ -357,8 +358,7 @@ final class MobileImportBootstrap extends Component
             'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::import.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::import.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

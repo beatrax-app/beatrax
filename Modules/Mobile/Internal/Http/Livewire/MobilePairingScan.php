@@ -22,6 +22,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
@@ -700,8 +701,7 @@ final class MobilePairingScan extends Component
             'entryNotice' => $this->entryArmNotice($typedCodeCanFindPeer),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::pairing.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

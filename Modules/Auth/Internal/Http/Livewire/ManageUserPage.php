@@ -134,7 +134,6 @@ final class ManageUserPage extends Component
             'nativeExport' => $shareSheet->replacesWebViewDownload(),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('auth::manage_user.page_title', ['name' => $this->partnerUsername])]);
 
         return $view;

@@ -12,6 +12,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Internal\Exceptions\GoalTargetDateBeforeStartException;
@@ -237,8 +238,7 @@ final class GoalsPage extends Component
                 'baseCurrency' => $baseCurrency->installDefault(),
             ]);
 
-            /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').' · Beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').Brand::TITLE_SUFFIX]);
 
             return $view;
         }
@@ -281,8 +281,7 @@ final class GoalsPage extends Component
             'baseCurrency' => $baseCurrency->forUser($user),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }

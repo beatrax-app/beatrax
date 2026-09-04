@@ -124,7 +124,6 @@ final class SignupPage extends Component
             'countryOptions' => $countries->options(),
         ]);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('auth::signup.page_title')]);
 
         return $view;

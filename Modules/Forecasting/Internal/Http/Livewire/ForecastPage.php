@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\ForecastChartView;
@@ -262,8 +263,7 @@ final class ForecastPage extends Component
 
         $view = $views->make('forecasting::livewire.forecast-page', $viewData);
 
-        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('forecasting::forecast.page_title').' · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('forecasting::forecast.page_title').Brand::TITLE_SUFFIX]);
 
         return $view;
     }
