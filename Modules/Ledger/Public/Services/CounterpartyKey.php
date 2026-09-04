@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 
 // The one producer of `transactions.counterparty_normalized`. Everything
@@ -85,6 +86,6 @@ final readonly class CounterpartyKey
     // byte offset then slices through.
     public static function compactIban(string $iban): string
     {
-        return (string) preg_replace('/\s+/u', '', self::normalizeIban($iban));
+        return PatternScan::replace('/\s+/u', '', self::normalizeIban($iban));
     }
 }
