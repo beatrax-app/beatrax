@@ -156,7 +156,7 @@ it('spells the brand title suffix once, in the class that owns it', function ():
         /** @var SplFileInfo $file */
         foreach ($iterator as $file) {
             $path = $file->getPathname();
-            if (! $file->isFile() || ! preg_match('~\.(?:php|blade\.php)$~', $path)) {
+            if (! $file->isFile() || ! PatternScan::matches('~\.(?:php|blade\.php)$~', $path)) {
                 continue;
             }
             if (str_ends_with($path, 'Public/Support/Brand.php') || str_contains($path, '/Resources/lang/')) {
@@ -167,7 +167,9 @@ it('spells the brand title suffix once, in the class that owns it', function ():
             }
 
             $source = (string) file_get_contents($path);
-            if (preg_match_all('~ \xc2\xb7 Beatrax~', $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
+            $matches = PatternScan::allWithOffsets('~ \xc2\xb7 Beatrax~', $source);
+
+            if ($matches[0] === []) {
                 continue;
             }
 
