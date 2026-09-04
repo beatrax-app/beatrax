@@ -8,6 +8,7 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 
 // Found by being locked out on a real device: a keypad and a rose "Sign out"
 // were the whole screen, so a reader who forgot the code had no way of knowing
@@ -19,18 +20,18 @@ function authLockLogoutControlLabels(string $html): array
 {
     $labels = [];
 
-    preg_match_all('/<form\b[^>]*>.*?<\/form>/s', $html, $forms);
+    $forms = PatternScan::all('/<form\b[^>]*>.*?<\/form>/s', $html);
 
     foreach ($forms[0] as $form) {
-        preg_match('/\baction="([^"]*)"/', $form, $action);
-        preg_match('/\bmethod="([^"]*)"/', $form, $method);
+        $action = PatternScan::first('/\baction="([^"]*)"/', $form);
+        $method = PatternScan::first('/\bmethod="([^"]*)"/', $form);
 
         $target = html_entity_decode($action[1] ?? '', ENT_QUOTES);
         if ($target !== route('logout') || strtoupper($method[1] ?? '') !== 'POST') {
             continue;
         }
 
-        preg_match_all('/<button\b[^>]*>(.*?)<\/button>/s', $form, $buttons);
+        $buttons = PatternScan::all('/<button\b[^>]*>(.*?)<\/button>/s', $form);
         foreach ($buttons[1] as $inner) {
             $text = html_entity_decode(strip_tags($inner), ENT_QUOTES);
             $labels[] = trim((string) preg_replace('/\s+/', ' ', $text));

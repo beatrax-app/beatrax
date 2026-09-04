@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Testing\TestResponse;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 // ForcePasswordChangeMiddleware is registered as Livewire persistent middleware
 // so a flagged account cannot keep driving components whose snapshots it already
@@ -16,7 +17,7 @@ use Modules\Core\Models\User;
 
 function forcedChangeSnapshot(string $pageHtml, string $component): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
 
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);

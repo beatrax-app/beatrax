@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A tab strip is four separate promises, and three of them were kept: the roles
 // were there, the selection was announced, and nothing said which region a tab
 // governs or how to walk the strip without a pointer. All four are checked here
@@ -49,11 +51,9 @@ function tabStripOpenTags(string $source): array
         $source,
     );
 
-    preg_match_all(
+    $matches = PatternScan::setsWithOffsets(
         '~<([a-zA-Z][\w:.-]*)((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>~s',
         $source,
-        $matches,
-        PREG_SET_ORDER | PREG_OFFSET_CAPTURE
     );
 
     $tags = [];

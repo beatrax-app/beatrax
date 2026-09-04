@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Queue\QueueActions;
@@ -212,7 +213,7 @@ it('enables the Queue sidebar item (drops nav-disabled when dev.queue is registe
     $response = $this->actingAs($user)->get('/dev/queue/pending');
     $html = (string) $response->getContent();
 
-    preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Queue[\s\S]*?</a>#', $html, $matches);
+    $matches = PatternScan::all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Queue[\s\S]*?</a>#', $html);
 
     expect($matches[0])->not->toBeEmpty('Queue sidebar entry should render');
     foreach ($matches[1] as $classes) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Category;
 
 // Read off a phone: 35 options, two of them "Income" and two of them
@@ -64,10 +65,7 @@ beforeEach(function (): void {
  */
 function cashBookPathOptions(string $html): array
 {
-    $found = preg_match_all('/<option value="(\d+)">([^<]*)<\/option>/', $html, $matches, PREG_SET_ORDER);
-    if ($found === false) {
-        return [];
-    }
+    $matches = PatternScan::sets('/<option value="(\d+)">([^<]*)<\/option>/', $html);
 
     $options = [];
     foreach ($matches as $match) {

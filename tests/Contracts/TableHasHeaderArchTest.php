@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // A data table without header cells announces every cell as bare text, so a
 // screen reader cannot say which column a figure belongs to. Sonar's S5256
 // checks this, but it reads the raw template and resolves neither <x-core::th>
@@ -47,9 +49,7 @@ it('gives every table a header source', function (): void {
     foreach (tableHeaderBladeFiles() as $path) {
         $source = tableHeaderStripComments((string) file_get_contents($path));
 
-        if (preg_match_all('/<table\b/', $source, $matches, PREG_OFFSET_CAPTURE) === 0) {
-            continue;
-        }
+        $matches = PatternScan::allWithOffsets('/<table\b/', $source);
 
         foreach ($matches[0] as $match) {
             $start = (int) $match[1];

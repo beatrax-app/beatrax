@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 
 // Measured in Chromium with a coarse pointer at 375px and 411px, against the
 // built stylesheet, in all 26 locales: without these two the strip's buttons
@@ -15,7 +16,7 @@ it('lets a confirm strip wrap rather than squeeze its two answers to the touch f
 
     expect($html)->toContain('flex flex-wrap items-center');
 
-    preg_match_all('~<button\b.*?</button>~s', $html, $buttons);
+    $buttons = PatternScan::all('~<button\b.*?</button>~s', $html);
 
     expect($buttons[0])->toHaveCount(2);
 

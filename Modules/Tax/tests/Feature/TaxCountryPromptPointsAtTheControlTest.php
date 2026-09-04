@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
 
@@ -32,7 +33,8 @@ function taxPromptUser(string $username): User
 
 function taxPromptAnchor(string $html): string
 {
-    expect(preg_match('/href="[^"]*settings[^"]*#([a-z-]+)"/', $html, $matches))->toBe(1);
+    $matches = PatternScan::first('/href="[^"]*settings[^"]*#([a-z-]+)"/', $html);
+    expect($matches)->not->toBeEmpty();
 
     return $matches[1];
 }

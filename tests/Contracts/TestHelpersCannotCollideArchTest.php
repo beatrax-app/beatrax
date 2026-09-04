@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Pest compiles every test file into one process, so the helper functions they
 // declare at file scope share a single global namespace. Two files declaring
 // the same name is a fatal — "Cannot redeclare function" — which takes down
@@ -31,7 +33,7 @@ function declaredTestHelpers(): array
 
             // File scope only: an indented `function` is a method or a closure,
             // and neither reaches the global namespace.
-            preg_match_all('/^function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/m', $contents, $matches);
+            $matches = PatternScan::all('/^function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/m', $contents);
 
             foreach ($matches[1] as $name) {
                 $byName[$name][] = $relative;

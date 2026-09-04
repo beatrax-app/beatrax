@@ -14,6 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 
@@ -77,7 +78,8 @@ function backupSnapshotDatabase(): DatabaseManager
 {
     $connection = Mockery::mock(Connection::class);
     $connection->allows('statement')->andReturnUsing(static function (string $sql): bool {
-        expect(preg_match("/VACUUM INTO '(.+)'/", $sql, $found))->toBe(1);
+        $found = PatternScan::first("/VACUUM INTO '(.+)'/", $sql);
+        expect($found)->toHaveCount(2);
         $snapshot = new PDO('sqlite:'.$found[1], options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $snapshot->exec('CREATE TABLE marker (val TEXT)');
         $snapshot->exec("INSERT INTO marker (val) VALUES ('plaintext-snapshot')");

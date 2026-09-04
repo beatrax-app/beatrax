@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Facades\Blade;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
 /**
@@ -50,17 +51,15 @@ function touchCaptionCallSites(): array
     foreach (touchCaptionBladeFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        preg_match_all(
+        $matches = PatternScan::setsWithOffsets(
             '~<x-core::emoji-action\b(.*?)</x-core::emoji-action>~s',
             $source,
-            $matches,
-            PREG_SET_ORDER | PREG_OFFSET_CAPTURE
         );
 
         foreach ($matches as $match) {
             $body = $match[1][0];
-            preg_match('~:label="Lang::get\(\'([^\']+)\'\)"~', $body, $label);
-            preg_match('~:caption="Lang::get\(\'([^\']+)\'\)"~', $body, $caption);
+            $label = PatternScan::first('~:label="Lang::get\(\'([^\']+)\'\)"~', $body);
+            $caption = PatternScan::first('~:caption="Lang::get\(\'([^\']+)\'\)"~', $body);
 
             $sites[] = [
                 'file' => $path,
@@ -230,7 +229,7 @@ it('places the tip against the viewport rather than inside what clips it', funct
 it('lets a row of five actions wrap rather than clip its last one', function (): void {
     $blade = (string) file_get_contents(base_path('Modules/Pots/Resources/views/livewire/pots-page.blade.php'));
 
-    preg_match('~<div class="(flex w-full[^"]*)">\s*\{\{--~', $blade, $row);
+    $row = PatternScan::first('~<div class="(flex w-full[^"]*)">\s*\{\{--~', $blade);
 
     expect($row[1] ?? '')->toContain('flex-wrap');
 });

@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
@@ -294,12 +295,14 @@ it('names whichever of its two screens the reader actually opened', function ():
     $anomaly = $this->actingAs($this->user)->get('/drift?type=anomaly');
 
     $nameOf = static function (string $html): string {
-        expect(preg_match('/<h1[^>]*>(.*?)<\/h1>/s', $html, $m))->toBe(1);
+        $m = PatternScan::first('/<h1[^>]*>(.*?)<\/h1>/s', $html);
+        expect($m)->not->toBe([]);
 
         return trim(strip_tags($m[1]));
     };
     $titleOf = static function (string $html): string {
-        expect(preg_match('/<title[^>]*>(.*?)<\/title>/s', $html, $m))->toBe(1);
+        $m = PatternScan::first('/<title[^>]*>(.*?)<\/title>/s', $html);
+        expect($m)->not->toBe([]);
 
         return trim(html_entity_decode($m[1]));
     };

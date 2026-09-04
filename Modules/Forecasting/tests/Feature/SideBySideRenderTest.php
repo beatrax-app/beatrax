@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Forecasting\Models\ForecastRun;
 use Modules\Forecasting\Models\ForecastScenario;
 
@@ -236,7 +237,7 @@ it('computes a shared y-axis range across both panels', function (): void {
     $resp = $this->actingAs($this->user)->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id);
     $resp->assertOk();
     $html = $resp->getContent();
-    preg_match_all('/&quot;yaxis&quot;:\{&quot;min&quot;:([\-0-9.]+),&quot;max&quot;:([\-0-9.]+)/', (string) $html, $matches);
+    $matches = PatternScan::all('/&quot;yaxis&quot;:\{&quot;min&quot;:([\-0-9.]+),&quot;max&quot;:([\-0-9.]+)/', (string) $html);
     expect(count($matches[1] ?? []))->toBeGreaterThanOrEqual(2);
     expect($matches[1][0])->toBe($matches[1][1]);
     expect($matches[2][0])->toBe($matches[2][1]);

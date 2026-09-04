@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
 // Measured on a Galaxy S24 at a 411px viewport: every one of the eight chips
@@ -35,12 +36,7 @@ function logChipPage(): string
  */
 function logChipClasses(string $html): array
 {
-    preg_match_all(
-        '/<button\b(?=[^>]*\bdata-severity-chip="([A-Z]+)")[^>]*\bclass="([^"]*)"/',
-        $html,
-        $matches,
-        PREG_SET_ORDER,
-    );
+    $matches = PatternScan::sets('/<button\b(?=[^>]*\bdata-severity-chip="([A-Z]+)")[^>]*\bclass="([^"]*)"/', $html);
 
     $out = [];
     foreach ($matches as $match) {

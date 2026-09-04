@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The header note claimed a category badge read through MerchantMemoryQuery.
 // No such markup exists, and the query deliberately discards that result — the
 // note described a page nobody had written.
@@ -12,8 +14,11 @@ it('renders a badge for every badge the page note names', function (): void {
 
     expect($source)->toBeString();
 
-    expect(preg_match('/\{\{--(.*?)--\}\}/s', (string) $source, $note))->toBe(1);
-    expect(preg_match_all('/([A-Za-z]+) badge/', $note[1], $claims))->toBeGreaterThan(0);
+    $note = PatternScan::first('/\{\{--(.*?)--\}\}/s', (string) $source);
+    expect($note)->not->toBeEmpty();
+
+    $claims = PatternScan::all('/([A-Za-z]+) badge/', $note[1]);
+    expect($claims[1])->not->toBeEmpty();
 
     $missing = [];
     foreach ($claims[1] as $badge) {

@@ -7,6 +7,7 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 
 // The phone is where being locked out has no way around it: no CLI, no second
@@ -19,18 +20,18 @@ function mobileLockLogoutControlLabels(string $html): array
 {
     $labels = [];
 
-    preg_match_all('/<form\b[^>]*>.*?<\/form>/s', $html, $forms);
+    $forms = PatternScan::all('/<form\b[^>]*>.*?<\/form>/s', $html);
 
     foreach ($forms[0] as $form) {
-        preg_match('/\baction="([^"]*)"/', $form, $action);
-        preg_match('/\bmethod="([^"]*)"/', $form, $method);
+        $action = PatternScan::first('/\baction="([^"]*)"/', $form);
+        $method = PatternScan::first('/\bmethod="([^"]*)"/', $form);
 
         $target = html_entity_decode($action[1] ?? '', ENT_QUOTES);
         if ($target !== route('logout') || strtoupper($method[1] ?? '') !== 'POST') {
             continue;
         }
 
-        preg_match_all('/<button\b[^>]*>(.*?)<\/button>/s', $form, $buttons);
+        $buttons = PatternScan::all('/<button\b[^>]*>(.*?)<\/button>/s', $form);
         foreach ($buttons[1] as $inner) {
             $text = html_entity_decode(strip_tags($inner), ENT_QUOTES);
             $labels[] = trim((string) preg_replace('/\s+/', ' ', $text));

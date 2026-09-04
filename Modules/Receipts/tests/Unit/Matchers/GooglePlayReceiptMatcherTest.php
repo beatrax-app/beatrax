@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
@@ -74,7 +75,7 @@ it('parses a current-generation Google Play receipt with the strict GPA order-id
     $dto = $outcome->parsed;
     expect($dto)->toBeInstanceOf(ParsedReceiptDto::class);
     expect($dto->referenceId)->toBe('GPA.1234-5678-9012-34567');
-    expect(preg_match('/^GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}$/', (string) $dto?->referenceId))->toBe(1);
+    expect(PatternScan::matches('/^GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}$/', (string) $dto?->referenceId))->toBeTrue();
     expect($dto?->amountMinor)->toBe(-1299);
     expect($dto?->currency)->toBe('USD');
     expect($dto?->ownIban)->toBe('GOOGLE-PLAY');

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a--comment-leading-an-alpine-expression
  */
@@ -37,14 +39,12 @@ it('never opens an Alpine expression with a line comment', function (): void {
     foreach (alpineBladeFiles() as $path) {
         $contents = (string) file_get_contents($path);
 
-        $matched = preg_match_all(
+        $matches = PatternScan::sets(
             '/\b(x-(?:init|effect|show|model|text|html|if|on:[\w.\-]+|bind:[\w.\-]+)|@[\w.\-]+)\s*=\s*"(\s*)\/\//',
             $contents,
-            $matches,
-            PREG_SET_ORDER,
         );
 
-        if ($matched === false || $matched === 0) {
+        if ($matches === []) {
             continue;
         }
 

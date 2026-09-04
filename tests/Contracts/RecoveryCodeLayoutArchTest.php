@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#grid-cols-2-recovery-codes-at-411px
  */
@@ -19,7 +21,7 @@ function recoveryCodeViews(): array
 it('never puts recovery codes in two columns on a phone', function (string $view): void {
     $source = (string) file_get_contents(base_path($view));
 
-    preg_match_all('/class="grid[^"]*"/', $source, $matches);
+    $matches = PatternScan::all('/class="grid[^"]*"/', $source);
 
     // A bare grid-cols-2 with no single-column base is the defect: it applies
     // at every width, phone included.

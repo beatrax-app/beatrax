@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 // The rules page drew a chip reading ALL beside a Dutch sentence for as long as
@@ -49,19 +50,6 @@ function bladeSpeakingFiles(): Finder
         ->notPath('tests');
 }
 
-// preg_match_all answers false when the engine gives up — a backtrack limit, a
-// JIT stack limit on a long template — and both rules below would read that as
-// "nothing matched". A silent false is a clean tree reported over a scan that
-// never ran, so it is raised instead.
-function bladeSpeakingScanned(int|false $matched, string $what): int
-{
-    if ($matched === false) {
-        throw new RuntimeException('the blade-literal '.$what.' scan stopped reading: '.preg_last_error_msg());
-    }
-
-    return $matched;
-}
-
 // A Blade comment is prose by definition and is stripped before either rule
 // looks at the file, or every sentence a template explains itself with would be
 // read as copy the template speaks.
@@ -73,7 +61,7 @@ function bladeSpeakingSource(string $source): string
 /** @return list<string> the quoted literals inside this template's echoes */
 function bladeSpeakingEchoLiterals(string $source, int &$echoes): array
 {
-    bladeSpeakingScanned(preg_match_all('/\{\{(?!--)(.*?)\}\}|\{!!(.*?)!!\}/s', $source, $matches, PREG_SET_ORDER), 'echo');
+    $matches = PatternScan::sets('/\{\{(?!--)(.*?)\}\}|\{!!(.*?)!!\}/s', $source);
 
     $literals = [];
 
@@ -90,7 +78,7 @@ function bladeSpeakingEchoLiterals(string $source, int &$echoes): array
             $expression,
         );
 
-        bladeSpeakingScanned(preg_match_all('/\'([^\'\\\\]*)\'|"([^"\\\\]*)"/', $expression, $quoted, PREG_SET_ORDER), 'literal');
+        $quoted = PatternScan::sets('/\'([^\'\\\\]*)\'|"([^"\\\\]*)"/', $expression);
 
         foreach ($quoted as $one) {
             $literal = ($one[1] ?? '') !== '' ? $one[1] : ($one[2] ?? '');
@@ -114,12 +102,12 @@ function bladeSpeakingReadsAsCopy(string $literal): bool
         return false;
     }
 
-    if (bladeSpeakingScanned(preg_match('/^[A-Za-z][A-Za-z0-9 \'’.,!?()-]+$/u', $literal), 'copy shape') !== 1) {
+    if (! PatternScan::matches('/^[A-Za-z][A-Za-z0-9 \'’.,!?()-]+$/u', $literal)) {
         return false;
     }
 
-    return bladeSpeakingScanned(preg_match('/[A-Z]/', $literal), 'capital') === 1
-        && bladeSpeakingScanned(preg_match('/[a-z][A-Z]/', $literal), 'hump') !== 1;
+    return PatternScan::matches('/[A-Z]/', $literal)
+        && ! PatternScan::matches('/[a-z][A-Z]/', $literal);
 }
 
 it('never echoes a word it typed for itself', function (): void {
@@ -180,7 +168,7 @@ it('never puts a sentence a reader hears into an attribute of its own', function
     foreach (bladeSpeakingFiles() as $file) {
         $relative = str_replace(base_path().'/', '', $file->getPathname());
         $source = bladeSpeakingSource((string) $file->getContents());
-        bladeSpeakingScanned(preg_match_all($pattern, $source, $matches, PREG_SET_ORDER), 'visible attribute');
+        $matches = PatternScan::sets($pattern, $source);
 
         foreach ($matches as $match) {
             $attributes++;
@@ -198,7 +186,7 @@ it('never puts a sentence a reader hears into an attribute of its own', function
             // Two words of letters is a phrase somebody wrote. One is a brand,
             // a format example or a code, and every one of those on this tree
             // is exactly that.
-            if (bladeSpeakingScanned(preg_match('/[A-Za-z]{2,}\s+[A-Za-z]{2,}/', $value), 'phrase') !== 1) {
+            if (! PatternScan::matches('/[A-Za-z]{2,}\s+[A-Za-z]{2,}/', $value)) {
                 continue;
             }
 

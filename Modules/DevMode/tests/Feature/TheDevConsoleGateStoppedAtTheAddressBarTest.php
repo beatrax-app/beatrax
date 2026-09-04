@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Testing\TestResponse;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Support\DevModeSession;
 
 // EnsureDeveloperMode sits on the /dev routes, and route middleware does not
@@ -15,7 +16,7 @@ use Modules\DevMode\Internal\Support\DevModeSession;
 
 function devGateSnapshot(string $pageHtml, string $component): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
 
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);

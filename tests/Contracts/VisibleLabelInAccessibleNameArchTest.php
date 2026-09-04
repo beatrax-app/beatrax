@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-aria-label-that-hides-the-visible-label
  */
@@ -54,11 +56,9 @@ it('has every static visible label contained in its accessible name (WCAG 2.5.3)
         // <button …>text</button> and <a …>text</a>, non-greedy, no nesting
         // of the same tag. Anything this pattern misses is simply not checked
         // rather than wrongly reported.
-        preg_match_all(
+        $matches = PatternScan::setsWithOffsets(
             '~<(button|a)\b([^>]*)>((?:(?!</\1>).)*)</\1>~s',
             $source,
-            $matches,
-            PREG_SET_ORDER | PREG_OFFSET_CAPTURE
         );
 
         foreach ($matches as $match) {

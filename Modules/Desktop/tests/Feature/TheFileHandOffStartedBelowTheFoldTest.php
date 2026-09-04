@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 // The staging screen renders inside layouts.app, whose shell is already
 // min-h-screen. The view opened a second viewport-height block and centred the
@@ -23,7 +24,7 @@ beforeEach(function (): void {
 it('opens no second viewport-height block inside the app shell', function (): void {
     $view = (string) file_get_contents(base_path('Modules/Desktop/Resources/views/staging.blade.php'));
 
-    expect(preg_match('/class="[^"]*min-h-screen/', $view))->toBe(0);
+    expect(PatternScan::matches('/class="[^"]*min-h-screen/', $view))->toBeFalse();
 });
 
 it('still reaches the page it stages for', function (): void {

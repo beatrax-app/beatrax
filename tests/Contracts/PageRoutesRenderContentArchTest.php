@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-page-that-renders-the-shell-and-nothing-else
@@ -13,7 +14,7 @@ function mountedComponents(string $uri): array
 {
     $html = (string) test()->get($uri)->getContent();
 
-    preg_match_all('/&quot;name&quot;:&quot;([a-z0-9._\-]+)&quot;/', $html, $matches);
+    $matches = PatternScan::all('/&quot;name&quot;:&quot;([a-z0-9._\-]+)&quot;/', $html);
 
     return array_values(array_unique($matches[1]));
 }
@@ -39,7 +40,7 @@ it('mounts the page component on a settings route', function (string $uri, strin
 it('gives every page a title of its own, not the bare app name', function (string $uri): void {
     $html = (string) test()->get($uri)->getContent();
 
-    preg_match('#<title>(.*?)</title>#s', $html, $m);
+    $m = PatternScan::first('#<title>(.*?)</title>#s', $html);
 
     expect(trim($m[1] ?? ''))->not->toBe('Beatrax');
 })->with(['/settings/aliases', '/settings/open-banking']);
