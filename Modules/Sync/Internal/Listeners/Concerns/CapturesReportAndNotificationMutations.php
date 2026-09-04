@@ -52,6 +52,18 @@ trait CapturesReportAndNotificationMutations
         }
     }
 
+    // The retention sweep is the only path that deletes one, and a delete it
+    // does not announce is undone the moment a peer replays its own history of
+    // the row — which is what the registry's _delete_wins rule is there to
+    // settle.
+    private function handleNotificationDelete(NotificationMutated $event, OpLogWriter $writer): void
+    {
+        $writer->writeDelete(
+            table: 'notifications',
+            pk: $event->notificationId,
+        );
+    }
+
     // Unlike every other registered table, notifications.id is NOT an
     // autoincrement surrogate — it is a deterministic sha256 digest, so it
     // MUST be carried as an explicit field or a fresh device's

@@ -715,13 +715,25 @@ a single contended write would throw mid-loop and silently abort the
 per-user pass halfway through.
 
 **Error envelope:** `RateLimitedException` on the discovery query
-silently aborts the daily run (the next scheduler tick retries
-tomorrow — no state-machine transition, since `discovered_senders` has
-no per-inbox lifecycle column and the absence of new rows for one day
-is its own signal). Any other `Throwable` is swallowed (no facade
-access to `Log` in module code) and the loop continues to the next
-inbox — discovery is best-effort, and a single inbox's failure must
-not abort the whole per-user pass.
+retires the *provider*, not the pass. The walk marks that provider spent
+and carries on with the remaining inboxes, because a quota belongs to a
+credential: aborting the whole run meant one busy Gmail account kept a
+Microsoft inbox from ever being walked, and an account permanently over
+quota never reached its second inbox at all. Inboxes sharing the spent
+credential are skipped rather than asked again, since asking only spends
+the retry. There is still no state-machine transition —
+`discovered_senders` has no per-inbox lifecycle column — which is exactly
+why the refusal is logged: a warning naming the inbox and provider is the
+only record that the pass stopped short of a mailbox rather than finding
+it empty.
+
+Any other `Throwable` still lets the loop continue to the next inbox —
+discovery is best-effort, and a single inbox's failure must not abort the
+whole per-user pass — but it is logged too, through an injected
+`Psr\Log\LoggerInterface` and `SafeExceptionContext::describe()`. The old
+note that it was swallowed "for lack of facade access to `Log` in module
+code" had the rule right and the conclusion wrong: the facade is banned,
+the abstraction is not, and well over a hundred files already inject it.
 
 The exclude list combines two sources of "do not surface again": every
 `known_senders` pattern (some full addresses like `paypal.com`, others
