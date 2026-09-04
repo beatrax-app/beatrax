@@ -85,6 +85,11 @@ return [
         '.device-test',
         '.playwright-mcp',
 
+        // The repository itself. The packager's own internal list excludes it
+        // too, but the whole history of a personal-finance application is not
+        // a thing to leave resting on a vendor default we do not control.
+        '.git',
+
         // A manual drop directory for PayPal exports. .gitignore keeps
         // local/paypal/ present and its contents out of git, nothing in the
         // application reads it, and what a developer drops there is a real
