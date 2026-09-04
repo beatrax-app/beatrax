@@ -195,6 +195,7 @@ final class AppNavigation
     {
         return [
             ['destination' => Destination::DataDevices, 'icon' => '⇄', 'key' => 'data_devices', 'keywords' => ['sync', 'pair', 'device', 'backup', 'phone']],
+            ['destination' => Destination::DataLocations, 'icon' => '⌖', 'key' => 'data_locations', 'keywords' => ['where', 'path', 'folder', 'storage', 'export', 'delete']],
             ['destination' => Destination::Settings, 'icon' => '⚙️', 'key' => 'settings', 'keywords' => ['preferences', 'config', 'profile', 'account', 'language']],
         ];
     }

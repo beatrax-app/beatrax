@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Categorisire',
         'data_devices' => 'Date și dispozitive',
+        'data_locations' => 'Unde sunt datele mele?',
         'settings' => 'Setări',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Verifică tranzacțiile fără categorie',
         'community' => 'Cunoștințe comune despre comercianți',
         'data_devices' => 'Sincronizare, împerechere și copii de rezervă',
+        'data_locations' => 'Căi, export și ștergere',
         'settings' => 'Preferințe ale aplicației',
     ],
 

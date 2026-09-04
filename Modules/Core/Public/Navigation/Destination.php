@@ -69,6 +69,8 @@ enum Destination: string
 
     case DataDevices = 'data-devices.index';
 
+    case DataLocations = 'core.help.data-locations';
+
     case Settings = 'settings';
 
     public function routeName(): string

@@ -334,6 +334,10 @@
         </span>
         {{ AppNavigation::label(Destination::DataDevices) }}
     </a>
+    <a href="{{ Destination::DataLocations->url() }}" class="side-item {{ $isActive(Destination::DataLocations->path()) }}">
+        <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::DataLocations) }}</span>
+        {{ AppNavigation::label(Destination::DataLocations) }}
+    </a>
     <a href="{{ Destination::Settings->url() }}" class="side-item {{ $isActive(Destination::Settings->path()) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Settings) }}</span>
         {{ AppNavigation::label(Destination::Settings) }}
