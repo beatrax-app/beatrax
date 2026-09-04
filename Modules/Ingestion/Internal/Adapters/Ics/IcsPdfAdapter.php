@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Carbon\CarbonImmutable;
 use Generator;
+use Modules\Ingestion\Internal\Exceptions\IcsStatementDateUnreadableException;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
@@ -75,9 +76,16 @@ final class IcsPdfAdapter implements SourceAdapter
         $rawText = $text;
         $cleaned = $this->stripPageNoise($text);
 
+        // A row states a day and a month and never a year, so this one date is
+        // the year of every transaction in the file. Stood in for by the wall
+        // clock, an archived statement imported stamped into the current year.
         $statementDate = $this->header->statementDate($rawText);
-        $statementYear = $statementDate->year ?? (int) date('Y');
-        $statementMonth = $statementDate->month ?? (int) date('n');
+        if (! $statementDate instanceof CarbonImmutable) {
+            throw new IcsStatementDateUnreadableException;
+        }
+
+        $statementYear = $statementDate->year;
+        $statementMonth = $statementDate->month;
 
         $cardLast4 = $this->header->cardLast4($rawText);
 

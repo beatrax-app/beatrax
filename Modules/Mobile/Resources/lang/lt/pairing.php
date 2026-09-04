@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Įrenginys susietas',
     'success_body' => 'Šiuo įrenginiu dabar pasitikima. Prisijungus duomenys bus sinchronizuoti.',
+    'encryption_incomplete' => 'Įrenginys susietas, tačiau jame saugomų duomenų šifravimas nebuvo užbaigtas. Duomenys dar nesaugomi užšifruoti.',
     'done' => 'Atlikta',
 
     'errors' => [

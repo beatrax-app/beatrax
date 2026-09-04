@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Dispositivo abbinato',
     'success_body' => 'Questo dispositivo è ora attendibile. I tuoi dati si sincronizzeranno appena ti connetti.',
+    'encryption_incomplete' => 'Il dispositivo è associato, ma la cifratura dei dati salvati su di esso non è stata completata. I dati non sono ancora archiviati cifrati.',
     'done' => 'Fatto',
 
     'errors' => [

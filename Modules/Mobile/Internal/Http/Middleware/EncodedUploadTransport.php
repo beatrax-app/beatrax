@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Modules\Core\Public\Services\UserDataPathService;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -46,6 +47,10 @@ final class EncodedUploadTransport
     private const DECODE_CHUNK = 1 << 19;
 
     private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    public function __construct(
+        private readonly LoggerInterface $logger,
+    ) {}
 
     /**
      * @param  Closure(Request): Response  $next
@@ -147,11 +152,7 @@ final class EncodedUploadTransport
         @mkdir($dir, 0700, true);
         @chmod($dir, 0700);
 
-        $path = tempnam($dir, 'beatrax-upload-');
-
-        if ($path === false) {
-            throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
-        }
+        $path = $this->stagedPath($dir);
 
         [$written, $digest] = $this->decodeInto($content, $path);
 
@@ -168,6 +169,37 @@ final class EncodedUploadTransport
         return $path;
     }
 
+    // tempnam() does not fail on a directory it cannot write to: it creates
+    // the file in sys_get_temp_dir() instead, returns THAT path, and says so
+    // in a notice. Suppressed on purpose — a notice is not a guarantee, and
+    // the path it hands back is. The stray file is removed, not left at 1777.
+    private function stagedPath(string $dir): string
+    {
+        $path = @tempnam($dir, 'beatrax-upload-');
+
+        if ($path === false) {
+            $this->refuseStaging('tempnam() could not name a file for the upload');
+        }
+
+        $staged = realpath($path);
+
+        if ($staged === false || dirname($staged) !== realpath($dir)) {
+            @unlink($path);
+            $this->refuseStaging('the staging directory was not writable, and tempnam() fell back to the system temp directory');
+        }
+
+        return $staged;
+    }
+
+    // Every way staging can fail reads the same to the caller; the reason it
+    // failed is for the log, which this class named and never wrote to.
+    private function refuseStaging(string $why): never
+    {
+        $this->logger->warning('EncodedUploadTransport: upload staging refused — '.$why.'.');
+
+        throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
+    }
+
     // Decoded a slice at a time straight onto disk. Holding the whole decoded
     // copy alongside the raw body and the parsed base64 string cost about four
     // times the file, and the supported 20 MB maximum fatalled on line one of
@@ -180,7 +212,7 @@ final class EncodedUploadTransport
         $handle = fopen($path, 'wb');
 
         if ($handle === false) {
-            throw new HttpException(500, self::STAGING_FAILED_MESSAGE);
+            $this->refuseStaging('the staged file could not be opened for writing');
         }
 
         $hash = hash_init('sha256');

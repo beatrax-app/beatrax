@@ -8,12 +8,14 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Sync\Public\Events\TransactionMutated;
+use Psr\Log\LoggerInterface;
 
 final readonly class FieldProvenanceWriter
 {
     public function __construct(
         private DatabaseManager $db,
         private Dispatcher $events,
+        private LoggerInterface $log,
     ) {}
 
     // A null (never-stamped) map is initialised via COALESCE(..., '{}')
@@ -100,22 +102,30 @@ final readonly class FieldProvenanceWriter
             ->where('user_id', $userId)
             ->value('field_provenance');
 
-        return is_string($raw) && $raw !== '' ? self::decodeProvenance($raw) : [];
+        return is_string($raw) && $raw !== '' ? $this->decodeProvenance($raw, $transactionId) : [];
     }
 
+    // Still degrades to "nothing is protected" rather than taking down a
+    // re-apply run over one row's JSON — but it says so now. Silent, the
+    // degradation is a rule overwriting a category the reader set by hand,
+    // and no later reading of the ledger can tell that this is what happened.
     /**
      * @return array<string, string>
      */
-    private static function decodeProvenance(string $raw): array
+    private function decodeProvenance(string $raw, int $transactionId): array
     {
         try {
             /** @var mixed $decoded */
             $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return [];
+            $decoded = null;
         }
 
         if (! is_array($decoded)) {
+            $this->log->warning('FieldProvenanceWriter: field_provenance did not read, so no field on this row is protected from a rule.', [
+                'transaction_id' => $transactionId,
+            ]);
+
             return [];
         }
 

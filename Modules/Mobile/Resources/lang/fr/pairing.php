@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Appareil appairé',
     'success_body' => 'Cet appareil est maintenant approuvé. Tes données se synchroniseront dès que tu te connecteras.',
+    'encryption_incomplete' => 'Cet appareil est appairé, mais le chiffrement des données qui y sont stockées n\'a pas abouti. Elles ne sont pas encore stockées chiffrées.',
     'done' => 'Terminé',
 
     'errors' => [
