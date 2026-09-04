@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupElement;
+use Modules\Core\Public\Support\MarkupSource;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-aria-label-that-hides-the-visible-label
@@ -32,19 +33,45 @@ function labelInNameBladeFiles(): array
     return $files;
 }
 
+// The outermost hidden element is removed first, so removing it takes any
+// nested one with it and no offset computed here is ever stale.
+function labelInNameWithoutHidden(string $inner): string
+{
+    foreach (MarkupSource::tags($inner) as $element) {
+        if ($element->attribute('aria-hidden') !== 'true' || $element->inner === null) {
+            continue;
+        }
+
+        $whole = strlen($element->startTag) + strlen($element->inner) + strlen('</'.$element->name.'>');
+
+        return labelInNameWithoutHidden(substr_replace($inner, '', $element->offset, $whole));
+    }
+
+    return $inner;
+}
+
 // Strips the pieces that carry no announced text: nested elements, Blade
 // comments, and anything the reader is told to ignore.
 function labelInNameVisibleText(string $inner): string
 {
-    $inner = preg_replace('~<span[^>]*aria-hidden="true"[^>]*>.*?</span>~s', '', $inner) ?? $inner;
-    $inner = preg_replace('~\{\{--.*?--\}\}~s', '', $inner) ?? $inner;
-    $inner = preg_replace('~<[^>]+>~', '', $inner) ?? $inner;
-
     // Entities are decoded before the caller tests for letters, so that
     // &times; and &lsaquo; read as the glyphs they are rather than as words.
-    $inner = html_entity_decode($inner, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = html_entity_decode(
+        MarkupSource::text(labelInNameWithoutHidden($inner)),
+        ENT_QUOTES | ENT_HTML5,
+        'UTF-8',
+    );
 
-    return trim(preg_replace('~\s+~', ' ', $inner) ?? $inner);
+    return trim(preg_replace('~\s+~u', ' ', $text) ?? $text);
+}
+
+/** @return list<MarkupElement> every button and link in the file, read whole */
+function labelInNameControls(string $source): array
+{
+    return array_merge(
+        MarkupSource::elements($source, 'button'),
+        MarkupSource::elements($source, 'a'),
+    );
 }
 
 it('has every static visible label contained in its accessible name (WCAG 2.5.3)', function (): void {
@@ -53,24 +80,14 @@ it('has every static visible label contained in its accessible name (WCAG 2.5.3)
     foreach (labelInNameBladeFiles() as $path) {
         $source = (string) file_get_contents($path);
 
-        // <button …>text</button> and <a …>text</a>, non-greedy, no nesting
-        // of the same tag. Anything this pattern misses is simply not checked
-        // rather than wrongly reported.
-        $matches = PatternScan::setsWithOffsets(
-            '~<(button|a)\b([^>]*)>((?:(?!</\1>).)*)</\1>~s',
-            $source,
-        );
+        foreach (labelInNameControls($source) as $control) {
+            $accessibleName = $control->attribute('aria-label');
 
-        foreach ($matches as $match) {
-            $attributes = $match[2][0];
-            $inner = $match[3][0];
-
-            if (preg_match('~aria-label="([^"]*)"~', $attributes, $label) !== 1) {
+            if ($accessibleName === null || $control->inner === null) {
                 continue;
             }
 
-            $accessibleName = $label[1];
-            $visible = labelInNameVisibleText($inner);
+            $visible = labelInNameVisibleText($control->inner);
 
             // Only statically-decidable pairs. An interpolated name or label
             // depends on runtime values this check cannot resolve, and an
@@ -86,16 +103,8 @@ it('has every static visible label contained in its accessible name (WCAG 2.5.3)
                 continue;
             }
 
-            // The tag pattern stops at the first ">", so an attribute holding
-            // inline JS spills its tail into $inner. Those artefacts carry
-            // quotes or "=", which real button text does not.
-            if (str_contains($visible, '"') || str_contains($visible, '=')) {
-                continue;
-            }
-
             if (! str_contains(mb_strtolower($accessibleName), mb_strtolower($visible))) {
-                $line = substr_count(substr($source, 0, (int) $match[0][1]), "\n") + 1;
-                $offenders[] = sprintf('%s:%d — shows "%s", announces "%s"', $path, $line, $visible, $accessibleName);
+                $offenders[] = sprintf('%s:%d — shows "%s", announces "%s"', $path, $control->line($source), $visible, $accessibleName);
             }
         }
     }
