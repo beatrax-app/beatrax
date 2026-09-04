@@ -411,6 +411,7 @@ jobs:
               # DesktopServiceProvider.
               working-directory: mobile-app
               run: |
+                  set -euo pipefail
                   php artisan config:clear
                   MODULE_LIST=$(php artisan module:list)
                   echo "$MODULE_LIST"
