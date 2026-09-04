@@ -1,0 +1,12 @@
+# invariants-from-shipped-failures.md is a log: every entry is appended and no
+# entry is edited afterwards, which is what makes `union` right for it. Five
+# open branches added 65, 117, 117, 195 and 29 lines to it and removed none
+# between them, and each pair of those collided at the end of the file — five
+# conflicts carrying no disagreement, resolved by keeping both sides every
+# time. Union does that resolution instead of asking.
+#
+# It is scoped to this one file on purpose. Union keeps both sides of any hunk
+# two branches touch, so on a file where entries get REVISED it would silently
+# leave the old text beside the new one. The append-only habit is what makes it
+# safe here, and a file that stops being append-only should leave this list.
+.docs/conventions/invariants-from-shipped-failures.md merge=union
