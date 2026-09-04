@@ -8,9 +8,13 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
+use Modules\Sync\Internal\Merge\RowOwnership;
 use Modules\Sync\Internal\Merge\SearchDocumentRows;
+use Modules\Sync\Internal\Merge\SplitCreateTail;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 
 // A peer's history arrives in transport frames and nothing keeps one row's
 // create ops inside a single frame. The half that lands second names a row
@@ -208,4 +212,61 @@ it('never moves a birth time that came off the wire', function (): void {
     // disagreement for the collision check, never something to overwrite.
     expect($db->connection()->table('transactions')->where('id', 402)->value('created_at'))
         ->toBe('2026-06-10 09:00:00');
+});
+
+// The tail is written as one statement, so a single column whose foreign key
+// target has not landed costs every column beside it. Nothing comes back for
+// it: no quarantine row, no retry, and the row count still matches the peer's.
+// The refusal is tolerated -- the row is applied and usable -- but a merge that
+// drops a column has to leave a trace somewhere a reader can find it.
+it('says which columns it lost when the tail of a create is refused', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = (int) splitTailUser('split-tail-refused')->id;
+
+    $accountId = (int) $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId, 'name' => 'Main', 'slug' => 'main-'.$userId, 'kind' => 'checking',
+        'iban' => 'NL00LOST'.str_pad((string) $userId, 10, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+    $runId = (int) $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId, 'source_format' => 'demo', 'raw_file_path' => 'i.csv',
+        'sha256' => str_repeat('d', 64), 'uploaded_at' => '2026-06-01 00:00:00',
+        'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
+    ]);
+    $db->connection()->table('transactions')->insert([
+        'id' => 512, 'user_id' => $userId, 'account_id' => $accountId, 'type' => 'expense',
+        'posted_at' => '2026-06-10', 'booked_at' => '2026-06-10 12:00:00', 'value_date' => '2026-06-10',
+        'amount_minor' => -2500, 'currency' => 'EUR', 'settled_amount_minor' => -2500,
+        'settled_currency' => 'EUR', 'counterparty_normalized' => 'refused',
+        'normalization_version' => 3, 'source_format' => 'demo', 'import_run_id' => $runId,
+        'source_row_index' => 2, 'fingerprint' => str_repeat('9', 64), 'fingerprint_version' => 3,
+        'status' => 'cleared', 'created_at' => '2026-06-10 12:00:00', 'updated_at' => '2026-06-10 12:00:00',
+    ]);
+
+    $said = [];
+    $logger = new class($said) implements LoggerInterface
+    {
+        use LoggerTrait;
+
+        /** @param array<int, array{0: mixed, 1: array<string, mixed>}> $said */
+        public function __construct(private array &$said) {}
+
+        /** @param array<string, mixed> $context */
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->said[] = [$message, $context];
+        }
+    };
+
+    $tail = new SplitCreateTail($db, new RowOwnership($db), $logger);
+    $tail->fill('transactions', 512, ['category_id' => 987654, 'payment_type' => 'pin'], $userId);
+
+    $row = $db->connection()->table('transactions')->where('id', 512)->first();
+
+    expect($row?->payment_type)->toBe('unknown', 'the whole tail goes down with the one column that was refused')
+        ->and($row?->category_id)->toBeNull()
+        ->and($said)->toHaveCount(1, 'a tail nothing retries must not be dropped in silence')
+        ->and($said[0][1]['columns'])->toBe(['category_id', 'payment_type'])
+        ->and($said[0][1]['table'])->toBe('transactions')
+        ->and($said[0][1])->not->toHaveKey('exception');
 });

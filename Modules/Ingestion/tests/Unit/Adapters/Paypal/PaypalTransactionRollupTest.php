@@ -310,7 +310,7 @@ it('emits monotonically increasing sourceRowIndex over the rolled-up canonical r
     }
 })->group('phase-4');
 
-it('skips a parent row with a malformed Bruto cell and bumps skippedMalformedRowCount', function (): void {
+it('skips a parent row with a malformed Bruto cell and names the place it held', function (): void {
     $rows = [
         paypalRow([
             'Transactiereferentie' => 'O-00000000000000001',
@@ -328,7 +328,7 @@ it('skips a parent row with a malformed Bruto cell and bumps skippedMalformedRow
 
     expect($dtos)->toHaveCount(1);
     expect($dtos[0]->sourceRef)->toBe('O-00000000000000001');
-    expect($this->rollup->skippedMalformedRowCount())->toBe(1);
+    expect($this->rollup->unreadableRowIndexes())->toBe([1]);
 })->group('phase-4');
 
 // The skip-the-row catch names InvalidAmountException, so an over-range Bruto
@@ -354,7 +354,44 @@ it('skips a parent row whose Bruto is wider than the ledger can hold', function 
 
     expect($dtos)->toHaveCount(1)
         ->and($dtos[0]->sourceRef)->toBe('O-00000000000000001')
-        ->and($this->rollup->skippedMalformedRowCount())->toBe(1);
+        ->and($this->rollup->unreadableRowIndexes())->toBe([1]);
+});
+
+// A PayPal export can pass language detection and still be missing the amount
+// column. Defaulted to "0,00" the payment read as an amount of exactly nothing,
+// which parses, so nothing raised and the import reported itself clean.
+it('refuses a payment row whose export carries no gross-amount column at all', function (): void {
+    $row = paypalRow(['Transactiereferentie' => 'O-00000000000000001']);
+    unset($row['Bruto ']);
+
+    $dtos = $this->rollup->rollup([$row], 'nl');
+
+    expect($dtos)->toHaveCount(0);
+    expect($this->rollup->unreadableRowIndexes())->toBe([0]);
+});
+
+it('refuses a conversion leg whose row carries no gross-amount column', function (): void {
+    $parent = paypalRow([
+        'Valuta' => 'USD',
+        'Bruto ' => '-10,46',
+        'Netto' => '-10,46',
+        'Transactiereferentie' => 'O-00000000000000034',
+        'Reference Txn ID' => '',
+    ]);
+    $childFx = paypalRow([
+        'Omschrijving' => 'Algemene valutaomrekening',
+        'Valuta' => 'EUR',
+        'Netto' => '-9,27',
+        'Transactiereferentie' => 'O-00000000000000035',
+        'Reference Txn ID' => 'O-00000000000000034',
+    ]);
+    unset($childFx['Bruto ']);
+
+    $dtos = $this->rollup->rollup([$parent, $childFx], 'nl');
+
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->settledAmountMinor)->toBeNull();
+    expect($this->rollup->unreadableRowIndexes())->toBe([1]);
 });
 
 it('drops a malformed FX child but still emits the parent DTO without the FX pair filled in', function (): void {
@@ -385,7 +422,7 @@ it('drops a malformed FX child but still emits the parent DTO without the FX pai
     expect($dto->amountMinor)->toBe(-1046);
     expect($dto->settledAmountMinor)->toBeNull();
     expect($dto->settledCurrency)->toBeNull();
-    expect($this->rollup->skippedMalformedRowCount())->toBe(1);
+    expect($this->rollup->unreadableRowIndexes())->toBe([1]);
 })->group('phase-4');
 
 it('produces 82 logical-payment groups when given the full redacted fixture rows', function (): void {

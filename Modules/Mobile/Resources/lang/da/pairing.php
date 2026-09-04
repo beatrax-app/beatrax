@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Enheden er parret',
     'success_body' => 'Denne enhed er nu betroet. Dine data synkroniseres, så snart du forbinder.',
+    'encryption_incomplete' => 'Enheden er parret, men krypteringen af de data, der er gemt på den, blev ikke fuldført. Dataene er endnu ikke gemt krypteret.',
     'done' => 'Færdig',
 
     'errors' => [

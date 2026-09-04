@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Enheten är parkopplad',
     'success_body' => 'Den här enheten är nu betrodd. Dina data synkroniseras så snart du ansluter.',
+    'encryption_incomplete' => 'Enheten är parkopplad, men krypteringen av de data som lagras på den slutfördes inte. Data lagras ännu inte krypterat.',
     'done' => 'Klar',
 
     'errors' => [

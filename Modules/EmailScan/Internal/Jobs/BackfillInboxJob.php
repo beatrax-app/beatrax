@@ -278,7 +278,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
             return true;
-        } catch (InvalidStateTransitionException) {
+        } catch (InvalidStateTransitionException $e) {
+            // BackfillWindowModal answers these states in the modal rather than
+            // dispatching, so arriving here is the race it cannot close — and
+            // a reader whose modal closed on a backfill that never started.
+            $context->logger->warning('BackfillInboxJob: the scan state machine refused the opening transition, so no backfill ran.', [
+                'inbox_id' => $this->inboxId,
+                'refused_transition' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }

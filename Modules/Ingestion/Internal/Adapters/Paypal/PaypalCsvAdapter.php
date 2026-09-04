@@ -10,18 +10,22 @@ use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
+use Modules\Ingestion\Public\Contracts\NamesRowsItCouldNotRead;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-final class PaypalCsvAdapter implements SourceAdapter
+final class PaypalCsvAdapter implements NamesRowsItCouldNotRead, SourceAdapter
 {
     // A PayPal wallet has no IBAN, so this literal stands in as the account
     // key; AccountResolver scopes by user, so it cannot collide.
     private const PAYPAL_OWN_IBAN = SyntheticIban::Paypal->value;
 
     private ?StatementSummaryData $lastStatementMetadata = null;
+
+    /** @var list<int> */
+    private array $lastUnreadableRowIndexes = [];
 
     public function __construct(
         private readonly HeaderSniffer $sniffer,
@@ -38,12 +42,21 @@ final class PaypalCsvAdapter implements SourceAdapter
         return $this->lastStatementMetadata;
     }
 
+    /**
+     * @return list<int>
+     */
+    public function unreadableRowIndexes(): array
+    {
+        return $this->lastUnreadableRowIndexes;
+    }
+
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
         // Cleared before the sniff, not after: this adapter is a singleton, so
         // a run refused at the door would otherwise answer statementMetadata()
-        // with the previous file's statement.
+        // and unreadableRowIndexes() with the previous file's.
         $this->lastStatementMetadata = null;
+        $this->lastUnreadableRowIndexes = [];
 
         $this->sniffer->sniff($localPath, PaypalCsvLanguageProfile::FORMAT);
 
@@ -87,6 +100,7 @@ final class PaypalCsvAdapter implements SourceAdapter
         }
 
         $rolledUp = $this->rollup->rollup($rawRows, $language);
+        $this->lastUnreadableRowIndexes = $this->rollup->unreadableRowIndexes();
 
         /** @var list<CarbonImmutable> $bookedDates */
         $bookedDates = [];
@@ -142,15 +156,18 @@ final class PaypalCsvAdapter implements SourceAdapter
             'orphanChildCount' => $this->rollup->orphanChildCount(),
         ];
 
-        $skippedMalformedRowCount = $this->rollup->skippedMalformedRowCount();
-        if ($skippedMalformedRowCount > 0) {
-            $extras['skippedMalformedRowCount'] = $skippedMalformedRowCount;
+        $unreadableRowCount = count($this->lastUnreadableRowIndexes);
+        if ($unreadableRowCount > 0) {
+            $extras['unreadableRowCount'] = $unreadableRowCount;
         }
 
         // No single currency, no balance: /reconcile reads this as a target and
         // asks the reader to close any gap by toggling rows, so one that no row
-        // can close is worse than none at all.
-        $currency = count($netByCurrency) === 1 ? array_key_first($netByCurrency) : null;
+        // can close is worse than none at all. A row that could not be read is
+        // the same case: summed over the rest, the total moves with the loss.
+        $currency = count($netByCurrency) === 1 && $unreadableRowCount === 0
+            ? array_key_first($netByCurrency)
+            : null;
 
         return new StatementSummaryData(
             importRunId: 0,

@@ -13,5 +13,7 @@ enum StatementExtraKey: string
 
     case MultiStatement = 'multiStatement';
 
+    case ClosingBalanceUnreadable = 'closingBalanceUnreadable';
+
     case CreatedOn = 'createdOn';
 }

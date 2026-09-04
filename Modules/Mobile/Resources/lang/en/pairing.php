@@ -34,6 +34,7 @@ return [
 
     'success_heading' => 'Device paired',
     'success_body' => 'This device is now trusted. Your data will sync once you connect.',
+    'encryption_incomplete' => 'This device is paired, but encrypting the data stored on it did not finish. It is not encrypted at rest yet.',
     'done' => 'Done',
 
     'errors' => [
