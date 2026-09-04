@@ -69,7 +69,7 @@
                             <input
                                 type="text"
                                 x-model="name"
-                                x-on:keydown.enter.prevent="$wire.renameCategory({{ $cat->id }}, name); editing = false"
+                                x-on:keydown.enter.prevent="$wire.renameCategory('{{ $cat->id }}', name); editing = false"
                                 x-on:keydown.escape.stop="editing = false; name = @js($cat->name)"
                                 class="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                                 aria-label="{{ Lang::get('tax::settings.rename_input_aria', ['name' => $cat->name]) }}"
@@ -91,7 +91,7 @@
                         <template x-if="editing">
                             <button
                                 type="button"
-                                x-on:click="$wire.renameCategory({{ $cat->id }}, name); editing = false"
+                                x-on:click="$wire.renameCategory('{{ $cat->id }}', name); editing = false"
                                 class="pill-btn-ghost text-xs mr-1"
                                 aria-label="{{ Lang::get('tax::settings.rename_save_aria', ['name' => $cat->name]) }}"
                                 data-testid="rename-save-{{ $cat->id }}"
@@ -99,7 +99,7 @@
                         </template>
                         <button
                             type="button"
-                            wire:click="archiveCategory({{ $cat->id }})"
+                            wire:click="archiveCategory('{{ $cat->id }}')"
                             class="pill-btn-ghost text-xs opacity-0 group-hover:opacity-100 focus:opacity-100"
                             aria-label="{{ Lang::get('tax::settings.archive_aria', ['name' => $cat->name]) }}"
                         >{{ Lang::get('tax::settings.archive') }}</button>
@@ -159,7 +159,7 @@
                             {{-- Archiving is reversible. --}}
                             <button
                                 type="button"
-                                wire:click="unarchiveCategory({{ $cat->id }})"
+                                wire:click="unarchiveCategory('{{ $cat->id }}')"
                                 class="pill-btn-ghost text-xs opacity-0 group-hover:opacity-100 focus:opacity-100"
                                 aria-label="{{ Lang::get('tax::settings.restore_aria', ['name' => $cat->name]) }}"
                                 data-testid="unarchive-btn-{{ $cat->id }}"

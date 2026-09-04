@@ -67,10 +67,10 @@ final class ReportsIndex extends Component
 
     // The action's own user-scoped lookup is the security boundary; catching its
     // NotFoundHttpException only spares a stale payload a 500.
-    public function deleteReport(int $reportId, CurrentUser $currentUser, DeleteReport $delete): void
+    public function deleteReport(int|string $reportId, CurrentUser $currentUser, DeleteReport $delete): void
     {
         try {
-            $delete->delete($currentUser->user(), $reportId);
+            $delete->delete($currentUser->user(), DerivedRowId::fromWire($reportId));
         } catch (NotFoundHttpException) {
             $this->confirmingDeleteId = null;
             $this->flashMessage = Lang::get('reports::index.flash.not_found');

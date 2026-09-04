@@ -131,7 +131,7 @@
                                 tone="danger"
                                 :label="Lang::get('cashbook::cash-book.delete_entry')"
                                 :caption="Lang::get('cashbook::cash-book.delete_entry_caption')"
-                                wire:click="confirmDelete({{ (int) $entry->id }})"
+                                wire:click="confirmDelete('{{ (int) $entry->id }}')"
                             >🗑️</x-core::emoji-action>
                         </div>
 
@@ -142,7 +142,7 @@
                                 :cancel-label="Lang::get('cashbook::cash-book.delete_keep')"
                                 :confirm-label="Lang::get('cashbook::cash-book.delete')"
                                 cancel="cancelDelete"
-                                :confirm="'delete('.(int) $entry->id.')'"
+                                :confirm="'delete(\''.(int) $entry->id.'\')'"
                             />
                         @endif
                     </div>
@@ -177,12 +177,12 @@
                                 :cancel-label="Lang::get('cashbook::cash-book.delete_keep')"
                                 :confirm-label="Lang::get('cashbook::cash-book.delete')"
                                 cancel="cancelDelete"
-                                :confirm="'delete('.(int) $entry->id.')'"
+                                :confirm="'delete(\''.(int) $entry->id.'\')'"
                             />
                         @else
                             <button
                                 type="button"
-                                wire:click="confirmDelete({{ (int) $entry->id }})"
+                                wire:click="confirmDelete('{{ (int) $entry->id }}')"
                                 aria-label="{{ Lang::get('cashbook::cash-book.delete_entry') }}"
                                 class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400 dark:text-slate-400"
                             >{{ Lang::get('cashbook::cash-book.delete') }}</button>
