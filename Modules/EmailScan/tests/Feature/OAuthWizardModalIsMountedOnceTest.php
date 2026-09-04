@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -30,7 +31,7 @@ it('lets the redirect URI break inside the dialog it sizes', function (): void {
         base_path('Modules/EmailScan/Resources/views/livewire/oauth-client-wizard-modal.blade.php'),
     );
 
-    preg_match_all('/<span[^>]*>\{\{ \$redirectUri \}\}<\/span>/', $template, $spans);
+    $spans = PatternScan::all('/<span[^>]*>\{\{ \$redirectUri \}\}<\/span>/', $template);
 
     expect($spans[0])->not->toBeEmpty();
 

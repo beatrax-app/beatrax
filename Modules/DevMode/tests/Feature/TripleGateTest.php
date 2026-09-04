@@ -7,6 +7,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 
 function tripleGateUser(string $username): User
@@ -121,7 +122,7 @@ it('enforces the token every locale tells the operator to type', function (): vo
     $tokens = [];
     foreach ($locales as $locale) {
         app()->setLocale($locale);
-        preg_match('#<code>(.*?)</code>#', (string) Lang::get('dev::triple_gate.type_to_confirm_html'), $matches);
+        $matches = PatternScan::first('#<code>(.*?)</code>#', (string) Lang::get('dev::triple_gate.type_to_confirm_html'));
         $tokens[$locale] = $matches[1] ?? '';
     }
 

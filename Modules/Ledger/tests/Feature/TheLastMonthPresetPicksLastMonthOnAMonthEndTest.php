@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 
 // subMonth() off a 29th, 30th or 31st that the shorter month does not have
@@ -29,11 +30,9 @@ function datePresetButtons(string $today): array
 
     $html = (string) Livewire::test(TransactionsList::class)->set('currency', 'eur_only')->html();
 
-    preg_match_all(
+    $matches = PatternScan::sets(
         '/\$set\(\'filterAfter\', \'(?<after>[\d-]+)\'\).*?\$set\(\'filterBefore\', \'(?<before>[\d-]+)\'\).*?>(?<label>[^<]+)<\/button>/s',
         $html,
-        $matches,
-        PREG_SET_ORDER,
     );
 
     return array_map(

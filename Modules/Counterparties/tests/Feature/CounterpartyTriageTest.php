@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Account;
@@ -253,7 +254,7 @@ function cpTriageAmountsFor(int $userId): array
         ->test(CounterpartyTriage::class)
         ->html();
 
-    preg_match_all('/triage-tx__amount"[^>]*>(.*?)<\/span>/s', $html, $matches);
+    $matches = PatternScan::all('/triage-tx__amount"[^>]*>(.*?)<\/span>/s', $html);
 
     return array_values(array_map(
         static fn (string $raw): string => html_entity_decode(trim($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8'),

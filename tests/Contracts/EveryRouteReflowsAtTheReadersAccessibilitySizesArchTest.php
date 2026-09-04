@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\UnlayeredCss;
 
 // Measured on an iPhone 12 mini (375pt) with iOS Larger Accessibility Sizes on
@@ -27,8 +28,8 @@ use Tests\Contracts\Support\UnlayeredCss;
 /** @return list<string> every class list in $source, markup attribute or merged array value */
 function accessibilityReflowClassAttributes(string $source): array
 {
-    preg_match_all('/class="([^"]*)"/', $source, $attributes);
-    preg_match_all('/\'class\'\s*=>\s*"([^"]*)"/', $source, $merged);
+    $attributes = PatternScan::all('/class="([^"]*)"/', $source);
+    $merged = PatternScan::all('/\'class\'\s*=>\s*"([^"]*)"/', $source);
 
     return array_merge($attributes[1], $merged[1]);
 }

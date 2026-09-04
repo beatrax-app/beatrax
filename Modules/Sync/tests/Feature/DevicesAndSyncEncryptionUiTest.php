@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
@@ -283,8 +284,7 @@ it('the encryption-on status row names the search index and every column SearchI
     $source = file_get_contents($writerPath);
     expect($source)->toBeString();
 
-    $matches = [];
-    preg_match_all("/decryptValue\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '', $matches, PREG_SET_ORDER);
+    $matches = PatternScan::sets("/decryptValue\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '');
 
     $indexedInTheClear = [];
     foreach ($matches as $match) {

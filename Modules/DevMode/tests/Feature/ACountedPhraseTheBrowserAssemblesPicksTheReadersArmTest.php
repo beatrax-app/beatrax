@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Internal\Http\Livewire\CommandPaletteModal;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 use Symfony\Component\Process\Process;
@@ -224,7 +225,7 @@ it('names only keys that resolve, everywhere Lang::arms is called', function ():
             }
 
             foreach ($calls[1] as $arguments) {
-                preg_match_all("/'([^']+)'/", $arguments, $found);
+                $found = PatternScan::all("/'([^']+)'/", $arguments);
                 foreach ($found[1] as $key) {
                     $keys[$key] = true;
                 }

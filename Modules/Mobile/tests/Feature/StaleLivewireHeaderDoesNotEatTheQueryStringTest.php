@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Http\Middleware\ForgetStaleLivewireHeaderBetweenRequests;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,7 +19,7 @@ beforeEach(function (): void {
 
     // The rendered tab strip, as aria-selected pairs.
     $this->selection = function (string $html): array {
-        preg_match_all('/aria-selected="(true|false)"[^>]*>([\s\S]{0,40}?)</', $html, $matches);
+        $matches = PatternScan::all('/aria-selected="(true|false)"[^>]*>([\s\S]{0,40}?)</', $html);
 
         $pairs = [];
         foreach ($matches[2] as $index => $label) {

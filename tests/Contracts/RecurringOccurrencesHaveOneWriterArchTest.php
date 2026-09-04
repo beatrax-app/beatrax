@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  * @link ../../.docs/features/recurring/architecture.md
@@ -95,9 +97,7 @@ function recurringOccurrenceStatements(string $stripped): array
     $pattern = '/(?:->|::)?\b(?:table|from|insert into|update|replace into)\s*\(?\s*'
         ."['\"]recurring_series_occurrences|\\bRecurringSeriesOccurrence\\b/i";
 
-    if (preg_match_all($pattern, $stripped, $matches, PREG_OFFSET_CAPTURE) === 0) {
-        return [];
-    }
+    $matches = PatternScan::allWithOffsets($pattern, $stripped);
 
     $statements = [];
 

@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
 
@@ -20,7 +21,7 @@ uses(RefreshDatabase::class);
 
 function pageMapSnapshot(string $pageHtml): string
 {
-    preg_match_all('/wire:snapshot="([^"]*)"/', $pageHtml, $matches);
+    $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
         if (str_contains($snapshot, '"name":"cashbook.cash-book-page"')) {

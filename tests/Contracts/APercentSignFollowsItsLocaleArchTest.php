@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\PatternScan;
 
 // Whether a percent sign is closed up ("42%"), spaced ("42 %") or written in
 // front ("%42") is the locale's own convention, not a house style — and the
@@ -74,7 +75,9 @@ it('spells a percent sign the way each locale spells it', function (): void {
         $strings = require $path;
 
         foreach (percentSignFlatten($strings) as $key => $value) {
-            if (preg_match_all(PERCENT_SIGN_TOKEN, $value, $found, PREG_SET_ORDER) === 0) {
+            $found = PatternScan::sets(PERCENT_SIGN_TOKEN, $value);
+
+            if ($found === []) {
                 continue;
             }
 

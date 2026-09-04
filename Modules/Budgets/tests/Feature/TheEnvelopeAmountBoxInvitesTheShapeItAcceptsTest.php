@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Category;
 
 // The grid folds every envelope into the reader's reporting currency and the
@@ -42,7 +43,7 @@ function envelopeShapeFixture(string $baseCurrency): array
 
 function envelopeAmountBoxes(string $html): string
 {
-    preg_match_all('/<input[^>]*wire:model="(?:assignedInputs\.\d+|moveAmount)"[^>]*>/', $html, $found);
+    $found = PatternScan::all('/<input[^>]*wire:model="(?:assignedInputs\.\d+|moveAmount)"[^>]*>/', $html);
 
     expect($found[0])->not->toBe([], 'no envelope amount box rendered');
 

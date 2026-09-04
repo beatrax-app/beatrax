@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
@@ -50,7 +51,7 @@ function cursorTriageCardName(int $userId): string
         ->test(CounterpartyTriage::class)
         ->html();
 
-    preg_match('/class="triage-iban">(.*?)</s', $html, $m);
+    $m = PatternScan::first('/class="triage-iban">(.*?)</s', $html);
 
     return trim($m[1] ?? '');
 }
@@ -91,7 +92,7 @@ it('walks a whole queue of three without stepping over one', function (): void {
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
 
     for ($i = 0; $i < 3; $i++) {
-        preg_match('/class="triage-iban">(.*?)</s', (string) $component->html(), $m);
+        $m = PatternScan::first('/class="triage-iban">(.*?)</s', (string) $component->html());
         $seen[] = trim($m[1] ?? '');
         $component->set('draftName', 'Named '.$i)->call('manualLabel');
     }

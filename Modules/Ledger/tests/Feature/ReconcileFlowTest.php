@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\ReconcilePage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\Currency;
@@ -166,7 +167,7 @@ it('parses the account select client-side, so clearing it cannot write an empty 
 
     expect($html)->toContain('<option value="">');
 
-    preg_match('/wire:model((?:\.[a-z0-9]+)*)="accountId"/', $html, $binding);
+    $binding = PatternScan::first('/wire:model((?:\.[a-z0-9]+)*)="accountId"/', $html);
     $modifiers = array_values(array_filter(explode('.', $binding[1] ?? '')));
 
     expect(array_search('number', $modifiers, true))

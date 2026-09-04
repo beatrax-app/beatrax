@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 
 uses(RefreshDatabase::class);
@@ -99,10 +100,12 @@ it('gives each rendered tax picker its own note id so both labels bind', functio
         ->dispatch('tax-tag', id: $txId)
         ->html();
 
-    expect(preg_match_all('/id="(tax-picker-note-[^"]+)"/', $html, $ids))->toBe(2);
+    $ids = PatternScan::all('/id="(tax-picker-note-[^"]+)"/', $html);
+    expect($ids[1])->toHaveCount(2);
     expect(array_unique($ids[1]))->toHaveCount(2);
 
-    expect(preg_match_all('/for="(tax-picker-note-[^"]+)"/', $html, $fors))->toBe(2);
+    $fors = PatternScan::all('/for="(tax-picker-note-[^"]+)"/', $html);
+    expect($fors[1])->toHaveCount(2);
     expect(array_unique($fors[1]))->toHaveCount(2);
 
     // Each label names an id that exists, so neither points at the other copy.

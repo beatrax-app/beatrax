@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
@@ -143,7 +144,7 @@ it('shadows a foreign row with a converted amount, not the same integer relabell
     $html = Livewire::test(RecurringPage::class)->html();
 
     $shadows = [];
-    preg_match_all('/data-eur-shadow="true">([^<]+)</u', $html, $matches);
+    $matches = PatternScan::all('/data-eur-shadow="true">([^<]+)</u', $html);
     foreach ($matches[1] as $shadow) {
         $shadows[] = trim($shadow);
     }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Livewire runs a `#[Validate]` rule only when the component actually calls
 // validate(); the attribute alone enforces nothing. A component that declares
 // a rule and never runs it reads as validated in review and accepts anything
@@ -41,7 +43,7 @@ it('has every declared validation rule actually enforced', function (): void {
             continue;
         }
 
-        preg_match_all('/#\[Validate\([^\]]*\)\]\s*public\s+\S+\s+\$(\w+)/', $source, $declared);
+        $declared = PatternScan::all('/#\[Validate\([^\]]*\)\]\s*public\s+\S+\s+\$(\w+)/', $source);
         if ($declared[1] === []) {
             continue;
         }
@@ -53,7 +55,7 @@ it('has every declared validation rule actually enforced', function (): void {
             continue;
         }
 
-        preg_match_all("/validateOnly\(\s*'(\w+)'/", $source, $only);
+        $only = PatternScan::all("/validateOnly\(\s*'(\w+)'/", $source);
         $covered = array_flip($only[1]);
 
         $unenforced = array_values(array_filter(

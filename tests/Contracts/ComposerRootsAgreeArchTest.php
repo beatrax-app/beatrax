@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // The app has two Composer roots — the repo root the desktop and the test
 // suite run from, and mobile-app/, whose vendor/ is the one that ships inside
 // the phone build. They share every line of Modules/, so a library pinned
@@ -91,8 +93,8 @@ function composerRootExceptionShape(string $relativePath): array
 {
     $block = composerRootExceptionBlock($relativePath);
 
-    preg_match_all('/\$exceptions->(\w+)\(/', $block, $methods);
-    preg_match_all('/\b([A-Z]\w*(?:Exception|Error))\b/', $block, $types);
+    $methods = PatternScan::all('/\$exceptions->(\w+)\(/', $block);
+    $types = PatternScan::all('/\b([A-Z]\w*(?:Exception|Error))\b/', $block);
 
     $unique = static function (array $found): array {
         $found = array_values(array_unique($found));

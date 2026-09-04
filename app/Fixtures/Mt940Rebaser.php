@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Fixtures;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Public\Banking\SwiftDate;
 
@@ -39,8 +40,7 @@ final class Mt940Rebaser implements RebasesStatementDates
     // ENTRIES a month short of the window they were shifted to reach.
     public function newestDate(string $contents): ?CarbonImmutable
     {
-        $matches = [];
-        preg_match_all(self::STATEMENT_LINE, $contents, $matches);
+        $matches = PatternScan::all(self::STATEMENT_LINE, $contents);
 
         $newest = null;
         foreach ($matches[1] as $raw) {
@@ -131,8 +131,7 @@ final class Mt940Rebaser implements RebasesStatementDates
         $days = [];
 
         foreach ([self::BALANCE_LINE => 3, self::STATEMENT_LINE => 1] as $pattern => $group) {
-            $matches = [];
-            preg_match_all($pattern, $contents, $matches);
+            $matches = PatternScan::all($pattern, $contents);
             foreach ($matches[$group] as $raw) {
                 $day = $this->asDay($raw);
                 if ($day instanceof CarbonImmutable) {

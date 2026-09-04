@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 
 /**
@@ -123,7 +124,9 @@ function instructedCommandInvocations(string $contents): array
             continue;
         }
 
-        if (preg_match_all('/php\s+artisan\s+([A-Za-z][A-Za-z0-9:_-]*)/', $line, $matches) === 0) {
+        $matches = PatternScan::all('/php\s+artisan\s+([A-Za-z][A-Za-z0-9:_-]*)/', $line);
+
+        if ($matches[1] === []) {
             continue;
         }
         foreach ($matches[1] as $name) {
@@ -147,7 +150,9 @@ function instructedCommandMiscasings(string $contents, array $foldedNames): arra
     $found = [];
 
     foreach (explode("\n", $contents) as $index => $line) {
-        if (preg_match_all('/(?<![A-Za-z0-9_\-\/:])([A-Za-z][A-Za-z0-9_-]*:[A-Za-z][A-Za-z0-9:_-]*)/', $line, $matches) === 0) {
+        $matches = PatternScan::all('/(?<![A-Za-z0-9_\-\/:])([A-Za-z][A-Za-z0-9_-]*:[A-Za-z][A-Za-z0-9:_-]*)/', $line);
+
+        if ($matches[1] === []) {
             continue;
         }
         foreach ($matches[1] as $token) {

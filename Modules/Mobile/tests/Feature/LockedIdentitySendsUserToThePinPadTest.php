@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 
@@ -58,7 +59,7 @@ it('routes every locked-identity branch to the lock screen', function (): void {
 
     // The copy must not survive anywhere that does not also open the PIN pad,
     // and the only place it is produced is inside the helper that redirects.
-    $occurrences = preg_match_all(
+    $occurrences = PatternScan::count(
         "/mobile::pairing\.errors\.identity_locked/",
         $component
     );

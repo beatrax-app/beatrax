@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\TogglePin;
@@ -190,7 +191,7 @@ function prrExpense(DatabaseManager $db, User $user, Account $account, string $p
 function prrChartOptions(string $html): array
 {
     expect($html)->toMatch('/data-options="/');
-    preg_match('/data-options="([^"]*)"/', $html, $matches);
+    $matches = PatternScan::first('/data-options="([^"]*)"/', $html);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), true);
     expect($decoded)->toBeArray();
 
