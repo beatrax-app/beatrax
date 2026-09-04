@@ -518,11 +518,13 @@ final class PotsPage extends Component
         $this->archivingPotId = 0;
     }
 
-    public function archivePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
+    public function archivePot(CurrentUser $currentUser, PotWriter $writer, int|string $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
+
+        $potId = DerivedRowId::fromWire($potId);
 
         $writer->archive($currentUser->user(), $potId);
         $this->archivingPotId = 0;
