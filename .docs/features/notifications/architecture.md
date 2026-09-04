@@ -248,6 +248,17 @@ key-service/session parameters exist purely as a forward-compatible
 safety net (logged, never gating today's delete) in case a future change
 ever extends the predicate onto an encrypted column.
 
+The sweep **announces** every id it removes, dispatching
+`NotificationMutated` with mutationType `delete` so the capture listener
+writes a tombstone. This matches `CounterpartyGarbageCollectorJob` in the
+second respect as well as the first, and for the reason that job's own
+comment gives: a retention run on one device otherwise leaves the peer
+holding rows this device deleted. Running the sweep on both devices does
+not substitute for it — `notifications` carries `_delete_wins` in the
+merge registry, which only settles a tombstone against a create, so
+without one the peer's own history of the row is the last word on whether
+a retired notification comes back.
+
 ## Demo seeding
 
 `DemoNotificationsSeeder` never writes a `notifications` row directly and
