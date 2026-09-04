@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Session\Session;
@@ -21,6 +22,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\RetentionWindow;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Sync\Public\Events\NotificationMutated;
 use Psr\Log\LoggerInterface;
 
 final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
@@ -59,6 +61,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         ?AppLockKeyService $appLockKeyService = null,
         ?EncryptionMigrationService $encryptionMigrationService = null,
         ?LoggerInterface $logger = null,
+        ?Dispatcher $events = null,
     ): void {
         // Gates nothing today — the predicate below touches no encrypted
         // column. It logs so a contributor who later adds one sees the
@@ -100,6 +103,30 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
                 ->where('user_id', $this->userId)
                 ->whereIn('id', $ids)
                 ->delete();
+
+            $this->announce($ids, $events);
         } while (count($ids) === self::CHUNK_SIZE);
+    }
+
+    // Retention is a decision about the household's history, not about one
+    // device's disk: a sweep that only deleted locally left the peer holding
+    // rows this device had already retired, and gave any later replay of the
+    // peer's own history the last word on whether they came back.
+    /**
+     * @param  list<string>  $ids
+     */
+    private function announce(array $ids, ?Dispatcher $events): void
+    {
+        if ($events === null) {
+            return;
+        }
+
+        foreach ($ids as $id) {
+            $events->dispatch(new NotificationMutated(
+                notificationId: $id,
+                userId: $this->userId,
+                mutationType: 'delete',
+            ));
+        }
     }
 }

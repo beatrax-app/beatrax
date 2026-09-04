@@ -2091,14 +2091,6 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Feature/TheSettingsCopyOfTheAmountToggleCannotDriftTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\DiscoveryScanJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\IncrementalScanJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ProcessFetchedInboxMessagesJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Receipts\\Internal\\Jobs\\ScanInboxDropFolderJob',
-        'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
         'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
         'Modules/Desktop/tests/Feature/AutoUpdate/UpdateFeedSmokeTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
@@ -2285,6 +2277,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/CounterpartyFilterTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
+        'Modules/Sync/tests/Feature/APrunedNotificationIsRetiredOnThePeerTooTest.php -> Modules\\Notifications\\Internal\\Jobs\\PruneNotificationsJob',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',
         'Modules/Sync/tests/Feature/MerchantAliasEditsMustLeaveTheDeviceTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
@@ -2319,12 +2312,15 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // second copy in the test: a column added there without an announcing
         // writer is exactly what this guard exists to catch, and a hardcoded
         // list would go quiet the moment the two drifted.
+        'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
         // parser that stops recognising the paragraph fails there too. Spelling
         // the literal a second time in the test would break exactly that link.
         'tests/Contracts/ATuningNumberIsNamedOnceAndAnswersToTheRealStatementArchTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfExtractionMap',
+        'tests/Contracts/AUniqueJobTakesItsLockWhereTheAppKeepsLocksArchTest.php -> Modules\\Categorization\\Internal\\Jobs\\ReapplyRulesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
