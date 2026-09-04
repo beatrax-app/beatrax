@@ -237,8 +237,9 @@ handshake that still has longer to run.
 
 Two transports reach that binding: a typed code goes through `accept()`, a relayed or LAN
 frame through `applyResponderAccept()` → `bindResponderOntoRow()`. Both take the new expiry
-from `PairingTokenService::extendedExpiry()`, so the grow-only rule cannot hold on one route
-and not the other.
+from `CeremonyWindow::extendedFrom()`, so the grow-only rule cannot hold on one route
+and not the other. Every writer that moves `expires_at` goes through that one class, which is
+the only reason the rule is checkable rather than three coincidences.
 
 ### Nothing writes `expired`; the lapse is derived at read time
 
@@ -617,10 +618,10 @@ landed exactly in that gap — the token expired at 16:03:53 and the reader
 unlocked around 16:05, so a resume surface would have had nothing to offer.
 
 So `extendCeremonyAcrossLock()` gives a returning reader a fresh
-`ACCEPT_GRACE_MINUTES` — the same constant that already answers "how long do two
-humans need to compare six words". It reuses `extendedExpiry()`, so it is
-grow-only in the same sense every other writer is: a ceremony with longer to run
-is never shortened.
+`CeremonyWindow::GRACE_MINUTES` — the same constant that already answers "how long
+do two humans need to compare six words". It goes through
+`CeremonyWindow::extendedFrom()`, so it is grow-only in the same sense every other
+writer is: a ceremony with longer to run is never shortened.
 
 **This lets an idle timeout lengthen a trust window, which is a real weakening
 and is stated as one.** What bounds it:
@@ -633,9 +634,10 @@ and is stated as one.** What bounds it:
   a device id, `DeviceIdentityLoader` needs the app-lock KEK to produce one, and
   `AppLockKeyService::release()` answers null while locked. A locked app cannot
   reach the write at all.
-- Only from two human moments: `DevicesAndSyncSettingsSection::mount()`, a reader
-  arriving at the surface, and `HoldPairingCeremonyOpenOnUnlock`, the listener on
-  `Modules\Auth\Public\Events\AppLockUnlocked` — a reader typing their PIN.
+- Only from three human moments: `DevicesAndSyncSettingsSection::mount()`, a reader
+  arriving at the surface; `HoldPairingCeremonyOpenOnUnlock`, the listener on
+  `Modules\Auth\Public\Events\AppLockUnlocked` — a reader typing their PIN; and
+  `LocalConfirmRecorder`, a reader tapping confirm on the safety number.
   Never from the three-second poll, which would renew forever.
 
   Both, not one: the listener catches a lapse the lock caused and reaches a reader
@@ -652,6 +654,31 @@ capture**, because `confirm()` binds the tap to the keys behind the words that
 were displayed — a rebind makes the digest stop matching and the confirmation is
 refused out loud. So the revival hands an attacker the same stall they could
 already cause before the lock, and no new road to a confirmed pairing.
+
+### The tap is the third moment, and the one that was missing
+
+A confirm is not a moment that ends the ceremony; it is a moment that starts a
+wait. The side that taps first then sits on "Waiting for the other device to
+confirm…" while the other phone is picked up, woken, unlocked and read — and
+until this was fixed, none of that moved `expires_at`.
+
+Measured on a Mac and an iPhone, both with the app lock at five minutes: the
+desktop's human confirmed at 18:06:47Z on a row expiring at 18:09:27Z. The
+phone's signed `PAIR_CONFIRM` arrived between 18:09:28Z and 18:09:45Z — one to
+eighteen seconds late — and `PeerConfirmVerifier` refused all eight attempts,
+seven as "the responder accept could not be bound to its row" and one as "no
+live pairing row holds this token". Neither screen said the code had expired.
+The phone then dialled the desktop, was answered `PEER_REVOKED`, and
+`LanSyncClient::forgetRevokedPeer()` cleared its own `confirmed_at` — so the
+device that had finished the ceremony ended up trusting nobody, and no
+transaction ever crossed.
+
+So `LocalConfirmRecorder` moves the window in the same `UPDATE` that stamps the
+side. That is the narrowest place it can live: `ceremonyIsLive()` gates the whole
+method, so a tap arriving after the window has genuinely run out still refuses
+and cannot revive the row — the extension rides on a confirmation that was
+already going to be accepted, and buys time only for the peer of a human who is
+demonstrably still present.
 
 ### The extension and its disclosure are one render
 
@@ -811,7 +838,8 @@ Idle, a tick is **one covered index read** (`pairing_tokens_user_expires_idx` is
 state a device is in essentially always.
 
 During a ceremony the bound is the ceremony itself: at most `TTL_MINUTES` (10), and after the
-accept `ACCEPT_GRACE_MINUTES` (5) at a time. At one tick per three seconds that is a couple of
+accept `CeremonyWindow::GRACE_MINUTES` (5) at a time, with
+`CEREMONY_MAX_AGE_MINUTES` (60) over all of them. At one tick per three seconds that is a couple of
 hundred ticks, each costing at most one relay round trip, one cached browse and one peer
 request — which is precisely what the modal poll already spent. Nothing new is on the wire; the
 same traffic simply stopped depending on a window being open. A device with no relay configured
