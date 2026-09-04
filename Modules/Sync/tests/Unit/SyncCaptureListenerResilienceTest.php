@@ -213,3 +213,88 @@ it('warns rather than throws on a mutation type it does not recognise', function
         new NotificationPreferenceMutated(preferenceId: 8, userId: 1, mutationType: 'teleport'),
     )],
 ]);
+
+// Two of the eleven surfaces above are reached by name; the other nine were
+// reached only with a sink that cannot fail, so a catch removed from any one of
+// them left this file green. The list is read off the class rather than written
+// out, so a surface added tomorrow is held to the same rule on the day it lands.
+/** @return list<string> */
+function captureListenerSurfaces(): array
+{
+    $names = [];
+
+    foreach ((new ReflectionClass(SyncCaptureListener::class))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+        if (str_starts_with($method->getName(), 'handle')) {
+            $names[] = $method->getName();
+        }
+    }
+
+    sort($names);
+
+    return $names;
+}
+
+function captureListenerEventClassFor(string $surface): string
+{
+    return (string) (new ReflectionMethod(SyncCaptureListener::class, $surface))->getParameters()[0]->getType();
+}
+
+// The sink resolution throws before the mutationType is read, so any well-typed
+// event reaches the catch; the values only have to satisfy the constructor.
+function captureListenerEventFor(string $eventClass): object
+{
+    $arguments = [];
+
+    foreach ((new ReflectionClass($eventClass))->getConstructor()?->getParameters() ?? [] as $parameter) {
+        $type = (string) $parameter->getType();
+
+        $arguments[$parameter->getName()] = match (true) {
+            str_contains($type, 'array') => [],
+            str_contains($type, 'int') => 1,
+            $parameter->getName() === 'mutationType' => 'create',
+            default => 'x',
+        };
+    }
+
+    return new $eventClass(...$arguments);
+}
+
+it('lets no capture failure escape into the write that caused it', function (): void {
+    $surfaces = captureListenerSurfaces();
+
+    // Counted first: a reflection that resolved nothing would report every
+    // surface safe, which is the answer a safe listener also gives.
+    expect(count($surfaces))->toBeGreaterThanOrEqual(11);
+
+    $escaped = [];
+    $unreported = [];
+
+    foreach ($surfaces as $surface) {
+        $calls = [];
+        $listener = listenerOver(unresolvableContainer(), $calls);
+
+        try {
+            $listener->{$surface}(captureListenerEventFor(captureListenerEventClassFor($surface)));
+        } catch (Throwable $e) {
+            $escaped[] = $surface.' threw '.$e::class;
+
+            continue;
+        }
+
+        if ($calls === [] || $calls[0]['level'] !== 'error') {
+            $unreported[] = $surface;
+        }
+    }
+
+    expect($escaped)->toBe([], implode("\n  ", [
+        'A capture listener runs inside the request that saved the row, so an exception here',
+        'fails the reader edit over replication they never asked for. Catch it and report it.',
+        'Escaped: '.implode(', ', $escaped),
+    ]));
+
+    expect($unreported)->toBe([], implode("\n  ", [
+        'Swallowing a capture failure without logging one is the other half of the defect:',
+        'the mutation is invisible to every peer and nothing anywhere says so. Report it',
+        'through report(), which logs at error level. Silent: '.implode(', ', $unreported),
+    ]));
+});
