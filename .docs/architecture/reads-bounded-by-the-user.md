@@ -34,7 +34,7 @@ wrong in a specific direction — see [measuring write cost](measuring-write-cos
 | 2 | `RuleEngine::match()` per transaction | **282.9 queries per row**, 31.5 ms/row. A re-apply over the fixture extrapolates to 7,072,500 queries and **13 minutes** | **Yes** |
 | 3 | `PersistedOpLogEntries::forUser()` | **696 MB** peak growth, 10.3 s, for 1,225,000 entries | No — no production caller |
 | 4 | `FingerprintRederiveService::run()` | 52 MB growth / 90.5 MB peak, 4.47 s, reading the whole table to skip nearly all of it | **Yes** |
-| 5 | `SearchQuery::search()` on a common word | 25,000 candidate ids materialised, 18 MB, 445 ms — per keystroke in the palette | No |
+| 5 | `SearchQuery::search()` on a common word | 25,000 candidate ids materialised, 18 MB, 445 ms — per keystroke in the palette | **Yes** |
 | 6 | `CommunityCorpusQuery::lookupGeneralized()` for a reader who named no country | **143.5 ms per unresolved row**, 6,750 patterns scanned past PHP's 4,096-entry PCRE cache | **Yes** |
 | 7 | `CounterpartyDisplayName::forUser()` | 109.7 ms and 2.05 MB for 2,000 counterparties, on every transaction-detail render | **Yes** |
 | 8 | `EntityNameSearch` counterparty scan | the whole merchant list materialised per palette keystroke, 1.14 MB, to return three names | **Yes** |
@@ -77,6 +77,52 @@ streamed rather than fetched.
 | After, every row stale | **46.5 MB** | **1,861 ms** |
 | Before, 99% already current | 90.5 MB | 4,473 ms |
 | After, 99% already current | **40.5 MB** | **84 ms** |
+
+### 5 — a common word handed `whereIn` the whole matching ledger
+
+The FTS tokenizer is trigram, so a word like *betaling* matches most of a Dutch
+ledger. `FtsCandidateResolver::resolve()` plucked every matching rowid and
+`SearchQuery` fed the list to `whereIn` — twice, because `totals()` clones the
+page query. The list was read as a bound and was never one.
+
+The restructure this was filed as needing turned out to be small: the FTS arm
+hands back the **query** rather than its result, and `whereIn()` routes a
+`Builder` through `createSub()` into `IN (SELECT …)`. `EXPLAIN QUERY PLAN`
+confirms `LIST SUBQUERY` — SQLite materialises the MATCH once rather than per
+outer row, which a correlated `whereExists` would not have done. That shape was
+measured and rejected: it takes `totals()` to 3,375 ms.
+
+Capping the candidate set is not available and it is worth saying why, because
+it is the obvious idea. The page orders `posted_at DESC, id DESC` while the FTS
+pluck comes back in ascending rowid order, so a cap would hand the page the
+oldest rows and then sort those; and `totals()` aggregates over the whole
+candidate set, with `$totalCount === 0` gating the did-you-mean suggestion.
+
+The two sentinels the id list carried survive: `null` still means filters-only,
+and `[]` — the amount branch — became a lazy `EXISTS` probe consulted only once
+the text parses as money.
+
+| common word, palette width | before | after |
+| --- | --- | --- |
+| bindings in one statement | **20,004** | **58** |
+| peak PHP memory | 8.95 MB | **0.13 MB** |
+| total SQL | 177.5 ms | **84.6 ms** |
+
+58 is the highlight load — six sentinels plus fifty page rowids — so it is
+bounded by the page rather than by the ledger.
+
+The amount branch beside it was deliberately **not** converted. As a subquery it
+runs twice, once in the page read and once in the totals clone: 7.7 ms to
+16.5 ms on `49.90`. It is already bounded to rows sharing one figure, and
+holding the subquery would have split the chain across two statements, which is
+the scanner's documented blind spot — its allow-list entry would have gone stale
+while the read still happened. It keeps its entry.
+
+Fifteen query shapes — common and rare words, no-match, a bare number, three
+money queries, the LIKE fallback, filters-only, multi-word, two filter
+combinations and a second cursor page — return identical pages: every row id and
+its order, both totals, `hasMore`, both cursors, the did-you-mean and the
+highlighted snippets.
 
 ### 6 — the corpus scan a reader who named no country pays
 
@@ -200,13 +246,6 @@ against the same code path with the fix removed — byte-identical everywhere.
   AEAD. The fingerprint is what stops a withheld or rotated key resolving to a
   cached keyring, so making it cheaper means moving when that check runs — a
   security-relevant change, and not one to make as a side effect of a read pass.
-- **A common search word materialises the whole matching ledger.** The FTS
-  tokenizer is trigram, so a word like *betaling* matches most of a Dutch ledger;
-  `FtsCandidateResolver::resolve()` returns every matching rowid and
-  `SearchQuery` feeds them to `whereIn`. 25,000 ids, 18 MB, 445 ms — per
-  keystroke in the palette. The id list is load-bearing for control flow (`null`
-  means filters-only, `[]` triggers the amount branch), so removing it is a
-  restructure of the search path rather than a bound.
 
 ## What was left alone, and why
 
