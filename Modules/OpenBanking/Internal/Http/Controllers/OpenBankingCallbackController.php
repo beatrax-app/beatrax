@@ -49,23 +49,29 @@ final readonly class OpenBankingCallbackController
             }
 
             $connectionId = ($this->completeConsent)($userId, is_string($codeRaw) ? $codeRaw : '');
-        } catch (OpenBankingCredentialsException $e) {
-            // Its message names the secrets file by absolute path, and this
-            // flash renders verbatim on the settings screen. The reader gets
-            // the line that says what to do; the path goes to the log.
+        } catch (RuntimeException $e) {
+            return $this->backToSettings('open_banking_failed', $this->readerReason($e));
+        }
+
+        return $this->backToSettings('open_banking_connected', $connectionId);
+    }
+
+    // Most refusals in this flow build their message from Lang, so what they
+    // carry is already the reader's own words. The credentials one does not:
+    // it names the secrets file by absolute path, and this flash renders
+    // verbatim on the settings screen.
+    private function readerReason(RuntimeException $e): string
+    {
+        if ($e instanceof OpenBankingCredentialsException) {
             $this->logger->warning(
                 'OpenBankingCallbackController: the stored credentials could not be read.',
                 SafeExceptionContext::describe($e),
             );
 
-            return $this->backToSettings('open_banking_failed', $e->readerMessage());
-        } catch (RuntimeException $e) {
-            // Everything reaching here builds its message from Lang, so the
-            // reason it carries is already the reader's own words.
-            return $this->backToSettings('open_banking_failed', $e->getMessage());
+            return $e->readerMessage();
         }
 
-        return $this->backToSettings('open_banking_connected', $connectionId);
+        return $e->getMessage();
     }
 
     private function cancellationMessage(Request $request): ?string

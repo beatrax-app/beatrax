@@ -36,23 +36,29 @@ final readonly class OpenBankingConnectController
                 is_string($institutionIdRaw) ? trim($institutionIdRaw) : '',
                 fn (): string => $this->callbackUri(),
             );
-        } catch (OpenBankingCredentialsException $e) {
-            // Its message names the secrets file by absolute path, and this
-            // flash renders verbatim on the settings screen. The reader gets
-            // the line that says what to do; the path goes to the log.
+        } catch (RuntimeException $e) {
+            return $this->failRedirect($this->readerReason($e));
+        }
+
+        return $this->redirector->away($consentUrl);
+    }
+
+    // Most refusals in this flow build their message from Lang, so what they
+    // carry is already the reader's own words. The credentials one does not:
+    // it names the secrets file by absolute path, and this flash renders
+    // verbatim on the settings screen.
+    private function readerReason(RuntimeException $e): string
+    {
+        if ($e instanceof OpenBankingCredentialsException) {
             $this->logger->warning(
                 'OpenBankingConnectController: the stored credentials could not be read.',
                 SafeExceptionContext::describe($e),
             );
 
-            return $this->failRedirect($e->readerMessage());
-        } catch (RuntimeException $e) {
-            // Everything reaching here builds its message from Lang, so the
-            // reason it carries is already the reader's own words.
-            return $this->failRedirect($e->getMessage());
+            return $e->readerMessage();
         }
 
-        return $this->redirector->away($consentUrl);
+        return $e->getMessage();
     }
 
     private function failRedirect(string $message): RedirectResponse
