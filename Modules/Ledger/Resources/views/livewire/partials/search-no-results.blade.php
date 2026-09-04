@@ -42,7 +42,7 @@
                     {{ $acctName }}
                     <button
                         type="button"
-                        wire:click="$set('filterAccounts', array_values(array_filter($filterAccounts, fn($id) => (int)$id !== {{ (int) $accountId }})))"
+                        wire:click="removeAccountFilter('{{ (int) $accountId }}')"
                         class="srch-chip-close"
                         aria-label="{{ Lang::get('ledger::list.filter.remove_named_aria', ['name' => $acctName]) }}"
                     >&times;</button>
@@ -57,7 +57,7 @@
                     {{ $catName }}
                     <button
                         type="button"
-                        wire:click="$set('filterCategories', array_values(array_filter($filterCategories, fn($id) => (int)$id !== {{ (int) $categoryId }})))"
+                        wire:click="removeCategoryFilter('{{ (int) $categoryId }}')"
                         class="srch-chip-close"
                         aria-label="{{ Lang::get('ledger::list.filter.remove_named_aria', ['name' => $catName]) }}"
                     >&times;</button>
