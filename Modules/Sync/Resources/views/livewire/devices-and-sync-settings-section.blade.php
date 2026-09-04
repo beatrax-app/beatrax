@@ -248,7 +248,7 @@
                                                 :label="Lang::get('sync::devices.rename_device')"
                                                 :caption="Lang::get('sync::devices.rename_device_caption')"
                                                 class="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-                                                wire:click="startRename({{ $device['id'] }})"
+                                                wire:click="startRename('{{ $device['id'] }}')"
                                             >✏️</x-core::emoji-action>
                                         @endif
 
@@ -308,7 +308,7 @@
                             @if (! ($device['is_self'] ?? false) && ! ($device['removed'] ?? false))
                                 <button
                                     type="button"
-                                    wire:click="startRemove({{ $device['id'] }})"
+                                    wire:click="startRemove('{{ $device['id'] }}')"
                                     aria-label="{{ Lang::get('sync::devices.remove_aria', ['name' => $device['name']]) }}"
                                     class="min-h-[44px] flex-shrink-0 py-3 text-sm font-medium text-rose-600
                                            hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 rounded

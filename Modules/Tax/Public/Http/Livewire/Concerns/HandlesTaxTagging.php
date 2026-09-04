@@ -9,6 +9,7 @@ use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
@@ -60,7 +61,7 @@ trait HandlesTaxTagging
 
     #[On('tax-tag')]
     public function tagTransaction(
-        int $id,
+        int|string $id,
         TagTransaction $tag,
         CurrentUser $u,
         TaxTagQuery $q,
@@ -68,6 +69,7 @@ trait HandlesTaxTagging
         TaxCategoryWriter $writer,
         TransactionStatusQuery $status,
     ): void {
+        $id = DerivedRowId::fromWire($id);
         $user = $u->user();
 
         if ($status->isReconciled($user->id, $id)) {
@@ -110,12 +112,13 @@ trait HandlesTaxTagging
 
     #[On('tax-edit-tag')]
     public function editTaxTag(
-        int $id,
+        int|string $id,
         TaxTagQuery $q,
         CurrentUser $u,
         Clock $c,
         TaxCategoryWriter $writer,
     ): void {
+        $id = DerivedRowId::fromWire($id);
         $user = $u->user();
 
         // Open (which resets the row fields) before pre-filling, so a tag-lookup

@@ -12,6 +12,7 @@ use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsMutationForms;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\SummarisesMutations;
@@ -170,8 +171,10 @@ final class ScenarioEditorSidebar extends Component
         $this->dispatch('scenario-mutated');
     }
 
-    public function editMutation(int $mutationId): void
+    public function editMutation(int|string $mutationId): void
     {
+        $mutationId = DerivedRowId::fromWire($mutationId);
+
         $this->editingMutationId = $mutationId;
         $this->formError = null;
         foreach ($this->mutations as $m) {
@@ -238,13 +241,13 @@ final class ScenarioEditorSidebar extends Component
     }
 
     public function removeMutation(
-        int $mutationId,
+        int|string $mutationId,
         CurrentUser $currentUser,
         RemoveScenarioMutation $action,
         ScenarioQuery $scenarioQuery,
     ): void {
         try {
-            ($action)($mutationId, $currentUser->user());
+            ($action)(DerivedRowId::fromWire($mutationId), $currentUser->user());
         } catch (NotFoundHttpException) {
             // Already gone. A concurrent removal and a stale id reach the
             // same outcome, so the refresh below still has to run.

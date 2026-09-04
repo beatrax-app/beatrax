@@ -34,7 +34,7 @@
     {{-- Tagged: emerald filled pill. Clicking re-opens the picker to edit. --}}
     <button
         type="button"
-        wire:click="$dispatch('tax-edit-tag', { id: {{ $txId }} })"
+        wire:click="$dispatch('tax-edit-tag', { id: '{{ $txId }}' })"
         class="tax-badge inline-flex items-center"
         aria-label="{{ Lang::get('tax::badge.edit_aria', ['label' => $label]) }}"
         data-testid="tax-badge-tagged-{{ $txId }}"
@@ -45,7 +45,7 @@
          the emoji rule does not reach it. --}}
     <button
         type="button"
-        wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
+        wire:click="$dispatch('tax-tag', { id: '{{ $txId }}' })"
         class="tax-badge--untagged tax-badge--shown inline-flex items-center"
         aria-label="{{ Lang::get('tax::badge.tag_aria') }}"
         data-testid="tax-badge-untagged-{{ $txId }}"
@@ -57,7 +57,7 @@
     <x-core::emoji-action
         :label="Lang::get('tax::badge.tag_aria')"
         :caption="Lang::get('tax::badge.tag_caption')"
-        wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
+        wire:click="$dispatch('tax-tag', { id: '{{ $txId }}' })"
         data-testid="tax-badge-untagged-{{ $txId }}"
     >🏷️</x-core::emoji-action>
 @else
@@ -65,7 +65,7 @@
          focus-within (.row-cta pattern). --}}
     <button
         type="button"
-        wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
+        wire:click="$dispatch('tax-tag', { id: '{{ $txId }}' })"
         class="tax-badge--untagged inline-flex items-center opacity-0 group-hover:opacity-100 focus:opacity-100"
         aria-label="{{ Lang::get('tax::badge.tag_aria') }}"
         title="{{ Lang::get('tax::badge.tag') }}"

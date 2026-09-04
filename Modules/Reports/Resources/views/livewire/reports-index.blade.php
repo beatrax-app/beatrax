@@ -103,7 +103,7 @@
                             :cancel-label="Lang::get('reports::index.cancel')"
                             :confirm-label="Lang::get('reports::index.delete_report')"
                             cancel="cancelDelete"
-                            :confirm="'deleteReport('.$row->id.')'"
+                            :confirm="'deleteReport(\''.$row->id.'\')'"
                         />
                     @else
                         <div
@@ -166,7 +166,7 @@
                                     :cancel-label="Lang::get('reports::index.cancel')"
                                     :confirm-label="Lang::get('reports::index.delete_report')"
                                     cancel="cancelDelete"
-                                    :confirm="'deleteReport('.$row->id.')'"
+                                    :confirm="'deleteReport(\''.$row->id.'\')'"
                                 />
                             @else
                                 <td style="padding: var(--space-2) var(--space-3); text-align: right;">
