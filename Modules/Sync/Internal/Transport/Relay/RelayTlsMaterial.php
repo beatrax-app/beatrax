@@ -141,10 +141,19 @@ final class RelayTlsMaterial
         }
     }
 
+    // A pin nobody can read must fail the comparison, not raise inside the
+    // handshake that asks for it: an empty DER matches no certificate, where
+    // PatternScan::replace() would throw out of a TLS decision. Stated here
+    // because the `(string)` cast that used to say it did not read as a choice.
     private function pemToDer(string $pem): string
     {
         $body = preg_replace('/-----(BEGIN|END)[^-]+-----|\s+/', '', $pem);
-        $der = base64_decode((string) $body, true);
+
+        if ($body === null) {
+            return '';
+        }
+
+        $der = base64_decode($body, true);
 
         return $der === false ? '' : $der;
     }
