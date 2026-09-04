@@ -21,8 +21,6 @@ final readonly class PairingTokenService
 
     private const int TTL_MINUTES = 10;
 
-    private const int ACCEPT_GRACE_MINUTES = 5;
-
     // The absolute age past which a ceremony is dead however many times a human
     // moment renewed it. Two people comparing six words do not need an hour;
     // anything still unconfirmed after one is a row nobody is attending.
@@ -36,6 +34,7 @@ final readonly class PairingTokenService
         private PeerConfirmVerifier $peerConfirmVerifier,
         private LocalConfirmRecorder $localConfirm,
         private HeldPeerConfirm $heldPeerConfirm,
+        private CeremonyWindow $window,
     ) {}
 
     // Mints a pairing token for the initiator and persists its hash. Returns
@@ -190,18 +189,9 @@ final readonly class PairingTokenService
         return $accepted ?? false;
     }
 
-    // A "grace extension" must only ever GROW the lifetime — take
-    // max(existing expiry, now + grace floor) so an early accept never
-    // shortens the live handshake. Both transports reach the responder
-    // binding, and neither may reach it with its own version of this rule.
     private function extendedExpiry(\stdClass $row, CarbonImmutable $now): CarbonImmutable
     {
-        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
-        $existingExpiry = is_string($row->expires_at)
-            ? CarbonImmutable::parse($row->expires_at)
-            : $graceExpiry;
-
-        return $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
+        return $this->window->extendedFrom($row->expires_at, $now);
     }
 
     // The confirming side is derived from the caller's OWN device id, not a

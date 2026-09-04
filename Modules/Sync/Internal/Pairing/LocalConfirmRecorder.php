@@ -22,6 +22,7 @@ final readonly class LocalConfirmRecorder
         private DatabaseManager $db,
         private Clock $clock,
         private SafetyNumberDeriver $safetyDeriver,
+        private CeremonyWindow $window,
     ) {}
 
     // The row carrying this side's fresh stamp, or null for any of the three
@@ -132,6 +133,19 @@ final readonly class LocalConfirmRecorder
     private function stampSideConfirmation(int $tokenId, int $userId, PairingSide $side, array $comparedKeys): ?\stdClass
     {
         $column = $side->confirmedAtColumn();
+        $now = $this->clock->now();
+
+        // The tap is the proof a human is still in this ceremony, so it moves
+        // the window the peer's own confirm is checked against. Without it the
+        // side that has finished times out the side it is waiting for, and the
+        // arriving frame is refused as expired by a row nobody had abandoned.
+        $extended = $this->window->extendedFrom(
+            $this->db->connection()->table('pairing_tokens')
+                ->where('id', $tokenId)
+                ->where('user_id', $userId)
+                ->value('expires_at'),
+            $now,
+        );
 
         // Those keys ride in the WHERE rather than being checked and then
         // trusted: a rebind landing in between matches no row, so nothing is
@@ -141,7 +155,7 @@ final readonly class LocalConfirmRecorder
             ->where('user_id', $userId)
             ->where('initiator_ed25519_pub_hex', $comparedKeys['initiator'])
             ->where('responder_ed25519_pub_hex', $comparedKeys['responder'])
-            ->update([$column => Instant::zulu($this->clock->now())]);
+            ->update([$column => Instant::zulu($now), 'expires_at' => Instant::zulu($extended)]);
 
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
