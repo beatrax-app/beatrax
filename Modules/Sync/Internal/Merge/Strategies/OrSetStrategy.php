@@ -14,7 +14,8 @@ final class OrSetStrategy implements MergeStrategyInterface
     // elements whose tag is in the add-set but NOT in the remove-set.
     /**
      * @param  list<OpLogEntry>  $candidateEntries  HLC-sorted ascending.
-     * @return list<array{v: string, tag: string}> The merged set of live elements.
+     * @return list<array{v: string, tag: string}>|null The merged set of live
+     *                                                  elements, or null when no op ever carried one.
      */
     public function resolve(array $candidateEntries): mixed
     {
@@ -24,13 +25,21 @@ final class OrSetStrategy implements MergeStrategyInterface
         /** @var array<string, true> $removeSet  tag => true */
         $removeSet = [];
 
+        $everCarriedASet = false;
+
         foreach ($candidateEntries as $entry) {
-            if ($entry->value !== null) {
-                $this->applyEntry($entry->value, $addSet, $removeSet);
+            if ($entry->value === null) {
+                continue;
             }
+
+            $this->applyEntry($entry->value, $addSet, $removeSet);
+            $everCarriedASet = true;
         }
 
-        return $this->liveElements($addSet, $removeSet);
+        // A field no op ever gave a set to is absent, not empty. Returning []
+        // wrote an empty JSON array on the receiver while the origin kept its
+        // NULL, and no later op can bring two replicas back together.
+        return $everCarriedASet ? $this->liveElements($addSet, $removeSet) : null;
     }
 
     // Validates the OR-Set wire shape explicitly and throws a typed error on a

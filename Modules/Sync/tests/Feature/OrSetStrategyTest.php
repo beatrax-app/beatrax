@@ -130,3 +130,72 @@ it('add-then-remove: element removed by its tag is absent from the union', funct
     $values = array_column($result, 'v');
     expect(in_array('alias-foo', $values, true))->toBeFalse();
 });
+
+// merged_from is nullable, and a create_row op for a row that never merged
+// anything carries value null. Resolving that history to [] made the receiver
+// store an empty JSON array against the origin's NULL, permanently.
+function orSetNullEntry(string $deviceId, int $hlcL, int $userId): OpLogEntry
+{
+    return new OpLogEntry(
+        table: 'merchant_aliases',
+        pk: '1',
+        field: 'merged_from',
+        value: null,
+        hlcL: $hlcL,
+        hlcC: 0,
+        deviceId: $deviceId,
+        opType: OpType::CreateRow,
+        signature: str_repeat('aa', 32),
+        userId: $userId,
+    );
+}
+
+it('a field no op ever carried a set for stays null rather than becoming an empty set', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = $db->connection()->table('users')->insertGetId([
+        'username' => 'orset-u3',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $strategy = new OrSetStrategy;
+
+    expect($strategy->resolve([orSetNullEntry('device-a', 1000, $userId)]))->toBeNull();
+});
+
+it('a set emptied by removals is still an empty set, not an absent one', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $userId = $db->connection()->table('users')->insertGetId([
+        'username' => 'orset-u4',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $entryAdd = orSetEntry(
+        deviceId: 'device-a',
+        hlcL: 1000,
+        hlcC: 0,
+        added: [['v' => 'alias-foo', 'tag' => 'device-a:1000:0']],
+        removedTags: [],
+        userId: $userId,
+    );
+
+    $entryRemove = orSetEntry(
+        deviceId: 'device-a',
+        hlcL: 1001,
+        hlcC: 0,
+        added: [],
+        removedTags: ['device-a:1000:0'],
+        userId: $userId,
+    );
+
+    $strategy = new OrSetStrategy;
+
+    expect($strategy->resolve([$entryAdd, $entryRemove]))->toBe([]);
+});
