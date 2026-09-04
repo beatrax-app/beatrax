@@ -4,71 +4,54 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Http\Controllers;
 
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Internal\Exceptions\OpenBankingCallbackException;
+use Modules\OpenBanking\Internal\Actions\CompleteBankConsent;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
-use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
 final readonly class OpenBankingCallbackController
 {
     public function __construct(
-        private EnableBankingHttpClient $client,
-        private OpenBankingSecretsRepository $secrets,
         private OpenBankingStateRepository $oauthState,
         private CurrentUser $currentUser,
-        private DatabaseManager $db,
-        private Clock $clock,
         private Redirector $redirector,
+        private CompleteBankConsent $completeConsent,
     ) {}
 
     public function __invoke(Request $request): RedirectResponse
     {
         $cancellation = $this->cancellationMessage($request);
         if ($cancellation !== null) {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_canceled', $cancellation);
+            return $this->backToSettings('open_banking_canceled', $cancellation);
         }
 
         // Resolve the current user before consuming the state so the consume
         // call can verify the state's stored user_id matches.
         $userId = $this->currentUser->id();
-
         $stateParamRaw = $request->query('state');
-        $stateParam = is_string($stateParamRaw) ? $stateParamRaw : '';
+        $codeRaw = $request->query('code');
 
         try {
             // Inside the try, not before it: a state that does not match is an
             // ORDINARY way for this URL to be reached — a link opened twice, a
             // back button, a redirect that sat in a tab overnight — and it left
             // the reader on a 500 page in the middle of connecting their bank.
-            if (! $this->oauthState->consumeState($stateParam, $userId)) {
+            if (! $this->oauthState->consumeState(is_string($stateParamRaw) ? $stateParamRaw : '', $userId)) {
                 throw InvalidStateException::stateMismatch();
             }
 
-            $connectionId = $this->completeConsent($request, $userId);
+            $connectionId = ($this->completeConsent)($userId, is_string($codeRaw) ? $codeRaw : '');
         } catch (RuntimeException $e) {
             // Every refusal subclasses RuntimeException and carries a
             // user-facing reason, so one flash handles all of them.
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', $e->getMessage());
+            return $this->backToSettings('open_banking_failed', $e->getMessage());
         }
 
-        return $this->redirector
-            ->route('settings.open-banking')
-            ->with('open_banking_connected', $connectionId);
+        return $this->backToSettings('open_banking_connected', $connectionId);
     }
 
     private function cancellationMessage(Request $request): ?string
@@ -83,161 +66,10 @@ final readonly class OpenBankingCallbackController
         return is_string($description) && $description !== '' ? $description : $errorParam;
     }
 
-    private function completeConsent(Request $request, int $userId): int
+    private function backToSettings(string $key, mixed $value): RedirectResponse
     {
-        $codeRaw = $request->query('code');
-        $code = is_string($codeRaw) ? $codeRaw : '';
-        if ($code === '') {
-            throw OpenBankingCallbackException::noAuthorizationCode();
-        }
-
-        $credentials = $this->secrets->load();
-        if ($credentials === null || $credentials->institutionId === null) {
-            throw OpenBankingCallbackException::wizardIncomplete();
-        }
-
-        $session = $this->client->createSession($code);
-
-        $sessionId = $this->client->sessionIdFrom($session);
-        if ($sessionId === null) {
-            throw OpenBankingCallbackException::noSessionId();
-        }
-
-        // Not gated like sessionId: a missing accounts[] entry does not
-        // invalidate a completed consent, and a later fetch reports it itself.
-        $accountUid = $this->client->accountUidFrom($session);
-
-        $institutionId = $credentials->institutionId;
-        $now = $this->clock->now();
-        $nowString = $now->toDateTimeString();
-        $consentExpiresAt = ConsentWindow::expiresAfter($now);
-        $consentExpiresAtString = $consentExpiresAt->toDateTimeString();
-
-        $upsert = $this->upsertConnectionRow($userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString);
-
-        // The secrets write happens after the DB commit, so a failure here needs
-        // a compensating rollback or the row points at no session material.
-        try {
-            $this->secrets->save(new OpenBankingCredentials(
-                applicationId: $credentials->applicationId,
-                privateKeyPem: $credentials->privateKeyPem,
-                sessionId: $sessionId,
-                consentExpiresAt: $consentExpiresAt,
-                bankScaHost: $credentials->bankScaHost,
-                institutionId: $institutionId,
-            ));
-        } catch (SecretsWriteFailed $e) {
-            $this->rollbackConnectionRow($upsert, $userId, $nowString);
-
-            throw $e;
-        }
-
-        return $upsert['id'];
-    }
-
-    /**
-     * @return array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorConsentRevokedAt: ?string, priorAccountUid: ?string}
-     */
-    private function upsertConnectionRow(
-        int $userId,
-        string $institutionId,
-        ?string $accountUid,
-        string $nowString,
-        string $consentExpiresAtString,
-    ): array {
-        $existingRow = $this->db->connection()->table('open_banking_connections')
-            ->where('user_id', $userId)
-            ->where('institution_id', $institutionId)
-            ->first(['id', 'consent_expires_at', 'consent_revoked_at', 'account_uid']);
-        $existingId = ($existingRow !== null && is_numeric($existingRow->id)) ? (int) $existingRow->id : null;
-
-        // Snapshot the pre-update values so the re-link path can restore them if
-        // the secrets write fails, rather than advertise a consent it cannot back.
-        $priorConsentExpiresAt = ($existingRow !== null && is_string($existingRow->consent_expires_at))
-            ? $existingRow->consent_expires_at
-            : null;
-        $priorConsentRevokedAt = ($existingRow !== null && is_string($existingRow->consent_revoked_at))
-            ? $existingRow->consent_revoked_at
-            : null;
-        $priorAccountUid = ($existingRow !== null && is_string($existingRow->account_uid))
-            ? $existingRow->account_uid
-            : null;
-
-        $connectionId = $this->db->connection()->transaction(function () use (
-            $existingId, $userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString,
-        ): int {
-            $connection = $this->db->connection();
-
-            if ($existingId !== null) {
-                $connection->table('open_banking_connections')
-                    ->where('id', $existingId)
-                    ->where('user_id', $userId)
-                    ->update([
-                        'consent_expires_at' => $consentExpiresAtString,
-                        // A fresh consent is exactly what a revoked one needed:
-                        // leaving the stamp would keep the tile reading Revoked
-                        // over a session the bank has just re-granted.
-                        'consent_revoked_at' => null,
-                        // A re-link may surface a different account_uid, or the
-                        // first one, so always take THIS session's.
-                        'account_uid' => $accountUid,
-                        'updated_at' => $nowString,
-                    ]);
-
-                return $existingId;
-            }
-
-            return $connection->table('open_banking_connections')->insertGetId([
-                'user_id' => $userId,
-                'institution_id' => $institutionId,
-                'account_uid' => $accountUid,
-                'bank_display_name' => null,
-                'enabled' => false,
-                'consent_expires_at' => $consentExpiresAtString,
-                'consent_revoked_at' => null,
-                'last_successful_sync_at' => null,
-                'last_attempt_at' => null,
-                'last_attempt_status' => null,
-                'created_at' => $nowString,
-                'updated_at' => $nowString,
-            ]);
-        });
-
-        return [
-            'id' => $connectionId,
-            'isNew' => $existingId === null,
-            'priorConsentExpiresAt' => $priorConsentExpiresAt,
-            'priorConsentRevokedAt' => $priorConsentRevokedAt,
-            'priorAccountUid' => $priorAccountUid,
-        ];
-    }
-
-    /**
-     * @param  array{id: int, isNew: bool, priorConsentExpiresAt: ?string, priorConsentRevokedAt: ?string, priorAccountUid: ?string}  $upsert
-     */
-    private function rollbackConnectionRow(array $upsert, int $userId, string $nowString): void
-    {
-        $this->db->connection()->transaction(function () use ($upsert, $userId, $nowString): void {
-            $connection = $this->db->connection();
-
-            if ($upsert['isNew']) {
-                $connection->table('open_banking_connections')
-                    ->where('id', $upsert['id'])
-                    ->where('user_id', $userId)
-                    ->delete();
-
-                return;
-            }
-
-            $connection->table('open_banking_connections')
-                ->where('id', $upsert['id'])
-                ->where('user_id', $userId)
-                ->update([
-                    'consent_expires_at' => $upsert['priorConsentExpiresAt'],
-                    'consent_revoked_at' => $upsert['priorConsentRevokedAt'],
-                    'account_uid' => $upsert['priorAccountUid'],
-                    'updated_at' => $nowString,
-                ]);
-        });
+        return $this->redirector
+            ->route('settings.open-banking')
+            ->with($key, $value);
     }
 }

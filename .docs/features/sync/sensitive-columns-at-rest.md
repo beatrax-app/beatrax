@@ -1032,9 +1032,10 @@ never true and `ColdStartVault` is the null implementation, so enrolment was not
 but the default path, writing `secret || wrapped_key` into the SQLite file with the identity
 function as its shield.
 
-There is now a third gate, and it is structural: `WebAuthnBiometricController` refuses both the
-creation challenge and the enrolment POST unless the bound `SecretShield` reports
-`protectsAtRest()`. That is a capability on the contract rather than a platform test, so it covers
+There is now a third gate, and it is structural: `WebAuthnBiometricController` refuses the
+creation challenge and `EnrolBiometricCredential` refuses the enrolment itself, both unless the
+bound `SecretShield` reports `protectsAtRest()`. The two answer with the same payload, because the
+controller maps every enrolment outcome through one place. That is a capability on the contract rather than a platform test, so it covers
 every route into enrolment however it is reached, and it fails closed on a shield that only *looks*
 like one — `SafeStorageSecretShield` answers it by round-tripping random bytes through the
 custodian rather than by returning `true`, because Electron's `safeStorage` is unavailable on a

@@ -78,7 +78,7 @@ about the desktop, browser or iOS behaviour changes.
 | `GET /reports/export` | `beatrax-report-<slug>.csv` |
 | `AliasesSettingsPage::exportYaml()` | `aliases.yaml` |
 | `ManageUserPage::downloadCodes()` | `beatrax-recovery-codes-<name>.txt` |
-| `RecoveryCodesExportController` | `beatrax-recovery-codes-<name>.txt` |
+| `ExportRecoveryCodes` | `beatrax-recovery-codes-<name>.txt` |
 
 `GET /reports/export` is a plain navigation rather than a Livewire action, so
 it answers with the outcome sentence as `text/plain` — 200 when the sheet

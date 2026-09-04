@@ -94,10 +94,15 @@ What the module explicitly does NOT do:
 - **Internal/Listeners/** — `RaiseReconsentAlertOnTokenFailure`
   (writes the system_alerts row), `EmitOAuthReauthRequiredAlert`
   (per-request belt-and-braces from the sidebar composer).
+- **Internal/Actions/** — `ResolveInboxToReconnect` (turns an
+  `?inbox_id=` into an owned, same-provider row or a 404) and
+  `ConnectInboxFromGrant` (exchanges the code, writes the inbox rows
+  and the encrypted tokens, compensates a failed secret write, and
+  settles the re-consent alert).
 - **Internal/Http/Controllers/** — `OAuthConnectController`
   (begins the OAuth handshake; PKCE + state are owned here),
-  `OAuthCallbackController` (handles the redirect, exchanges the
-  code, writes the encrypted tokens).
+  `OAuthCallbackController` (consumes the state and the verifier, then
+  turns the action's outcome into a redirect).
 - **Internal/Http/Livewire/** — `InboxesPage` (`/inboxes`),
   `OAuthClientWizardModal` (Connect-an-inbox wizard),
   `BackfillWindowModal` (date-range picker for the backfill).
@@ -177,9 +182,10 @@ The OAuth-connect handshake:
   → provider redirects to /oauth/callback?code=…&state=…
   → OAuthCallbackController::__invoke
        → OAuthStateRepository::validate($state) → InvalidStateException
-       → provider->exchange($code, $codeVerifier)
-       → OAuthSecretsRepository::store(...) (encrypted-at-rest)
-       → Inbox row created, InboxScanState row created ('idle')
+       → ConnectInboxFromGrant
+            → provider->exchange($code, $codeVerifier)
+            → OAuthSecretsRepository::store(...) (encrypted-at-rest)
+            → Inbox row created, InboxScanState row created ('idle')
        → redirect /inboxes
 ```
 
@@ -219,57 +225,73 @@ The backfill (user-triggered):
 
 ## OAuth connect + callback controllers
 
+Both routes are thin by contract
+([a controller hands the work to an action](../../conventions/a-controller-hands-the-work-to-an-action.md)):
+they resolve the request, hand it to an action, and turn what comes back into a
+redirect. The state and the PKCE verifier are the exception and stay in the
+controllers, because both are one-shot request glue — the state exists only to
+be read back by the callback, the verifier only to survive between the two.
+
 `OAuthConnectController` (`GET /oauth/connect/{provider}`) computes
 the loopback redirect URI server-side from the injected config
 repository, so a query-string-supplied `redirect_uri` cannot smuggle a
-different value into the consent URL. It selects the provider wrapper
-via `match($provider)`, issues a per-flow random state via
-`OAuthStateRepository`, stashes the optional existing-inbox id for the
-reconnect path, and redirects to the provider's authorization URL. The
-reconnect path resolves the existing inbox via the Public `InboxQuery`
-service (scoped to the current user, enforcing the cross-user 404
-invariant inside the query) rather than a raw DB read, and rejects a
-reconnect whose `inbox_id` targets a different provider than the
-existing row — allowing a Gmail consent dance to complete against a
-Microsoft inbox row would write a Gmail refresh token under an inbox
-whose schema still claims `provider='microsoft'`, permanently breaking
-the inbox on the next scan. The rejection uses the same
+different value into the consent URL. It resolves the provider wrapper
+through `MailOAuthProviders` keyed on the `MailProvider` enum — an
+unknown `{provider}` is a 404 before anything else runs — issues a
+per-flow random state via `OAuthStateRepository`, stashes the optional
+existing-inbox id for the reconnect path, and redirects to the
+provider's authorization URL. `ResolveInboxToReconnect` owns the
+reconnect path: it resolves the existing inbox via the Public
+`InboxQuery` service (scoped to the current user, enforcing the
+cross-user 404 invariant inside the query) rather than a raw DB read,
+and rejects a reconnect whose `inbox_id` targets a different provider
+than the existing row — allowing a Gmail consent dance to complete
+against a Microsoft inbox row would write a Gmail refresh token under
+an inbox whose schema still claims `provider='microsoft'`, permanently
+breaking the inbox on the next scan. The rejection uses the same
 `NotFoundHttpException` shape as the cross-user 404 path so a provider
 mismatch is not enumerable from the response.
 
 `OAuthCallbackController` (`GET /oauth/callback/{provider}`) verifies
 the CSRF state and the originating-user binding (the state carries the
 `user_id` that initiated the dance; `consumeState` rejects the
-callback unless the current authenticated user matches), exchanges the
-authorization code for tokens via the matched provider wrapper, then
-persists the inbox row(s) and the chmod-600 credentials in two
-sequential steps: a DB transaction first (update the existing inbox
-row on reconnect, or insert a new `inboxes` + `inbox_scan_state` row
-pair on first connect), then the credential write second. A new inbox
-without a refresh token is rejected before either write — Google
-returns no refresh token when the OAuth consent screen is still in
-"Testing" status, and persisting such an inbox would leave it
-permanently `needs_reauth` on the very first scan. Because the secret
-write happens after the DB commit (the inbox id is only known once
-`insertGetId()` returns), a failed credential write on the new-inbox
-path triggers a compensating rollback that deletes both just-inserted
-rows; the reconnect path instead surfaces a flash, since a prior
-refresh token Google already invalidated cannot be un-rotated. On
-success the controller acknowledges any active
-`oauth_reconsent_required` `system_alerts` row for the inbox (with a
-LIKE-based fallback for SQLite builds without the JSON1 extension),
-lifts a `needs_reauth` scan state back to `idle` through
-`InboxScanStateMachine` (the sole sanctioned mutator), and redirects to
-`/inboxes` with a flash that auto-opens the backfill window modal. That
-lift is the whole point of the Reconnect button: `needs_reauth` is
-terminal for both scan jobs, so rotating the secret while leaving the
-status alone hands the user a working grant on a permanently dead
-inbox. Only that one status is lifted — a row mid-backfill keeps its
-own lifecycle. Provider errors at the consent screen itself (e.g. user
-canceled) arrive via the `error` query parameter and are handled before
-the state is consumed; token-exchange failures
-(`InvalidGrantException`, `OAuthExchangeFailed`) redirect back with a
-flashed failure reason rather than a raw exception page.
+callback unless the current authenticated user matches), then hands
+the code and the verifier to `ConnectInboxFromGrant`. Provider errors
+at the consent screen itself (e.g. user canceled) arrive via the
+`error` query parameter and are handled before the state is consumed.
+
+`ConnectInboxFromGrant` exchanges the authorization code for tokens via
+the matched provider wrapper, then persists the inbox row(s) and the
+chmod-600 credentials in two sequential steps: a DB transaction first
+(update the existing inbox row on reconnect, or insert a new
+`inboxes` + `inbox_scan_state` row pair on first connect), then the
+credential write second. A new inbox without a refresh token is rejected before
+either write — Google returns no refresh token when the OAuth consent
+screen is still in "Testing" status, and persisting such an inbox would
+leave it permanently `needs_reauth` on the very first scan. Because the
+secret write happens after the DB commit (the inbox id is only known
+once `insertGetId()` returns), a failed credential write on the
+new-inbox path triggers a compensating rollback that deletes both
+just-inserted rows; the reconnect path instead returns a refusal, since
+a prior refresh token Google already invalidated cannot be un-rotated.
+On success it acknowledges any active `oauth_reconsent_required`
+`system_alerts` row for the inbox (with a LIKE-based fallback for
+SQLite builds without the JSON1 extension) and lifts a `needs_reauth`
+scan state back to `idle` through `InboxScanStateMachine` (the sole
+sanctioned mutator). That lift is the whole point of the Reconnect
+button: `needs_reauth` is terminal for both scan jobs, so rotating the
+secret while leaving the status alone hands the user a working grant on
+a permanently dead inbox. Only that one status is lifted — a row
+mid-backfill keeps its own lifecycle.
+
+Every refusal — no code, a refused grant, a failed exchange, a missing
+refresh token, an unwritable credential row — comes back as an
+`InboxConnectionResult` carrying the line the reader is shown, and the
+controller flashes it. The token-exchange failures (`InvalidGrantException`,
+`OAuthExchangeFailed`) log the developer's sentence and hand the reader a
+translated one, rather than reaching a raw exception page. On success the
+redirect lands at `/inboxes` with a flash that auto-opens the backfill window
+modal.
 
 ## Livewire surfaces
 
@@ -335,7 +357,7 @@ than backfilling from scratch. `acknowledgeReconnect` (listening for
 `oauth-client-wizard:reconsented`) optimistically clears the user's
 `oauth_reconsent_required` alert for the inbox the moment the OAuth
 wizard signals a re-consent dance started — the real token refresh
-happens server-side in `OAuthCallbackController`, and if it fails,
+happens server-side in `ConnectInboxFromGrant`, and if it fails,
 `RaiseReconsentAlertOnTokenFailure` re-raises a fresh alert on the next
 `IncrementalScanJob`, so the system self-heals rather than depending on
 this optimistic clear being correct. `render()` skips the
@@ -362,7 +384,7 @@ discovered-senders panel is unreachable there. The desktop strings are unchanged
 and still say what the desktop scheduler really does; see
 [a screen that keeps its promise on one platform](../../conventions/invariants-from-shipped-failures.md#a-screen-that-keeps-its-promise-on-one-of-the-platforms-it-ships-to).
 
-`OAuthCallbackController::missingRefreshTokenMessage()` branches on the same
+`ConnectInboxFromGrant::missingRefreshTokenMessage()` branches on the same
 signal. The desktop refusal explains itself by an access token that dies "within
 the hour", which reads as a promise of hourly scanning; the `_phone` variants
 keep the step that fixes the refusal and drop that half of the sentence.
@@ -1051,8 +1073,8 @@ listener imports this event, never the other way around.
 Single source of truth for the
 `http(s)://127.0.0.1:PORT/oauth/callback/{provider}` URI the
 OAuth-client wizard prints for the user to paste into Google Cloud
-Console/Azure Portal, and that `OAuthConnectController` +
-`OAuthCallbackController` both compute server-side when issuing and
+Console/Azure Portal, and that `OAuthConnectController` and
+`ConnectInboxFromGrant` both compute server-side when issuing and
 consuming the consent dance.
 
 Promoted from `Modules\EmailScan\Internal` to `Modules\EmailScan\Public`

@@ -7,10 +7,7 @@ namespace Modules\Auth\Internal\Http\Controllers;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
-use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
-use Modules\Auth\Public\Services\AppLockClientConfig;
-use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Auth\Internal\Actions\RecordAppBackgrounded;
 
 // The two ends of a backgrounding. lock.js's own 30s timer cannot be trusted
 // on mobile: a suspended WebView never fires it and the return handler then
@@ -18,19 +15,12 @@ use Modules\Core\Public\Contracts\CurrentUser;
 final readonly class LockLifecycleController
 {
     public function __construct(
-        private AppLockClientConfig $lockConfig,
-        private CurrentUser $currentUser,
-        private Clock $clock,
+        private RecordAppBackgrounded $recordBackgrounded,
     ) {}
 
-    // Gated on the lock being enabled, like LockEngageController: a marker for
-    // a user with no lock strands them on a PIN pad no PIN opens.
     public function background(Session $session): Response
     {
-        if ($this->currentUser->isAuthenticated()
-            && $this->lockConfig->isEnabled($this->currentUser->user()->id)) {
-            $session->put(AppLockMiddleware::SESSION_BACKGROUNDED_AT, $this->clock->now()->getTimestamp());
-        }
+        ($this->recordBackgrounded)($session);
 
         return new Response('', 204);
     }
