@@ -278,11 +278,7 @@ final readonly class OpLogReplayer
         /** @var list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}> $pairCascades */
         $pairCascades = [];
 
-        /** @var list<int> $touchedTransactionIds */
-        $touchedTransactionIds = [];
-
-        /** @var list<int> $tombstonedTransactionIds */
-        $tombstonedTransactionIds = [];
+        $documents = new SearchDocumentRows($this->db);
 
         $this->db->connection()->transaction(
             function () use (
@@ -292,20 +288,19 @@ final readonly class OpLogReplayer
                 $userId,
                 $now,
                 &$pairCascades,
-                &$touchedTransactionIds,
-                &$tombstonedTransactionIds,
+                $documents,
             ): void {
                 /** @var array<string, array<int|string, OpLogEntry>> $pendingDeletes */
                 $pendingDeletes = [];
 
-                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $touchedTransactionIds);
+                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $documents);
                 $this->applier->applyFieldMerges(
                     $candidatesByField,
                     $tombstones,
                     $userId,
                     $now,
                     $pendingDeletes,
-                    $touchedTransactionIds,
+                    $documents,
                 );
                 $this->applier->collectBareTombstones($candidatesByField, $tombstones, $creates, $pendingDeletes);
                 $this->applier->applyDeletions(
@@ -313,12 +308,12 @@ final readonly class OpLogReplayer
                     $userId,
                     $now,
                     $pairCascades,
-                    $tombstonedTransactionIds,
+                    $documents,
                 );
             },
         );
 
-        $this->pairCascade->apply($pairCascades, $userId, $now, $touchedTransactionIds);
-        $this->searchRefresher->refresh($touchedTransactionIds, $tombstonedTransactionIds, $userId, $now);
+        $this->pairCascade->apply($pairCascades, $userId, $now, $documents);
+        $this->searchRefresher->refresh($documents, $userId, $now);
     }
 }
