@@ -10,6 +10,7 @@ use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ClearedStatus;
@@ -54,13 +55,13 @@ trait HandlesClearedStatus
     // component mixing the trait in, whatever it calls its own row id.
     #[On('cleared-toggle')]
     public function toggleClearedRow(
-        int $id,
+        int|string $id,
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
         Clock $clock,
     ): void {
-        $this->toggleClearedStatus($id, $currentUser, $db, $events, $clock);
+        $this->toggleClearedStatus(DerivedRowId::fromWire($id), $currentUser, $db, $events, $clock);
     }
 
     public function toggleClearedStatus(

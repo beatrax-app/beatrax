@@ -105,12 +105,12 @@
                                 <div class="flex items-center gap-2 text-xs">
                                     <button
                                         type="button"
-                                        wire:click="editMutation({{ $m['id'] }})"
+                                        wire:click="editMutation('{{ $m['id'] }}')"
                                         class="text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline dark:hover:text-slate-100 dark:text-slate-400"
                                     >{{ Lang::get('forecasting::scenario.edit') }}</button>
                                     <button
                                         type="button"
-                                        wire:click="removeMutation({{ $m['id'] }})"
+                                        wire:click="removeMutation('{{ $m['id'] }}')"
                                         class="text-rose-700 underline-offset-2 hover:underline dark:text-rose-500"
                                     >{{ Lang::get('forecasting::scenario.remove') }}</button>
                                 </div>

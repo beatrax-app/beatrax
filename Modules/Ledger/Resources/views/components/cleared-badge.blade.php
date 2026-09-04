@@ -49,7 +49,7 @@
 @else
     <button
         type="button"
-        wire:click="$dispatch('cleared-toggle', { id: {{ $txId }} })"
+        wire:click="$dispatch('cleared-toggle', { id: '{{ $txId }}' })"
         class="status-pill {{ $variant }} cleared-badge-toggle"
         aria-label="{{ UserDataPathService::isMobileRuntime() ? Lang::get('ledger::common.badge.toggle_aria_touch', ['label' => $label]) : Lang::get('ledger::common.badge.toggle_aria', ['label' => $label]) }}"
         data-testid="cleared-badge-{{ $txId }}"

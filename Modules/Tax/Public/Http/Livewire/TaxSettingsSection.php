@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
@@ -53,7 +54,7 @@ final class TaxSettingsSection extends Component
     }
 
     public function renameCategory(
-        int $categoryId,
+        int|string $categoryId,
         string $name,
         CurrentUser $currentUser,
         TaxCategoryWriter $writer,
@@ -61,7 +62,7 @@ final class TaxSettingsSection extends Component
         $this->renameError = '';
 
         try {
-            $writer->rename($currentUser->user()->id, $categoryId, $name);
+            $writer->rename($currentUser->user()->id, DerivedRowId::fromWire($categoryId), $name);
         } catch (NotFoundHttpException) {
             $this->reportCategoryGone();
         } catch (DuplicateTaxCategoryNameException|\InvalidArgumentException $e) {
@@ -75,24 +76,24 @@ final class TaxSettingsSection extends Component
     }
 
     public function archiveCategory(
-        int $categoryId,
+        int|string $categoryId,
         CurrentUser $currentUser,
         TaxCategoryWriter $writer,
     ): void {
         try {
-            $writer->archive($currentUser->user()->id, $categoryId);
+            $writer->archive($currentUser->user()->id, DerivedRowId::fromWire($categoryId));
         } catch (NotFoundHttpException) {
             $this->reportCategoryGone();
         }
     }
 
     public function unarchiveCategory(
-        int $categoryId,
+        int|string $categoryId,
         CurrentUser $currentUser,
         TaxCategoryWriter $writer,
     ): void {
         try {
-            $writer->unarchive($currentUser->user()->id, $categoryId);
+            $writer->unarchive($currentUser->user()->id, DerivedRowId::fromWire($categoryId));
         } catch (NotFoundHttpException) {
             $this->reportCategoryGone();
         }

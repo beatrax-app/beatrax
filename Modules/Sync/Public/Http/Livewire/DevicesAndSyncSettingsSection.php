@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
@@ -359,9 +360,9 @@ final class DevicesAndSyncSettingsSection extends Component
         $this->encryptionProgress = 0;
     }
 
-    public function startRemove(int $deviceId): void
+    public function startRemove(int|string $deviceId): void
     {
-        $this->removingDeviceId = $deviceId;
+        $this->removingDeviceId = DerivedRowId::fromWire($deviceId);
         $this->showRemoveModal = true;
     }
 
