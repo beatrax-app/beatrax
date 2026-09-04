@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Internal\Encryption\ProductionKdfCost;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\BackupEncryptor;
+use Tests\Helpers\CheapKdfCost;
 use Tests\Helpers\FailingStream;
 
 /**
@@ -31,7 +33,7 @@ it('round-trips a multi-chunk payload byte-for-byte', function (): void {
     $payload = random_bytes(200_000);
     file_put_contents($p['plain'], $payload);
 
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'correct horse battery staple');
     $enc->decrypt($p['enc'], $p['dec'], 'correct horse battery staple');
 
@@ -45,7 +47,7 @@ it('round-trips an empty and a sub-chunk payload', function (): void {
     foreach (['', 'tiny'] as $payload) {
         $p = backupTmpPaths();
         file_put_contents($p['plain'], $payload);
-        $enc = new BackupEncryptor;
+        $enc = new BackupEncryptor(new CheapKdfCost);
         $enc->encrypt($p['plain'], $p['enc'], 'pw');
         $enc->decrypt($p['enc'], $p['dec'], 'pw');
         expect(file_get_contents($p['dec']))->toBe($payload);
@@ -56,7 +58,7 @@ it('round-trips an empty and a sub-chunk payload', function (): void {
 it('fails to decrypt with the wrong passphrase', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(50_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'right-passphrase');
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'wrong-passphrase'))
@@ -68,7 +70,7 @@ it('fails to decrypt with the wrong passphrase', function (): void {
 it('detects a tampered byte in the ciphertext', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(50_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     $bytes = (string) file_get_contents($p['enc']);
@@ -88,7 +90,7 @@ it('detects a tampered byte in the ciphertext', function (): void {
 it('rejects out-of-range Argon2id parameters in the header (pre-auth DoS guard)', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(10_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     // Overwrite the memlimit field (8 bytes at offset 8+16+4 = 28) with a value
@@ -111,7 +113,7 @@ it('rejects out-of-range Argon2id parameters in the header (pre-auth DoS guard)'
 it('refuses header parameters libsodium would run but this application never writes', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(10_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     $bytes = (string) file_get_contents($p['enc']);
@@ -136,12 +138,13 @@ it('refuses header parameters libsodium would run but this application never wri
 
 // The bound is what this application WRITES, so both parameter sets it can
 // write have to keep opening: a bound that refused a real backup would be a
-// reader locked out of their own file.
+// reader locked out of their own file. ProductionKdfCost and not the suite's
+// cheap one, or the two sets under test collapse into the same numbers.
 it('still opens both parameter sets it writes — a passphrase backup and a key-sealed file', function (): void {
     $p = backupTmpPaths();
     $plaintext = random_bytes(10_000);
     file_put_contents($p['plain'], $plaintext);
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new ProductionKdfCost);
 
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
     $enc->decrypt($p['enc'], $p['dec'], 'pw');
@@ -160,7 +163,7 @@ it('still opens both parameter sets it writes — a passphrase backup and a key-
 it('detects a truncated backup (missing final tag)', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(200_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     $bytes = (string) file_get_contents($p['enc']);
@@ -176,7 +179,7 @@ it('rejects a file that is not a Beatrax encrypted backup', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['enc'], 'this is not an encrypted backup at all');
 
-    expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->decrypt($p['enc'], $p['dec'], 'pw'))
         ->toThrow(BackupFormatException::class, 'bad file header');
 
     $p['cleanup']();
@@ -196,7 +199,7 @@ it('uses a 256-bit symmetric key (quantum-safe floor)', function (): void {
 it('refuses to read a backup that is not there', function (): void {
     $p = backupTmpPaths();
 
-    expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->decrypt($p['enc'], $p['dec'], 'pw'))
         ->toThrow(BackupIoException::class, 'Cannot read encrypted backup');
 
     $p['cleanup']();
@@ -208,7 +211,7 @@ it('rejects a file that ends before the header does', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['enc'], 'BTR');
 
-    expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->decrypt($p['enc'], $p['dec'], 'pw'))
         ->toThrow(BackupFormatException::class, 'ended unexpectedly');
 
     $p['cleanup']();
@@ -220,7 +223,7 @@ it('rejects a file that ends before the header does', function (): void {
 it('reports a destination it cannot rename onto, and leaves no plaintext', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(1_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     mkdir($p['dec']);
@@ -242,7 +245,7 @@ it('reports a read that fails while encrypting', function (): void {
     FailingStream::$data = random_bytes(1_000);
     FailingStream::$failOnRead = 1;
 
-    expect(fn () => (new BackupEncryptor)->encrypt('beatraxfail://source', $p['enc'], 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->encrypt('beatraxfail://source', $p['enc'], 'pw'))
         ->toThrow(BackupIoException::class, 'Read error while encrypting backup.');
 
     FailingStream::reset();
@@ -255,7 +258,7 @@ it('reports a write that reports zero bytes while encrypting', function (): void
     FailingStream::register();
     FailingStream::$failWrites = true;
 
-    expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], 'beatraxfail://sink', 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->encrypt($p['plain'], 'beatraxfail://sink', 'pw'))
         ->toThrow(BackupIoException::class, 'Write error on');
 
     FailingStream::reset();
@@ -274,7 +277,7 @@ it('reports a write that reports zero bytes while encrypting', function (): void
 it('reports a read that fails on the first ciphertext block', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(200_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     FailingStream::register();
@@ -296,7 +299,7 @@ it('reports a read that fails on the first ciphertext block', function (): void 
 it('detects a backup truncated on a block boundary', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(200_000));
-    $enc = new BackupEncryptor;
+    $enc = new BackupEncryptor(new CheapKdfCost);
     $enc->encrypt($p['plain'], $p['enc'], 'pw');
 
     $headerBytes = 8 + SODIUM_CRYPTO_PWHASH_SALTBYTES + 4 + 8
@@ -324,7 +327,7 @@ it('closes the source handle when the destination cannot be opened', function ()
 
     $before = count(get_resources('stream'));
 
-    expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], $p['enc'], 'pw'))
+    expect(fn () => (new BackupEncryptor(new CheapKdfCost))->encrypt($p['plain'], $p['enc'], 'pw'))
         ->toThrow(BackupIoException::class, 'Cannot write encrypted backup');
 
     expect(count(get_resources('stream')))->toBe($before);

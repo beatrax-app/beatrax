@@ -465,6 +465,13 @@ run: `encrypt()` uses `MODERATE` (0.75 s, 256 MiB) and `encryptWithKey()` uses
 headers Beatrax has ever produced. A header past `MODERATE` was not written
 here, and is refused as a format error rather than derived.
 
+`MAX_OPSLIMIT`/`MAX_MEMLIMIT` are fixed constants rather than a reading of the
+injected `Modules\Core\Public\Contracts\KdfCost`, which the test suite lowers
+to libsodium's floor: a backup written at the shipped cost has to keep opening
+under a process deriving at a cheaper one, so this ceiling must not follow the
+write cost down. The shipped cost, and how it is pinned, is
+[The Argon2id cost, and why the suite does not pay it](../../architecture/argon2id-cost.md).
+
 Quantum safety: this scheme is post-quantum secure by construction
 because it is purely symmetric — there is no public-key/asymmetric
 step anywhere, so Shor's algorithm (which breaks RSA/ECC/DH key

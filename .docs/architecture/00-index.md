@@ -17,6 +17,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [Chain resolution](chain-resolution.md) | PayPal funding chains, ICS bulk-iDEAL settlement chains, the `pair_transaction_id` linkage, and the known-counterparty-IBAN alias bridge |
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the priority fold in which the last matching rule wins, and the receipt-vs-statement enrichment conflict resolver |
 | [Measuring write cost](measuring-write-cost.md) | Why any bulk-write timing taken inside the test suite looks quadratic, and how to take one that does not |
+| [The Argon2id cost](argon2id-cost.md) | The one work factor every passphrase-derived key is stretched at, how it is pinned, and why the suite is allowed to derive at libsodium's floor |
 | [SQLite write locks](sqlite-write-locks.md) | Why `busy_timeout` cannot save a read-then-write transaction, and the `transaction_mode = IMMEDIATE` that decides who waits |
 | [Navigation destinations](navigation-destinations.md) | The one vocabulary of user-facing screens, why it lives in `Core` rather than `Shell`, and the invariant that keeps the shell a sink |
 | [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) | Table-by-table layout grouped by owning module, the trust-boundary columns, and the state-machine sole-mutator rule |

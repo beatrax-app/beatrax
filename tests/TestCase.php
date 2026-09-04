@@ -8,8 +8,10 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Foundation\Vite;
+use Modules\Core\Public\Contracts\KdfCost;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\Currency;
+use Tests\Helpers\CheapKdfCost;
 
 /**
  * @link ../.docs/conventions/test-harness-isolation.md
@@ -40,6 +42,12 @@ abstract class TestCase extends BaseTestCase
             'serialize' => false,
         ]);
         $this->app['config']->set('cache.locks_store', 'array');
+
+        // Argon2id at the shipped cost is ~0.5s per derivation and this suite
+        // performs thousands of them — 218 of AuthFeature's 250 seconds. Every
+        // consumer takes the cost injected, so replacing the one binding here
+        // covers all of them. The shipped numbers have their own pinning test.
+        $this->app->instance(KdfCost::class, new CheapKdfCost);
 
         $this->isolatedStorageRoot = sys_get_temp_dir()
             .DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8))
