@@ -517,7 +517,7 @@ reprinted all ten codes under the line promising they are shown once,
 with the confirmation checkbox reset. The codes themselves are bcrypt
 digests in `user_recovery_codes` and the session payload is an encrypted
 Laravel envelope, so the fault was a false promise, never plaintext at
-rest. `RecoveryCodesExportController` reads the same session key, which
+rest. `ExportRecoveryCodes` reads the same session key, which
 is why the display marks rather than consumes: a share-sheet export
 fired from the screen must still find the codes.
 
