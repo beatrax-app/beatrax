@@ -8,6 +8,8 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Exceptions\BoundedReadException;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -182,6 +184,62 @@ it('counts an already-indexed message towards the progress total', function (): 
     $progress = json_decode((string) $db->connection()->table('inboxes')->where('id', $inboxId)->value('backfill_progress'), true);
 
     expect($progress['fetched_count'])->toBe(1);
+});
+
+// A message this device will not hold whole has to cost that one message.
+// Letting the refusal out of the walk abandoned every page behind it and put
+// the whole inbox into error over a single item.
+it('skips a message the ceiling refuses and keeps walking the rest of the page', function (): void {
+    [$user, $inboxId, $db] = emailScanWalkInbox('walk-oversized');
+
+    $refuser = new class implements GraphApiClientContract
+    {
+        public function listSenderMessagesPaged(int $inboxId, array $senderPatterns, DateTimeImmutable $windowStart, ?string $nextLink): array
+        {
+            return [
+                'messages' => [
+                    emailScanWalkMessage('paypal-before', 'service@paypal.com', '2026-05-11T09:14:21Z'),
+                    emailScanWalkMessage('paypal-oversized', 'service@paypal.com', '2026-05-11T09:15:21Z'),
+                    emailScanWalkMessage('paypal-after', 'service@paypal.com', '2026-05-11T09:16:21Z'),
+                ],
+                'nextLink' => null,
+            ];
+        }
+
+        public function getRawMessage(int $inboxId, string $providerMessageId): string
+        {
+            if ($providerMessageId === 'paypal-oversized') {
+                throw BoundedReadException::tooLarge('Graph message '.$providerMessageId, 26 * 1024 * 1024, UploadLimits::MAX_MESSAGE_BYTES);
+            }
+
+            return "From: service@paypal.com\r\nTo: cardholder@example.test\r\nSubject: Receipt\r\n"
+                ."Date: Mon, 11 May 2026 09:14:21 +0000\r\nMessage-ID: <{$providerMessageId}@paypal.com>\r\n\r\nBody.";
+        }
+
+        public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array
+        {
+            return ['messages' => [], 'deltaLink' => 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$deltatoken=D', 'nextLink' => null];
+        }
+
+        public function listDiscoveryCandidatesPaged(int $inboxId, array $keywords, array $excludeSenders, ?string $nextLink): array
+        {
+            return ['messages' => [], 'nextLink' => null];
+        }
+    };
+    $this->app->instance(GraphApiClientContract::class, $refuser);
+
+    /** @var BackfillInboxJob $job */
+    $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
+    $this->app->call([$job, 'handle']);
+
+    $stored = $db->connection()->table('inbox_messages')
+        ->where('inbox_id', $inboxId)
+        ->orderBy('provider_message_id')
+        ->pluck('provider_message_id')
+        ->all();
+
+    expect($stored)->toBe(['paypal-after', 'paypal-before'])
+        ->and($db->connection()->table('inbox_scan_state')->where('inbox_id', $inboxId)->value('status'))->toBe('idle');
 });
 
 // Belt and braces against a provider that answers every page with another

@@ -17,7 +17,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\InboxMessageStatus;
+use Modules\Core\Public\Exceptions\BoundedReadException;
+use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\UploadLimits;
+use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -25,6 +30,7 @@ use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
+use Psr\Log\LoggerInterface;
 
 // Per-user hourly consumer of inbox_messages rows with status='fetched'.
 // Walks the InboxMessageQuery generator, resolves each row's on-disk
@@ -63,6 +69,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
         EmlBlobStore $blobs,
         RecordReceipt $recordReceipt,
         ReceiptLedgerBridge $bridge,
+        LoggerInterface $logger,
     ): void {
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
@@ -92,13 +99,42 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
                 continue;
             }
 
-            $outcome = ($recordReceipt)($files->get($emlPath), $user, null);
+            $eml = $this->cappedBlob($logger, $dto, $emlPath);
+            if ($eml === null) {
+                $this->markUnmatched($db, $clock, $dto->id);
+
+                continue;
+            }
+
+            $outcome = ($recordReceipt)($eml, $user, null);
             [$update, $importRunId] = $this->resolveUpdate($outcome, $user, $importRunId, $clock, $bridge);
 
             $db->connection()
                 ->table('inbox_messages')
                 ->where('id', $dto->id)
                 ->update($update);
+        }
+    }
+
+    // The blob's size is whatever the sender of that mail chose. A refusal
+    // lands the row on the same unmatched status a missing blob gets, which is
+    // the state the reader already has a re-fetch for.
+    private function cappedBlob(LoggerInterface $logger, InboxMessageDto $dto, string $emlPath): ?string
+    {
+        try {
+            return BoundedRead::file('inbox message '.$dto->providerMessageId, $emlPath, UploadLimits::MAX_MESSAGE_BYTES);
+        } catch (BoundedReadException $e) {
+            $logger->warning(
+                'ProcessFetchedInboxMessagesJob: refused to read a stored message whole.',
+                [
+                    'user_id' => $dto->userId,
+                    'inbox_message_id' => $dto->id,
+                    'message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
+                ],
+            );
+
+            return null;
         }
     }
 
