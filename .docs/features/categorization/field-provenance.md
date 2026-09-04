@@ -104,9 +104,13 @@ protected" — rules apply as if the row were fresh — rather than taking
 down a re-apply run over a JSON parse error. If it were made a crash
 surface, one bad row would stop the whole batch.
 
-The trade to be aware of: corrupt provenance loses the user's manual
-protection silently. That is accepted because the alternative loses the
-entire run loudly, and the map is reconstructed on the next manual edit.
+What that degradation costs is the reader's own work: `ReapplyRulesJob`
+runs unattended over the full history, and a row reading `[]` has its
+category, counterparty and note rewritten as though the reader had never
+touched them. Degrade-or-crash was never the whole choice, though.
+`decodeProvenance()` logs a warning naming the transaction, so the map is
+still degraded and the row is still recoverable by a manual edit — but a
+later reading of a category nobody expected has something to find.
 
 ## It reaches the other devices
 
