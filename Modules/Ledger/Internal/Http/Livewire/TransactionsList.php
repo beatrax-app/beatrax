@@ -11,6 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Internal\Services\TransactionFilterOptions;
 use Modules\Ledger\Internal\Services\TransactionRowDecorator;
@@ -171,6 +172,37 @@ final class TransactionsList extends Component
     {
         $this->fullHistory = ! $this->fullHistory;
         $this->resetPagination();
+    }
+
+    // The account and category chips removed themselves with a PHP expression —
+    // `array_filter($filterAccounts, fn($id) => …)` — written into an attribute
+    // the browser evaluates as JavaScript, where `fn($id) =>` is a syntax error.
+    // Both close buttons threw in Alpine's evaluator and did nothing at all,
+    // on the one panel whose whole purpose is inviting a filter to be dropped.
+    public function removeAccountFilter(int|string $accountId): void
+    {
+        $this->filterAccounts = self::withoutId($this->filterAccounts, $accountId);
+        $this->resetPagination();
+    }
+
+    public function removeCategoryFilter(int|string $categoryId): void
+    {
+        $this->filterCategories = self::withoutId($this->filterCategories, $categoryId);
+        $this->resetPagination();
+    }
+
+    // resetPagination() is called by hand rather than left to updated(): that
+    // hook fires for a property the wire writes, and these two are written by a
+    // method instead.
+    /**
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private static function withoutId(array $ids, int|string $removed): array
+    {
+        $target = DerivedRowId::fromWire($removed);
+
+        return array_values(array_filter($ids, static fn (int $id): bool => $id !== $target));
     }
 
     // Search and every filter are wire:model.live, so refining one re-ran the

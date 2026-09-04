@@ -653,6 +653,13 @@ component that renders it into a `wire:click` of its own. Every
 Reports came to quote the button that ASKS the question and leave the button
 that ANSWERS it bare.
 
+What it counts as an id is the name the expression ends on, and three ways of
+writing the same value used to slip past that: `$txId` (the anchor admitted no
+`$`), `$m['id']` (the anchor had to end on the letters, and a subscript closes
+on `']`) and `(int) $accountId` (a cast in front, which only `$entry->id` ever
+survived because `->` gave it a second way in). A ternary between two ids would
+still slip; nothing writes one.
+
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 
 Routes each module's `*Mutated` events to the `OpLogWriter`. Wired in

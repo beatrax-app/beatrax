@@ -160,7 +160,13 @@ function idBearingExpression(string $expression): bool
         return false;
     }
 
-    return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*(\'\]|"\])?\s*$/', $expression) === 1;
+    // A cast is a wrapper, not a different value: `(int) $accountId` is the
+    // account, and an anchor that has to start on the `$` reads straight past
+    // the `(`. `(int) $entry->id` was caught only because `->` gave it a second
+    // way in, which is why the shape looked covered.
+    $operand = trim((string) preg_replace('/^\(\s*(int|integer|float|double|string|bool|boolean)\s*\)\s*/i', '', $expression));
+
+    return preg_match('/(^\$?|->|::|\[\'|\[")\s*[a-zA-Z_]*[iI][dD]\s*(\'\]|"\])?\s*$/', $operand) === 1;
 }
 
 it('never lets a blade write a derived id as a bare number', function (): void {
