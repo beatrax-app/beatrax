@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "php \"$CLAUDE_PROJECT_DIR/.claude/hooks/comment-policy.php\""
+          }
+        ]
+      }
+    ]
+  }
+}
