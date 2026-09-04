@@ -113,6 +113,47 @@ is unconditional at every boot stage. That is what makes these static
 accessors safe to call from `config/*.php` files, which are evaluated before
 the container exists.
 
+## Why one variable is read from three sources and the other from one
+
+`NATIVEPHP_PLATFORM` is read from `$_SERVER`, `$_ENV` and `getenv()`;
+`NATIVEPHP_STORAGE_PATH` is read with a bare `getenv()` at three call sites.
+The asymmetry looks like drift and is not — the two variables reach PHP by
+different routes, and each is read the way its own route delivers it.
+
+**`NATIVEPHP_STORAGE_PATH` is set by the desktop shell only.** The Electron
+plugin puts it in the object it hands to the spawned PHP process
+(`resources/electron/electron-plugin/src/server/php.ts`), so it arrives as a
+genuine process environment variable and `getenv()` is the primitive that
+reads it. No mobile shell sets it at all: it appears nowhere in
+`nativephp/mobile` — not in the iOS `setenv()` block, not in the Swift host,
+not in Android's `LaravelEnvironment.kt`, and not in any `$_SERVER` injection.
+So on a phone there is no server-const spelling for a bare `getenv()` to miss,
+and its absence is precisely the signal that hands the decision to
+`isMobileRuntime()`.
+
+**`NATIVEPHP_PLATFORM` does have a `$_SERVER`-only route.** Each embedded
+webview gets its own PHP context, and those slots pass request state by
+inlining `$_SERVER['NATIVEPHP_PLATFORM'] = 'ios';` into the eval rather than
+calling `setenv()` — deliberately, so the slots can run concurrently without
+racing the persistent lane's environment churn. A bare `getenv()` is blind to
+that, which is the whole reason the three-source read exists.
+
+Resolved roots, measured rather than reasoned about:
+
+| | `storageRoot()` | `appRoot()` | `databaseFile()` |
+| --- | --- | --- | --- |
+| host / test | `<base>/storage` | `<base>/storage/app` | `<base>/database/…` |
+| desktop | `$NATIVEPHP_STORAGE_PATH` | `…/app` | `…/database/…` |
+| iOS | `<base>/storage` | `…/persisted_data/storage/app` | `…/persisted_data/database/…` |
+
+The desktop row is the live packaged behaviour; the iOS row is confirmed
+against a real device, where `persisted_data/storage/app/sync/identity/*.enc`
+and the database both sit in the persisted store. On desktop the app's own
+default connection is not this file's `databaseFile()` at all — the vendored
+desktop service provider rewrites `database.default` to its own `nativephp`
+connection, which in debug builds is `database/nativephp.sqlite` inside the
+project and in packaged builds is `NATIVEPHP_DATABASE_PATH`.
+
 ## Path traversal
 
 `appPath()` takes a caller-supplied relative segment, so it splits the
