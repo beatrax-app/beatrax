@@ -49,6 +49,7 @@ function syncMachineryTables(): array
         'mobile_sync_progress' => 'The phone\'s own progress through its first sync.',
         'mobile_import_intent' => 'A handoff between two screens of this install.',
         'sync_backfill_state' => 'How far THIS device has walked its own pre-sync history; a peer has its own rows and its own walk.',
+        'deferred_op_captures' => 'Coordinates THIS device could not sign yet. Replaying them onto a peer would ask it to announce a change it never made.',
     ];
 }
 

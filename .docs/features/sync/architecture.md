@@ -509,6 +509,12 @@ itself into the log, in slices that commit as they go and resume across
 requests: [Capturing the history that predates
 sync](pre-sync-history-capture.md).
 
+A mutation raised by a process holding no signing key — a scheduled command,
+`sync:serve`, a queue worker, or any screen behind an engaged app-lock — is
+recorded as a coordinate and replayed from the live row on the next request that
+can sign: [A mutation a keyless process cannot
+sign](a-mutation-a-keyless-process-cannot-sign.md).
+
 ### When two devices name one row (`Internal\Merge\AlreadyPresentCreate`)
 
 A `create_row` whose insert the database refuses as already present is one of
