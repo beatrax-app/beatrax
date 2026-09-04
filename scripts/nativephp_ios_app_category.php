@@ -20,8 +20,11 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  * processed plist as well. Reading the last built app back shows exactly that:
  * LSApplicationCategoryType is present and empty in
  * NativePHP.app/Info.plist while the source Info.plist never mentions it.
- * Setting the build setting is therefore the half that decides the shipped
- * value, and the config entry is the half that survives a template change.
+ *
+ * What that proves is that this build setting writes this key, so setting it
+ * is necessary. Which value would win if the two disagreed is NOT established
+ * — that needs a real iOS build to settle. Both are set, so the question never
+ * has to be answered and the artefact carries the same value either way.
  *
  * Finance is the category the product is, and it is the one whose review
  * expectations the store applies to a personal-finance app; picking a milder
