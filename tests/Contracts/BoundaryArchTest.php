@@ -2337,6 +2337,12 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // mounts it by alias.
         'tests/Contracts/EveryWireCallableMethodIsReachableFromTheUiArchTest.php -> Modules\\Community\\Internal\\Http\\Livewire\\SharedListSettingsPanel',
         'tests/Contracts/ForecastingProjectionContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
+        // The two shells' custody adapters have no Public seam and must not get
+        // one: naming them is the whole point of the guard, which exists to make
+        // deleting either binding loud.
+        'tests/Contracts/KeyCustodianIsWiredOnBothShellsArchTest.php -> Modules\\Auth\\Internal\\Lock\\NullKeyCustodian',
+        'tests/Contracts/KeyCustodianIsWiredOnBothShellsArchTest.php -> Modules\\Desktop\\Internal\\Native\\DesktopKeyCustodian',
+        'tests/Contracts/KeyCustodianIsWiredOnBothShellsArchTest.php -> Modules\\Mobile\\Internal\\Identity\\SecureStorageKeyCustodian',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\ExpenseSeriesDetector',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Detectors\\IncomeSeriesDetector',
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',

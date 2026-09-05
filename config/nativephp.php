@@ -207,6 +207,11 @@ return [
         // installs before the signed manifest is verified and the user agrees.
         'php scripts/nativephp_inject_explicit_consent_updates.php',
 
+        // NativePHP surfaces isEncryptionAvailable() and nothing else, and on
+        // Linux that is true for the keyring-less fallback too. Without this
+        // route the desktop reports keychain protection it does not have.
+        'php scripts/nativephp_inject_safe_storage_backend.php',
+
         // The published template declares only the bare `#plugin` entry, so
         // `#plugin/*` subpath imports abort the Vite/Rollup build.
         'php scripts/nativephp_patch_electron_imports.php',

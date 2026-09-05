@@ -423,6 +423,36 @@ key twice by design — so the listener's `forget()` arm is currently reached by
 nothing, and the paths that genuinely rotate the data key do not raise the
 event at all.
 
+### What safeStorage is worth on Linux
+
+`System::canEncrypt()` is `safeStorage.isEncryptionAvailable()` and nothing
+else. On macOS and Windows that is the whole answer, because Keychain Services
+and DPAPI are the only backends there. On Linux it is also true for
+`basic_text` — Chromium's fallback when no keyring is reachable, whose key is
+derived from a password published in Chromium's own source. A desktop with no
+GNOME Keyring and no KWallet therefore answered exactly like one with them,
+`SafeStorageSecretShield::protectsAtRest()` returned true because the bytes did
+change, and biometric enrolment wrote a wrap of the app-lock data key believing
+it was machine-bound.
+
+Electron 38 answers the real question through `safeStorage.getSelectedStorageBackend()`,
+which NativePHP 2.2 exposes no route to. `scripts/nativephp_inject_safe_storage_backend.php`
+adds one — a `prebuild` hook, on the same terms as its siblings, patching
+`electron-plugin/dist/server/api/system.js` — and
+`SafeStorageBackendProbe` is the reader. `basic_text`, `unknown`, a 404 from a
+bundle built before the hook existed, and a shell that refuses the call all
+mean the same thing: **no keyring, so no claim of protection.** Only
+`gnome_libsecret` and the KWallet backends earn `KeyCustody::OperatingSystem`.
+
+What that changes is the claim, not the bytes. `store()` and `read()` stay keyed
+on `canEncrypt()` alone, so a keyring-less Linux desktop still encrypts and
+still round-trips: refusing there would strand every blob an earlier build wrote
+on that machine — the OAuth secrets and the biometric wrap among them — for a
+layer that was never the secret. `custody()` is what tells a caller persisting
+key material to stop, and `SafeStorageSecretShield::protectsAtRest()` now asks
+it *before* the round-trip probe, because the probe alone answers yes about
+ciphertext anyone can open.
+
 ## Known risks
 
 `LockOnWindowHideOrClose` locks the session the instant NativePHP

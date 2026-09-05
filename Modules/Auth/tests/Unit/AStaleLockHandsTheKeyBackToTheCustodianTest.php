@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Enums\KeyCustody;
 
 // On the desktop and mobile bundles DATA_KEY_SESSION holds a handle, not the
 // key: dropping the handle without telling the custodian leaves the raw key in
@@ -30,6 +31,11 @@ function staleLockCustodian(): KeyCustodian
         public function forget(string $handle): void
         {
             $this->forgotten[] = $handle;
+        }
+
+        public function custody(): KeyCustody
+        {
+            return KeyCustody::OperatingSystem;
         }
     };
 }

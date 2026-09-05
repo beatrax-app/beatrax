@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal\Native;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Enums\KeyCustody;
 use Native\Desktop\System;
 
 // Depends on the CONCRETE Native\Desktop\System rather than the facade, whose
@@ -21,6 +22,7 @@ final readonly class DesktopKeyCustodian implements KeyCustodian
     public function __construct(
         private ConfigRepository $config,
         private System $system,
+        private SafeStorageBackendProbe $backend,
     ) {}
 
     public function store(string $rawKey): string
@@ -86,6 +88,21 @@ final readonly class DesktopKeyCustodian implements KeyCustodian
         // entry of its own, so forgetting the session copy is enough.
     }
 
+    public function custody(): KeyCustody
+    {
+        if (! $this->canEncrypt()) {
+            return KeyCustody::Session;
+        }
+
+        return $this->backend->protects()
+            ? KeyCustody::OperatingSystem
+            : KeyCustody::PlatformStoreDoesNotProtect;
+    }
+
+    // Deliberately blind to the backend the probe names: a keyring-less Linux
+    // still round-trips, and refusing to encrypt there would strand every blob
+    // an earlier build wrote on that machine -- the OAuth secrets and the
+    // biometric wrap among them -- for a layer that was never the secret.
     private function canEncrypt(): bool
     {
         if ($this->config->get('nativephp-internal.running') !== true) {
