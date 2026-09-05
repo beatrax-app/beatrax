@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'A categories.goal_def nem támogatott (nem lapos) sablonformát használ — a cél nem lett importálva.',
         'budget_currency_mismatch' => ':count költségvetési sor nem lett importálva: a költségvetéseidet :envelope pénznemben vezeted, ez az export viszont :source pénznemben tervez költségvetést.|:count költségvetési sor nem lett importálva: a költségvetéseidet :envelope pénznemben vezeted, ez az export viszont :source pénznemben tervez költségvetést.',
         'amount_apply_collision' => 'A forrás új összegét nem lehetett alkalmazni — ütközik egy másik tranzakció ujjlenyomatával (ugyanaz a számla, dátum, pénznem és partner). Változatlanul maradt.',
+        'amount_currency_mismatch' => 'A tranzakciók összegei nem lettek egyeztetve: ezek a tranzakciók :local pénznemben vannak vezetve, ez az export viszont :source pénznemben adja meg őket. Változatlanul maradtak.',
         'schedule_unsupported' => 'Az ütemezett és ismétlődő tranzakciókat a Beatrax még nem tudja külső forrásból létrehozni — csak megjegyzésként őrződtek meg, nem élő ismétlődő sorozatként.',
         'saved_report_unsupported' => 'A mentett jelentéseknek és az elemzési beállításoknak nincs megfelelőjük a Beatraxban.',
         'assumed_currency' => "Feltételezett érték: :currency — ebben az exportban nem található 'preferences.currencyCode' sor.",

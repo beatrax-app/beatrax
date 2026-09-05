@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def koristi nepodržan (neravan) oblik predloška — cilj nije uvezen.',
         'budget_currency_mismatch' => ':count redak proračuna nije uvezen: tvoji se proračuni vode u :envelope, a ovaj izvoz proračunava u :source.|:count retka proračuna nisu uvezena: tvoji se proračuni vode u :envelope, a ovaj izvoz proračunava u :source.|:count redaka proračuna nije uvezeno: tvoji se proračuni vode u :envelope, a ovaj izvoz proračunava u :source.',
         'amount_apply_collision' => 'Novi iznos iz izvora nije se mogao primijeniti — sudara se s otiskom druge transakcije (isti račun, datum, valuta i protustranka). Ostavljeno nepromijenjeno.',
+        'amount_currency_mismatch' => 'Iznosi transakcija nisu usklađeni: te se transakcije vode u :local, a ovaj ih izvoz navodi u :source. Ostavljeni nepromijenjeni.',
         'schedule_unsupported' => 'Zakazane i ponavljajuće transakcije još nemaju u Beatraxu put za stvaranje iz vanjskog izvora — sačuvane su samo kao bilješka, ne kao živa ponavljajuća serija.',
         'saved_report_unsupported' => 'Spremljena izvješća i konfiguracije analiza nemaju u Beatraxu istovrijednicu.',
         'assumed_currency' => "Pretpostavljeno :currency — u ovom izvozu nije pronađen redak 'preferences.currencyCode'.",

@@ -9,9 +9,11 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\ConflictDto;
+use Modules\Migration\Internal\Dto\UnreconciledFieldDto;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -25,6 +27,7 @@ final readonly class ThreeWayMergeResolver
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
         private PeriodQuery $periods,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function resolve(int $newRunId, User $user, string $sourceProduct): MergeDecision
@@ -33,14 +36,16 @@ final readonly class ThreeWayMergeResolver
         $applies = [];
         /** @var list<ConflictDto> $conflicts */
         $conflicts = [];
+        /** @var list<UnreconciledFieldDto> $unreconciled */
+        $unreconciled = [];
 
         $this->reconcileBudgetAssignments($newRunId, $user, $sourceProduct, $applies, $conflicts);
         $this->reconcileCategories($newRunId, $user, $sourceProduct, $applies, $conflicts);
         $this->reconcileAccounts($newRunId, $user, $sourceProduct, $applies, $conflicts);
         $this->reconcileTransactionDescriptions($newRunId, $user, $sourceProduct, $applies, $conflicts);
-        $this->reconcileTransactionAmounts($newRunId, $user, $sourceProduct, $applies, $conflicts);
+        $this->reconcileTransactionAmounts($newRunId, $user, $sourceProduct, $applies, $conflicts, $unreconciled);
 
-        return new MergeDecision($applies, $conflicts);
+        return new MergeDecision($applies, $conflicts, $unreconciled);
     }
 
     /**
@@ -56,6 +61,8 @@ final readonly class ThreeWayMergeResolver
             ->where('migration_run_id', $newRunId)
             ->get();
 
+        $envelopeCurrency = $this->baseCurrency->forUser($user);
+
         /** @var stdClass $row */
         foreach ($rows as $row) {
             $categoryExternalId = self::toString($row->source_category_external_id);
@@ -63,6 +70,14 @@ final readonly class ThreeWayMergeResolver
             $sourceExternalId = $categoryExternalId.'|'.$periodStart;
             $currency = self::toString($row->currency);
             $sNewMinor = self::toInt($row->budgeted_minor);
+
+            // The envelope this compares against carries the reader's own
+            // currency and the fold never converts, so a foreign-currency row
+            // is not a budget these three legs may be read as one money.
+            // PromoteBudgetAssignments refuses it too, and is what reports it.
+            if ($currency !== '' && $currency !== $envelopeCurrency) {
+                continue;
+            }
 
             $map = $this->findMap($user, $sourceProduct, 'budget_assignment', $sourceExternalId);
             if ($map === null) {
@@ -91,11 +106,11 @@ final readonly class ThreeWayMergeResolver
                 ->value('assigned_minor');
             $currentMinor = self::toInt($currentValue);
 
-            if (self::moneyEquals($sNewMinor, $currency, $baselineMinor, $currency)) {
+            if (self::moneyEquals($sNewMinor, $baselineMinor, $currency)) {
                 continue;
             }
 
-            if (self::moneyEquals($currentMinor, $currency, $baselineMinor, $currency)) {
+            if (self::moneyEquals($currentMinor, $baselineMinor, $currency)) {
                 $applies[] = [
                     'entityType' => MigrationEntityType::BudgetAssignment->value,
                     'sourceExternalId' => $sourceExternalId,
@@ -305,8 +320,9 @@ final readonly class ThreeWayMergeResolver
     /**
      * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
      * @param  list<ConflictDto>  $conflicts
+     * @param  list<UnreconciledFieldDto>  $unreconciled
      */
-    private function reconcileTransactionAmounts(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts): void
+    private function reconcileTransactionAmounts(int $newRunId, User $user, string $sourceProduct, array &$applies, array &$conflicts, array &$unreconciled): void
     {
         $connection = $this->db->connection();
 
@@ -316,6 +332,9 @@ final readonly class ThreeWayMergeResolver
             ->whereNull('parent_source_external_id')
             ->where('is_split_parent', false)
             ->get();
+
+        /** @var array<string, array{local: string, source: string}> $foreignPairs */
+        $foreignPairs = [];
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
@@ -348,13 +367,27 @@ final readonly class ThreeWayMergeResolver
             $currentCurrency = self::toString($currentRow->currency);
             $currentMinor = self::toInt($currentRow->amount_minor);
 
-            if (self::moneyEquals($sNewMinor, $sourceCurrency, $baselineMinor, $sourceCurrency)) {
+            // EntityChangeApplier rebuilds the amount at the LIVE currency, so
+            // applying a source that restates 100 USD over a live 90 EUR would
+            // record 100 EUR — and the baseline carries no currency to judge it
+            // against either. Reported unreconciled and left exactly as it is.
+            if ($sourceCurrency !== '' && $sourceCurrency !== $currentCurrency) {
+                $foreignPairs[$currentCurrency.'|'.$sourceCurrency] = [
+                    'local' => $currentCurrency,
+                    'source' => $sourceCurrency,
+                ];
+
                 continue;
             }
 
-            // Both legs carry the LIVE currency, not $sourceCurrency: a
-            // mismatched pair makes moneyEquals() report a false conflict.
-            if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $currentCurrency)) {
+            // Every leg below is now provably the one currency this row is
+            // denominated in, which is what makes a bare minor-unit comparison
+            // a money comparison rather than an integer one.
+            if (self::moneyEquals($sNewMinor, $baselineMinor, $sourceCurrency)) {
+                continue;
+            }
+
+            if (self::moneyEquals($currentMinor, $baselineMinor, $currentCurrency)) {
                 $applies[] = [
                     'entityType' => MigrationEntityType::Transaction->value,
                     'sourceExternalId' => $externalId,
@@ -372,6 +405,15 @@ final readonly class ThreeWayMergeResolver
                 sourceValue: $sNewMinor,
                 baselineValue: $baselineMinor,
                 currency: $currentCurrency,
+            );
+        }
+
+        foreach ($foreignPairs as $pair) {
+            $unreconciled[] = new UnreconciledFieldDto(
+                entityType: MigrationEntityType::Transaction->value,
+                fieldName: 'amount_minor',
+                localCurrency: $pair['local'],
+                sourceCurrency: $pair['source'],
             );
         }
     }
@@ -406,8 +448,12 @@ final readonly class ThreeWayMergeResolver
         return is_string($value) ? $value : null;
     }
 
-    private static function moneyEquals(int $aMinor, string $aCurrency, int $bMinor, string $bCurrency): bool
+    // One currency, because every caller has already established that its three
+    // legs share one. A two-currency signature here read as a comparison that
+    // could see a currency change; it never could, and the callers that looked
+    // like they were passing two were passing the same variable twice.
+    private static function moneyEquals(int $aMinor, int $bMinor, string $currency): bool
     {
-        return Money::ofMinor($aMinor, $aCurrency)->equals(Money::ofMinor($bMinor, $bCurrency));
+        return Money::ofMinor($aMinor, $currency)->equals(Money::ofMinor($bMinor, $currency));
     }
 }

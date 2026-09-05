@@ -12,7 +12,8 @@ use Modules\Import\Public\Enums\EnrichmentConflictField;
 
 // Read-side projection of pending_enrichment_conflicts for the
 // first-conflict toast's mount() fallback. Every read is scoped by
-// user_id, so a foreign conflict can never surface.
+// user_id, so a foreign conflict can never surface, and to a null
+// resolution, so a settled row is a record and not a second question.
 final readonly class ReceiptConflictQuery
 {
     use CoercesScalars;
@@ -28,6 +29,7 @@ final readonly class ReceiptConflictQuery
             ->table('pending_enrichment_conflicts as c')
             ->join('transactions as t', 't.id', '=', 'c.transaction_id')
             ->where('c.user_id', $user->id)
+            ->whereNull('c.resolution')
             ->orderByDesc('c.id')
             ->first([
                 'c.id',
@@ -71,6 +73,7 @@ final readonly class ReceiptConflictQuery
             ->where('user_id', $user->id)
             ->where('transaction_id', $transactionId)
             ->where('field_name', EnrichmentConflictField::Currency->value)
+            ->whereNull('resolution')
             ->value('incoming_value');
 
         $decoded = self::decodeScalar(is_string($held) ? $held : null);

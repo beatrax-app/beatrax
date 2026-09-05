@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def uporablja nepodprto (neploščato) obliko predloge — cilj ni bil uvožen.',
         'budget_currency_mismatch' => ':count vrstica proračuna ni bila uvožena: tvoji proračuni se vodijo v :envelope, ta izvoz pa proračun vodi v :source.|:count vrstici proračuna nista bili uvoženi: tvoji proračuni se vodijo v :envelope, ta izvoz pa proračun vodi v :source.|:count vrstice proračuna niso bile uvožene: tvoji proračuni se vodijo v :envelope, ta izvoz pa proračun vodi v :source.|:count vrstic proračuna ni bilo uvoženih: tvoji proračuni se vodijo v :envelope, ta izvoz pa proračun vodi v :source.',
         'amount_apply_collision' => 'Novega zneska iz vira ni bilo mogoče uporabiti — trči ob prstni odtis druge transakcije (isti račun, datum, valuta in nasprotna stranka). Ostal je nespremenjen.',
+        'amount_currency_mismatch' => 'Zneski transakcij niso bili usklajeni: te transakcije se vodijo v :local, ta izvoz pa jih navaja v :source. Ostali so nespremenjeni.',
         'schedule_unsupported' => 'Beatrax načrtovanih in ponavljajočih se transakcij še ne zna ustvariti iz zunanjega vira — ohranjeno le kot opomba, ne kot dejavna serija v razdelku Ponavljajoče.',
         'saved_report_unsupported' => 'Shranjena poročila in nastavitve analiz v Beatraxu nimajo ustreznice.',
         'assumed_currency' => "Predpostavljeno: :currency — v tem izvozu ni bilo najdene nobene vrstice 'preferences.currencyCode'.",

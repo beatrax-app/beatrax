@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def izmanto neatbalstītu (ne plakanu) veidnes formu — mērķis netika importēts.',
         'budget_currency_mismatch' => ':count budžeta rindu netika importētas: jūsu budžeti tiek uzturēti valūtā :envelope, bet šis eksports budžetu veido valūtā :source.|:count budžeta rinda netika importēta: jūsu budžeti tiek uzturēti valūtā :envelope, bet šis eksports budžetu veido valūtā :source.|:count budžeta rindas netika importētas: jūsu budžeti tiek uzturēti valūtā :envelope, bet šis eksports budžetu veido valūtā :source.',
         'amount_apply_collision' => 'Avota jauno summu nevarēja piemērot — tā saduras ar cita darījuma pirksta nospiedumu (tas pats konts, datums, valūta un darījuma partneris). Atstāta nemainīga.',
+        'amount_currency_mismatch' => 'Darījumu summas netika saskaņotas: šie darījumi tiek uzturēti valūtā :local, bet šis eksports tos norāda valūtā :source. Atstātas nemainītas.',
         'schedule_unsupported' => 'Plānotus un regulārus darījumus Beatrax vēl neprot izveidot no ārēja avota — saglabāts tikai kā piezīme, nevis kā aktīva sērija sadaļā Regulārie maksājumi.',
         'saved_report_unsupported' => 'Saglabātām atskaitēm un analīzes konfigurācijām Beatrax nav ekvivalenta.',
         'assumed_currency' => "Pieņemts: :currency — šajā eksportā netika atrasta neviena 'preferences.currencyCode' rinda.",

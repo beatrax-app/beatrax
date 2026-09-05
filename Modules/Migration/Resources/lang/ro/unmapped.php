@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def folosește o formă de șablon neacceptată (neplată) — obiectivul nu a fost importat.',
         'budget_currency_mismatch' => ':count rând de buget nu a fost importat: bugetele tale sunt ținute în :envelope, iar acest export ține bugetul în :source.|:count rânduri de buget nu au fost importate: bugetele tale sunt ținute în :envelope, iar acest export ține bugetul în :source.|:count de rânduri de buget nu au fost importate: bugetele tale sunt ținute în :envelope, iar acest export ține bugetul în :source.',
         'amount_apply_collision' => 'Suma nouă din sursă nu a putut fi aplicată — se suprapune cu amprenta altei tranzacții (același cont, dată, monedă și contraparte). A rămas neschimbată.',
+        'amount_currency_mismatch' => 'Sumele tranzacțiilor nu au fost reconciliate: aceste tranzacții sunt ținute în :local, iar acest export le indică în :source. Au rămas neschimbate.',
         'schedule_unsupported' => 'Beatrax nu poate încă să creeze tranzacții programate sau recurente dintr-o sursă externă — păstrate doar ca notă, nu ca serie activă în Recurente.',
         'saved_report_unsupported' => 'Rapoartele salvate și configurațiile de analiză nu au echivalent în Beatrax.',
         'assumed_currency' => "S-a presupus :currency — nu a fost găsit niciun rând 'preferences.currencyCode' în acest export.",

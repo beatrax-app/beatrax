@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def uses an unsupported (non-flat) template shape — the goal was not imported.',
         'budget_currency_mismatch' => ':count budget row was not imported: your budgets are kept in :envelope, and this export budgets in :source.|:count budget rows were not imported: your budgets are kept in :envelope, and this export budgets in :source.',
         'amount_apply_collision' => "The source's new amount could not be applied — it collides with another transaction's fingerprint (same account, date, currency and counterparty). Left unchanged.",
+        'amount_currency_mismatch' => 'Transaction amounts were not reconciled: these transactions are kept in :local, and this export states them in :source. Left unchanged.',
         'schedule_unsupported' => 'Scheduled and recurring transactions have no Beatrax create-from-external-source path yet — preserved as a note only, not a live Recurring series.',
         'saved_report_unsupported' => 'Saved reports and analysis configs have no Beatrax equivalent.',
         'assumed_currency' => "Assumed :currency — no 'preferences.currencyCode' row was found in this export.",
