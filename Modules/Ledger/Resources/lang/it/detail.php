@@ -97,7 +97,7 @@ return [
         'heading' => 'Elimina la transazione',
         'help' => "Rimuove definitivamente questa transazione. L'operazione non può essere annullata.",
         'button' => 'Elimina',
-        'confirm_prompt' => 'Eliminare questa transazione? Nota, suddivisione ed etichette fiscali spariscono con lei.',
+        'confirm_prompt' => 'Eliminare questa transazione? Nota, suddivisione, etichette fiscali ed eventuale conteggio su un obiettivo di risparmio spariscono con lei. Se è uno dei due lati di un trasferimento, l\'altro lato viene riclassificato.',
         'confirm' => 'Sì, elimina',
         'cancel' => 'Annulla',
     ],

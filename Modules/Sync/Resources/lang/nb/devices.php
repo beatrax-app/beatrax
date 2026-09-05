@@ -6,7 +6,7 @@ return [
     'heading' => 'Enheter og synkronisering',
 
     'enable_sync' => 'Aktiver synkronisering',
-    'enable_sync_help' => 'Del dataene dine sikkert mellom betrodde enheter. Krever en applås. Når den først er på, krypteres dataene dine og applåsen kan ikke slås av igjen.',
+    'enable_sync_help' => 'Del dataene dine sikkert mellom betrodde enheter. Krever en applås. Å slå den på kan ikke angres: dataene dine er kryptert fra da av, og verken synkronisering eller applåsen kan slås av igjen.',
 
     'app_lock_notice' => 'Sett opp en applås først for å aktivere synkronisering.',
     'go_to_app_lock' => 'Gå til Applås',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Opplåsing åpner denne paringen på nytt i stedet for å la den utløpe, så den varer lenger enn app-låstiden du har satt. Den avsluttes når du fullfører eller avbryter den.',
 
     'relay_endpoint' => 'Relay-endepunkt',
-    'relay_endpoint_help' => 'Valgfritt. Når det er angitt, synkroniserer frakoblede enheter via dette relayet. La feltet stå tomt for bare LAN&#8209;direkte.',
-    'relay_endpoint_help_phone' => 'Valgfritt. Når det er angitt, går endringer via dette relayet også når enhetene dine ikke er på samme nettverk. Denne enheten henter dem når du synkroniserer fra denne skjermen — aldri i bakgrunnen, for applåsen har den eneste nøkkelen. La feltet stå tomt for bare LAN&#8209;direkte.',
+    'relay_endpoint_help' => 'Valgfritt. Et relay lar to enheter fullføre paringen og utveksle krypteringsnøkler når de ikke når hverandre direkte. Selve transaksjonene synkroniseres fortsatt bare når begge enhetene er på samme nettverk. La feltet stå tomt for bare LAN&#8209;direkte.',
+    'relay_endpoint_help_phone' => 'Valgfritt. Et relay lar to enheter fullføre paringen og utveksle krypteringsnøkler når de ikke når hverandre direkte. Selve transaksjonene synkroniseres fortsatt bare når begge enhetene er på samme nettverk. Denne enheten henter det som venter på den, når du synkroniserer fra denne skjermen — aldri i bakgrunnen, for applåsen har den eneste nøkkelen. La feltet stå tomt for bare LAN&#8209;direkte.',
     'relay_endpoint_aria' => 'URL til relay-endepunkt',
     'relay_insecure_warning' => 'Dette relay-endepunktet bruker vanlig HTTP. Relayet dekrypterer aldri dataene dine, men en usikker tilkobling avslører krypterte størrelser og tidspunkter for dem som overvåker nettverket. Bruk et <strong>https://</strong>-endepunkt for best mulig personvern.',
 

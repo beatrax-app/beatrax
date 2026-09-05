@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Beløpsvisning',
-        'label' => 'Standardvisning i transaksjonslisten',
+        'label' => 'Standardvisning av beløp',
         'eur_only' => 'Oppgjort beløp',
         'original' => 'Opprinnelig beløp',
-        'help' => 'Du kan fortsatt bytte per side fra transaksjonslisten.',
+        'help' => 'Gjelder transaksjonslisten og totalene i oversikten. Du kan fortsatt bytte per side, men bare fra transaksjonslisten.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Valutakurser',
         'fetch_online' => 'Hent oppdaterte kurser på nett',
-        'online_on' => 'Kurser hentes daglig fra ECB. Kun oppslag av valutapar — ingen personopplysninger.',
+        'online_on' => 'Kurser hentes daglig fra ECB, eller fra Frankfurter hvis ECB ikke er tilgjengelig. Kun oppslag av valutapar — ingen personopplysninger.',
         'last_updated' => 'Sist oppdatert: :date.',
-        'online_off' => 'Medfølgende kurser brukes. Ingen data forlater denne enheten.',
+        'online_off' => 'Kursene som allerede ligger her, brukes fortsatt, med det medfølgende øyeblikksbildet som reserve. Ingen data forlater denne enheten.',
         'fetch_aria' => 'Hent oppdaterte valutakurser på nett',
         'refreshing' => 'Oppdaterer…',
         'next_refresh' => 'Automatisk oppdatering: én gang om dagen',

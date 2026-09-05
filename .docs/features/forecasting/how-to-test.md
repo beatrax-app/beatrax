@@ -46,10 +46,15 @@ isolation.
 - `noScenarioMutationsJoinedToTransactionQueries` — the load-
   bearing one. Forbids any JOIN that couples
   `forecast_scenario_mutations` to `transactions`,
-  `recurring_series`, or `chain_links`. The scenario substrate is
-  walled off from the ledger.
-- `noForecastRunStateWritesOutsideMachine` — only
-  `ForecastRunStateMachine` may write `forecast_runs.status`.
+  `recurring_series_occurrences`, `chain_links` or
+  `card_statements`. The scenario substrate is walled off from the
+  ledger.
+- Nothing gates `forecast_runs.status` by name.
+  `ForecastRunStateMachine` is the single legal mutator — other
+  module code reads the row freely but never UPDATEs the column
+  directly — and `crossModuleRawTableWrites` guards the broader
+  substrate. Keeping it that way is a review convention, not a
+  build failure.
 
 ## How to run the suite for just this module
 

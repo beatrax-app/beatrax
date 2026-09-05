@@ -97,7 +97,7 @@ return [
         'heading' => 'Smazat transakci',
         'help' => 'Trvale odstraní tuto transakci. Tuhle akci nejde vzít zpět.',
         'button' => 'Smazat',
-        'confirm_prompt' => 'Smazat tuto transakci? Zmizí s ní i poznámka, rozdělení a daňové štítky.',
+        'confirm_prompt' => 'Smazat tuto transakci? Zmizí s ní i poznámka, rozdělení, daňové štítky a případný příspěvek na spořicí cíl. Pokud jde o jednu stranu převodu, druhá strana dostane novou klasifikaci.',
         'confirm' => 'Ano, smazat',
         'cancel' => 'Zrušit',
     ],

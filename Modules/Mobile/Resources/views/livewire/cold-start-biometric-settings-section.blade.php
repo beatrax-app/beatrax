@@ -1,6 +1,11 @@
 {{--
     Cold-start biometric unlock settings (mobile).
-    Mounted via @livewire('mobile.cold-start-biometric-settings-section').
+
+    Registered as `mobile.cold-start-biometric-settings-section` and deliberately
+    mounted by no screen. The app-side path is built; the native enclave binding
+    it would enrol against is not, so drawing this toggle would offer a reader an
+    unlock their device cannot perform. .docs/design/cold-start-biometric-unlock.md
+    holds the four remaining pieces, and the mount belongs with the last of them.
 
     Copy:
       - Heading: "Biometric unlock"

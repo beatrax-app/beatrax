@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Biometrie behouden',
 
     'auto_lock' => 'Automatisch vergrendelen na',
+    'auto_lock_note' => 'Beatrax vergrendelt na deze tijd zonder activiteit — en eerder als je de app verlaat: overschakelen naar een andere app, of het venster verbergen of sluiten, vergrendelt Beatrax binnen :window, wat deze instelling ook zegt.',
     'idle_1' => '1 minuut',
     'idle_5' => '5 minuten',
     'idle_15' => '15 minuten',

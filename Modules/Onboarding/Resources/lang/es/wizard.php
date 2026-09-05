@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'El asistente no ha podido determinar el paso activo. Usa Continuar más tarde → para salir; al volver a abrirlo se recuperará.',
 
     'privacy' => 'Tus datos se quedan en este dispositivo',
+    'privacy_connector' => 'Tus datos se quedan en este dispositivo. Este paso conecta tu bandeja de entrada con Google o Microsoft.',
     'need_help' => '¿Necesitas ayuda?',
     'need_help_aria' => '¿Necesitas ayuda? Abre la página de incidencias de Beatrax en GitHub',
 ];

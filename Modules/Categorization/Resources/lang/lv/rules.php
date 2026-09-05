@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Noteikumi paliek šajā ierīcē. Tie netiek koplietoti ar citām tavām ierīcēm.',
 
     'reapply' => 'Piemērot noteikumus vēsturei',
-    'reapply_confirm' => 'Vai piemērot visus noteikumus visai jūsu vēsturei? Katra kategorija, darījuma partneris, piezīme un nodokļu atzīme, ko ievietojis noteikums, tiek pārrakstīta. Tas, ko iestatījāt ar roku, paliek, tāpat kā viss, kas ir saskaņotā konta izrakstā. Vecās vērtības neatgriež nekas.',
+    'reapply_confirm' => 'Vai piemērot visus noteikumus visai jūsu vēsturei? Katra kategorija, darījuma partneris, piezīme un nodokļu atzīme, ko ievietojis noteikums, tiek pārrakstīta. Tas, ko iestatījāt ar roku, paliek, tāpat kā viss, kas ir saskaņotā konta izrakstā vai darījumā, kuru sadalījāt. Vecās vērtības neatgriež nekas.',
     'reapplying' => 'Piemēro…',
     'new_rule' => 'Jauns noteikums',
 

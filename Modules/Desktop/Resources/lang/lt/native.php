@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Failas',
         'file_import' => 'Importuoti failą…',
-        'file_scan_email' => 'Nuskaityti el. paštą dabar',
+        'file_scan_email' => 'El. pašto dėžutės…',
         'help' => 'Žinynas',
         'help_github_repo' => 'GitHub saugykla',
         'help_report_issue' => 'Pranešti apie problemą',
         'help_about' => 'Apie Beatrax',
         'developer_submenu' => 'Kūrėjas',
         'dev_open_console' => 'Atverti kūrėjo pultą',
-        'dev_run_command' => '⌘K Vykdyti komandą',
+        'dev_run_command' => 'Vykdyti komandą…',
     ],
 
     'worker_alert' => [

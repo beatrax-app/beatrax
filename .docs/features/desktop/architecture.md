@@ -30,10 +30,23 @@ What the module explicitly does NOT do:
 - It never owns business logic. The dispatchers and listeners here
   glue NativePHP events to in-app domain events; the response to a
   domain event lives in the owning module.
-- It never bypasses the bundle gate. Every NativePHP-coupled
-  subscription is registered only when
-  `config('nativephp-internal.running') === true`, so local dev / CI runs
-  never reach the NativePHP HTTP client.
+- It never reaches Electron from local dev or CI. Everything below the
+  gate in `DesktopServiceProvider::boot()` — the focus-state flippers,
+  the OS-notification dispatcher, the crash watchdog, the file-open
+  bridge, the lock-on-hide listener, the deep-link navigator and the
+  auto-update chain — is subscribed only when
+  `config('nativephp-internal.running') === true`. The listeners
+  registered *above* that gate are the ones whose round-trip has to work
+  off-bundle, so the subscription list itself is not the gate — each of
+  them answers the question in its own body instead.
+  `RebuildAppMenuOnAuthChange::handle()` returns unless the bundle is
+  running; `SyncListenerProcess` and `RelayListenerProcess` return unless
+  the `ChildProcess` facade class exists at all;
+  `ForgetColdStartVaultOnKeyRotation` resolves the `ColdStartVault`
+  contract, which is Auth's `NullColdStartVault` everywhere but the
+  bundle; and `ContinuePendingFileIntentAfterLogin` touches no NativePHP
+  symbol in the first place. Add a listener above the gate and it is
+  yours to gate: nothing above that line is held by anything else.
 - It never owns the secret-key store. APP_KEY regeneration is owned
   by `Core::EnsureAppKey`; this module's `FirstLaunchBootstrap` only
   chains the call.
@@ -50,9 +63,11 @@ What the module explicitly does NOT do:
     under local dev / CI the binding is absent and the app-layout falls
     through to the client-side `prefers-color-scheme` pre-paint
     script. "Absence of a binding is itself the signal."
-  - `RemembersPendingFileIntent::remember($path) / consume()` — the
-    session-scoped pending-intent store the file-open listeners
-    persist into.
+  - `RemembersPendingFileIntent::remember($path, $extension)` — the
+    contract's one method, and the whole of it. The `Import` and
+    `Receipts` listeners persist a validated path into the
+    session-scoped store; the reading half stays Internal, which is
+    what makes the contract write-only across the boundary.
 - **Events/**
   - `FileOpenedFromOs` — raised by `Internal\Native\FileOpenIntake`
     after a validated file path is admitted. Listeners in `Import`
@@ -91,12 +106,14 @@ What the module explicitly does NOT do:
   - `ApplyCloseWindowChoice` — handles the JS-glued POST that
     follows the close-window prompt.
   - `ContinuePendingFileIntentAfterLogin` — fires on Laravel
-    `Login`; routes the user to the staging page when an intent is
-    pending.
-  - `DispatchOsNotification` — the four `handle*` methods for
-    `TransactionImported`, `DriftAlertOpened`,
-    `ForecastShortfallDetected`, and the worker-crash alert.
-    Gated by `WindowFocusState` so an in-focus window stays quiet.
+    `Login` and re-reads the pending intent, which is what drops one
+    whose file has gone. The redirect to the staging page belongs to
+    the `ContinueToStagedFile` middleware.
+  - `DispatchOsNotification` — the single handler,
+    `handleNotificationDeliverable`, for the Notifications module's
+    `NotificationDeliverable` event. Consults the Notifications module's
+    `SuppressionEvaluator` first and `WindowFocusState` second, so a
+    suppressed trigger stays quiet whether or not the window is focused.
   - `HandleNativeOpenFile` — bridges the NativePHP `OpenFile` event
     to `FileOpenIntake`.
   - `NavigateOnNotificationDeepLink` — handles
@@ -134,7 +151,13 @@ What the module explicitly does NOT do:
   toggles + quiet hours), then the focus gate (in-focus = no OS toast,
   the in-app `SystemAlertsBanner`/notification inbox handles it), then
   the per-device hide-details preference (swaps the real body for a
-  detail-free fallback).
+  detail-free fallback). It re-implements no slice of that first
+  decision: `onlyOneSuppressionEvaluator` in
+  `tests/Contracts/BoundaryArchTest.php` fails the build if this adapter
+  or its mobile counterpart names a quiet-hours or per-trigger-toggle
+  column directly, because two independently written suppression checks
+  drift into "my phone ignores quiet hours" with no failing test to
+  point at.
 - `WindowCloseBehavior::choiceFor($user)` — reads
   `users.close_behavior` and returns the choice, with
   `shouldPromptFor($user)` for the null case (never asked) and
@@ -321,9 +344,12 @@ CSRF token. It was invisible because `ValidateCsrfToken` short-circuits on
 ingress and one validation boundary — `FileOpenIntake`, which both entry
 paths still converge on before `FileOpenedFromOs` fires.
 
-Both injections are idempotent and fail the build loudly on an anchor a
-future NativePHP release has moved, rather than leaving a main process that
-silently drops every document path. What PHP can pin about them is pinned in
+Both injections are idempotent, and both exit non-zero and write the anchor
+they could not find to STDERR when a future NativePHP release moves it. That is
+as loud as it gets: NativePHP's prebuild runner prints `Command failed: …` and
+carries on to the next hook, so the build still produces an installer — one
+whose main process silently drops every document path — and the red line in the
+build log is the only warning. What PHP can pin about them is pinned in
 `Modules/Desktop/tests/Unit/FileOpenIngressScriptsTest.php`; the Electron
 runtime half — that a double-clicked export on a packaged Windows or Linux
 build reaches `FileOpenIntake` — is only observable from a real installer and

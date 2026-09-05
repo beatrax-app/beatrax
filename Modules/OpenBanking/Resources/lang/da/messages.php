@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Indsæt dit applikations-id',
         'application_id_label' => 'Applikations-id',
-        'step3_help' => 'Det gemmes i en lokal fil uden for databasen med restriktive rettigheder og forlader aldrig denne enhed.',
+        'step3_help' => 'Gemmes i en lokal fil uden for databasen, som kun du kan læse. Det identificerer din applikation over for Enable Banking, så det følger med hver forespørgsel — det gør din private nøgle aldrig.',
 
         'step4_title' => 'Vælg din bank',
         'via_enable_banking' => 'via Enable Banking',

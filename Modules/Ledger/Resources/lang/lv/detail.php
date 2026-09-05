@@ -97,7 +97,7 @@ return [
         'heading' => 'Dzēst darījumu',
         'help' => 'Neatgriezeniski dzēš šo darījumu. Šo darbību nevar atsaukt.',
         'button' => 'Dzēst',
-        'confirm_prompt' => 'Dzēst šo darījumu? Līdzi pazūd piezīme, sadalījums un nodokļu birkas.',
+        'confirm_prompt' => 'Dzēst šo darījumu? Līdzi pazūd piezīme, sadalījums, nodokļu birkas un jebkurš ieskaitījums uzkrājumu mērķī. Ja tā ir viena pārskaitījuma puse, otra puse tiek pārklasificēta.',
         'confirm' => 'Jā, dzēst',
         'cancel' => 'Atcelt',
     ],

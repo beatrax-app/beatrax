@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Shift a series date',
-            'desc' => 'Move the next or all subsequent occurrences forward.',
+            'desc' => 'Move the next occurrence, or all subsequent ones, to a different date.',
         ],
     ],
 

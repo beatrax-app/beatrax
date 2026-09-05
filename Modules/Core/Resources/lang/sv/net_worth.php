@@ -23,9 +23,11 @@ return [
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurser per :date från :source',
 
-    'stale_bundled' => 'En medföljande ögonblickskurs används. Slå på hämtning online i Inställningar för aktuella kurser.',
-    'stale_old' => 'Den här kursen är mer än 3 dagar gammal. Nästa hämtning online uppdaterar den.',
+    'stale_bundled' => 'En medföljande ögonblickskurs som är mer än :count dag gammal används. Slå på hämtning online i Inställningar för aktuella kurser.|En medföljande ögonblickskurs som är mer än :count dagar gammal används. Slå på hämtning online i Inställningar för aktuella kurser.',
+    'stale_old' => 'Den här kursen är mer än :count dag gammal. Nästa hämtning online uppdaterar den.|Den här kursen är mer än :count dagar gammal. Nästa hämtning online uppdaterar den.',
+    'stale_offline' => 'Den här kursen är mer än :count dag gammal, och hämtning online är avstängd. Slå på den i Inställningar för att uppdatera kursen.|Den här kursen är mer än :count dagar gammal, och hämtning online är avstängd. Slå på den i Inställningar för att uppdatera kursen.',
 
+    'source_ecb' => 'ECB',
     'source_bundled' => 'Medföljande ögonblicksbild',
     'source_transaction' => 'Registrerad kurs',
     'source_fallback' => 'kurser',

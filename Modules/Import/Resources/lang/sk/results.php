@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Nahrať ďalší výpis z účtu',
 
     'chain' => [
-        'heading' => 'Riešia sa reťazce…',
-        'pending' => 'Vo fronte. Riešenie reťazcov sa čoskoro spustí.',
+        'heading' => 'Riešenie reťazcov',
+        'pending' => 'Riešenie reťazcov sa nespustilo, takže reťazce financovania neboli prepojené.',
         'running' => 'Prepájajú sa reťazce financovania a rozkladajú sa zúčtovania z výpisu z účtu.',
     ],
 

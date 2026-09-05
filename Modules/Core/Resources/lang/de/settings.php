@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Betragsanzeige',
-        'label' => 'Standardansicht in der Transaktionsliste',
+        'label' => 'Standardansicht für Beträge',
         'eur_only' => 'Abgerechneter Betrag',
         'original' => 'Originalbetrag',
-        'help' => 'Du kannst weiterhin pro Seite aus der Transaktionsliste heraus umschalten.',
+        'help' => 'Gilt für die Transaktionsliste und die Summen im Dashboard. Du kannst weiterhin pro Seite umschalten, aber nur aus der Transaktionsliste heraus.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Wechselkurse',
         'fetch_online' => 'Aktuelle Kurse online abrufen',
-        'online_on' => 'Kurse werden täglich von der ECB abgerufen. Nur Abfragen von Währungspaaren — keine persönlichen Daten.',
+        'online_on' => 'Kurse werden täglich von der ECB abgerufen, oder von Frankfurter, wenn die ECB nicht erreichbar ist. Nur Abfragen von Währungspaaren — keine persönlichen Daten.',
         'last_updated' => 'Zuletzt aktualisiert: :date.',
-        'online_off' => 'Es werden die mitgelieferten Kurse verwendet. Keine Daten verlassen dieses Gerät.',
+        'online_off' => 'Es gelten weiterhin die bereits vorhandenen Kurse, die mitgelieferte Momentaufnahme dient als Rückfallebene. Keine Daten verlassen dieses Gerät.',
         'fetch_aria' => 'Aktuelle Wechselkurse online abrufen',
         'refreshing' => 'Wird aktualisiert…',
         'next_refresh' => 'Automatische Aktualisierung: einmal täglich',

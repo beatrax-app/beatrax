@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Zaenkrat preskoči',
     'mark_ignored' => 'Za to ne sprašuj več',
-    'not_now_note' => 'Nobeno od njiju ne spremeni nasprotne stranke — še vedno jo lahko označiš pozneje na strani Nasprotne stranke.',
+    'skip_note' => 'Preskok ne zapiše ničesar — samo premakne se na naslednjo neznano.',
+    'mark_ignored_note' => 'To označi nasprotno stranko kot prezrto, da ostane zunaj te vrste. Njeno ime, vrsta in zgodovina ostanejo nedotaknjeni, označiš pa jo lahko pozneje na strani Nasprotne stranke.',
     'previous' => 'Prejšnja neznana',
 
     'kbd_yes' => 'da',

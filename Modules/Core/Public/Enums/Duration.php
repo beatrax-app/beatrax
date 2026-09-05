@@ -10,6 +10,8 @@ namespace Modules\Core\Public\Enums;
 // caller derives from, so no site re-computes the conversion by hand.
 enum Duration: string
 {
+    case Second = 'second';
+
     case Minute = 'minute';
 
     case Hour = 'hour';
@@ -19,6 +21,7 @@ enum Duration: string
     public function seconds(): int
     {
         return match ($this) {
+            self::Second => 1,
             self::Minute => 60,
             self::Hour => 3600,
             self::Day => 86400,

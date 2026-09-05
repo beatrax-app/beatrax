@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Models\User;
 
 // The layout emits window.beatraxIdleMs only for a lock-enabled user, and from
 // that user's own idle_timeout_minutes rather than one constant for everybody.
+// window.beatraxGraceMs travels beside it and is the same for everybody: the
+// window leaving the foreground locks on is not the idle timeout, and lock.js
+// reads it from here rather than keeping a second copy the settings copy that
+// discloses it could drift from.
 
 function clientConfigUser(string $username): User
 {
@@ -91,4 +96,33 @@ it('layout emits the configured idle timeout for a lock-enabled user', function 
     $this->get('/help/data-locations')
         ->assertOk()
         ->assertSee('window.beatraxIdleMs = '.(30 * 60_000).';', false);
+});
+
+it('backgroundGraceMs answers the disclosed window, whoever asks', function (): void {
+    /** @var AppLockClientConfig $config */
+    $config = $this->app->make(AppLockClientConfig::class);
+
+    expect($config->backgroundGraceMs())->toBe(IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS * 1000);
+});
+
+it('layout hands the grace window to the browser beside the idle timeout', function (): void {
+    $user = clientConfigUser('cc-layout-grace');
+    $this->actingAs($user);
+
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    $provisioner->enable($user->id, '123456', 'client-config-pass');
+
+    $this->get('/help/data-locations')
+        ->assertOk()
+        ->assertSee('window.beatraxGraceMs = '.(IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS * 1000).';', false);
+});
+
+it('layout emits no grace window for a user without the lock enabled', function (): void {
+    $user = clientConfigUser('cc-layout-grace-off');
+    $this->actingAs($user);
+
+    $this->get('/help/data-locations')
+        ->assertOk()
+        ->assertDontSee('window.beatraxGraceMs', false);
 });

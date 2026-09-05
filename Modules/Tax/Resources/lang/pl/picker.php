@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Oznaczyć też kolejne pozycje (:count) —',
     'batch_after' => '?',
-    'batch_confirm' => 'Oznaczyć wszystkie pozostałe transakcje od :name jako odliczane od podatku? Każda z nich dostaje tę kategorię i tę notatkę. Znacznik zdejmuje się potem pojedynczo, transakcja po transakcji.',
+    'batch_confirm' => 'Oznaczyć jeszcze :count transakcję od :name z roku podatkowego :year jako odliczaną od podatku? Dostaje tę kategorię i tę notatkę. Transakcje z zakończonego uzgodnienia zostają nietknięte, a znacznik zdejmuje się potem pojedynczo, transakcja po transakcji.|Oznaczyć jeszcze :count transakcje od :name z roku podatkowego :year jako odliczane od podatku? Każda z nich dostaje tę kategorię i tę notatkę. Transakcje z zakończonego uzgodnienia zostają nietknięte, a znacznik zdejmuje się potem pojedynczo, transakcja po transakcji.|Oznaczyć jeszcze :count transakcji od :name z roku podatkowego :year jako odliczane od podatku? Każda z nich dostaje tę kategorię i tę notatkę. Transakcje z zakończonego uzgodnienia zostają nietknięte, a znacznik zdejmuje się potem pojedynczo, transakcja po transakcji.',
     'batch_tag_all' => 'Oznacz wszystkie',
     'batch_dismiss' => 'Odrzuć',
 ];

@@ -51,9 +51,17 @@ isolation.
 - The repo-wide module-boundary invariant — forbids any class
   outside `Modules\Onboarding\` from importing
   `Modules\Onboarding\Internal\*`.
-- The repo-wide `noOnboardingWritesToTransactions` — the
-  module never writes `transactions`; every persist routes
-  through `Import::ConfirmImport`.
+- `Modules\Onboarding\` writes no transactions: the commit path
+  hands each previewed run to Import's `ConfirmsImports` contract.
+  What keeps it that way is `crossModuleRawTableWrites`, which pins
+  every raw write a module makes against a table another module
+  created, by file and table. Onboarding's one entry on that list is
+  `accounts`, from `Internal\Http\Livewire\Steps\FirstImportStep`,
+  so a raw `transactions` write from this module fails the build.
+  Reads are unrestricted on purpose —
+  `Internal\Http\Livewire\StartingBalanceCard` reads `transactions`
+  to warn when a confirmed starting-balance date falls after the
+  account's earliest row.
 
 ## How to run the suite for just this module
 

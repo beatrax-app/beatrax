@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Vykdyti importą', 'hint' => 'Atverti importo vediklį'],
-        'scan_email' => ['label' => 'Nuskaityti el. paštą dabar', 'hint' => 'Nedelsiant paleisti pašto dėžutės sinchronizavimą'],
+        'scan_email' => ['label' => 'Atverti pašto dėžutes', 'hint' => 'Tavo prijungtos pašto dėžutės'],
         'open_profile' => ['label' => 'Atverti profilį', 'hint' => 'Nustatymai — paskyra ir nuostatos'],
-        'toggle_theme' => ['label' => 'Keisti temą', 'hint' => 'Perjungti tarp šviesios ir tamsios temos'],
+        'toggle_theme' => ['label' => 'Atverti išvaizdos nustatymus', 'hint' => 'Šviesi, tamsi arba sistemos'],
     ],
 
     'run_command' => 'Vykdyti :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Kūrėjo apžvalga', 'hint' => 'Sistemos plytelės + naujausi vykdymai'],
         'artisan' => ['label' => 'Artisan vykdyklė', 'hint' => 'Leidžiamų komandų vykdymas'],
-        'audit' => ['label' => 'Kūrėjo audito žurnalas', 'hint' => 'Kiekvienas veiksmas kūrėjo režimu'],
+        'audit' => ['label' => 'Kūrėjo audito žurnalas', 'hint' => 'Tavo veiksmai kūrėjo režimu'],
         'logs' => ['label' => 'Žurnalų sekiklis', 'hint' => 'Tiesioginis laravel-*.log srautas'],
         'queue' => ['label' => 'Eilės inspektorius', 'hint' => 'Laukiančios / nepavykusios / paketai'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sistemos patikros'],

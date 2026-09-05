@@ -15,7 +15,8 @@ Practical recipes for exercising the `EmailScan` module in isolation.
     (`MimeHeaderParserTest`, `SafeMessageTest`).
   - The `OAuthSecret` model's encrypted casts
     (`Models/OAuthSecretTest`).
-  - The `OAuthSecretsRepository` happy + safe-write-failure paths
+  - The `OAuthSecretsRepository` round-trips, and that a raw read of
+    `client_secret` or `tokens_blob` never returns plaintext
     (`Services/OAuthSecretsRepositoryTest`).
   - The `EmlBlobStore` `chmod 0600` chain
     (`EmlBlobStoreChmodChainTest`, `EmlBlobStoreTest`).
@@ -67,16 +68,38 @@ Practical recipes for exercising the `EmailScan` module in isolation.
 
 ## Contract / arch invariants
 
-- `noInboxScanStateWritesOutsideMachine` — only
-  `Internal\InboxScanStateMachine` may write
-  `inbox_scan_state.status`.
-- `noOAuthSecretsWritesOutsideRepository` — only
-  `Public\Services\OAuthSecretsRepository` may write
-  `oauth_secrets`.
-- `noImapImportsAnywhere` — no class anywhere in `Modules/` may
-  import a `webklex/php-imap` or PHP-ext-imap symbol. The path is
-  blocked at the dependency layer; the arch test is the secondary
-  guard.
+- `noOtherInboxScanStateMutator` — only
+  `Internal\InboxScanStateMachine` may UPDATE `inbox_scan_state`.
+  `noOtherBackfillProgressMutator` carries the same sole-mutator rule
+  to `inboxes.backfill_progress`, which sits on the `inboxes` table
+  but is a per-inbox lifecycle signal. Both greps target UPDATE only,
+  so `ConnectInboxFromGrant`'s first-connect INSERT and the
+  migrations' own seed inserts stay legal.
+- Nothing enforces mechanically that `oauth_secrets` is written only
+  through `Public\Services\OAuthSecretsRepository`. It is a review
+  convention, and `Database\Seeders\Demo\DemoEmailScanSeeder`
+  already writes `OAuthSecret` rows beside the repository. The two
+  guards that do exist are narrower: `noOAuthTokensInEmailScanSchema`
+  fails an EmailScan migration that declares an OAuth-secret column,
+  and `noSecretsInLivewireSnapshot` keeps those columns out of a
+  Livewire snapshot.
+- `tests/Contracts/NoExtImapTest.php` holds the no-IMAP half in three
+  places: `composer.json` requires no `ext-imap`, no PHP under
+  `Modules/` or `app/` calls `extension_loaded('imap')`, and
+  `composer.lock` names none of `webklex/php-imap`,
+  `webklex/laravel-imap` or `ddeboer/imap`. `composer.json`'s own
+  `conflict` block hard-fails the install; the lockfile grep catches
+  what that cannot — a hand-edited lock, or a forced override that
+  slipped past the resolver. Mail access here is provider-API-only,
+  Gmail API and Microsoft Graph, and that is a specification rule
+  rather than a preference.
+- `tests/Contracts/NoOutboundMailCapabilityShipsArchTest.php` holds
+  the other half, that the product sends no mail at all: it ships no
+  class that composes a message to send, no call that hands a message
+  to a transport, and if it configures mail at all it falls back to a
+  transport that reaches no network. A single Mailable plus a
+  configured relay would put a reader's financial detail on somebody
+  else's server.
 
 ## How to run the suite for just this module
 
@@ -144,27 +167,34 @@ and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
 - **No IMAP path is supported.** Only Gmail API and Microsoft Graph.
-  The project pins PHP 8.3.x partly to avoid the PHP 8.4 ext-imap
-  removal; this module is the contractual reason.
+  This is a specification rule, not a preference: an IMAP library is a
+  specification violation, and this module is the contractual reason.
+  `composer.json` requires PHP `^8.5`, where `ext-imap` is no longer a
+  core extension, so the removal is not what carries the rule —
+  `NoExtImapTest` and the `conflict` block are.
 - **OAuth secrets are encrypted at rest.** The
   `OAuthSecret::$client_secret` and `OAuthSecret::$tokens_blob`
   columns carry ciphertext via Laravel's `encrypted` cast; plaintext
   exists only inside the Eloquent attribute layer.
-- **`OAuthSecretsRepository` is the SOLE sanctioned read/write
-  path for `oauth_secrets`.** No code outside the repository may
-  read or write the table; the safe-write sequence (`.bak`,
-  `.new`, atomic rename) is centralised here.
+- **`OAuthSecretsRepository` is the sanctioned read/write path for
+  `oauth_secrets` in production code.** Every read filters by the
+  current reader's id and every write stamps it, so the isolation
+  holds without a caller passing a user id. The demo seeder writes
+  `OAuthSecret` rows directly and is the one accepted exception.
   (`tests/Unit/Services/OAuthSecretsRepositoryTest.php`,
   `tests/Feature/OAuthSecretsCrossUserTest.php`)
 - **`InboxScanStateMachine` is the SOLE sanctioned mutator of
-  `inbox_scan_state.status`.** The arch invariant
-  `noInboxScanStateWritesOutsideMachine` blocks any other writer.
-  Allowed lifecycle:
-  `idle → discovering → scanning → idle`; `* → error`;
-  `error → idle` on retry. (`tests/Unit/InboxScanStateMachineTest.php`)
-- **Per-inbox jobs never overlap.** `IncrementalScanJob`,
-  `BackfillInboxJob`, and `DiscoveryScanJob` are
-  `ShouldBeUniqueUntilProcessing` keyed on `inboxId`.
+  `inbox_scan_state`.** The arch invariant
+  `noOtherInboxScanStateMutator` blocks any other writer. The allowed
+  lifecycle is the transition graph `InboxScanStatus::allowedNext()`
+  returns, which the machine's guard enforces on every transition.
+  (`tests/Unit/InboxScanStateMachineTest.php`)
+- **Per-inbox jobs never overlap.** `IncrementalScanJob` and
+  `BackfillInboxJob` are `ShouldBeUnique` keyed on the inbox id, and
+  `DiscoveryScanJob` on the user id. `ShouldBeUnique` holds the lock
+  until the worker finishes rather than releasing it at handle-entry,
+  so a second dispatch during a multi-minute backfill is collapsed
+  rather than run alongside.
   (`tests/Integration/ConcurrentBackfillTest.php`)
 - **A failed-token refresh transitions the inbox to `error` AND
   raises `InboxTokenFailed`.** The job's own `failed(Throwable,

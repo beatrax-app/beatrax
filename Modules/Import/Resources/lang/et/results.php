@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Laadi üles järgmine väljavõte',
 
     'chain' => [
-        'heading' => 'Lahendan ahelaid…',
-        'pending' => 'Järjekorras. Ahelate lahendaja alustab peagi.',
+        'heading' => 'Ahelate lahendamine',
+        'pending' => 'Ahelate lahendamine ei käivitunud, seega rahastusahelaid ei seotud.',
         'running' => 'Seon rahastusahelaid ja lahutan väljavõtte arveldusi.',
     ],
 

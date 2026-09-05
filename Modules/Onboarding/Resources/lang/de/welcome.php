@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Willkommen',
     'h1' => 'Lass Beatrax dein Geld kennenlernen.',
-    'lede' => 'Etwa 5 Minuten. Nichts verlässt dieses Gerät — alles, was du verbindest, bleibt in einer Datei darauf.',
+    'lede' => 'Etwa 5 Minuten. Beatrax hält deinen Verlauf in einer Datei auf diesem Gerät — der einzige Schritt, der nach draußen geht, ist das Verbinden eines Postfachs, und den kannst du überspringen.',
     'tagline' => 'Das richten wir ein:',
 
     'bank_title' => 'Deine Bank',

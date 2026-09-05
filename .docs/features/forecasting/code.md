@@ -12,14 +12,16 @@ Modules/Forecasting/
 │   ├── Dto/                 (10 DTOs + 5 ScenarioMutationPayload
 │   │                          variants)
 │   ├── Enums/               (ForecastHorizon, ScenarioMutationKind,
-│   │                          ShiftScope, SeriesConfidence;
-│   │                          ForecastPointSet is Internal)
+│   │                          ShiftScope)
 │   ├── Events/              (4 events)
-│   ├── Exceptions/
-│   │   └── OpeningBalanceDivergenceWarning.php
+│   ├── Http/Livewire/
+│   │   ├── ForecastHighlightsTile.php
+│   │   ├── ModelWhatIfDropdown.php
+│   │   └── OpeningBalanceEditor.php
 │   └── Services/
 │       ├── ForecastQuery.php
 │       ├── ScenarioQuery.php
+│       ├── NetWorthQuery.php
 │       └── ForecastHighlightsQuery.php
 ├── Internal/
 │   ├── Pipeline/
@@ -46,15 +48,24 @@ Modules/Forecasting/
 │   │   └── ForecastWindow.php
 │   ├── Casts/
 │   │   └── ScenarioMutationPayloadCast.php
+│   ├── Enums/
+│   │   ├── ForecastPointSet.php
+│   │   ├── ScenarioFormField.php
+│   │   ├── ScenarioTemplate.php
+│   │   └── SeriesConfidence.php
 │   ├── Exceptions/
-│   │   └── InvalidForecastRunTransitionException.php
+│   │   ├── ForecastResultEncodingException.php
+│   │   ├── ForecastRunNotFoundException.php
+│   │   ├── InvalidForecastRunTransitionException.php
+│   │   └── OpeningBalanceDivergenceWarning.php
 │   ├── Support/
 │   │   ├── AmountStringParser.php
 │   │   ├── BufferFloor.php
 │   │   ├── ForecastChartView.php
 │   │   ├── ScenarioHorizonBounds.php
 │   │   └── ScenarioSeriesResolver.php
-│   └── Http/Livewire/       (6 SFCs)
+│   └── Http/Livewire/       (ForecastPage, AccountBufferEditor,
+│                              ScenarioEditorSidebar)
 ├── Models/
 │   ├── ForecastRun.php
 │   ├── ForecastScenario.php
@@ -115,16 +126,22 @@ Modules/Forecasting/
   - `ForecastHighlightsDto`, `ShortfallWindowDto`,
     `BalanceAnchorDto`, `SeriesConfidenceDto` — the last carrying a
     `SeriesConfidence` enum and a `monthlyEquivalentMinor`, because the
-    legend line is suffixed "/mo".
+    legend line is suffixed "/mo". The enum itself is
+    `Internal/Enums/`, so a reader of this Public DTO who wants to
+    switch on `confidence` is naming an Internal type to do it.
 - **Events/**
   - `ForecastShortfallDetected` — `(userId, accountId, scenarioId,
     startsAt, endsAt, lowestBalanceMinor, currency, bufferUsedMinor)`.
   - `ScenarioCreated`, `ScenarioMutated`, `ScenarioDeleted` —
     each carrying the scenario id + user id.
-- **Exceptions/**
-  - `OpeningBalanceDivergenceWarning` — raised by
-    `SetAccountOpeningBalance` when the manual override diverges
-    from the statement anchor beyond threshold.
+- **Exceptions** — `OpeningBalanceDivergenceWarning`, raised by
+  `SetAccountOpeningBalance` when the manual override diverges from
+  the statement anchor beyond threshold. It is the one part of this
+  surface that does not sit under `Public/`: the class is in
+  `Internal/Exceptions/`, and the only code that catches it is this
+  module's own `OpeningBalanceEditor`, which turns it into the
+  confirm banner. A caller in another module would have to name it
+  to catch it, and could not.
 
 ## Internal services
 

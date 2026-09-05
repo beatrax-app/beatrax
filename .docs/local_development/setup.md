@@ -62,7 +62,7 @@ touch database/database.sqlite
 # Apply every migration
 docker compose run --rm -e DB_CONNECTION=sqlite php php artisan migrate
 
-# Enable WAL mode, create the owner account, re-dispatch the seed listeners
+# Migrate, seed the currency table, create the owner account, dispatch UserInstalled
 docker compose run --rm -e DB_CONNECTION=sqlite php php artisan beatrax:install \
     --username=dev --password='choose-something-better'
 ```
@@ -81,8 +81,10 @@ sqlite3 database/database.sqlite "select count(*) from sqlite_master where type=
 ## A demo dataset to look at
 
 An empty install is hard to judge. `demo:seed` fills it with a representative ledger —
-two users, five accounts, ~165 transactions, chains, recurring series, forecasts, drift
-and anomaly alerts, notifications, and a rebuilt search index:
+two personas with their own accounts and transactions, plus chains, recurring series,
+forecasts, drift and anomaly alerts, notifications, and a rebuilt search index. It
+prints a running count of every kind of row it seeds, so read the output rather than
+this page for the sizes:
 
 ```sh
 docker compose run --rm -e DB_CONNECTION=sqlite php php artisan demo:seed --reset
@@ -91,10 +93,22 @@ docker compose run --rm -e DB_CONNECTION=sqlite php php artisan demo:seed --rese
 It finishes by printing the login it created (`demo-1`). `--reset` clears
 any previous demo rows first, so it is safe to re-run.
 
-`beatrax:install` is idempotent. It enables WAL mode + `synchronous=NORMAL` on the
-SQLite file, ensures the owner user exists (creating one with a prompted password if
-not), and registers the launchd plist files for the scheduler, queue worker, and
-IMAP-idle worker if you opt in.
+`beatrax:install` is idempotent. It refuses outright if the database path resolves
+inside a cloud-sync folder, runs the migrations, seeds the currency reference table, and
+ensures the owner user exists — creating one with a prompted password if not, and
+leaving an existing password alone if so. Re-running it re-dispatches `UserInstalled`,
+which is how the seed listeners heal missing reference data.
+
+It sets no PRAGMAs. WAL and `synchronous=NORMAL` are declared in `config/database.php`
+and applied by `SqliteOptimizationsProvider` on Laravel's `ConnectionEstablished` event,
+which fires during provider boot — before any command runs. See [creating the SQLite
+file before the container boots](../architecture/sqlite-file-precreation.md).
+
+`--launchd` is a separate mode rather than an extra step: it runs no migrations, seeds
+nothing and creates no account. On macOS it writes and bootstraps
+`~/Library/LaunchAgents/com.beatrax.horizon.plist`, `…scheduler.plist` and
+`…redis.plist`, with `--without-redis` dropping the third; on any other OS it errors out
+and stops.
 
 ## Build the frontend
 
@@ -132,10 +146,13 @@ docker compose run --rm php vendor/bin/pint --test
 docker compose run --rm php vendor/bin/phpstan analyse --memory-limit=1G
 ```
 
-The PR gate runs the same three commands on every push. Green locally usually means
-green in CI; the two known divergences (PHP 8.4 vs 8.5 axis, and CI's stricter
-`fail-fast` posture for release builds) are documented in
-[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
+The PR gate runs those same checks on every push, plus `composer analyse:deps`, and all
+of it on PHP 8.5 — there is no second version axis to be caught out by. What does differ
+is shape: CI shards the Pest run across three runners and each shard fans out with
+`--parallel` over that runner's cores, where the command above runs the whole suite in
+one place. Green locally usually means green in CI. The release pipeline runs the same
+gate before it builds anything; see
+[`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Build the desktop bundle locally
 
@@ -170,9 +187,14 @@ the underlying tooling.
 `mobile-app/` is a **second Composer root**, not a subdirectory of the first. It has its
 own `vendor/`, and it depends on `nativephp/mobile` where the repo root depends on
 `nativephp/desktop` — the two host packages hard-conflict, which is the whole reason
-for the split. The domain code is shared into it by symlink (`Modules/`, `app/`,
-`resources/`, `database/`, `routes/`, `public/`, `tests/`), so a change to a module is
-picked up by both roots with no copying.
+for the split. The domain code is shared into it by symlink — `app/`, `Modules/`,
+`resources/`, `routes/`, `public/` and `tests/` are each a link back to the repo root,
+so a change to a module is picked up by both roots with no copying. `database/` is
+**not** among them: `mobile-app/database/` is a real directory that links only
+`migrations/` and `schema/`, so the two roots share the schema and keep their own
+database file. Why each root needs its own file, and why each `bootstrap/app.php`
+creates it before the container boots, is in [creating the SQLite file before the
+container boots](../architecture/sqlite-file-precreation.md#the-mobile-mirror).
 
 Working on it needs its own install:
 
@@ -212,10 +234,12 @@ them; this one skips them.
 
 ## A seeded environment to click through
 
-`demo:seed` stands up a realistic dataset — two users, seven accounts, ~185
-transactions, plus chains, recurring series, forecasts, drift alerts, receipts,
-goals, pots, cash-book entries, saved reports, anomalies and notifications — so
-every surface has something in it. Two of those accounts are denominated in yen,
+`demo:seed` stands up a realistic dataset — two personas with their own accounts
+and transactions, plus chains, recurring series, forecasts, drift alerts,
+receipts, goals, pots, cash-book entries, saved reports, anomalies and
+notifications — so every surface has something in it. The command reports the
+count for each as it goes; that is the number to trust, not one written here.
+Two of those accounts are denominated in yen,
 which has no minor unit; [what the demo zero-decimal account has to
 show](../features/ledger/what-the-demo-zero-decimal-account-has-to-show.md) says
 which surfaces that is there to prove.
@@ -231,12 +255,19 @@ composer dev:seed-desktop    # the NativePHP shell — the `nativephp` connectio
 composer dev:serve           # artisan serve on 127.0.0.1:8000 + vite in watch mode
 ```
 
-NativePHP sets `NATIVEPHP_RUNNING=true` when it launches the desktop shell, and
-that flips `config('database.default')` from `sqlite` to its own `nativephp`
-connection at `database/nativephp.sqlite`. `dev:seed-desktop` sets the same
-variable through `@putenv` so the seeder lands where the shell will look.
-`NATIVEPHP_STORAGE_PATH` is a red herring here — it moves the *storage* tree,
-not which connection is default.
+NativePHP sets `NATIVEPHP_RUNNING=true` when it launches the desktop shell. Grepping the
+first-party tree for it finds only the `dev:seed-desktop` script that sets it; the reader
+is in `vendor/nativephp/desktop`, where the vendored `NativeServiceProvider` rewrites
+`config('database.default')` from `sqlite` to a `nativephp` connection it defines at
+runtime. That connection is not in `config/database.php` and never will be, which is why
+looking there is a dead end. On a debug build, which a local checkout is, it points at
+`database/nativephp.sqlite`. `dev:seed-desktop` sets the same variable through
+`@putenv` so the seeder lands where the shell will look.
+
+`NATIVEPHP_STORAGE_PATH` is a different switch and only the packaged shell sets it. It
+moves the storage tree, and with it the `sqlite` connection's own file, because
+`UserDataPathService::databaseFile()` reads it — but it never changes which connection
+is default.
 
 If the desktop app shows the welcome screen on a database you know you seeded,
 ask it which connection it is on rather than which file exists:
@@ -245,6 +276,9 @@ ask it which connection it is on rather than which file exists:
 NATIVEPHP_RUNNING=true php artisan tinker \
     --execute="echo DB::connection()->getDatabaseName();"
 ```
+
+On a debug build, asking creates the answer: if `database/nativephp.sqlite` is not
+there, the provider touches it and runs `native:migrate` before the echo prints.
 
 Both seeds pass `--reset`, whose teardown is scoped to demo rows only — it
 never touches a real user you created by hand, so either is safe to re-run.

@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Datoteka',
         'file_import' => 'Uvezi datoteku…',
-        'file_scan_email' => 'Skeniraj e-poštu sada',
+        'file_scan_email' => 'Sandučići e-pošte…',
         'help' => 'Pomoć',
         'help_github_repo' => 'GitHub repozitorij',
         'help_report_issue' => 'Prijavi problem',
         'help_about' => 'O Beatraxu',
         'developer_submenu' => 'Razvojni alati',
         'dev_open_console' => 'Otvori razvojnu konzolu',
-        'dev_run_command' => '⌘K Pokreni naredbu',
+        'dev_run_command' => 'Pokreni naredbu…',
     ],
 
     'worker_alert' => [

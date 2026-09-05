@@ -5,32 +5,73 @@ Practical recipes for exercising the `Desktop` module in isolation.
 ## Unit tests
 
 - **Location:** `Modules/Desktop/tests/Unit/`
-- **What they test:** the focus-state singleton flip; the
-  pending-file-intent session round-trip in isolation; the
-  close-window-behavior decision against a fixture `User`; the
-  file-open intake's extension allow-list + size bound + realpath
-  sanity.
-- **Common stubs:** the tests build the listeners with stub
-  collaborators (a `Session` array implementation, an in-memory
-  `LoggerInterface` spy). No NativePHP packages are touched.
+- **What they test:** the focus-state singleton flip
+  (`WindowFocusStateTest`); the OS-notification dispatcher's
+  suppression-then-focus decision and its detail-free body
+  (`DispatchOsNotificationTest`); the rolling crash counter
+  (`SurfaceWorkerCrashAlertTest`); the menu's item shape
+  (`AppMenuBuilderTest`); the 15-second bound on every Electron call
+  (`BoundedNativeApiClientTest`); the safeStorage custody classes
+  (`DesktopKeyCustodianTest`, `SafeStorageSecretShieldTest`,
+  `DesktopColdStartVaultTest`); the build-patch scripts under
+  `scripts/`, `require`d for their helper functions and run as text
+  transforms over a stub of the published Electron source
+  (`FileOpenIngressScriptsTest`, `InjectPersistentTrayScriptTest`,
+  `ForceAdhocSigningScriptTest`); and
+  the committed `build/entitlements.mac.plist` those scripts stage
+  (`HardenedRuntimeEntitlementsTest`).
+- **Common stubs:** these are unit tests by scope, not by isolation.
+  They import NativePHP facades and let the facade reach its HTTP
+  client, which `Http::fake()` answers — the loopback Electron API is
+  never running under test. `DispatchOsNotificationTest` also uses
+  `RefreshDatabase`, because the suppression decision it is checking
+  reads real `notification_preferences` and `device_registry` rows.
+- **What is NOT here:** the pending-file-intent round-trip, the
+  close-window-behavior decision and the file-open intake all need a
+  booted application and live under `Feature/`, not `Unit/`.
 
 ## Feature tests
 
 - **Location:** `Modules/Desktop/tests/Feature/`
 - **What they test:**
-  - `FirstLaunchBootstrap` end-to-end against a fresh SQLite (the
+  - `FirstLaunchBootstrap` end-to-end against a fresh SQLite — the
     migrator runs, the APP_KEY sentinel materialises, a second run
-    short-circuits).
-  - The four Livewire screens (`SetupScreen`, `WelcomeScreen`,
-    `CloseWindowPrompt`, `FileStagingPage`).
-  - The `FileOpenedFromOs` raise / consume flow without the bundle
-    (the listener is unconditional; subscribers in
-    `Import` / `Receipts` consume it directly).
-  - The continue-pending-intent-after-login flow.
-  - The close-window applicator with both `'tray'` and
-    `'quit'` users.
-- **Setup:** every test uses `RefreshDatabase`. Tests that exercise
-  bundle-gated behaviour set
+    short-circuits (`FirstLaunchBootstrapTest`).
+  - Three of the four Livewire screens: `WelcomeScreen`
+    (`WelcomeScreenRedirectTest`), `CloseWindowPrompt`
+    (`CloseWindowPromptTest`,
+    `TheCloseQuestionCouldBeDismissedWithoutAnsweringItTest`) and
+    `FileStagingPage` (`FileOpenedFromOsTest`,
+    `TheFileHandOffStartedBelowTheFoldTest`,
+    `ThePendingFileIntentIsNotWireWritableTest`).
+  - **`SetupScreen` is covered by no test in this repository.** It is
+    the screen `EnsureDatabaseReady` redirects to when migrations are
+    pending, and its `poll()` is what re-drives the migrator — so the
+    one surface that repairs a failed first-launch boot has nothing
+    asserting that it does.
+  - The file-open intake's extension allow-list, per-extension size
+    bound and realpath canonicalisation, and the `FileOpenedFromOs`
+    raise / consume flow without the bundle: the NativePHP `OpenFile`
+    bridge (`HandleNativeOpenFile`) is bundle-gated, but the `Import`
+    and `Receipts` subscriptions to `FileOpenedFromOs` are not, so a
+    test raises the event through `FileOpenIntake` and the subscribers
+    consume it directly (`FileOpenedFromOsTest`,
+    `HandleNativeOpenFileTest`).
+  - The pending-file-intent round-trip across the login boundary,
+    including the stale intent that is dropped, the cross-user
+    isolation, and the staging redirect that fires exactly once
+    (`FileOpenedFromOsTest`).
+  - The close-window-behavior decision against a fixture `User`, and
+    the applicator with both `'tray'` and `'quit'` users
+    (`CloseWindowPromptTest`,
+    `TheTrayChoiceAskedWhichWindowWasFocusedTest`,
+    `CloseActionControllerTest`).
+- **Setup:** every test here gets `RefreshDatabase`, and almost none
+  of them says so: the root `tests/Pest.php` binds it to
+  `Modules/*/tests/Feature` wholesale, along with the module's own
+  `TestCase`. `Unit/` is deliberately not bound, which is why a unit
+  test that needs a database declares `uses(RefreshDatabase::class)`
+  itself. Tests that exercise bundle-gated behaviour set
   `config(['nativephp-internal.running' => true])` BEFORE booting
   the application kernel — setting it after boot is a no-op (the
   subscriptions already ran).
@@ -75,12 +116,16 @@ composer test
   the new extension is admitted. Never silently widen the allow-list
   without a covering test; the intake is the OS-supplied-path
   security boundary.
-- **OS notifications not firing in the bundle** — confirm
-  `WindowFocusState::isFocused()` returns the expected value. The
-  most common cause is the `WindowFocused` / `WindowBlurred`
-  closures registered in the boot didn't fire because the bundle
-  gate (`config('nativephp-internal.running')`) is false; the
-  closures only register inside the bundle.
+- **OS notifications not firing in the bundle** — there are two
+  silencers and the first one is not this module's. Check
+  `SuppressionEvaluator::shouldDeliver()` for the user and trigger:
+  a per-trigger toggle off, or a quiet-hours window, returns a
+  decision that never reaches the focus gate. If it says deliver,
+  confirm `WindowFocusState::isFocused()` returns the expected value —
+  the usual cause there is that the `WindowFocused` / `WindowBlurred`
+  closures never registered, because the bundle gate
+  (`config('nativephp-internal.running')`) is false and those closures
+  only register inside the bundle.
 - **A pending file intent lost across the login boundary** — the
   intent is session-scoped. If the session cookie is regenerated on
   login (the default Laravel behaviour), the intent must persist
@@ -112,18 +157,21 @@ and the assertion — see
   codebase must live inside this module. Enforced by the repo-wide
   arch invariant `noNativePhpImportsOutsideDesktopModule`.
 - **No NativePHP listener fires under local dev / CI.** Every
-  bundle-coupled listener subscription is gated by
-  `config('nativephp-internal.running') === true`. Tests for the
-  in-app behaviour exercise the domain events directly without
-  involving NativePHP at all.
+  subscription registered below the gate in `DesktopServiceProvider`
+  is conditional on `config('nativephp-internal.running') === true`,
+  and the handlers subscribed above it hold the same check in their own
+  bodies. Tests for the in-app behaviour exercise the domain events
+  directly without involving NativePHP at all.
+  (`TheDeveloperMenuNothingCouldReachTest`, `OsThemeProbeTest`)
 - **`OsThemeSignal` is bound only inside the bundle.** In local dev /
   CI the contract is unbound; the layout's `app()->bound(...)` check
   is the documented fallback signal. (The contract's docblock states
-  "the absence of a binding is itself the signal".)
+  "the absence of a binding is itself the signal".) (`OsThemeProbeTest`)
 - **`FirstLaunchBootstrap` is idempotent across launches.** The
   migrator's own `run()` is a no-op when nothing is pending;
   `Core::EnsureAppKey` short-circuits via its sentinel file. Both
   steps may execute on every launch without side effects.
+  (`FirstLaunchBootstrapTest`)
 - **`FileOpenIntake::receive` rejects every inadmissible path.**
   The allow-list is exactly two extensions, `csv` and `eml`
   (`FileOpenIntake::SUPPORTED_EXTENSIONS`) — the document types the
@@ -136,33 +184,55 @@ and the assertion — see
   traversal resolving to nothing is refused on the spot. A rejected
   path is dropped in silence — no event, and no log line either; the
   OS never sees an error payload, which would betray the app's
-  presence. (`tests/Feature/FileOpenedFromOsTest.php`)
-- **The OS-notification dispatcher stays quiet while the window is
-  focused.** Every `handle*` method on `DispatchOsNotification`
-  consults `WindowFocusState::isFocused()` first; when true, the
-  in-app `SystemAlertsBanner` is the visible surface and no OS
-  notification is fired.
+  presence. (`Modules/Desktop/tests/Feature/FileOpenedFromOsTest.php`)
+- **The OS-notification dispatcher asks suppression first and the
+  focus gate second.** `DispatchOsNotification` has one handler,
+  `handleNotificationDeliverable`, for the Notifications module's
+  `NotificationDeliverable`. It calls
+  `SuppressionEvaluator::shouldDeliver()` before it looks at
+  `WindowFocusState::isFocused()`, so a trigger the reader switched off
+  or a quiet-hours window stays silent whether or not the window is
+  focused; when the window is focused the in-app `SystemAlertsBanner`
+  and the notification inbox are the visible surface instead. The order
+  matters because only the first decision also carries the
+  hide-details preference the body is swapped for.
+  (`DispatchOsNotificationTest`,
+  `TheNotificationOnlyEverArrivesWhenNothingIsFocusedTest`)
+- **Neither delivery adapter re-implements suppression.**
+  `onlyOneSuppressionEvaluator` in
+  `tests/Contracts/BoundaryArchTest.php` fails the build if
+  `DispatchOsNotification` or its mobile counterpart names a
+  quiet-hours or per-trigger-toggle column directly instead of going
+  through `SuppressionEvaluator::shouldDeliver()`.
 - **The pending-file-intent round-trip works regardless of bundle
   state.** The `Login` subscription for
-  `ContinuePendingFileIntentAfterLogin` is NOT gated; local dev / CI runs
-  must be able to exercise the staging-page route from a dropped
-  file.
+  `ContinuePendingFileIntentAfterLogin` is NOT gated, and neither is
+  the `ContinueToStagedFile` middleware that does the redirecting;
+  local dev / CI runs must be able to exercise the staging-page route
+  from a dropped file. (`FileOpenedFromOsTest`)
 - **The close-behavior choice persists per user.**
   `users.close_behavior` is the source of truth; the close-prompt
-  modal records the choice once.
+  modal records the choice once. (`CloseWindowPromptTest`,
+  `TheCloseQuestionCouldBeDismissedWithoutAnsweringItTest`)
 - **The worker-crash watchdog only escalates on threshold-crossing.**
   `SurfaceWorkerCrashAlert` accumulates `ProcessExited` events in a
   rolling window; a single transient crash does not raise an alert.
+  (`SurfaceWorkerCrashAlertTest`, `WorkerCrashAlertTest`)
 - **`NotificationDeepLink` is the only path that drives in-app
   navigation from outside the bundle's window.** Subscribers
   (`NavigateOnNotificationDeepLink`) call
   `Window::current()->url(...)`; no other module navigates the
-  window directly.
+  window directly. Nothing enforces the "no other module" half
+  mechanically — it is a review convention — but the deep-link path
+  itself, including the route it refuses, is held by
+  `TheNotificationOnlyEverArrivesWhenNothingIsFocusedTest`.
 - **The persistent macOS tray is composed in the Electron main
   process — not in PHP.** The PHP-side `AppMenuBuilder` composes the
   application menu only. The tray script
   `scripts/nativephp_inject_persistent_tray.php` is invoked once at
-  bundle assembly time.
+  bundle assembly time, and what it writes is pinned by
+  `InjectPersistentTrayScriptTest`; `AppMenuBuilderTest` holds the
+  menu's own item shape.
 
 ## Edge cases
 
@@ -204,9 +274,14 @@ and the assertion — see
     surface).
   - [`Import`](../import/how-to-test.md) + [`Receipts`](../receipts/how-to-test.md)
     — both subscribe to `FileOpenedFromOs`.
-  - [`DriftAlerts`](../drift-alerts/how-to-test.md),
-    [`Forecasting`](../forecasting/how-to-test.md) — both raise events
-    the `DispatchOsNotification` consumes.
+  - [`Notifications`](../notifications/architecture.md) — owns the one
+    event `DispatchOsNotification` consumes, `NotificationDeliverable`,
+    and the `SuppressionEvaluator` the handler consults before
+    delivering. Triggers raised elsewhere — by
+    [`DriftAlerts`](../drift-alerts/how-to-test.md),
+    [`Forecasting`](../forecasting/how-to-test.md) and the rest —
+    reach this module only after Notifications has persisted a row and
+    raised that one event.
   - NativePHP packages (`nativephp/laravel`, `nativephp/electron`,
     `Native\Desktop\Contracts\Shell`).
 - **Depended on by**

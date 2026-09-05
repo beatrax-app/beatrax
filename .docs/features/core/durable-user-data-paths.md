@@ -105,8 +105,11 @@ wiped-and-reshipped bundle.
   cached config outlive the update that replaced the code they were
   compiled from.
 - **A raw `base_path()` / `storage_path()` / `database_path()` call
-  anywhere else** — the arch invariant `noRawPathHelpersOutsidePathService`
-  fails. This class is the allow-list, and it has exactly one entry.
+  anywhere else, or a storage path written out by hand** — the arch
+  invariant `noStoragePathHardCodedOutsideUserDataPathService` fails. It
+  bans the three helpers and the literals `database.sqlite` and
+  `storage/app/` alike, across `Modules`, `app` and `config`. This class
+  is the allow-list, and it has exactly one entry.
 
 `getenv()` is used throughout rather than Laravel's `env()` helper because it
 is unconditional at every boot stage. That is what makes these static

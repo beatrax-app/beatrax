@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Accès en lecture seule',
         'reads_label' => 'Beatrax lit',
         'reads_sub' => 'Les reçus uniquement',
-        'token_label' => 'Le jeton reste local',
-        'token_sub' => 'Fichier chiffré',
+        'token_label' => 'Le jeton est stocké chiffré',
+        'token_sub' => 'Dans la base de données locale',
     ],
 
     'authorize_gmail' => 'Autoriser avec Gmail',

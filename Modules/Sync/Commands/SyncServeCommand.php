@@ -37,7 +37,7 @@ final class SyncServeCommand extends Command
     protected $signature = 'sync:serve {--port= : WebSocket listen port; defaults to SYNC_PORT}';
 
     /** @var string */
-    protected $description = 'Start the long-running Noise/WebSocket sync listener (amphp event loop).';
+    protected $description = 'Start the long-running Noise/WebSocket sync listener on 0.0.0.0 (amphp event loop), advertise this device over mDNS, and serve the plain-HTTP pre-pairing routes (GET /pair/offer, POST /pair/frame, GET /pair/frames).';
 
     // The pairing screen's own poll interval, kept because a ceremony should
     // cost what it always cost. This driver only ever collects, so the number

@@ -64,8 +64,7 @@ Modules/Recurring/
 │   ├── RecurringSeries.php
 │   ├── RecurringSeriesOccurrence.php
 │   └── RecurringSeriesTransition.php
-├── Database/Migrations/   (10 migrations covering the schema +
-│                            evolution)
+├── Database/Migrations/   (the schema and its evolution)
 ├── Routes/
 │   └── web.php
 ├── Resources/views/
@@ -104,15 +103,19 @@ Modules/Recurring/
     eurEquivalent, monthlyEquivalent, latestFundingChainLinkId,
     nextExpectedAt, nextExpectedConfidenceLow,
     varianceTolerancePercent, snoozedUntil)`.
-    Note there is no `latestFxRateUsed` either: the column of
-    that name exists but no writer has ever filled it, so the
-    forecast now resolves a rate through `ExchangeRateService`
+    Note there is no `latestFxRateUsed` either: no writer ever
+    filled the column of that name and it has since been dropped,
+    so the forecast resolves a rate through `ExchangeRateService`
     instead of reading one off the series.
     Note there is no `baselineAmount`: the amount the series
     carries is the LATEST one observed, and drift is judged
     against the previous occurrence rather than against a
     frozen baseline.
   - `RecurringOccurrenceDto` — per-occurrence row.
+  - `MonthlyEquivalentTotals` — the expense / income / net
+    `Money` triple behind the `/recurring` header, plus the
+    currency codes left unconverted for want of a rate, so a
+    partial total says so rather than under-reporting.
   - `RecurringSeriesAmountTrendDto` — chart data for the
     series detail.
   There is no `NextExpectedChargeDto`. The projected next
@@ -278,7 +281,7 @@ Modules/Recurring/
 - `Models/RecurringSeriesTransition` — append-only audit log
   of state changes.
 
-Migrations (10 total):
+Migrations:
 
 - `2026_05_18_010001_create_recurring_series_table.php`.
 - `2026_05_18_010002_create_recurring_series_occurrences_table.php`.
@@ -298,6 +301,14 @@ Migrations (10 total):
 - `2026_08_19_000002_show_merchant_names_on_recurring_review.php`
   — backfills a detected name for rows still showing the
   clustering key.
+- `2026_08_28_000001_add_billing_day_to_recurring_series.php` —
+  the day of the month the bill is charged on, kept beside
+  `next_expected_at` because that date is clamped in a month
+  shorter than the billing day and both the calendar and the
+  forecast walk forward from it.
+- `2026_08_28_000004_drop_latest_fx_rate_used_from_recurring_series.php`
+  — removes the column no production writer ever set; the rate
+  is resolved live at the fold instead.
 
 ## Provider wiring
 

@@ -26,9 +26,10 @@ crosses.
 
 Enforced twice, so it cannot be argued around: `App\PhpStan\Rules\BoundaryRule`
 at static-analysis time, and `pinnedCrossModuleInternalImports` in
-`tests/Contracts/BoundaryArchTest.php`, which pins every crossing that exists —
-in production, in tests, and in the Blade views that mount a neighbour's
-Livewire component by alias. If you find yourself importing another module's
+`tests/Contracts/BoundaryArchTest.php`, which pins every crossing that exists in
+production and in tests. A Blade view mounting a neighbour's Livewire component
+by alias names no class, so no import scan can see it; `pinnedCrossModuleLivewireMounts`
+in the same file pins those. If you find yourself importing another module's
 `Internal\`, the answer is a new `Public\` contract, not an exception.
 
 The map is [`.docs/architecture/module-boundaries.md`](.docs/architecture/module-boundaries.md);

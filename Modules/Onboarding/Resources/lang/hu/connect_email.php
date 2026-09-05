@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Csak olvasási hozzáférés',
         'reads_label' => 'A Beatrax ezt olvassa',
         'reads_sub' => 'Csak bizonylatok',
-        'token_label' => 'A token helyben marad',
-        'token_sub' => 'Titkosított fájl',
+        'token_label' => 'A token titkosítva tárolódik',
+        'token_sub' => 'A helyi adatbázisban',
     ],
 
     'authorize_gmail' => 'Engedélyezés Gmaillel',

@@ -80,10 +80,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Bedragweergave',
-        'label' => 'Standaardweergave in de transactielijst',
+        'label' => 'Standaardweergave van bedragen',
         'eur_only' => 'Verrekend bedrag',
         'original' => 'Oorspronkelijk bedrag',
-        'help' => 'Je kunt dit nog steeds per pagina wijzigen in de transactielijst.',
+        'help' => 'Geldt voor de transactielijst en voor de totalen op het dashboard. Je kunt dit nog steeds per pagina wijzigen, maar alleen in de transactielijst.',
     ],
 
     'base_currency' => [
@@ -95,9 +95,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Wisselkoersen',
         'fetch_online' => 'Actuele koersen online ophalen',
-        'online_on' => 'Koersen worden dagelijks bij de ECB opgehaald. Alleen valutaparen — geen persoonlijke gegevens.',
+        'online_on' => 'Koersen worden dagelijks bij de ECB opgehaald, of bij Frankfurter als de ECB onbereikbaar is. Alleen valutaparen — geen persoonlijke gegevens.',
         'last_updated' => 'Laatst bijgewerkt: :date.',
-        'online_off' => 'Er worden meegeleverde koersen gebruikt. Er verlaten geen gegevens je apparaat.',
+        'online_off' => 'De koersen die al op dit apparaat staan, worden nog gebruikt, met de meegeleverde momentopname als terugval. Er verlaten geen gegevens je apparaat.',
         'fetch_aria' => 'Actuele wisselkoersen online ophalen',
         'refreshing' => 'Bezig met vernieuwen…',
         'next_refresh' => 'Automatische vernieuwing: eens per dag',

@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'As regras ficam neste dispositivo. Não são partilhadas com os teus outros dispositivos.',
 
     'reapply' => 'Reaplicar as regras ao histórico',
-    'reapply_confirm' => 'Reaplicar todas as regras a todo o teu histórico? Cada categoria, contraparte, nota e etiqueta fiscal que uma regra tenha colocado é reescrita. O que definiste à mão mantém-se, tal como tudo o que esteja num extrato reconciliado. Nada repõe os valores antigos.',
+    'reapply_confirm' => 'Reaplicar todas as regras a todo o teu histórico? Cada categoria, contraparte, nota e etiqueta fiscal que uma regra tenha colocado é reescrita. O que definiste à mão mantém-se, tal como tudo o que esteja num extrato reconciliado ou numa transação que tenhas dividido. Nada repõe os valores antigos.',
     'reapplying' => 'A reaplicar…',
     'new_rule' => 'Nova regra',
 

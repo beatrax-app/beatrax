@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Dosya',
         'file_import' => 'Dosya içe aktar…',
-        'file_scan_email' => 'E-postaları şimdi tara',
+        'file_scan_email' => 'E-posta kutuları…',
         'help' => 'Yardım',
         'help_github_repo' => 'GitHub deposu',
         'help_report_issue' => 'Sorun bildir',
         'help_about' => 'Beatrax hakkında',
         'developer_submenu' => 'Geliştirici',
         'dev_open_console' => "Dev Console'u aç",
-        'dev_run_command' => '⌘K Komut çalıştır',
+        'dev_run_command' => 'Komut çalıştır…',
     ],
 
     'worker_alert' => [

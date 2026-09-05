@@ -92,8 +92,11 @@
                                     data-testid="arg-input-{{ $arg->name }}"
                                 >
                                     <option value="">{{ Lang::get('dev::arg_prompt.select_placeholder') }}</option>
-                                    @foreach ($arg->options as $optValue => $optLabel)
-                                        <option value="{{ $optValue }}">{{ $optLabel }}</option>
+                                    {{-- ArgSpec::$options is a list of the literal tokens artisan
+                                         accepts, so the VALUE is the element — keying the loop
+                                         posted the array index and every choice failed its rule. --}}
+                                    @foreach ($arg->options as $option)
+                                        <option value="{{ $option }}">{{ $option }}</option>
                                     @endforeach
                                 </select>
                             @else

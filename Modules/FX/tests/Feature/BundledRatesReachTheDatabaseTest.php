@@ -8,8 +8,8 @@ use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-// "Bundled rates are used. No data leaves this device." is what Settings tells
-// a reader who leaves online fetch off, which is the default. On the phone
+// Settings tells a reader who leaves online fetch off — the default — that the
+// bundled snapshot is the fallback behind it. On the phone
 // `exchange_rates` held zero rows: FetchFxRatesJob is the only writer and its
 // first act is to return when the toggle is off, so the bundled snapshot — the
 // fallback the column's own migration promises — was never loaded. Choosing USD

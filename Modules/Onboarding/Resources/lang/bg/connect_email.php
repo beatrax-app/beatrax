@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Достъп само за четене',
         'reads_label' => 'Beatrax чете',
         'reads_sub' => 'Само касови бележки',
-        'token_label' => 'Токенът остава локално',
-        'token_sub' => 'Криптиран файл',
+        'token_label' => 'Токенът е криптиран',
+        'token_sub' => 'В локалната база данни',
     ],
 
     'authorize_gmail' => 'Оторизирай с Gmail',

@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Etichetezi și încă :count din',
     'batch_after' => '?',
-    'batch_confirm' => 'Etichetezi drept deductibile fiscal toate tranzacțiile rămase de la :name? Fiecare primește această categorie și această notă. Eticheta se scoate după aceea doar tranzacție cu tranzacție.',
+    'batch_confirm' => 'Etichetezi drept deductibilă încă :count tranzacție de la :name din anul fiscal :year? Primește această categorie și această notă. Tranzacțiile de pe o reconciliere finalizată rămân neatinse, iar eticheta se scoate după aceea doar tranzacție cu tranzacție.|Etichetezi drept deductibile încă :count tranzacții de la :name din anul fiscal :year? Fiecare primește această categorie și această notă. Tranzacțiile de pe o reconciliere finalizată rămân neatinse, iar eticheta se scoate după aceea doar tranzacție cu tranzacție.|Etichetezi drept deductibile încă :count de tranzacții de la :name din anul fiscal :year? Fiecare primește această categorie și această notă. Tranzacțiile de pe o reconciliere finalizată rămân neatinse, iar eticheta se scoate după aceea doar tranzacție cu tranzacție.',
     'batch_tag_all' => 'Etichetează tot',
     'batch_dismiss' => 'Închide',
 ];

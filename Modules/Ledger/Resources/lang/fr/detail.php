@@ -97,7 +97,7 @@ return [
         'heading' => 'Supprimer la transaction',
         'help' => 'Supprime définitivement cette transaction. Cette action est irréversible.',
         'button' => 'Supprimer',
-        'confirm_prompt' => 'Supprimer cette transaction ? Sa note, sa ventilation et ses étiquettes fiscales partent avec elle.',
+        'confirm_prompt' => 'Supprimer cette transaction ? Sa note, sa ventilation, ses étiquettes fiscales et toute contribution à un objectif d\'épargne partent avec elle. Si c\'est un côté d\'un virement, l\'autre côté est reclassé.',
         'confirm' => 'Oui, supprimer',
         'cancel' => 'Annuler',
     ],

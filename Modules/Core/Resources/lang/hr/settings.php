@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Prikaz iznosa',
-        'label' => 'Zadani prikaz na popisu transakcija',
+        'label' => 'Zadani prikaz iznosa',
         'eur_only' => 'Podmireni iznos',
         'original' => 'Izvorni iznos',
-        'help' => 'Prikaz i dalje možeš promijeniti za svaku stranicu s popisa transakcija.',
+        'help' => 'Vrijedi za popis transakcija i za ukupne iznose na nadzornoj ploči. Prikaz i dalje možeš promijeniti za svaku stranicu, ali samo s popisa transakcija.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Tečajevi',
         'fetch_online' => 'Dohvati aktualne tečajeve s interneta',
-        'online_on' => 'Tečajevi se dnevno dohvaćaju s ECB-a. Samo upiti o valutnim parovima — bez osobnih podataka.',
+        'online_on' => 'Tečajevi se dnevno dohvaćaju s ECB-a ili s Frankfurtera ako ECB nije dostupan. Samo upiti o valutnim parovima — bez osobnih podataka.',
         'last_updated' => 'Zadnje ažuriranje: :date.',
-        'online_off' => 'Koriste se ugrađeni tečajevi. Nijedan podatak ne napušta ovaj uređaj.',
+        'online_off' => 'I dalje se koriste već postojeći tečajevi, a ugrađena snimka služi kao rezerva. Nijedan podatak ne napušta ovaj uređaj.',
         'fetch_aria' => 'Dohvati aktualne tečajeve s interneta',
         'refreshing' => 'Osvježavanje…',
         'next_refresh' => 'Automatsko osvježavanje: jednom dnevno',

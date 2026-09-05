@@ -37,6 +37,11 @@ return [
     'keep_biometric' => 'Obdrži biometrijo',
 
     'auto_lock' => 'Samodejno zakleni po',
+    // i18n-review: sl · auto_lock_note — ":window" is core::durations.seconds and
+    // reads "30 sekund"; "v 30 sekundah" needs a locative the shared key cannot
+    // supply, so the window became the predicate "ta zamik pa je največ".
+    // Whether "zamik" is the word a Slovenian reader expects is the open half.
+    'auto_lock_note' => 'Beatrax se zaklene po tem času brez dejavnosti — in prej, če ga zapustiš: preklop v drugo aplikacijo ali skrivanje oziroma zapiranje okna zaklene Beatrax ne glede na to nastavitev, ta zamik pa je največ :window.',
     'idle_1' => '1 minuti',
     'idle_5' => '5 minutah',
     'idle_15' => '15 minutah',

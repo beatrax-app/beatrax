@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Kihagyás egyelőre',
     'mark_ignored' => 'Ne kérdezz többet erről',
-    'not_now_note' => 'Egyik sem változtatja meg a partnert — később a Partnerek oldalon még felcímkézheted.',
+    'skip_note' => 'A kihagyás semmit sem ír — csak a következő ismeretlenre lép.',
+    'mark_ignored_note' => 'Ez figyelmen kívül hagyottként jelöli a partnert, így kimarad ebből a sorból. A neve, a típusa és az előzményei érintetlenek maradnak, és a Partnerek oldalon később is felcímkézheted.',
     'previous' => 'Előző ismeretlen',
 
     'kbd_yes' => 'igen',

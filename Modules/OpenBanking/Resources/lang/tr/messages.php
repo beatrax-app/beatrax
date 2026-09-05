@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Uygulama kimliğini yapıştır',
         'application_id_label' => 'Uygulama kimliği',
-        'step3_help' => 'Bu bilgi, veritabanının dışında, kısıtlı izinlere sahip yerel bir dosyada saklanır ve bu cihazdan asla çıkmaz.',
+        'step3_help' => 'Veritabanının dışında, yalnızca senin okuyabildiğin yerel bir dosyada saklanır. Uygulamanı Enable Banking\'e tanıtır, bu yüzden her istekle birlikte gider — özel anahtarın ise asla.',
 
         'step4_title' => 'Bankanı seç',
         'via_enable_banking' => 'Enable Banking üzerinden',

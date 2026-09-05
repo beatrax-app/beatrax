@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Nu overslaan',
     'mark_ignored' => 'Vraag hier niet meer naar',
-    'not_now_note' => 'Geen van beide verandert de tegenpartij — je kunt deze later alsnog labelen op de pagina Tegenpartijen.',
+    'skip_note' => 'Overslaan schrijft niets — het gaat alleen door naar de volgende onbekende.',
+    'mark_ignored_note' => 'Dit markeert de tegenpartij als genegeerd, zodat deze uit deze rij blijft. De naam, het type en de geschiedenis blijven ongewijzigd, en je kunt deze later alsnog labelen op de pagina Tegenpartijen.',
     'previous' => 'Vorige onbekende',
 
     'kbd_yes' => 'ja',

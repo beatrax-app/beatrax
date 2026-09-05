@@ -97,7 +97,7 @@ return [
         'heading' => 'Izbriši transakciju',
         'help' => 'Trajno uklanja ovu transakciju. Ova se radnja ne može poništiti.',
         'button' => 'Izbriši',
-        'confirm_prompt' => 'Izbrisati ovu transakciju? S njom nestaju bilješka, podjela i porezne oznake.',
+        'confirm_prompt' => 'Izbrisati ovu transakciju? S njom nestaju bilješka, podjela, porezne oznake i svaki doprinos cilju štednje. Ako je jedna strana prijenosa, druga se strana preklasificira.',
         'confirm' => 'Da, izbriši',
         'cancel' => 'Odustani',
     ],

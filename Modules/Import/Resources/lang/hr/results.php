@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Učitaj još jedan izvod',
 
     'chain' => [
-        'heading' => 'Rješavanje lanaca…',
-        'pending' => 'U redu čekanja. Rješavanje lanaca uskoro počinje.',
+        'heading' => 'Rješavanje lanaca',
+        'pending' => 'Rješavanje lanaca nije započelo pa lanci financiranja nisu povezani.',
         'running' => 'Povezivanje lanaca financiranja i razlaganje namira s izvoda.',
     ],
 

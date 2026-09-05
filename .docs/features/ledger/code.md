@@ -53,7 +53,7 @@ Modules/Ledger/
 │   ├── StatementSummary.php
 │   └── Transaction.php
 ├── Database/
-│   └── Migrations/   (17 migrations covering the canonical schema)
+│   └── Migrations/   (the canonical schema and every change to it since)
 ├── Routes/
 │   ├── web.php
 │   └── console.php
@@ -168,7 +168,7 @@ Modules/Ledger/
 - `Models/ImportRun` — per-import audit row.
 - `Models/StatementSummary` — per-statement-period totals.
 
-Migrations (17 total, summarised by purpose):
+Migrations, the load-bearing ones summarised by purpose:
 
 - Initial schema: currencies, accounts, categories,
   import_runs, transactions, merchants, merchant_memories.
@@ -189,8 +189,10 @@ Migrations (17 total, summarised by purpose):
 - `2026_05_17_020001_recreate_transactions_type_triggers.php`
   — the type-enum trigger refresh.
 - `2026_05_27_000001_add_starting_balance_to_accounts_table.php`
-  - `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`
-  — the per-account starting-balance addition.
+  and
+  `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`
+  — the per-account starting-balance addition, added then
+  backfilled from the statement summaries already on hand.
 
 ## Provider wiring
 
@@ -208,7 +210,7 @@ Migrations (17 total, summarised by purpose):
 `LedgerServiceProvider::boot()`:
 
 - Loads migrations, web/console routes, views.
-- Registers two Livewire components under the `ledger.*`
-  namespace.
+- Registers this module's Livewire components under the
+  `ledger.*` namespace.
 - Registers the `RederiveFingerprintsCommand` artisan command
   behind a `runningInConsole()` guard.

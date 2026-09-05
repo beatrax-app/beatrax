@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Zobrazenie sumy',
-        'label' => 'Predvolené zobrazenie v zozname transakcií',
+        'label' => 'Predvolené zobrazenie súm',
         'eur_only' => 'Zúčtovaná suma',
         'original' => 'Pôvodná suma',
-        'help' => 'V zozname transakcií to môžeš kedykoľvek prepnúť pre jednotlivé stránky.',
+        'help' => 'Platí pre zoznam transakcií aj pre súčty v prehľade. Pre jednotlivé stránky to môžeš kedykoľvek prepnúť, ale len v zozname transakcií.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Výmenné kurzy',
         'fetch_online' => 'Sťahovať aktuálne kurzy online',
-        'online_on' => 'Kurzy sa denne sťahujú z ECB. Len dopyty na menové páry — žiadne osobné údaje.',
+        'online_on' => 'Kurzy sa denne sťahujú z ECB alebo z Frankfurteru, ak je ECB nedostupná. Len dopyty na menové páry — žiadne osobné údaje.',
         'last_updated' => 'Naposledy aktualizované: :date.',
-        'online_off' => 'Používajú sa priložené kurzy. Toto zariadenie neopúšťajú žiadne údaje.',
+        'online_off' => 'Naďalej sa používajú už uložené kurzy a priložená snímka slúži ako záloha. Toto zariadenie neopúšťajú žiadne údaje.',
         'fetch_aria' => 'Stiahnuť aktuálne výmenné kurzy online',
         'refreshing' => 'Obnovuje sa…',
         'next_refresh' => 'Automatické obnovenie: raz denne',

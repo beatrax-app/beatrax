@@ -24,10 +24,13 @@ return [
         'help_touch' => 'Rodyti raginimą „Padėk kitiems tai atpažinti“ rūšiavimo eilutėje, kad vienu palietimu galėtum pateikti pasiūlymą bendram sąrašui.',
     ],
 
+    // i18n-review: lt · update_on_updates.note — "šoninė juosta" is the form
+    // used here; Lithuanian interfaces also say "šoninis skydelis", and this app
+    // names the element in no other line, so a reader has no house term for it.
     'update_on_updates' => [
         'title' => 'Atnaujinti bendrą sąrašą kartu su programėlės atnaujinimais',
         'help' => 'Atnaujinti kartu pateiktą sąrašą kaskart, kai Beatrax atsinaujina.',
         'help_phone' => 'Atnaujinti kartu pateiktą sąrašą kaskart, kai iš „App Store“ arba „Google Play“ įdiegiama nauja Beatrax versija.',
-        'note' => 'Pradės veikti su būsimu programėlės atnaujinimu — dabartinę versiją rasi Nustatymai → Apie.',
+        'note' => 'Pradės veikti su būsimu programėlės atnaujinimu — naudojama versija rodoma šoninės juostos viršuje.',
     ],
 ];

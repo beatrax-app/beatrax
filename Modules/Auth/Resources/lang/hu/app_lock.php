@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Biometria megtartása',
 
     'auto_lock' => 'Automatikus zárolás ennyi után',
+    'auto_lock_note' => 'A Beatrax ennyi tétlenség után zárol — és hamarabb, ha elhagyod: másik alkalmazásra váltva vagy az ablakot elrejtve vagy bezárva a Beatrax legfeljebb :window múlva zárol, bármit mond is ez a beállítás.',
     'idle_1' => '1 perc',
     'idle_5' => '5 perc',
     'idle_15' => '15 perc',

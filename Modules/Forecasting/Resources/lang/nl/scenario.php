@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Een reeksdatum verschuiven',
-            'desc' => 'Verplaats de volgende of alle daaropvolgende voorkomsten naar voren.',
+            'desc' => 'Verplaats de volgende of alle daaropvolgende voorkomsten naar een andere datum.',
         ],
     ],
 

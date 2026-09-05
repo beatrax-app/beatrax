@@ -26,27 +26,34 @@ rows.
 
 ## Module boundary
 
-`Public/` exposes the cross-module surface:
+`Public/` holds exactly one class: `Http/Livewire/PinnedReportsRow`, the
+dashboard's row of pinned-report mini-cards. `Shell`'s dashboard mounts it by
+its registered alias `reports.pinned-reports-row` — the crossing
+`pinnedCrossModuleLivewireMounts` pins — and no module outside `Reports`
+imports a `Modules\Reports\` symbol at all. The module publishes a card, not
+a query surface.
 
-- **Dto/** — `ReportDefinition` (the full user-composed recipe, the exact
-  shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
+Everything else lives under `Internal/` and is reachable only from inside the
+module:
+
+- **Internal/Dto/** — `ReportDefinition` (the full user-composed recipe, the
+  exact shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
   (the aggregator's output contract: rows, total, currency, the two
   FX-exclusion SETS, optional comparison rows), `ReportResultRow`
   (one grouped total), `SavedReportIndexRow` (a `/reports/library` row
   with a pre-rendered summary line).
-- **Actions/** — `SaveReport`, `UpdateReport`, `DeleteReport`,
+- **Internal/Actions/** — `SaveReport`, `UpdateReport`, `DeleteReport`,
   `TogglePin` — the write surface for saved/pinned reports.
-- **Services/** — `PinnedReportsQuery`, `SavedReportsQuery` — read models
-  for the dashboard mini-card row and the library index.
-
-`Internal/` houses the aggregation engine, the CSV exporter, the Livewire
-components, and small support helpers — none of it is reachable from
-another module.
+- **Internal/Services/** — `PinnedReportsQuery` and `SavedReportsQuery`, the
+  read models behind the dashboard mini-card row and the library index, and
+  `ReportCsvExporter`.
+- **Internal/Aggregation/**, **Internal/Http/**, **Internal/Support/** — the
+  aggregation engine, the Livewire components, and small support helpers.
 
 ## Key services + events
 
 - `ReportAggregator::run(User, ReportDefinition): ReportResultDto` — the
-  single Public-facing aggregation entry point. Every consumer calls
+  module's single aggregation entry point. Every consumer calls
   this and never talks to a dimension query, `CurrencyModeApplier`, or
   `PeriodComparison` collaborator directly. Dispatch splits `net_worth`
   (a time series, dimension ignored) from the three transaction metrics
@@ -581,9 +588,14 @@ divisor is not the same for every currency, so a JPY row (which has no minor
 unit at all) was drawn at a hundredth of itself beside a table still printing
 the true figure. The scale is taken from the currency itself; an unrecognised
 code falls back to two decimals, which is what every other boundary in the
-repo assumes. There is no shared seam to take that scale from: `Ledger`'s
-`Money` and `Currency` both hardcode `MINOR_UNITS_PER_MAJOR = 100`
-everywhere except `Money::formatWholeUnits()`.
+repo assumes. Both of those come from `Ledger` and neither is copied here:
+`ChartAmount` divides through `Money::majorUnits()`, and a caller that needs
+the scale or the decimal count as a number asks
+`Ledger\Public\ValueObjects\CurrencyScale`, the one reader of either.
+`tests/Contracts/OneSeamAnswersTheMinorUnitScaleArchTest.php` fails the build
+on a second `log10` over a minor-unit scale, or a second fallback to
+`Money::MINOR_UNITS_PER_MAJOR`, anywhere outside that seam — so a local copy
+of the divisor is a red build, not a review note.
 
 CSV export mirrors the same aggregator call
 (`ReportCsvExporter::export()`), so the download and the on-screen

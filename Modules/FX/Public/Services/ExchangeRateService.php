@@ -19,7 +19,7 @@ use Modules\Ledger\Public\ValueObjects\RateTable;
  */
 final class ExchangeRateService
 {
-    private const int STALE_DAYS_THRESHOLD = 3;
+    public const int STALE_DAYS_THRESHOLD = 3;
 
     private const string BASE_CURRENCY = Currency::Eur->value;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Benvenuto',
     'h1' => 'Facciamo conoscere a Beatrax i tuoi soldi.',
-    'lede' => 'Circa 5 minuti. Niente esce da questo dispositivo — tutto quello che colleghi resta in un file al suo interno.',
+    'lede' => 'Circa 5 minuti. Beatrax tiene la tua cronologia in un file su questo dispositivo — l\'unico passaggio che esce all\'esterno è collegare una casella di posta, e puoi saltarlo.',
     'tagline' => 'Ecco cosa configureremo:',
 
     'bank_title' => 'La tua banca',

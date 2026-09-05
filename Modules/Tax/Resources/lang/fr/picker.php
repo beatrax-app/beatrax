@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Marquer aussi :count autres transactions de',
     'batch_after' => ' ?',
-    'batch_confirm' => 'Marquer toutes les transactions restantes de :name comme déductibles ? Chacune reçoit cette catégorie et cette note. Retirer le marquage ensuite se fait transaction par transaction.',
+    'batch_confirm' => 'Marquer :count autre transaction de :name pour l\'année fiscale :year comme déductible ? Elle reçoit cette catégorie et cette note. Les transactions d\'un rapprochement terminé sont laissées telles quelles, et retirer le marquage ensuite se fait transaction par transaction.|Marquer :count autres transactions de :name pour l\'année fiscale :year comme déductibles ? Chacune reçoit cette catégorie et cette note. Les transactions d\'un rapprochement terminé sont laissées telles quelles, et retirer le marquage ensuite se fait transaction par transaction.',
     'batch_tag_all' => 'Tout marquer',
     'batch_dismiss' => 'Ignorer',
 ];

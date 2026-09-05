@@ -32,13 +32,21 @@ isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noReceiptsWritesToTransactions` — forbids
-  any class in `Modules\Receipts\` from importing
-  `Modules\Ledger\Models\Transaction` for write.
-- The repo-wide `noReceiptsWritesToStatementSummaries` —
-  forbids any class outside `Modules\Ledger\Public\Services\StatementSummaryWriter`
-  from writing `statement_summaries`. This module calls the
-  Ledger writer.
+- The repo-wide `crossModuleRawTableWrites` pins every raw write a
+  module makes against a table another module created, by file and
+  table. Receipts has four entries: `inbox_messages` from
+  `Internal\Jobs\ProcessFetchedInboxMessagesJob`, and
+  `pending_enrichment_conflicts`, `transactions` and `users` from
+  `Public\Actions\ApplyReceiptConflictResolution`. So this module
+  does write `transactions` — resolving a receipt conflict onto the
+  row is the whole point of that action — and what the invariant
+  holds is that the one writer is pinned by name, so a second one is
+  a decision somebody has to argue rather than a line somebody adds.
+- `statement_summaries` belongs to Ledger, and Receipts names it
+  nowhere. Receipts is not pinned for that table, so a raw write from
+  here fails `crossModuleRawTableWrites`. Inside Ledger,
+  `Public\Services\StatementSummaryWriter` is in fact the only
+  writer, but nothing pins that.
 
 ## How to run the suite for just this module
 
@@ -144,13 +152,15 @@ and the assertion — see
   paths.** Other extensions pass through to whichever
   subscriber owns them ([`Import`](../import/how-to-test.md) owns
   `.csv`).
-- **Enrichments flow through `Import::ApplyEnrichments`**,
-  not directly into `transactions`. The
-  `noReceiptsWritesToTransactions` arch invariant blocks any
-  direct INSERT/UPDATE.
-- **Statement summaries flow through
-  `Ledger::RecordsStatementSummary`**, not directly into
-  `statement_summaries`.
+- **Enrichments flow through `Import::ApplyEnrichments`**, not
+  directly into `transactions`. The one place Receipts writes the
+  table itself is `ApplyReceiptConflictResolution`, resolving a
+  conflict the reader answered; `crossModuleRawTableWrites` pins that
+  file and table, so a second writer fails the build.
+- **Statement summaries are Ledger's.** `Ledger::RecordsStatementSummary`
+  is the contract that writes them, and Receipts names
+  `statement_summaries` nowhere — a raw write from this module would
+  fail `crossModuleRawTableWrites`.
 - **The `pending_enrichment_conflicts` table is the conflict
   audit log.** `RecordReceipt` writes a pending conflict row
   when a parsed receipt disagrees with the existing

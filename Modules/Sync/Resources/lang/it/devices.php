@@ -6,7 +6,7 @@ return [
     'heading' => 'Dispositivi e sincronizzazione',
 
     'enable_sync' => 'Attiva la sincronizzazione',
-    'enable_sync_help' => 'Condividi i tuoi dati in modo sicuro tra i dispositivi attendibili. Richiede un blocco dell\'app. Una volta attivo, i tuoi dati sono cifrati e il blocco dell\'app non può più essere disattivato.',
+    'enable_sync_help' => 'Condividi i tuoi dati in modo sicuro tra i dispositivi attendibili. Richiede un blocco dell\'app. L\'attivazione non si può annullare: da quel momento i tuoi dati sono cifrati e non si possono più disattivare né la sincronizzazione né il blocco dell\'app.',
 
     'app_lock_notice' => "Imposta prima un blocco dell'app per attivare la sincronizzazione.",
     'go_to_app_lock' => "Vai a Blocco dell'app",
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Sbloccare riapre questo abbinamento invece di lasciarlo scadere, quindi dura più del timeout di blocco che hai impostato. Termina quando lo completi o lo annulli.',
 
     'relay_endpoint' => 'Endpoint del relay',
-    'relay_endpoint_help' => 'Facoltativo. Se impostato, i dispositivi offline si sincronizzano tramite questo relay. Lascia vuoto per usare solo la LAN&#8209;diretta.',
-    'relay_endpoint_help_phone' => 'Facoltativo. Se impostato, le modifiche viaggiano su questo relay anche quando i tuoi dispositivi non sono sulla stessa rete. Questo dispositivo le ritira quando sincronizzi da questa schermata — mai in background, perché il blocco app custodisce l\'unica chiave. Lascia vuoto per usare solo la LAN&#8209;diretta.',
+    'relay_endpoint_help' => 'Facoltativo. Un relay consente a due dispositivi di completare l\'abbinamento e di scambiarsi le chiavi di cifratura quando non riescono a raggiungersi direttamente. Le transazioni vere e proprie si sincronizzano comunque solo quando entrambi i dispositivi sono sulla stessa rete. Lascia vuoto per usare solo la LAN&#8209;diretta.',
+    'relay_endpoint_help_phone' => 'Facoltativo. Un relay consente a due dispositivi di completare l\'abbinamento e di scambiarsi le chiavi di cifratura quando non riescono a raggiungersi direttamente. Le transazioni vere e proprie si sincronizzano comunque solo quando entrambi i dispositivi sono sulla stessa rete. Questo dispositivo ritira ciò che lo sta aspettando quando sincronizzi da questa schermata — mai in background, perché il blocco app custodisce l\'unica chiave. Lascia vuoto per usare solo la LAN&#8209;diretta.',
     'relay_endpoint_aria' => 'URL endpoint del relay',
     'relay_insecure_warning' => 'Questo endpoint del relay usa HTTP in chiaro. Anche se il relay non decritta mai i tuoi dati, una connessione non sicura espone le dimensioni crittografate e i tempi a chi osserva la rete. Usa un endpoint <strong>https://</strong> per la massima privacy.',
 

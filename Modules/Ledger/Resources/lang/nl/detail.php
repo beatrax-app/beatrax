@@ -97,7 +97,7 @@ return [
         'heading' => 'Transactie verwijderen',
         'help' => 'Verwijdert deze transactie permanent. Deze actie kan niet ongedaan worden gemaakt.',
         'button' => 'Verwijderen',
-        'confirm_prompt' => 'Deze transactie verwijderen? De notitie, splitsing en fiscale labels verdwijnen mee.',
+        'confirm_prompt' => 'Deze transactie verwijderen? De notitie, splitsing, fiscale labels en een eventuele bijdrage aan een spaardoel verdwijnen mee. Is dit de ene kant van een overboeking, dan wordt de andere kant opnieuw geclassificeerd.',
         'confirm' => 'Ja, verwijderen',
         'cancel' => 'Annuleren',
     ],

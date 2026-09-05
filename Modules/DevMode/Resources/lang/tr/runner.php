@@ -50,28 +50,28 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Veritabanını yedekle', 'description' => 'Yedekler dizinine zaman damgalı bir SQLite kopyası yazar.'],
-        'doctor' => ['label' => 'Doctor çalıştır', 'description' => 'Kurulu PHP / Composer / SQLite sürümlerini bildirir ve asgari gereksinimleri doğrular.'],
-        'failed_jobs' => ['label' => 'Başarısız işleri temizle', 'description' => "Laravel'in yönettiği failed_jobs tablosundaki çözülmüş kayıtları temizler."],
+        'db_backup' => ['label' => 'Veritabanını yedekle', 'description' => 'Yedekler dizinine zaman damgalı bir SQLite kopyası yazar; veritabanı son yedekten bu yana değişmediyse hiçbir şey yazmaz. Saklanan bir kopya, saklama ilkesine göre eski yedekleri de siler.'],
+        'doctor' => ['label' => 'Doctor çalıştır', 'description' => 'Operasyonel probe paketini çalıştırır ve her satır için pass / warn / fail bildirir. Warn ya da fail satırı sıfırdan farklı bir çıkış kodu verir.'],
+        'failed_jobs' => ['label' => 'Başarısız işleri temizle', 'description' => "Laravel'in yönettiği failed_jobs tablosundan 30 günden eski her kaydı siler; işin yeniden denenmiş olup olmaması fark etmez."],
         'cache_clear' => ['label' => 'Önbelleği temizle', 'description' => 'Uygulamanın önbellek deposunu boşaltır.'],
         'route_list' => ['label' => 'Rotaları listele', 'description' => 'Kayıtlı her HTTP rotasını standart çıktıya yazar.'],
-        'config_show' => ['label' => 'Yapılandırmayı göster', 'description' => 'Verilen yapılandırma anahtarının değerini yazar.'],
+        'config_show' => ['label' => 'Yapılandırmayı göster', 'description' => 'Bütün bir yapılandırma dosyasını ya da içindeki noktalı bir anahtarın değerini yazar.'],
         'view_clear' => ['label' => 'Görünüm önbelleğini temizle', 'description' => 'Derlenmiş Blade görünümlerinin önbelleğini boşaltır.'],
-        'queue_retry' => ['label' => 'Başarısız işleri yeniden dene', 'description' => 'Bir işi (kimliğe göre) ya da başarısız olan tüm işleri (boş kimlik) yeniden dener.'],
-        'rederive_fingerprints' => ['label' => 'Parmak izlerini yeniden türet', 'description' => 'Her işlemin parmak izini geçerli normalleştirme sürümüyle yeniden hesaplar.'],
+        'queue_retry' => ['label' => 'Başarısız işleri yeniden dene', 'description' => 'Kimliğe göre tek bir başarısız işi ya da `all` verildiğinde başarısız olan tüm işleri yeniden dener.'],
+        'rederive_fingerprints' => ['label' => 'Parmak izlerini yeniden türet', 'description' => 'Hâlâ geçerli normalleştirme sürümünün altında olan her işlemin parmak izini yeniden hesaplar. Buradan çalıştırıldığında sayıyı bildirir ve hiçbir şey yazmaz.'],
         'db_restore' => ['label' => 'Veritabanını geri yükle', 'description' => 'Geçerli veritabanını verilen yedek dosyasıyla değiştirir.'],
         'regenerate_recovery_codes' => ['label' => 'Kurtarma kodlarını yenile', 'description' => 'Bir kullanıcının tek kullanımlık 10 kurtarma kodunu yeniden üretir.'],
         'grant_dev' => ['label' => 'Geliştirici erişimi ver', 'description' => 'Verilen kullanıcı için is_developer=true yapar.'],
         // i18n-review: tr · command.install.description — İdempotent is kept as a
         // loanword. Turkish has no settled native form for it, and the sentence
         // depends on the reader recognising the property rather than the word.
-        'install' => ['label' => 'Kurulumu çalıştır', 'description' => 'İdempotent ilk kurulum. Yapılandırılmış bir kurulumda yeniden çalıştırmak yıkıcıdır.'],
+        'install' => ['label' => 'Kurulumu çalıştır', 'description' => 'İdempotent ilk kurulum: veritabanı şeması, referans verileri ve tek kullanıcı hesabı. Yapılandırılmış bir kurulumda yeniden çalıştırıldığında mevcut hesabı yeniden onaylar ve parolayı değiştirmez.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Eylem'],
         'config' => ['label' => 'Yapılandırma anahtarı', 'help' => 'Yazdırılacak yapılandırma dosyası veya noktalı anahtar, örneğin `app` ya da `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'İş kimliği', 'help' => 'Tüm başarısız işleri yeniden denemek için boş bırak; tek bir kaydı denemek için bir kimlik gir.', 'placeholder' => 'tümü (veya belirli bir kimlik)'],
+        'id' => ['label' => 'İş kimliği', 'help' => 'Tüm başarısız işleri yeniden denemek için `all` yaz, tek bir kaydı denemek için bir iş kimliği gir. Boş bırakılırsa hiçbir şey yeniden denenmez.', 'placeholder' => 'all (veya belirli bir kimlik)'],
         'queue' => ['label' => 'Kuyruk adı', 'help' => 'İsteğe bağlı kuyruk filtresi; varsayılan olarak tüm kuyruklar.', 'placeholder' => 'default'],
         'path' => ['label' => 'Yedek dosyasının yolu', 'help' => 'Geçerli veritabanını verilen yoldaki dosyayla değiştirir.', 'placeholder' => '/yol/dosyaya/backup.sqlite'],
         'username' => ['label' => 'Kullanıcı adı', 'placeholder' => 'alice'],

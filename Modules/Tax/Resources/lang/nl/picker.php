@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Nog :count andere van',
     'batch_after' => ' taggen?',
-    'batch_confirm' => 'Alle resterende transacties van :name als fiscaal aftrekbaar taggen? Elk daarvan krijgt deze categorie en deze notitie. De tag er later weer af halen gaat per transactie.',
+    'batch_confirm' => 'Nog :count transactie van :name uit belastingjaar :year als fiscaal aftrekbaar taggen? Die krijgt deze categorie en deze notitie. Transacties op een voltooide afstemming blijven ongemoeid en de tag er later weer af halen gaat per transactie.|Nog :count transacties van :name uit belastingjaar :year als fiscaal aftrekbaar taggen? Elk daarvan krijgt deze categorie en deze notitie. Transacties op een voltooide afstemming blijven ongemoeid en de tag er later weer af halen gaat per transactie.',
     'batch_tag_all' => 'Alles taggen',
     'batch_dismiss' => 'Negeren',
 ];

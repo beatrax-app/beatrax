@@ -1,16 +1,32 @@
 # What the desktop build leaves behind
 
 `php artisan native:build` does not build from a manifest of files it needs. It
-**copies the working tree** and then removes the entries listed in
-`cleanup_exclude_files` in `config/nativephp.php`. Every entry in that list is
-there because something concrete went wrong without it — a build that hung, a
-codesign that was refused, an app that shipped with no styling. This page says
-which failure each one prevents, and — just as important — which entries look
-missing but must stay out of the list.
+**copies the working tree**, filtering as it walks. `copyToBuildDirectory()` in
+NativePHP's `CopiesToBuildDirectory` trait merges two `cleanup_exclude_files`
+lists — the vendored `nativephp-internal` one and the `nativephp` one, which is
+this repository's `config/nativephp.php` — and drops any path that `fnmatch()`es
+an entry in the union. Nothing is copied and then deleted: a matched path is
+simply never copied, and there is no later cleanup pass despite what the key is
+called.
+
+The merge is worth holding onto, because half of what protects the bundle is not
+in this repository at all. `auth.json`, `database/*.sqlite` and its `-shm` /
+`-wal` companions, `storage/framework/*`, `storage/logs/*` and
+`vendor/nativephp/php-bin` are all entries in
+`vendor/nativephp/desktop/config/nativephp-internal.php`. They are in force on
+every build and nothing here restates them, so a NativePHP release that drops
+one takes its protection with it and no test in this repository notices.
+
+Every entry in `config/nativephp.php` is there because something concrete went
+wrong without it — a build that hung, a codesign that was refused, an app that
+shipped with no styling, an installer that carried the builder's own finances.
+This page says which failure each one prevents, and — just as important — which
+entries look missing but must stay out of the list.
 
 Related: [the prebuild hooks](build-prebuild-hooks.md) that patch the toolchain
 during the same build, and [SQLite file pre-creation](../../architecture/sqlite-file-precreation.md),
-which exists partly because this list strips `database/*.sqlite` from the copy.
+which exists partly because the merged list keeps `database/*.sqlite` out of the
+copy — that pattern being one of NativePHP's, not one of ours.
 
 ## The one thing to understand first: fnmatch has no `FNM_PATHNAME`
 
@@ -28,6 +44,28 @@ consequences drive most of the surprises below:
 
 Get either of these wrong and the failure is not a validation error. It is a
 build that succeeds and ships something broken.
+
+## The five entries NativePHP published, and the one that completes them
+
+`build`, `temp`, `content`, `node_modules` and `*/tests` are the list NativePHP
+ships in its publishable `config/nativephp.php`. They are kept as published:
+
+- `build` holds electron-builder's own inputs — `build/entitlements.mac.plist`
+  and `build/notarize.js`. The packager reads them from the source tree and from
+  the staged `buildResources` directory; the running application never does.
+- `temp` and `content` name directories this repository does not have. They cost
+  nothing and removing them would be a divergence from the published default for
+  no gain.
+- `node_modules` is the front-end toolchain. Vite has already compiled into
+  `public/build` by the time the copy runs, and the packaged app has no npm to
+  run anything with.
+- `*/tests` strips every vendored and per-module test suite, fixtures included —
+  `Modules/Receipts/tests/fixtures/` alone carries dozens of real-shaped receipt
+  emails and statement rows. None of it has a runtime role and all of it would be
+  codesigned file by file.
+- `tests`, the repo-root suite, is this repository's addition and is the same
+  exclusion: as the section above explains, `*/tests` cannot match a path with no
+  separator to its left, so the root tree needs its own line or it ships.
 
 ## Size: why the caches are excluded
 
@@ -71,6 +109,33 @@ running. Bundling it makes Laravel emit **every asset URL against
 `http://localhost:5173`** — so the shipped app has no styling and no JavaScript
 on whichever machine happens to open it. Nothing about the build fails; the
 artifact is simply broken.
+
+## Privacy: the entries that keep a real ledger out of the installer
+
+Four entries exist for one reason, and it is the most consequential on this page:
+a copy of the working tree is a copy of whatever the person running the build has
+been doing with the application.
+
+- `storage/app` is durable user data belonging to whoever ran the app on the
+  build machine. Every path `UserDataPathService` hands out lives under here, and
+  at runtime `appPath()` resolves to `NATIVEPHP_STORAGE_PATH` on desktop or
+  `persisted_data/` on mobile — never to the bundle, so nothing in the shipped
+  app ever reads this copy. It shipped anyway: a whole database backup, the
+  imported statements and receipts under `private/`, the dropped mail under
+  `inbox/`, and on mobile the encrypted device identities and group data keys.
+  `.gitignore` keeps them out of git; it does not bound a build.
+- `.device-test` and `.playwright-mcp` are device-test and browser-automation
+  output — screenshots of the running application, page snapshots and console
+  logs, all of them pictures of a real ledger. On the machine where this was
+  found they came to 1.6 GB across 4,024 files, copied into the build because
+  neither name matched any existing pattern.
+- `local` is a manual drop directory for PayPal exports. `.gitignore` keeps
+  `local/paypal/` present and its contents out of git, nothing in the application
+  reads it, and what a developer drops there is a real financial statement.
+
+`.git` is the fifth, for a related reason. The packager's own internal list
+excludes it too, but the whole history of a personal-finance application is not a
+thing to leave resting on a vendor default we do not control.
 
 ## The mobile shell, and the exclusion you must not generalise
 

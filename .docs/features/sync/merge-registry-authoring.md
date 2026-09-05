@@ -14,13 +14,21 @@ to bring a new table under sync. There is no engine change.
 ## The shape
 
 ```php
-'goals' => [
-    'name'            => ['nullable' => false],
-    'target_minor'    => ['nullable' => false],
-    '_delete_wins'    => true,
-    '_create_required' => ['name', 'target_minor'],
+'widgets' => [
+    'name'             => ['nullable' => false],
+    'sort_order'       => ['nullable' => true],
+    '_delete_wins'     => true,
+    '_create_required' => ['name'],
 ],
 ```
+
+The table is invented, and that is the point. A template naming a real one is a
+template somebody pastes into the registry, and it stops being true the day that
+table gains a NOT NULL column: `MergeRulesRegistrySchemaGuardTest` holds every
+registered table's list against its own migration in both directions, so the
+paste fails the build — and reads as correct to everyone who does not run it.
+An invented name cannot be pasted in by accident, and has no migration to drift
+from.
 
 **Strategies.** The `MergeStrategy` enum names three: `Lww` (last writer wins,
 per field), `GCounter` (a grow-only counter that sums rather than overwrites —
@@ -58,12 +66,18 @@ succeeds. List it in `_create_required` and the replayer demands a value the op
 never carries, and the create is refused for no reason.
 
 Columns currently in that category: `saved_reports.pinned`,
-`envelope_settings.overspend_mode`'s sibling `threshold_percent`,
 `notifications.state`, `drift_alerts.state`, `anomaly_alerts.state`,
-`system_alerts.created_at`, `recurring_series.state` / `.cadence` /
-`.variance_tolerance_percent` / `.next_expected_confidence_low`,
+`system_alerts.created_at` (`useCurrent()`), `recurring_series.state` /
+`.cadence` / `.variance_tolerance_percent` / `.next_expected_confidence_low`,
 `tax_deduction_categories.status` / `.sort_order`, `accounts.default_currency`,
 and every counter on `import_runs`.
+
+`envelope_settings.threshold_percent` is the one that is easy to file here and
+does not belong: it is `nullable()` with no default at all, because null means
+"use the default threshold", so it stays out for the plainer reason. Its sibling
+`overspend_mode` is the column of that table that is `NOT NULL` without a
+default, and it is what `_create_required` names there beside `user_id` and
+`category_id`.
 
 `categorization_rules` is the extreme case: `priority`, `combinator`, `active`
 and `hits_count` all carry defaults and `user_id` is nullable, so the table has

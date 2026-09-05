@@ -10,20 +10,30 @@ output.
 
 ## Module boundary
 
-- **Public/Dto** — `CalendarDayDto` (one grid day: date, today/past flags,
-  risk flag, SoD/EoD balances, computing sentinel, entries) and
+`Calendar` has no `Public/` directory, and that is the shape of the module
+rather than an omission: no production file outside it may reach in, and there
+is nothing inside for anyone to reach for. It composes one screen out of seams
+other modules already publish — the ledger's rows, the recurring cadences, the
+forecast balances — and publishes nothing back. All of it is `Internal/`, and
+the only files outside the module that name a `Modules\Calendar\Internal\`
+symbol are two test files, both pinned in `pinnedCrossModuleInternalImports`.
+
+- **Internal/Dto** — `CalendarDayDto` (one grid day: date, today/past flags,
+  risk flag, SoD/EoD balances, computing sentinel, entries),
   `CalendarEntryDto` (one payment: amount, direction, account, counterparty,
-  paid/missed/approximate flags). An entry carries a `seriesId`, a
-  `transactionId`, or **both** — a cadence predicted it, the ledger booked it,
-  or the ledger's row retired the cadence's estimate of the same payment — and
-  the panel drills through to every id it has.
-  Read-only value objects; the module never writes.
+  paid/missed/approximate flags), and `DayBalanceDto` (what one day's balance
+  line knows, including the currencies it could not price). An entry carries a
+  `seriesId`, a `transactionId`, or **both** — a cadence predicted it, the
+  ledger booked it, or the ledger's row retired the cadence's estimate of the
+  same payment — and the panel drills through to every id it has.
+  Read-only value objects; the module writes no domain row of its own.
 - **Internal/Services/CalendarQuery** — the sole composition service.
   Registered as a stateless singleton (all state flows through `forMonth()`
   arguments).
 - **Internal/Http/Livewire/CalendarPage** — the `/calendar` page: month
   navigation, the Accounts popover, day selection, and account-preference
-  persistence to `user_preferences`.
+  persistence, written through `Core`'s `UserPreferenceWriter` rather than
+  onto `user_preferences` directly.
 
 ## The grid edge
 

@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Dostęp tylko do odczytu',
         'reads_label' => 'Beatrax odczytuje',
         'reads_sub' => 'Tylko paragony',
-        'token_label' => 'Token zostaje lokalnie',
-        'token_sub' => 'Zaszyfrowany plik',
+        'token_label' => 'Token jest zaszyfrowany',
+        'token_sub' => 'W lokalnej bazie danych',
     ],
 
     'authorize_gmail' => 'Autoryzuj przez Gmail',

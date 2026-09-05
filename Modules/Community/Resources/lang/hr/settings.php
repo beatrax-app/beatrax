@@ -25,6 +25,6 @@ return [
         'title' => 'Ažuriraj zajednički popis pri ažuriranjima aplikacije',
         'help' => 'Osvježi priloženi popis svaki put kad se Beatrax ažurira.',
         'help_phone' => 'Osvježi priloženi popis svaki put kad se s App Storea ili Google Playa instalira nova verzija Beatraxa.',
-        'note' => 'Aktivira se s budućim ažuriranjem aplikacije — trenutačnu verziju vidi u Postavke → O aplikaciji.',
+        'note' => 'Aktivira se s budućim ažuriranjem aplikacije — verzija koju koristiš prikazana je na vrhu bočne trake.',
     ],
 ];

@@ -37,10 +37,12 @@ bank or card, card → bank via bulk SEPA settlement) so that fixed monthly
 payments, real underlying funding sources, and upcoming cash flow are
 visible in one place instead of buried across statements.
 
-It runs entirely on your own machine. No telemetry. No cloud sync. No
-remote account. The SQLite database, the OAuth tokens, the cached
-email receipts — all live on your disk and never leave it unless you
-choose to export them yourself.
+It runs on your own machine. No telemetry, no Beatrax server, no cloud
+account: the SQLite database, the OAuth tokens and the cached email
+receipts live on the device you installed it on. What goes out is what
+you connect it to — a mailbox, a bank through Enable Banking, the
+devices you pair for sync — plus a daily exchange-rate lookup. Each
+connection says so on the screen where you turn it on.
 
 The product is **source-available**, not open-source in the OSI sense.
 The full source is here for you to read, run, and modify; the license
@@ -76,24 +78,26 @@ for your platform.
 
 ### Installing on macOS
 
-Beatrax is an independent app. macOS will warn you the first time you
-open it — that's expected.
-
 1. Open the downloaded **beatrax.dmg** and drag Beatrax into your
    Applications folder.
-2. Right-click **Beatrax** in Applications and choose **Open**.
-3. When macOS asks "are you sure?", click **Open**.
-4. From now on, double-clicking Beatrax launches it normally.
+2. Double-click Beatrax.
 
-**Alternative (Terminal one-liner):**
+That is the whole procedure. Released macOS builds are signed with an
+Apple Developer ID and notarised by Apple: the release workflow refuses
+to publish a macOS build unless every signing and notarisation credential
+is present, then re-opens the finished DMG and checks it with `codesign`,
+Gatekeeper and a stapled notarisation ticket before it is uploaded. A
+download from the Releases page opens without a first-launch dialog.
 
-```sh
-xattr -d com.apple.quarantine /Applications/beatrax.app
-```
+Two cases still show one, and for both the answer is the same —
+right-click **Beatrax** in Applications, choose **Open**, and confirm at
+the prompt; from then on it launches normally:
 
-> Like most independent macOS apps, Beatrax isn't signed with an Apple
-> Developer ID — we don't pay Apple $99/year just to avoid the
-> first-launch dialog. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
+- **A bundle you built yourself.** Without Apple credentials the build
+  falls back to an ad-hoc signature, which Gatekeeper does not accept.
+- **A download from v1.3.0 or earlier.** Those artifacts predate the
+  signing gate and really are unsigned. A current release does not need
+  the step.
 
 #### Intel Macs (x86_64)
 
@@ -110,7 +114,11 @@ npm ci
 cp .env.example .env
 php artisan key:generate
 php artisan native:install --publish --no-interaction --force
-php artisan native:build mac x64
+# The after-sign hook refuses to finish an un-notarized macOS build
+# rather than warn and continue; this says the unsigned bundle is
+# deliberate. The result is ad-hoc signed, so it needs the right-click
+# → Open step above the first time you launch it.
+NATIVEPHP_SKIP_NOTARIZE=1 php artisan native:build mac x64
 # Installer lands at nativephp/electron/dist/beatrax-<version>-x64.dmg
 ```
 
@@ -119,17 +127,17 @@ Full local-dev prerequisites (Docker, Node 22+, PHP 8.5) are in
 
 ### Installing on Windows
 
-Beatrax is an independent app. Windows SmartScreen will warn you the
-first time you open it — that's expected.
-
 1. Run the downloaded **beatrax-setup.exe**.
-2. When you see "Windows protected your PC", click **More info**.
-3. Click **Run anyway**.
-4. From now on, Beatrax launches normally from the Start menu.
+2. Follow the installer; Beatrax then launches from the Start menu.
 
-> SmartScreen reputation builds up over time as more people open
-> Beatrax. After a few weeks, the warning will stop appearing for new
-> users automatically. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
+The release workflow refuses to publish a Windows build unless every
+Azure Trusted Signing credential is present, and checks the produced
+installer's Authenticode signature before it is uploaded — so a release
+cut under that gate carries a publisher identity Windows can check.
+
+Downloads from v1.3.0 or earlier predate the gate and are unsigned. If
+you see "Windows protected your PC", click **More info** and then **Run
+anyway** — or take a current release, which does not ask.
 
 ### Installing on Linux
 
@@ -151,15 +159,22 @@ sudo dpkg -i beatrax-*.deb
 
 ### Verifying the download
 
-Every release publishes SHA-256 checksums and an Ed25519-signed
-manifest. If you'd like to verify integrity:
+Every release publishes an auto-update manifest beside the installers —
+`latest.yml`, `latest-mac.yml`, `latest-linux.yml` — each carrying the
+installer's SHA-512, and each with a detached Ed25519 signature in a
+`.sig` file next to it. There is no separate checksum file: the manifest
+is where the hash lives, and the signature is what makes it worth
+trusting.
+
+To check a download, compare its SHA-512 against the `sha512` field of
+the manifest for its platform:
 
 ```sh
-sha256sum beatrax-{version}-{platform}.{ext}
+openssl dgst -sha512 -binary beatrax-{version}-{platform}.{ext} | base64
 ```
 
-Then compare against the checksum file published with the release. For
-the deeper "is this manifest authentic?" check, see
+For the deeper "is this manifest authentic?" question — verifying the
+`.sig` against the publisher key the bundle carries — see
 [the verification runbook →](.docs/runbooks/verify-release.md).
 
 ## Screenshots

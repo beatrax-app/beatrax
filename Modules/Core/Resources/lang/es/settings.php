@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Visualización del importe',
-        'label' => 'Vista por defecto en la lista de transacciones',
+        'label' => 'Vista por defecto de los importes',
         'eur_only' => 'Importe liquidado',
         'original' => 'Importe original',
-        'help' => 'Puedes cambiarlo página a página desde la lista de transacciones.',
+        'help' => 'Se aplica a la lista de transacciones y a los totales del panel. Puedes cambiarlo página a página, pero solo desde la lista de transacciones.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Tipos de cambio',
         'fetch_online' => 'Obtener los tipos actuales en línea',
-        'online_on' => 'Los tipos se obtienen a diario del BCE. Solo consultas de pares de monedas — ningún dato personal.',
+        'online_on' => 'Los tipos se obtienen a diario del BCE, o de Frankfurter si el BCE no está disponible. Solo consultas de pares de monedas — ningún dato personal.',
         'last_updated' => 'Última actualización: :date.',
-        'online_off' => 'Se usan los tipos incluidos con la app. Ningún dato sale de este dispositivo.',
+        'online_off' => 'Se siguen usando los tipos que ya hay en este dispositivo, con la instantánea incluida como respaldo. Ningún dato sale de este dispositivo.',
         'fetch_aria' => 'Obtener los tipos de cambio actuales en línea',
         'refreshing' => 'Actualizando…',
         'next_refresh' => 'Actualización automática: una vez al día',

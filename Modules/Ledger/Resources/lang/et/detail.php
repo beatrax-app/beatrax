@@ -97,7 +97,7 @@ return [
         'heading' => 'Kustuta tehing',
         'help' => 'Eemaldab selle tehingu jäädavalt. Seda toimingut ei saa tagasi võtta.',
         'button' => 'Kustuta',
-        'confirm_prompt' => 'Kas kustutada see tehing? Märkus, jaotus ja maksusildid kaovad koos sellega.',
+        'confirm_prompt' => 'Kas kustutada see tehing? Märkus, jaotus, maksusildid ja võimalik panus säästueesmärki kaovad koos sellega. Kui see on ülekande üks pool, liigitatakse teine pool ümber.',
         'confirm' => 'Jah, kustuta',
         'cancel' => 'Tühista',
     ],

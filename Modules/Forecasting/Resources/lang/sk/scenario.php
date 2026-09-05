@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Posunúť dátum série',
-            'desc' => 'Posunie najbližší alebo všetky nasledujúce výskyty.',
+            'desc' => 'Presunie najbližší alebo všetky nasledujúce výskyty na iný dátum.',
         ],
     ],
 

@@ -19,16 +19,20 @@ Modules/DriftAlerts/
 │   │   ├── DriftAlertAcknowledged.php
 │   │   ├── DriftAlertSnoozed.php
 │   │   └── DriftAlertDismissedCancelled.php
-│   └── Services/
-│       ├── DriftAlertQuery.php
-│       └── CancellationImpactQuery.php
+│   ├── Services/
+│   │   ├── DriftAlertQuery.php
+│   │   └── CancellationImpactQuery.php
+│   └── Http/Livewire/
+│       ├── DashboardDriftBadge.php
+│       ├── DriftThresholdEditor.php
+│       └── SavingsInsightsCard.php
 ├── Internal/
 │   ├── DriftEvaluator.php
 │   ├── AmountMovement.php
 │   ├── CadenceYearRate.php
 │   ├── StateMachines/
 │   │   ├── DriftAlertStateMachine.php
-│   │   └── InvalidStateTransitionException.php
+│   │   └── DriftAlertNotFoundException.php
 │   ├── Jobs/
 │   │   ├── DetectDriftAlertsJob.php
 │   │   └── RevivedExpiredDriftSnoozesJob.php
@@ -38,15 +42,15 @@ Modules/DriftAlerts/
 │   │   └── DriftAlertDtoMapper.php
 │   └── Http/Livewire/
 │       ├── DriftPage.php
-│       ├── DashboardDriftBadge.php
-│       └── DriftThresholdEditor.php
+│       └── SubscriptionDriftWatchPage.php
 ├── Models/
 │   ├── DriftAlert.php
 │   └── DriftAlertTransition.php
 ├── Database/
 │   ├── Migrations/
 │   │   ├── 2026_05_19_010001_create_drift_alerts_table.php
-│   │   └── 2026_05_19_010002_create_drift_alert_transitions_table.php
+│   │   ├── 2026_05_19_010002_create_drift_alert_transitions_table.php
+│   │   └── 2026_06_07_010001_create_savings_insight_dismissals_table.php
 │   ├── Factories/
 │   │   ├── DriftAlertFactory.php
 │   │   └── DriftAlertTransitionFactory.php
@@ -60,7 +64,7 @@ Modules/DriftAlerts/
 └── tests/
     ├── Unit/
     ├── Feature/
-    └── fixtures/drift-corpus/   (24 representative fixtures)
+    └── fixtures/drift-corpus/   (one file per real-world shape)
 ```
 
 ## Public API
@@ -119,8 +123,15 @@ Modules/DriftAlerts/
   `drift_alert_transitions` audit row, and emits the `EntityMutated`
   edit afterwards, so every acknowledge, snooze, dismissal and revival
   reaches the peer through one dispatch.
-- `Internal/StateMachines/InvalidStateTransitionException` — typed
-  exception thrown for any disallowed transition.
+- `Internal/StateMachines/DriftAlertNotFoundException` — raised
+  inside the state machine's transaction when the `lockForUpdate`
+  lookup comes back null: the row vanished after the caller handed
+  over the model. It is the only exception this module declares.
+  `InvalidStateTransitionException`, thrown for any disallowed
+  transition, is `Modules\Core\Public\StateMachine`'s — the
+  guarded-state-machine base raises one sentinel for every module that
+  builds on it, so a caller catching it does not need to know which
+  machine rejected the move.
 - `Internal/Jobs/DetectDriftAlertsJob` — queued evaluation per
   `(user, series)`. `ShouldBeUniqueUntilProcessing` on
   `uniqueId() = "{userId}-{seriesId}"`.
@@ -156,6 +167,10 @@ Migrations:
   drill-in hot paths.
 - `2026_05_19_010002_create_drift_alert_transitions_table.php` —
   the audit log.
+- `2026_06_07_010001_create_savings_insight_dismissals_table.php` —
+  the per-user set of dismissed savings insights, keyed on the stable
+  insight key `SavingsInsightsQuery` composes so a recomputed insight
+  set filters against it by key rather than by row id.
 
 ## Provider wiring
 
@@ -172,8 +187,8 @@ Migrations:
 `DriftAlertsServiceProvider::boot()`:
 
 - Loads migrations, routes, views (all file-/dir-existence guarded).
-- Registers three Livewire components under the `drift-alerts.*`
-  namespace.
+- Registers this module's Livewire components under the
+  `drift-alerts.*` namespace.
 - Subscribes `EvaluateDriftOnMetricsRefreshed` to
   `Recurring::RecurringSeriesMetricsRefreshed`.
 - Registers no view composer. The sidebar's drift badge is one of the

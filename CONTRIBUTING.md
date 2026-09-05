@@ -5,8 +5,10 @@
 Beatrax is a small, local-only personal-finance dashboard built in
 Laravel and Livewire. Contributions are welcome — bug fixes,
 performance work, additional ingestion adapters, additional
-categorization rules, additional email-receipt parsers, and (when
-internationalization lands) translations. The project ships under the
+categorization rules, additional email-receipt parsers, and translations
+— the app is already localised, one directory per locale under each
+module's `Resources/lang/`, and a new locale is a welcome addition. The
+project ships under the
 [Hippocratic License 3.0](LICENSE), a source-available license with
 ethical-use clauses; contributors agree both to the license and to the
 [Code of Conduct](CODE_OF_CONDUCT.md) by participating.
@@ -17,16 +19,28 @@ early than ask you to rework a finished PR.
 
 ## Setup
 
-Detailed local setup lives in [`.docs/local_development/setup.md`](.docs/local_development/setup.md).
-The short version:
+Detailed local setup lives in [`.docs/local_development/setup.md`](.docs/local_development/setup.md),
+and it is worth reading rather than skimming — two of the steps below
+fail silently if you shorten them. The short version:
 
 - Install [Docker](https://docs.docker.com/get-docker/); the PHP 8.5
   toolchain is defined in `docker-compose.yml` and `docker/php8.5/Dockerfile`.
 - Clone the repo into your project directory.
 - `docker compose run --rm php composer install`
 - `npm ci`
-- `docker compose run --rm php php artisan migrate`
-- Run the dev server (`docker compose run --rm php php artisan serve`).
+- `cp .env.example .env` then
+  `docker compose run --rm php php artisan key:generate`
+- `touch database/database.sqlite` — Laravel's migrator does not create
+  the file.
+- `docker compose run --rm -e DB_CONNECTION=sqlite php php artisan migrate`,
+  then the same prefix for
+  `php artisan beatrax:install --username=… --password=…`. **The
+  `-e DB_CONNECTION=sqlite` is not optional**: the container sets
+  `DB_CONNECTION=sqlite_testing`, which is `:memory:`, so without it both
+  commands report success and leave a zero-byte database behind.
+- Run the app from the host — `composer dev:serve` — not through
+  `docker compose run`. The `php` service publishes no port, so a server
+  started inside it is unreachable from your browser.
 
 The project ships with sample fixtures so you can exercise the
 ingestion paths without owning the source banks' accounts.
@@ -65,19 +79,26 @@ file enforces the DI rule above.
 
 ### Quality gate
 
-Every pull request must pass three gates:
+Every pull request must pass four gates, all blocking:
 
 ```sh
-vendor/bin/pint --test                     # formatting
+vendor/bin/pint --test                         # formatting
 vendor/bin/phpstan analyse --memory-limit=1G   # Larastan level 10 strict
-vendor/bin/pest                            # unit + feature + arch tests
+vendor/bin/pest                                # unit + feature + contract + arch
+composer analyse:deps                          # every import is a declared dependency
 ```
 
 Run them through the Docker toolchain, e.g.
 `docker compose run --rm php vendor/bin/pint --test`. The full test
-suite runs with `docker compose run --rm php php artisan test`
-(serial, like CI) or `composer test` (Pest under `--parallel`, faster
-local iteration). The CI workflow runs all three gates on PHP 8.5.
+suite runs with `docker compose run --rm php php artisan test --parallel`,
+or `composer test`, which is `pest --parallel --processes=4`.
+
+CI runs the same four on PHP 8.5, and only on 8.5 — there is no second
+version axis. It does not run the suite serially: it shards the Pest run
+across three runners and each shard fans out with `--parallel` over that
+runner's cores. Pint, Larastan and `analyse:deps` run in their own job
+alongside the shards, and a single `quality (PHP 8.5)` check collapses
+the lot.
 
 > **Docker caveat:** a handful of `Modules/DevMode` tests spawn real
 > `php artisan` child processes (the spawn-then-tail console). Those
@@ -151,8 +172,9 @@ to declare, and review is there for a reason.
    notes are generated from the commit log at tag time, so the subject is what
    a reader will see. Mark a breaking change with `!` after the type, or a
    `BREAKING CHANGE:` trailer.
-4. Wait for CI to go green. The PHP 8.5 quality gate (Pint, Larastan
-   level 10, Pest) must pass before review starts.
+4. Wait for CI to go green. The `quality (PHP 8.5)` check — Pint,
+   Larastan level 10, `composer analyse:deps` and the three Pest shards —
+   must pass before review starts.
 5. Address review feedback inline; push fixups as new commits (no
    force-push during review unless the reviewer asks for it).
 6. Once approved, the reviewer (or you, if self-merge is permitted)
@@ -174,14 +196,22 @@ In scope:
 
 Not in scope:
 
-- Features explicitly listed as "Out of Scope" in the project's roadmap
-  documents (telemetry, partner-sharing modes, cloud sync, mobile
-  clients).
+- Anything that requires the app to phone home. Beatrax is local-only by
+  design and that constraint will not move: no telemetry, no Beatrax
+  server, no cloud-hosted sync or backup. The end-to-end-encrypted
+  peer-to-peer device sync that ships is the opposite shape — two devices
+  on one network, with nothing in between.
 - Switching the database away from SQLite, switching the frontend stack
   away from Livewire, or other foundational rework. These would be
   whole-architecture conversations, not pull requests.
-- Anything that requires the app to phone home — Beatrax is local-only
-  by design, and that constraint won't move.
+- Work the specification has not scheduled. The roadmap and the per-version
+  manifests live in the spec, and a feature that appears in neither is a
+  spec pull request before it is a code one.
+
+Two things that were once out of scope now ship, so do not read an old
+list as still current: the mobile shell (`Modules/Mobile`, and the second
+Composer root at `mobile-app/`) and the owner/partner multi-user model
+(`/settings/users/new`, `AddUserAction`) are both part of the product.
 
 If you have an idea that sits in the grey zone, open a Discussion
 first. It's faster than writing code that won't merge.

@@ -50,7 +50,14 @@ What the module explicitly does NOT do:
     per-detector contract. Tag `recurring.detector`. The
     detector reads its own window from
     `users.recurring_detection_window_months` and upserts the series
-    itself; it returns nothing to its caller.
+    itself; it returns nothing to its caller. The window is not a
+    parameter, and a caller has nothing to pass: the expense and
+    income passes merge their output into one series set, so both
+    open the window through
+    `RecurringDetectionWindow::opensOn()` instead. A detector handed
+    a window of its own would put a series in the merged set the
+    other pass could not see the occurrences of — see
+    [why the detection window default is two months](series-detection.md#why-the-detection-window-default-is-two-months).
   - `DispatchesRecurringDetection::dispatchForUser(int $userId)`
     — called by `Import::ConfirmImport` after every import
     commits; bound to `BusRecurringDetectionDispatcher`.
@@ -67,17 +74,33 @@ What the module explicitly does NOT do:
     $tolerance, $user)`.
   - `SetDriftThresholdForSeries($seriesId, $pct, $user)` —
     per-series drift override; consumed by `DriftAlerts`.
-- **DTOs/**
-  - `RecurringSeriesDto`, `RecurringOccurrenceDto`,
-    `RecurringSeriesAmountTrendDto`,
-    `NextExpectedChargeDto`.
+- **DTOs/** — `RecurringSeriesDto`, `RecurringOccurrenceDto`,
+  `RecurringSeriesAmountTrendDto` and `MonthlyEquivalentTotals`,
+  the last carrying the expense / income / net `Money` triple plus
+  the currency codes left unconverted for want of a rate, so a
+  header that is missing one says so rather than under-reporting.
+  There is no next-expected-charge DTO: that date rides on
+  `RecurringSeriesDto` with its own confidence flag.
 - **Events/**
-  - `RecurringSeriesDetected` — `(seriesId, userId)`.
+  - `RecurringSeriesDetected` — `(seriesId, userId, direction,
+    detectedName, cadence)`.
   - `RecurringSeriesApproved` — `(seriesId, userId)`.
   - `RecurringSeriesRejected` — `(seriesId, userId)`.
-  - `RecurringSeriesCadenceFlipped` — `(seriesId, userId)`
-    — cadence drifted to a different stable cadence.
-  - `RecurringSeriesMetricsRefreshed` — `(seriesId, userId)`.
+  - `RecurringSeriesCadenceFlipped` — `(seriesId, userId,
+    oldCadence, newCadence)` — cadence drifted to a different
+    stable cadence.
+  - `RecurringSeriesMetricsRefreshed` — `(userId,
+    recurringSeriesId, direction, cadence, latestAmountMinor,
+    latestCurrency)`. The series id is spelled
+    `recurringSeriesId` here and `seriesId` on the four above; a
+    listener written against the wrong one fatals on an undefined
+    property.
+  - `PaymentReminderDue` — `(userId, seriesId, dueDate,
+    confidenceLow, expectedAmount, displayName)`, and
+    `PaymentSettled` — `(userId, seriesId, dueDate)`. Both key
+    the occurrence on the series' `next_expected_at`, never on the
+    date the job happened to run, so the withdrawal can find the
+    row the reminder wrote.
 - **Services/**
   - `RecurringSeriesQuery::pendingForUser($user, $cursorId,
     $limit)` and its `rejectedForUser` / `approvedForUser`
@@ -105,7 +128,7 @@ What the module explicitly does NOT do:
   rows into one series.
 - **Internal/Detectors/** —
   `ExpenseSeriesDetector`, `IncomeSeriesDetector`. Each
-  emits `DetectedSeriesDto` instances.
+  emits `DetectedSeries` instances.
 - **Internal/StateMachines/RecurringSeriesStateMachine** —
   SOLE sanctioned mutator of `recurring_series.state`.
   Allowed transitions: `pending → approved | rejected |
@@ -485,15 +508,21 @@ BEFORE INSERT / BEFORE UPDATE triggers on `recurring_series` enforce it
 at the database level.
 
 `transition()` validates the requested target against
-`ALLOWED_TRANSITIONS`, opens a DB transaction, sets
-`PRAGMA busy_timeout = 5000`, takes a row lock on the series
-(`lockForUpdate()`), writes the new state + `updated_at`, and inserts one
-row in `recurring_series_transitions` carrying the full audit metadata.
-Throws `InvalidStateTransitionException` for an illegal target,
-`InvalidArgumentException` for an unknown actor, and
+`ALLOWED_TRANSITIONS`, opens a DB transaction, takes a row lock on the
+series (`lockForUpdate()`), writes the new state + `updated_at`, and
+inserts one row in `recurring_series_transitions` carrying the full
+audit metadata. Throws `InvalidStateTransitionException` for an illegal
+target, `InvalidArgumentException` for an unknown actor, and
 `SeriesRowVanishedException` when the series row is missing under the
-lock. This SQLite contention guard means two concurrent sweep jobs that
-briefly contend on the same series row serialise rather than fail.
+lock. Two concurrent sweep jobs that briefly contend on the same series
+row serialise rather than fail.
+
+The machine issues no pragma of its own. The wait for a competing
+writer is the connection's own `busy_timeout`, the thirty seconds
+`config/database.php` asks for, applied once per connection by
+`SqliteOptimizationsProvider`. Lowering it inside a transaction here
+would fail `tests/Contracts/OneConnectionHoldsOneBusyTimeoutArchTest.php`,
+which exists because sixteen write paths used to do exactly that.
 
 Both exceptions are caught where a concurrent move is a normal outcome
 rather than a defect, and only there:
@@ -548,13 +577,13 @@ The detection trigger chain:
 
 ```
 Import::ConfirmImport (post-commit)
-  → DispatchesRecurringDetection::dispatch($user)
+  → DispatchesRecurringDetection::dispatchForUser($user->id)
        → dispatch DetectRecurringSeriesJob($user->id)
 
 DetectRecurringSeriesJob::handle
   → for each tagged detector (Expense / Income):
-       → detector->detect($user, $window)
-       → for each DetectedSeriesDto:
+       → detector->detectForUser($user)
+       → for each DetectedSeries:
             → ClusterKeyComposer::compose
             → upsert recurring_series row (UNIQUE per cluster_key)
             → CadenceInferrer::infer for the series's occurrences

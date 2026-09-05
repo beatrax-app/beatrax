@@ -21,6 +21,7 @@ return [
     'unknown_lede' => 'De wizard kon de actieve stap niet bepalen. Gebruik Later verdergaan → om af te sluiten; bij het volgende laden wordt het hersteld.',
 
     'privacy' => 'Je gegevens blijven op dit apparaat',
+    'privacy_connector' => 'Je gegevens blijven op dit apparaat. Deze stap koppelt je postvak aan Google of Microsoft.',
     'need_help' => 'Hulp nodig?',
     'need_help_aria' => 'Hulp nodig? Opent de Beatrax issues-pagina op GitHub',
 ];

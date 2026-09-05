@@ -14,8 +14,10 @@ that were set up independently disagree about it for the same person. Comparing 
 every op a paired peer sent.
 
 Membership is proven by the **device** instead. `$deviceKeys` comes from
-`DeviceRegistryService::deviceKeys($userId)`, which is confirmed-only and user-scoped, so
-another user's device simply has no key present and its entry cannot clear the Ed25519 gate.
+`DeviceRegistryService::signatureVerificationKeys($userId)` — the confirmed `device_registry`
+rows widened by the `device_introductions` this reader has confirmed. Both halves are
+user-scoped, so another user's device simply has no key present and its entry cannot clear the
+Ed25519 gate.
 Once an entry is past that gate its `userId` is **overwritten** with the replay scope rather
 than compared against it.
 

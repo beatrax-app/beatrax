@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Zobrazení částky',
-        'label' => 'Výchozí zobrazení v seznamu transakcí',
+        'label' => 'Výchozí zobrazení částek',
         'eur_only' => 'Vypořádaná částka',
         'original' => 'Původní částka',
-        'help' => 'Přímo v seznamu transakcí to můžeš kdykoli přepnout pro danou stránku.',
+        'help' => 'Platí pro seznam transakcí i pro součty v Přehledu. Pro danou stránku to můžeš kdykoli přepnout, ale jen v seznamu transakcí.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Směnné kurzy',
         'fetch_online' => 'Stahovat aktuální kurzy online',
-        'online_on' => 'Kurzy se denně stahují z ECB. Jen dotazy na měnové páry — žádná osobní data.',
+        'online_on' => 'Kurzy se denně stahují z ECB, a pokud je ECB nedostupná, z Frankfurteru. Jen dotazy na měnové páry — žádná osobní data.',
         'last_updated' => 'Naposledy aktualizováno: :date.',
-        'online_off' => 'Používají se přibalené kurzy. Ze zařízení neodchází žádná data.',
+        'online_off' => 'Nadále se používají již uložené kurzy a přibalený snímek slouží jako záloha. Ze zařízení neodchází žádná data.',
         'fetch_aria' => 'Stáhnout aktuální směnné kurzy online',
         'refreshing' => 'Aktualizace…',
         'next_refresh' => 'Automatická aktualizace: jednou denně',

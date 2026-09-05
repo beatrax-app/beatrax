@@ -25,6 +25,6 @@ return [
         'title' => 'Mettre à jour la liste partagée lors des mises à jour de l\'app',
         'help' => 'Actualise la liste intégrée chaque fois que Beatrax se met à jour.',
         'help_phone' => 'Actualise la liste intégrée chaque fois qu\'une nouvelle version de Beatrax est installée depuis l\'App Store ou Google Play.',
-        'note' => 'S\'active avec une future mise à jour de l\'app — voir Paramètres → À propos pour la version actuelle.',
+        'note' => "S'active avec une future mise à jour de l'app — la version que tu utilises est affichée en haut de la barre latérale.",
     ],
 ];

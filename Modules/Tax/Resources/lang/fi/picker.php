@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Merkitäänkö myös :count muuta vastapuolelta',
     'batch_after' => '?',
-    'batch_confirm' => 'Merkitäänkö kaikki jäljellä olevat tapahtumat vastapuolelta :name verovähennyskelpoisiksi? Jokainen niistä saa tämän kategorian ja tämän muistiinpanon. Merkinnän poistaminen käy vain tapahtuma kerrallaan.',
+    'batch_confirm' => 'Merkitäänkö vielä :count tapahtuma vastapuolelta :name verovuodelle :year verovähennyskelpoiseksi? Se saa tämän kategorian ja tämän muistiinpanon. Valmiiseen täsmäytykseen kuuluvat tapahtumat jätetään ennalleen, ja merkinnän poistaminen käy vain tapahtuma kerrallaan.|Merkitäänkö vielä :count tapahtumaa vastapuolelta :name verovuodelle :year verovähennyskelpoisiksi? Jokainen niistä saa tämän kategorian ja tämän muistiinpanon. Valmiiseen täsmäytykseen kuuluvat tapahtumat jätetään ennalleen, ja merkinnän poistaminen käy vain tapahtuma kerrallaan.',
     'batch_tag_all' => 'Merkitse kaikki',
     'batch_dismiss' => 'Ohita',
 ];

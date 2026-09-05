@@ -17,15 +17,15 @@
  * authoritatively on any app page. The server's last_activity_at is the
  * authoritative source and the client timer is a best-effort convenience.
  *
- * GRACE_MS is 30 000ms. Returning within the grace window lifts the veil
- * without a server round-trip. After grace elapses the next Livewire
- * request hits AppLockMiddleware, which redirects to /lock.
+ * window.beatraxGraceMs is the grace window, emitted beside beatraxIdleMs
+ * by the authenticated layout from the same constant the app-lock settings
+ * copy discloses. Returning within it lifts the veil without a server
+ * round-trip. After grace elapses the next Livewire request hits
+ * AppLockMiddleware, which redirects to /lock.
  *
  * Idle-lock no-op: when window.beatraxIdleMs is absent (undefined), the idle
  * tracker is disabled — the lock feature is off for this session.
  */
-
-const GRACE_MS = 30000; // 30 s grace window
 
 const IDLE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll', 'wheel'];
 
@@ -221,9 +221,18 @@ document.addEventListener('alpine:init', () => {
         // Grace-window management
         // -----------------------------------------------------------------------
 
-        /** Start the grace timer after the window is backgrounded / blurred. */
+        /** Start the grace timer after the window is backgrounded. */
         _startGrace() {
             this._clearGrace();
+
+            // The window is the server's, so the settings copy that discloses
+            // it and the timer that runs it cannot part. Absent means the
+            // layout emitted no lock config at all, and the server-side
+            // marker _markBackgrounded() just wrote is the clock that counts.
+            if (typeof window.beatraxGraceMs !== 'number') {
+                return;
+            }
+
             this._graceTimer = window.setTimeout(() => {
                 this._graceTimer = null;
                 // Grace elapsed — lock the server session via the engage
@@ -232,7 +241,7 @@ document.addEventListener('alpine:init', () => {
                 this._serverLock();
                 // Also broadcast locked state to all tabs (UX convenience).
                 this._broadcast('locked');
-            }, GRACE_MS);
+            }, window.beatraxGraceMs);
         },
 
         /** Cancel a pending grace timer (user returned in time). */
@@ -317,7 +326,7 @@ document.addEventListener('alpine:init', () => {
          * would always 419 here. The server returns 204 and no body is read.
          *
          * Called when:
-         *   1. The 30-second grace window elapses (background/blur past grace).
+         *   1. The grace window elapses (backgrounded past grace).
          *   2. The idle ticker detects inactivity >= idle_timeout_minutes.
          */
         _serverLock() {
@@ -469,8 +478,8 @@ document.addEventListener('alpine:init', () => {
             // but the marker is written by a keepalive POST that lands ~30ms
             // AFTER the incoming page's own GET, so nothing was there to pull
             // and the marker simply waited. A user reading one page for longer
-            // than the 30s grace was then locked on their next tap, whatever
-            // their idle timeout said.
+            // than the grace window was then locked on their next tap,
+            // whatever their idle timeout said.
             //
             // `persisted` is NOT the discriminator, though the first version of
             // this read it as one. Chrome reports false for an ordinary
@@ -536,7 +545,7 @@ document.addEventListener('alpine:init', () => {
             //
             // Blur fires whenever another window takes focus while ours stays
             // visible on screen — there is no app-switcher snapshot to defend
-            // against, and starting the 30s grace here meant clicking away for
+            // against, and starting the grace here meant clicking away for
             // half a minute locked the app regardless of a 30-minute idle
             // setting. Genuine backgrounding still locks: visibilitychange
             // above, plus the native WindowHidden/WindowClosed listener, which

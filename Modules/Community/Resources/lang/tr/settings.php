@@ -25,6 +25,6 @@ return [
         'title' => 'Uygulama güncellemelerinde paylaşılan listeyi güncelle',
         'help' => 'Beatrax her kendini güncellediğinde hazır listeyi yenile.',
         'help_phone' => 'App Store ya da Google Play üzerinden Beatrax’ın yeni bir sürümü her kurulduğunda hazır listeyi yenile.',
-        'note' => 'Gelecek bir uygulama güncellemesiyle etkinleşir — geçerli sürüm için Ayarlar → Hakkında bölümüne bak.',
+        'note' => 'Gelecek bir uygulama güncellemesiyle etkinleşir — kullandığın sürüm kenar çubuğunun en üstünde gösterilir.',
     ],
 ];

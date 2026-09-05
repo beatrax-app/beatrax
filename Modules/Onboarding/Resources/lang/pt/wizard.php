@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'O assistente não conseguiu determinar o passo ativo. Usa Retomar mais tarde → para sair; da próxima vez que abrires, o assistente recupera.',
 
     'privacy' => 'Os teus dados ficam neste dispositivo',
+    'privacy_connector' => 'Os teus dados ficam neste dispositivo. Este passo liga a tua caixa de entrada à Google ou à Microsoft.',
     'need_help' => 'Precisas de ajuda?',
     'need_help_aria' => 'Precisas de ajuda? Abre a página de issues do Beatrax no GitHub',
 ];

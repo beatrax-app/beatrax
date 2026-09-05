@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Lipește ID-ul aplicației',
         'application_id_label' => 'ID aplicație',
-        'step3_help' => 'Acesta este stocat într-un fișier local, în afara bazei de date, cu permisiuni restrictive, și nu părăsește niciodată acest dispozitiv.',
+        'step3_help' => 'Este stocat într-un fișier local, în afara bazei de date, pe care doar tu îl poți citi. Identifică aplicația ta către Enable Banking, deci călătorește cu fiecare cerere — cheia ta privată, niciodată.',
 
         'step4_title' => 'Alege-ți banca',
         'via_enable_banking' => 'prin Enable Banking',

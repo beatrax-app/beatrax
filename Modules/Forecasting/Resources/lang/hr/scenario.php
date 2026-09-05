@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Pomakni datum serije',
-            'desc' => 'Pomakni sljedeće ili sva daljnja pojavljivanja.',
+            'desc' => 'Premjesti sljedeće ili sva daljnja pojavljivanja na drugi datum.',
         ],
     ],
 

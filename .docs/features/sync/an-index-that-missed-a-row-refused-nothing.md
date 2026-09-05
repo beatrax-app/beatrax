@@ -34,9 +34,13 @@ names, and it is inside `QuarantineReason::recoverable()`. Both of those drive
   normally within a moment."* Nothing had been received, nothing was waiting,
   and no amount of waiting would clear it.
 - **A hold nothing retires.** The insert names no `gdk_epoch`, so the column is
-  null. `HistoryReprojector::replayQuarantined()` retires only holds whose epoch
-  the device now has, and its settled sweep clears only the two create-refusals.
-  A null epoch matches neither, so the row stands for the life of the database.
+  null. `HistoryReprojector::replayQuarantined()` retires a key-recoverable hold
+  only once the device holds the epoch that hold names; its settled sweep clears
+  the two create-refusals when the row turns up and the delete-refusal when the
+  row goes away; and it deletes outright the `gdk_decrypt_failed` holds this
+  device authored itself. A `strategy_error` row with a null epoch, a `pk` whose
+  row is sitting right there and a `device_id` of `system-fts` answers to none
+  of them, so it stands for the life of the database.
 - **A replay of a whole row's history, repeatedly.** A null epoch also passes the
   openable-rows filter, so every pass inside the window re-fetched and re-applied
   every op that transaction ever had, to fix an index.

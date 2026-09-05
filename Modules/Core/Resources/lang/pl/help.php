@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Gdzie są moje dane?',
-    'intro' => 'Beatrax przechowuje wszystko na tym urządzeniu. Nic nie jest wysyłane na serwer, nic nie synchronizuje się z chmurą, nic nie opuszcza tego urządzenia bez Twojego eksportu.',
+    'intro' => 'Beatrax przechowuje wszystko na tym urządzeniu. Nie ma żadnego serwera Beatraxa ani konta w chmurze. Na zewnątrz wychodzi tylko to, co sam podłączysz — skrzynka odbiorcza, bank przez Enable Banking, urządzenia sparowane do synchronizacji — oraz codzienne zapytanie o kursy walut. Każde połączenie mówi o tym na ekranie, na którym je włączasz.',
 
     'lives_here' => 'Twoje dane są tutaj',
     'copy' => 'Kopiuj',

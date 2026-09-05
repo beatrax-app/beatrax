@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Mută data unei serii',
-            'desc' => 'Mută înainte următoarea apariție sau toate aparițiile ulterioare.',
+            'desc' => 'Mută următoarea apariție sau toate aparițiile ulterioare la altă dată.',
         ],
     ],
 

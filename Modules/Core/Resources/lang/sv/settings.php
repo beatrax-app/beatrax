@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Beloppsvisning',
-        'label' => 'Standardvy i transaktionslistan',
+        'label' => 'Standardvy för belopp',
         'eur_only' => 'Reglerat belopp',
         'original' => 'Ursprungligt belopp',
-        'help' => 'Du kan fortfarande växla per sida från transaktionslistan.',
+        'help' => 'Gäller transaktionslistan och summorna i översikten. Du kan fortfarande växla per sida, men bara från transaktionslistan.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Växelkurser',
         'fetch_online' => 'Hämta aktuella kurser online',
-        'online_on' => 'Kurser hämtas dagligen från ECB. Endast uppslag av valutapar — inga personuppgifter.',
+        'online_on' => 'Kurser hämtas dagligen från ECB, eller från Frankfurter om ECB inte går att nå. Endast uppslag av valutapar — inga personuppgifter.',
         'last_updated' => 'Senast uppdaterad: :date.',
-        'online_off' => 'Medföljande kurser används. Inga data lämnar den här enheten.',
+        'online_off' => 'Kurserna som redan finns används fortfarande, med den medföljande ögonblicksbilden som reserv. Inga data lämnar den här enheten.',
         'fetch_aria' => 'Hämta aktuella växelkurser online',
         'refreshing' => 'Uppdaterar…',
         'next_refresh' => 'Automatisk uppdatering: en gång om dagen',

@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Įkelti kitą išrašą',
 
     'chain' => [
-        'heading' => 'Nustatomos grandinės…',
-        'pending' => 'Eilėje. Grandinių nustatymas netrukus prasidės.',
+        'heading' => 'Grandinių nustatymas',
+        'pending' => 'Grandinių nustatymas neprasidėjo, todėl lėšų grandinės nebuvo susietos.',
         'running' => 'Siejamos lėšų grandinės ir skaidomi išrašo atsiskaitymai.',
     ],
 

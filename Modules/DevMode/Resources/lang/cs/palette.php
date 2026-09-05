@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Spustit import', 'hint' => 'Otevřít průvodce importem'],
-        'scan_email' => ['label' => 'Naskenovat e-maily', 'hint' => 'Spustit synchronizaci schránky ihned'],
+        'scan_email' => ['label' => 'Otevřít schránky', 'hint' => 'Tvoje připojené schránky'],
         'open_profile' => ['label' => 'Otevřít profil', 'hint' => 'Nastavení — účet a předvolby'],
-        'toggle_theme' => ['label' => 'Přepnout motiv', 'hint' => 'Přepínání mezi světlým a tmavým motivem'],
+        'toggle_theme' => ['label' => 'Otevřít nastavení vzhledu', 'hint' => 'Světlý, tmavý nebo systémový'],
     ],
 
     'run_command' => 'Spustit :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Vývojářský přehled', 'hint' => 'Systémové dlaždice + nedávná spuštění'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'Spouštění povolených příkazů'],
-        'audit' => ['label' => 'Vývojářský protokol auditu', 'hint' => 'Každá akce ve vývojářském režimu'],
+        'audit' => ['label' => 'Vývojářský protokol auditu', 'hint' => 'Tvoje akce ve vývojářském režimu'],
         'logs' => ['label' => 'Sledování logů', 'hint' => 'Živý stream souboru laravel-*.log'],
         'queue' => ['label' => 'Inspektor fronty', 'hint' => 'Čekající / neúspěšné / dávky'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Systémové sondy'],

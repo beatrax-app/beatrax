@@ -171,16 +171,31 @@ it('names the bundled snapshot as the source and tells the reader to enable onli
 
     Livewire::test(NetWorthCard::class)
         ->assertSee('Bundled snapshot')
-        ->assertSee('Using a bundled snapshot rate. Enable online refresh in Settings for current rates.')
-        ->assertDontSee('This rate is more than 3 days old. The next online refresh will update it.');
+        ->assertSee('Using a bundled snapshot rate more than 3 days old. Enable online refresh in Settings for current rates.')
+        ->assertDontSee('The next online refresh will update it.');
 })->group('phase-1');
 
-it('keeps the age-based stale note for an old rate that did NOT come from the bundled snapshot', function (): void {
+it('keeps the age-based stale note for an old online rate once online fetching is on', function (): void {
+    $this->user->update(['fx_online_enabled' => true]);
     nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', 'ecb');
 
     Livewire::test(NetWorthCard::class)
         ->assertSee('This rate is more than 3 days old. The next online refresh will update it.')
-        ->assertDontSee('Using a bundled snapshot rate. Enable online refresh in Settings for current rates.');
+        ->assertDontSee('online refresh is off');
+})->group('phase-1');
+
+// fx:refresh-rates dispatches nothing for a reader with online fetching off, so
+// the note that a refresh is coming named a job no scheduler would ever run for
+// them. The rate keeps its `ecb` source after the toggle goes off, which is why
+// the source alone cannot tell the two notes apart.
+it('does not promise a refresh to a reader who has online fetching off', function (): void {
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', 'ecb');
+
+    Livewire::test(NetWorthCard::class)
+        ->assertSee('This rate is more than 3 days old, and online refresh is off. Turn it on in Settings to update it.')
+        ->assertDontSee('The next online refresh will update it.');
 })->group('phase-1');

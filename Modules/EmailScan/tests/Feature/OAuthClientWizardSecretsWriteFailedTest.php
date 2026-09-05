@@ -52,7 +52,7 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
         ->set('clientSecret', 'GOCSPX-secret-value')
         ->set('publishedConfirmed', true)
         ->call('submit')
-        ->assertSet('errorMessage', 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.')
+        ->assertSet('errorMessage', 'Could not save your OAuth client — writing it to the database on this device failed. Try again.')
         // Still mounted, so nothing bubbled.
         ->assertSet('provider', 'gmail')
         // Wiped on purpose: re-pasting beats round-tripping the secret through

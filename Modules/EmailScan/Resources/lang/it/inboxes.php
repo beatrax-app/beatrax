@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Ricollega',
     'disconnect' => 'Disconnetti',
+    'disconnect_confirm' => 'Disconnettere :email? Questo rimuove le credenziali salvate di questa casella, la sua cronologia di scansione e i mittenti che hai aggiunto o ignorato. Le ricevute già archiviate in Beatrax non vengono modificate. Ricollegandola riparte una scansione da zero.',
     'scan_now' => 'Scansiona ora',
     'scan_in_progress_title' => 'Scansione già in corso',
 

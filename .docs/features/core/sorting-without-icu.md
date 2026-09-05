@@ -142,13 +142,15 @@ Three suites hold it:
   the Danish `aa`, the Turkish dotless ı, the Hungarian digraphs, the
   Lithuanian own-letters, and a name that is another name's prefix.
 - `LocaleCollatorTest` keeps the desktop contract, and its "answers each reader
-  in their own alphabet" case now asserts both arms.
+  in their own alphabet" case asserts both arms.
 
-The trap the old tests fell into: `LocaleCollatorTest`'s *"answers each reader
-in their own alphabet"* built a `Collator` in all five cases, and
-`LocaleCollatorFoldIsPlatformIndependentTest`'s Greek case asserted only
-`not->toBe(0)` — that the fold is injective, never that the order is Greek. A
-name-ordering test that does not assert an **order** cannot fail.
+A name-ordering test that does not assert an **order** cannot fail. Asserting
+only that two names differ — `not->toBe(0)` — tests that the fold is
+injective, which a fold mapping every Greek name to the empty string still
+satisfies. So the Greek case in `LocaleCollatorWithoutIcuTest` reads `Ωμέγα`
+after `Άλφα` and `Άλφα` before `Βήτα`, and the `LocaleCollatorTest` case above
+asserts the fallback arm beside the collator one rather than building a
+`Collator` in every branch.
 
 ## Cost
 

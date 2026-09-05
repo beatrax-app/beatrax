@@ -144,8 +144,10 @@ Its body line was `notifications::copy.body.savings_prompt`, whose whole English
 value was `':message'`, and `:message` arrived as a plain string —
 `SavingsInsightsQuery::render()` had already resolved one of three
 `drift-alerts::savings.insight.*_message` lines and formatted the monthly amount
-into it. That query runs inside `EmitSavingsPromptsJob`, an hourly job with no
-reader, so the sentence froze in the worker's language and the amount froze
+into it. That query runs inside `EmitSavingsPromptsJob`, a queued job with no
+reader — dispatched once per local day by the `notifications:daily-triggers`
+pass, which `DailyLocalWindow` lets through on the first tick at or after
+09:15 — so the sentence froze in the worker's language and the amount froze
 under the worker's grouping marks.
 
 A plain string is a legal replacement value and always was — that is what a

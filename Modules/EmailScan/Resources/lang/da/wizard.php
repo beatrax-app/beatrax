@@ -11,7 +11,7 @@ return [
     'cancel' => 'Annullér',
     'save_connect' => 'Gem og forbind',
 
-    'secret_help' => 'De gemmes i en lokal konfigurationsfil uden for databasen med restriktive rettigheder og forlader aldrig denne enhed.',
+    'secret_help' => 'Gemmes krypteret i databasen på denne enhed. Beatrax sender den kun til Google eller Microsoft for at hente og forny dit adgangstoken — ingen andre steder hen.',
 
     'gmail' => [
         'step1_title' => 'Åbn Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Angiv et Google OAuth-klient-id, der slutter på .apps.googleusercontent.com.',
         'google_secret' => 'Angiv en Google OAuth-klienthemmelighed, der begynder med GOCSPX-.',
         'google_published' => 'Bekræft, at du har sat din OAuth-samtykkeskærm til "In production".',
-        'write_failed' => 'Din OAuth-klient kunne ikke gemmes på disken — kontrollér rettighederne til din secrets-mappe, og prøv igen.',
+        'write_failed' => 'Din OAuth-klient kunne ikke gemmes — skrivningen til databasen på denne enhed mislykkedes. Prøv igen.',
     ],
 ];

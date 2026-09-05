@@ -90,21 +90,36 @@ Modules/Ingestion/
 ## Public API
 
 - **Contracts/**
-  - `SourceAdapter::parse(SplFileInfo $file):
-    iterable<SourceTransactionDto>`. Stream-based.
-  - `AccountResolver::resolve(string $iban, User $user):
-    AccountResolution`. Concrete impl in `Ledger`.
+  - `SourceAdapter::format(): string`,
+    `SourceAdapter::parse(string $localPath, AccountResolver
+    $accounts): Generator<int, SourceTransactionDto>` and
+    `SourceAdapter::statementMetadata(): ?StatementSummaryData`.
+    The parse is stream-based: the adapter yields rows and the
+    statement metadata is only complete once the generator has
+    run to its terminator.
+  - `AccountResolver::resolve(string $iban): AccountResolution`.
+    The resolver is already bound to one user — the concrete
+    `EloquentAccountResolver` takes the `User` in its constructor —
+    and it lives in `Import`, not `Ledger`.
 - **DTOs/**
   - `SourceTransactionDto` — close-to-source row shape with
     every field the adapter could observe (amount, currency,
     posted-at, settled-at, counterparty name + IBAN,
     description, source-specific `raw_payload` blob).
-  - `SniffResult` — `(detectedCharset, headerSignature,
-    mismatchFlags)`.
+  - `SniffResult` — a `Spatie\LaravelData\Data` carrying
+    `(string $format, string $delimiter, bool $hasHeader,
+    string $encoding, int $columnCount)`. It records what the
+    declared format says the file is; it carries no mismatch
+    flags, because a file that disagrees never yields a result.
   - `AccountResolution` — discriminated union of
     `KnownAccount` + `UnknownAccount`.
 - **Services/**
-  - `HeaderSniffer::sniff(SplFileInfo $file): SniffResult`.
+  - `HeaderSniffer::sniff(string $localPath, string
+    $declaredFormat): SniffResult`. The declared id is the input,
+    never an output: the sniffer reads the head of the file to
+    derive the delimiter, header presence and column count, and
+    throws `SniffMismatchException` when the file does not match
+    the format the user picked.
   - `SourceAdapterRegistry::for(string $formatId):
     SourceAdapter`. Throws `UnsupportedFormatException` on
     unknown id.

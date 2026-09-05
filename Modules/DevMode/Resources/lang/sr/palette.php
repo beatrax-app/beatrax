@@ -37,12 +37,16 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Pokreni uvoz', 'hint' => 'Otvori čarobnjak za uvoz'],
-        'scan_email' => ['label' => 'Skeniraj e-poštu sada', 'hint' => 'Odmah pokreni sinhronizaciju sandučeta'],
+        // i18n-review: sr · action.scan_email — «sandučad» is the collective plural
+        // of «sanduče», which this file used only in the singular before. Confirm a
+        // Serbian reader says that for mailboxes rather than «sandučići»; the desktop
+        // File menu carries the same word and moves with it.
+        'scan_email' => ['label' => 'Otvori sandučad', 'hint' => 'Tvoja povezana sandučad'],
         // i18n-review: sr · action.open_profile.hint — «podešavanja» covers both Settings and
         // preferences here, so the second half says «opcije». Confirm that reads as
         // preferences rather than as feature options.
         'open_profile' => ['label' => 'Otvori profil', 'hint' => 'Podešavanja — nalog i opcije'],
-        'toggle_theme' => ['label' => 'Promeni temu', 'hint' => 'Prebaci između svetle i tamne teme'],
+        'toggle_theme' => ['label' => 'Otvori podešavanja izgleda', 'hint' => 'Svetla, tamna ili sistemska'],
     ],
 
     'run_command' => 'Pokreni :command',
@@ -53,7 +57,7 @@ return [
         // konzole», which is clearer but long for a palette row.
         'overview' => ['label' => 'Dev pregled', 'hint' => 'Sistemske pločice + nedavna pokretanja'],
         'artisan' => ['label' => 'Artisan pokretač', 'hint' => 'Pokreni komande sa liste dozvoljenih'],
-        'audit' => ['label' => 'Dev revizioni log', 'hint' => 'Svaka radnja u dev režimu'],
+        'audit' => ['label' => 'Dev revizioni log', 'hint' => 'Tvoje radnje u dev režimu'],
         // i18n-review: sr · nav.logs — sr has no settled noun for a log tailer, so the
         // label names the act of following the file and the hint carries «uživo» from
         // logs.php, so the pair reads as one feature.

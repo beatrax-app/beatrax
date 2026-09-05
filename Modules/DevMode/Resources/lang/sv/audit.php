@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Granskningslogg',
-    'subtitle' => 'Varje kommando, köåtgärd och SQL-fråga som körts via Dev Console.',
+    'subtitle' => 'De kommandon, köåtgärder och SQL-frågor som du har kört via Dev Console.',
     'clear_all' => 'Rensa allt',
-    'clear_all_confirm' => 'Rensa varje post i granskningsloggen? Det går inte att ångra.',
+    'clear_all_confirm' => 'Rensa varje post i granskningsloggen som du har skapat? Det går inte att ångra.',
     'filter_tier' => 'Nivå',
     'filter_all' => 'Alla',
     'filter_command' => 'Kommando',

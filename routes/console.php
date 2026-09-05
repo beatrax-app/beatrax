@@ -311,12 +311,12 @@ Schedule::command('notifications:prune')
     ->daily()
     ->withoutOverlapping(30);
 
-// Daily open-banking auto-sync. It used to run at 06:00 to sit ahead of the FX
-// refresh and the notification pass; it still does, defined after the FX entry
-// and firing hours before the 09:15 window. Only connections that are BOTH
-// enabled AND hold a non-expired consent are enumerated — the "no-op when OB
-// is off or consent has expired" requirement is enforced at that query, not
-// solely inside the job.
+// Daily open-banking auto-sync, at midnight local: no hour is named, because
+// the phone runner selects from a fixed interval map and an hour could not
+// survive onto a device. It still lands ahead of the FX refresh and the 09:15
+// notification window. Only connections that are BOTH enabled AND hold a
+// non-expired consent are enumerated — the "no-op when OB is off or consent
+// has expired" requirement is enforced at that query, not inside the job.
 Schedule::command('open-banking:sync-due')
     ->name('open-banking.daily-sync')
     ->daily()

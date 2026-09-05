@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Registo de auditoria',
-    'subtitle' => 'Todos os comandos, ações de fila e consultas SQL executados a partir da Dev Console.',
+    'subtitle' => 'Os comandos, ações de fila e consultas SQL que executaste a partir da Dev Console.',
     'clear_all' => 'Limpar tudo',
-    'clear_all_confirm' => 'Limpar todas as entradas do registo de auditoria? Isto não pode ser anulado.',
+    'clear_all_confirm' => 'Limpar todas as entradas do registo de auditoria que registaste? Isto não pode ser anulado.',
     'filter_tier' => 'Nível',
     'filter_all' => 'Todos',
     'filter_command' => 'Comando',

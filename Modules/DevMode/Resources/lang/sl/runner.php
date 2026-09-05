@@ -53,31 +53,31 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Varnostno kopiraj zbirko podatkov', 'description' => 'Zapiše kopijo SQLite s časovnim žigom v mapo z varnostnimi kopijami.'],
-        'doctor' => ['label' => 'Zaženi doctor', 'description' => 'Sporoči nameščene različice PHP / Composer / SQLite in preveri najnižje zahteve.'],
-        'failed_jobs' => ['label' => 'Počisti neuspela opravila', 'description' => 'Odstrani razrešene vnose iz tabele failed_jobs, ki jo upravlja Laravel.'],
+        'db_backup' => ['label' => 'Varnostno kopiraj zbirko podatkov', 'description' => 'Zapiše kopijo SQLite s časovnim žigom v mapo z varnostnimi kopijami, razen če se zbirka podatkov od zadnje kopije ni spremenila. Ohranjena kopija odstrani tudi starejše varnostne kopije po pravilu hrambe.'],
+        'doctor' => ['label' => 'Zaženi doctor', 'description' => 'Zažene nabor operativnih preverjanj in za vsako vrstico sporoči pass / warn / fail. Vrstica warn ali fail da neničelno izhodno kodo.'],
+        'failed_jobs' => ['label' => 'Počisti neuspela opravila', 'description' => 'Iz tabele failed_jobs, ki jo upravlja Laravel, izbriše vsako vrstico, starejšo od 30 dni, ne glede na to, ali je bilo opravilo kdaj ponovljeno.'],
         'cache_clear' => ['label' => 'Počisti predpomnilnik', 'description' => 'Izprazni predpomnilnik aplikacije.'],
         // i18n-review: sl · command.route_list — «pot» is already this locale's word
         // for a filesystem path in system.php, so an HTTP route lands on the same
         // noun. A native should say whether «poti HTTP» keeps the two apart.
         'route_list' => ['label' => 'Izpiši poti HTTP', 'description' => 'Izpiše vsako registrirano pot HTTP na stdout.'],
-        'config_show' => ['label' => 'Prikaži konfiguracijo', 'description' => 'Izpiše vrednost pri navedenem konfiguracijskem ključu s pikami.'],
+        'config_show' => ['label' => 'Prikaži konfiguracijo', 'description' => 'Izpiše celotno konfiguracijsko datoteko ali vrednost ključa s pikami v njej.'],
         // i18n-review: sl · command.view_clear — «pogled» is taken by the palette's
         // own views, and the Blade template cache reuses it here. Confirm that the
         // two readings do not collide on this row.
         'view_clear' => ['label' => 'Počisti predpomnilnik pogledov', 'description' => 'Izprazni predpomnilnik prevedenih pogledov Blade.'],
-        'queue_retry' => ['label' => 'Znova poskusi neuspela opravila', 'description' => 'Znova poskusi eno opravilo (po id) ali vsako neuspelo opravilo (prazen id).'],
-        'rederive_fingerprints' => ['label' => 'Znova izpelji prstne odtise', 'description' => 'Znova izračuna prstni odtis vsake transakcije z veljavno različico normalizacije.'],
+        'queue_retry' => ['label' => 'Znova poskusi neuspela opravila', 'description' => 'Znova poskusi eno neuspelo opravilo po id ali vsa neuspela opravila, če navedeš `all`.'],
+        'rederive_fingerprints' => ['label' => 'Znova izpelji prstne odtise', 'description' => 'Znova izračuna prstni odtis vsake transakcije, ki je še pod veljavno različico normalizacije. Zagon od tu sporoči število in ničesar ne zapiše.'],
         'db_restore' => ['label' => 'Obnovi zbirko podatkov', 'description' => 'Trenutno zbirko podatkov zamenja z navedeno datoteko varnostne kopije.'],
         'regenerate_recovery_codes' => ['label' => 'Znova ustvari kode za obnovitev', 'description' => 'Znova ustvari 10 enkratnih kod za obnovitev za uporabnika.'],
         'grant_dev' => ['label' => 'Dodeli razvijalski dostop', 'description' => 'Za navedenega uporabnika nastavi is_developer=true.'],
-        'install' => ['label' => 'Zaženi namestitev', 'description' => 'Idempotentna prva nastavitev. Ponovni zagon na že nastavljeni namestitvi je uničujoč.'],
+        'install' => ['label' => 'Zaženi namestitev', 'description' => 'Idempotentna prva nastavitev: shema zbirke podatkov, referenčni podatki in edini uporabniški račun. Ponovni zagon na že nastavljeni namestitvi znova potrdi obstoječi račun in gesla ne spremeni.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Dejanje'],
         'config' => ['label' => 'Konfiguracijski ključ', 'help' => 'Konfiguracijska datoteka ali ključ s pikami za izpis, npr. `app` ali `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'Id opravila', 'help' => 'Pusti prazno, da znova poskusiš vsako neuspelo opravilo; z navedenim id-jem znova poskusiš en sam vnos.', 'placeholder' => 'vse (ali določen id)'],
+        'id' => ['label' => 'Id opravila', 'help' => 'Vpiši `all`, da znova poskusiš vsako neuspelo opravilo, ali id opravila za en sam vnos. Prazno polje ne poskusi ničesar.', 'placeholder' => 'all (ali določen id)'],
         'queue' => ['label' => 'Ime čakalne vrste', 'help' => 'Izbirni filter čakalne vrste; privzeto vse vrste.', 'placeholder' => 'default'],
         'path' => ['label' => 'Pot do datoteke varnostne kopije', 'help' => 'Trenutno zbirko podatkov zamenja z datoteko na navedeni poti.', 'placeholder' => '/pot/do/backup.sqlite'],
         'username' => ['label' => 'Uporabniško ime', 'placeholder' => 'alice'],

@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Voltar a ligar',
     'disconnect' => 'Desligar',
+    'disconnect_confirm' => 'Desligar :email? Isto remove as credenciais guardadas desta caixa, o seu histórico de análise e os remetentes que adicionaste ou dispensaste. Os recibos já arquivados no Beatrax não são afetados. Voltar a ligar inicia uma análise de raiz.',
     'scan_now' => 'Analisar agora',
     'scan_in_progress_title' => 'Já há uma análise em curso',
 

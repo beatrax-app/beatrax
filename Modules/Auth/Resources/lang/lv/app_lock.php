@@ -37,6 +37,11 @@ return [
     'keep_biometric' => 'Paturēt biometriju',
 
     'auto_lock' => 'Automātiski bloķēt pēc',
+    // i18n-review: lv · auto_lock_note — ":window" is core::durations.seconds and
+    // reads "30 sekundes"; "30 sekunžu laikā" needs a genitive the shared key
+    // cannot supply, so the window became "tas aizņem ne vairāk kā". Whether
+    // that or a "laikā" rewrite reads better wants a native eye.
+    'auto_lock_note' => 'Beatrax bloķējas pēc šāda dīkstāves laika — un ātrāk, ja to pamet: pārslēgšanās uz citu lietotni vai loga paslēpšana vai aizvēršana bloķē Beatrax neatkarīgi no šī iestatījuma, un tas aizņem ne vairāk kā :window.',
     'idle_1' => '1 minūte',
     'idle_5' => '5 minūtes',
     'idle_15' => '15 minūtes',

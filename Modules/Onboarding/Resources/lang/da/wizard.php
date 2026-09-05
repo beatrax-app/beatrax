@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Guiden kunne ikke afgøre, hvilket trin der er aktivt. Brug Fortsæt senere → for at afslutte, så bliver det rettet, næste gang siden indlæses.',
 
     'privacy' => 'Dine data bliver på denne enhed',
+    'privacy_connector' => 'Dine data bliver på denne enhed. Dette trin forbinder din indbakke med Google eller Microsoft.',
     'need_help' => 'Brug for hjælp?',
     'need_help_aria' => 'Brug for hjælp? Åbner Beatrax issues-siden på GitHub',
 ];

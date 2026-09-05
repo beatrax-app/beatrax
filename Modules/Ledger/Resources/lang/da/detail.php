@@ -97,7 +97,7 @@ return [
         'heading' => 'Slet transaktionen',
         'help' => 'Fjerner denne transaktion permanent. Handlingen kan ikke fortrydes.',
         'button' => 'Slet',
-        'confirm_prompt' => 'Slet denne transaktion? Note, opdeling og skattemærker følger med.',
+        'confirm_prompt' => 'Slet denne transaktion? Note, opdeling, skattemærker og et eventuelt bidrag til et opsparingsmål følger med. Er den det ene ben i en overførsel, bliver det andet ben omklassificeret.',
         'confirm' => 'Ja, slet',
         'cancel' => 'Annullér',
     ],

@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Naloži še en izpisek',
 
     'chain' => [
-        'heading' => 'Razreševanje verig…',
-        'pending' => 'V čakalni vrsti. Razreševanje verig se bo kmalu začelo.',
+        'heading' => 'Razreševanje verig',
+        'pending' => 'Razreševanje verig se ni začelo, zato verige financiranja niso bile povezane.',
         'running' => 'Povezovanje verig financiranja in razstavljanje poravnav z izpiska.',
     ],
 

@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Bestand',
         'file_import' => 'Bestand importeren…',
-        'file_scan_email' => 'E-mail nu scannen',
+        'file_scan_email' => 'E-mailpostvakken…',
         'help' => 'Help',
         'help_github_repo' => 'GitHub-repo',
         'help_report_issue' => 'Een probleem melden',
         'help_about' => 'Over Beatrax',
         'developer_submenu' => 'Ontwikkelaar',
         'dev_open_console' => 'Dev Console openen',
-        'dev_run_command' => '⌘K Voer een opdracht uit',
+        'dev_run_command' => 'Voer een opdracht uit…',
     ],
 
     'worker_alert' => [

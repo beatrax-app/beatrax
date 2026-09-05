@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Käivita import', 'hint' => 'Ava impordiviisard'],
-        'scan_email' => ['label' => 'Skanni e-posti kohe', 'hint' => 'Käivita postkasti sünkroonimine kohe'],
+        'scan_email' => ['label' => 'Ava postkastid', 'hint' => 'Sinu ühendatud postkastid'],
         'open_profile' => ['label' => 'Ava profiil', 'hint' => 'Seaded — konto ja eelistused'],
-        'toggle_theme' => ['label' => 'Vaheta teemat', 'hint' => 'Lülita heleda ja tumeda teema vahel'],
+        'toggle_theme' => ['label' => 'Ava välimuse seaded', 'hint' => 'Hele, tume või süsteemne'],
     ],
 
     'run_command' => 'Käivita :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Arenduse ülevaade', 'hint' => 'Süsteemiplaadid + hiljutised käivitused'],
         'artisan' => ['label' => 'Artisani käivitaja', 'hint' => 'Käivita lubatud käsud'],
-        'audit' => ['label' => 'Arendusrežiimi auditilogi', 'hint' => 'Iga arendusrežiimi toiming'],
+        'audit' => ['label' => 'Arendusrežiimi auditilogi', 'hint' => 'Sinu arendusrežiimi toimingud'],
         'logs' => ['label' => 'Logide jälgija', 'hint' => 'laravel-*.log otsevoog'],
         'queue' => ['label' => 'Järjekorra inspektor', 'hint' => 'Ootel / ebaõnnestunud / partiid'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Süsteemikontrollid'],

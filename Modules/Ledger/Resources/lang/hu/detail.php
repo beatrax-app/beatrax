@@ -97,7 +97,7 @@ return [
         'heading' => 'Tranzakció törlése',
         'help' => 'Véglegesen eltávolítja ezt a tranzakciót. A művelet nem vonható vissza.',
         'button' => 'Törlés',
-        'confirm_prompt' => 'Törlöd ezt a tranzakciót? A jegyzete, felosztása és adócímkéi is eltűnnek.',
+        'confirm_prompt' => 'Törlöd ezt a tranzakciót? A jegyzete, felosztása, adócímkéi és a megtakarítási célhoz számított hozzájárulás is eltűnik. Ha egy átutalás egyik fele, a másik fél újrabesorolást kap.',
         'confirm' => 'Igen, törlöm',
         'cancel' => 'Mégse',
     ],

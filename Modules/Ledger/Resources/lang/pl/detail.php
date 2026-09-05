@@ -97,7 +97,7 @@ return [
         'heading' => 'Usuń transakcję',
         'help' => 'Trwale usuwa tę transakcję. Tej operacji nie można cofnąć.',
         'button' => 'Usuń',
-        'confirm_prompt' => 'Usunąć tę transakcję? Znikną z nią notatka, podział i znaczniki podatkowe.',
+        'confirm_prompt' => 'Usunąć tę transakcję? Znikną z nią notatka, podział, znaczniki podatkowe i każde zaliczenie na cel oszczędnościowy. Jeśli to jedna strona przelewu, druga strona dostanie nową klasyfikację.',
         'confirm' => 'Tak, usuń',
         'cancel' => 'Anuluj',
     ],

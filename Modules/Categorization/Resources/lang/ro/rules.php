@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Regulile rămân pe acest dispozitiv. Nu sunt partajate cu celelalte dispozitive ale tale.',
 
     'reapply' => 'Reaplică regulile pe istoric',
-    'reapply_confirm' => 'Reaplici toate regulile pe tot istoricul tău? Fiecare categorie, contraparte, notă și etichetă fiscală pusă de o regulă este rescrisă. Ce ai setat manual rămâne, la fel și tot ce se află pe un extras reconciliat. Nimic nu aduce înapoi valorile vechi.',
+    'reapply_confirm' => 'Reaplici toate regulile pe tot istoricul tău? Fiecare categorie, contraparte, notă și etichetă fiscală pusă de o regulă este rescrisă. Ce ai setat manual rămâne, la fel și tot ce se află pe un extras reconciliat sau pe o tranzacție pe care ai împărțit-o. Nimic nu aduce înapoi valorile vechi.',
     'reapplying' => 'Se reaplică…',
     'new_rule' => 'Regulă nouă',
 

@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Décaler la date d\'une série',
-            'desc' => 'Décale la prochaine occurrence ou toutes les suivantes.',
+            'desc' => 'Déplace la prochaine occurrence, ou toutes les suivantes, à une autre date.',
         ],
     ],
 

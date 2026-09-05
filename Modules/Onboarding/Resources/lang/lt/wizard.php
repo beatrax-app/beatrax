@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Vedikliui nepavyko nustatyti aktyvaus žingsnio. Pasirink Tęsti vėliau →, kad išeitum, ir kitą kartą atvėrus viskas bus atkurta.',
 
     'privacy' => 'Tavo duomenys lieka šiame įrenginyje',
+    'privacy_connector' => 'Tavo duomenys lieka šiame įrenginyje. Šis žingsnis prijungia tavo pašto dėžutę prie Google arba Microsoft.',
     'need_help' => 'Reikia pagalbos?',
     'need_help_aria' => 'Reikia pagalbos? Atveria Beatrax problemų puslapį GitHub',
 ];

@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Onboarding\Internal\Services\WizardStepRegistry')
 {{--
     Parent view for the first-run setup wizard. Renders the wizard
     chrome (top brand row + progress dots + resume-later affordance),
@@ -6,6 +7,11 @@
     footer privacy pill + help link. The active step is mounted as a
     nested Livewire component so each step owns its own state without
     contaminating the parent.
+
+    The footer sits outside the step switch, so its privacy pill renders
+    on every step. Which line it renders comes from the registry's
+    reachesAThirdParty(), because the blanket "your data stays on this
+    device" was pinned under the "Authorize with Gmail" button too.
 
     The wizard registers nine step keys: two static bookend steps
     (welcome + done), five connector/import steps (connect-bank,
@@ -163,9 +169,14 @@
     </main>
 
     <footer class="wiz-footer">
+        @php
+            $privacyLine = app(WizardStepRegistry::class)->reachesAThirdParty($currentStepKey)
+                ? Lang::get('onboarding::wizard.privacy_connector')
+                : Lang::get('onboarding::wizard.privacy');
+        @endphp
         <span class="privacy-pill">
             <span class="privacy-pill-dot" aria-hidden="true"></span>
-            {{ Lang::get('onboarding::wizard.privacy') }}
+            {{ $privacyLine }}
         </span>
         <a
             class="wiz-help-link tap-link"

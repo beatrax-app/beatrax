@@ -52,9 +52,12 @@ Position itself never reads that preference — it only accepts the resolved
 cadence as a constructor argument, keeping this module ignorant of
 Notifications' internals. The enum lives in `Modules\Core\Public\Enums`
 rather than beside the preference row it is stored in, because
-`pinnedTriggerModulesNeverImportNotifications` forbids the import that would
-otherwise be needed here; `Core` is the module both already depend on, so the
-shared word costs no edge.
+`noTriggerModuleImportsNotifications` forbids the import that would otherwise
+be needed here. That gate covers five modules — `Recurring`, `Budgets`,
+`DriftAlerts`, `Position` and `Ledger` — and fails the build on any mention
+of the `Modules\Notifications\` namespace inside them, comments stripped
+first. `Core` is the module both already depend on, so the shared word costs
+no edge.
 
 - `DigestCadence::Off` short-circuits before any work; nothing is dispatched.
 - The occurrence key is derived from the injected `Clock` (never `now()`

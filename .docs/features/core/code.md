@@ -129,17 +129,19 @@ Modules/Core/
     `DriftAlerts`, `Recurring` and `Anomaly`.
 - **Scopes/**
   - `UserScope::apply($builder, $model)` — `where('user_id',
-    CurrentUser::id())`. Skipped when the auth factory is unbound (CLI
-    - tests not in HTTP context).
+    CurrentUser::id())`. Skipped when the auth factory is unbound, as
+    it is under the CLI and in tests outside an HTTP context.
 - **Services/**
   - `SystemClock` — production `Clock`.
   - `CurrentUserService` — production `CurrentUser`. Throws
     `NotAuthenticatedException` from `resolveUser()` when no guard
     user exists.
-  - `UserDataPathService::databaseFile()`, `appPath()`,
-    `appRelative($name)`, `storagePath($subdir)`, `backupsPath()`.
-    The single sanctioned `base_path()` caller; the
-    `NATIVEPHP_STORAGE_PATH` env var redirects every accessor.
+  - `UserDataPathService::databaseFile()`, `appPath($relative)`,
+    `storageBase()`, `backupsPath()`, `secretsPath()`,
+    `frameworkPath($sub)`, `logsFile()`, `publicPath($relative)`,
+    `projectPath($relative)`. The single sanctioned `base_path()`
+    caller; the `NATIVEPHP_STORAGE_PATH` env var redirects every
+    accessor.
   - `DevConsoleBuildGate::permits()` — whether this build carries the
     Dev Console at all. `local` and `testing` are the development
     environments, held as an allow-list so no other spelling of a
@@ -352,5 +354,6 @@ Migrations:
 `CoreServiceProvider::boot()`:
 
 - Loads migrations, web/console routes, views.
-- Registers five Livewire components under the `core.*` namespace.
-- Registers the five CLI commands when running in console.
+- Registers this module's Livewire components under the `core.*`
+  namespace.
+- Registers its console commands when running in console.

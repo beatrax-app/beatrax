@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Vill du märka :count till från',
     'batch_after' => '?',
-    'batch_confirm' => 'Vill du märka alla återstående transaktioner från :name som avdragsgilla? Var och en får den här kategorin och den här anteckningen. Märkningen kan bara tas bort en transaktion i taget.',
+    'batch_confirm' => 'Vill du märka :count transaktion till från :name för beskattningsåret :year som avdragsgill? Den får den här kategorin och den här anteckningen. Transaktioner på en slutförd avstämning lämnas orörda, och märkningen kan bara tas bort en transaktion i taget.|Vill du märka :count transaktioner till från :name för beskattningsåret :year som avdragsgilla? Var och en får den här kategorin och den här anteckningen. Transaktioner på en slutförd avstämning lämnas orörda, och märkningen kan bara tas bort en transaktion i taget.',
     'batch_tag_all' => 'Märk alla',
     'batch_dismiss' => 'Stäng',
 ];

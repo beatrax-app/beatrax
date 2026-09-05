@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Regler stannar på den här enheten. De delas inte med dina andra enheter.',
 
     'reapply' => 'Tillämpa regler på historiken igen',
-    'reapply_confirm' => 'Vill du tillämpa alla regler på hela din historik igen? Varje kategori, motpart, anteckning och skatteetikett som en regel har satt skrivs över. Det du har satt för hand står kvar, och det gör även allt på ett avstämt kontoutdrag. Ingenting återställer de gamla värdena.',
+    'reapply_confirm' => 'Vill du tillämpa alla regler på hela din historik igen? Varje kategori, motpart, anteckning och skatteetikett som en regel har satt skrivs över. Det du har satt för hand står kvar, och det gör även allt på ett avstämt kontoutdrag eller på en transaktion som du har delat upp. Ingenting återställer de gamla värdena.',
     'reapplying' => 'Tillämpar igen…',
     'new_rule' => 'Ny regel',
 

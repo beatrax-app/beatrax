@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Prieiga tik skaitymui',
         'reads_label' => 'Beatrax skaito',
         'reads_sub' => 'Tik kvitus',
-        'token_label' => 'Prieigos raktas lieka įrenginyje',
-        'token_sub' => 'Šifruotas failas',
+        'token_label' => 'Prieigos raktas šifruojamas',
+        'token_sub' => 'Vietinėje duomenų bazėje',
     ],
 
     'authorize_gmail' => 'Suteikti prieigą per Gmail',

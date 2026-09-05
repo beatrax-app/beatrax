@@ -97,7 +97,7 @@ return [
         'heading' => 'Izbriši transakcijo',
         'help' => 'Trajno odstrani to transakcijo. Tega dejanja ni mogoče razveljaviti.',
         'button' => 'Izbriši',
-        'confirm_prompt' => 'Izbrišem to transakcijo? Z njo gredo opomba, razdelitev in davčne oznake.',
+        'confirm_prompt' => 'Izbrišem to transakcijo? Z njo gredo opomba, razdelitev, davčne oznake in morebitni prispevek k varčevalnemu cilju. Če je to ena stran prenosa, se druga stran prerazvrsti.',
         'confirm' => 'Da, izbriši',
         'cancel' => 'Prekliči',
     ],

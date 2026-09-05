@@ -62,18 +62,36 @@ Practical recipes for exercising the `Core` module in isolation.
 
 ## Contract / arch invariants
 
-Several invariants in `tests/Contracts/` are anchored by `Core`:
+What `tests/Contracts/` holds for `Core`, and what it does not:
 
-- `noRawPathHelpersOutsidePathService` — only
+- `noStoragePathHardCodedOutsideUserDataPathService` — only
   `UserDataPathService` may call `base_path()` /
-  `database_path()` / `storage_path()`.
-- `everyUserScopedModelUsesBelongsToUser` — every Eloquent model
-  whose table has a `user_id` column must use the trait.
+  `database_path()` / `storage_path()`, and only it may spell a
+  storage literal (`database.sqlite`, `storage/app/`) out. It
+  reads `Modules`, `app` and `config`, skipping tests and
+  migrations; Blade files are exempt from the literal half,
+  because a `<code>` tag legitimately shows a reader a path.
 - `noSecretsInLivewireSnapshot` — backed by `SecretsColumnRegistry`.
   Adding a new secret column without registering it leaves the
   invariant blind.
-- `noUnsanctionedSystemAlertAcknowledgements` — only
-  `AcknowledgeSystemAlert` may write `system_alerts.acknowledged_at`.
+- Nothing sweeps Eloquent models for the `BelongsToUser` trait.
+  The two checks that exist sit on either side of it:
+  `tests/Contracts/UserIdColumnArchTest.php` fails a table
+  reaching the migrated schema with neither a `user_id` column nor
+  a stated reason it has none — a table that never grew one can
+  never be scoped to an account, and sync would carry its rows to
+  a paired device with nobody to attach them to — and
+  `tests/Contracts/UserScopeDropRequiresUserIdArchTest.php` fails
+  a query that drops the user scope without re-asserting the owner.
+  `Modules/Core/tests/Unit/BelongsToUserTraitTest.php` covers the
+  trait's own two behaviours and nothing wider.
+- `tests/Contracts/SystemAlertWriterSeamArchTest.php` requires
+  every user-owned alert to be *raised* through
+  `SystemAlertWriter`. Acknowledging one is not gated:
+  `AcknowledgeSystemAlert` is the reader's path, and
+  `ConnectInboxFromGrant::acknowledgeReconsentAlerts()` clears
+  the reconsent banner the same way when an inbox is
+  reconnected.
 
 ## How to run the suite for just this module
 
@@ -138,18 +156,25 @@ and the assertion — see
 
 - **`BelongsToUser` is the only sanctioned way for a domain model to
   scope to the user.** The `UserScope` global scope is the single
-  read-side guard; every authenticated query inherits it. The arch
-  invariant `everyUserScopedModelUsesBelongsToUser` enforces the trait
-  composition. (See [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).)
+  read-side guard; every authenticated query inherits it. No test
+  sweeps the models for the trait, so composing it is a review
+  convention; what the build fails on is a table reaching the schema
+  with no `user_id` and no stated reason
+  (`tests/Contracts/UserIdColumnArchTest.php`), and a query dropping
+  the scope without re-asserting the owner
+  (`tests/Contracts/UserScopeDropRequiresUserIdArchTest.php`). (See [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).)
 - **`CurrentUser::user()` never returns `null`.** If no guard user is
   bound, the service throws `NotAuthenticatedException`; downstream
   code can assume a real `User` instance after a successful resolve.
 - **`UserDataPathService` is the SOLE sanctioned caller of
-  `base_path()` in production code.** The arch invariant
-  `noRawPathHelpersOutsidePathService` blocks every other call site,
-  so a packaged build (where `NATIVEPHP_STORAGE_PATH` redirects the
-  storage root) cannot land a stray path that escapes the redirect.
-  (`tests/Feature/UserDataPathResolutionTest.php`)
+  `base_path()` in production code, and the only file allowed to
+  spell a storage path out.** The arch invariant
+  `noStoragePathHardCodedOutsideUserDataPathService` blocks every
+  other call site and every other `database.sqlite` / `storage/app/`
+  literal, so a packaged build (where `NATIVEPHP_STORAGE_PATH`
+  redirects the storage root) cannot land a stray path that escapes
+  the redirect.
+  (`Modules/Core/tests/Feature/UserDataPathResolutionTest.php`)
 - **`EnsureAppKey::run()` runs `key:generate --force` exactly once per
   install.** The sentinel file at
   `appPath('first-launch.app-key-generated')` is the idempotency
@@ -224,10 +249,16 @@ and the assertion — see
   `user_preferences.skipped_update_versions` JSON column records the
   list; the banner does not re-surface those versions.
   (`tests/Feature/AutoUpdate/SkipVersionTest.php`)
-- **`AcknowledgeSystemAlert` is the sole sanctioned writer of
-  `system_alerts.acknowledged_at`.** Direct writes via Eloquent /
-  query-builder are forbidden by the arch invariant
-  `noUnsanctionedSystemAlertAcknowledgements`.
+- **Every user-owned alert is raised through `SystemAlertWriter`.**
+  That half is held by
+  `tests/Contracts/SystemAlertWriterSeamArchTest.php`. The other half
+  is not gated, and deliberately so: besides
+  `AcknowledgeSystemAlert`,
+  `ConnectInboxFromGrant::acknowledgeReconsentAlerts()` writes
+  `system_alerts.acknowledged_at` as well, so reconnecting an inbox
+  clears the reconsent banner the way the reader's own Acknowledge
+  does — and captures the acknowledgement for sync, or the other
+  device keeps prompting for an inbox already reconnected.
 - **The SQLite WAL + busy_timeout + synchronous=NORMAL PRAGMAs apply
   to every connection.** `SqliteOptimizationsProvider` registers the
   listener; a connection that bypasses the listener (test harness
@@ -306,6 +337,8 @@ and the assertion — see
   `users.default_currency_view` — per-user preference columns.
 - `user_preferences.skipped_update_versions` (JSON) — per-user
   skipped-update-version list.
-- `BEATRAX_RUNTIME=local` (env) — Dev-mode runtime distinguisher
-  several modules respect (`DevMode` for surface gates, `Queue` for
-  driver). See [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md).
+- `BEATRAX_DEV_MODE` (env) — the developer-mode gate, read once as
+  `config('app.dev_mode')` and `false` in a packaged build. There is no
+  second runtime distinguisher: `.env.bundled` also writes
+  `BEATRAX_RUNTIME`, which nothing in the tree reads, and the queue
+  driver comes from `QUEUE_CONNECTION`. See [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md).

@@ -11,7 +11,7 @@ return [
     'cancel' => 'Peruuta',
     'save_connect' => 'Tallenna ja yhdistä',
 
-    'secret_help' => 'Nämä tallennetaan paikalliseen asetustiedostoon tietokannan ulkopuolelle rajoitetuin käyttöoikeuksin, eivätkä ne koskaan poistu tältä laitteelta.',
+    'secret_help' => 'Tallennetaan salattuna tämän laitteen tietokantaan. Beatrax lähettää sen vain Googlelle tai Microsoftille hakeakseen ja uusiakseen käyttöoikeustunnisteesi — ei minnekään muualle.',
 
     'gmail' => [
         'step1_title' => 'Avaa Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Anna Google OAuth client ID, joka päättyy .apps.googleusercontent.com.',
         'google_secret' => 'Anna Google OAuth client secret, joka alkaa GOCSPX-.',
         'google_published' => 'Vahvista, että olet julkaissut OAuth consent screenin tilaan ”In production”.',
-        'write_failed' => 'OAuth-asiakastasi ei voitu tallentaa levylle — tarkista salaisuushakemiston käyttöoikeudet ja yritä uudelleen.',
+        'write_failed' => 'OAuth-asiakastasi ei voitu tallentaa — kirjoitus tämän laitteen tietokantaan epäonnistui. Yritä uudelleen.',
     ],
 ];

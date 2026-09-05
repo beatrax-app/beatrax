@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Denetim günlüğü',
-    'subtitle' => 'Dev Console üzerinden çalıştırılan her komut, kuyruk işlemi ve SQL sorgusu.',
+    'subtitle' => 'Dev Console üzerinden çalıştırdığın komutlar, kuyruk işlemleri ve SQL sorguları.',
     'clear_all' => 'Tümünü temizle',
-    'clear_all_confirm' => 'Denetim günlüğündeki tüm kayıtlar silinsin mi? Bu işlem geri alınamaz.',
+    'clear_all_confirm' => 'Denetim günlüğünde oluşturduğun tüm kayıtlar silinsin mi? Bu işlem geri alınamaz.',
     'filter_tier' => 'Seviye',
     'filter_all' => 'Tümü',
     'filter_command' => 'Komut',

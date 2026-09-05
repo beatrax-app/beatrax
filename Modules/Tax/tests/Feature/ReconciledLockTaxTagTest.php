@@ -9,6 +9,7 @@ use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
  * @param  array<string, mixed>  $overrides
@@ -148,4 +149,36 @@ it('applyBatchTag skips reconciled rows and tags only the editable siblings', fu
 
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $reconciledId)->count())->toBe(0)
         ->and(DB::table('tax_transaction_tags')->where('transaction_id', $clearedId)->count())->toBe(1);
+});
+
+// The banner offered every untagged sibling and then wrote only the editable
+// ones, so a counterparty with one reconciled row offered two and tagged one.
+it('counts only the siblings the batch tag will actually write', function (): void {
+    $cp = Counterparty::create([
+        'user_id' => $this->user->id,
+        'type' => 'merchant',
+        'slug' => 'gym-vendor-offer-fixture',
+        'display_name' => 'Gym Vendor',
+    ]);
+
+    $trigger = taxLockTx($this->user->id, $this->account->id, $this->run->id, [
+        'status' => 'cleared',
+        'counterparty_id' => $cp->id,
+        'booked_at' => '2026-04-01 00:00:00',
+    ]);
+    taxLockTx($this->user->id, $this->account->id, $this->run->id, [
+        'status' => 'reconciled',
+        'counterparty_id' => $cp->id,
+        'booked_at' => '2026-04-02 00:00:00',
+    ]);
+    $editable = taxLockTx($this->user->id, $this->account->id, $this->run->id, [
+        'status' => 'cleared',
+        'counterparty_id' => $cp->id,
+        'booked_at' => '2026-04-03 00:00:00',
+    ]);
+
+    $query = app(TaxTagQuery::class);
+
+    expect($query->untaggedCountForCounterparty($this->user->id, $trigger, 2026)->untaggedCount)->toBe(1)
+        ->and($query->untaggedIdsForCounterparty($this->user->id, $cp->id, 2026))->toBe([$trigger, $editable]);
 });

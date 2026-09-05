@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Taisyklės lieka šiame įrenginyje. Jos nėra bendrinamos su kitais jūsų įrenginiais.',
 
     'reapply' => 'Taikyti taisykles istorijai iš naujo',
-    'reapply_confirm' => 'Iš naujo pritaikyti visas taisykles visai tavo istorijai? Kiekviena kategorija, kita šalis, pastaba ir mokesčių žyma, kurią priskyrė taisyklė, bus perrašyta. Tai, ką nustatei ranka, išlieka, taip pat ir viskas, kas yra suderintame išraše. Senų reikšmių niekas nesugrąžins.',
+    'reapply_confirm' => 'Iš naujo pritaikyti visas taisykles visai tavo istorijai? Kiekviena kategorija, kita šalis, pastaba ir mokesčių žyma, kurią priskyrė taisyklė, bus perrašyta. Tai, ką nustatei ranka, išlieka, taip pat ir viskas, kas yra suderintame išraše arba operacijoje, kurią suskaidei. Senų reikšmių niekas nesugrąžins.',
     'reapplying' => 'Taikoma iš naujo…',
     'new_rule' => 'Nauja taisyklė',
 

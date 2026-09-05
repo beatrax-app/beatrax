@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Pravila ostaju na ovom uređaju. Ne dijele se s vašim drugim uređajima.',
 
     'reapply' => 'Ponovno primijeni pravila na povijest',
-    'reapply_confirm' => 'Ponovno primijeniti sva pravila na cijelu tvoju povijest? Svaka kategorija, protustranka, bilješka i porezna oznaka koju je postavilo pravilo prepisuje se. Ono što je postavljeno ručno ostaje, kao i sve na usklađenom izvodu. Stare vrijednosti ništa ne vraća.',
+    'reapply_confirm' => 'Ponovno primijeniti sva pravila na cijelu tvoju povijest? Svaka kategorija, protustranka, bilješka i porezna oznaka koju je postavilo pravilo prepisuje se. Ono što je postavljeno ručno ostaje, kao i sve na usklađenom izvodu ili na transakciji koju si podijelio. Stare vrijednosti ništa ne vraća.',
     'reapplying' => 'Ponovna primjena…',
     'new_rule' => 'Novo pravilo',
 

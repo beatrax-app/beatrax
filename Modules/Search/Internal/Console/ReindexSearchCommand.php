@@ -24,10 +24,10 @@ use stdClass;
 final class ReindexSearchCommand extends Command
 {
     /** @var string */
-    protected $signature = 'search:reindex {--force : Skip the confirmation prompt.}';
+    protected $signature = 'search:reindex';
 
     /** @var string */
-    protected $description = 'Rebuild the FTS5 full-text search index from all transactions.';
+    protected $description = 'Rebuild the FTS5 full-text search index. Users whose columns this process cannot decrypt are skipped, and their existing index rows are left intact.';
 
     private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 

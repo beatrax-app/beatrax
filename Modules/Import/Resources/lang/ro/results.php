@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Încarcă alt extras de cont',
 
     'chain' => [
-        'heading' => 'Se rezolvă lanțurile…',
-        'pending' => 'În coadă. Rezolvarea lanțurilor va începe în curând.',
+        'heading' => 'Rezolvarea lanțurilor',
+        'pending' => 'Rezolvarea lanțurilor nu a pornit, așa că lanțurile de finanțare nu au fost legate.',
         'running' => 'Se leagă lanțurile de finanțare și se descompun decontările din extras.',
     ],
 

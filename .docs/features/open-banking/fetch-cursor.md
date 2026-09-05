@@ -36,7 +36,7 @@ So the cursor advances **from what the write returned**. A confirm that refuses
 (`ImportNotConfirmableException` — the fetched rows name an account the ledger
 does not have) throws before a result exists, and the window stays open.
 
-The reader's own "Sync now" therefore never moves the cursor; the 06:00
+The reader's own "Sync now" therefore never moves the cursor; the daily
 scheduled sync does. Re-fetching a window that has already been previewed costs
 one fingerprint lookup per row and lands nothing twice.
 

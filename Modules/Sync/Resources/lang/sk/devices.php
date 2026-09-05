@@ -6,7 +6,7 @@ return [
     'heading' => 'Zariadenia a synchronizácia',
 
     'enable_sync' => 'Zapnúť synchronizáciu',
-    'enable_sync_help' => 'Zdieľaj svoje údaje bezpečne medzi dôveryhodnými zariadeniami. Vyžaduje zámok aplikácie. Keď je zapnutý, údaje sa zašifrujú a zámok aplikácie sa už nedá vypnúť.',
+    'enable_sync_help' => 'Zdieľaj svoje údaje bezpečne medzi dôveryhodnými zariadeniami. Vyžaduje zámok aplikácie. Zapnutie sa nedá vrátiť späť: údaje sú odvtedy zašifrované a vypnúť sa už nedá ani synchronizácia, ani zámok aplikácie.',
 
     'app_lock_notice' => 'Ak chceš zapnúť synchronizáciu, najprv nastav zámok aplikácie.',
     'go_to_app_lock' => 'Prejsť na Zámok aplikácie',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Odomknutie toto párovanie znovu otvorí, namiesto aby ho nechalo vypršať, takže pretrvá dlhšie než nastavený časový limit zámku aplikácie. Skončí, keď ho dokončíte alebo zrušíte.',
 
     'relay_endpoint' => 'Adresa relé',
-    'relay_endpoint_help' => 'Voliteľné. Keď je nastavená, zariadenia offline sa synchronizujú cez toto relé. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
-    'relay_endpoint_help_phone' => 'Voliteľné. Keď je nastavená, zmeny putujú cez toto relé aj vtedy, keď tvoje zariadenia nie sú v rovnakej sieti. Toto zariadenie si ich prevezme, keď synchronizuješ z tejto obrazovky — nikdy na pozadí, pretože zámok aplikácie drží jediný kľúč. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
+    'relay_endpoint_help' => 'Voliteľné. Relé umožní dvom zariadeniam dokončiť párovanie a vymeniť si šifrovacie kľúče, keď sa nedokážu spojiť priamo. Samotné transakcie sa naďalej synchronizujú len vtedy, keď sú obe zariadenia v rovnakej sieti. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
+    'relay_endpoint_help_phone' => 'Voliteľné. Relé umožní dvom zariadeniam dokončiť párovanie a vymeniť si šifrovacie kľúče, keď sa nedokážu spojiť priamo. Samotné transakcie sa naďalej synchronizujú len vtedy, keď sú obe zariadenia v rovnakej sieti. Toto zariadenie si prevezme to, čo naň čaká, keď synchronizuješ z tejto obrazovky — nikdy na pozadí, pretože zámok aplikácie drží jediný kľúč. Nechaj prázdne, ak chceš iba priame LAN&#8209;spojenie.',
     'relay_endpoint_aria' => 'URL adresa relé',
     'relay_insecure_warning' => 'Táto adresa relé používa obyčajné HTTP. Relé tvoje údaje nikdy nedešifruje, no nezabezpečené spojenie prezradí pozorovateľom siete veľkosti a časovanie zašifrovaných prenosov. Pre najlepšie súkromie použi adresu <strong>https://</strong>.',
 

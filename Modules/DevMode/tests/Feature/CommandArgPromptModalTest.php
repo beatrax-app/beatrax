@@ -131,6 +131,19 @@ it('submit() works from any page — does not depend on a #[On(spawn-command)] l
         );
 });
 
+it('draws each select choice under the token artisan accepts, not its position in the list', function (): void {
+    // beatrax:failed-jobs was unrunnable from the console: the option loop
+    // read ArgSpec::$options by key, so the only choice rendered as value="0"
+    // and every submission failed the `in:prune` rule the select was drawn for.
+    $user = promptUser('arg-prompt-select-value');
+
+    Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'beatrax:failed-jobs', tier: 'safe', prefill: [])
+        ->assertSeeHtml('<option value="prune">prune</option>')
+        ->assertDontSeeHtml('<option value="0">');
+});
+
 it('submit() rejects an arg value that violates its ArgSpec rules instead of spawning', function (): void {
     // beatrax:failed-jobs declares `action` as ['required', 'in:prune'].
     // $values is client-supplied, so before the rules ran on this path a

@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Executar uma importação', 'hint' => 'Abrir o assistente de importação'],
-        'scan_email' => ['label' => 'Analisar o e-mail agora', 'hint' => 'Executar já a sincronização da caixa de correio'],
+        'scan_email' => ['label' => 'Abrir as caixas de correio', 'hint' => 'As tuas caixas de correio ligadas'],
         'open_profile' => ['label' => 'Abrir o perfil', 'hint' => 'Definições — conta e preferências'],
-        'toggle_theme' => ['label' => 'Mudar o tema', 'hint' => 'Alternar entre o tema claro e o escuro'],
+        'toggle_theme' => ['label' => 'Abrir as definições de aspeto', 'hint' => 'Claro, escuro ou sistema'],
     ],
 
     'run_command' => 'Executar :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Visão geral de desenvolvimento', 'hint' => 'Cartões do sistema + execuções recentes'],
         'artisan' => ['label' => 'Runner do Artisan', 'hint' => 'Executar comandos autorizados'],
-        'audit' => ['label' => 'Registo de auditoria de desenvolvimento', 'hint' => 'Todas as ações do modo de programador'],
+        'audit' => ['label' => 'Registo de auditoria de desenvolvimento', 'hint' => 'As tuas ações do modo de programador'],
         'logs' => ['label' => 'Leitor de registos', 'hint' => 'Fluxo em direto de laravel-*.log'],
         'queue' => ['label' => 'Inspetor de filas', 'hint' => 'Pendentes / falhadas / lotes'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sondas do sistema'],

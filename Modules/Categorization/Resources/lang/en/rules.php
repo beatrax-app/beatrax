@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Rules stay on this device. They are not shared with your other devices.',
 
     'reapply' => 'Re-apply rules to history',
-    'reapply_confirm' => 'Re-apply every rule to your whole history? Every category, counterparty, note and tax tag a rule put there is rewritten. What you set by hand stays, and so does anything on a reconciled statement. Nothing puts the old values back.',
+    'reapply_confirm' => 'Re-apply every rule to your whole history? Every category, counterparty, note and tax tag a rule put there is rewritten. What you set by hand stays, and so does anything on a reconciled statement or a transaction you have split. Nothing puts the old values back.',
     'reapplying' => 'Re-applying…',
     'new_rule' => 'New rule',
 

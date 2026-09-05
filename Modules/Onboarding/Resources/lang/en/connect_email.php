@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Read-only access',
         'reads_label' => 'Beatrax reads',
         'reads_sub' => 'Receipts only',
-        'token_label' => 'Token stays local',
-        'token_sub' => 'Encrypted file',
+        'token_label' => 'Token stored encrypted',
+        'token_sub' => 'In the local database',
     ],
 
     'authorize_gmail' => 'Authorize with Gmail',

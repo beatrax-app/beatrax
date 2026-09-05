@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Kurallar bu cihazda kalır. Diğer cihazlarınızla paylaşılmaz.',
 
     'reapply' => 'Kuralları geçmişe yeniden uygula',
-    'reapply_confirm' => 'Tüm kurallar geçmişinin tamamına yeniden uygulansın mı? Bir kuralın koyduğu her kategori, karşı taraf, not ve vergi etiketi yeniden yazılır. Elle ayarladıkların olduğu gibi kalır, mutabakatlı bir ekstredeki her şey de öyle. Eski değerleri hiçbir şey geri getirmez.',
+    'reapply_confirm' => 'Tüm kurallar geçmişinin tamamına yeniden uygulansın mı? Bir kuralın koyduğu her kategori, karşı taraf, not ve vergi etiketi yeniden yazılır. Elle ayarladıkların olduğu gibi kalır, mutabakatlı bir ekstredeki ve böldüğün bir işlemdeki her şey de öyle. Eski değerleri hiçbir şey geri getirmez.',
     'reapplying' => 'Yeniden uygulanıyor…',
     'new_rule' => 'Yeni kural',
 

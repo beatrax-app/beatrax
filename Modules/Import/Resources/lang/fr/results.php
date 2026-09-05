@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Envoyer un autre relevé',
 
     'chain' => [
-        'heading' => 'Résolution des chaînes…',
-        'pending' => 'En file d\'attente. Le résolveur de chaînes va démarrer sous peu.',
+        'heading' => 'Résolution des chaînes',
+        'pending' => 'La résolution des chaînes n’a pas démarré, les chaînes de financement n’ont donc pas été liées.',
         'running' => 'Liaison des chaînes de financement et décomposition des règlements du relevé.',
     ],
 

@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Reconectează',
     'disconnect' => 'Deconectează',
+    'disconnect_confirm' => 'Deconectezi :email? Astfel se șterg datele de autentificare stocate ale acestei căsuțe, istoricul ei de scanare și expeditorii pe care i-ai adăugat sau închis. Bonurile deja înregistrate în Beatrax nu sunt afectate. O nouă conectare pornește o scanare de la zero.',
     'scan_now' => 'Scanează acum',
     'scan_in_progress_title' => 'O scanare este deja în curs',
 

@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Sorozat dátumának eltolása',
-            'desc' => 'A következő vagy az összes további előfordulás előbbre hozása.',
+            'desc' => 'A következő vagy az összes további előfordulás áthelyezése másik dátumra.',
         ],
     ],
 

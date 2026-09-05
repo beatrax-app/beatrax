@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Audito žurnalas',
-    'subtitle' => 'Kiekviena komanda, eilės veiksmas ir SQL užklausa, įvykdyti per kūrėjo pultą.',
+    'subtitle' => 'Komandos, eilės veiksmai ir SQL užklausos, kuriuos įvykdei per kūrėjo pultą.',
     'clear_all' => 'Išvalyti viską',
-    'clear_all_confirm' => 'Išvalyti visus audito žurnalo įrašus? Šio veiksmo atšaukti negalima.',
+    'clear_all_confirm' => 'Išvalyti visus tavo užfiksuotus audito žurnalo įrašus? Šio veiksmo atšaukti negalima.',
     'filter_tier' => 'Lygis',
     'filter_all' => 'Visi',
     'filter_command' => 'Komanda',

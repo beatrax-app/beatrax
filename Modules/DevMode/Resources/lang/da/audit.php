@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Auditlog',
-    'subtitle' => 'Hver kommando, køhandling og SQL-forespørgsel, der er kørt via Dev Console.',
+    'subtitle' => 'De kommandoer, køhandlinger og SQL-forespørgsler, du har kørt via Dev Console.',
     'clear_all' => 'Ryd alt',
-    'clear_all_confirm' => 'Ryd hver post i auditloggen? Det kan ikke fortrydes.',
+    'clear_all_confirm' => 'Ryd hver post i auditloggen, du selv har lavet? Det kan ikke fortrydes.',
     'filter_tier' => 'Niveau',
     'filter_all' => 'Alle',
     'filter_command' => 'Kommando',

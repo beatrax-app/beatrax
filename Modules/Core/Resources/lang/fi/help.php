@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Missä tietoni ovat?',
-    'intro' => 'Beatrax tallentaa kaiken tälle laitteelle. Mitään ei lähetetä palvelimelle, mitään ei synkronoida pilveen, mitään ei poistu tältä laitteelta ilman että viet sen itse.',
+    'intro' => 'Beatrax tallentaa kaiken tälle laitteelle. Beatraxin palvelinta tai pilvitiliä ei ole. Ulos lähtee vain se, minkä itse yhdistät — postilaatikko, pankki Enable Bankingin kautta, laitteet jotka paritat synkronointia varten — sekä päivittäinen valuuttakurssien haku. Jokainen yhteys kertoo siitä siinä näkymässä, jossa otat sen käyttöön.',
 
     'lives_here' => 'Tietosi sijaitsevat täällä',
     'copy' => 'Kopioi',

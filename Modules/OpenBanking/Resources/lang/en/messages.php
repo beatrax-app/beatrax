@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Paste your application ID',
         'application_id_label' => 'Application ID',
-        'step3_help' => 'This is stored in a local file outside the database with restrictive permissions and never leaves this device.',
+        'step3_help' => 'Stored in a local file outside the database with owner-only permissions. It identifies your application to Enable Banking, so it travels with every request — your private key never does.',
 
         'step4_title' => 'Choose your bank',
         'via_enable_banking' => 'via Enable Banking',

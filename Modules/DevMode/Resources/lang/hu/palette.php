@@ -34,12 +34,12 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Import futtatása', 'hint' => 'Az importvarázsló megnyitása'],
-        'scan_email' => ['label' => 'E-mail vizsgálata most', 'hint' => 'A postafiók szinkronizálásának azonnali futtatása'],
+        'scan_email' => ['label' => 'Postafiókok megnyitása', 'hint' => 'A csatlakoztatott postafiókjaid'],
         // i18n-review: hu · action.open_profile.hint — «beállítások» covers both Settings and
         // preferences here, so the hint repeats it as the compound «alkalmazásbeállítások».
         // A native reader decides whether that reads.
         'open_profile' => ['label' => 'Profil megnyitása', 'hint' => 'Beállítások — fiók és alkalmazásbeállítások'],
-        'toggle_theme' => ['label' => 'Téma váltása', 'hint' => 'Váltás a világos és a sötét téma között'],
+        'toggle_theme' => ['label' => 'Megjelenés beállításainak megnyitása', 'hint' => 'Világos, sötét vagy rendszer'],
     ],
 
     'run_command' => ':command futtatása',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Fejlesztői áttekintés', 'hint' => 'Rendszercsempék + legutóbbi futtatások'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'Engedélyezett parancsok futtatása'],
-        'audit' => ['label' => 'Fejlesztői auditnapló', 'hint' => 'A fejlesztői mód minden művelete'],
+        'audit' => ['label' => 'Fejlesztői auditnapló', 'hint' => 'A fejlesztői módban végzett műveleteid'],
         'logs' => ['label' => 'Naplókövető', 'hint' => 'A laravel-*.log élő folyama'],
         'queue' => ['label' => 'Várólista-vizsgáló', 'hint' => 'Függőben / sikertelen / kötegek'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Rendszerpróbák'],

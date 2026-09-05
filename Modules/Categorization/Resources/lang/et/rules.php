@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Reeglid jäävad sellesse seadmesse. Neid ei jagata sinu teiste seadmetega.',
 
     'reapply' => 'Rakenda reeglid ajaloole uuesti',
-    'reapply_confirm' => 'Kas rakendada kõik reeglid uuesti kogu sinu ajaloole? Iga kategooria, vastaspool, märkus ja maksumärgend, mille reegel on lisanud, kirjutatakse üle. See, mille oled käsitsi määranud, jääb alles, samuti kõik, mis on kooskõlastatud väljavõttel. Vanu väärtusi ei too miski tagasi.',
+    'reapply_confirm' => 'Kas rakendada kõik reeglid uuesti kogu sinu ajaloole? Iga kategooria, vastaspool, märkus ja maksumärgend, mille reegel on lisanud, kirjutatakse üle. See, mille oled käsitsi määranud, jääb alles, samuti kõik, mis on kooskõlastatud väljavõttel või tehingul, mille oled jaotanud. Vanu väärtusi ei too miski tagasi.',
     'reapplying' => 'Rakendan uuesti…',
     'new_rule' => 'Uus reegel',
 

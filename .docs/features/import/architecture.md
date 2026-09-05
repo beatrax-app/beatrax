@@ -4,7 +4,8 @@ The `Import` module is the orchestrator that takes a user-supplied
 file (or an OS-opened drop) and walks it through the
 preview-then-confirm wizard into the canonical ledger. It owns the
 `ImportPipeline` stage chain, the per-source `PaymentTypeHinter` and
-`StartingBalanceDetector` registries (tag-discovered), the
+`DetectsStartingBalance` registries (tag-discovered under
+`import.payment_type_hinter` and `starting-balance.detector`), the
 merchant-alias surface, the institution-IBAN alias bridge, and the
 post-commit dispatch boundary that wakes up `Chains`.
 
@@ -32,9 +33,12 @@ What the module explicitly does NOT do:
   ship — append the FQN to a constant in the provider, add the
   class, the registry picks it up.
 - It never re-resolves a previously-resolved counterparty IBAN
-  without a documented reason. The `KnownCounterpartyIbanResolver`
-  is the single sanctioned reader of the
-  `known_counterparty_ibans` table.
+  without a documented reason. `KnownCounterpartyIbanResolver`,
+  behind the `ResolvesKnownCounterpartyIban` contract, is how another
+  module asks whether an IBAN belongs to a known institution — it is
+  not the table's only reader, and nothing forbids a second one:
+  `Transfers`, `Counterparties` and both `Chains` resolvers query
+  `known_counterparty_ibans` directly for predicates of their own.
 
 ## Module boundary
 

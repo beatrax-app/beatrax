@@ -105,7 +105,7 @@ it('has copy for every outcome the service can report, in both languages', funct
     expect($missing)->toBe([], implode(', ', $missing));
 });
 
-it('states on the screen that this device cannot sync in the background', function (): void {
+it('states on the screen what this device does between presses', function (): void {
     $user = syncButtonUser('sync-says-background-'.bin2hex(random_bytes(4)));
     confirmPeerFor($user);
     $this->actingAs($user);

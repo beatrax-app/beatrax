@@ -44,21 +44,41 @@ beforeEach(function (): void {
 it('draws the progress surface on the results page while the resolver still has work', function (JobRunStatus $status): void {
     progressPollResolutionRow($this->fixtureUser, $status);
 
-    $html = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
-        ->assertSee('Resolving chains')
-        ->html();
-
-    expect($html)->toContain('wire:poll');
+    Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
+        ->assertSee('Chain resolution');
 })->with([
     'pending' => JobRunStatus::Pending,
     'running' => JobRunStatus::Running,
 ]);
 
+// The resolver is dispatched synchronously by the confirm, so a row still
+// reading Pending on this screen is one that never started and that nothing
+// will restart. Polling it re-reads a column no writer will touch, and the
+// pulse beside it paints work that is not happening.
+it('polls and pulses for a run that is going somewhere, and for no other', function (): void {
+    progressPollResolutionRow($this->fixtureUser, JobRunStatus::Running);
+
+    $running = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])->html();
+
+    expect($running)->toContain('wire:poll')
+        ->and($running)->toContain('animate-pulse');
+
+    ChainResolutionRun::query()->where('user_id', $this->fixtureUser->id)
+        ->update(['status' => JobRunStatus::Pending->value]);
+
+    $pending = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
+        ->assertSee('Chain resolution')
+        ->html();
+
+    expect($pending)->not->toContain('wire:poll')
+        ->and($pending)->not->toContain('animate-pulse');
+});
+
 it('takes the progress surface away once chain resolution is done', function (): void {
     progressPollResolutionRow($this->fixtureUser, JobRunStatus::Complete);
 
     $html = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
-        ->assertDontSee('Resolving chains')
+        ->assertDontSee('Chain resolution')
         ->html();
 
     expect($html)->not->toContain('wire:poll');
@@ -66,7 +86,7 @@ it('takes the progress surface away once chain resolution is done', function ():
 
 it('draws no progress surface when the confirm dispatched no resolution at all', function (): void {
     $html = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
-        ->assertDontSee('Resolving chains')
+        ->assertDontSee('Chain resolution')
         ->html();
 
     expect($html)->not->toContain('wire:poll');
@@ -84,7 +104,7 @@ it('leaves a failed resolution to the dashboard, and carries no job error to thi
     );
 
     $html = Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
-        ->assertDontSee('Resolving chains')
+        ->assertDontSee('Chain resolution')
         ->html();
 
     expect($html)->not->toContain('ResolveChainLinksJob')
@@ -103,11 +123,11 @@ it('reads the run by exact user_id, so one reader never observes another\'s', fu
     progressPollResolutionRow($other, JobRunStatus::Running);
 
     Livewire::test(ImportResults::class, ['id' => $this->importRun->id])
-        ->assertDontSee('Resolving chains');
+        ->assertDontSee('Chain resolution');
 
     $this->actingAs($other);
     Livewire::test(ImportResults::class, ['id' => progressPollRunFor($other, '-other')->id])
-        ->assertSee('Resolving chains');
+        ->assertSee('Chain resolution');
 });
 
 it('keeps the substring payload lookup out of the component that polls', function (): void {

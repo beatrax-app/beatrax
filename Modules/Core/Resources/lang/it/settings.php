@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Visualizzazione dell\'importo',
-        'label' => 'Vista predefinita nella lista delle transazioni',
+        'label' => 'Vista predefinita degli importi',
         'eur_only' => 'Importo regolato',
         'original' => 'Importo originale',
-        'help' => 'Puoi comunque cambiarla pagina per pagina dalla lista delle transazioni.',
+        'help' => 'Vale per la lista delle transazioni e per i totali nella dashboard. Puoi comunque cambiarla pagina per pagina, ma solo dalla lista delle transazioni.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Tassi di cambio',
         'fetch_online' => 'Scarica online i tassi correnti',
-        'online_on' => 'Tassi scaricati ogni giorno dalla BCE. Solo ricerche di coppie di valute — nessun dato personale.',
+        'online_on' => 'Tassi scaricati ogni giorno dalla BCE, o da Frankfurter se la BCE non è raggiungibile. Solo ricerche di coppie di valute — nessun dato personale.',
         'last_updated' => 'Ultimo aggiornamento: :date.',
-        'online_off' => 'Vengono usati i tassi inclusi nel pacchetto. Nessun dato lascia questo dispositivo.',
+        'online_off' => 'Restano in uso i tassi già presenti, con lo snapshot incluso come riserva. Nessun dato lascia questo dispositivo.',
         'fetch_aria' => 'Scarica online i tassi di cambio correnti',
         'refreshing' => 'Aggiornamento…',
         'next_refresh' => 'Aggiornamento automatico: una volta al giorno',

@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Affichage des montants',
-        'label' => 'Vue par défaut dans la liste des transactions',
+        'label' => 'Vue par défaut des montants',
         'eur_only' => 'Montant réglé',
         'original' => 'Montant d\'origine',
-        'help' => 'Tu peux toujours changer page par page depuis la liste des transactions.',
+        'help' => 'S\'applique à la liste des transactions et aux totaux du tableau de bord. Tu peux toujours changer page par page, mais seulement depuis la liste des transactions.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Taux de change',
         'fetch_online' => 'Récupérer les taux actuels en ligne',
-        'online_on' => 'Taux récupérés chaque jour auprès de la BCE. Uniquement des recherches de paires de devises — aucune donnée personnelle.',
+        'online_on' => 'Taux récupérés chaque jour auprès de la BCE, ou auprès de Frankfurter si la BCE est injoignable. Uniquement des recherches de paires de devises — aucune donnée personnelle.',
         'last_updated' => 'Dernière mise à jour : :date.',
-        'online_off' => 'Les taux fournis avec l\'application sont utilisés. Aucune donnée ne quitte cet appareil.',
+        'online_off' => 'Les taux déjà présents restent utilisés, l’instantané intégré servant de secours. Aucune donnée ne quitte cet appareil.',
         'fetch_aria' => 'Récupérer les taux de change actuels en ligne',
         'refreshing' => 'Actualisation…',
         'next_refresh' => 'Actualisation automatique : une fois par jour',

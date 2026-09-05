@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Reconnecter',
     'disconnect' => 'Déconnecter',
+    'disconnect_confirm' => 'Déconnecter :email ? Cela supprime les identifiants enregistrés de cette boîte, son historique d\'analyse et les expéditeurs que tu as ajoutés ou ignorés. Les reçus déjà classés dans Beatrax ne sont pas touchés. Une nouvelle connexion repart sur une analyse vierge.',
     'scan_now' => 'Analyser maintenant',
     'scan_in_progress_title' => 'Une analyse est déjà en cours',
 

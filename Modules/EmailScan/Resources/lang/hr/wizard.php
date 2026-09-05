@@ -11,7 +11,7 @@ return [
     'cancel' => 'Odustani',
     'save_connect' => 'Spremi i poveži',
 
-    'secret_help' => 'Pohranjuju se u lokalnoj konfiguracijskoj datoteci izvan baze podataka, s restriktivnim dozvolama, i nikad ne napuštaju ovaj uređaj.',
+    'secret_help' => 'Pohranjuje se šifrirano u bazu podataka na ovom uređaju. Beatrax ga šalje samo Googleu ili Microsoftu, kako bi dobio i obnavljao tvoj pristupni token — nikamo drugamo.',
 
     'gmail' => [
         'step1_title' => 'Otvori Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Unesi Google OAuth client ID koji završava na .apps.googleusercontent.com.',
         'google_secret' => 'Unesi Google OAuth client secret koji počinje s GOCSPX-.',
         'google_published' => 'Potvrdi da je OAuth zaslon privole prebačen u „In production”.',
-        'write_failed' => 'Nije bilo moguće spremiti tvoj OAuth klijent na disk — provjeri dozvole direktorija s tajnama i pokušaj ponovno.',
+        'write_failed' => 'Nije bilo moguće spremiti tvoj OAuth klijent — pisanje u bazu podataka na ovom uređaju nije uspjelo. Pokušaj ponovno.',
     ],
 ];

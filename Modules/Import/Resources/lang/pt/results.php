@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Carregar outro extrato',
 
     'chain' => [
-        'heading' => 'A resolver cadeias…',
-        'pending' => 'Em fila. O resolvedor de cadeias começa dentro de momentos.',
+        'heading' => 'Resolução de cadeias',
+        'pending' => 'A resolução de cadeias não chegou a começar, por isso as cadeias de financiamento não foram ligadas.',
         'running' => 'A ligar cadeias de financiamento e a decompor liquidações de extrato.',
     ],
 

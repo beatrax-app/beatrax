@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Kør import', 'hint' => 'Åbn importguiden'],
-        'scan_email' => ['label' => 'Scan e-mail nu', 'hint' => 'Kør synkroniseringen af postkassen med det samme'],
+        'scan_email' => ['label' => 'Åbn postkasser', 'hint' => 'Dine tilknyttede postkasser'],
         'open_profile' => ['label' => 'Åbn profilen', 'hint' => 'Indstillinger — konto og præferencer'],
-        'toggle_theme' => ['label' => 'Skift tema', 'hint' => 'Skift mellem lyst og mørkt tema'],
+        'toggle_theme' => ['label' => 'Åbn udseendeindstillinger', 'hint' => 'Lyst, mørkt eller system'],
     ],
 
     'run_command' => 'Kør :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Dev-overblik', 'hint' => 'Systemfelter + seneste kørsler'],
         'artisan' => ['label' => 'Artisan-runner', 'hint' => 'Kør godkendte kommandoer'],
-        'audit' => ['label' => 'Dev-auditlog', 'hint' => 'Hver handling i dev-tilstand'],
+        'audit' => ['label' => 'Dev-auditlog', 'hint' => 'Dine handlinger i dev-tilstand'],
         'logs' => ['label' => 'Logvisning', 'hint' => 'Livestream af laravel-*.log'],
         'queue' => ['label' => 'Kø-inspektør', 'hint' => 'Afventende / mislykkede / batches'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Systemprober'],

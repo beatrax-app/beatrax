@@ -131,7 +131,8 @@ same removal is performed there:
   `SensitiveFieldRegistry::columns()` seals;
 - and it still accepts and relays the phone's *own* writes, because `opsAfterWatermark()`
   filters on a registry ROW rather than on `confirmed_at` — deliberately, so a removed
-  device's history stays replicable — and `receiveOps()` verifies against the retained key map.
+  device's history stays replicable — and its own `signatureVerificationKeys()` map still
+  carries the phone's key, since the row it reads is still confirmed *there*.
 
 The mid-session revocation check and the `PEER_REVOKED` message do not close this either. They
 are statements about **this** connection: the desktop tells the phone that *it* no longer

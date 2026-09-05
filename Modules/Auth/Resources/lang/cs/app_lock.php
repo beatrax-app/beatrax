@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Ponechat biometriku',
 
     'auto_lock' => 'Automaticky zamknout po',
+    'auto_lock_note' => 'Beatrax se zamkne po této době bez aktivity — a dřív, když ho opustíš: přepnutí do jiné aplikace nebo skrytí či zavření okna zamkne Beatrax do :window bez ohledu na toto nastavení.',
     'idle_1' => '1 minutě',
     'idle_5' => '5 minutách',
     'idle_15' => '15 minutách',

@@ -5,9 +5,9 @@
      Microsoft 365 variant when $provider === 'microsoft'. The user
      pastes their per-install OAuth client_id + client_secret obtained
      from Google Cloud Console or the Microsoft Entra admin center; on
-     submit the credentials are written atomically to the chmod-600
-     JSON repository and the user is redirected directly into the
-     per-inbox consent flow.
+     submit the credentials are written to the encrypted oauth_secrets
+     columns and the user is redirected directly into the per-inbox
+     consent flow.
 
      The Google variant carries six numbered steps + a mandatory
      publishedConfirmed checkbox; the Microsoft variant carries six

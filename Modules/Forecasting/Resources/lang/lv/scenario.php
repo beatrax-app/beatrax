@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Pārbīdīt sērijas datumu',
-            'desc' => 'Pārcelt nākamo vai visus turpmākos gadījumus uz priekšu.',
+            'desc' => 'Pārcelt nākamo vai visus turpmākos gadījumus uz citu datumu.',
         ],
     ],
 

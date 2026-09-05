@@ -34,12 +34,12 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Suorita tuonti', 'hint' => 'Avaa ohjattu tuonti'],
-        'scan_email' => ['label' => 'Skannaa sähköposti nyt', 'hint' => 'Suorita postilaatikon synkronointi heti'],
+        'scan_email' => ['label' => 'Avaa postilaatikot', 'hint' => 'Yhdistetyt postilaatikkosi'],
         // i18n-review: fi · action.open_profile.hint — Finnish says «asetukset» for both
         // Settings and preferences, so the hint would repeat it. «omat valinnat» stands in;
         // a native reader decides whether the repetition reads better.
         'open_profile' => ['label' => 'Avaa profiili', 'hint' => 'Asetukset — tili ja omat valinnat'],
-        'toggle_theme' => ['label' => 'Vaihda teemaa', 'hint' => 'Vaihda vaalean ja tumman teeman välillä'],
+        'toggle_theme' => ['label' => 'Avaa ulkoasuasetukset', 'hint' => 'Vaalea, tumma tai järjestelmä'],
     ],
 
     'run_command' => 'Suorita :command',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Kehityksen yleiskatsaus', 'hint' => 'Järjestelmäruudut + viimeisimmät suoritukset'],
         'artisan' => ['label' => 'Artisan-suoritin', 'hint' => 'Suorita sallitut komennot'],
-        'audit' => ['label' => 'Kehitystilan tarkastusloki', 'hint' => 'Jokainen kehitystilan toiminto'],
+        'audit' => ['label' => 'Kehitystilan tarkastusloki', 'hint' => 'Omat kehitystilan toiminnot'],
         'logs' => ['label' => 'Lokien seuranta', 'hint' => 'Reaaliaikainen laravel-*.log-virta'],
         'queue' => ['label' => 'Jonon tarkastelu', 'hint' => 'Odottavat / epäonnistuneet / erät'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Järjestelmätarkistukset'],

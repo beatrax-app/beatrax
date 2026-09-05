@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Log di audit',
-    'subtitle' => 'Ogni comando, azione sulla coda e query SQL eseguiti dalla Dev Console.',
+    'subtitle' => 'I comandi, le azioni sulla coda e le query SQL che hai eseguito dalla Dev Console.',
     'clear_all' => 'Cancella tutto',
-    'clear_all_confirm' => 'Cancellare ogni voce del log di audit? Questa azione non è reversibile.',
+    'clear_all_confirm' => 'Cancellare ogni voce del log di audit che hai registrato? Questa azione non è reversibile.',
     'filter_tier' => 'Livello',
     'filter_all' => 'Tutti',
     'filter_command' => 'Comando',

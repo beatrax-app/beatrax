@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Piekļuve tikai lasīšanai',
         'reads_label' => 'Beatrax nolasa',
         'reads_sub' => 'Tikai čekus',
-        'token_label' => 'Pilnvara paliek lokāli',
-        'token_sub' => 'Šifrēts fails',
+        'token_label' => 'Pilnvara glabājas šifrēta',
+        'token_sub' => 'Vietējā datubāzē',
     ],
 
     'authorize_gmail' => 'Autorizēt ar Gmail',

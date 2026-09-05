@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Pravidla zůstávají v tomto zařízení. Nesdílejí se s vašimi ostatními zařízeními.',
 
     'reapply' => 'Použít pravidla znovu na historii',
-    'reapply_confirm' => 'Použít znovu všechna pravidla na celou tvou historii? Každá kategorie, protistrana, poznámka i daňový štítek, které tam pravidlo dalo, se přepíšou. Co je nastavené ručně, zůstane, a stejně tak vše na odsouhlaseném výpisu. Staré hodnoty už nic nevrátí.',
+    'reapply_confirm' => 'Použít znovu všechna pravidla na celou tvou historii? Každá kategorie, protistrana, poznámka i daňový štítek, které tam pravidlo dalo, se přepíšou. Co je nastavené ručně, zůstane, a stejně tak vše na odsouhlaseném výpisu nebo na transakci, kterou jsi rozdělil. Staré hodnoty už nic nevrátí.',
     'reapplying' => 'Aplikuje se…',
     'new_rule' => 'Nové pravidlo',
 

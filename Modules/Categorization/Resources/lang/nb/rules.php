@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Regler blir på denne enheten. De deles ikke med de andre enhetene dine.',
 
     'reapply' => 'Bruk reglene på historikken på nytt',
-    'reapply_confirm' => 'Vil du bruke alle reglene på hele historikken din på nytt? Hver kategori, motpart, notat og skattemerke som en regel har satt, blir skrevet over. Det du har satt for hånd, blir stående, og det samme gjør alt på en avstemt kontoutskrift. Ingenting setter de gamle verdiene tilbake.',
+    'reapply_confirm' => 'Vil du bruke alle reglene på hele historikken din på nytt? Hver kategori, motpart, notat og skattemerke som en regel har satt, blir skrevet over. Det du har satt for hånd, blir stående, og det samme gjør alt på en avstemt kontoutskrift eller på en transaksjon du har fordelt. Ingenting setter de gamle verdiene tilbake.',
     'reapplying' => 'Bruker på nytt…',
     'new_rule' => 'Ny regel',
 

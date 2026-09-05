@@ -126,7 +126,11 @@ return [
 
         'step3_title' => 'Įklijuok savo programos ID',
         'application_id_label' => 'Programos ID',
-        'step3_help' => 'Tai saugoma vietiniame faile už duomenų bazės ribų su griežtomis prieigos teisėmis ir niekada neišeina iš šio įrenginio.',
+        // i18n-review: lt · step3_help — "identifies your application to Enable
+        // Banking" is reworded to "tells Enable Banking which application is
+        // calling", because the brand takes no case in the direct form. A native
+        // should say whether "identifikuoja tavo programą" reads better here.
+        'step3_help' => 'Saugoma vietiniame faile už duomenų bazės ribų, kurį gali skaityti tik tu. Jis nurodo Enable Banking, kuri programa kreipiasi, todėl keliauja su kiekviena užklausa — privatusis raktas niekada.',
 
         'step4_title' => 'Pasirink savo banką',
         'via_enable_banking' => 'per Enable Banking',

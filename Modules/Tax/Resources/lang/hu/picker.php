@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Megjelölsz további :count tételt innen:',
     'batch_after' => '?',
-    'batch_confirm' => 'Adóból leírhatóként megjelölöd az összes hátralévő tranzakciót innen: :name? Mindegyik ezt a kategóriát és ezt a megjegyzést kapja. A címkét utána csak egyesével lehet levenni.',
+    'batch_confirm' => 'Adóból leírhatóként megjelölöd a(z) :name további :count tranzakcióját a(z) :year adóévből? Mindegyik ezt a kategóriát és ezt a megjegyzést kapja. A befejezett egyeztetésen szereplő tranzakciók érintetlenek maradnak, a címkét pedig utána csak egyesével lehet levenni.|Adóból leírhatóként megjelölöd a(z) :name további :count tranzakcióját a(z) :year adóévből? Mindegyik ezt a kategóriát és ezt a megjegyzést kapja. A befejezett egyeztetésen szereplő tranzakciók érintetlenek maradnak, a címkét pedig utána csak egyesével lehet levenni.',
     'batch_tag_all' => 'Mind megjelölése',
     'batch_dismiss' => 'Elvetés',
 ];

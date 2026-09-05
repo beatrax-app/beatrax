@@ -155,7 +155,7 @@ Modules/Chains/
 - `Internal/CardStatementStateMachine` — single sanctioned mutator of
   `card_statements.state`. Encodes the allowed transitions: `open →
   partially_settled → settled / overpaid`. Other writes are forbidden
-  by `noCardStatementStateWritesOutsideMachine`.
+  by `noOtherCardStatementStateMutator`.
 - `Internal/ChainLinkInsertHelper` — the `chain_links` INSERT site.
   Every writer goes through it — both resolvers, the hint listener and
   the demo seeder — so no two callers can drift on evidence whitespace,

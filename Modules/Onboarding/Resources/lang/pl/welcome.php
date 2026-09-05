@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Witamy',
     'h1' => 'Niech Beatrax pozna Twoje finanse.',
-    'lede' => 'Około 5 minut. Nic nie opuszcza tego urządzenia — wszystko, co podłączysz, zostaje w pliku na nim.',
+    'lede' => 'Około 5 minut. Beatrax trzyma Twoją historię w pliku na tym urządzeniu — jedyny krok, który sięga na zewnątrz, to podłączenie skrzynki odbiorczej, a ten możesz pominąć.',
     'tagline' => 'Oto, co skonfigurujemy:',
 
     'bank_title' => 'Twój bank',

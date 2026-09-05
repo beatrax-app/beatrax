@@ -243,6 +243,14 @@ Capture rides on the same two writers: `AnomalyEvaluator` emits the create, and
 `AnomalyAlertStateMachine` — the sole legal mutator of `state` — emits the edit
 for every acknowledge, snooze, dismissal and revival.
 
+`noOtherAnomalyAlertStateMutator` keeps it sole: no file under
+`Modules/Anomaly/` outside the state machine may write `anomaly_alerts.state`
+**or `snoozed_until`**, which is on the list because the Open tab decides
+whether an alert is open by reading it. `actioned_at` and `dismissed_as` ride
+the dismissal transition and are deliberately not on it. Migrations are
+excluded, since a migration declares the column whose later mutation the rule
+restricts.
+
 ## Read surfaces
 
 A derived id does not ascend with insertion, so `AnomalyAlertQuery` cannot order

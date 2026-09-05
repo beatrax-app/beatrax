@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Volver a conectar',
     'disconnect' => 'Desconectar',
+    'disconnect_confirm' => '¿Desconectar :email? Esto elimina las credenciales guardadas de este buzón, su historial de análisis y los remitentes que hayas añadido o descartado. Los recibos ya registrados en Beatrax no se ven afectados. Volver a conectarlo inicia un análisis desde cero.',
     'scan_now' => 'Analizar ahora',
     'scan_in_progress_title' => 'Ya hay un análisis en curso',
 

@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Fail',
         'file_import' => 'Impordi fail…',
-        'file_scan_email' => 'Skanni e-posti kohe',
+        'file_scan_email' => 'E-posti postkastid…',
         'help' => 'Abi',
         'help_github_repo' => 'GitHubi repositoorium',
         'help_report_issue' => 'Teata probleemist',
         'help_about' => 'Beatraxist',
         'developer_submenu' => 'Arendaja',
         'dev_open_console' => 'Ava arenduskonsool',
-        'dev_run_command' => '⌘K Käivita käsk',
+        'dev_run_command' => 'Käivita käsk…',
     ],
 
     'worker_alert' => [

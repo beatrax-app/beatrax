@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Summa kuvamine',
-        'label' => 'Vaikevaade tehingute loendis',
+        'label' => 'Summade vaikevaade',
         'eur_only' => 'Arveldatud summa',
         'original' => 'Algne summa',
-        'help' => 'Tehingute loendis saad seda igal lehel endiselt vahetada.',
+        'help' => 'Kehtib tehingute loendi ja Ülevaate kogusummade kohta. Igal lehel saad seda endiselt vahetada, aga ainult tehingute loendis.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Vahetuskursid',
         'fetch_online' => 'Tõmba ajakohased kursid veebist',
-        'online_on' => 'Kursid tõmmatakse iga päev ECB-st. Ainult valuutapaaride päringud — isikuandmeid ei saadeta.',
+        'online_on' => 'Kursid tõmmatakse iga päev ECB-st või Frankfurterist, kui ECB pole kättesaadav. Ainult valuutapaaride päringud — isikuandmeid ei saadeta.',
         'last_updated' => 'Viimati uuendatud: :date.',
-        'online_off' => 'Kasutusel on kaasas olevad kursid. Andmed ei lahku sellest seadmest.',
+        'online_off' => 'Kasutusel on endiselt juba olemasolevad kursid, varuvariandiks on kaasas olev hetktõmmis. Andmed ei lahku sellest seadmest.',
         'fetch_aria' => 'Tõmba ajakohased vahetuskursid veebist',
         'refreshing' => 'Värskendan…',
         'next_refresh' => 'Automaatne värskendus: kord päevas',

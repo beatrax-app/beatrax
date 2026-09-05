@@ -142,7 +142,7 @@ What the module explicitly does NOT do:
   caller, running synchronously so a transaction is searchable the
   instant the import commits (no queue dependency). It is not the only
   one. **Every write that changes indexed text has to reindex**, and
-  seven classes across five modules do:
+  nine classes across five modules do:
 
   | Caller | Module | When |
   |---|---|---|

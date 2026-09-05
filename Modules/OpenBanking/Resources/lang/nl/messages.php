@@ -125,7 +125,7 @@ return [
 
         'step3_title' => 'Plak je applicatie-ID',
         'application_id_label' => 'Applicatie-ID',
-        'step3_help' => 'Dit wordt opgeslagen in een lokaal bestand buiten de database met beperkte rechten en verlaat dit apparaat nooit.',
+        'step3_help' => 'Wordt opgeslagen in een lokaal bestand buiten de database, dat alleen jij kunt lezen. Het identificeert je applicatie bij Enable Banking, dus het gaat met elke aanvraag mee — je privésleutel nooit.',
 
         'step4_title' => 'Kies je bank',
         'via_enable_banking' => 'via Enable Banking',

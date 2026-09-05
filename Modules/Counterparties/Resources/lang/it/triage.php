@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Salta per ora',
     'mark_ignored' => 'Non chiedermelo più',
-    'not_now_note' => 'Nessuna delle due modifica la controparte: puoi ancora etichettarla più tardi dalla pagina Controparti.',
+    'skip_note' => 'Saltare non scrive nulla: passa solo alla prossima sconosciuta.',
+    'mark_ignored_note' => 'Questo segna la controparte come ignorata, così resta fuori da questa coda. Nome, tipo e cronologia restano intatti e puoi ancora etichettarla più tardi dalla pagina Controparti.',
     'previous' => 'Sconosciuta precedente',
 
     'kbd_yes' => 'sì',

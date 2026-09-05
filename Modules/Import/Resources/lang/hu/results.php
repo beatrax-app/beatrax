@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Másik számlakivonat feltöltése',
 
     'chain' => [
-        'heading' => 'Láncok feloldása…',
-        'pending' => 'Várólistán. A láncfeloldó hamarosan elindul.',
+        'heading' => 'Láncok feloldása',
+        'pending' => 'A láncok feloldása nem indult el, ezért a finanszírozási láncok nem lettek összekapcsolva.',
         'running' => 'Finanszírozási láncok összekapcsolása és a kivonatelszámolások felbontása.',
     ],
 

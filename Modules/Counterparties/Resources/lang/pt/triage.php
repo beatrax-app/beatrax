@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Ignorar por agora',
     'mark_ignored' => 'Não perguntar mais por esta',
-    'not_now_note' => 'Nenhuma das duas altera a contraparte — ainda a podes identificar mais tarde na página Contrapartes.',
+    'skip_note' => 'Ignorar não escreve nada — passa apenas para a desconhecida seguinte.',
+    'mark_ignored_note' => 'Isto marca a contraparte como ignorada, para que fique fora desta fila. O nome, o tipo e o histórico ficam intactos e ainda a podes identificar mais tarde na página Contrapartes.',
     'previous' => 'Desconhecida anterior',
 
     'kbd_yes' => 'sim',

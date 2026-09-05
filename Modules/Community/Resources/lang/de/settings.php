@@ -28,6 +28,6 @@ return [
         'title' => 'Gemeinsame Liste bei App-Updates aktualisieren',
         'help' => 'Die mitgelieferte Liste jedes Mal auffrischen, wenn Beatrax sich selbst aktualisiert.',
         'help_phone' => 'Die mitgelieferte Liste jedes Mal auffrischen, wenn eine neue Version von Beatrax aus dem App Store oder von Google Play installiert wird.',
-        'note' => 'Wird mit einem künftigen App-Update aktiv — die aktuelle Version findest du unter Einstellungen → Über.',
+        'note' => 'Wird mit einem künftigen App-Update aktiv — die Version, die du nutzt, steht oben in der Seitenleiste.',
     ],
 ];

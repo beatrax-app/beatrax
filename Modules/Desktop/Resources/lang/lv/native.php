@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Fails',
         'file_import' => 'Importēt failu…',
-        'file_scan_email' => 'Skenēt e-pastu tagad',
+        'file_scan_email' => 'E-pasta pastkastes…',
         'help' => 'Palīdzība',
         'help_github_repo' => 'GitHub repozitorijs',
         'help_report_issue' => 'Ziņot par problēmu',
         'help_about' => 'Par Beatrax',
         'developer_submenu' => 'Izstrādātājam',
         'dev_open_console' => 'Atvērt izstrādes konsoli',
-        'dev_run_command' => '⌘K Izpildīt komandu',
+        'dev_run_command' => 'Izpildīt komandu…',
     ],
 
     'worker_alert' => [

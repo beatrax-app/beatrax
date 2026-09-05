@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Zadrži biometriju',
 
     'auto_lock' => 'Automatski zaključaj posle',
+    'auto_lock_note' => 'Beatrax se zaključava posle toliko vremena bez aktivnosti — i pre toga ako ga napustiš: prelazak u drugu aplikaciju ili skrivanje ili zatvaranje prozora zaključava Beatrax u roku od :window, bez obzira na ovo podešavanje.',
     'idle_1' => '1 minut',
     'idle_5' => '5 minuta',
     'idle_15' => '15 minuta',

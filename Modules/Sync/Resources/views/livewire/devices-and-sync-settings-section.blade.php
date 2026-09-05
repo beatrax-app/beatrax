@@ -53,15 +53,17 @@
         :label="Lang::get('sync::devices.enable_sync')"
         :description="Lang::get('sync::devices.enable_sync_help')"
     >
-        {{-- Blade does not compile @class / @disabled between the attributes of
-             an <x-…> tag, so the app-lock gate is spelled as bound expressions.
-             The dimming classes ADD to the track the component builds. --}}
+        {{-- Sync has no off position — enableSync() is the only action there
+             is — so once it is on the track is a readout, not a control.
+             pointer-events-none cannot say that: it swallows the not-allowed
+             cursor, and disabled alone takes the button out of the tab order. --}}
         <x-core::switch
             :on="$syncEnabled"
             :label="Lang::get('sync::devices.enable_sync')"
-            wire:click="{{ $syncEnabled ? '' : ($appLockConfigured ? 'enableSync' : '') }}"
-            :class="! $appLockConfigured && ! $syncEnabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
-            :disabled="! $appLockConfigured && ! $syncEnabled"
+            wire:click="{{ $syncEnabled || ! $appLockConfigured ? '' : 'enableSync' }}"
+            class="disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="$syncEnabled || ! $appLockConfigured"
+            :aria-disabled="$syncEnabled || ! $appLockConfigured ? 'true' : 'false'"
         />
     </x-core::setting-row>
 

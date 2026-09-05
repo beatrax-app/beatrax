@@ -37,6 +37,11 @@ return [
     'keep_biometric' => 'Jäta biomeetria alles',
 
     'auto_lock' => 'Automaatne lukustus pärast',
+    // i18n-review: et · auto_lock_note — ":window" is core::durations.seconds and
+    // reads "30 sekundit"; "30 sekundi jooksul" needs a genitive the shared key
+    // cannot supply, so the window moved into its own "selleks kulub" clause.
+    // Whether an Estonian reader wants it back inside the frame is the call.
+    'auto_lock_note' => 'Beatrax lukustub pärast nii pikka tegevusetust — ja varem, kui sa selle juurest lahkud: teise rakendusse lülitumine või akna peitmine või sulgemine lukustab Beatraxi olenemata sellest seadest ja selleks kulub kõige rohkem :window.',
     'idle_1' => '1 minut',
     'idle_5' => '5 minutit',
     'idle_15' => '15 minutit',

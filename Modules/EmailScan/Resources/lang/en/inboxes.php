@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Reconnect',
     'disconnect' => 'Disconnect',
+    'disconnect_confirm' => 'Disconnect :email? This removes the stored credentials for this mailbox, its scan history, and the senders you added or dismissed. Receipts already filed into Beatrax are not affected. Connecting it again starts a fresh scan.',
     'scan_now' => 'Scan now',
     'scan_in_progress_title' => 'Scan already in progress',
 

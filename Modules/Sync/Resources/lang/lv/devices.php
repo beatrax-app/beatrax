@@ -6,7 +6,7 @@ return [
     'heading' => 'Ierīces un sinhronizācija',
 
     'enable_sync' => 'Ieslēgt sinhronizāciju',
-    'enable_sync_help' => 'Droši koplietojiet savus datus starp uzticamām ierīcēm. Nepieciešama lietotnes bloķēšana. Tiklīdz tā ir ieslēgta, dati tiek šifrēti un lietotnes bloķēšanu vairs nevar izslēgt.',
+    'enable_sync_help' => 'Droši koplietojiet savus datus starp uzticamām ierīcēm. Nepieciešama lietotnes bloķēšana. Ieslēgšanu nevar atsaukt: no šī brīža dati tiek šifrēti, un vairs nevar izslēgt ne sinhronizāciju, ne lietotnes bloķēšanu.',
 
     'app_lock_notice' => 'Vispirms iestatiet lietotnes bloķēšanu, lai ieslēgtu sinhronizāciju.',
     'go_to_app_lock' => 'Doties uz lietotnes bloķēšanu',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Atbloķēšana atkārtoti atver šo pārošanu, nevis ļauj tai beigties, tāpēc tā ilgst ilgāk par jūsu iestatīto lietotnes bloķēšanas laiku. Tā beidzas, kad to pabeidzat vai atceļat.',
 
     'relay_endpoint' => 'Retranslatora adrese',
-    'relay_endpoint_help' => 'Neobligāti. Ja norādīts, bezsaistes ierīces sinhronizējas caur šo retranslatoru. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
-    'relay_endpoint_help_phone' => 'Neobligāti. Ja norādīts, izmaiņas ceļo caur šo retranslatoru arī tad, kad jūsu ierīces nav vienā tīklā. Šī ierīce tās saņem, kad sinhronizējat no šī ekrāna — nekad fonā, jo lietotnes bloķēšana glabā vienīgo atslēgu. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
+    'relay_endpoint_help' => 'Neobligāti. Retranslators ļauj divām ierīcēm pabeigt pārošanu un apmainīties ar šifrēšanas atslēgām, kad tās nevar sasniegt viena otru tieši. Paši darījumi joprojām sinhronizējas tikai tad, kad abas ierīces ir vienā tīklā. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
+    'relay_endpoint_help_phone' => 'Neobligāti. Retranslators ļauj divām ierīcēm pabeigt pārošanu un apmainīties ar šifrēšanas atslēgām, kad tās nevar sasniegt viena otru tieši. Paši darījumi joprojām sinhronizējas tikai tad, kad abas ierīces ir vienā tīklā. Šī ierīce saņem to, kas to gaida, kad sinhronizējat no šī ekrāna — nekad fonā, jo lietotnes bloķēšana glabā vienīgo atslēgu. Atstājiet tukšu, lai izmantotu tikai tiešu LAN&#8209;savienojumu.',
     'relay_endpoint_aria' => 'Retranslatora adreses URL',
     'relay_insecure_warning' => 'Šī retranslatora adrese izmanto vienkāršu HTTP. Lai gan retranslators jūsu datus nekad neatšifrē, nedrošs savienojums atklāj tīkla novērotājiem šifrēto datu apjomu un laikus. Vislabākā privātuma nodrošināšanai izmantojiet <strong>https://</strong> adresi.',
 

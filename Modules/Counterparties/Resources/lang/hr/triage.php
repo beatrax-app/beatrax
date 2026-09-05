@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Preskoči zasad',
     'mark_ignored' => 'Više ne pitaj za ovu',
-    'not_now_note' => 'Nijedno ne mijenja protustranku — još je uvijek možeš označiti kasnije na stranici Protustranke.',
+    'skip_note' => 'Preskakanje ne zapisuje ništa — samo prelazi na sljedeću nepoznatu.',
+    'mark_ignored_note' => 'Ovo označava protustranku kao zanemarenu pa ostaje izvan ovog reda. Njezin naziv, vrsta i povijest ostaju netaknuti, a i dalje je možeš označiti kasnije na stranici Protustranke.',
     'previous' => 'Prethodna nepoznata',
 
     'kbd_yes' => 'da',

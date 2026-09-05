@@ -254,19 +254,36 @@ Noise authenticates the *socket*. It says nothing about who originally signed a
 given op, and ops legitimately arrive having been forwarded through the relay
 or replayed from disk — so the transport channel is not the signing boundary.
 `SyncSession::receiveOps()` verifies each entry's Ed25519 signature against the
-connect-time snapshot key map UNIONED with
-`DeviceRegistryService::retainedDeviceKeys()`, and drops anything unverifiable
-before handing the rest to the replayer. The snapshot admits peers; the retained
-map only reads history, and removal has already shut the Noise transport to a
-revoked device, so a wider verification map grants it nothing.
+key map its caller hands it, and that map is the whole gate — nothing inside the
+method widens it. Every path that reaches the wire passes
+`DeviceRegistryService::signatureVerificationKeys()`, read once as a connect-time
+snapshot so a revocation takes effect on the peer's next reconnect. A key the
+registry merely *retains* is deliberately not in it: it belongs to a device
+nothing confirms, the replayer refuses that device's new work anyway, and
+admitting it here would spend this peer's cursor on an entry no later
+confirmation could bring back.
 
-Two dropped-entry cases are logged very differently on purpose. An invalid
-signature is one warning per entry. An entry whose author key is not in the map
-at all is **counted per author and reported once, at error level**: a peer whose
-history was signed by a retired identity wrote the same warning six thousand
-times, which is why nobody read it, and an exchange that delivered thousands of
-entries and applied none of them otherwise looks like an ordinary clean sync
-from every surface above it.
+An entry the map cannot verify is therefore **held, not dropped**. Held means it
+reaches no merge strategy and writes nothing, and — the load-bearing half — that
+it is left out of the watermark advance, which runs over the verified entries
+alone. The cursor is kept per (peer, author), so an author with a single held
+entry gets no cursor movement at all and the peer offers that author's whole
+delta again on the next exchange. What releases the hold is the key arriving:
+the device finishing the pairing ceremony, or a `device_introductions` row this
+reader confirms. The next exchange re-offers the same entries, they verify, and
+they replay. `AHeldEntryKeepsItsPlaceInThePeerCursorTest` is where that is
+pinned.
+
+The two refusals are logged very differently on purpose. An entry that fails
+verification against a key this device does hold is one warning per entry. An
+entry whose author is in no map at all is **counted per author and reported
+once, at error level**: a peer whose history was signed by a retired identity
+wrote the same warning six thousand times, which is why nobody read it, and an
+exchange that delivered thousands of entries and applied none of them otherwise
+looks like an ordinary clean sync from every surface above it. That one line
+carries `known_to_registry`, read from `retainedDeviceKeys()` — the only use the
+retained map has here, and only to separate an author this install once trusted,
+whom an introduction can restore, from one it has never heard of.
 
 The replay itself is synchronous. That is safe only because the pacing bounds
 live out of band — the per-receive timeout and `MAX_CATCHUP_FRAMES` — rather

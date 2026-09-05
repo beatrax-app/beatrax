@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Forbind igen',
     'disconnect' => 'Afbryd',
+    'disconnect_confirm' => 'Vil du afbryde :email? Det fjerner de gemte oplysninger for denne postkasse, dens scanningshistorik og de afsendere, du har tilføjet eller lukket. Kvitteringer, der allerede er lagt i Beatrax, berøres ikke. Forbinder du igen, starter en ny scanning forfra.',
     'scan_now' => 'Scan nu',
     'scan_in_progress_title' => 'Scanning er allerede i gang',
 

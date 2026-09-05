@@ -55,17 +55,36 @@ Practical recipes for exercising the `Import` module in isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide
-  `noKnownCounterpartyIbansReadsOutsideResolver` — only
-  `KnownCounterpartyIbanResolver` may query the table.
-- The repo-wide `paymentTypeHinterRegistryFallbackIsLast` —
-  asserts the `DescriptionKeywordFallbackHinter` is the last
-  hinter registered under the
-  `import.payment_type_hinter` tag.
-- The repo-wide `startingBalanceDetectorRegistryOrdering` —
-  asserts CAMT.053 first, MT940 second, ICS PDF third,
-  PayPal CSV last under the `starting-balance.detector`
-  tag.
+- Nothing restricts who reads `known_counterparty_ibans`, and
+  `KnownCounterpartyIbanResolver` is not its only reader. Four other
+  production files query the table directly —
+  `Transfers\Internal\Services\TransferPairer`,
+  `Counterparties\Internal\Resolver\CounterpartyResolverService`,
+  `Chains\Internal\Resolvers\RetypeByAliasResolver` and
+  `Chains\Internal\Resolvers\PaypalFundingResolver` — while
+  `Ledger\Public\Services\CounterpartyKeyBackfill` reads its
+  `real_iban` column during the enable-time sweep and
+  `Sync\Internal\Crypto\SensitiveFieldRegistry` names that column as
+  one left in plaintext at rest. Reads are unrestricted by design:
+  `crossModuleRawTableWrites` pins raw cross-module *writes* and says
+  nothing about reads. A test asserting a single reader would be
+  asserting a rule this repository does not hold.
+- The two container registries are held by module feature tests, not
+  by a repo-wide invariant. `PaymentTypeHinterRegistryTest` resolves
+  the `import.payment_type_hinter` tag and pins the resulting class
+  list exactly — CAMT.053, MT940, positional CSV, ICS PDF, PayPal CSV,
+  then `DescriptionKeywordFallbackHinter` — with a separate case
+  asserting the fallback is last so the tie-break falls through to it.
+  `StartingBalanceDetectorRegistryTest` does the same for the four
+  `starting-balance.detector` bindings: CAMT.053, MT940, ICS PDF,
+  PayPal CSV. A seventh hinter, a fifth detector or a reordering fails
+  until somebody edits the pinned list.
+- `paymentTypeHinterContract` in `tests/Contracts/BoundaryArchTest.php`
+  is the arch half. It reflects over every `*Hinter` class under
+  `Modules/Import/Internal/Parsers` and fails one that does not
+  implement `Modules\Import\Public\Contracts\PaymentTypeHinter`,
+  which is how a class silently drops out of the classifier seam's
+  `iterable<PaymentTypeHinter>` type.
 
 ## How to run the suite for just this module
 

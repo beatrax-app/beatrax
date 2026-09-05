@@ -27,7 +27,7 @@ final class DoctorCommand extends Command
     protected $signature = 'beatrax:doctor';
 
     /** @var string */
-    protected $description = 'Report installed PHP / Composer / SQLite versions and verify minimums.';
+    protected $description = 'Run the operational probe suite and report pass / warn / fail per row. Exits 2 on a fail row, 1 on a warn row.';
 
     public function __construct(
         private readonly PhpVersionProbe $phpProbe,

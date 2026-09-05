@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Bienvenue',
     'h1' => 'Apprenons à Beatrax à connaître ton argent.',
-    'lede' => 'Environ 5 minutes. Rien ne quitte cet appareil — tout ce que tu connectes reste dans un fichier ici.',
+    'lede' => 'Environ 5 minutes. Beatrax garde ton historique dans un fichier sur cet appareil — la seule étape qui sort d\'ici est la connexion d\'une boîte de réception, et tu peux la passer.',
     'tagline' => 'Voici ce que nous allons configurer :',
 
     'bank_title' => 'Ta banque',

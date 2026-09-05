@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Jurnal de audit',
-    'subtitle' => 'Fiecare comandă, acțiune de coadă și interogare SQL rulată prin Dev Console.',
+    'subtitle' => 'Comenzile, acțiunile de coadă și interogările SQL pe care le-ai rulat prin Dev Console.',
     'clear_all' => 'Șterge tot',
-    'clear_all_confirm' => 'Ștergi fiecare intrare din jurnalul de audit? Acțiunea nu poate fi anulată.',
+    'clear_all_confirm' => 'Ștergi fiecare intrare din jurnalul de audit pe care ai înregistrat-o? Acțiunea nu poate fi anulată.',
     'filter_tier' => 'Nivel',
     'filter_all' => 'Toate',
     'filter_command' => 'Comandă',

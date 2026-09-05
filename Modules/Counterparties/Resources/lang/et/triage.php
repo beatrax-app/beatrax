@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Jäta praegu vahele',
     'mark_ignored' => 'Ära seda enam küsi',
-    'not_now_note' => 'Kumbki ei muuda vastaspoolt — saad selle hiljem vastaspoolte lehel sildistada.',
+    'skip_note' => 'Vahelejätmine ei kirjuta midagi — see liigub lihtsalt järgmise tundmatu juurde.',
+    'mark_ignored_note' => 'See märgib vastaspoole eiratuks, nii et see jääb sellest järjekorrast välja. Nimi, tüüp ja ajalugu jäävad puutumata ning saad selle hiljem vastaspoolte lehel sildistada.',
     'previous' => 'Eelmine tundmatu',
 
     'kbd_yes' => 'jah',

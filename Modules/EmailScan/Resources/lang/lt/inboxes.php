@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Prijungti iš naujo',
     'disconnect' => 'Atjungti',
+    'disconnect_confirm' => 'Atjungti :email? Tai pašalins išsaugotus šios dėžutės prisijungimo duomenis, jos nuskaitymo istoriją ir siuntėjus, kuriuos pridėjai ar paslėpei. Į Beatrax jau įtrauktiems kvitams tai neturi įtakos. Prisijungus iš naujo nuskaitymas prasideda nuo pradžių.',
     'scan_now' => 'Nuskaityti dabar',
     'scan_in_progress_title' => 'Nuskaitymas jau vyksta',
 

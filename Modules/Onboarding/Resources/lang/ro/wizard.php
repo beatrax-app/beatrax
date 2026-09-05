@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Asistentul nu a putut determina pasul activ. Folosește Reia mai târziu → ca să ieși, iar la următoarea pornire se va reface.',
 
     'privacy' => 'Datele tale rămân pe acest dispozitiv',
+    'privacy_connector' => 'Datele tale rămân pe acest dispozitiv. Acest pas conectează căsuța ta de e-mail la Google sau Microsoft.',
     'need_help' => 'Ai nevoie de ajutor?',
     'need_help_aria' => 'Ai nevoie de ajutor? Deschide pagina de probleme Beatrax de pe GitHub',
 ];

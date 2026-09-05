@@ -5,24 +5,36 @@ Practical recipes for exercising the `Categorization` module in isolation.
 ## Unit tests
 
 - **Location:** `Modules/Categorization/tests/Unit/`
-- **What they test:** the specificity scoring table
-  (`RuleEvaluatorSpecificityTest`); the default-tree seeder's
-  idempotence + global scope (`DefaultCategoryTreeSeederTest`); the
-  default-rule seeder's per-user write + slug resolution
+- **What they test:** the matcher's ordering and determinism —
+  ascending `priority` then `id`, actions by `position` then `id`, and
+  a byte-identical list on a repeat call (`RuleEngineOrderingTest`);
+  the condition matcher operator by operator across the text, amount
+  and date value types and both combinators, plus the three rules that
+  never fire — inactive, foreign-user, and no conditions at all
+  (`RuleEngineConditionMatchingTest`); an amount bound never reaching
+  a row settled in another currency
+  (`AnAmountRuleDoesNotReachAnotherCurrencyTest`); the default-tree
+  seeder's idempotence + global scope (`DefaultCategoryTreeSeederTest`);
+  the default-rule seeder's per-user write + slug resolution
   (`DefaultCategorizationRuleSeederTest`); the merchant-memory
   query's batching shape (`MerchantMemoryQueryBatchTest`); the
   uncategorised-triage query's user-scoped result set
   (`UncategorizedTriageQueryTest`).
-- **Common stubs:** the specificity test exercises `RuleEvaluator`
-  against an in-memory rule + memory list and a synthetic
-  `CanonicalTransaction`. No HTTP layer is involved.
+- **Common stubs:** the two `RuleEngine` tests build rules through the
+  Eloquent models against a refreshed database and hand `match()` a
+  synthetic `RuleMatchInput`. No HTTP layer is involved.
 
 ## Feature tests
 
 - **Location:** `Modules/Categorization/tests/Feature/`
 - **What they test:**
-  - The full evaluator behaviour against a real DB
-    (`RuleEvaluatorTest`).
+  - The merchant-memory fallback against a real DB — recency ahead
+    of occurrence count, the empty-counterparty sentinel, and a
+    foreign user's memory never firing (`RuleEvaluatorTest`).
+  - The applier's two modes, last-writer-wins per action type, and
+    the `manual` provenance skip (`RuleApplierActionsTest`).
+  - The re-apply job over history, including its split and
+    reconciled guards (`ReapplyRulesJobTest`).
   - The stage's exception-fall-through + hits-count atomic increment
     (`ApplyAutoCategoryStageTest`).
   - The `AssignCategory` action's delegation to Ledger and event
@@ -45,12 +57,17 @@ Practical recipes for exercising the `Categorization` module in isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noCategorizationWritesTransactions` arch invariant
-  (in `tests/Contracts/BoundaryArchTest.php`) — forbids any class
-  under `Modules\Categorization\` from importing
-  `Modules\Ledger\Models\Transaction` for write. Adding a new
-  Categorization service that needs to update `transactions` must go
-  through Ledger's `UpdatesTransactionCategory` contract instead.
+- No invariant names this module and `transactions` together. The one
+  that reaches it is `crossModuleRawTableWrites` (in
+  `tests/Contracts/BoundaryArchTest.php`), which pins Categorization
+  for `merchant_memories` and `merchants` and for nothing else — so a
+  raw write to `transactions` from here fails the build with the
+  offending file named. A new service that needs to change a
+  transaction goes through Ledger's Public contracts:
+  `UpdatesTransactionCategory`, `ReassignsCounterparty`,
+  `SetsTransactionNote`. Reads are unrestricted on purpose, which is
+  what lets `RuleApplier` read a note back after asking Ledger to
+  write it.
 - `tests/Feature/SeedRulesEndToEndCategorizationTest.php` — the live-
   distribution ≥40% gate. Reduces the risk of a default rule set
   regression that lands an install where most transactions arrive
@@ -86,28 +103,34 @@ composer test
   row covering the new spelling or extend the seed list (`default-
   categorization-rules.php`).
 - **Auto-category provenance shows `source=memory` but the user expected
-  `source=rule`** — the rule and the memory candidate scored the same;
-  the tiebreaker is "rule wins" but the rule must be the first
-  candidate evaluated. Run
-  `vendor/bin/pest Modules/Categorization/tests/Unit/RuleEvaluatorSpecificityTest.php`
-  to confirm the score table.
+  `source=rule`** — memory is a fallback, not a competitor. The stage
+  consults it only when no rule fired with a `category` action, so
+  either the rule did not match the row or it carries no category
+  action. Check its conditions against the row and that it is still
+  `active`, then run
+  `vendor/bin/pest Modules/Categorization/tests/Unit/RuleEngineConditionMatchingTest.php`
+  to confirm the operator semantics.
 - **The provenance panel draws nothing after a manual correction** —
   it renders the rule card only for `source=rule`. A `source=memory`
   row gets the memory card and a `source=manual` row gets nothing at
   all, both by design. Run
   `vendor/bin/pest Modules/Categorization/tests/Feature/CategorizationProvenancePanelTest.php`
   to see the three variants.
-- **A test failing with "unknown field/match" trigger error** — the
-  paired BEFORE INSERT / BEFORE UPDATE triggers on
-  `categorization_rules.field / match` reject any value outside the
-  enum. Confirm the action layer is producing one of the allowed
-  values; the trigger is the second layer behind the action-layer
-  validation.
+- **A test failing with an unknown-value trigger error** — paired
+  BEFORE INSERT / BEFORE UPDATE triggers reject any value outside the
+  enum on `rule_conditions.field`, `rule_conditions.op`,
+  `rule_conditions.value_type` and `categorization_rules.combinator`.
+  Confirm the action layer is producing one of the allowed values; the
+  trigger is the second layer behind the action-layer validation.
 - **Merchant memory rows not appearing after a reclassify** — the
-  transaction probably has no resolved merchant. `MerchantMemoryWriter`
-  skips the upsert in that case; the typical cause is a counterparty-
-  normalization mismatch in the source row. Inspect
-  `transactions.counterparty_normalized` against `merchants.normalized_name`.
+  listener find-or-creates the `merchants` row its NOT NULL FK points
+  at, so a missing merchant is no longer a reason. What still stops it
+  is a transaction whose `counterparty_normalized` is empty or the
+  `CounterpartyKey::NONE` sentinel, and an un-categorise (a null
+  `categoryId`), both of which return before any write. Inspect
+  `transactions.counterparty_normalized` first; if it holds a value,
+  check it against `merchants.normalized_name`, since the two must be
+  derived the same way to join.
 
 ## Behavioural contracts, and the tests that hold them
 
@@ -116,26 +139,39 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-- **The rule evaluator picks at most one winner per transaction, by
-  specificity score.** Equals beats memory beats starts_with beats
-  contains; at equal score, the rule beats the memory. The score
-  algorithm is documented in
-  [architecture/categorization](../../architecture/categorization.md).
-  (`tests/Unit/RuleEvaluatorSpecificityTest.php`,
-  `tests/Feature/RuleEvaluatorTest.php`)
-- **The rule evaluator never crosses the user boundary.** Every
-  rule + memory + merchant lookup is scoped by `where('user_id',
+- **Every matching rule fires, and the last one visited wins per
+  action type.** `RuleEngine::match()` evaluates the whole active set
+  in ascending `priority` then `id` and returns all of it; `RuleApplier`
+  folds those actions into one desired action per type, so the
+  `category`, `counterparty`, `note` or `tax_tag` that lands is the one
+  from the **highest** `priority` rule, with the highest `id` breaking
+  a tie. There is no score anywhere in this path. The full account is
+  [Rule evaluation order](rule-evaluation-order.md).
+  (`tests/Unit/RuleEngineOrderingTest.php`,
+  `tests/Feature/RuleApplierActionsTest.php`)
+- **Merchant memory is a fallback, never a competitor.**
+  `ApplyAutoCategoryStage` calls `RuleEvaluator::lookupMemory()` only
+  when no fired rule carried a `category` action, and the row it takes
+  is the most recently seen one — `last_seen_at` first, then
+  `occurrence_count`, then `id` — so a fresh correction outranks a
+  stale memory with a bigger count.
+  (`tests/Feature/RuleEvaluatorTest.php`,
+  `tests/Feature/ApplyAutoCategoryStageTest.php`)
+- **Neither layer crosses the user boundary.** Every rule, condition,
+  action, memory and merchant pull is scoped by `where('user_id',
   $user->id)`; no other user's rule can fire for the current user.
-  (`tests/Feature/RuleEvaluatorTest.php`)
-- **`ApplyAutoCategoryStage` never aborts an import.** On any evaluator
-  exception, it logs a warning and returns
+  (`tests/Unit/RuleEngineConditionMatchingTest.php`,
+  `tests/Feature/RuleEvaluatorTest.php`)
+- **`ApplyAutoCategoryStage` never aborts an import.** On any exception
+  from either layer, it logs a warning and returns
   `AutoCategorizationOutcomeDto::manual($tx)` so the row lands in the
   triage queue rather than the import bailing.
   (`tests/Feature/ApplyAutoCategoryStageTest.php`)
 - **`AssignCategory` never writes to `transactions` directly.** Every
   successful manual categorisation routes through Ledger's
-  `UpdatesTransactionCategory` (the sole `transactions` mutator).
-  Enforced by the `noCategorizationWritesTransactions` arch invariant.
+  `UpdatesTransactionCategory`. A raw write from here would be caught
+  by `crossModuleRawTableWrites`, since this module is pinned for
+  `merchant_memories` and `merchants` only.
   (`tests/Feature/AssignCategoryTest.php`)
 - **`TransactionCategorized` fires exactly once per successful
   reclassify.** No double-dispatch on the same write; no dispatch when
@@ -159,8 +195,11 @@ and the assertion — see
   (`tests/Unit/DefaultCategoryTreeSeederTest.php`,
   `tests/Unit/DefaultCategorizationRuleSeederTest.php`)
 - **The matched-rule counter is monotonic under concurrent imports.**
-  `ApplyAutoCategoryStage` uses `UPDATE … SET hits_count = hits_count
-  - 1` (atomic), not read-modify-write.
+  `ApplyAutoCategoryStage` bumps `hits_count` with an atomic `UPDATE`
+  that adds one to the stored value, never a read-modify-write, and
+  runs the whole bump loop inside one DB transaction so a mid-loop
+  throw rolls every increment for the row back.
+  (`tests/Feature/ApplyAutoCategoryStageTest.php`)
 - **The CRUD surface for rules respects per-user scope.**
   `CreateCategorizationRule` / `UpdateCategorizationRule` /
   `DeleteCategorizationRule` filter by `user_id`; a cross-user mutate
@@ -181,12 +220,13 @@ and the assertion — see
   return `AutoCategorizationOutcomeDto::manual($folded)`. Either way
   the import succeeds.
 - **Memory candidate but counterparty is the empty sentinel** —
-  `CounterpartyKey::NONE` short-circuits the memory JOIN; only
-  rule candidates participate in scoring.
-- **Rule with an unknown `field` or `match` value** (e.g. a row that
-  somehow bypassed the DB trigger) — silently skipped by the evaluator;
-  it never picks an unsanctioned operator.
-- **Buggy user-authored rule throwing inside the evaluator** — caught
+  `CounterpartyKey::NONE` short-circuits the memory JOIN, so the row
+  falls through to manual unless a fired rule already set a category.
+- **Rule condition with an unknown `op` or `value_type`** (e.g. a row
+  that somehow bypassed the DB trigger) — `RuleEngine` reads that
+  condition as false rather than throwing, so a corrupt row disables
+  its own rule instead of taking down the run.
+- **Buggy user-authored rule throwing inside the matcher** — caught
   by `ApplyAutoCategoryStage`; the import row falls back to manual; the
   user sees it in triage. The warning is logged with
   `(user_id, source_format, source_row_index, exception, message)` so
@@ -235,4 +275,4 @@ and the assertion — see
   that the receipt-vs-statement enrichment conflict resolver respects.
   Documented in [categorization architecture](../../architecture/categorization.md#the-receipt-vs-statement-enrichment-conflict-resolver).
 - No environment config keys; the module has no behaviour that varies
-  by `BEATRAX_RUNTIME` or any other runtime flag.
+  by `BEATRAX_DEV_MODE` or any other runtime flag.

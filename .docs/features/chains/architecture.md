@@ -94,7 +94,7 @@ What the module explicitly does NOT do:
 - **Internal/CardStatementStateMachine** — the sole sanctioned mutator
   of `card_statements.state` (`open` → `partially_settled` →
   `settled` / `overpaid`). The arch invariant
-  `noCardStatementStateWritesOutsideMachine` keeps it sole.
+  `noOtherCardStatementStateMutator` keeps it sole.
 - **Internal/ChainLinkInsertHelper** — the single shared `chain_links`
   INSERT site that encodes evidence JSON consistently.
 - **Internal/Exceptions/ChainLinkRequiresConcretePartnerException** —

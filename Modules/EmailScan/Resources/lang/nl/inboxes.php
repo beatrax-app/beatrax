@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Opnieuw verbinden',
     'disconnect' => 'Ontkoppelen',
+    'disconnect_confirm' => ':email ontkoppelen? Dit verwijdert de opgeslagen inloggegevens van deze mailbox, de scangeschiedenis en de afzenders die je hebt toegevoegd of afgewezen. Bonnen die al in Beatrax staan blijven ongewijzigd. Opnieuw verbinden begint met een verse scan.',
     'scan_now' => 'Nu scannen',
     'scan_in_progress_title' => 'Er loopt al een scan',
 

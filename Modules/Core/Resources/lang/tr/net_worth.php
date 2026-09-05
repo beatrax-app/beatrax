@@ -23,9 +23,11 @@ return [
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurlar :date tarihli, kaynak :source',
 
-    'stale_bundled' => 'Uygulamayla birlikte gelen anlık kur kullanılıyor. Güncel kurlar için Ayarlar bölümünden çevrimiçi yenilemeyi aç.',
-    'stale_old' => 'Bu kur 3 günden eski. Bir sonraki çevrimiçi yenileme onu güncelleyecek.',
+    'stale_bundled' => 'Uygulamayla birlikte gelen, :count günden eski anlık kur kullanılıyor. Güncel kurlar için Ayarlar bölümünden çevrimiçi yenilemeyi aç.',
+    'stale_old' => 'Bu kur :count günden eski. Bir sonraki çevrimiçi yenileme onu güncelleyecek.',
+    'stale_offline' => 'Bu kur :count günden eski ve çevrimiçi yenileme kapalı. Güncellenmesi için Ayarlar bölümünden aç.',
 
+    'source_ecb' => 'ECB',
     'source_bundled' => 'Yerleşik anlık görüntü',
     'source_transaction' => 'Kaydedilen kur',
     'source_fallback' => 'kurlar',

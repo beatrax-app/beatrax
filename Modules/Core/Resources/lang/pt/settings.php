@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Apresentação do montante',
-        'label' => 'Vista predefinida na lista de transações',
+        'label' => 'Vista predefinida dos montantes',
         'eur_only' => 'Montante liquidado',
         'original' => 'Montante original',
-        'help' => 'Podes na mesma alternar página a página a partir da lista de transações.',
+        'help' => 'Aplica-se à lista de transações e aos totais do painel. Podes na mesma alternar página a página, mas só a partir da lista de transações.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Taxas de câmbio',
         'fetch_online' => 'Obter as taxas atuais online',
-        'online_on' => 'Taxas obtidas diariamente do BCE. Apenas consultas de pares de moedas — sem dados pessoais.',
+        'online_on' => 'Taxas obtidas diariamente do BCE, ou do Frankfurter se o BCE estiver indisponível. Apenas consultas de pares de moedas — sem dados pessoais.',
         'last_updated' => 'Última atualização: :date.',
-        'online_off' => 'São usadas as taxas incluídas na app. Nenhum dado sai deste dispositivo.',
+        'online_off' => 'Continuam a ser usadas as taxas que já existem, com o instantâneo incluído como reserva. Nenhum dado sai deste dispositivo.',
         'fetch_aria' => 'Obter online as taxas de câmbio atuais',
         'refreshing' => 'A atualizar…',
         'next_refresh' => 'Atualização automática: uma vez por dia',

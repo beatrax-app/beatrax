@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Kol kas praleisti',
     'mark_ignored' => 'Daugiau apie šią neklausti',
-    'not_now_note' => 'Nė vienas iš jų nekeičia kitos šalies — vėliau ją vis tiek gali pažymėti kitų šalių puslapyje.',
+    'skip_note' => 'Praleidimas nieko neįrašo — tik pereina prie kitos nežinomos.',
+    'mark_ignored_note' => 'Taip kita šalis pažymima kaip nepaisoma ir lieka už šios eilės ribų. Jos pavadinimas, tipas ir istorija nepakinta, o vėliau ją vis tiek gali pažymėti kitų šalių puslapyje.',
     'previous' => 'Ankstesnė nežinoma',
 
     'kbd_yes' => 'taip',

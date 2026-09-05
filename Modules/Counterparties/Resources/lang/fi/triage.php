@@ -42,7 +42,11 @@ return [
 
     'skip' => 'Ohita toistaiseksi',
     'mark_ignored' => 'Älä kysy tästä enää',
-    'not_now_note' => 'Kumpikaan ei muuta vastapuolta — voit merkitä sen myöhemmin Vastapuolet-sivulla.',
+    'skip_note' => 'Ohittaminen ei kirjoita mitään — se vain siirtyy seuraavaan tuntemattomaan.',
+    // i18n-review: fi · mark_ignored_note — "huomiotta jätetty" is the ignore state,
+    // chosen because "ohitettu" is the word the Skip button above it already uses and
+    // these two lines exist to tell the two apart. A native should pick between them.
+    'mark_ignored_note' => 'Tämä merkitsee vastapuolen huomiotta jätetyksi, jolloin se pysyy poissa tästä jonosta. Sen nimi, tyyppi ja historia säilyvät ennallaan, ja voit merkitä sen myöhemmin Vastapuolet-sivulla.',
     'previous' => 'Edellinen tuntematon',
 
     'kbd_yes' => 'kyllä',

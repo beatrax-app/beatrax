@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Datum einer Reihe verschieben',
-            'desc' => 'Verschiebe das nächste oder alle folgenden Vorkommen nach vorn.',
+            'desc' => 'Verschiebe das nächste oder alle folgenden Vorkommen auf ein anderes Datum.',
         ],
     ],
 

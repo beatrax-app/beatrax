@@ -264,6 +264,8 @@
                     {{ Lang::get('counterparties::triage.skip') }}
                 </x-core::secondary-button>
 
+                <p class="triage-note">{{ Lang::get('counterparties::triage.skip_note') }}</p>
+
                 {{-- Slate, not rose. Ignoring writes metadata.ignored and
                      leaves the row, its type and its history alone, and the
                      index card's "Label this counterparty" link carries
@@ -274,7 +276,7 @@
                     {{ Lang::get('counterparties::triage.mark_ignored') }}
                 </x-core::secondary-button>
 
-                <p class="triage-note">{{ Lang::get('counterparties::triage.not_now_note') }}</p>
+                <p class="triage-note">{{ Lang::get('counterparties::triage.mark_ignored_note') }}</p>
             </div>
 
             @if ($hasPrevious)

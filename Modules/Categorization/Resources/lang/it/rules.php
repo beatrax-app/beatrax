@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Le regole restano su questo dispositivo. Non vengono condivise con gli altri tuoi dispositivi.',
 
     'reapply' => 'Riapplica le regole alla cronologia',
-    'reapply_confirm' => 'Riapplicare tutte le regole a tutta la tua cronologia? Ogni categoria, controparte, nota ed etichetta fiscale messa da una regola viene riscritta. Quello che hai impostato a mano resta, e così tutto ciò che si trova su un estratto conto riconciliato. Nulla rimette i valori precedenti.',
+    'reapply_confirm' => 'Riapplicare tutte le regole a tutta la tua cronologia? Ogni categoria, controparte, nota ed etichetta fiscale messa da una regola viene riscritta. Quello che hai impostato a mano resta, e così tutto ciò che si trova su un estratto conto riconciliato o su una transazione che hai suddiviso. Nulla rimette i valori precedenti.',
     'reapplying' => 'Riapplicazione…',
     'new_rule' => 'Nuova regola',
 

@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Poveži ponovo',
     'disconnect' => 'Prekini vezu',
+    'disconnect_confirm' => 'Prekinuti vezu sa :email? Ovo uklanja sačuvane akreditive ovog sandučeta, njegovu istoriju skeniranja i pošiljaoce koje si dodao ili odbacio. Potvrde koje su već zavedene u Beatrax ostaju netaknute. Ponovno povezivanje kreće s novim skeniranjem.',
     'scan_now' => 'Skeniraj sada',
     'scan_in_progress_title' => 'Skeniranje je već u toku',
 

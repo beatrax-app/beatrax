@@ -23,15 +23,16 @@ cross-cutting design lives in the topic page.
 
 What the module explicitly does NOT do:
 
-- It never writes to the `transactions` table directly. The single
-  sanctioned mutator of `transactions.category_id` is Ledger's
-  `UpdatesTransactionCategory` action; `AssignCategory` here delegates
-  to it, then dispatches `TransactionCategorized` for downstream
-  reactions.
-- It never auto-categorises a transaction the rule evaluator could not
-  match. There is no fuzzy heuristic that fires "maybe this is groceries"
-  — uncategorised is honest; a wrong guess buried in the dashboard is
-  worse than an entry in the triage queue.
+- It never writes to the `transactions` table directly. Every field a
+  rule or a manual pick changes goes through a Ledger Public contract —
+  `UpdatesTransactionCategory`, `ReassignsCounterparty`,
+  `SetsTransactionNote` — and `AssignCategory` here delegates to the
+  first of those, then dispatches `TransactionCategorized` for
+  downstream reactions.
+- It never auto-categorises a transaction neither a rule nor the
+  merchant memory matched. There is no fuzzy heuristic that fires "maybe
+  this is groceries" — uncategorised is honest; a wrong guess buried in
+  the dashboard is worse than an entry in the triage queue.
 - It never seeds rules from personal data. The shipped seed set targets
   universal Dutch-household merchants (streaming brands, supermarkets,
   energy suppliers, tax authorities, the bulk-iDEAL settlement marker).
@@ -63,37 +64,57 @@ read-model queries the UI consumes:
 `Internal/` houses the implementation:
 
 - **Internal/Pipeline/ApplyAutoCategoryStage** — the synchronous
-  ImportPipeline stage bound to `AppliesAutoCategory`. Runs the
-  evaluator and stamps `categoryId` + `autoCategoryProvenance` on the
-  canonical row.
-- **Internal/Services/RuleEvaluator** — the specificity-scored matcher.
-- **Internal/Services/RuleEvaluationOutcome** — small value object that
-  carries the winning candidate (or "none") between the evaluator and
-  the stage.
-- **Internal/Listeners/SeedDefaultCategoryTree** + `SeedDefaultCategorizationRules`
-  - `MerchantMemoryWriter` — the three listeners that wire the module
-  into `UserInstalled` and `TransactionCategorized`.
-- **Internal/Http/Livewire/** — `TriageInbox`, `InlineCategoryPicker`,
-  `RulesPage`, `RuleFormModal`, `CategorizationProvenancePanel`.
+  ImportPipeline stage bound to `AppliesAutoCategory`. Runs the rule
+  engine, folds what fired onto the canonical row, and stamps
+  `categoryId` + `autoCategoryProvenance`.
+- **Internal/Services/RuleEngine** — the pure matcher. Returns every
+  rule that fired as a `list<MatchedRule>`; it picks no winner.
+- **Internal/Services/ActiveRuleSet** — the rule book, read whole in
+  three queries and held for the life of the instance.
+- **Internal/Services/RuleApplier** — turns a `list<MatchedRule>` into
+  effects, on the in-flight DTO at import and through Ledger's Public
+  contracts at re-apply.
+- **Internal/Services/RuleEvaluator** — the merchant-memory lookup,
+  consulted only when no fired rule carried a `category` action.
+- **Internal/Listeners/SeedDefaultCategoryTree**,
+  `SeedDefaultCategorizationRules` and `MerchantMemoryWriter` — the
+  three listeners that wire the module into `UserInstalled` and
+  `TransactionCategorized`.
+- **Internal/Http/Livewire/** — `TriageInbox`, `RulesPage`,
+  `RuleFormModal`. `InlineCategoryPicker` and
+  `CategorizationProvenancePanel` are Public, because a neighbour's
+  blade mounts each of them by alias.
 
-The arch invariant `noCategorizationWritesTransactions` keeps the module
-honest: only `AssignCategory` (via Ledger) and `ApplyAutoCategoryStage`
-(via the ImportPipeline's persist boundary) ever cause a write to the
-`transactions.category_id` column.
+No invariant names this module and `transactions` together. What keeps
+it honest is `crossModuleRawTableWrites`, which pins Categorization for
+`merchant_memories` and `merchants` and for nothing else — so a raw
+write to `transactions` from here fails the build, and the way in is a
+Ledger Public contract. Reading `transactions` back is unrestricted by
+design, which is how `RuleApplier` re-reads a note it has just asked
+`SetsTransactionNote` to write.
 
 ## Key services + events
 
-- `RuleEvaluator` — pulls the user's active rules and merchant memory,
-  scores each candidate (`equals=100`, `memory=90`,
-  `starts_with=50+length`, `contains=10+length`), returns the highest.
-  Rule beats memory at equal score (tiebreaker). All comparisons are
-  case-insensitive and Unicode-safe (`mb_*` family).
-- `ApplyAutoCategoryStage` — the ImportPipeline stage. On any evaluator
-  exception, falls back to `AutoCategorizationOutcomeDto::manual($tx)`
-  so a single buggy rule never aborts an import. Increments the rule's
-  `hits_count` counter atomically with an `UPDATE … SET hits_count =
-  hits_count + 1` so the `/rules` table can show how often each rule
-  has actually fired.
+- `RuleEngine::match()` — walks `ActiveRuleSet::forUser()`, which
+  pulls `active = true` rules ordered by `priority` then `id`, and
+  returns every rule that fired. There is no score and no single
+  winner: `RuleApplier` folds the matches by action type afterwards
+  and the last one visited is the one that lands, so the winner is the
+  rule with the **highest** `priority`. All comparisons run in PHP over
+  the `mb_*` family, case-insensitively. The full account is
+  [Rule evaluation order](rule-evaluation-order.md).
+- `RuleEvaluator::lookupMemory()` — the merchant-memory fallback. It
+  joins `merchant_memories` to `merchants` on the derived
+  `normalized_name` key and orders `last_seen_at` descending, then
+  `occurrence_count`, then `id`, so a fresh correction outranks a stale
+  memory carrying a larger count.
+- `ApplyAutoCategoryStage` — the ImportPipeline stage. On any exception
+  from either layer it falls back to
+  `AutoCategorizationOutcomeDto::manual($tx)`, so a single buggy rule
+  never aborts an import. It increments each matched rule's
+  `hits_count` counter atomically, with an `UPDATE` that adds one to
+  the stored value rather than reading it back first, so the `/rules`
+  table can show how often each rule has actually fired.
 - `AssignCategory` — the manual-categorise write path. Delegates the
   write to Ledger's `UpdatesTransactionCategory`, dispatches
   `TransactionCategorized`, and stamps `field_provenance` so the column
@@ -137,11 +158,13 @@ honest: only `AssignCategory` (via Ledger) and `ApplyAutoCategoryStage`
   in that case, but the read side stays defensive regardless).
   `position` orders this rule's actions' application (last-writer-wins
   across shared fields).
-- **`AutoCategorizationOutcomeDto`** — three branches: `auto(...)` (a
-  rule or merchant-memory row won, `ruleId`/`memoryId` preserved so the
-  provenance panel can name what fired), `manual(...)` (no candidate
-  scored above threshold, the row surfaces on `/uncategorized`). The wrapped
-  `CanonicalTransaction` carries the row through to the writer.
+- **`AutoCategorizationOutcomeDto`** — two branches: `auto(...)` (a
+  rule or a merchant-memory row decided the category,
+  `ruleId`/`memoryId` preserved so the provenance panel can name what
+  fired) and `manual(...)` (no fired rule carried a `category` action
+  and the memory lookup came back empty, so the row surfaces on
+  `/uncategorized`). The wrapped `CanonicalTransaction` carries the row
+  through to the writer.
 
 ## Rule CRUD actions: validation + IDOR guards
 
@@ -315,7 +338,7 @@ writer of the table makes (`table = 'counterparties'`,
 `mutationType = 'delete'`), which keeps the coupling at the raw table
 name rather than importing the model. Both arms are kept: the model
 event still covers any Eloquent delete path.
-`ARulePointingAtACounterpartyDeletedOnAPeerTest` (in `Counterparties`)
+`ARulePointingAtADeletedCounterpartyTest` (in `Counterparties`)
 dispatches that announcement and pins the outcome, including that
 another reader's rule and a rule naming a counterparty nobody deleted
 both stay active.
@@ -373,11 +396,11 @@ touches this counter.
 ## Default seeders
 
 `DefaultCategoryTreeSeeder` installs a Dutch-household-shaped default
-tree (13 top-level sections, 17 leaves) with `user_id = NULL` so it
-acts as the shared starting set for every user. It is keyed on
-`(slug, user_id = NULL)` so the lookup only ever matches the global
-default-tree row, never a per-user override sharing the same slug —
-re-running is safe and never demotes a user-owned category to global.
+tree with `user_id = NULL` so it acts as the shared starting set for
+every user. It is keyed on `(slug, user_id = NULL)` so the lookup only
+ever matches the global default-tree row, never a per-user override
+sharing the same slug — re-running is safe and never demotes a
+user-owned category to global.
 
 Structure is re-asserted on every run; the **name** is written once, at
 creation, alongside `name_is_default = true`. The name goes in as the
@@ -390,7 +413,7 @@ name has to go through the seam that knows this:
 [category display names](../ledger/category-display-names.md).
 
 `DefaultCategorizationRuleSeeder` installs the universal-merchant rule
-set per-user (since `RuleEvaluator` scopes its pull by `user_id` with
+set per-user (since `ActiveRuleSet` scopes its pull by `user_id` with
 no NULL fallback — a global rule would never fire). It maps each
 fixture row's category slug to the corresponding global-tree category,
 creating one `CategorizationRule` parent + one condition + one
@@ -417,14 +440,16 @@ ImportPipeline:
 ImportPipeline.preview()
   → … (parse, normalize, classify-transaction-type, classify-payment-type)
   → ApplyAutoCategoryStage
-       → RuleEvaluator.evaluate($tx, $user)
-           ├─ pull active rules for user (indexed (user_id, active))
-           ├─ score each candidate
-           ├─ JOIN merchants for memory candidate
-           └─ return highest-scoring outcome
-       → if outcome.categoryId:
-            stamp tx.categoryId + tx.autoCategoryProvenance
-            bump categorization_rules.hits_count atomically
+       → RuleEngine.match(RuleMatchInput, $user)
+           ├─ ActiveRuleSet: active rules for user, ORDER BY priority, id
+           └─ return every rule that fired
+       → RuleApplier.applyAtImport: fold the actions onto the DTO
+       → bump categorization_rules.hits_count once per matched rule
+       → if a rule set a category:
+            stamp tx.categoryId + tx.autoCategoryProvenance (source=rule)
+          else RuleEvaluator.lookupMemory($tx, $userId)
+            → JOIN merchants, ORDER BY last_seen_at, occurrence_count, id
+            → stamp the memory's category (source=memory), or leave manual
   → … (counterparty-resolve, fingerprint)
   → persist
 ```

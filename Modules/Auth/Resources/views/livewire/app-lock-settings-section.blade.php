@@ -17,6 +17,9 @@
       - Toggle label: "Lock app with PIN"
       - Toggle description: "Replaces daily sign-in with a PIN. Sessions stay active for 30 days."
       - Idle label: "Auto-lock after"
+      - Idle note: leaving the foreground locks on its own fixed window, which
+        this setting does not govern. The window is interpolated from
+        IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS, never typed into the line.
       - Biometric empty-state: "This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here."
       - Disable modal CTA: "Disable lock" / "Keep app lock"
       - Change PIN modal CTA: "Change PIN" / "Keep PIN"
@@ -306,6 +309,7 @@
         </label>
         <select
             id="idle-timeout-select"
+            aria-describedby="idle-timeout-note"
             wire:model="idleTimeoutMinutes"
             wire:change="setIdleTimeout"
             class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900
@@ -317,6 +321,12 @@
             @endforeach
         </select>
     </div>
+
+    <p id="idle-timeout-note" class="-mt-4 text-xs text-slate-500 dark:text-slate-400">
+        {{ Lang::get('auth::app_lock.auto_lock_note', [
+            'window' => Lang::choice('core::durations.seconds', IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS),
+        ]) }}
+    </p>
 
     {{-- ===== 3e: Disable lock modal (PIN confirmation) ===== --}}
     @if ($confirmingDisable)

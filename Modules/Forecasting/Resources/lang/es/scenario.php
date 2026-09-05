@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Desplazar la fecha de una serie',
-            'desc' => 'Adelanta o retrasa la siguiente ocurrencia o todas las posteriores.',
+            'desc' => 'Mueve la siguiente ocurrencia, o todas las posteriores, a otra fecha.',
         ],
     ],
 

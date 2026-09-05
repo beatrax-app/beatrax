@@ -107,10 +107,9 @@ Modules/EmailScan/
     `loadInbox($inboxId): ?InboxCredentials`,
     `saveInboxRefreshToken(...)`, `rotateRefreshToken(...)`,
     `removeInbox($inboxId)`. Single sanctioned read/write path for
-    `oauth_secrets`, which is an Eloquent-backed table — not the
-    `.bak` + `.new` + atomic-rename JSON file it started life as.
-    Takes no `$userId`: the reader comes from `CurrentUser`. Throws
-    `SecretsWriteFailed` when the save fails.
+    `oauth_secrets`, an Eloquent-backed table rather than a file on
+    disk. Takes no `$userId`: the reader comes from `CurrentUser`.
+    Throws `SecretsWriteFailed` when the save fails.
   - `EmlBlobStore::put($messageId, $bytes)`, `pathFor($messageId)`,
     `exists($messageId)`, `delete($messageId)`. Per-message blob
     persistence under the user-data path. Writes `chmod 0600`.
@@ -168,17 +167,25 @@ Modules/EmailScan/
   fresh, and the authorized `users.messages` / `users.history` /
   `users` resources built from it. `GmailApiClient` holds one and makes
   no Google call that does not come through it.
-- `Internal/InboxScanStateMachine::transition($state, $next,
-  $message)` — SOLE sanctioned mutator of
-  `inbox_scan_state.status`. The arch invariant
-  `noInboxScanStateWritesOutsideMachine` blocks any other writer.
+- `Internal/InboxScanStateMachine` — SOLE sanctioned mutator of
+  `inbox_scan_state`, and of `inboxes.backfill_progress`.
+  `applyStatus($inboxId, $newStatus, $errorMessage = null)` moves the
+  status under a `lockForUpdate()`; `applyRateLimited($inboxId,
+  $retryAfterSeconds)`, `resetRetryAttempts($inboxId)` and
+  `backoffForAttempt($attempt)` own the retry schedule;
+  `recordCursor($inboxId, $cursor)` and
+  `recordBackfillProgress($inboxId, $progress)` own the position. The
+  arch invariants `noOtherInboxScanStateMutator` and
+  `noOtherBackfillProgressMutator` block any other writer.
 - `Internal/Jobs/DiscoveryScanJob::handle()` — initial sender
   discovery; writes `discovered_senders`.
 - `Internal/Jobs/IncrementalScanJob::handle()` — on-cadence pull
-  since the cursor. `ShouldBeUniqueUntilProcessing` keyed on
-  inbox id. Defines its own `failed(Throwable,
-  InboxScanStateMachine)` so the state machine flips the row to
-  `error` on final-retry exhaustion.
+  since the cursor. `ShouldBeUnique` keyed on inbox id, so the lock
+  is held until the worker finishes rather than released the moment
+  it starts: a second dispatch for the same inbox is collapsed
+  instead of walking the same pages alongside the first. Defines its
+  own `failed(Throwable, InboxScanStateMachine)` so the state machine
+  flips the row to `error` on final-retry exhaustion.
 - `Internal/Jobs/BackfillInboxJob::handle()` — user-triggered
   historical pull, chunked. Same `failed(...)` hook.
 - `Internal/Listeners/RaiseReconsentAlertOnTokenFailure::handle($event)`

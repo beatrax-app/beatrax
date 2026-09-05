@@ -6827,6 +6827,54 @@ three reports have to meet in the `quality` job that already collapses them
 before "ran elsewhere" can be told from "ran nowhere". A guard that cannot read
 its input has to say so, which is the same rule it enforces on everyone else.
 
+## A screen that states one condition and enforces two
+
+The app-lock settings screen offered "Auto-lock after: 30 minutes" and said
+nothing else. Leaving the foreground locks on a separate fixed window that no
+setting there changes: thirty seconds after `visibilitychange` fires, and on the
+desktop immediately, on `WindowHidden` and `WindowClosed`. That behaviour is
+right — it is what keeps the app-switcher snapshot off a ledger — and it was
+never disclosed. A reader who chose thirty minutes and was locked in thirty
+seconds had been told something untrue by the only screen that discusses locking.
+
+The window itself had three spellings and no owner: `30` in a private constant
+on `LockIdleClock`, `30000` in `lock.js`, and "30-second" in prose on the auth
+architecture page. All three agreed, which is what made them safe to leave —
+until one of them moved. It now has one home on `IdleTimeoutOptions`, reaches the
+browser as `window.beatraxGraceMs` beside the idle timeout it is not, and reaches
+the sentence through `Lang::choice`. The three copies are gone rather than
+synchronised, because synchronised copies are the state this defect starts from.
+
+`AWindowAReaderIsToldAboutHasOneDefinitionArchTest` holds it, and it is written
+against symbols rather than against the number. Thirty is not rare here — a
+thirty-day session lifetime, a thirty-second PIN backoff and a thirty-minute idle
+option all live in the same files — so a scan hunting for `30` would call three
+correct sites offenders and teach the next reader to switch it off.
+
+The same shape ran through the product wherever a sentence stated a fact the code
+owned. The privacy page said "nothing is sent to a server" three lines above a
+path list naming the folders four outbound connectors write. An OAuth wizard told
+a reader pasting a client secret that it lived in a permission-restricted file and
+never left the device; it is an encrypted database column, and it goes to Google
+on every token refresh. A recurring-income field documented `0` as the way to
+switch the threshold off, in the migration comment and in twenty-six locales, and
+the detector read `0` as "unset" and substituted the strictest floor it ships
+with. An exchange-rate toggle promised "bundled rates are used" while the lookup
+went on serving the last rates fetched, because nothing on the read path consults
+the flag the write path does. A stale-rate note promised "the next online refresh
+will update it" to the one reader for whom no refresh is ever dispatched.
+
+Copy is not statically checkable and no guard here pretends otherwise. What is
+checkable is a citation. A page that names a guard makes a promise about the
+build — a reviewer reads "the `noXxx` invariant forbids this", trusts the suite,
+approves, and nothing fails. Twenty-seven such names were carried in the
+documentation and existed nowhere in the tree, and four test classes were named
+that no file answers to. `ADocNamesOnlySymbolsThatExistArchTest` reads both out
+of backticks and holds them to the tree. It does not read the sentences around
+them, and the twenty-seven were not all the same defect: six were guards that had
+been renamed, which reads to a grepping contributor as a guard someone deleted —
+which is how a second copy of one comes to be written.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

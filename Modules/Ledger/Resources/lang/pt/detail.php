@@ -97,7 +97,7 @@ return [
         'heading' => 'Eliminar a transação',
         'help' => 'Remove permanentemente esta transação. Esta ação não pode ser anulada.',
         'button' => 'Eliminar',
-        'confirm_prompt' => 'Eliminar esta transação? A nota, a divisão e as etiquetas fiscais vão com ela.',
+        'confirm_prompt' => 'Eliminar esta transação? A nota, a divisão, as etiquetas fiscais e qualquer contribuição para um objetivo de poupança vão com ela. Se for um dos lados de uma transferência, o outro lado é reclassificado.',
         'confirm' => 'Sim, eliminar',
         'cancel' => 'Cancelar',
     ],

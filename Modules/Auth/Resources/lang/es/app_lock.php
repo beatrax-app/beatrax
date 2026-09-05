@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Mantener biometría',
 
     'auto_lock' => 'Bloqueo automático tras',
+    'auto_lock_note' => 'Beatrax se bloquea tras ese tiempo sin actividad — y antes si lo dejas: cambiar a otra app, u ocultar o cerrar la ventana, bloquea Beatrax en menos de :window, diga lo que diga este ajuste.',
     'idle_1' => '1 minuto',
     'idle_5' => '5 minutos',
     'idle_15' => '15 minutos',

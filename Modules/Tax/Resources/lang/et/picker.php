@@ -30,7 +30,7 @@ return [
     // i18n-review: et · batch_confirm — :name is a counterparty, so this says
     // "vastaspoolelt", the word rules.chip_counterparty uses. The neighbouring
     // batch_before calls the same thing "allikast", a source. One of the two is wrong.
-    'batch_confirm' => 'Kas märgistada kõik ülejäänud tehingud vastaspoolelt :name maksust mahaarvatavaks? Igaüks neist saab selle kategooria ja selle märkuse. Märgendi eemaldamine käib hiljem ühe tehingu kaupa.',
+    'batch_confirm' => 'Kas märgistada veel :count tehing vastaspoolelt :name maksuaastal :year maksust mahaarvatavaks? See saab selle kategooria ja selle märkuse. Lõpetatud kooskõlastusega tehingud jäetakse puutumata ja märgendi eemaldamine käib hiljem ühe tehingu kaupa.|Kas märgistada veel :count tehingut vastaspoolelt :name maksuaastal :year maksust mahaarvatavaks? Igaüks neist saab selle kategooria ja selle märkuse. Lõpetatud kooskõlastusega tehingud jäetakse puutumata ja märgendi eemaldamine käib hiljem ühe tehingu kaupa.',
     'batch_tag_all' => 'Märgista kõik',
     'batch_dismiss' => 'Peida',
 ];

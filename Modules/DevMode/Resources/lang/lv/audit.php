@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Audita žurnāls',
-    'subtitle' => 'Katra komanda, rindas darbība un SQL vaicājums, kas izpildīts izstrādes konsolē.',
+    'subtitle' => 'Komandas, rindas darbības un SQL vaicājumi, ko esat izpildījis izstrādes konsolē.',
     'clear_all' => 'Notīrīt visu',
-    'clear_all_confirm' => 'Notīrīt visus audita žurnāla ierakstus? To nevar atsaukt.',
+    'clear_all_confirm' => 'Notīrīt visus jūsu reģistrētos audita žurnāla ierakstus? To nevar atsaukt.',
     'filter_tier' => 'Līmenis',
     'filter_all' => 'Visi',
     'filter_command' => 'Komanda',

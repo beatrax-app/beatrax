@@ -27,7 +27,10 @@ return [
 
     'batch_before' => 'Vai atzīmēt vēl :count no',
     'batch_after' => '?',
-    'batch_confirm' => 'Vai atzīmēt visus atlikušos darījumus no :name kā attaisnotos izdevumus? Katrs no tiem saņem šo kategoriju un šo piezīmi. Atzīmi pēc tam var noņemt tikai pa vienam darījumam.',
+    // i18n-review: lv · batch_confirm — Latvian selects arm 0 for zero, so the zero
+    // form leads and the singular follows. The banner only appears from two rows up, so
+    // that arm ships unread; a native should still check it stands on its own.
+    'batch_confirm' => 'Vai atzīmēt vēl :count darījumu no :name :year taksācijas gadā kā attaisnotos izdevumus? Katrs no tiem saņem šo kategoriju un šo piezīmi. Pabeigta saskaņojuma darījumi paliek neskarti, un atzīmi pēc tam var noņemt tikai pa vienam darījumam.|Vai atzīmēt vēl :count darījumu no :name :year taksācijas gadā kā attaisnoto izdevumu? Tas saņem šo kategoriju un šo piezīmi. Pabeigta saskaņojuma darījumi paliek neskarti, un atzīmi pēc tam var noņemt tikai pa vienam darījumam.|Vai atzīmēt vēl :count darījumus no :name :year taksācijas gadā kā attaisnotos izdevumus? Katrs no tiem saņem šo kategoriju un šo piezīmi. Pabeigta saskaņojuma darījumi paliek neskarti, un atzīmi pēc tam var noņemt tikai pa vienam darījumam.',
     'batch_tag_all' => 'Atzīmēt visus',
     'batch_dismiss' => 'Aizvērt',
 ];

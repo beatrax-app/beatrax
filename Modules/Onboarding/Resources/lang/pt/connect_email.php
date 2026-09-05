@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Acesso apenas de leitura',
         'reads_label' => 'O Beatrax lê',
         'reads_sub' => 'Apenas recibos',
-        'token_label' => 'O token fica local',
-        'token_sub' => 'Ficheiro encriptado',
+        'token_label' => 'O token fica cifrado',
+        'token_sub' => 'Na base de dados local',
     ],
 
     'authorize_gmail' => 'Autorizar com o Gmail',

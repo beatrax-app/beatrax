@@ -17,6 +17,18 @@ it('preserves the operator-facing contract of operator-recovery.md backups + rec
     // forbidden-substring assertions; `/s` makes `.` cross newlines.
     $contents = preg_replace('#<!--.*?-->#s', '', $raw) ?? $raw;
 
+    // A needle pins one of two things, and the difference decides whether a
+    // failure means "restore the sentence" or "the sentence was wrong". A
+    // heading or a real artisan signature pins STRUCTURE: the page still owes
+    // the operator that section, and the command still answers to that name.
+    // A needle naming a technology or a number pins a RECIPE, and a recipe
+    // outlives its truth: 'Stuck Redis unique-lock keys' held a heading over
+    // `docker exec beatrax-redis redis-cli` long after config/cache.php made
+    // `database` the lock store, so the one recipe an operator would reach for
+    // mid-incident could not run and reported no stuck lock. '7 daily' and
+    // 'Sunday' are the two of that kind left; they match
+    // BackupRetentionPolicy today, and they are pinned here rather than read
+    // from it because the counts are private to the policy.
     $required = [
         '## Backups',
         '## Operator recovery',
@@ -28,7 +40,7 @@ it('preserves the operator-facing contract of operator-recovery.md backups + rec
         '.suspect',
         '7 daily',
         'Sunday',
-        'Stuck Redis unique-lock keys',
+        'Stuck unique-job lock rows',
         '### Restoring from a backup',
         '### Corrupt-backup alert',
         '### Failed-jobs maintenance',

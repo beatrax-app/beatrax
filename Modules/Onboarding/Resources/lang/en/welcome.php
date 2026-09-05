@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Welcome',
     'h1' => "Let's get Beatrax to know your money.",
-    'lede' => 'About 5 minutes. Nothing leaves this device — everything you connect stays in a file on it.',
+    'lede' => 'About 5 minutes. Beatrax keeps your history in a file on this device — the only step that reaches out is connecting a mailbox, and you can skip it.',
     'tagline' => "Here's what we'll set up:",
 
     'bank_title' => 'Your bank',

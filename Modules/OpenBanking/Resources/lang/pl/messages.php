@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Wklej identyfikator aplikacji',
         'application_id_label' => 'Identyfikator aplikacji',
-        'step3_help' => 'Jest przechowywany w lokalnym pliku poza bazą danych, z restrykcyjnymi uprawnieniami, i nigdy nie opuszcza tego urządzenia.',
+        'step3_help' => 'Jest przechowywany w lokalnym pliku poza bazą danych, czytelnym tylko dla Ciebie. Identyfikuje Twoją aplikację wobec Enable Banking, więc wędruje z każdym żądaniem — Twój klucz prywatny nigdy.',
 
         'step4_title' => 'Wybierz swój bank',
         'via_enable_banking' => 'przez Enable Banking',

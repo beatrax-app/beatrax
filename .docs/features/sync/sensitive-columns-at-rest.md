@@ -632,7 +632,7 @@ encryption through `EncryptionMigrationService::migrate()` — the production en
 hand-rolled fixture — then renders twenty-two surfaces over the ciphertext that produces and
 asserts that the exact bytes stored in the database do not appear in what reaches the browser.
 
-Twelve are full HTTP renders: `/counterparties/triage`, `/counterparties`,
+Sixteen are full HTTP renders: `/counterparties/triage`, `/counterparties`,
 `/counterparties/{slug}`, `/community/mystery-merchants`, `/transactions`, `/transactions/{id}`,
 `/uncategorized`, `/notifications`, `/recurring`, `/recurring/review`, `/recurring/series/{id}`,
 `/tax`, `/reports`, `/cash`, `/calendar` and `/imports/{id}/preview`. Six are components with no
@@ -890,14 +890,15 @@ each, so "not on the encrypted list" stops reading the same as "nobody looked". 
 is the entry that proves the point: it is argued in the bullet list above and was **absent from
 the registry** until the counterparty-slug pass went looking, so the one place an engineer checks
 first read it as a column nobody had considered. The five
-`accounts`/`categories`/`counterparties` identity columns are joined there by the five readable columns argued
-at length further down this page — `merchants.name`, `recurring_series.detected_name`,
-`transaction_search_docs.search_body`, `known_counterparty_ibans.real_iban` — because the registry
-is where an engineer looks first, and a column argued only in prose read from there as one nobody
-had looked at. `known_counterparty_ibans.real_iban` is the newest of them and the least obvious:
-it is a **counterparty's** IBAN in cleartext, `string(34)`, carrying `unique(user_id, real_iban)`,
-predicated on by every IBAN-matching resolver arm, and now read by the enable-time sweep to
-recover the IBAN half of a chain-link signature. Two tests in
+`accounts`/`categories`/`counterparties` identity columns are joined there by the five readable
+columns argued at length further down this page — `merchants.name`,
+`recurring_series.detected_name`, `recurring_series.display_name_override`,
+`transaction_search_docs.search_body` and `known_counterparty_ibans.real_iban` — because the
+registry is where an engineer looks first, and a column argued only in prose read from there as
+one nobody had looked at. `known_counterparty_ibans.real_iban` is the newest of them and the
+least obvious: it is a **counterparty's** IBAN in cleartext, `string(34)`, carrying
+`unique(user_id, real_iban)`, predicated on by every IBAN-matching resolver arm, and now read by
+the enable-time sweep to recover the IBAN half of a chain-link signature. Two tests in
 `SensitiveColumnPredicateGuardTest` hold the two lists honest against each other: they must be
 disjoint, and every `{table}.{column}` an allowlist reason leans on must appear in
 `knowinglyPlaintext()` and must not have since entered `columns()`.

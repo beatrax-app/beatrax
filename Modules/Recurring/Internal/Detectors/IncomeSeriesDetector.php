@@ -98,10 +98,11 @@ final readonly class IncomeSeriesDetector implements SeriesDetector
 
     public function detectForUser(User $user, ?Session $session = null): void
     {
-        $threshold = $user->recurring_income_min_amount_minor;
-        if ($threshold <= 0) {
-            $threshold = User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR;
-        }
+        // Zero is a value the reader chose: the field admits it, the column
+        // comment names it, and the settings copy offers it as the way to
+        // switch the floor off. Only a negative is unreadable, and the
+        // narrowest answer to one is a floor nothing can fall under.
+        $threshold = max(0, $user->recurring_income_min_amount_minor);
         $since = RecurringDetectionWindow::opensOn($user, $this->clock);
 
         $floors = $this->floorsByCurrency($user, $threshold, $since);

@@ -97,7 +97,7 @@ return [
         'heading' => 'Odstrániť transakciu',
         'help' => 'Natrvalo odstráni túto transakciu. Túto akciu nemožno vrátiť späť.',
         'button' => 'Odstrániť',
-        'confirm_prompt' => 'Odstrániť túto transakciu? Zmiznú s ňou poznámka, rozdelenie aj daňové štítky.',
+        'confirm_prompt' => 'Odstrániť túto transakciu? Zmiznú s ňou poznámka, rozdelenie, daňové štítky aj prípadný príspevok na sporiaci cieľ. Ak ide o jednu stranu prevodu, druhá strana sa preklasifikuje.',
         'confirm' => 'Áno, odstrániť',
         'cancel' => 'Zrušiť',
     ],

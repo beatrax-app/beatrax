@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Carica un altro estratto conto',
 
     'chain' => [
-        'heading' => 'Risoluzione delle catene…',
-        'pending' => 'In coda. Il risolutore delle catene partirà a breve.',
+        'heading' => 'Risoluzione delle catene',
+        'pending' => 'La risoluzione delle catene non è partita, quindi le catene di finanziamento non sono state collegate.',
         'running' => 'Collegamento delle catene di finanziamento e scomposizione dei regolamenti di estratto conto.',
     ],
 

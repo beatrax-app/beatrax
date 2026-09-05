@@ -11,7 +11,7 @@ return [
     'cancel' => 'Avbryt',
     'save_connect' => 'Lagre og koble til',
 
-    'secret_help' => 'De lagres i en lokal konfigurasjonsfil utenfor databasen med begrensede tillatelser, og de forlater aldri denne enheten.',
+    'secret_help' => 'Lagres kryptert i databasen på denne enheten. Beatrax sender den bare til Google eller Microsoft for å hente og fornye tilgangstokenet ditt — ingen andre steder.',
 
     'gmail' => [
         'step1_title' => 'Åpne Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Skriv inn en Google OAuth-klient-ID som slutter på .apps.googleusercontent.com.',
         'google_secret' => 'Skriv inn en Google OAuth-klienthemmelighet som begynner med GOCSPX-.',
         'google_published' => 'Bekreft at du har satt OAuth-samtykkeskjermen din til "In production".',
-        'write_failed' => 'OAuth-klienten din kunne ikke lagres til disk — sjekk tillatelsene for secrets-mappen din, og prøv igjen.',
+        'write_failed' => 'OAuth-klienten din kunne ikke lagres — skrivingen til databasen på denne enheten mislyktes. Prøv igjen.',
     ],
 ];

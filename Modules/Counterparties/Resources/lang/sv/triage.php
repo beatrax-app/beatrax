@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Hoppa över tills vidare',
     'mark_ignored' => 'Fråga inte om den här igen',
-    'not_now_note' => 'Ingen av dem ändrar motparten — du kan fortfarande märka den senare på sidan Motparter.',
+    'skip_note' => 'Att hoppa över skriver ingenting — det går bara vidare till nästa okända.',
+    'mark_ignored_note' => 'Det här markerar motparten som ignorerad så att den hålls utanför den här kön. Namnet, typen och historiken rörs inte, och du kan fortfarande märka den senare på sidan Motparter.',
     'previous' => 'Föregående okänd',
 
     'kbd_yes' => 'ja',

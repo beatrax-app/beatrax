@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Regeln bleiben auf diesem Gerät. Sie werden nicht mit deinen anderen Geräten geteilt.',
 
     'reapply' => 'Regeln erneut auf den Verlauf anwenden',
-    'reapply_confirm' => 'Alle Regeln erneut auf deinen gesamten Verlauf anwenden? Jede Kategorie, jeder Zahlungspartner, jede Notiz und jede Steuer-Markierung, die eine Regel gesetzt hat, wird überschrieben. Was du von Hand gesetzt hast, bleibt, und ebenso alles auf einem abgeglichenen Kontoauszug. Die alten Werte holt nichts zurück.',
+    'reapply_confirm' => 'Alle Regeln erneut auf deinen gesamten Verlauf anwenden? Jede Kategorie, jeder Zahlungspartner, jede Notiz und jede Steuer-Markierung, die eine Regel gesetzt hat, wird überschrieben. Was du von Hand gesetzt hast, bleibt, und ebenso alles auf einem abgeglichenen Kontoauszug oder auf einer Transaktion, die du aufgeteilt hast. Die alten Werte holt nichts zurück.',
     'reapplying' => 'Wird erneut angewendet…',
     'new_rule' => 'Neue Regel',
 

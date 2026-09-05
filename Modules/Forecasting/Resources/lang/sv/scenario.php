@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Flytta datumet i en serie',
-            'desc' => 'Flytta fram nästa händelse eller alla efterföljande händelser.',
+            'desc' => 'Flytta nästa händelse eller alla efterföljande händelser till ett annat datum.',
         ],
     ],
 

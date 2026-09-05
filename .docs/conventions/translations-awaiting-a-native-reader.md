@@ -28,6 +28,13 @@ The block is 2–4 lines because every comment in `Modules/` is, so `M1` and `M2
 in [the comment policy](00-index.md#the-comment-policy-is-canonical-in-the-spec)
 apply here like anywhere else.
 
+`tests/Contracts/AnI18nReviewMarkerKeepsPointingAtSomethingArchTest.php` keeps
+every marker answerable. It reads the locale, the `·`, the key list and the `—`
+off the **first** line of the block, then fails when the locale named is not the
+directory the file sits in, or when a key named is no longer in that file. A
+first line that does not reach its `—` is not read at all, so the whole address
+belongs on that line and the prose starts after the dash.
+
 **Clearing one** means deleting the comment, not editing it. A marker that a
 reviewer has answered and left in place is worse than no marker: the next
 reader treats an already-checked string as still open.
@@ -41,7 +48,7 @@ sentence and the word on the button have to be recognisably the same action.
 
 | Locale | File | What a native reader has to decide |
 |---|---|---|
-| `lv` | `Modules/Auth/Resources/lang/lv/lock_screen.php`, `Modules/Mobile/Resources/lang/lv/lock.php` | The sentence now repeats the button's `Atteikties` verbatim rather than inflecting it to `Atsakieties`, whose stem change hides the match. But *atteikties* is also this app's word for cancelling a subscription (`Modules/DriftAlerts/Resources/lang/lv/alerts.php`, `cancel_impact`). If that collision is real, all three `sign_out` labels want `Izrakstīties` or `Iziet`. |
+| `lv` | `Modules/Auth/Resources/lang/lv/lock_screen.php`, `Modules/Mobile/Resources/lang/lv/lock.php` | The sentence repeats the button's `Atteikties` word for word, and the marker reads that same verb as this app's word for cancelling a subscription. `Modules/DriftAlerts/Resources/lang/lv/alerts.php` · `cancel_impact` writes `Atsakieties`, a different verb, so the collision the marker names is not there to find. A reader settles both that line and whether every `sign_out` label wants `Izrakstīties` instead. |
 | `bg` | `Modules/Auth/Resources/lang/bg/lock_screen.php`, `Modules/Mobile/Resources/lang/bg/lock.php` | Left as it stood: the sentence says `Излез`, the button says `Изход`. Confirm the pairing reads — the two share a root, and twenty other locales pair a prose imperative with a nominal button label the same way. |
 
 ### The "no data is lost" clause
@@ -82,6 +89,9 @@ a numeral does not settle in the languages that decline it.
 | `sl` | `Modules/Auth/Resources/lang/sl/lock_screen.php` · `error_incorrect_remaining`, `Modules/Mobile/Resources/lang/sl/lock.php` · `errors.incorrect_pin_remaining` | Rewritten from a count label to real dual agreement, so the verb moves with the noun across all four arms. The grammar is checked against the rule table and pinned by a test; the word order and the `še` are a style call. |
 | `sl` | `Modules/Mobile/Resources/lang/sl/sync_complete.php` · `records` | Same rewrite. Leading with `:peer` is a guess about what reads well when the device name is long. |
 | `lv` | `Modules/Goals/Resources/lang/lv/messages.php` · `archived_disclosure`, `Modules/Pots/Resources/lang/lv/messages.php` · `archived.toggle` | Latvian selects its **first** segment for zero, so both are written there as a genitive plural (`Arhivētu mērķu`, `Arhivētu krājkašu`). Neither disclosure renders at zero — each is drawn only when the count is at least one — so that arm is unread. The pots singular is also written indefinite (`Arhivēta krājkase`) against the definite plural (`Arhivētās krājkases`) the line already carried; one of the two is what a count label wants. |
+| `lv` | `Modules/Tax/Resources/lang/lv/picker.php` · `batch_confirm` | Latvian selects arm 0 for zero, so the zero form leads and the singular follows. The banner only appears from two rows up, so that arm ships unread; it should still be checked standing alone. |
+| `lt` | `Modules/Sync/Resources/lang/lt/devices.php` · `introduced_withheld` | The many arm takes the neuter predicate a genitive-plural count governs, `liks neperskaityta`, against the agreeing `liks neperskaitytų`. |
+| `lv` | `Modules/Sync/Resources/lang/lv/devices.php` · `introduced_withheld` | The zero arm copies the genitive plural `sync::health.skipped` uses, so it reads `0 izmaiņu nav lasāmas`; whether that arm wants `nav lasāmu` instead is the call. |
 | `sl` | `Modules/CashBook/Resources/lang/sl/cash-book.php` · `errors.amount_unreadable`, `Modules/Forecasting/Resources/lang/sl/forecast.php` · `errors.amount_decimals` | Both said "z :decimals decimalnimi mesti". The preposition follows the numeral's **spoken** form — `s` before *tremi* and *štirimi*, `z` before *enim*, *dvema* and *osmimi* — and a digit settles none of it, so one of the four arms is always written with the wrong one. They now read `na največ` and `ki ima največ`, neither of which alternates. Whether either reads as well as the instrumental is the call. |
 
 ### The first-import step's counted phrases
@@ -105,6 +115,10 @@ arms they never had. Files are `Modules/Onboarding/Resources/lang/<locale>/first
 | `lv` | `already_imported` | Three arms with the zero-first order Latvian selects: `jau importētu`, `jau importēts`, `jau importēti`. The zero arm renders whenever nothing was a duplicate. |
 | `ro` | `already_imported` | The third arm carries the `de` a numeral from 20 up requires, landing on a bare participle: `21 de deja importate`. It follows the `anomaly::dashboard` precedent and reads clumsily; a native eye should say whether the noun has to come back. |
 | `sk` | `already_imported` | Was the genitive plural `už importovaných` alone, wrong at one and two. Now agrees with *transakcia* across the three arms. `cs` `pl` `hr` `sr` `sl` `lt` `uk` keep their impersonal, which needs no arm — that difference between siblings is deliberate but unreviewed. |
+
+None of these rows has a marker in the lang file it names, so the grep at the
+top of this page does not reach them: these questions live here and nowhere
+else, and a reader of `first_import.php` sees a settled line.
 
 ### A count beside an adjective
 
@@ -208,7 +222,7 @@ that *are* their locales' own wording. That is a decision, not an open question.
 
 `Modules/Migration/Resources/lang/<locale>/unmapped.php` is new: it holds the
 labels and reasons the preview used to store in the database in English. Twelve
-markers sit in it, and eleven are the same key.
+markers sit in it, all on the same key.
 
 | Locale | Key | What is open |
 |---|---|---|
@@ -307,6 +321,129 @@ writing them.
 | `tr` | `Modules/EmailScan/Resources/lang/tr/inboxes.php` · `oauth_client_missing` | The sentence has to name the button the reader presses, and `connect_gmail` reads *Gmail bağla* with a lowercase verb — alone among the twenty-six, it gives the button no standalone name. Written here as *Bağla düğmesine*, which avoids the `Bağla'ya` apostrophe; spelling the whole label out is the alternative. |
 | `et` | `Modules/OpenBanking/Resources/lang/et/messages.php` · `page.credentials_unreadable` | *Volitusi* is this file's own word for the stored credentials, taken from `disconnect.body`, so it was reused rather than a second word introduced. In Estonian it reads more naturally as an authority that was granted than as a secret held on disk; *pääsuandmed* may be the word. |
 | `lv` | `Modules/OpenBanking/Resources/lang/lv/messages.php` · `page.credentials_unreadable` | Naming the feature in full stacks three genitives ahead of the noun — *atvērtās banku saskarnes piekļuves datus*. It is grammatical and it is heavy, and the screen the alert sits on is already titled with the term. |
+
+### The window in the auto-lock note
+
+`auth::app_lock.auto_lock_note` tells the reader how long Beatrax waits before
+it locks itself, and the window reaches the sentence as `:window` from
+`core::durations.seconds`. That shared key hands over a counting phrase in its
+citation form — `30 sekundit`, `30 sekuntia`, `30 sekundes`, `30 sekund` — while
+the frame each of these four locales would naturally use, "within X", governs a
+case the shared key cannot supply. So in all four the window moved out of the
+frame and into a clause of its own. Files are
+`Modules/Auth/Resources/lang/<locale>/app_lock.php`.
+
+| Locale | The frame it could not sit in | Where the window went instead |
+|---|---|---|
+| `et` | `30 sekundi jooksul` — genitive | `selleks kulub :window`. Whether an Estonian reader wants it back inside the frame is the call. |
+| `fi` | `30 sekunnin kuluessa` — genitive | `siihen kuluu :window`, and the same question. |
+| `lv` | `30 sekunžu laikā` — genitive | `tas aizņem ne vairāk kā :window`; whether that or a `laikā` rewrite reads better wants a native eye. |
+| `sl` | `v 30 sekundah` — locative | The predicate `ta zamik pa je največ :window`, and whether `zamik` is the word a Slovenian reader expects is the open half. |
+
+Answering any of these "the frame should win" is not a change to one line.
+`core::durations.seconds` is shared, and one value cannot arrive in four cases,
+so that answer splits the key.
+
+### How old a rate is
+
+`core::net_worth.stale_bundled`, `stale_old` and `stale_offline` say the same
+thing in three settings — the rate on screen is older than `:count` days — and
+one marker per locale covers all three. What governs the noun here is the
+comparative rather than the numeral, so the arms carry the case the comparative
+takes and not the one a count alone would. Files are
+`Modules/Core/Resources/lang/<locale>/net_worth.php`.
+
+| Locale | What is open |
+|---|---|
+| `el` | The singular arm puts a digit in front of a genitive singular, `παλαιότερη της :count ημέρας`. It is grammatical and stilted, and a Greek reader decides whether to reword it. |
+| `fi` | The singular reads `yli :count päivän vanha` against the plural `yli :count päivää vanha`. Which case `yli` takes beside a numeral here is the question. |
+| `lt` | The arms follow the genitive the line already used after `senesnis nei`, giving `dienos` at one and `dienų` above it. Whether `senesnis kaip` with the nominative is the form a Lithuanian reader would write is open. |
+
+### The bank's own abbreviation
+
+`core::net_worth.source_ecb` names where a rate came from, and it ships `ECB` in
+every locale. Eight of them have a settled abbreviation of their own, and each
+carries a marker saying which. The value is not free to move on its own: it is
+what that locale's `core::settings.exchange_rates.online_on` already writes, so
+the net-worth card and the Settings line cannot name the same institution two
+ways. Moving to the native form moves both lines or neither.
+
+| Locale | What that language usually writes |
+|---|---|
+| `bg` | ЕЦБ |
+| `de` | EZB |
+| `et` | EKP |
+| `fi` | EKP |
+| `hu` | EKB |
+| `pl` | EBC |
+| `ro` | BCE |
+| `uk` | ЄЦБ |
+
+### Where a locale has two words and the line picked one
+
+None of these is ungrammatical. Each is a word this app already uses elsewhere
+for the same thing, or a word the app names nowhere else at all, and the marker
+sets out both candidates so a reader can settle which one the product says.
+
+| Locale | File · key | What is open |
+|---|---|---|
+| `el` `et` `lt` `lv` | `Modules/Community/Resources/lang/<locale>/settings.php` · `update_on_updates.note` | The note points at the version number at the top of the sidebar, and no other line in the app names that element, so a reader has no house term to match it to. Written `πλαϊνή στήλη`, `külgriba`, `šoninė juosta` and `sānjosla`, against `πλαϊνή μπάρα`, `külgpaan`, `šoninis skydelis` and `sānu josla`. |
+| `el` | `Modules/Categorization/Resources/lang/el/rules.php` · `reapply_confirm` | `κατάσταση` on its own also reads as *state*, so this writes the fuller `κατάσταση λογαριασμού` where `ledger::reconcile.statement_date` carries the bare noun. |
+| `nl` | `Modules/Categorization/Resources/lang/nl/rules.php` · `reapply_confirm` | `afgeletterd` follows this file's own `summary_reconciled_skipped`, while `ledger::reconcile` calls the same state `afgestemd`. |
+| `fi` | `Modules/Counterparties/Resources/lang/fi/triage.php` · `mark_ignored_note` | `huomiotta jätetty` is the ignore state, chosen because `ohitettu` is the word the Skip button above it already uses — and these two lines exist to tell the two apart. |
+| `et` | `Modules/Tax/Resources/lang/et/picker.php` · `batch_confirm` | `:name` is a counterparty, so this says `vastaspoolelt` after `categorization::rules.chip_counterparty`. The neighbouring `batch_before` calls the same thing `allikast`, a source. One of the two is wrong. |
+| `tr` | `Modules/Tax/Resources/lang/tr/picker.php` · `batch_confirm` | The same split the other way round: this follows `batch_before` and says `işyeri`, where `categorization::rules.chip_counterparty` says `karşı taraf`. |
+| `sr` | `Modules/DevMode/Resources/lang/sr/palette.php` · `action.scan_email` | `sandučad` is the collective plural of `sanduče`, which this file had used only in the singular, and `desktop::native.menu.file_scan_email` beside it carries the same word. Whether Serbian readers say that for mailboxes rather than `sandučići` settles both lines. |
+
+### A sentence built rather than borrowed
+
+Where the English says something no idiom in the locale covers, what ships is a
+construction its author could defend and not a phrase a reader recognises from
+anywhere else. Each of these names its own construction and asks whether it
+reads.
+
+| Locale | File · key | What is open |
+|---|---|---|
+| `et` | `Modules/Core/Resources/lang/et/help.php` · `intro` | "The devices you pair for sync" became the relative `seadmed, mille sünkroonimiseks seod`. Whether that reads inside an em-dash list, or wants a clause of its own. |
+| `lv` | `Modules/Core/Resources/lang/lv/help.php` · `intro` | The formal register matches the rest of the file, but the em-dash list of connections and `ikdienas valūtas kursu pieprasījums` are both the author's own. Whether the apposition reads, or wants a colon list instead. |
+| `hu` | `Modules/Onboarding/Resources/lang/hu/welcome.php` · `lede` | "Reaches out" became `kifelé is kapcsolatot nyit`, a construction rather than an idiom. Hungarian may sooner name the network here than the direction. |
+| `lt` | `Modules/OpenBanking/Resources/lang/lt/messages.php` · `step3_help` | "Identifies your application to Enable Banking" is reworded to "tells Enable Banking which application is calling", because the brand takes no case in the direct form. Whether `identifikuoja tavo programą` reads better here. |
+| `et` | `Modules/Sync/Resources/lang/et/devices.php` · `introduced_heading` | "Vouched for" has no settled Estonian noun phrase. The idiom `seisab selle eest hea` is used over the shorter `teise seadme soovitatud`, which reads closer to a recommendation. |
+| `sr` | `Modules/Categorization/Resources/lang/sr/rules.php` · `reapply_confirm` | `druga strana` is this locale's counterparty, but standing in a bare list of nouns it reads as "the other side". Whether it wants a fuller phrase here, or the list a different order. |
+
+### The same line written for a finger
+
+Eight lines have a `_touch` twin, because the pointer copy says *click* where a
+phone and a touch desktop have to say *tap*. In a language that marks case on
+what the verb governs that is not one word swapped, so each twin was written
+again rather than patched, and every one of them carries the same question:
+does the verb still govern the case the rest of the sentence is in.
+
+| File · key | The line it twins |
+|---|---|
+| `Modules/Budgets/Resources/lang/<locale>/messages.php` · `empty.copy_hint_touch` | "Copy last month's plan, or tap a cell below to start assigning." |
+| `Modules/Budgets/Resources/lang/<locale>/messages.php` · `empty.first_hint_touch` | "Tap a cell below to start assigning your first month." |
+| `Modules/Community/Resources/lang/<locale>/settings.php` · `help_touch` | "Show the “Help others identify this” CTA on the triage row so you can submit a suggestion to the shared list with one tap." |
+| `Modules/Counterparties/Resources/lang/<locale>/components.php` · `hidden_aria_touch` | "IBAN hidden — tap Show IBAN to reveal" |
+| `Modules/DevMode/Resources/lang/<locale>/runner.php` · `no_runs_touch` | "No runs yet. Tap “Run a command” or use the command palette (⌘K)." |
+| `Modules/Import/Resources/lang/<locale>/aliases.php` · `empty_body_touch` | "Aliases appear here after you tap the italic raw description on an import preview row and give it a friendly name." |
+| `Modules/Ledger/Resources/lang/<locale>/common.php` · `toggle_aria_touch` | ":label — tap to toggle" |
+| `Modules/OpenBanking/Resources/lang/<locale>/messages.php` · `step5_body_touch` | "Tap below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking." |
+
+The six keys outside Budgets carry the question in every locale but `en` and
+`nl`. The two Budgets lines carry it in sixteen: `bg` `cs` `el` `et` `fi` `hr`
+`hu` `lt` `lv` `pl` `ro` `sk` `sl` `sr` `tr` `uk`.
+
+### The stat that says what the import linked
+
+`migration::results.stats.payee` heads a number in the import summary, and the
+count is counterparties the import **linked** to rows that were already there,
+not ones it created. Sixteen locales write the label as a participle that has to
+agree with their own word for a counterparty — `Свързани контрагенти`,
+`Spárované protistrany`, `Seotud vastaspooled` — and every marker asks the same
+thing: whether the participle agrees where it now stands. Files are
+`Modules/Migration/Resources/lang/<locale>/results.php`, and the locales are
+`bg` `cs` `el` `et` `fi` `hr` `hu` `lt` `lv` `pl` `ro` `sk` `sl` `sr` `tr` `uk`.
 
 ## Checked and deliberately left alone
 

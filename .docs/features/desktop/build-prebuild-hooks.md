@@ -17,10 +17,18 @@ step these hooks run alongside.
 
 ## Order matters
 
-The array order is the execution order, and the first entry has to stay first:
-`nativephp_stage_build_resources.php` puts the icons and the entitlements file
-into the directory that the signing configuration then points at. Signing before
-staging leaves electron-builder with nothing to find.
+NativePHP runs the `prebuild` entries in the order the array declares them, and
+the first has to stay first: `nativephp_stage_build_resources.php` puts the icons
+and the entitlements file into the directory that the signing configuration then
+points at. Signing before staging leaves electron-builder with nothing to find.
+The sections below follow the array's order.
+
+A hook that fails does not stop the build. NativePHP's prebuild runner prints
+`Command failed: …` for a non-zero exit and moves straight on to the next entry,
+so a script whose anchor a NativePHP release has moved leaves a red line in the
+build log and an installer that is still produced — without whatever that hook
+was there to patch. Every script exits non-zero and writes its reason to STDERR
+because that log line is the only signal there is.
 
 ## The hooks
 
@@ -48,20 +56,6 @@ Apple Silicon.
 It is still in the repo for local unsigned development builds, but it is not in
 the `prebuild` chain.
 
-### `nativephp_fix_php_binary_extraction.php` — byte-exact PHP binary
-
-Patches NativePHP's `php.js` so electron-builder's `beforePack` step extracts the
-bundled static PHP binary with `ditto`/`unzip` instead of the yauzl streaming
-pipe. The streaming path inflates the arm64 Mach-O by roughly 5 MB, and codesign
-then refuses it:
-
-```
-main executable failed strict validation
-```
-
-This is a hard precondition for Developer ID signing and notarisation, not an
-optimisation.
-
 ### `nativephp_azure_publisher_name.php` — the key NativePHP omits
 
 Adds the `publisherName` key to `win.azureSignOptions`. electron-builder 26
@@ -69,14 +63,6 @@ requires it, so without this patch **every** Azure Trusted Signing build aborts
 during config validation — before signtool is ever reached. See
 [repo security setup](../../runbooks/repo-security-setup.md) for how the
 `NATIVEPHP_AZURE_*` values are provisioned.
-
-### `nativephp_inject_explicit_consent_updates.php` — nothing installs itself
-
-Sets `autoDownload = false` and `autoInstallOnAppQuit = false` on
-electron-updater, so no update downloads or installs until the Ed25519-signed
-manifest has been verified and the user has explicitly consented. The
-verification itself lives in `ElectronUpdateChannel` (see
-[core architecture](../core/architecture.md) and `config/auto_update.php`).
 
 ### `nativephp_inject_macos_update_settings.php` — no differential downloads
 
@@ -102,6 +88,14 @@ The patch inserts the setter after that line in **both**
 `electron-plugin/dist/index.js`, because each does its own destructure and uses
 its own `autoUpdater` reference.
 
+### `nativephp_inject_explicit_consent_updates.php` — nothing installs itself
+
+Sets `autoDownload = false` and `autoInstallOnAppQuit = false` on
+electron-updater, so no update downloads or installs until the Ed25519-signed
+manifest has been verified and the user has explicitly consented. The
+verification itself lives in `ElectronUpdateChannel` (see
+[core architecture](../core/architecture.md) and `config/auto_update.php`).
+
 ### `nativephp_patch_electron_imports.php` — subpath imports
 
 Exposes `#plugin/*` in the Electron `package.json` `imports` map so subpath
@@ -121,6 +115,60 @@ the X button there is no focused window, and the tray's "Open Beatrax" item
 silently does nothing — the app is running with no way back to it. The injected
 menu handlers either show and focus an existing main window, or POST to
 `/api/window/open` to reconstruct one from any state.
+
+### `nativephp_inject_file_associations.php` — telling the OS that Beatrax opens these files
+
+electron-builder writes the macOS `CFBundleDocumentTypes`, the Windows registry
+entries and the Linux `.desktop` `MimeType=` line from a `fileAssociations` key,
+and NativePHP's published `electron-builder.mjs` declares none. Without that
+block no shell ever routes a document to Beatrax — so macOS's `open-file`, the
+one leg NativePHP already forwards, never fires, and no argv ever carries a path
+on the other two platforms. The whole `FileOpenIntake` route into the
+application was unreachable everywhere at once.
+
+The hook declares `.csv` and `.eml` document types, splicing them in ahead of
+electron-builder's `protocols` key so the two OS-registration blocks sit
+together. NativePHP 2.2 exposes no config key for this, and a hand edit to
+`nativephp/electron-builder.mjs` does not survive `native:install --publish`.
+
+Removing this hook fails nothing: the build succeeds, the app runs, and
+double-clicking a statement opens it in something else.
+
+### `nativephp_inject_file_open_ingress.php` — the two platforms that never emit `open-file`
+
+Windows and Linux put the document path on `process.argv` at cold start and hand
+it to an already-running instance through `app.on('second-instance')`. NativePHP
+registers a `second-instance` handler only when a deep-link scheme is configured,
+and forwards it as `OpenedFromURL` — a deep link, not a document.
+
+The hook takes the single-instance lock unconditionally, scans argv last-first
+for a `.csv`/`.eml` argument, and forwards both the cold-start and the
+second-instance case through NativePHP's own `notifyLaravel('events', …)`
+transport as the same `App\OpenFile` event the macOS leg raises. That keeps one
+PHP-side subscriber and adds no HTTP route of Beatrax's own: a main-process POST
+into the `web` group carries neither session nor CSRF token and could only ever
+answer `419`. Without the lock, a second double-click opens a second copy of a
+ledger application.
+
+Its anchor is NativePHP's `NativePHP.bootstrap(...)` call, matched verbatim on
+purpose. What PHP can pin about this script and the associations one is pinned in
+`Modules/Desktop/tests/Unit/FileOpenIngressScriptsTest.php`; that a
+double-clicked export on a packaged Windows or Linux build reaches
+`FileOpenIntake` is only observable from a real installer.
+
+### `nativephp_fix_php_binary_extraction.php` — byte-exact PHP binary
+
+Patches NativePHP's `php.js` so electron-builder's `beforePack` step extracts the
+bundled static PHP binary with `ditto`/`unzip` instead of the yauzl streaming
+pipe. The streaming path inflates the arm64 Mach-O by roughly 5 MB, and codesign
+then refuses it:
+
+```
+main executable failed strict validation
+```
+
+This is a hard precondition for Developer ID signing and notarisation, not an
+optimisation.
 
 ## postbuild
 

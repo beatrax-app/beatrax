@@ -97,7 +97,7 @@ return [
         'heading' => 'Poista tapahtuma',
         'help' => 'Poistaa tämän tapahtuman pysyvästi. Toimintoa ei voi peruuttaa.',
         'button' => 'Poista',
-        'confirm_prompt' => 'Poistetaanko tämä tapahtuma? Muistiinpano, jako ja verotunnisteet katoavat sen mukana.',
+        'confirm_prompt' => 'Poistetaanko tämä tapahtuma? Muistiinpano, jako, verotunnisteet ja mahdollinen osuus säästötavoitteeseen katoavat sen mukana. Jos se on siirron toinen puoli, toinen puoli luokitellaan uudelleen.',
         'confirm' => 'Kyllä, poista',
         'cancel' => 'Peruuta',
     ],

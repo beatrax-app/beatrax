@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Veiviseren klarte ikke å finne ut hvilket trinn som er aktivt. Bruk Fortsett senere → for å avslutte, så rettes det opp neste gang siden lastes inn.',
 
     'privacy' => 'Dataene dine blir på denne enheten',
+    'privacy_connector' => 'Dataene dine blir på denne enheten. Dette trinnet kobler innboksen din til Google eller Microsoft.',
     'need_help' => 'Trenger du hjelp?',
     'need_help_aria' => 'Trenger du hjelp? Åpner Beatrax issues-siden på GitHub',
 ];

@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'A szabályok ezen az eszközön maradnak. Nem osztjuk meg őket a többi eszközöddel.',
 
     'reapply' => 'Szabályok újraalkalmazása az előzményekre',
-    'reapply_confirm' => 'Újraalkalmazod az összes szabályt a teljes előzményedre? Minden kategória, partner, megjegyzés és adócímke, amit egy szabály tett oda, felülíródik. Amit kézzel állítottál be, megmarad, és ugyanígy minden, ami egyeztetett kivonaton szerepel. A régi értékeket semmi nem hozza vissza.',
+    'reapply_confirm' => 'Újraalkalmazod az összes szabályt a teljes előzményedre? Minden kategória, partner, megjegyzés és adócímke, amit egy szabály tett oda, felülíródik. Amit kézzel állítottál be, megmarad, és ugyanígy minden, ami egyeztetett kivonaton szerepel vagy felosztott tranzakcióhoz tartozik. A régi értékeket semmi nem hozza vissza.',
     'reapplying' => 'Újraalkalmazás…',
     'new_rule' => 'Új szabály',
 

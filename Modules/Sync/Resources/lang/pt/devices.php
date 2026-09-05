@@ -6,7 +6,7 @@ return [
     'heading' => 'Dispositivos e sincronização',
 
     'enable_sync' => 'Ativar a sincronização',
-    'enable_sync_help' => 'Partilha os teus dados em segurança entre dispositivos de confiança. Requer um bloqueio da aplicação. Uma vez ativo, os teus dados ficam cifrados e o bloqueio da aplicação já não pode ser desligado.',
+    'enable_sync_help' => 'Partilha os teus dados em segurança entre dispositivos de confiança. Requer um bloqueio da aplicação. Ativar isto não pode ser desfeito: a partir daí os teus dados ficam cifrados e já não é possível desligar nem a sincronização nem o bloqueio da aplicação.',
 
     'app_lock_notice' => 'Define primeiro um bloqueio da aplicação para ativares a sincronização.',
     'go_to_app_lock' => 'Ir para Bloqueio da aplicação',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Desbloquear reabre este emparelhamento em vez de o deixar expirar, por isso dura mais do que o tempo de bloqueio que definiu. Termina quando o concluir ou cancelar.',
 
     'relay_endpoint' => 'Endpoint do relay',
-    'relay_endpoint_help' => 'Opcional. Quando definido, os dispositivos offline sincronizam através deste relay. Deixa vazio para usares apenas LAN&#8209;direta.',
-    'relay_endpoint_help_phone' => 'Opcional. Quando definido, as alterações viajam por este relay mesmo quando os teus dispositivos não estão na mesma rede. Este dispositivo recolhe-as quando sincronizas a partir deste ecrã — nunca em segundo plano, porque o bloqueio da app guarda a única chave. Deixa vazio para usares apenas LAN&#8209;direta.',
+    'relay_endpoint_help' => 'Opcional. Um relay permite que dois dispositivos concluam o emparelhamento e troquem chaves de encriptação quando não conseguem alcançar-se diretamente. As transações em si continuam a sincronizar apenas quando ambos os dispositivos estão na mesma rede. Deixa vazio para usares apenas LAN&#8209;direta.',
+    'relay_endpoint_help_phone' => 'Opcional. Um relay permite que dois dispositivos concluam o emparelhamento e troquem chaves de encriptação quando não conseguem alcançar-se diretamente. As transações em si continuam a sincronizar apenas quando ambos os dispositivos estão na mesma rede. Este dispositivo recolhe o que está à sua espera quando sincronizas a partir deste ecrã — nunca em segundo plano, porque o bloqueio da app guarda a única chave. Deixa vazio para usares apenas LAN&#8209;direta.',
     'relay_endpoint_aria' => 'URL do endpoint do relay',
     'relay_insecure_warning' => 'Este endpoint de relay usa HTTP simples. Embora o relay nunca desencripte os teus dados, uma ligação insegura expõe os tamanhos encriptados e os tempos a quem observe a rede. Usa um endpoint <strong>https://</strong> para teres a melhor privacidade.',
 

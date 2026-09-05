@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Klistra in ditt applikations-ID',
         'application_id_label' => 'Applikations-ID',
-        'step3_help' => 'Detta sparas i en lokal fil utanför databasen med restriktiva behörigheter och lämnar aldrig den här enheten.',
+        'step3_help' => 'Sparas i en lokal fil utanför databasen som bara du kan läsa. Det identifierar din applikation för Enable Banking, så det följer med varje förfrågan — det gör aldrig din privata nyckel.',
 
         'step4_title' => 'Välj din bank',
         'via_enable_banking' => 'via Enable Banking',

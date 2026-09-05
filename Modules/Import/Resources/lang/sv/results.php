@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Ladda upp ett kontoutdrag till',
 
     'chain' => [
-        'heading' => 'Löser upp kedjor…',
-        'pending' => 'I kö. Kedjelösaren startar snart.',
+        'heading' => 'Kedjeupplösning',
+        'pending' => 'Kedjeupplösningen startade aldrig, så finansieringskedjor länkades inte.',
         'running' => 'Länkar finansieringskedjor och delar upp avräkningar från kontoutdraget.',
     ],
 

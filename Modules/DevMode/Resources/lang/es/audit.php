@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Registro de auditoría',
-    'subtitle' => 'Todos los comandos, acciones de cola y consultas SQL ejecutados desde la Dev Console.',
+    'subtitle' => 'Los comandos, acciones de cola y consultas SQL que has ejecutado desde la Dev Console.',
     'clear_all' => 'Borrar todo',
-    'clear_all_confirm' => '¿Borrar todas las entradas del registro de auditoría? Esto no se puede deshacer.',
+    'clear_all_confirm' => '¿Borrar todas las entradas del registro de auditoría que has generado? Esto no se puede deshacer.',
     'filter_tier' => 'Nivel',
     'filter_all' => 'Todos',
     'filter_command' => 'Comando',

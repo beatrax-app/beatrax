@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Lim inn applikasjons-ID-en din',
         'application_id_label' => 'Applikasjons-ID',
-        'step3_help' => 'Dette lagres i en lokal fil utenfor databasen med restriktive rettigheter og forlater aldri denne enheten.',
+        'step3_help' => 'Lagres i en lokal fil utenfor databasen som bare du kan lese. Den identifiserer applikasjonen din overfor Enable Banking, så den følger med hver forespørsel — det gjør aldri den private nøkkelen din.',
 
         'step4_title' => 'Velg banken din',
         'via_enable_banking' => 'via Enable Banking',

@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
@@ -40,6 +41,13 @@ final class SyncScreen extends Component
 
     public bool $pauseOnCellular = false;
 
+    // This screen is a plain web route with no platform gate, so the desktop
+    // renders it too. The cellular pause and the tap-only note below it are
+    // both phone-only facts: nothing on the desktop reads that policy file,
+    // and the desktop listens for peers the whole time it is open.
+    #[Locked]
+    public bool $onPhone = false;
+
     // No confirmed peer means "Sync now" has nothing to talk to: the burst
     // would dial nobody and report success, which reads as a working sync on
     // a device that has never been paired.
@@ -59,6 +67,7 @@ final class SyncScreen extends Component
     ): void {
         $this->hydrateProgress($currentUser->id(), $db);
         $this->pauseOnCellular = $networkPolicy->pauseOnCellular();
+        $this->onPhone = UserDataPathService::platform() !== null;
         $this->hasPeers = $devices->otherDeviceNames($currentUser->id()) !== [];
     }
 

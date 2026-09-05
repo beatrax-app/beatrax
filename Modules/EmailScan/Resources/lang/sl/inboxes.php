@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Znova poveži',
     'disconnect' => 'Prekini povezavo',
+    'disconnect_confirm' => 'Prekinem povezavo z :email? To odstrani shranjene poverilnice tega nabiralnika, njegovo zgodovino pregledovanja in pošiljatelje, ki si jih dodal ali opustil. Potrdila, ki so že vložena v Beatrax, ostanejo nedotaknjena. Ponovna povezava začne pregled od začetka.',
     'scan_now' => 'Preglej zdaj',
     'scan_in_progress_title' => 'Pregledovanje že poteka',
 

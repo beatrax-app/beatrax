@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'File',
         'file_import' => 'Import file…',
-        'file_scan_email' => 'Scan email now',
+        'file_scan_email' => 'Email inboxes…',
         'help' => 'Help',
         'help_github_repo' => 'GitHub repo',
         'help_report_issue' => 'Report an issue',
         'help_about' => 'About Beatrax',
         'developer_submenu' => 'Developer',
         'dev_open_console' => 'Open Dev Console',
-        'dev_run_command' => '⌘K Run a command',
+        'dev_run_command' => 'Run a command…',
     ],
 
     'worker_alert' => [

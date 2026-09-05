@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Upload another statement',
 
     'chain' => [
-        'heading' => 'Resolving chains…',
-        'pending' => 'Queued. The chain resolver will start shortly.',
+        'heading' => 'Chain resolution',
+        'pending' => 'Chain resolution did not start, so funding chains were not linked.',
         'running' => 'Linking funding chains and decomposing statement settlements.',
     ],
 

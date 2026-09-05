@@ -27,10 +27,10 @@ final class EncodedUploadTransport
 
     public const string MARKER = 'base64';
 
-    // The size the product advertises as its maximum, in three other places:
-    // resources/js/mobile-upload.js and the two shells' php.ini patches. This
-    // is where the promise is kept — a body past it is refused rather than
-    // decoded into a fatal the reader is never told about.
+    // The transport ceiling, written in three other places that cannot see
+    // this one: resources/js/mobile-upload.js and the two shells' php.ini
+    // patches. It is not the limit a reader is shown — UploadLimits::MAX_KB is,
+    // and it is half this. A body past it is refused, never decoded to a fatal.
     public const MAX_BYTES = 20 * 1024 * 1024;
 
     // One file per pick on the client, so a body naming more than a handful is

@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Upload endnu et kontoudtog',
 
     'chain' => [
-        'heading' => 'Løser kæder op…',
-        'pending' => 'I kø. Kædeløseren starter om lidt.',
+        'heading' => 'Kædeløsning',
+        'pending' => 'Kædeløsningen startede ikke, så finansieringskæderne blev ikke forbundet.',
         'running' => 'Forbinder finansieringskæder og opdeler afregninger fra kontoudtoget.',
     ],
 

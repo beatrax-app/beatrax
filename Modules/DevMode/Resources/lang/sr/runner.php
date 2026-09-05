@@ -50,28 +50,28 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Napravi rezervnu kopiju baze podataka', 'description' => 'Upisuje SQLite kopiju sa vremenskom oznakom u fasciklu sa rezervnim kopijama.'],
-        'doctor' => ['label' => 'Pokreni doctor', 'description' => 'Prikazuje instalirane verzije PHP-a / Composera / SQLite-a i proverava minimalne zahteve.'],
-        'failed_jobs' => ['label' => 'Očisti neuspele zadatke', 'description' => 'Uklanja razrešene unose iz tabele failed_jobs kojom upravlja Laravel.'],
+        'db_backup' => ['label' => 'Napravi rezervnu kopiju baze podataka', 'description' => 'Upisuje SQLite kopiju sa vremenskom oznakom u fasciklu sa rezervnim kopijama, osim ako se baza nije promenila od poslednje kopije. Zadržana kopija uklanja i starije rezervne kopije prema pravilu čuvanja.'],
+        'doctor' => ['label' => 'Pokreni doctor', 'description' => 'Pokreće skup operativnih provera i prijavljuje pass / warn / fail za svaki red. Red warn ili fail daje izlazni kod različit od nule.'],
+        'failed_jobs' => ['label' => 'Očisti neuspele zadatke', 'description' => 'Iz tabele failed_jobs kojom upravlja Laravel briše svaki red stariji od 30 dana, bez obzira na to da li je zadatak ikada ponovljen.'],
         'cache_clear' => ['label' => 'Očisti keš', 'description' => 'Prazni keš aplikacije.'],
         'route_list' => ['label' => 'Prikaži rute', 'description' => 'Ispisuje svaku registrovanu HTTP rutu na stdout.'],
-        'config_show' => ['label' => 'Prikaži konfiguraciju', 'description' => 'Ispisuje vrednost zadatog konfiguracionog ključa sa tačkama.'],
+        'config_show' => ['label' => 'Prikaži konfiguraciju', 'description' => 'Ispisuje celu konfiguracionu datoteku ili vrednost ključa sa tačkama u njoj.'],
         'view_clear' => ['label' => 'Očisti keš prikaza', 'description' => 'Prazni keš kompajliranih Blade prikaza.'],
-        'queue_retry' => ['label' => 'Ponovi neuspele zadatke', 'description' => 'Ponavlja jedan zadatak (po id-u) ili svaki neuspeli zadatak (prazan id).'],
+        'queue_retry' => ['label' => 'Ponovi neuspele zadatke', 'description' => 'Ponavlja jedan neuspeli zadatak po id-u ili svaki neuspeli zadatak ako navedeš `all`.'],
         // i18n-review: sr · command.rederive_fingerprints — «otisak» is the word the Auth
         // files already use for a key and a biometric fingerprint; here it names the
         // transaction fingerprint. Confirm the same noun carries all three.
-        'rederive_fingerprints' => ['label' => 'Ponovo izvedi otiske', 'description' => 'Ponovo računa otisak svake transakcije prema trenutnoj verziji normalizacije.'],
+        'rederive_fingerprints' => ['label' => 'Ponovo izvedi otiske', 'description' => 'Ponovo računa otisak svake transakcije koja je i dalje ispod trenutne verzije normalizacije. Pokretanje odavde prijavljuje broj i ništa ne upisuje.'],
         'db_restore' => ['label' => 'Vrati bazu podataka', 'description' => 'Zamenjuje trenutnu bazu podataka zadatom datotekom rezervne kopije.'],
         'regenerate_recovery_codes' => ['label' => 'Ponovo generiši kodove za oporavak', 'description' => 'Ponovo generiše 10 jednokratnih kodova za oporavak za korisnika.'],
         'grant_dev' => ['label' => 'Dodeli programerski pristup', 'description' => 'Postavlja is_developer=true za zadatog korisnika.'],
-        'install' => ['label' => 'Pokreni instalaciju', 'description' => 'Idempotentno podešavanje pri prvom pokretanju. Ponovno pokretanje na već podešenoj instalaciji je destruktivno.'],
+        'install' => ['label' => 'Pokreni instalaciju', 'description' => 'Idempotentno podešavanje pri prvom pokretanju: šema baze podataka, referentni podaci i jedini korisnički nalog. Ponovno pokretanje na već podešenoj instalaciji iznova potvrđuje postojeći nalog i ostavlja lozinku nepromenjenom.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Radnja'],
         'config' => ['label' => 'Konfiguracioni ključ', 'help' => 'Konfiguraciona datoteka ili ključ sa tačkama koji treba ispisati, npr. `app` ili `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'Id zadatka', 'help' => 'Ostavi prazno da ponoviš svaki neuspeli zadatak; navedi id da ponoviš jedan unos.', 'placeholder' => 'sve (ili određeni id)'],
+        'id' => ['label' => 'Id zadatka', 'help' => 'Upiši `all` da ponoviš svaki neuspeli zadatak ili id zadatka da ponoviš jedan unos. Prazno polje ne ponavlja ništa.', 'placeholder' => 'all (ili određeni id)'],
         'queue' => ['label' => 'Naziv reda čekanja', 'help' => 'Opcioni filter po redu čekanja; podrazumevano svi redovi.', 'placeholder' => 'default'],
         'path' => ['label' => 'Putanja do datoteke rezervne kopije', 'help' => 'Zamenjuje trenutnu bazu podataka datotekom na zadatoj putanji.', 'placeholder' => '/putanja/do/backup.sqlite'],
         'username' => ['label' => 'Korisničko ime', 'placeholder' => 'alice'],

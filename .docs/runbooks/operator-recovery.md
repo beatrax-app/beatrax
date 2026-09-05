@@ -104,39 +104,50 @@ and `.sqlite-shm` files together as a unit, then `php artisan up`.
 
 ## Operator recovery
 
-### Stuck Redis unique-lock keys
+### Stuck unique-job lock rows
 
-When a queue worker crashes mid-job, the per-user unique-lock key
-`unique-lock:resolve-chain-links:{userId}` may remain in Redis and block the
-next chain-resolver job dispatch for that user. The lock has a 600-second TTL
-so it self-clears, but pre-TTL recovery is sometimes desirable (e.g. after a
-worker SIGKILL during development).
+A job that implements `ShouldBeUnique` takes a lock the moment it is dispatched,
+so a second dispatch covering the same rows is dropped rather than queued
+twice. `ResolveChainLinksJob` is the one an operator tends to meet: it locks per
+user for 600 seconds and, because it is `ShouldBeUniqueUntilProcessing`, the
+lock is released the instant a worker picks the job up. The window in which one
+can be stranded is therefore between dispatch and pickup — a queue nothing is
+draining, or a worker killed before it started the job. The 600-second expiry
+means it self-clears either way; pre-expiry recovery is sometimes desirable
+(e.g. after a worker SIGKILL during development).
 
-List stuck locks:
+There is no Redis here to look in. `config('cache.locks_store')` is `database`,
+and `tests/Contracts/AUniqueJobTakesItsLockWhereTheAppKeepsLocksArchTest.php`
+fails the build if any unique job takes its lock anywhere else — a job that
+locks in a store the other workers are not watching is not unique at all. So
+the lock is a row in the `cache_locks` table, keyed
+`<cache prefix>laravel_unique_job:<job class>:<uniqueId>`, where the chain
+resolver's `uniqueId` is the user id.
 
-```sh
-docker exec beatrax-redis redis-cli KEYS '*unique-lock:resolve-chain-links:*'
-```
-
-Clear a specific lock:
-
-```sh
-docker exec beatrax-redis redis-cli DEL '<key>'
-```
-
-Clear every chain-resolver lock (use with care — only when no jobs are mid-run;
-running this while a worker holds a lock will let a second dispatch enter the
-critical section):
+List the locks currently held for that job:
 
 ```sh
-docker exec beatrax-redis redis-cli --scan \
-  --pattern 'unique-lock:resolve-chain-links:*' \
-  | xargs -I {} docker exec beatrax-redis redis-cli DEL {}
+sqlite3 database/database.sqlite \
+  "SELECT key, owner, datetime(expiration, 'unixepoch') AS expires_utc
+     FROM cache_locks
+    WHERE key LIKE '%ResolveChainLinksJob%';"
 ```
 
-A future artisan command (`chains:clear-stuck-locks --user=<id>`) backed by an
-injected `Cache::driver('redis')` repository may wrap this; for now the
-`redis-cli` recipes above are the supported recovery path.
+Release one, using the exact key the row reported:
+
+```sh
+sqlite3 database/database.sqlite \
+  "DELETE FROM cache_locks WHERE key = '<key-from-the-row-above>';"
+```
+
+Deleting the row is precisely what the framework's own `forceRelease()` does, so
+the same caution applies as to any forced release: do it only when no worker is
+running the job, because a second dispatch will then enter the critical section
+alongside the first. Waiting the 600 seconds out is always the safer option.
+
+Neither cache command helps here. `cache:clear` empties the `cache` table and
+never touches `cache_locks`, and `cache:forget` addresses a cache entry rather
+than a lock.
 
 ### Restoring from a backup
 
@@ -254,7 +265,9 @@ page loads.
 
 ### Failed-jobs maintenance
 
-The `failed_jobs` table grows over time as Horizon retries exhaust.
+The `failed_jobs` table grows over time as queued jobs exhaust their
+retries. Horizon is a dev-only dependency and is absent from a
+`--no-dev` self-host, so on a server the rows come from `queue:work`.
 The `beatrax:failed-jobs prune` command trims it:
 
 ```sh

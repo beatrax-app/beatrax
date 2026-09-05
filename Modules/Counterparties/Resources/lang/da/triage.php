@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Spring over indtil videre',
     'mark_ignored' => 'Spørg ikke om denne igen',
-    'not_now_note' => 'Ingen af dem ændrer modparten — du kan stadig mærke den senere på siden Modparter.',
+    'skip_note' => 'At springe over skriver ingenting — det går bare videre til den næste ukendte.',
+    'mark_ignored_note' => 'Det markerer modparten som ignoreret, så den holdes ude af denne kø. Dens navn, type og historik røres ikke, og du kan stadig mærke den senere på siden Modparter.',
     'previous' => 'Forrige ukendte',
 
     'kbd_yes' => 'ja',

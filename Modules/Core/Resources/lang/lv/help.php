@@ -9,7 +9,11 @@ return [
     ],
 
     'page_title' => 'Kur ir mani dati?',
-    'intro' => 'Beatrax glabā visu šajā ierīcē. Nekas netiek sūtīts uz serveri, nekas netiek sinhronizēts ar mākoni, nekas nepamet šo ierīci, kamēr to neeksportējat.',
+    // i18n-review: lv · intro — the formal register matches the rest of this
+    // file, but the em-dash list of connections and "ikdienas valūtas kursu
+    // pieprasījums" are both constructions of mine. A native should say whether
+    // the apposition reads, or wants a colon list instead.
+    'intro' => 'Beatrax glabā visu šajā ierīcē. Nav ne Beatrax servera, ne mākoņa konta. Ārpus ierīces nonāk tikai tas, ko pievienojat pats — pastkaste, banka caur Enable Banking, ierīces, ko sapārojat sinhronizācijai — kā arī ikdienas valūtas kursu pieprasījums. Katrs savienojums to pasaka ekrānā, kurā to ieslēdzat.',
 
     'lives_here' => 'Jūsu dati atrodas šeit',
     'copy' => 'Kopēt',

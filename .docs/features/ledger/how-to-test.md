@@ -40,18 +40,38 @@ Practical recipes for exercising the `Ledger` module in isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noTransactionsWritesOutsideLedger` invariant —
-  forbids any class outside
-  `Modules\Ledger\Public\Actions\RecordTransactions` from
-  INSERTing / UPDATEing the `transactions` table.
-- The repo-wide
-  `noCategoryColumnWritesOutsideLedgerUpdater` invariant —
-  forbids any class outside
-  `Modules\Ledger\Public\Actions\UpdateTransactionCategory`
-  from writing `transactions.category_id`.
-- The repo-wide `everyDomainModelUsesBelongsToUser` invariant —
-  asserted via the `BelongsToUser` trait composition on every
-  Ledger model.
+- The repo-wide `crossModuleRawTableWrites` invariant pins
+  every raw write one module makes to a table another
+  module created, by file, table and count. Eight files
+  outside Ledger are pinned for `transactions`: Import's
+  `ApplyEnrichments`, Receipts'
+  `ApplyReceiptConflictResolution`, Migration's
+  `EntityChangeApplier` and `PromoteStagingToDomain`,
+  Transfers' `TransferPairer` and `PairUnlinker`, Chains'
+  `RetypeByAliasResolver` and CashBook's `CashBookPage`. A
+  ninth fails the build. Reads are unrestricted on purpose,
+  and an Eloquent save is invisible to it — `Models\` is a
+  deliberate shared read seam.
+- Nothing gates `transactions.category_id` to one writer.
+  `UpdateTransactionCategory` is the single-value write
+  path, and `SaveTransactionSplit` writes the column too
+  when a collapsing split leaves one surviving leg
+  category. Both are this module's own Public actions;
+  keeping a third out is a review convention, not a build
+  failure.
+- Nothing sweeps Eloquent models for the `BelongsToUser`
+  trait, so composing it on a new model is a review
+  convention. What the build holds is the ground on either
+  side of it: `tests/Contracts/UserIdColumnArchTest.php`
+  fails a table reaching the migrated schema with neither a
+  `user_id` column nor a stated reason it has none, and
+  `tests/Contracts/UserScopeDropRequiresUserIdArchTest.php`
+  fails a query that drops the user scope without naming
+  the owner again.
+  `Modules/Core/tests/Unit/BelongsToUserTraitTest.php`
+  covers the trait's own two behaviours and nothing wider:
+  it adds `user_id` to `fillable`, and it exposes a
+  `user()` relation.
 
 ## How to run the suite for just this module
 
@@ -118,13 +138,18 @@ serves is the spec's; this section maps that requirement onto the code
 and the assertion — see
 [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/).
 
-- **`RecordsTransactions` is the SOLE sanctioned writer for
-  `transactions`.** No other module / no other class issues
-  INSERTs / UPDATEs against the table. The arch invariant
-  `noTransactionsWritesOutsideLedger` enforces it.
-- **`UpdatesTransactionCategory` is the SOLE sanctioned writer
-  for `transactions.category_id`.** The arch invariant
-  `noCategoryColumnWritesOutsideLedgerUpdater` enforces it.
+- **`RecordsTransactions` is the writer the import path goes
+  through, and every raw writer outside this module is
+  pinned.** Eight files elsewhere raw-write `transactions`;
+  `crossModuleRawTableWrites` names each one with its table
+  and its count, so a ninth is a decision somebody makes on
+  purpose rather than a write nobody notices.
+- **`UpdatesTransactionCategory` is the single-value write
+  path for `transactions.category_id`.**
+  `SaveTransactionSplit` writes the same column when a split
+  collapses, and stamps the provenance `manual` so a rule
+  cannot take that choice back. Nothing in the suite holds
+  the pair at two.
 - **`RecordsStatementSummary` is the SOLE sanctioned writer for
   `statement_summaries`.**
 - **`RecordTransactions::__invoke` is idempotent on the v3

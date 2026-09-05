@@ -37,9 +37,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Uruchom import', 'hint' => 'Otwórz kreator importu'],
-        'scan_email' => ['label' => 'Skanuj pocztę teraz', 'hint' => 'Uruchom synchronizację skrzynki od razu'],
+        'scan_email' => ['label' => 'Otwórz skrzynki', 'hint' => 'Twoje podłączone skrzynki'],
         'open_profile' => ['label' => 'Otwórz profil', 'hint' => 'Ustawienia — konto i preferencje'],
-        'toggle_theme' => ['label' => 'Przełącz motyw', 'hint' => 'Przełączanie między jasnym a ciemnym motywem'],
+        'toggle_theme' => ['label' => 'Otwórz ustawienia wyglądu', 'hint' => 'Jasny, ciemny lub systemowy'],
     ],
 
     'run_command' => 'Uruchom :command',
@@ -53,7 +53,7 @@ return [
         // form in this app; the descriptive "z listy dozwolonych" is used. A native
         // reader settles whether the console keeps the English word instead.
         'artisan' => ['label' => 'Runner Artisan', 'hint' => 'Uruchamianie poleceń z listy dozwolonych'],
-        'audit' => ['label' => 'Dziennik audytu dev', 'hint' => 'Każde działanie w Dev Mode'],
+        'audit' => ['label' => 'Dziennik audytu dev', 'hint' => 'Twoje działania w Dev Mode'],
         'logs' => ['label' => 'Podgląd logów', 'hint' => 'Strumień na żywo z laravel-*.log'],
         'queue' => ['label' => 'Inspektor kolejki', 'hint' => 'Oczekujące / nieudane / partie'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sondy systemowe'],

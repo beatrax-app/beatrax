@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Arkisto',
         'file_import' => 'Tuo tiedosto…',
-        'file_scan_email' => 'Skannaa sähköposti nyt',
+        'file_scan_email' => 'Sähköpostilaatikot…',
         'help' => 'Ohje',
         'help_github_repo' => 'GitHub-repositorio',
         'help_report_issue' => 'Ilmoita ongelmasta',
         'help_about' => 'Tietoja Beatraxista',
         'developer_submenu' => 'Kehittäjä',
         'dev_open_console' => 'Avaa kehityskonsoli',
-        'dev_run_command' => '⌘K Suorita komento',
+        'dev_run_command' => 'Suorita komento…',
     ],
 
     'worker_alert' => [

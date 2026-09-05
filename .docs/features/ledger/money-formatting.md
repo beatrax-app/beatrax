@@ -92,13 +92,23 @@ knows:
   `beatraxCurrency`, so before this the symbol was right and the number was
   a hundredth of itself: the same page printed `-¥980,000` beside a point
   plotted at `-9800`.
-- **`MoneyInput`'s own `scaleFor()`**, threaded through `tryToMinor()`,
-  `tryToPositiveMinor()`, `exceedsMax()`, `formatMinor()`,
-  `formatAbsMinor()` and `toDecimalString()` as an optional
-  `?string $currencyCode`. Omitting it keeps the two-decimal assumption,
+- **`MoneyInput`**, which takes the currency as an optional
+  `?string $currencyCode` on `tryToMinor()`, `tryToPositiveMinor()`,
+  `exceedsMax()`, `formatMinor()`, `formatAbsMinor()`, `decimalPlaces()`
+  and `toDecimalString()`, and asks
+  `Ledger\Public\ValueObjects\CurrencyScale` for the answer rather than
+  computing one. Omitting the code keeps the two-decimal assumption,
   which is what a caller with genuinely no currency in hand wants. At a
   currency's own scale, a zero-decimal currency accepts no fractional part
   at all — `tryToMinor('1250.00', 'JPY')` is `null`, not `125000`.
+
+`CurrencyScale` is where a new caller goes for the scale. It is the only
+place the `?? MINOR_UNITS_PER_MAJOR` fallback and the `log10` that turns a
+scale into a decimal count are written, and
+`OneSeamAnswersTheMinorUnitScaleArchTest` fails the build on a second copy
+of either — so a private re-derivation is caught before it can drift. See
+[where the scale comes
+from](minor-units-and-zero-decimal-currencies.md#where-the-scale-comes-from).
 
 The remaining constant users are the boundaries where no currency is in
 scope: three of the four `Ingestion` amount parsers (`IcsAmountParser`

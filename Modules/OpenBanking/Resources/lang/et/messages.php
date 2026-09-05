@@ -129,7 +129,7 @@ return [
 
         'step3_title' => 'Kleebi oma rakenduse ID',
         'application_id_label' => 'Rakenduse ID',
-        'step3_help' => 'See salvestatakse andmebaasist väljapoole kohalikku faili piiratud õigustega ega lahku kunagi sellest seadmest.',
+        'step3_help' => 'Salvestatakse andmebaasist väljapoole kohalikku faili, mida saad lugeda ainult sina. See ütleb Enable Bankingule, milline rakendus pöördub, seega läheb see kaasa iga päringuga — sinu privaatvõti mitte kunagi.',
 
         'step4_title' => 'Vali oma pank',
         'via_enable_banking' => 'Enable Bankingu kaudu',

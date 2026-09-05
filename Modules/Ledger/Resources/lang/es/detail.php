@@ -97,7 +97,7 @@ return [
         'heading' => 'Eliminar la transacción',
         'help' => 'Elimina esta transacción de forma permanente. Esta acción no se puede deshacer.',
         'button' => 'Eliminar',
-        'confirm_prompt' => '¿Eliminar esta transacción? Su nota, desglose y etiquetas fiscales se van con ella.',
+        'confirm_prompt' => '¿Eliminar esta transacción? Su nota, su desglose, sus etiquetas fiscales y cualquier aportación a un objetivo de ahorro se van con ella. Si es uno de los lados de una transferencia, el otro lado se reclasifica.',
         'confirm' => 'Sí, eliminar',
         'cancel' => 'Cancelar',
     ],

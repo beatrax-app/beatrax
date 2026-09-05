@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Rulează un import', 'hint' => 'Deschide asistentul de import'],
-        'scan_email' => ['label' => 'Scanează e-mailul acum', 'hint' => 'Rulează imediat sincronizarea căsuței de e-mail'],
+        'scan_email' => ['label' => 'Deschide căsuțele de e-mail', 'hint' => 'Căsuțele tale de e-mail conectate'],
         'open_profile' => ['label' => 'Deschide profilul', 'hint' => 'Setări — cont și preferințe'],
-        'toggle_theme' => ['label' => 'Schimbă tema', 'hint' => 'Comută între tema luminoasă și cea întunecată'],
+        'toggle_theme' => ['label' => 'Deschide setările de aspect', 'hint' => 'Luminoasă, întunecată sau sistem'],
     ],
 
     'run_command' => 'Rulează :command',
@@ -50,7 +50,7 @@ return [
         // form in this app; the descriptive "din lista permisă" is used. A native
         // reader settles whether the console keeps the English word instead.
         'artisan' => ['label' => 'Runner Artisan', 'hint' => 'Rulează comenzi din lista permisă'],
-        'audit' => ['label' => 'Jurnal de audit dev', 'hint' => 'Fiecare acțiune din Dev Mode'],
+        'audit' => ['label' => 'Jurnal de audit dev', 'hint' => 'Acțiunile tale din Dev Mode'],
         'logs' => ['label' => 'Urmărire jurnale', 'hint' => 'Flux live din laravel-*.log'],
         'queue' => ['label' => 'Inspector de coadă', 'hint' => 'În așteptare / eșuate / loturi'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Probe de sistem'],

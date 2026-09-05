@@ -23,6 +23,6 @@ return [
         'title' => 'Gedeelde lijst bijwerken bij app-updates',
         'help' => 'Ververs de meegeleverde lijst telkens wanneer Beatrax zichzelf bijwerkt.',
         'help_phone' => 'Ververs de meegeleverde lijst telkens wanneer er een nieuwe versie van Beatrax uit de App Store of Google Play wordt geïnstalleerd.',
-        'note' => 'Wordt geactiveerd bij een toekomstige app-update — zie Instellingen → Over voor de huidige versie.',
+        'note' => 'Wordt geactiveerd bij een toekomstige app-update — de versie die je gebruikt staat bovenaan de zijbalk.',
     ],
 ];

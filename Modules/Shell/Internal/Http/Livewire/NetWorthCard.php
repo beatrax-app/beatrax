@@ -21,8 +21,11 @@ final class NetWorthCard extends Component
 
     public function render(CurrentUser $currentUser, NetWorthQuery $query, ViewFactory $views): View
     {
+        $user = $currentUser->user();
+
         return $views->make('shell::livewire.net-worth-card', [
-            'netWorth' => $query->forUser($currentUser->user()),
+            'netWorth' => $query->forUser($user),
+            'fxOnlineEnabled' => $user->fx_online_enabled,
         ]);
     }
 }

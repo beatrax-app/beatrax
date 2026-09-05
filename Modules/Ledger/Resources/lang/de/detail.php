@@ -97,7 +97,7 @@ return [
         'heading' => 'Transaktion löschen',
         'help' => 'Entfernt diese Transaktion dauerhaft. Diese Aktion lässt sich nicht rückgängig machen.',
         'button' => 'Löschen',
-        'confirm_prompt' => 'Diese Transaktion löschen? Notiz, Aufteilung und Steuer-Tags gehen mit ihr.',
+        'confirm_prompt' => 'Diese Transaktion löschen? Notiz, Aufteilung, Steuer-Tags und eine etwaige Anrechnung auf ein Sparziel gehen mit ihr. Ist sie eine Seite einer Überweisung, wird die andere Seite neu eingeordnet.',
         'confirm' => 'Ja, löschen',
         'cancel' => 'Abbrechen',
     ],

@@ -11,7 +11,7 @@ return [
     'cancel' => 'Abbrechen',
     'save_connect' => 'Speichern und verbinden',
 
-    'secret_help' => 'Diese werden in einer lokalen Konfigurationsdatei außerhalb der Datenbank mit restriktiven Rechten gespeichert und verlassen dieses Gerät nie.',
+    'secret_help' => 'Wird verschlüsselt in der Datenbank auf diesem Gerät gespeichert. Beatrax sendet es nur an Google oder Microsoft, um dein Zugriffstoken zu holen und zu erneuern — sonst nirgendwohin.',
 
     'gmail' => [
         'step1_title' => 'Google Cloud Console öffnen',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Gib eine Google-OAuth-Client-ID ein, die auf .apps.googleusercontent.com endet.',
         'google_secret' => 'Gib ein Google-OAuth-Client-Secret ein, das mit GOCSPX- beginnt.',
         'google_published' => "Bestätige, dass du deinen OAuth-Zustimmungsbildschirm auf 'In production' gesetzt hast.",
-        'write_failed' => 'Dein OAuth-Client konnte nicht gespeichert werden — prüfe die Rechte deines Secrets-Verzeichnisses und versuch es noch mal.',
+        'write_failed' => 'Dein OAuth-Client konnte nicht gespeichert werden — das Schreiben in die Datenbank auf diesem Gerät ist fehlgeschlagen. Versuch es noch mal.',
     ],
 ];

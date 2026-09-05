@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Acces doar pentru citire',
         'reads_label' => 'Beatrax citește',
         'reads_sub' => 'Doar bonuri',
-        'token_label' => 'Tokenul rămâne local',
-        'token_sub' => 'Fișier criptat',
+        'token_label' => 'Tokenul este criptat',
+        'token_sub' => 'În baza de date locală',
     ],
 
     'authorize_gmail' => 'Autorizează cu Gmail',

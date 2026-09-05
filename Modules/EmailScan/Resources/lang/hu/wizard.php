@@ -11,7 +11,7 @@ return [
     'cancel' => 'Mégse',
     'save_connect' => 'Mentés és csatlakoztatás',
 
-    'secret_help' => 'Ezeket az adatbázison kívüli helyi konfigurációs fájlban, szigorú jogosultságokkal tároljuk, és soha nem hagyják el ezt az eszközt.',
+    'secret_help' => 'Titkosítva tárolódik az eszköz adatbázisában. A Beatrax csak a Google-nek vagy a Microsoftnak küldi el, hogy megszerezze és megújítsa a hozzáférési tokenedet — máshová soha.',
 
     'gmail' => [
         'step1_title' => 'Nyisd meg a Google Cloud Console-t',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Adj meg egy .apps.googleusercontent.com végződésű Google OAuth-kliensazonosítót.',
         'google_secret' => 'Adj meg egy GOCSPX- kezdetű Google OAuth-titkoskulcsot.',
         'google_published' => 'Erősítsd meg, hogy az OAuth-hozzájárulási képernyőt „In production” állapotba állítottad.',
-        'write_failed' => 'Az OAuth-klienst nem sikerült lemezre menteni — ellenőrizd a titkokat tároló könyvtár jogosultságait, és próbáld újra.',
+        'write_failed' => 'Az OAuth-klienst nem sikerült menteni — az eszköz adatbázisába írás nem sikerült. Próbáld újra.',
     ],
 ];
