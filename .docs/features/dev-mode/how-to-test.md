@@ -146,10 +146,23 @@ and the assertion — see
   `DevCommandRegistry`.** `CommandSpawner::start()` whitelists the
   command name against the registry before any `Process` is
   constructed; an unknown name raises `InvalidArgumentException`.
-- **NEVER-EXPOSED commands (`migrate`, `migrate:rollback`, `db:seed`)
-  are absent from the registry.** Adding one is a deliberate
-  registry change visible in code review; the spawner trusts the
-  registry as the authoritative allow-list.
+- **NEVER-EXPOSED commands (`migrate`, `migrate:fresh`,
+  `migrate:rollback`, `db:wipe`, `db:seed`) are absent from the
+  registry.** Enforced by
+  `tests/Contracts/ARegisteredDevCommandRunsAsTheRunnerInvokesItArchTest.php`,
+  which resolves every registered name against the live console
+  application and refuses the migration, wipe and seed families. Review
+  alone was the control until it carried `migrate:fresh` into the
+  destructive tier and kept it there.
+- **Every registered command can actually run as the runner invokes
+  it.** The same file settles each `ArgSpec` name and each fixed flag
+  against the command's own `InputDefinition`, requires the schema to
+  supply every required argument, and refuses a command that asks a
+  question — the detached child's stdin is `/dev/null`, so a prompt
+  reads EOF and the run dies on Symfony's `Aborted.`. `db:restore`
+  named neither flag its handler demands and `db:backup` offered a
+  destination artisan rejects as a second positional; both always
+  exited non-zero.
 - **DESTRUCTIVE-tier commands require the triple gate.** The
   `TripleGateModal` requires (a) the Advanced toggle on, (b) an
   explicit confirm click, (c) the exact app name `Beatrax` typed in,

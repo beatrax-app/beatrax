@@ -88,8 +88,6 @@ it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never app
     // command and the assertion would no longer isolate the modal.
     $destructiveNames = [
         'db:restore',
-        'migrate:fresh',
-        'beatrax:reset-password',
         'beatrax:regenerate-recovery-codes',
         'beatrax:grant-dev',
         'beatrax:install',
@@ -119,7 +117,7 @@ it('shows prior runs on /dev/audit with the tier chip + non-zero exit-code highl
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
+        command: 'db:restore', args: ['path' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -157,7 +155,7 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
         exitCode: 0, stdoutExcerpt: '', errorExcerpt: '',
     ));
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'migrate:fresh', args: [], tier: CommandTier::Destructive,
+        command: 'beatrax:grant-dev', args: ['username' => 'someone'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -168,7 +166,7 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
 
     $response = $this->actingAs($user)->get('/dev/audit?tier=destructive');
     $response->assertStatus(200);
-    $response->assertSee('migrate:fresh');
+    $response->assertSee('beatrax:grant-dev');
 
     // The palette modal embeds the whole SAFE roster as JSON further down the
     // page, so its "cache:clear" row would satisfy a whole-document search.
@@ -260,7 +258,7 @@ it('onSpawnCommand() listener routes a DESTRUCTIVE name to the triple-gate (defe
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
-        ->dispatch('spawn-command', name: 'db:restore', args: ['from' => '/tmp/x'], tier: 'safe')
+        ->dispatch('spawn-command', name: 'db:restore', args: ['path' => '/tmp/x'], tier: 'safe')
         ->assertDispatched('triple-gate:open');
 });
 
@@ -269,7 +267,7 @@ it('spawn() routes a DESTRUCTIVE command to the triple-gate instead of spawning 
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
-        ->call('spawn', 'db:restore', ['from' => '/tmp/x'])
+        ->call('spawn', 'db:restore', ['path' => '/tmp/x'])
         ->assertDispatched('triple-gate:open');
 });
 
@@ -299,7 +297,10 @@ it('rerun() for a DESTRUCTIVE prior run opens the triple-gate carrying the origi
 
     /** @var CommandSpawner $spawner */
     $spawner = app(CommandSpawner::class);
-    $originalRunId = $spawner->start('db:restore', ['from' => '/tmp/x.sqlite'], $user->id, CommandTier::Destructive);
+    // The registry now supplies --confirm and --force-maintenance, so a source
+    // path that happened to exist would be restored over the live database.
+    $absentBackup = sys_get_temp_dir().'/beatrax-absent-'.bin2hex(random_bytes(6)).'.sqlite';
+    $originalRunId = $spawner->start('db:restore', ['path' => $absentBackup], $user->id, CommandTier::Destructive);
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)

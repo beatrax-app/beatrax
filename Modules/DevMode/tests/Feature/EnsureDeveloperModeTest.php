@@ -60,7 +60,7 @@ it('resolves all four Public contracts via the container', function (): void {
     $commands = app(DevCommandRegistry::class);
     expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
     expect($commands->safe())->toHaveCount(9);
-    expect($commands->destructive())->toHaveCount(6);
+    expect($commands->destructive())->toHaveCount(4);
 
     /** @var NavigationRegistry $nav */
     $nav = app(NavigationRegistry::class);

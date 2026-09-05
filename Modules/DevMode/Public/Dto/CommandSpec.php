@@ -14,6 +14,9 @@ final class CommandSpec extends Data
 {
     /**
      * @param  list<ArgSpec>  $argsSchema
+     * @param  list<string>  $fixedFlags  options the runner always appends, for a
+     *                                    command whose non-interactive path needs
+     *                                    a flag no operator is asked to choose
      */
     public function __construct(
         public readonly string $name,
@@ -21,5 +24,6 @@ final class CommandSpec extends Data
         public readonly CommandTier $tier,
         public readonly array $argsSchema,
         public readonly ?string $descriptionKey = null,
+        public readonly array $fixedFlags = [],
     ) {}
 }

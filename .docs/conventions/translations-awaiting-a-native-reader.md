@@ -237,7 +237,6 @@ languages. Eighty-one keys moved out of code into `dev::nav`, `dev::palette`,
 | all | `dev::overview.heartbeat_age` | `ttl` is left untranslated as a technical abbreviation, beside a count it does not govern. |
 | `ro` | `dev::overview.heartbeat_age`, `core::sidebar.dev.worker_ago` | Romanian puts *de* in front of a noun from twenty up, and the third arm writes `acum :count de s`. Whether *de* survives in front of an abbreviation is the open half. |
 | `el` | `dev::overview.heartbeat_age` | *δλ* against *δευτ.*; both are already in the tree, in `emailscan` and in the mobile lock screen. |
-| `el` `lt` | `dev::runner.command.migrate_fresh` | *μετεγκατάσταση* / *migracija* is the schema sense, while each locale calls the app's own YNAB import *μεταφορά δεδομένων* / *perkėlimas*. One word, two migrations. |
 | `pl` `ro` | `dev::palette.nav.overview.hint` | "Tiles" has no precedent in either locale; rendered *kafelki* / *panouri*. |
 | `pl` `ro` | `dev::palette.nav.artisan.hint` | "Whitelisted" has no settled form in either locale, so both describe it — *z listy dozwolonych*, *din lista permisă*. |
 | `pl` `ro` `uk` | `dev::palette.nav.sync_health.hint` | Nothing in the tree names a CRDT merge op; *operacje scalania*, *operațiuni de îmbinare*, *об’єднання* against *злиття*. |

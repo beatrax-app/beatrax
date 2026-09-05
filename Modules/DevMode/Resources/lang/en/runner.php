@@ -48,7 +48,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Back up database', 'description' => 'Write a timestamped SQLite copy to the backups directory (or the given path).'],
+        'db_backup' => ['label' => 'Back up database', 'description' => 'Write a timestamped SQLite copy to the backups directory.'],
         'doctor' => ['label' => 'Run doctor', 'description' => 'Report installed PHP / Composer / SQLite versions and verify minimums.'],
         'failed_jobs' => ['label' => 'Prune failed jobs', 'description' => 'Prune resolved entries from the Laravel-managed failed_jobs table.'],
         'cache_clear' => ['label' => 'Clear cache', 'description' => 'Flush the application cache store.'],
@@ -58,20 +58,17 @@ return [
         'queue_retry' => ['label' => 'Retry failed jobs', 'description' => 'Retry one (by id) or every (blank id) failed job.'],
         'rederive_fingerprints' => ['label' => 'Rederive fingerprints', 'description' => 'Re-compute every transaction fingerprint using the current normalization version.'],
         'db_restore' => ['label' => 'Restore database', 'description' => 'Replace the current database with the given backup file.'],
-        'migrate_fresh' => ['label' => 'Drop tables and re-migrate', 'description' => 'Drop every table, then re-run every migration.'],
-        'reset_password' => ['label' => 'Reset password', 'description' => 'Interactively reset a user password (refuses non-interactive use).'],
         'regenerate_recovery_codes' => ['label' => 'Regenerate recovery codes', 'description' => 'Regenerate the 10 single-use recovery codes for a user.'],
         'grant_dev' => ['label' => 'Grant developer access', 'description' => 'Set is_developer=true for the given user.'],
         'install' => ['label' => 'Run install', 'description' => 'Idempotent first-run setup. Re-running on a configured install is destructive.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Destination file', 'help' => 'Leave blank to use the default backups directory.', 'placeholder' => '/path/to/backup.sqlite (optional)'],
         'action' => ['label' => 'Action'],
         'config' => ['label' => 'Config key', 'help' => 'The config file or dotted key to print, e.g. `app` or `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Job id', 'help' => 'Leave blank to retry every failed job; pass an id to retry a single entry.', 'placeholder' => 'all (or a specific id)'],
         'queue' => ['label' => 'Queue name', 'help' => 'Optional queue filter; defaults to all queues.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Backup file path', 'help' => 'Replaces the current database with the file at the given path.', 'placeholder' => '/path/to/backup.sqlite'],
+        'path' => ['label' => 'Backup file path', 'help' => 'Replaces the current database with the file at the given path.', 'placeholder' => '/path/to/backup.sqlite'],
         'username' => ['label' => 'Username', 'placeholder' => 'alice'],
     ],
 ];

@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Napravi rezervnu kopiju baze podataka', 'description' => 'Upisuje SQLite kopiju sa vremenskom oznakom u fasciklu sa rezervnim kopijama (ili na zadatu putanju).'],
+        'db_backup' => ['label' => 'Napravi rezervnu kopiju baze podataka', 'description' => 'Upisuje SQLite kopiju sa vremenskom oznakom u fasciklu sa rezervnim kopijama.'],
         'doctor' => ['label' => 'Pokreni doctor', 'description' => 'Prikazuje instalirane verzije PHP-a / Composera / SQLite-a i proverava minimalne zahteve.'],
         'failed_jobs' => ['label' => 'Očisti neuspele zadatke', 'description' => 'Uklanja razrešene unose iz tabele failed_jobs kojom upravlja Laravel.'],
         'cache_clear' => ['label' => 'Očisti keš', 'description' => 'Prazni keš aplikacije.'],
@@ -63,20 +63,17 @@ return [
         // transaction fingerprint. Confirm the same noun carries all three.
         'rederive_fingerprints' => ['label' => 'Ponovo izvedi otiske', 'description' => 'Ponovo računa otisak svake transakcije prema trenutnoj verziji normalizacije.'],
         'db_restore' => ['label' => 'Vrati bazu podataka', 'description' => 'Zamenjuje trenutnu bazu podataka zadatom datotekom rezervne kopije.'],
-        'migrate_fresh' => ['label' => 'Obriši tabele i migriraj ponovo', 'description' => 'Briše svaku tabelu, pa ponovo pokreće svaku migraciju.'],
-        'reset_password' => ['label' => 'Resetuj lozinku', 'description' => 'Interaktivno resetuje lozinku korisnika (odbija neinteraktivnu upotrebu).'],
         'regenerate_recovery_codes' => ['label' => 'Ponovo generiši kodove za oporavak', 'description' => 'Ponovo generiše 10 jednokratnih kodova za oporavak za korisnika.'],
         'grant_dev' => ['label' => 'Dodeli programerski pristup', 'description' => 'Postavlja is_developer=true za zadatog korisnika.'],
         'install' => ['label' => 'Pokreni instalaciju', 'description' => 'Idempotentno podešavanje pri prvom pokretanju. Ponovno pokretanje na već podešenoj instalaciji je destruktivno.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Odredišna datoteka', 'help' => 'Ostavi prazno da se koristi podrazumevana fascikla sa rezervnim kopijama.', 'placeholder' => '/putanja/do/backup.sqlite (opciono)'],
         'action' => ['label' => 'Radnja'],
         'config' => ['label' => 'Konfiguracioni ključ', 'help' => 'Konfiguraciona datoteka ili ključ sa tačkama koji treba ispisati, npr. `app` ili `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id zadatka', 'help' => 'Ostavi prazno da ponoviš svaki neuspeli zadatak; navedi id da ponoviš jedan unos.', 'placeholder' => 'sve (ili određeni id)'],
         'queue' => ['label' => 'Naziv reda čekanja', 'help' => 'Opcioni filter po redu čekanja; podrazumevano svi redovi.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Putanja do datoteke rezervne kopije', 'help' => 'Zamenjuje trenutnu bazu podataka datotekom na zadatoj putanji.', 'placeholder' => '/putanja/do/backup.sqlite'],
+        'path' => ['label' => 'Putanja do datoteke rezervne kopije', 'help' => 'Zamenjuje trenutnu bazu podataka datotekom na zadatoj putanji.', 'placeholder' => '/putanja/do/backup.sqlite'],
         'username' => ['label' => 'Korisničko ime', 'placeholder' => 'alice'],
     ],
 ];

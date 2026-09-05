@@ -77,7 +77,7 @@ it('submit() with a DESTRUCTIVE-tier name routes to triple-gate:open (defence-in
 
     Livewire::actingAs($user)
         ->test(CommandArgPromptModal::class)
-        ->dispatch('command-args:prompt', name: 'db:restore', tier: 'safe', prefill: ['from' => '/tmp/x'])
+        ->dispatch('command-args:prompt', name: 'db:restore', tier: 'safe', prefill: ['path' => '/tmp/x'])
         ->call('submit')
         ->assertNotDispatched('spawn-command')
         ->assertNotDispatched('toast')
@@ -92,20 +92,20 @@ it('submit() drops empty optional values from the args map so the shell never se
         $this->markTestSkipped('posix extension required for spawn-then-tail');
     }
 
-    // db:backup's `destination` is optional, and a blank kept in the map
-    // would build `php artisan db:backup ''`, which Laravel can reject.
+    // queue:retry's `id` is optional, and a blank kept in the map would build
+    // `php artisan queue:retry ''`, which Laravel can reject.
     $user = promptUser('arg-prompt-optional');
 
     Livewire::actingAs($user)
         ->test(CommandArgPromptModal::class)
-        ->dispatch('command-args:prompt', name: 'db:backup', tier: 'safe', prefill: [])
-        ->set('values.destination', '')
+        ->dispatch('command-args:prompt', name: 'queue:retry', tier: 'safe', prefill: [])
+        ->set('values.id', '')
         ->call('submit')
         ->assertNotDispatched('spawn-command')
         ->assertDispatched(
             'toast',
             fn (string $event, array $params) => is_string($params['message'] ?? null)
-                && str_starts_with($params['message'], 'Started db:backup'),
+                && str_starts_with($params['message'], 'Started queue:retry'),
         );
 });
 
