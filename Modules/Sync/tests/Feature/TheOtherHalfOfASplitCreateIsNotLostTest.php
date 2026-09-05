@@ -8,8 +8,8 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
+use Modules\Sync\Internal\Merge\ReplayedRows;
 use Modules\Sync\Internal\Merge\RowOwnership;
-use Modules\Sync\Internal\Merge\SearchDocumentRows;
 use Modules\Sync\Internal\Merge\SplitCreateTail;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -87,7 +87,7 @@ it('keeps the tail of a create that was split across two batches', function (): 
         $batchTwo['transactions'][157][$f] = [splitTailEntry(157, $f, $v, $userId)];
     }
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
     $applier->applyCreates($batchOne, [], $userId, '2026-06-10 12:00:00', $touched);
     $applier->applyCreates($batchTwo, [], $userId, '2026-06-10 12:00:00', $touched);
@@ -146,7 +146,7 @@ it('does not call the rest of a create a collision when it seeded the birth time
         $batchTwo['transactions'][401][$f] = [splitTailEntry(401, $f, $v, $userId)];
     }
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
     $applier->applyCreates($batchOne, [], $userId, '2026-06-10 12:00:00', $touched);
     $applier->applyCreates($batchTwo, [], $userId, '2026-06-10 12:00:00', $touched);
@@ -202,7 +202,7 @@ it('never moves a birth time that came off the wire', function (): void {
         $second['transactions'][402][$f] = [splitTailEntry(402, $f, $v, $userId)];
     }
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
     $applier->applyCreates($first, [], $userId, '2026-06-10 12:00:00', $touched);
     $applier->applyCreates($second, [], $userId, '2026-06-10 12:00:00', $touched);

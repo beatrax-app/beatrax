@@ -302,13 +302,16 @@ Every failure mode is deliberately scoped to a single op:
 
 ## What runs inside the transaction, and what cannot
 
-The three apply passes run inside one `transaction()` scoped to `$userId`. Two things are
-*collected* inside it by reference and *consumed* after it commits:
+The three apply passes run inside one `transaction()` scoped to `$userId`. Three things are
+*collected* inside it and *consumed* after it commits:
 
 - **Transfer-pair cascades**, because the reclassification has to see the pair link already
   nulled by the committed delete.
 - **Full-text index refreshes**, because FTS5 shadow-table writes cannot run inside a
   transaction that also touches the base table.
+- **The rows the merge wrote**, announced as `PeerRowsApplied` — see
+  [What an arriving row announces](#what-an-arriving-row-announces). It runs last of the
+  three: it is the only step that hands control to another module.
 
 Search freshness can therefore never fail a replay. Each index call is individually guarded,
 and a failure is reported as a warning naming the row, the operation and `search:reindex` —
@@ -376,6 +379,60 @@ it belongs to, and two rules that are easy to get backwards:
 `ASearchDocumentIsRebuiltForEveryTableItReadsTest` derives the expected source
 list from what `SearchIndexWriter` actually queries, so a third source table
 breaks the test rather than going silently unindexed.
+
+## What an arriving row announces
+
+A merge writes with the query builder. No Eloquent model event fires, and until
+`PeerRowsApplied` existed no domain event was raised either — so every listener
+that keeps derived state or enforces a rule across rows was skipped on the
+arrival path, and the two devices disagreed with nothing anywhere reporting it.
+
+`EntityMutated` cannot be reused for this. It is the event the capture listener
+turns into an op, so raising it here would re-author the peer's row as this
+device's own and send it straight back. `ReplayedRows` collects what the merge
+actually wrote — created, updated and deleted, per table, deduplicated by pk —
+and `OpLogReplayer` dispatches one `PeerRowsApplied` per replay **after** the
+transaction commits, last of the three post-commit consumers above. A replay
+that applied nothing announces nothing.
+
+The dispatch is synchronous and reaches arbitrary modules, so it is guarded the
+way the index refresh beside it is: a listener that throws is reported as a
+warning naming the tables the announcement covered, and the merge stands. The
+rows are committed by then, so propagating would stop a catch-up mid-batch over
+work that is already durable — and what is stale is whatever that listener
+maintains, not anything the replayer refused.
+
+It is deliberately one event per replay rather than one per row: a first sync
+carries thousands of rows, and a listener that has to query per row would run
+thousands of times for one answer. The listeners filter by table.
+
+A rebuild announces too, and announces everything — it re-creates every row the
+log names, so the map it collects is one entry per row, held beside a log the
+rebuild already has fully hydrated. That is the intended cost: a rebuild is the
+operation most likely to have changed what the derived state was built from, and
+the alternative is a device whose forecasts describe the database it had before.
+
+Two listeners hear it today:
+
+| listener | what it would otherwise miss |
+|---|---|
+| `DeactivateRulesOnReferentDelete` | Categorization rules name a category or a counterparty through an opaque JSON payload with no foreign key. Rules are device-local, so the device holding one is the only side that can deactivate it, and a peer's delete reached neither the model-event arm nor the `EntityMutated` arm. |
+| `ProjectForecastOnPeerRowsApplied` | `forecast_runs` and `forecast_shortfall_windows` are derived and device-local, while every input the eight local forecast listeners fire on travels. A series a household member approved reached this device's tables and none of its forecasts until the daily sweep. |
+
+**Not every event belongs on this path**, and that is the harder half. An unlock
+happened *here*; a notification the origin device already delivered would ring a
+second time for one action; a categorization counted on arrival would count the
+peer's action twice. `AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest`
+therefore pins the whole set: every event a service provider wires a listener to
+is either raised on the merge path or carries one line saying why it stops at the
+device that raised it. The pin is compared in both directions, and where a pin
+claims another seam answers the arriving row — the search index, the nav-count
+cache, a table that travels on its own — it names the file and pattern that say
+so, and the guard re-runs them.
+
+What the guard cannot express is whether a listener *maintains* anything: that
+needs a human reading what it does. What it can do is refuse to let the question
+go unasked.
 
 ## Self-referential columns are written last
 
