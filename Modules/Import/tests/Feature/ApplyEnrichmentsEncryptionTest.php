@@ -98,7 +98,7 @@ it('encrypts the incoming counterparty_name/description before the prefer_receip
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL',
-            importRunId: 1,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],
@@ -135,7 +135,7 @@ it('leaves currency/amount_minor conflict values unencrypted (never sensitive)',
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL-2',
-            importRunId: 1,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'currency' => ['stored' => 'EUR', 'incoming' => 'USD'],
@@ -158,7 +158,7 @@ it('stores tax_transaction_tags-analogue plaintext for a non-encrypted user (pas
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL-3',
-            importRunId: 1,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],

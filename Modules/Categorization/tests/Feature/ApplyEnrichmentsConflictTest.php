@@ -161,7 +161,7 @@ it('prefer_receipt policy: applies the incoming value AND records the disagreeme
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
@@ -201,7 +201,7 @@ it('prefer_first_write policy: keeps the stored value AND records the disagreeme
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
@@ -295,7 +295,7 @@ it('unset policy + a statement enriching a receipt-written row: keeps the stored
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'STRONGER-REF',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Camt053->value,
             conflictingFields: [
                 'amount_minor' => ['stored' => -2500, 'incoming' => -9900],
@@ -333,13 +333,18 @@ it('a later disagreement about the same field replaces the record rather than be
     ]);
     $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
 
+    // A second real run, so the record's provenance has somewhere to move to:
+    // pending_enrichment_conflicts.import_run_id is a foreign key, and the
+    // reader is owed the run the surviving reading actually came from.
+    $laterRunId = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-LATER')->import_run_id;
+
     $applier = resolveApplier();
 
     $applier([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-A',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'First reading'],
@@ -351,7 +356,7 @@ it('a later disagreement about the same field replaces the record rather than be
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-B',
-            importRunId: 100,
+            importRunId: $laterRunId,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Second reading'],
@@ -362,6 +367,7 @@ it('a later disagreement about the same field replaces the record rather than be
     $pending = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->get();
     expect($pending)->toHaveCount(1);
     expect(json_decode((string) $pending[0]->incoming_value, true))->toBe('Second reading');
+    expect((int) $pending[0]->import_run_id)->toBe((int) $laterRunId);
 });
 
 it('W6 no-instance-cache: two consecutive __invoke calls for different users honour each user\'s policy independently (singleton safety)', function (): void {

@@ -276,9 +276,10 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             : ReceiptConflictChoice::PreferFirstWrite;
     }
 
-    // UNIQUE (user_id, transaction_id, field_name) holds one row per field, so
-    // a later disagreement about that same field has to replace the one on
-    // record or it is the one that goes unrecorded.
+    // An upsert onto UNIQUE (user_id, transaction_id, field_name), not an
+    // insert-or-ignore: the constraint holds one row per field, so a later
+    // disagreement about that same field has to replace the one on record or
+    // it becomes the dropped one. One statement, so it cannot half-apply.
     private function recordConflicts(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $resolution): void
     {
         $connection = $this->db->connection();
@@ -303,20 +304,16 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
                 'updated_at' => $now,
             ];
 
-            $inserted = $connection->table('pending_enrichment_conflicts')->insertOrIgnore($record + [
-                'user_id' => $user->id,
-                'transaction_id' => $enrichment->existingTransactionId,
-                'field_name' => $fieldName,
-                'created_at' => $now,
-            ]);
-
-            if ($inserted === 0) {
-                $connection->table('pending_enrichment_conflicts')
-                    ->where('user_id', $user->id)
-                    ->where('transaction_id', $enrichment->existingTransactionId)
-                    ->where('field_name', $fieldName)
-                    ->update($record);
-            }
+            $connection->table('pending_enrichment_conflicts')->upsert(
+                [$record + [
+                    'user_id' => $user->id,
+                    'transaction_id' => $enrichment->existingTransactionId,
+                    'field_name' => $fieldName,
+                    'created_at' => $now,
+                ]],
+                ['user_id', 'transaction_id', 'field_name'],
+                array_keys($record),
+            );
 
             $this->events->dispatch(new ReceiptConflictDetected(
                 transactionId: $enrichment->existingTransactionId,
