@@ -20,6 +20,7 @@ use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingAcceptRefusal;
+use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use stdClass;
 
@@ -116,23 +117,32 @@ final readonly class PairingGateway
         $this->peerLink->configureRelayFromQr($endpoint, $pin);
     }
 
+    // The refusals ride in the return rather than in a throw, because a throw
+    // here would put a screen's "cannot reach the other device" line in front
+    // of a reader whose network was never the reason.
     /**
+     * @return PairingFrameSend whether the frame left this device, which a
+     *                          caller re-emitting on a poll must render: the
+     *                          screen is otherwise identical either way.
+     *
      * @throws \Throwable when no road home is open — the LAN peer was
      *                    unreachable, the relay unconfigured, refusing or not
      *                    answering, and the peer's holding space full; callers
      *                    must catch and offer a non-blocking retry.
      */
-    public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): void
+    public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): PairingFrameSend
     {
-        $this->peerLink->sendResponderAccept($userId, $tokenHash, $desktopDeviceId, $session);
+        return $this->peerLink->sendResponderAccept($userId, $tokenHash, $desktopDeviceId, $session);
     }
 
     /**
+     * @return PairingFrameSend see {@see self::sendResponderAccept()}.
+     *
      * @throws \Throwable see {@see self::sendResponderAccept()}.
      */
-    public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): void
+    public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): PairingFrameSend
     {
-        $this->peerLink->sendConfirm($userId, $tokenId, $peerDeviceId, $session);
+        return $this->peerLink->sendConfirm($userId, $tokenId, $peerDeviceId, $session);
     }
 
     // Call at the TOP of a poll handler, before re-reading local pairing state.
