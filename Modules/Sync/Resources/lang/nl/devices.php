@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Dit apparaat bevestigen',
     'introduced_dismiss' => 'Negeren',
     'introduced_dismiss_aria' => ':name negeren',
+    'withheld_heading' => 'Achtergehouden door een ander apparaat',
+    'withheld_explainer' => 'Een ander apparaat van jou stuurt deze wijzigingen niet, omdat dit apparaat niet kan controleren wie ze heeft ondertekend. Er gaat niets verloren — ze blijven op het apparaat dat ze heeft. Ze komen binnen zodra een van je apparaten die identiteit doorgeeft en jij die bevestigt.',
+    'withheld_count' => ':count wijziging ondertekend door :name|:count wijzigingen ondertekend door :name',
+    'withheld_by' => 'Achtergehouden door :name',
 ];

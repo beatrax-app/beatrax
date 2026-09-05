@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Dieses Gerät bestätigen',
     'introduced_dismiss' => 'Verwerfen',
     'introduced_dismiss_aria' => ':name verwerfen',
+    'withheld_heading' => 'Von einem anderen Gerät zurückgehalten',
+    'withheld_explainer' => 'Ein anderes deiner Geräte sendet diese Änderungen nicht, weil dieses Gerät nicht prüfen kann, wer sie signiert hat. Nichts geht verloren — sie bleiben auf dem Gerät, das sie hat. Sie kommen an, sobald eines deiner Geräte diese Identität weitergibt und du sie bestätigst.',
+    'withheld_count' => ':count Änderung, signiert von :name|:count Änderungen, signiert von :name',
+    'withheld_by' => 'Zurückgehalten von :name',
 ];

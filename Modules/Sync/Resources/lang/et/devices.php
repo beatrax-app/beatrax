@@ -104,4 +104,8 @@ return [
     'introduced_confirm' => 'Kinnita see seade',
     'introduced_dismiss' => 'Eira',
     'introduced_dismiss_aria' => 'Eira :name',
+    'withheld_heading' => 'Teine seade hoiab neid kinni',
+    'withheld_explainer' => 'Mõni teine sinu seade neid muudatusi ei saada, sest see seade ei saa kontrollida, kes need allkirjastas. Midagi ei lähe kaotsi — need jäävad seadmesse, kus need on. Need jõuavad kohale, kui mõni sinu seade edastab selle identiteedi ja sa selle kinnitad.',
+    'withheld_count' => ':count muudatus, mille allkirjastas :name|:count muudatust, mille allkirjastas :name',
+    'withheld_by' => 'Kinni hoiab :name',
 ];

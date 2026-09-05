@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Bekræft denne enhed',
     'introduced_dismiss' => 'Afvis',
     'introduced_dismiss_aria' => 'Afvis :name',
+    'withheld_heading' => 'Tilbageholdt af en anden enhed',
+    'withheld_explainer' => 'En anden af dine enheder sender ikke disse ændringer, fordi denne enhed ikke kan tjekke, hvem der har signeret dem. Intet er tabt — de bliver på den enhed, der har dem. De kommer, hvis en af dine enheder videregiver den identitet, og du bekræfter den.',
+    'withheld_count' => ':count ændring signeret af :name|:count ændringer signeret af :name',
+    'withheld_by' => 'Tilbageholdt af :name',
 ];

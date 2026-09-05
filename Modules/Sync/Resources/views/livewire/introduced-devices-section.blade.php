@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\PatternScan')
-<div data-testid="introduced-devices-section">
+<div class="space-y-8" data-testid="introduced-devices-section">
     @if ($introductions !== [])
         <div class="space-y-4">
             <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.introduced_heading') }}</h3>
@@ -81,6 +81,34 @@
                                 </button>
                             </div>
                         </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- The other half of the same report. It carries no button because no
+         device has offered a key for these authors, and a count with nothing
+         to do about it is still the difference between a narrowing a reader
+         can see and one they cannot. --}}
+    @if ($withheld !== [])
+        <div class="space-y-4" data-testid="withheld-history">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.withheld_heading') }}</h3>
+
+            <x-core::alert tone="info" data-testid="withheld-notice">
+                {{ Lang::get('sync::devices.withheld_explainer') }}
+            </x-core::alert>
+
+            <ul class="divide-y divide-slate-200 dark:divide-slate-700">
+                @foreach ($withheld as $entry)
+                    <li class="py-4" wire:key="withheld-{{ $entry['peer'] }}-{{ $entry['author'] }}">
+                        <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="withheld-count-{{ $entry['author'] }}">
+                            {{ Lang::choice('sync::devices.withheld_count', $entry['count'], ['name' => $entry['author']]) }}
+                        </p>
+
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ Lang::get('sync::devices.withheld_by', ['name' => $entry['peer']]) }}
+                        </p>
                     </li>
                 @endforeach
             </ul>

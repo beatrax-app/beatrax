@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Confirmer cet appareil',
     'introduced_dismiss' => 'Ignorer',
     'introduced_dismiss_aria' => 'Ignorer :name',
+    'withheld_heading' => 'Retenu par un autre appareil',
+    'withheld_explainer' => 'Un autre de tes appareils n\'envoie pas ces changements, parce que cet appareil ne peut pas vérifier qui les a signés. Rien n\'est perdu — ils restent sur l\'appareil qui les détient. Ils arriveront si l\'un de tes appareils transmet cette identité et que tu la confirmes.',
+    'withheld_count' => ':count changement signé par :name|:count changements signés par :name',
+    'withheld_by' => 'Retenu par :name',
 ];

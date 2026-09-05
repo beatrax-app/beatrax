@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Vahvista tämä laite',
     'introduced_dismiss' => 'Hylkää',
     'introduced_dismiss_aria' => 'Hylkää :name',
+    'withheld_heading' => 'Toinen laite pidättää nämä',
+    'withheld_explainer' => 'Toinen laitteistasi ei lähetä näitä muutoksia, koska tämä laite ei voi tarkistaa, kuka ne on allekirjoittanut. Mitään ei katoa — ne jäävät laitteelle, jolla ne ovat. Ne saapuvat, kun jokin laitteistasi välittää tuon identiteetin ja sinä vahvistat sen.',
+    'withheld_count' => ':count muutos, jonka on allekirjoittanut :name|:count muutosta, jotka on allekirjoittanut :name',
+    'withheld_by' => 'Pidättäjä: :name',
 ];

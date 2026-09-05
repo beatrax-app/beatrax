@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Potwierdź to urządzenie',
     'introduced_dismiss' => 'Odrzuć',
     'introduced_dismiss_aria' => 'Odrzuć: :name',
+    'withheld_heading' => 'Zatrzymane przez inne urządzenie',
+    'withheld_explainer' => 'Inne Twoje urządzenie nie wysyła tych zmian, bo to urządzenie nie może sprawdzić, kto je podpisał. Nic nie ginie — zostają na urządzeniu, które je ma. Dotrą, gdy któreś z Twoich urządzeń przekaże tę tożsamość, a Ty ją potwierdzisz.',
+    'withheld_count' => ':count zmiana podpisana przez :name|:count zmiany podpisane przez :name|:count zmian podpisanych przez :name',
+    'withheld_by' => 'Zatrzymuje je :name',
 ];

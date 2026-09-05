@@ -41,14 +41,37 @@ holding less than the household has. Three surfaces stop that being silent.
 |---|---|
 | The answering device's log | `IntroductionOffers` logs at **error**, with the peer, the authors and the totals. Error rather than warning for the reason `reportUnframable()` is one: a withholding nothing announces reads as an ordinary clean sync from every surface above it. |
 | The `CATCH_UP_RESPONSE` | `withheld` carries a per-author count, so the asking device learns the size of what it is not getting. |
-| The device list | The count is stored against the introduction the reader can act on, so the number and the button that clears it are on the same row. |
+| The device list | `WithheldLedger` stores every count the answer carried, per (peer, author), and the screen reads it back — beside the introduction where there is one, and on its own where there is not. |
 
-The one case with no screen behind it is an author **both** devices have
-removed: the peer still confirms it and vouches, this install revoked it, and
-`DeviceIntroductionService::record()` refuses the row so an introduction cannot
-reverse a revocation. That refusal is logged at warning by
-`IntroductionOffers::reportRefusedForRemovedDevices()` and stops there — there
-is nothing for a reader to decide, because they already decided.
+**The count is the half of the report that always applies.** It was originally
+written into `device_introductions.withheld_entry_count`, which meant it only
+survived when the same answer carried a well-formed identity for that exact
+author — so the three cases that arrive without one all dropped it into the
+*sender's* log and nowhere else:
+
+- an author the answering peer has itself removed, which it may not vouch for;
+- a relayed key that fails `WithheldHistory`'s hex and length check;
+- an author this install already holds a `device_registry` row for, where the
+  removal stands and `DeviceIntroductionService::record()` refuses the row.
+
+`IntroductionOffers::record()` therefore writes the ledger **before** it reaches
+the guard that returns early on an empty offer list. The ledger replaces a
+peer's whole report each time rather than merging into it: an author the peer
+no longer names is holding nothing back, and a number left standing after that
+describes an exchange that has already been superseded. That is also what stops
+a confirmed introduction sitting under a line saying its history cannot be read
+until the reader confirms it.
+
+The screen applies the same test one step earlier. An author this device can
+already verify — paired since the report arrived, or introduced and confirmed —
+is left off the standalone list, because the next exchange withholds nothing for
+it and repeating the number would state a narrowing that has already ended.
+
+The refusal for a device both installs removed is still logged at warning by
+`IntroductionOffers::reportRefusedForRemovedDevices()`, because there is nothing
+for a reader to *decide* there. The number is now on the screen anyway: what a
+peer is holding back is a fact about this device's history whether or not there
+is a button beside it.
 
 ## An introduction is stored, not trusted
 
@@ -75,6 +98,15 @@ enforced by where the key lives and what is stored beside it.
   `whereNotNull('confirmed_at')` over `device_registry`. Nothing reachable from
   `device_registry` can ever return an introduced key, because there is no row
   there to return.
+- **And the registry still wins, read back rather than assumed.** `record()`
+  refuses to store an introduction for a device the registry has a row for, in
+  either direction. `signatureVerificationKeys()` applies the same exclusion in
+  SQL, because the two orderings are not the same event: an introduction
+  confirmed *before* that device paired left a second grant behind, and the
+  removal the reader later performed did not reach it — so the device went on
+  verifying through the weaker door. `DeviceIntroductionService::forUser()`
+  excludes those rows too, or the list would offer "confirmed for signatures"
+  next to a grant no longer being made.
 - **No transport key at all.** An introduction carries the Ed25519 signing half
   only. `device_introductions` has no `x25519_public_key_hex` column, so the
   Noise static key a session authenticates against has nowhere to land even if
@@ -124,5 +156,10 @@ once trusted (an introduction can restore it) from one it has never heard of
 
 Dismissing an introduction deletes its row. No epoch rotation follows, because
 an introduced device was never sent an epoch — there is no key material to take
-back. A device removed with `DeviceRegistryService::purge()` is unaffected: it
-has a `device_registry` row, and `record()` refuses to shadow one.
+back.
+
+`DeviceRegistryService::purge()` does not touch this table and does not need
+to. A purge leaves the `device_registry` row standing with its `confirmed_at`
+cleared, and a row there is what the exclusion above keys on: the introduction
+stops granting anything the moment the registry row exists, whichever of the
+two arrived first.

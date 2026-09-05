@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Confirm this device',
     'introduced_dismiss' => 'Dismiss',
     'introduced_dismiss_aria' => 'Dismiss :name',
+    'withheld_heading' => 'Held back by another device',
+    'withheld_explainer' => 'One of your devices is not sending these changes, because this device cannot check who signed them. Nothing is lost — they stay on the device that holds them. They arrive once one of your devices passes on that identity and you confirm it.',
+    'withheld_count' => ':count change signed by :name|:count changes signed by :name',
+    'withheld_by' => 'Held by :name',
 ];

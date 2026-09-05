@@ -104,4 +104,8 @@ return [
     'introduced_confirm' => 'Patvirtinti šį įrenginį',
     'introduced_dismiss' => 'Atmesti',
     'introduced_dismiss_aria' => 'Atmesti :name',
+    'withheld_heading' => 'Kitas įrenginys juos sulaiko',
+    'withheld_explainer' => 'Kitas tavo įrenginys šių pakeitimų nesiunčia, nes šis įrenginys negali patikrinti, kas juos pasirašė. Niekas neprarasta — jie lieka tame įrenginyje, kuris juos turi. Jie atkeliaus, kai kuris nors tavo įrenginys perduos tą tapatybę ir tu ją patvirtinsi.',
+    'withheld_count' => ':count pakeitimas, pasirašytas :name|:count pakeitimai, pasirašyti :name|:count pakeitimų, pasirašytų :name',
+    'withheld_by' => 'Sulaiko :name',
 ];
