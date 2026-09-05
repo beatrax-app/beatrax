@@ -200,6 +200,46 @@ it('still refuses an op signed by a device this user never paired with', functio
             ->count())->toBeGreaterThan(0);
 });
 
+it('refuses a NEW op signed by a device whose confirmation is gone, key retained and all', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    [$userId, $secretKeyHex] = seedUserWithRetiredPhone($db, 'unconfirmed');
+
+    // Removal as the settings section performs it: the row and its Ed25519 key
+    // stay, so the history this device already accepted can still be read back.
+    $db->connection()->table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', REMOVED_PHONE_DEVICE_ID)
+        ->update(['confirmed_at' => null]);
+
+    /** @var DeviceKeySigner $signer */
+    $signer = app(DeviceKeySigner::class);
+
+    // Ops this device has never held: nothing in op_log_entries names them, so
+    // the retained key is the only thing that could ever admit them.
+    $entries = retiredPhoneCreateOps($signer, $secretKeyHex, $userId, retiredPhoneGoalFields());
+
+    $replayer = new OpLogReplayer(
+        db: $db,
+        deviceKeys: app(DeviceRegistryService::class)->deviceKeys($userId),
+        rules: new MergeRulesRegistry,
+    );
+    $replayer->replay($entries, $userId);
+
+    expect($db->connection()->table('goals')->where('user_id', $userId)->count())->toBe(0)
+        ->and($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())->toBe(0)
+        ->and($db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('reason', QuarantineReason::UnconfirmedDevice->value)
+            ->count())->toBe(count($entries))
+        // The registry row is right there with its key in it, so an audit line
+        // blaming a missing key would name a cause the reader can disprove.
+        ->and($db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('reason', QuarantineReason::MissingDeviceKey->value)
+            ->count())->toBe(0);
+});
+
 it('offers a removed device\'s ops to the peer catching up instead of withholding them', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

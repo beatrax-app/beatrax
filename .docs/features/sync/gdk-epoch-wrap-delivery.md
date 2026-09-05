@@ -242,6 +242,12 @@ The same wrap can arrive twice — pushed on connect and again from a drained ma
 an epoch that is already present must not duplicate it and must never move `current_epoch`
 *backwards*.
 
+The drop is logged at `warning`, naming the epoch id and the recipient device and nothing else
+— never the key. It is the outcome that changes nothing, and for a long time it was also the
+only one that said nothing, so a delivery that appended a key and one that appended none were
+indistinguishable from every surface above the handler. The blind-index key is re-sent on the
+same two roads and its equal-key branch logs the same way, for the same reason.
+
 The resolution when two ids do collide turns on whether the local epoch has been *used*:
 
 - **Nothing is encrypted under it locally** — no `op_log_entries` row carries that

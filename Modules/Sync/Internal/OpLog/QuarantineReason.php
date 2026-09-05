@@ -21,6 +21,12 @@ enum QuarantineReason: string
 
     case MissingDeviceKey = 'missing_device_key';
 
+    // The registry still holds this author's key, but nothing confirms the
+    // device any more: removed here, or the peer saying it removed this one.
+    // Kept apart from a missing key so the audit row does not name a cause the
+    // reader can disprove by opening the device list and seeing the row.
+    case UnconfirmedDevice = 'unconfirmed_device';
+
     case ForgedSignature = 'forged_signature';
 
     case StrategyError = 'strategy_error';
