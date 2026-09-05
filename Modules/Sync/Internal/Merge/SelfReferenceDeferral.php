@@ -63,6 +63,15 @@ final class SelfReferenceDeferral
         return $extracted;
     }
 
+    // A Set names one column and carries no payload to strip, so the create
+    // path's extract() cannot answer for it. Asked before the merge writes,
+    // because the same foreign key refuses a Set naming an absent partner and
+    // the applier's own catch would record that as a strategy error.
+    public function isSelfReference(string $table, string $field): bool
+    {
+        return in_array($field, self::SELF_REFERENCES[$table] ?? [], true);
+    }
+
     // Re-applies the deferred columns now that their targets are present, and
     // carries whatever is still unsatisfied into the next batch. Dropping it
     // there cost a first sync every transfer pair whose partner sat further

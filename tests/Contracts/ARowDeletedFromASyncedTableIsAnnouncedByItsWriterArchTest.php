@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
+use Tests\Contracts\Support\RepoTree;
+use Tests\Contracts\Support\SyncedColumnWrites;
 
 // Capture is explicit here: a write reaches the op log because its writer
 // dispatched an event, never because the row changed. A delete that skips that
@@ -32,30 +35,16 @@ function tablesThatTravel(): array
     return $tables;
 }
 
+// Modules/ alone for as long as this rule existed, so app/ was structurally
+// invisible to it — and a console command that purges `transactions` and
+// `import_runs` and announces nothing lived there the whole time. The walk is
+// shared now, and it states which roots it does not read.
 /**
  * @return list<string>
  */
 function deleteWriterFiles(): array
 {
-    $files = [];
-    /** @var iterable<SplFileInfo> $walk */
-    $walk = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules'), FilesystemIterator::SKIP_DOTS));
-
-    foreach ($walk as $entry) {
-        $path = (string) $entry;
-        if (! str_ends_with($path, '.php')) {
-            continue;
-        }
-        foreach (['/tests/', '/Migrations/', '/Seeders/', '/Factories/'] as $excluded) {
-            if (str_contains($path, $excluded)) {
-                continue 2;
-            }
-        }
-        $files[] = $path;
-    }
-    sort($files);
-
-    return $files;
+    return SyncedColumnWrites::writerFiles();
 }
 
 // The chain has to be rooted at this table: a bare `->delete()` anywhere in a
@@ -65,11 +54,25 @@ function deletesFromTable(string $table, string $source): bool
     return preg_match("/table\(\s*'".$table."'\s*\)(?:\s*->[a-zA-Z]+\([^;]*?\))*?\s*->delete\(\)/s", $source) === 1;
 }
 
-// DependentRowCascade is the seam for a parent's children, and it announces
-// each row it takes, so a caller reaching for it is already covered.
+// DependentRowCascade builds the tombstone for each child it takes, but it
+// HANDS THEM BACK: naming the class was enough to pass this rule, and
+// DemoSeedCommand called it, threw the events away and then raw-deleted both
+// parents. The seam only counts where the caller dispatches what it got.
 function announcesADelete(string $source): bool
 {
-    return preg_match('/EntityMutated\(|[A-Za-z]+Mutated\(|->writeDelete\(|DependentRowCascade/', $source) === 1;
+    return PatternScan::matches('/new\s+[A-Za-z]*Mutated\(|->\s*writeDelete\(/', $source)
+        || (str_contains($source, 'DependentRowCascade') && PatternScan::matches('/->\s*dispatch\(/', $source));
+}
+
+// The one delete that must NOT be announced. A `users` tombstone is refused by
+// the applier outright — a peer may edit the reader's settings, never remove
+// the reader — so an op for it would be written, sent and dropped.
+/**
+ * @return array<string, string>
+ */
+function deletesNoPeerMayApply(): array
+{
+    return ['Modules/Auth/Internal/Account/UserScopedDataPurge.php' => 'users'];
 }
 
 it('announces every row it deletes from a table that travels', function (): void {
@@ -84,9 +87,15 @@ it('announces every row it deletes from a table that travels', function (): void
             continue;
         }
 
+        $relative = str_replace(base_path().'/', '', $file);
+
         foreach ($tables as $table) {
+            if ((deletesNoPeerMayApply()[$relative] ?? null) === $table) {
+                continue;
+            }
+
             if (deletesFromTable($table, $source)) {
-                $offenders[] = str_replace(base_path().'/', '', $file).' deletes from '.$table.' and announces nothing';
+                $offenders[] = $relative.' deletes from '.$table.' and announces nothing';
             }
         }
     }
@@ -121,6 +130,26 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
     $elsewhere = "<?php \$db->table('op_log_quarantine')->where('user_id', \$id)".$delete.';';
     expect(deletesFromTable('notifications', $elsewhere))->toBeFalse();
 
+    // Naming the cascade is not announcing what it handed back. This is the
+    // exact shape DemoSeedCommand shipped: the call, and no dispatch.
+    $discarded = "<?php \$c = new DependentRowCascade; \$c->deleteAll('transactions', \$ids, \$uid);".$planted;
+    expect(announcesADelete($discarded))->toBeFalse()
+        ->and(announcesADelete($discarded.' $events->dispatch($event);'))->toBeTrue();
+
     expect(tablesThatTravel())->toContain('notifications')
         ->not->toContain('rule_conditions', 'rule_actions', 'categorization_rules');
+
+    // The walk has to reach both roots, and say so: this rule read no file of
+    // app/ at all while claiming to hold the codebase.
+    expect(deleteWriterFiles())->not->toBeEmpty()
+        ->and(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))
+        ->toBe(['unaccounted' => [], 'stale' => [], 'silent' => []]);
+
+    $roots = [];
+    foreach (deleteWriterFiles() as $file) {
+        $relative = str_replace(base_path().'/', '', $file);
+        $roots[substr($relative, 0, (int) strpos($relative, '/'))] = true;
+    }
+
+    expect(array_keys($roots))->toEqualCanonicalizing(RepoTree::scope(RepoTree::RUNTIME_DOMAIN_PHP)['covers']);
 });

@@ -430,6 +430,9 @@ final readonly class OpLogEntryApplier
         array &$pendingDeletes,
         ReplayedRows $applied,
     ): void {
+        /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
+        $deferred = [];
+
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
                 $tomb = $tombstones[$table][$pk] ?? null;
@@ -441,12 +444,17 @@ final readonly class OpLogEntryApplier
                 }
 
                 foreach ($fields as $field => $fieldEntries) {
-                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now);
+                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now, $deferred);
                 }
 
                 $applied->rowUpdated($table, $pk, $userId);
             }
         }
+
+        // Handed over in one call rather than per field: apply() walks
+        // everything still outstanding each time it is asked, and a batch of
+        // pair links would otherwise re-walk the carry once per link.
+        $this->selfReferences->apply($deferred, $userId);
     }
 
     // Encode AND write inside one try: computing the value but running
@@ -455,8 +463,9 @@ final readonly class OpLogEntryApplier
     // quarantined instead.
     /**
      * @param  list<OpLogEntry>  $fieldEntries
+     * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
      */
-    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now): void
+    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now, array &$deferred): void
     {
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
@@ -484,6 +493,16 @@ final readonly class OpLogEntryApplier
             // row scopes to you while reading their balance.
             if (! $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $userId, $pk)) {
                 $this->quarantine->record($fieldEntries[0], QuarantineReason::CrossUser, $now);
+
+                return;
+            }
+
+            // A transfer pair names its partner, and a Set carrying that link
+            // routinely lands before the partner does: written here the foreign
+            // key refuses it and the catch below records a strategy error
+            // nothing retries. The deferral writes it when the partner arrives.
+            if ($columnValue !== null && $this->selfReferences->isSelfReference($table, $field)) {
+                $deferred[] = ['table' => $table, 'pk' => $pk, 'values' => [$field => $columnValue]];
 
                 return;
             }

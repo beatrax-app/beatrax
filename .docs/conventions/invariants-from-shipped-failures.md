@@ -6577,6 +6577,75 @@ the field, so the banner drops a row that is indistinguishable from one above it
 A duplicate that reaches a reader costs more than its own row: a critical
 sentence said twice is one nobody believes the third time.
 
+## A column first written after its row had already travelled
+
+`tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php`
+
+Two rules already asked whether a table announces: one for a delete, one for the
+`users` settings row. Both are table-level, and a table is the wrong unit. A row
+goes on the wire as a whole-row create the first time anything captures it and
+after that only as the Sets its writers announce — so a column first written
+*after* that create reaches a peer never, on a table that announces perfectly
+well for everything else.
+
+`transactions.pair_transaction_id` is the instance that cost real data.
+`TransferPairer` wrote the link on both legs with a bare `->update()`, so it
+travelled only inside a create. A transfer spans two accounts, which is two
+statements and usually two import runs, so the ordinary shape is a new leg
+paired against an older one — and the peer then held the new leg naming its
+partner while the partner named nobody. A pair formed by the orphan sweep after
+the capture travelled not at all, and the whole-table backfill skips a row that
+already carries a create op.
+
+`accounts` was the same defect five times over: the row is captured as a parent
+of the first transaction that names it, and the currency, the forecast buffer,
+the opening balance and both statement anchors are every one of them written
+afterwards.
+
+The guard reads its denominator off `MergeRulesRegistry` — every column it
+declares mergeable, on every covered table — so a new column is in scope the day
+it is registered. Writers whose *caller* announces are pinned with the file that
+proves it, and the pin is compared in both directions.
+
+### The delete guard beside it was narrower than its own claim, twice
+
+Widening this one exposed two holes in the rule it was modelled on. It walked
+`base_path('Modules')` alone, so `app/` was structurally invisible; and it
+counted a bare mention of `DependentRowCascade` as an announcement. Both were
+needed to hide `DemoSeedCommand`, which named the cascade, **discarded the
+tombstones it returned**, and then raw-deleted `transactions` and `import_runs`.
+Widening the walk alone would still have passed it.
+
+The second hole is the more interesting one: the cascade does not announce for
+its caller, it hands the events back. A rule keyed on the class name reads
+"reached the seam" as "used it". The allowance now requires the caller to
+dispatch, and a fixture holds it — the call with no dispatch must not count.
+
+Both walks read one scope, declared in `RepoTree` beside the three that were
+already there and held to `git ls-files` by the guard over that seam. The first
+attempt wrote the roots out again in the shared scanner — fourteen names, a
+second copy of the claim the seam exists to hold — and the scanner guard caught
+it. A coverage assertion is not something a walk carries; it is something the
+place a walk is declared already has.
+
+### The create guard beside it compares across tables
+
+Announcing the `transactions.status` write in `PromoteStagingToDomain` put the
+file's first `dirtyFields:` in it, and the create guard's comparison is
+whole-file: it diffed that edit's columns against an insert into `import_runs`
+in a different method, and reported three columns as lost.
+
+They are not. The `import_runs` row travels as a parent of the transactions
+`RecordTransactions` files, captured off the live foreign key and written out
+column by column, which is what a row with no hand-written payload looks like.
+All three are in the registry's `_create_required` for the table, so striking
+them instead would have made an arriving create fail its own NOT NULL.
+
+The unit is wrong in the mirror of the way the delete guard's was: that one
+asked about a table where it should have asked about a column, this one reads
+two tables as one because they share a file. Pinned per column rather than per
+file, so the next payload that really does lose one still fails here.
+
 ## A skip that no job could answer
 
 `tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php`

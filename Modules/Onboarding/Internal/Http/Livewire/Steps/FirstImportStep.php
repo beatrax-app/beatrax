@@ -30,6 +30,7 @@ use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountWriter;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Onboarding\Internal\Services\StartingBalanceRule;
@@ -131,10 +132,16 @@ final class FirstImportStep extends Component
             $now = $clock->now()->toDateTimeString();
             $balanceConfirmations = $this->acceptedBalanceConfirmations($balanceRule);
 
-            $db->connection()->transaction(function () use ($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations, $logger): void {
+            $db->connection()->transaction(function () use ($db, $confirmImport, $user, $now, $runIdsToCommit, $logger): void {
                 $this->confirmEachStagedRun($confirmImport, $user, $runIdsToCommit, $logger);
-                $this->persistCommit($db, $user, $now, $balanceConfirmations);
+                $this->persistCommit($db, $user, $now);
             });
+
+            // After the commit, and after the confirm inside it: the confirm
+            // captures each account as a whole row, so an anchor written before
+            // it travelled and one written inside it would be announced from
+            // within an outer transaction.
+            $this->anchorConfirmedBalances($app->make(AccountWriter::class), $user->id, $balanceConfirmations);
 
             $this->dispatchPostCommit($app, $logger, $user->id);
 
@@ -218,19 +225,18 @@ final class FirstImportStep extends Component
     /**
      * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
      */
-    private function persistCommit(DatabaseManager $db, User $user, string $now, array $balanceConfirmations): void
+    private function anchorConfirmedBalances(AccountWriter $accounts, int $userId, array $balanceConfirmations): void
     {
         foreach ($balanceConfirmations as $accountId => $confirmation) {
-            $db->connection()
-                ->table('accounts')
-                ->where('id', $accountId)
-                ->where('user_id', $user->id)
-                ->update([
-                    'starting_balance_minor' => $confirmation['minor'],
-                    'starting_balance_date' => $confirmation['date'],
-                    'updated_at' => $now,
-                ]);
+            $accounts->write($userId, $accountId, [
+                'starting_balance_minor' => $confirmation['minor'],
+                'starting_balance_date' => $confirmation['date'],
+            ]);
         }
+    }
+
+    private function persistCommit(DatabaseManager $db, User $user, string $now): void
+    {
         $db->connection()
             ->table('wizard_progress')
             ->where('user_id', $user->id)

@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Contracts\AnchorsStartingBalanceFromStatements;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
+use Modules\Ledger\Public\Services\AccountWriter;
 
 // Re-running is safe: an account whose pair is already set is left alone, so
 // a user-confirmed override survives later imports.
@@ -22,6 +23,7 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
 
     public function __construct(
         private DatabaseManager $db,
+        private AccountWriter $accounts,
     ) {}
 
     public function run(): void
@@ -38,7 +40,11 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
     {
         $connection = $this->db->connection();
 
-        return $connection->transaction(function () use ($connection, $userId): int {
+        // The reads run in a transaction and the writes after it. The seam
+        // announces each account it anchors, and an op emitted inside an outer
+        // transaction becomes a savepoint of it: a rollback would drop the op
+        // while the clock that stamped it had already moved on.
+        $earliestPerAccount = $connection->transaction(function () use ($connection, $userId): array {
             // The summary is written while the preview is being built, so a
             // file the reader discarded -- or previewed and walked away from --
             // leaves one behind. Anchoring off that set the account's opening
@@ -83,21 +89,33 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
                 ];
             }
 
-            $anchored = 0;
-            foreach ($earliestPerAccount as $accountId => $pick) {
-                $anchored += $connection->table('accounts')
-                    ->where('id', $accountId)
-                    ->where('user_id', $pick['user_id'])
-                    ->whereNull('starting_balance_minor')
-                    ->whereNull('starting_balance_date')
-                    ->update([
-                        'starting_balance_minor' => $pick['minor'],
-                        'starting_balance_date' => $pick['date'],
-                    ]);
+            return $earliestPerAccount;
+        });
+
+        $anchored = 0;
+        foreach ($earliestPerAccount as $accountId => $pick) {
+            // The whereNull pair was the filter and the guard at once. It is
+            // asked as its own question now, because the write below is a
+            // column list rather than a predicate: an override the reader
+            // confirmed must survive every later import.
+            $unanchored = $connection->table('accounts')
+                ->where('id', $accountId)
+                ->where('user_id', $pick['user_id'])
+                ->whereNull('starting_balance_minor')
+                ->whereNull('starting_balance_date')
+                ->exists();
+
+            if (! $unanchored) {
+                continue;
             }
 
-            return $anchored;
-        });
+            $anchored += $this->accounts->write($pick['user_id'], $accountId, [
+                'starting_balance_minor' => $pick['minor'],
+                'starting_balance_date' => $pick['date'],
+            ]);
+        }
+
+        return $anchored;
     }
 
     // A statement's period start and its rows' transaction dates are two

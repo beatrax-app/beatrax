@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Database\Seeders\Demo\DemoAnomalyAlertsSeeder;
@@ -37,6 +39,8 @@ use Modules\Pots\Database\Seeders\Demo\DemoPotsSeeder;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
 use Modules\Reports\Database\Seeders\Demo\DemoSavedReportsSeeder;
+use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Tax\Database\Seeders\Demo\DemoTaxTagsSeeder;
 
@@ -84,6 +88,7 @@ final class DemoSeedCommand extends Command
         private readonly DemoAnomalyAlertsSeeder $anomalyAlerts,
         private readonly PurgeUserDataAction $purgeUserData,
         private readonly DependentRowCascade $cascade,
+        private readonly Container $container,
     ) {
         parent::__construct();
     }
@@ -243,13 +248,21 @@ final class DemoSeedCommand extends Command
         $connection = $this->db->connection();
         $demoUserIds = $this->demoUserIds($connection);
 
-        $connection->transaction(function () use ($connection, $demoUserIds): void {
-            $this->purgeDemoImportRuns($connection);
+        /** @var list<object> $tombstones */
+        $tombstones = [];
+
+        $connection->transaction(function () use ($connection, $demoUserIds, &$tombstones): void {
+            $this->purgeDemoImportRuns($connection, $tombstones);
 
             foreach ($demoUserIds as $userId) {
                 ($this->purgeUserData)($connection, $userId);
             }
         });
+
+        // After the commit, never inside it: OpLogWriter opens a transaction of
+        // its own, which nested becomes a savepoint the outer rollback discards
+        // while the clock that stamped the op has already moved on.
+        $this->announce($tombstones);
 
         $this->info(sprintf(
             'Reset complete: cleared %d demo users + linked demo rows.',
@@ -278,7 +291,10 @@ final class DemoSeedCommand extends Command
     // Keyed by source_format rather than by owner, so a run stranded by an
     // earlier interrupted reset still clears once its user is already gone.
     // A stale row would otherwise block the re-seed on UNIQUE (user_id, fingerprint).
-    private function purgeDemoImportRuns(Connection $connection): void
+    /**
+     * @param  list<object>  $tombstones  Filled for dispatch once the caller's transaction commits.
+     */
+    private function purgeDemoImportRuns(Connection $connection, array &$tombstones): void
     {
         $importRunIds = $connection->table('import_runs')
             ->where('source_format', 'demo')
@@ -294,9 +310,7 @@ final class DemoSeedCommand extends Command
         }
 
         // The rows those transactions own go first, because the database now
-        // refuses the delete rather than taking them away behind it. Nothing
-        // is announced here, exactly as nothing is announced for the parents:
-        // this clears demo data before re-seeding it.
+        // refuses the delete rather than taking them away behind it.
         $owners = $connection->table('transactions')
             ->whereIn('import_run_id', $importRunIds)
             ->get(['id', 'user_id']);
@@ -308,11 +322,72 @@ final class DemoSeedCommand extends Command
             }
             $byUser[(int) $owner->user_id][] = (int) $owner->id;
         }
+
         foreach ($byUser as $userId => $transactionIds) {
-            $this->cascade->deleteAll('transactions', $transactionIds, $userId);
+            $tombstones = [...$tombstones, ...$this->cascade->deleteAll('transactions', $transactionIds, $userId)];
+
+            foreach ($transactionIds as $transactionId) {
+                $tombstones[] = new TransactionMutated(
+                    transactionId: $transactionId,
+                    userId: $userId,
+                    mutationType: 'delete',
+                );
+            }
         }
 
         $connection->table('transactions')->whereIn('import_run_id', $importRunIds)->delete();
+
+        $tombstones = [...$tombstones, ...$this->importRunTombstones($connection, $importRunIds)];
+
+        // A reset that told nobody was not merely unreplicated: every create op
+        // for these rows stays live in this device's own log, so the next
+        // rebuild hands the whole demo dataset back. The events the cascade
+        // already built were being discarded.
         $connection->table('import_runs')->whereIn('id', $importRunIds)->delete();
+    }
+
+    /**
+     * @param  list<int>  $importRunIds
+     * @return list<object>
+     */
+    private function importRunTombstones(Connection $connection, array $importRunIds): array
+    {
+        $tombstones = [];
+
+        // Read while the rows are still here: an import_runs tombstone needs
+        // the owner the row carries, and the delete below is the last moment
+        // anything can ask for it.
+        $runs = $connection->table('import_runs')->whereIn('id', $importRunIds)->get(['id', 'user_id']);
+
+        foreach ($runs as $run) {
+            if (! is_numeric($run->user_id ?? null) || ! is_numeric($run->id ?? null)) {
+                continue;
+            }
+
+            $tombstones[] = new EntityMutated(
+                table: 'import_runs',
+                pk: (int) $run->id,
+                userId: (int) $run->user_id,
+                mutationType: 'delete',
+            );
+        }
+
+        return $tombstones;
+    }
+
+    /**
+     * @param  list<object>  $tombstones
+     */
+    private function announce(array $tombstones): void
+    {
+        if ($tombstones === []) {
+            return;
+        }
+
+        $events = $this->container->make(Dispatcher::class);
+
+        foreach ($tombstones as $tombstone) {
+            $events->dispatch($tombstone);
+        }
     }
 }
