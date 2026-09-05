@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TÜHI',
         'badge_error' => 'VAJAB UUESTI ÜLESLAADIMIST',
         'error_body' => 'Me ei suutnud lugeda kõiki selle allika faile. Proovi teist faili →',
-        'partial_body' => 'Osa sellest failist jäi lugemata ja jäeti välja: :reason',
+        'partial_body' => 'Üht neist failidest ei õnnestunud tervikuna lugeda, seega jäeti see täielikult välja: :reason',
         'empty_body' => 'See väljavõte on tühi.',
         'col_date' => 'Kuupäev',
         'col_type' => 'Tüüp',

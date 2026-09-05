@@ -312,6 +312,18 @@ rows all failed as `UnknownAccount` used to flip to `confirmed` having
 written nothing — after which `RunImport`'s idempotency key refused to
 re-fetch that window and every transaction in it was gone.
 
+Anything that *offers* a run for confirming has to read the same rule, or
+it promises an import the confirm then refuses.
+`BuildConsolidatedPreviewQuery::buildSection()` is the second such place:
+the first-run wizard commits every run of every `Ready` section inside one
+transaction, so a run carrying a file failure does not fail alone — it
+takes every statement staged beside it down with it, and the step has no
+per-run discard to escape by. Such a run is therefore left out of the
+section whole: its rows are not counted, its sample is not shown, and its
+id is not in `importRunIds`. A section holding only that file has no rows
+left and reads `Error`; one holding it beside a file that read cleanly is
+`Ready` on the clean file's rows and carries the reason in `error`.
+
 `OpenBankingSyncRunner` records the refusal as a failed attempt and does
 **not** advance `last_successful_sync_at`, so the window stays open and
 the rows land on the next run once the reader names the account. Whether

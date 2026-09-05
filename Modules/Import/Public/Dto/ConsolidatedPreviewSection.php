@@ -10,7 +10,7 @@ use Spatie\LaravelData\Data;
 final class ConsolidatedPreviewSection extends Data
 {
     /**
-     * @param  list<int>  $importRunIds
+     * @param  list<int>  $importRunIds  The runs this section would commit, which is not every run it was built from: one whose file stopped being read is refused by ConfirmImport, so it is left out here rather than offered and then failed.
      * @param  list<PreviewRowDto>  $sampleRows
      */
     public function __construct(

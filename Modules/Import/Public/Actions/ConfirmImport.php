@@ -84,10 +84,7 @@ final readonly class ConfirmImport implements ConfirmsImports
         $errorCount = 0;
         $previewDuplicateCount = 0;
         if ($head !== null) {
-            // A file that failed to parse is one error even though it is no
-            // row, so the summary count keeps meaning "things that went wrong"
-            // now that the failure is no longer smuggled in as a row.
-            $errorCount = ($head->fileFailureReason === null ? 0 : 1) + $head->errorCount;
+            $errorCount = $head->errorCount;
             $previewDuplicateCount = $head->duplicateCount;
         }
 

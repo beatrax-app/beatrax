@@ -77,10 +77,10 @@
     @elseif ($section->status === PreviewSectionStatus::Empty)
         <p class="preview-section-empty">{{ Lang::get('onboarding::first_import.section.empty_body') }}</p>
     @else
-        {{-- A section reads READY when any row survived, and a file that stopped
-             being readable part-way through still yields rows before the stop.
-             Without this the count under the eyebrow is simply lower than the
-             statement, with nothing on screen saying why. --}}
+        {{-- A file that stopped being read is left out whole, so a section
+             holding one alongside a file that read cleanly is READY on the
+             other one's rows. Without this the count under the eyebrow is
+             simply lower than what the reader uploaded, saying nothing. --}}
         @if ($section->error !== null)
             <p class="preview-section-error" role="status">
                 {{ Lang::get('onboarding::first_import.section.partial_body', ['reason' => $section->error]) }}

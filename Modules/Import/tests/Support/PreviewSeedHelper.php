@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\ImportFailureReason;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
@@ -18,6 +19,8 @@ final class PreviewSeedHelper
         string $sourceFormat,
         int $newRowCount,
         ?int $accountId = null,
+        ?ImportFailureReason $fileFailureReason = null,
+        ?string $fileFailureDetail = null,
     ): int {
         $rowAccountId = $accountId ?? 1;
 
@@ -55,6 +58,8 @@ final class PreviewSeedHelper
                 importRunId: $run->id,
                 rows: $rows,
                 accountsToName: [],
+                fileFailureReason: $fileFailureReason,
+                fileFailureDetail: $fileFailureDetail,
             ),
             canonical: [],
             enrichments: [],

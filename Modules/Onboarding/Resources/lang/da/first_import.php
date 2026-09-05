@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TOM',
         'badge_error' => 'SKAL UPLOADES IGEN',
         'error_body' => 'Vi kunne ikke læse alle filerne fra denne kilde. Prøv en anden fil →',
-        'partial_body' => 'En del af filen kunne ikke læses og blev udeladt: :reason',
+        'partial_body' => 'En af disse filer kunne ikke læses helt og blev derfor udeladt i sin helhed: :reason',
         'empty_body' => 'Dette kontoudtog er tomt.',
         'col_date' => 'Dato',
         'col_type' => 'Type',

@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'VUOTO',
         'badge_error' => 'DA RICARICARE',
         'error_body' => 'Non siamo riusciti a leggere tutti i file di questa fonte. Prova con un altro file →',
-        'partial_body' => 'Una parte di questo file non è stata leggibile ed è stata esclusa: :reason',
+        'partial_body' => 'Uno di questi file non è stato leggibile per intero, quindi è stato escluso del tutto: :reason',
         'empty_body' => 'Questo estratto conto è vuoto.',
         'col_date' => 'Data',
         'col_type' => 'Tipo',

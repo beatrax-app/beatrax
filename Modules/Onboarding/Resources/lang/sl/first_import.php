@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PRAZNO',
         'badge_error' => 'POTREBEN PONOVEN NALOG',
         'error_body' => 'Nismo mogli prebrati vseh datotek za ta vir. Poskusi z drugo datoteko →',
-        'partial_body' => 'Dela te datoteke ni bilo mogoče prebrati in je bil izpuščen: :reason',
+        'partial_body' => 'Ene od teh datotek ni bilo mogoče prebrati v celoti, zato je bila v celoti izpuščena: :reason',
         'empty_body' => 'Ta izpisek je prazen.',
         'col_date' => 'Datum',
         'col_type' => 'Vrsta',

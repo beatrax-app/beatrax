@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'EMPTY',
         'badge_error' => 'NEEDS RE-UPLOAD',
         'error_body' => "We couldn't read all of the files for this source. Try a different file →",
-        'partial_body' => 'Some of this file could not be read and was left out: :reason',
+        'partial_body' => 'One of these files could not be read in full, so all of it was left out: :reason',
         'empty_body' => 'This statement is empty.',
         'col_date' => 'Date',
         'col_type' => 'Type',

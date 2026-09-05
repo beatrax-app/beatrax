@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TUŠČIA',
         'badge_error' => 'REIKIA ĮKELTI IŠ NAUJO',
         'error_body' => 'Nepavyko perskaityti visų šio šaltinio failų. Pabandyk kitą failą →',
-        'partial_body' => 'Dalies šio failo nepavyko perskaityti ir ji buvo praleista: :reason',
+        'partial_body' => 'Vieno iš šių failų nepavyko perskaityti viso, todėl jis buvo visiškai praleistas: :reason',
         'empty_body' => 'Šis išrašas tuščias.',
         'col_date' => 'Data',
         'col_type' => 'Tipas',

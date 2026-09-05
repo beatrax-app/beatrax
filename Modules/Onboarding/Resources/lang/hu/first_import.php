@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'ÜRES',
         'badge_error' => 'ÚJRA FEL KELL TÖLTENI',
         'error_body' => 'Nem sikerült beolvasni a forrás összes fájlját. Próbálj másik fájlt →',
-        'partial_body' => 'A fájl egy részét nem sikerült beolvasni, ezért kimaradt: :reason',
+        'partial_body' => 'Az egyik fájlt nem sikerült teljesen beolvasni, ezért teljes egészében kimaradt: :reason',
         'empty_body' => 'Ez a kivonat üres.',
         'col_date' => 'Dátum',
         'col_type' => 'Típus',
