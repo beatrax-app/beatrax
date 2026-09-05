@@ -4,10 +4,27 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 
+// The comparison is whole-file, so a file inserting into one table and
+// announcing an edit to another reads as a create that lost its columns. These
+// rows travel whole instead of as a hand-written payload, each with the seam
+// that sends every column and a pattern re-run against it.
+// Pinned per column, so a fourth unannounced one in the same file still fails.
+const CREATES_CAPTURED_WHOLESALE = [
+    'Migration/Internal/Pipeline/PromoteStagingToDomain.php' => [
+        'columns' => ['raw_file_path', 'sha256', 'uploaded_at'],
+        'reason' => "the only create event this file dispatches names `transactions`; the `import_runs` row it inserts travels as a parent of those transactions, captured by ImportSyncCapture off the live foreign key and written out column by column. All three are in the registry's `_create_required` for the table, so they cannot be struck from it either",
+        'announcedBy' => 'Modules/Sync/Internal/OpLog/OpLogBackfiller.php',
+        'proves' => '/writeCreateRow\(\$table, \$pk, \$this->plaintext->fields\(/',
+    ],
+];
+
 // A create payload is written by hand beside the insert it describes, and the
 // two drift: envelope_moves shipped a `memo` the reader typed straight into
 // the insert and never into the event, so the memo reached no other device.
 // Nothing downstream notices — the row syncs, only emptier than it was.
+/**
+ * @return array<string, list<string>> file, relative to $root, => the columns it inserts and never announces
+ */
 function capturedCreateOffenders(string $root): array
 {
     // Seeded from the op envelope by OpLogEntryApplier, which ignores any
@@ -29,11 +46,12 @@ function capturedCreateOffenders(string $root): array
 
         $missing = array_values(array_diff($inserted, $announced, $suppliedElsewhere));
         if ($missing !== []) {
-            $offenders[] = str_replace($root.'/', '', $file).' inserts '.implode(', ', $missing).' and announces neither';
+            sort($missing);
+            $offenders[str_replace($root.'/', '', $file)] = $missing;
         }
     }
 
-    sort($offenders);
+    ksort($offenders);
 
     return $offenders;
 }
@@ -83,14 +101,69 @@ function capturedCreateKeys(string $source, string $opener): array
 }
 
 it('announces every column a captured create actually inserted', function (): void {
-    $offenders = capturedCreateOffenders(base_path('Modules'));
+    $unpinned = [];
 
-    expect($offenders)->toBe([], implode("\n", [
+    foreach (capturedCreateOffenders(base_path('Modules')) as $file => $columns) {
+        $left = array_values(array_diff($columns, CREATES_CAPTURED_WHOLESALE[$file]['columns'] ?? []));
+
+        if ($left !== []) {
+            $unpinned[] = $file.' inserts '.implode(', ', $left).' and announces neither';
+        }
+    }
+
+    expect($unpinned)->toBe([], implode("\n", [
         'These writers insert a column their own create event never names, so the',
         'column reaches no other device:',
-        ...$offenders,
+        ...$unpinned,
         '',
-        'Add it to dirtyFields, or build one array and use it for both.',
+        'Add it to dirtyFields, or build one array and use it for both. A row that',
+        'travels whole rather than as a hand-written payload is pinned in',
+        'CREATES_CAPTURED_WHOLESALE with the seam that sends every column of it.',
+    ]));
+});
+
+it('keeps no pin for a create that now names its own columns', function (): void {
+    $offenders = capturedCreateOffenders(base_path('Modules'));
+
+    $stale = [];
+    foreach (CREATES_CAPTURED_WHOLESALE as $file => $pin) {
+        foreach (array_diff($pin['columns'], $offenders[$file] ?? []) as $column) {
+            $stale[] = $file.' is pinned for '.$column.', which it no longer inserts unannounced';
+        }
+    }
+
+    sort($stale);
+
+    expect($stale)->toBe([], implode("\n", [
+        'A pin that has outlived what earned it silently widens the exemption:',
+        ...$stale,
+        '',
+        'Delete the entry from CREATES_CAPTURED_WHOLESALE.',
+    ]));
+});
+
+it('re-checks the reason every wholesale pin was granted for', function (): void {
+    $broken = [];
+
+    foreach (CREATES_CAPTURED_WHOLESALE as $file => $pin) {
+        $path = base_path($pin['announcedBy']);
+
+        if (! is_file($path)) {
+            $broken[] = $file.' points at '.$pin['announcedBy'].', which does not exist';
+
+            continue;
+        }
+
+        if (! PatternScan::matches($pin['proves'], (string) file_get_contents($path))) {
+            $broken[] = $file.' is exempt because "'.$pin['reason'].'", and '.$pin['announcedBy'].' no longer reads that way';
+        }
+    }
+
+    sort($broken);
+
+    expect($broken)->toBe([], implode("\n", [
+        'An exemption whose reason no longer holds is a gap nobody chose:',
+        ...$broken,
     ]));
 });
 
@@ -111,5 +184,5 @@ it('reports a create that leaves one of its inserted columns unannounced', funct
     rmdir($planted);
 
     expect($offenders)->toHaveCount(1);
-    expect($offenders[0])->toContain('memo');
+    expect($offenders['Writer.php'])->toBe(['memo']);
 });

@@ -31,6 +31,8 @@ final class RepoTree
 
     public const string EVERY_BLADE_VIEW = 'every Blade view a reader is shown';
 
+    public const string RUNTIME_DOMAIN_PHP = 'the code that writes to a database at runtime';
+
     /**
      * @var array<string, array{extension: string, covers: list<string>, declines: array<string, string>, skips: list<string>}>
      */
@@ -54,6 +56,25 @@ final class RepoTree
             'covers' => ['Modules', 'resources'],
             'declines' => [],
             'skips' => ['/tests/'],
+        ],
+        self::RUNTIME_DOMAIN_PHP => [
+            'extension' => '.php',
+            'covers' => ['app', 'Modules'],
+            'declines' => [
+                '.claude' => 'editor hooks, which run against this tree and are not part of it',
+                'bootstrap' => 'the application assembling itself, never a domain write',
+                'config' => 'configuration arrays',
+                'database' => 'the shared migrations and seeders: schema and reference data, which is how those rows are meant to arrive',
+                'lang' => 'translation arrays',
+                'mobile-app' => 'its Modules/ and app/ are symlinks to the two roots already walked',
+                'public' => 'the built front end',
+                'resources' => 'Blade views and assets',
+                'routes' => 'the application assembling itself',
+                'scripts' => 'build and release scripts, which never run beside a database',
+                'tests' => 'the guards themselves, and the fixtures that name a violation on purpose',
+                'tools' => 'toolchain stubs, analysed by nothing at runtime',
+            ],
+            'skips' => ['/tests/', '/Database/Migrations/', '/Database/Seeders/', '/Database/Factories/'],
         ],
     ];
 

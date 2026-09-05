@@ -6528,9 +6528,30 @@ its caller, it hands the events back. A rule keyed on the class name reads
 "reached the seam" as "used it". The allowance now requires the caller to
 dispatch, and a fixture holds it — the call with no dispatch must not count.
 
-Both walks now also fail on a top-level directory that holds PHP and is neither
-read nor named, so no hand-written root list survives without a coverage
-assertion behind it.
+Both walks read one scope, declared in `RepoTree` beside the three that were
+already there and held to `git ls-files` by the guard over that seam. The first
+attempt wrote the roots out again in the shared scanner — fourteen names, a
+second copy of the claim the seam exists to hold — and the scanner guard caught
+it. A coverage assertion is not something a walk carries; it is something the
+place a walk is declared already has.
+
+### The create guard beside it compares across tables
+
+Announcing the `transactions.status` write in `PromoteStagingToDomain` put the
+file's first `dirtyFields:` in it, and the create guard's comparison is
+whole-file: it diffed that edit's columns against an insert into `import_runs`
+in a different method, and reported three columns as lost.
+
+They are not. The `import_runs` row travels as a parent of the transactions
+`RecordTransactions` files, captured off the live foreign key and written out
+column by column, which is what a row with no hand-written payload looks like.
+All three are in the registry's `_create_required` for the table, so striking
+them instead would have made an arriving create fail its own NOT NULL.
+
+The unit is wrong in the mirror of the way the delete guard's was: that one
+asked about a table where it should have asked about a column, this one reads
+two tables as one because they share a file. Pinned per column rather than per
+file, so the next payload that really does lose one still fails here.
 
 ## A skip that no job could answer
 

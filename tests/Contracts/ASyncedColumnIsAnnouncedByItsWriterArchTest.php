@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Tests\Contracts\Support\RepoTree;
 use Tests\Contracts\Support\SyncedColumnWrites;
 
 // A row travels as a whole-row create once, and after that only the Sets its
@@ -68,10 +69,10 @@ const SILENT_COLUMN_WRITERS = [
         'proves' => '/PinOrderCompactor::compact\(/',
     ],
     'Modules/Tax/Internal/Actions/TaxCategoryStore.php' => [
-        'columns' => ['tax_deduction_categories.name', 'tax_deduction_categories.status'],
-        'reason' => 'an Internal store every production caller reaches through TaxCategoryWriter, which announces each edit it delegates',
+        'columns' => ['tax_deduction_categories.name', 'tax_deduction_categories.name_is_default', 'tax_deduction_categories.status'],
+        'reason' => 'an Internal store every production caller reaches through TaxCategoryWriter, which announces each edit it delegates -- the rename carries the provenance flag it clears, so a peer stops resolving the corpus line for that row too',
         'announcedBy' => 'Modules/Tax/Public/Services/TaxCategoryWriter.php',
-        'proves' => '/->store->rename\(/',
+        'proves' => "/->store->rename\(.*?'name_is_default' => false/s",
     ],
     'Modules/Transfers/Public/Services/PairUnlinker.php' => [
         'columns' => ['transactions.type'],
@@ -152,16 +153,19 @@ it('has a denominator to read a verdict from', function (): void {
     expect(array_keys($tables))->toContain('transactions', 'accounts', 'goals')
         ->not->toContain('users', 'categorization_rules', 'rule_conditions', 'rule_actions');
 
-    expect(SyncedColumnWrites::unscannedRootsHoldingPhp())->toBe([], implode("\n", [
-        'A top-level directory holds PHP and this walk neither reads it nor names',
-        'it as somebody else\'s to read, so anything in it is invisible here — and',
-        'a guard that reports nothing about a hole reads exactly like a clean tree.',
-        'The delete guard beside this one walked Modules/ alone, which is how a',
-        'console command purging two travelling tables went unseen.',
-        '',
-        'Add the directory to SyncedColumnWrites::SCANNED_ROOTS, or to',
-        'OUT_OF_SCOPE_ROOTS with the reason it is out of scope.',
-    ]));
+    expect(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))->toBe(
+        ['unaccounted' => [], 'stale' => [], 'silent' => []],
+        implode("\n", [
+            'A top-level directory holds PHP and this walk neither reads it nor names',
+            'it as somebody else\'s to read, so anything in it is invisible here — and',
+            'a guard that reports nothing about a hole reads exactly like a clean tree.',
+            'The delete guard beside this one walked Modules/ alone, which is how a',
+            'console command purging two travelling tables went unseen.',
+            '',
+            'The scope is RepoTree::RUNTIME_DOMAIN_PHP. Add the directory to its',
+            '`covers`, or to its `declines` with the reason it is out of scope.',
+        ])
+    );
 
     expect(SyncedColumnWrites::modelsByTable($tables))
         ->toHaveKeys(['transactions', 'accounts', 'notifications']);

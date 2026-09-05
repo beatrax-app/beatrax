@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
+use Tests\Contracts\Support\RepoTree;
 use Tests\Contracts\Support\SyncedColumnWrites;
 
 // Capture is explicit here: a write reaches the op log because its writer
@@ -141,7 +142,8 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
     // The walk has to reach both roots, and say so: this rule read no file of
     // app/ at all while claiming to hold the codebase.
     expect(deleteWriterFiles())->not->toBeEmpty()
-        ->and(SyncedColumnWrites::unscannedRootsHoldingPhp())->toBe([]);
+        ->and(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))
+        ->toBe(['unaccounted' => [], 'stale' => [], 'silent' => []]);
 
     $roots = [];
     foreach (deleteWriterFiles() as $file) {
@@ -149,5 +151,5 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
         $roots[substr($relative, 0, (int) strpos($relative, '/'))] = true;
     }
 
-    expect(array_keys($roots))->toEqualCanonicalizing(SyncedColumnWrites::SCANNED_ROOTS);
+    expect(array_keys($roots))->toEqualCanonicalizing(RepoTree::scope(RepoTree::RUNTIME_DOMAIN_PHP)['covers']);
 });

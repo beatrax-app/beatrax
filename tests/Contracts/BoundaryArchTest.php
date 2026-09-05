@@ -1907,8 +1907,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
         'Modules/DevMode/Internal/Queue/QueueActions.php jobs 2',
-        'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php accounts 1',
-        'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php transactions 1',
         // The counterparty blind-index sweep re-keys the matching columns of
@@ -1920,12 +1918,15 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
-        'Modules/Onboarding/Internal/Http/Livewire/Steps/FirstImportStep.php accounts 1',
         'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php inbox_messages 2',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
-        'Modules/Transfers/Internal/Services/TransferPairer.php transactions 2',
+        // `pair_transaction_id` names a row in the table Ledger owns, and both
+        // legs have to carry it or neither does. The Transfers module is the one
+        // that knows a pair exists, so the link is written here and announced
+        // here; four raw writes across three modules collapsed into this one.
+        'Modules/Transfers/Internal/Services/PairLinkWriter.php transactions 1',
         'Modules/Transfers/Public/Services/PairUnlinker.php transactions 1',
     ];
 

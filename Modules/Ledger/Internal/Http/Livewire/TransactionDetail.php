@@ -13,6 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Navigation\Destination;
@@ -99,7 +100,8 @@ final class TransactionDetail extends Component
         Dispatcher $events,
         SavesTransactionSplit $splitter,
     ): void {
-        if (TransactionType::tryFrom($newType) === null) {
+        $type = TransactionType::tryFrom($newType);
+        if ($type === null) {
             // Only a payload can name a type the picker never offers, and the
             // refusal names the shape rather than the value: an HttpException
             // message is the whole body a production build returns.
@@ -120,32 +122,14 @@ final class TransactionDetail extends Component
             return;
         }
 
-        // Collapse the split before the type leaves the splittable set, or
-        // the legs are stranded on a transaction that can no longer show them.
-        $didUnsplit = false;
-        if (! TransactionType::tryFrom($newType)->isSplittable()) {
-            $firstLeg = $db->connection()
-                ->table('transaction_splits')
-                ->where('transaction_id', $this->transactionId)
-                ->where('user_id', $user->id)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->first(['category_id']);
-
-            if ($firstLeg !== null) {
-                $survivingCategoryId = is_numeric($firstLeg->category_id) ? (int) $firstLeg->category_id : 0;
-                $splitter->unsplit($user, $this->transactionId, $survivingCategoryId);
-                $didUnsplit = true;
-            }
-        }
+        $didUnsplit = $this->collapseSplitLeavingTheSplittableSet($type, $db, $splitter, $user);
 
         $partnerId = $tx->pair_transaction_id;
-        $breaksPair = $partnerId !== null
-            && ! in_array($newType, TransactionType::transferValues(), true);
+        $breaksPair = $partnerId !== null && ! $type->isTransfer();
 
-        $db->connection()->transaction(static function () use ($tx, $newType, $partnerId, $user, $breaksPair): void {
-            $tx->type = $newType;
-            if (! in_array($newType, TransactionType::transferValues(), true)) {
+        $db->connection()->transaction(static function () use ($tx, $type, $partnerId, $user, $breaksPair): void {
+            $tx->type = $type->value;
+            if (! $type->isTransfer()) {
                 $tx->pair_transaction_id = null;
             }
             $tx->save();
@@ -169,7 +153,7 @@ final class TransactionDetail extends Component
             dirtyFields: $breaksPair ? ['type' => $newType, 'pair_transaction_id' => null] : ['type' => $newType],
         ));
 
-        if ($breaksPair && $partnerId !== null) {
+        if ($breaksPair) {
             $events->dispatch(new TransactionMutated(
                 transactionId: $partnerId,
                 userId: $user->id,
@@ -189,6 +173,42 @@ final class TransactionDetail extends Component
         if ($didUnsplit) {
             $this->resetSplitEditor();
         }
+    }
+
+    // Collapse the split before the type leaves the splittable set, or the legs
+    // are stranded on a transaction that can no longer show them.
+    /**
+     * @return bool Whether legs were actually collapsed, so the editor is reset.
+     */
+    private function collapseSplitLeavingTheSplittableSet(
+        TransactionType $type,
+        DatabaseManager $db,
+        SavesTransactionSplit $splitter,
+        User $user,
+    ): bool {
+        if ($type->isSplittable()) {
+            return false;
+        }
+
+        $firstLeg = $db->connection()
+            ->table('transaction_splits')
+            ->where('transaction_id', $this->transactionId)
+            ->where('user_id', $user->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first(['category_id']);
+
+        if ($firstLeg === null) {
+            return false;
+        }
+
+        $splitter->unsplit(
+            $user,
+            $this->transactionId,
+            is_numeric($firstLeg->category_id) ? (int) $firstLeg->category_id : 0,
+        );
+
+        return true;
     }
 
     public function saveNote(

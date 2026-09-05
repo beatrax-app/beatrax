@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
-use FilesystemIterator;
 use Illuminate\Support\Str;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use ReflectionClass;
-use SplFileInfo;
 
 // The scan behind the column-level capture guard, kept out of the Pest file it
 // serves: a helper declared in a namespace-less test file exists only in the
@@ -56,89 +52,17 @@ final class SyncedColumnWrites
         return $columns;
     }
 
-    // Every top-level directory holding PHP that these walks do NOT read, and
-    // why. A hand-written root list is how a guard comes to cover five of
-    // thirteen and still report a clean tree: `app/` was invisible to the
-    // delete guard beside this one, which is where a whole console command hid.
-    /** @var array<string, string> */
-    public const array OUT_OF_SCOPE_ROOTS = [
-        '.claude' => 'editor hooks, which run against this tree and are not part of it',
-        'bootstrap' => 'the application assembling itself, never a domain write',
-        'config' => 'configuration arrays',
-        'database' => 'migrations and seeders: schema and reference data, which is how those rows are meant to arrive',
-        'lang' => 'translation arrays',
-        'mobile-app' => 'its Modules/ and app/ are symlinks to the two roots already walked',
-        'node_modules' => 'third-party front-end packages',
-        'public' => 'the built front end',
-        'resources' => 'Blade views and assets',
-        'routes' => 'the application assembling itself',
-        'scripts' => 'build and release scripts, which never run beside a database',
-        'storage' => 'runtime state',
-        'tests' => 'the guards themselves, and the fixtures that name a violation on purpose',
-        'tools' => 'toolchain stubs, analysed by nothing at runtime',
-        'vendor' => 'third-party code',
-    ];
-
-    // The two roots the walk reads. Named once so the coverage check below and
-    // the walk cannot drift apart.
-    /** @var list<string> */
-    public const array SCANNED_ROOTS = ['Modules', 'app'];
-
+    // The scope, and the reason each root it declines is somebody else's to
+    // read, live in RepoTree — the one place a walk over this tree is declared
+    // and the only one held to `git ls-files`. A hand-written list here was how
+    // the delete guard beside this one came to cover Modules/ alone, with a
+    // console command raw-deleting two travelling tables out of app/.
     /**
      * @return list<string>
      */
     public static function writerFiles(): array
     {
-        return array_values(array_filter(
-            BackendSourceFiles::all(),
-            static fn (string $path): bool => ! str_contains($path, '/Database/Seeders/')
-                && ! str_contains($path, '/Database/Factories/'),
-        ));
-    }
-
-    // A root holding PHP that is neither walked nor named is a hole the guard
-    // reports nothing about, which reads exactly like a clean tree.
-    /**
-     * @return list<string>
-     */
-    public static function unscannedRootsHoldingPhp(): array
-    {
-        $unnamed = [];
-
-        foreach (scandir(base_path()) ?: [] as $entry) {
-            if ($entry === '.' || $entry === '..' || ! is_dir(base_path($entry))) {
-                continue;
-            }
-
-            if (in_array($entry, self::SCANNED_ROOTS, true) || isset(self::OUT_OF_SCOPE_ROOTS[$entry])) {
-                continue;
-            }
-
-            if (self::holdsPhp(base_path($entry))) {
-                $unnamed[] = $entry;
-            }
-        }
-
-        sort($unnamed);
-
-        return $unnamed;
-    }
-
-    private static function holdsPhp(string $root): bool
-    {
-        /** @var iterable<SplFileInfo> $walk */
-        $walk = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::LEAVES_ONLY,
-        );
-
-        foreach ($walk as $file) {
-            if ($file->isFile() && $file->getExtension() === 'php') {
-                return true;
-            }
-        }
-
-        return false;
+        return RepoTree::files(RepoTree::RUNTIME_DOMAIN_PHP);
     }
 
     // The codebase's own prose names both halves of the rule it describes, so
