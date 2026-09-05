@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\RowOwnership;
 
@@ -112,7 +113,7 @@ function sourceMapRecordedEntityTypes(): array
         }
 
         $relative = 'Modules/Migration'.substr($path, strlen($root));
-        $tokens = token_get_all((string) file_get_contents($path));
+        $tokens = token_get_all(BladePhpSource::forPath($path, (string) file_get_contents($path)));
 
         foreach (array_keys($tokens) as $index) {
             if (! sourceMapWriterRecordCallAt($tokens, $index)) {

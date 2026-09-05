@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
+
 /**
  * @link ../../.docs/architecture/reads-bounded-by-the-user.md
  */
@@ -459,7 +461,7 @@ function boundedReadCountsByKey(): array
     foreach (boundedReadSourceFiles() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
-        foreach (boundedReadScan((string) file_get_contents($path)) as $hit) {
+        foreach (boundedReadScan(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $hit) {
             $key = $relative.'::'.$hit['table'];
             $counts[$key] = ($counts[$key] ?? 0) + 1;
         }

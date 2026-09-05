@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  */
@@ -92,7 +94,7 @@ it('renders no stack trace through getTraceAsString', function (): void {
     $hits = [];
 
     foreach (rawTraceSources() as $path) {
-        foreach (rawTraceCallLines((string) file_get_contents($path)) as $line) {
+        foreach (rawTraceCallLines(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $line) {
             $hits[] = str_replace(base_path().'/', '', $path).':'.$line;
         }
     }

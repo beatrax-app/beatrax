@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Exceptions\PatternScanFailedException;
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\ReplaceReturnSites;
 
@@ -32,7 +33,7 @@ it('leaves no preg_replace or preg_split whose failure reaches the program as an
             continue;
         }
 
-        $source = (string) file_get_contents($path);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
 
         if (! str_contains($source, 'preg_replace') && ! str_contains($source, 'preg_split')) {
             continue;

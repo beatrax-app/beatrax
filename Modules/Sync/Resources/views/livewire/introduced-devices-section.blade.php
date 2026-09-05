@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\PatternScan')
 <div data-testid="introduced-devices-section">
     @if ($introductions !== [])
         <div class="space-y-4">
@@ -35,7 +36,7 @@
                                      claim the sender made about itself. --}}
                                 @if ($introduction['safety_number_words'] !== '')
                                     @php
-                                        $words = preg_split('/\s+/', trim((string) $introduction['safety_number_words'])) ?: [];
+                                        $words = PatternScan::split('/\s+/', trim((string) $introduction['safety_number_words']));
                                     @endphp
                                     <div
                                         class="flex flex-wrap gap-2"

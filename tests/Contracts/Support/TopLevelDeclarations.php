@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use Modules\Core\Public\Support\BladePhpSource;
 use PhpToken;
 use RuntimeException;
 
@@ -97,7 +98,15 @@ final class TopLevelDeclarations
      */
     public static function inFile(string $relative): array
     {
-        return self::$read[$relative] ??= self::in((string) file_get_contents(RepoTree::root().'/'.$relative));
+        // Through BladePhpSource because `.blade.php` ends in `.php`, so the
+        // every-PHP-file walk below holds every template in the tree. Handed
+        // straight to the tokeniser a template is one T_INLINE_HTML, so it
+        // declares nothing and reads clean without having been read.
+        $path = RepoTree::root().'/'.$relative;
+
+        return self::$read[$relative] ??= self::in(
+            BladePhpSource::forPath($path, (string) file_get_contents($path)),
+        );
     }
 
     /**

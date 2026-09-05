@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\PatternScan')
 {{--
     Support-resource card (Overview tab) for merchant + government profiles.
     Renders only the links the bundled corpus actually has for this
@@ -32,7 +33,7 @@
     $withheld = array_values(array_filter($rows, static fn (array $row): bool => isset($resource->withheld[$row['key']])));
 
     $mailto = $resource->mailtoHref();
-    $phoneHref = $resource->phone !== null ? 'tel:'.preg_replace('/[^0-9+]/', '', $resource->phone) : null;
+    $phoneHref = $resource->phone !== null ? 'tel:'.PatternScan::replace('/[^0-9+]/', '', $resource->phone) : null;
 
     $chipWithheld = 'display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-md); border:1px dashed var(--color-border); font-size:var(--text-sm); font-weight:500; color:var(--color-text-muted); background:transparent;';
     $chip = 'display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-md); border:1px solid var(--color-border); font-size:var(--text-sm); font-weight:500; text-decoration:none; color:var(--color-text); background:var(--color-surface);';

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
+
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-dropped-user-scope-with-no-owner-named
  */
@@ -88,7 +90,7 @@ it('re-asserts the owner wherever it drops the user scope', function (): void {
     $offenders = [];
 
     foreach (userScopeShippedFiles() as $file) {
-        $source = (string) file_get_contents(base_path($file));
+        $source = BladePhpSource::forPath($file, (string) file_get_contents(base_path($file)));
 
         if (! str_contains($source, 'withoutGlobalScope')) {
             continue;

@@ -30,6 +30,10 @@ const MONEY_SHARE_PINS = [
         'reason' => 'how far a statement may be off before it stops counting as paid; a threshold, not a share of anything',
         'proves' => '/FLOOR_MINOR/',
     ],
+    'Modules/Counterparties/Resources/views/livewire/profile-tabs/bank.blade.php' => [
+        'reason' => 'a bar width rather than a slice: the numerator is one row magnitude and the denominator the largest magnitude on the panel, and the integer it rounds to never leaves the width it draws',
+        'proves' => '/width: \{\{ \$pct \}\}%/',
+    ],
     'Modules/Forecasting/Internal/Pipeline/CadenceJitter.php' => [
         'reason' => 'the seven-day smear of one uncertain occurrence, which is a probability weight over days and is documented as summing to slightly under the point estimate on purpose',
         'proves' => '/projection-math\.md/',

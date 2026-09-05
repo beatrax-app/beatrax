@@ -5883,6 +5883,99 @@ spelling, a CSS rule body. Neither is the reading of a PHP expression a markup
 attribute happens to hold — `:label="Lang::get('…')"` is parsed out of the
 attribute *value* the walk returns, which is where a pattern belongs.
 
+## A scanner blind inside a @php island
+
+`.blade.php` ends in `.php`, so every walk in this tree that filters on `.php`
+already holds the 276 Blade templates — `BackendSourceFiles::all()`,
+`RegexReturnSites::files()`, `ReplaceReturnSites::files()`, and half a dozen
+guards with a walk of their own. Every one of them then handed the file to
+`token_get_all`, which opens PHP mode at a literal `<?php` and nowhere else. A
+Blade island is not one, so a template reaches a token walk as a single
+`T_INLINE_HTML` and the guard reports it clean without having read a line of the
+code in it.
+
+Measured over those 276 files: **0** significant tokens raw, **62,982** through
+the seam, across 273 files that hold PHP at all. `str_contains($source,
+'preg_replace')` was true in four of them while `token_get_all` found nothing.
+
+What the blindness was hiding, found by pointing the corrected walks at the tree:
+
+- Four bare `preg_replace`/`preg_split` calls in three modules, under
+  `AReplaceThatNeverRanBlanksTheSubjectArchTest`, which lists every one of those
+  files: `counterparty-triage.blade.php:148`, `support-resources.blade.php:35`,
+  `introduced-devices-section.blade.php:38` and
+  `devices-and-sync-settings-section.blade.php:276`. Two of them read a failed
+  split as "this input had no parts", which would have drawn a device's safety
+  number as no words at all.
+- Two money figures divided in a template, under
+  `AMoneyShareIsCutByTheAllocatorArchTest` and
+  `AOneDirectionalFigureIsNarrowedBeforeItIsSharedArchTest`. Both turned out to
+  be relative-size bars rather than shares of a whole and are pinned with the
+  reason, which is the point: the guards had never been given the chance to ask.
+- Fifteen class-and-member mentions in comments inside `@php` islands, under
+  `CommentsNameSymbolsThatExistArchTest`. All fifteen resolve today. (Written
+  out rather than shown as an inline span: a span naming a class and a member
+  is a reference to the docs-symbol rule, which would then look for a class
+  whose whole purpose here is to stand for any of them.)
+
+### One reading, not four workarounds
+
+Three guards had each grown a private way around this, and each was partial.
+`AnEmptyCatchIsOneSomebodyChoseArchTest` lifted `@php … @endphp` bodies out with
+a pattern and joined them with `;\n`, which finds a `catch` but loses every line
+number and never sees `@php(…)`, `{{ }}` or a directive argument.
+`BaseCurrencyIsTheOnlyEuroArchTest` scans a template line by line as text.
+`EveryKeyACallSiteNamesResolvesToALineArchTest` compiles it with
+`Blade::compileString`.
+
+`Modules\Core\Public\Support\BladePhpSource` is the one reading now.
+`::of()` walks the source and returns the PHP it holds — `@php` bodies and
+`@php(…)`, `{{ }}`, `{{{ }}}` and `{!! !!}` echoes, `@directive(…)` arguments,
+and `<?php`/`<?=` blocks — with the markup between islands replaced by the
+newlines it spanned, so a token's reported line is still the line a reader has
+to open. `{{-- --}}`, `@verbatim`, `@{{ }}` and `@@` are text Blade prints
+rather than code it compiles, and none of them appears. It is a character walk
+over `MarkupLexer`, not a pattern: `<[^>]*>` over a template is the failure
+recorded two sections above. `::forPath()` is the one-line adoption for a walk
+holding both kinds of file.
+
+Two readings are deliberately kept. `BaseCurrencyIsTheOnlyEuro` stays a text
+scan because a currency code written into *markup* is the same defect and no
+island holds that one — the two readings agree on every template today, and the
+text one covers more. `EveryKeyACallSiteNamesResolvesToALine` keeps
+`Blade::compileString` because compiling additionally reaches the `:attribute`
+expressions on a component tag, which an island reading leaves as markup.
+
+### What must stay blind
+
+The guards standing in for SonarCloud's PHP rules — method count, cognitive
+complexity, parameter count, empty body — must not read the islands, because
+the analyser they mirror does not. Measured rather than assumed: SonarCloud
+indexes a `.blade.php` file with `"language":"php"`, and reports `ncloc: 0`,
+`statements: 0`, `functions: 0` and `classes: 0` for a 568-line template whose
+`@php` island is 60 lines long. Reading the islands here would fail the build on
+findings the dashboard will never raise, which is what `SonarSourceFiles`
+already says in its docblock.
+
+### The rule
+
+`AScannerThatListsABladeFileReadsItsPhpArchTest` enumerates every guard in
+`tests/Contracts/` and `Modules/*/tests/` that calls `token_get_all` or
+`PhpToken::tokenize` directly — found with the tokeniser, because the name
+inside a string is not a call — and requires each to name `BladePhpSource` or to
+appear in `BLADE_SCANNER_WALKS_NO_TEMPLATE` with the reason its walk cannot
+reach a template. Each reason carries a `proves` pattern re-checked against the
+file, so an exemption that stops being true fails. On the commit before the fix
+it named ten offenders.
+
+A guard that reports "nothing found" is unreadable on its own, so the rule
+carries a planted template holding the same call in ten Blade constructs. The
+raw tokeniser finds it on one line — the literal `<?php` block — and the seam
+finds it on six, and the four constructs Blade prints rather than compiles
+appear in neither. The same template is then planted as a real file under the
+temp directory and read back through `BackendSourceFiles::codeTokens`, which is
+how the rule proves the shared reading is live rather than merely present.
+
 ## A flag set but never read back
 
 `Modules/Mobile/tests/Unit/ExcludeDataFromBackupPatchTest.php`
