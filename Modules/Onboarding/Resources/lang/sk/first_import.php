@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PRÁZDNE',
         'badge_error' => 'TREBA NAHRAŤ ZNOVA',
         'error_body' => 'Nepodarilo sa nám prečítať všetky súbory z tohto zdroja. Skús iný súbor →',
-        'partial_body' => 'Časť tohto súboru sa nepodarilo načítať a bola vynechaná: :reason',
+        'partial_body' => 'Jeden z týchto súborov sa nepodarilo načítať celý, a preto bol celý vynechaný: :reason',
         'empty_body' => 'Tento výpis je prázdny.',
         'col_date' => 'Dátum',
         'col_type' => 'Typ',

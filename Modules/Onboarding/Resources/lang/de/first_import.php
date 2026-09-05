@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'LEER',
         'badge_error' => 'MUSS NEU HOCHGELADEN WERDEN',
         'error_body' => 'Wir konnten nicht alle Dateien dieser Quelle lesen. Versuch eine andere Datei →',
-        'partial_body' => 'Ein Teil dieser Datei konnte nicht gelesen werden und wurde weggelassen: :reason',
+        'partial_body' => 'Eine dieser Dateien konnte nicht vollständig gelesen werden und wurde deshalb ganz weggelassen: :reason',
         'empty_body' => 'Dieser Kontoauszug ist leer.',
         'col_date' => 'Datum',
         'col_type' => 'Typ',

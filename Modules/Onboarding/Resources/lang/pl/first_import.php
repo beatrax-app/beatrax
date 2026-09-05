@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PUSTE',
         'badge_error' => 'WYMAGA PONOWNEGO WGRANIA',
         'error_body' => 'Nie udało się odczytać wszystkich plików z tego źródła. Spróbuj innego pliku →',
-        'partial_body' => 'Części tego pliku nie udało się odczytać i została pominięta: :reason',
+        'partial_body' => 'Jednego z tych plików nie udało się odczytać w całości, więc został pominięty w całości: :reason',
         'empty_body' => 'Ten wyciąg jest pusty.',
         'col_date' => 'Data',
         'col_type' => 'Typ',

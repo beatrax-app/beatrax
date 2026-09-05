@@ -118,20 +118,29 @@ it('says a file was only read part-way instead of presenting the truncated impor
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->assertSee('Only part of this file could be read')
-        ->assertSee('Anything after that point was not read and will not be imported.')
+        ->assertSee('This file cannot be imported: filing only the part that was read would leave the rest of the period missing, with nothing to say so.')
+        ->assertSee('Upload the file again, or download a fresh copy of the statement from your bank.')
         ->assertSee('Rows read');
 });
 
-it('still offers to confirm the rows a part-read file did yield', function (): void {
+// The three rows this file did yield are a fragment of a statement: the rows
+// the read never reached are absent rather than failed, so nothing on the
+// ledger would mark the gap they leave. Their count is asserted here so the
+// refusal cannot be the nothing-importable one wearing this test's name.
+it('refuses to confirm the rows a part-read file did yield', function (): void {
     $preview = previewOf($this->fixtureUser, PREVIEW_PARTIAL_FIXTURE);
 
-    expect(confirmButtonMarkup($preview->importRunId))->not->toContain('wire:click="confirm" disabled');
+    expect($preview->rows)->toHaveCount(3);
+    expect(confirmButtonMarkup($preview->importRunId))->toContain('wire:click="confirm" disabled');
 
+    // The disabled attribute is a DOM guard and devtools defeats it, so the
+    // wire call is the one that has to refuse.
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->call('confirm')
-        ->assertRedirect();
+        ->assertNoRedirect();
 
-    expect(Transaction::query()->count())->toBe(3);
+    expect(ImportRun::query()->find($preview->importRunId)?->status)->toBe('previewed');
+    expect(Transaction::query()->count())->toBe(0);
 });
 
 // The first data row failing left zero preview rows, and the screen then read
