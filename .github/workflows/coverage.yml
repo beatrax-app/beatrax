@@ -17,6 +17,16 @@ on:
     branches: [main]
   pull_request:
 
+# One run per ref, not one per push. Without this a branch that is pushed four
+# times keeps four full sets of shards queued, and the runners spend their time
+# on commits nobody will merge -- measured at 107 queued runs against 8
+# executing, 44 of them superseded. A push to main is exempt: every commit that
+# lands is checked on its own, because that run is the only thing standing
+# behind a merge that has already happened.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
 permissions:
   contents: read
 
