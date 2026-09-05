@@ -29,6 +29,14 @@ const INTRODUCED_KEY_CALL_SITES = [
     'Modules/Mobile/Internal/Sync/LanSyncClient.php',
 ];
 
+// Every call site of the widened author set. It answers what a device may CARRY
+// for a peer — registry rows and confirmed introductions alike — and carries no
+// key. A second caller is the courier set and the vouching set being conflated,
+// which is the one edit this whole boundary is shaped to refuse.
+const CARRIED_AUTHOR_CALL_SITES = [
+    'Modules/Sync/Internal/Transport/IntroductionOffers.php',
+];
+
 /** @return list<string> every production PHP file the shells ship */
 function introducedKeySources(): array
 {
@@ -77,6 +85,23 @@ function introducedKeyStripped(string $relativePath): string
     );
 }
 
+// One method's source, ending at its own four-space closing brace rather than at
+// the next declaration: a body that ran on to the following method would pass a
+// scan for what it must not contain by borrowing the neighbour's text.
+function introducedKeyBodyOf(string $relativePath, string $method): string
+{
+    $stripped = introducedKeyStripped($relativePath);
+    $at = strpos($stripped, 'function '.$method.'(');
+
+    if ($at === false) {
+        return '';
+    }
+
+    $end = strpos($stripped, "\n    }\n", $at);
+
+    return substr($stripped, $at, ($end === false ? strlen($stripped) : $end) - $at);
+}
+
 it('lets nothing but the registry and its own service read a relayed key', function (): void {
     $sources = introducedKeySources();
 
@@ -116,15 +141,10 @@ it('hands the map that carries a relayed key only to an op-log signature check',
 });
 
 it('keeps the transport and epoch anchors reading the paired-only registry', function (): void {
-    $stripped = introducedKeyStripped('Modules/Sync/Public/Services/DeviceRegistryService.php');
-
     foreach (['deviceKeys', 'deviceX25519Keys'] as $method) {
-        $at = strpos($stripped, 'function '.$method.'(');
+        $body = introducedKeyBodyOf('Modules/Sync/Public/Services/DeviceRegistryService.php', $method);
 
-        expect($at)->not->toBeFalse($method.'() must still be here to be anchored');
-
-        $next = strpos($stripped, 'public function ', (int) $at + 1);
-        $body = substr($stripped, (int) $at, ($next === false ? strlen($stripped) : $next) - (int) $at);
+        expect($body)->not->toBe('', $method.'() must still be here to be anchored');
 
         expect(str_contains($body, 'device_introductions'))->toBeFalse(
             $method.'() is what a Noise handshake and a GDK epoch wrap are judged against. Reading an '
@@ -145,4 +165,54 @@ it('offers a relayed identity no transport key to carry', function (): void {
         'an introduction carries the signing half only. Without a column for it, a widened query cannot '
         .'produce a Noise static key for an introduced device even by mistake',
     );
+});
+
+it('lets one place ask which authors a device may carry ops for', function (): void {
+    $callers = [];
+
+    foreach (introducedKeySources() as $path) {
+        if (str_contains(introducedKeyStripped($path), '->authorIdsWithAKeyOnFile(')) {
+            $callers[] = $path;
+        }
+    }
+
+    sort($callers);
+    $expected = CARRIED_AUTHOR_CALL_SITES;
+    sort($expected);
+
+    expect($callers)->toBe($expected, 'The set a device may carry signed ops for is wider than the set it may '
+        .'vouch from, and the two answer different questions about the same author. A second caller is where '
+        .'they get conflated, and the conflation is a chain of vouches laundering trust');
+});
+
+it('gives the courier device ids and no key to compose an identity from', function (): void {
+    $body = introducedKeyBodyOf('Modules/Sync/Public/Services/DeviceRegistryService.php', 'authorIdsWithAKeyOnFile');
+
+    expect($body)->not->toBe('', 'authorIdsWithAKeyOnFile() must still be here to be anchored')
+        ->and(str_contains($body, 'device_introductions'))->toBeTrue(
+            'an author reachable only through a confirmed introduction is one this reader can verify, and '
+            .'withholding its ops from a third device that can verify it too is the gap this set closes',
+        )
+        ->and(str_contains($body, 'public_key'))->toBeFalse(
+            'a relay is a courier, not an authority. Selecting a key here would put the material an '
+            .'introduction offer is built from into the one set that spans both doors, and a vouch composed '
+            .'from it would be this device vouching on the strength of somebody else\'s vouch',
+        );
+});
+
+it('composes an introduction offer from the paired-only map alone', function (): void {
+    $body = introducedKeyBodyOf('Modules/Sync/Internal/Transport/IntroductionOffers.php', 'introductionsFor');
+
+    expect($body)->not->toBe('', 'introductionsFor() must still be here to be anchored')
+        ->and(str_contains($body, '->deviceKeys('))->toBeTrue(
+            'only a device this install confirmed through a two-party ceremony may be vouched for',
+        );
+
+    foreach (['->signatureVerificationKeys(', '->authorIdsWithAKeyOnFile(', '->carriedAuthorsFor('] as $wider) {
+        expect(str_contains($body, $wider))->toBeFalse(
+            'relaying signed DATA onward grants nobody anything, because the reader checks it against a key '
+            .'it confirmed itself. Relaying the IDENTITY onward from '.$wider.' would let this device vouch '
+            .'for an author it knows only because a peer vouched for it, which is the one hop that launders',
+        );
+    }
 });

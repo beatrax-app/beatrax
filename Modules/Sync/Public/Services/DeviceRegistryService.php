@@ -67,6 +67,35 @@ final readonly class DeviceRegistryService
         return [...$introduced, ...$this->deviceKeys($userId)];
     }
 
+    // Every author this device holds a signing key for, through either door: a
+    // device_registry row in any state, and an introduction this reader has
+    // confirmed. Ids and no key material, because the question it answers is
+    // what a relay may CARRY, never whose identity it may hand onward.
+    /**
+     * @return list<string> Author device ids.
+     *
+     * @link ../../../../.docs/features/sync/introducing-a-device-nobody-can-pair-with.md
+     */
+    public function authorIdsWithAKeyOnFile(int $userId): array
+    {
+        /** @var list<string> $paired */
+        $paired = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->pluck('device_id')
+            ->all();
+
+        /** @var list<string> $introduced */
+        $introduced = $this->db->connection()
+            ->table('device_introductions')
+            ->where('user_id', $userId)
+            ->whereNotNull('verification_confirmed_at')
+            ->pluck('device_id')
+            ->all();
+
+        return array_values(array_unique([...$paired, ...$introduced]));
+    }
+
     // Every key this registry still remembers, CONFIRMED OR REVOKED: the map
     // that verifies HISTORY, never the one that admits a peer. Removal shuts
     // the Noise transport to the device, so retention grants it nothing and

@@ -52,6 +52,18 @@ final readonly class IntroductionOffers
         return VerifiableAuthors::of(array_keys($this->registry->signatureVerificationKeys($userId)));
     }
 
+    // Who this device may CARRY ops for, which is a wider set than who it may
+    // vouch for and deliberately so. A courier verifies nothing on the reader's
+    // behalf — every op is checked there against a key that reader confirmed
+    // itself — so signed data may travel a hop the identity may not.
+    /**
+     * @return list<string> Author device ids, carrying no key material at all.
+     */
+    public function carriedAuthorsFor(int $userId): array
+    {
+        return $this->registry->authorIdsWithAKeyOnFile($userId);
+    }
+
     // What the filter took out, with an introduction for each author this
     // device has itself confirmed. Nothing is offered for a device this device
     // merely retains a key for: only a confirmed device may be relayed, and
