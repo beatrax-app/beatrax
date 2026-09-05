@@ -152,6 +152,39 @@ it('carries a confirm tap made while locked across the unlock', function (): voi
         ->and($this->session->get(ConfirmsAcrossTheLock::DEFERRED_CONFIRM_SESSION))->toBeNull();
 });
 
+// The lock outlives the token: five idle minutes into a ten-minute ceremony
+// leaves the poll reading `expired` off a row whose column still says
+// awaiting_confirm — the one HoldPairingCeremonyOpenOnUnlock revives. Telling
+// that reader to fetch a fresh code ends a ceremony the unlock would have won.
+it('does not send a locked reader for a fresh code over a lapse the unlock would undo', function (): void {
+    $component = Livewire::test(MobilePairingScan::class)->assertSet('step', 'confirm');
+
+    AppLockTestHarness::lock($this->session);
+
+    DB::table('pairing_tokens')
+        ->where('id', $this->row['id'])
+        ->update(['expires_at' => Instant::zulu(CarbonImmutable::now()->subMinute())]);
+
+    $component->call('checkPairingState')
+        ->assertSet('step', 'confirm')
+        ->assertSet('pairingTokenId', (string) $this->row['id'])
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.identity_locked'));
+});
+
+// The same lapse with the key in hand really has ended, and saying so is what
+// stops the poll spinning on a handshake nobody is going to finish.
+it('still calls a lapsed ceremony over once the reader can act on it', function (): void {
+    $component = Livewire::test(MobilePairingScan::class)->assertSet('step', 'confirm');
+
+    DB::table('pairing_tokens')
+        ->where('id', $this->row['id'])
+        ->update(['expires_at' => Instant::zulu(CarbonImmutable::now()->subMinute())]);
+
+    $component->call('checkPairingState')
+        ->assertSet('pairingTokenId', '')
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.invalid_code'));
+});
+
 // Carrying the tap must not carry the trust decision with it. The digest is
 // the fingerprint of the six words the human compared, so a peer that rebinds
 // while the reader is at the PIN pad inherits nothing.

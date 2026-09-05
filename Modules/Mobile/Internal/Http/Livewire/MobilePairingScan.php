@@ -461,9 +461,14 @@ final class MobilePairingScan extends Component
             $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger, $lock);
         }
 
-        // Expired, refused or cancelled on the other device: without this the
-        // poll spins forever on a handshake that already ended out of sight.
-        if ($state === null || $state === PairingGateway::STATE_EXPIRED) {
+        // Without this the poll spins forever on a handshake that ended out
+        // of sight. A lapse is not that while this device is locked: the
+        // unlock revives an awaiting_confirm row it owns a side of, so a
+        // fresh code here abandons a ceremony that was still winnable.
+        $endedForGood = $state === null
+            || ($state === PairingGateway::STATE_EXPIRED && $gateway->hasUsableIdentity($userId, $session));
+
+        if ($endedForGood) {
             $this->resetPairingAttempt();
             $this->awaitingPeer = false;
             $this->flashMessage = Lang::get($this->acceptRefusalKey(PairingAcceptRefusal::NotLiveHere));

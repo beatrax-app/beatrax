@@ -771,6 +771,14 @@ The line the phone shows is the one it already had — `identity_locked`, or
 `identity_needs_lock` where there is no lock to open — resolved in one place now
 that both `sendToUnlock()` and the poll read it.
 
+The same lock outlives the token. Five idle minutes into a ten-minute ceremony
+leaves the poll reading `expired` off `PairingTokenRowReader::state()` for a row
+whose column still says `awaiting_confirm` — exactly the row
+`extendCeremonyAcrossLock()` revives. So the poll's "this ended out of sight"
+branch asks whether the reader can act on it first: a row that is *gone* is gone
+under either key, but a *lapse* while locked is not reported as one, because
+sending that reader for a fresh code ends a ceremony the unlock would have won.
+
 ### A tap made against a locked identity is carried, not dropped
 
 Tapping Confirm while locked bounced to the PIN pad and lost the tap: the reader
