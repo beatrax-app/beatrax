@@ -64,11 +64,18 @@ jobs:
             - name: Check out the source
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-            - name: Install poppler-utils (pdftotext)
+            - name: Install poppler-utils (pdftotext) and avahi-utils (mDNS)
               # The receipt-extraction pipeline shells out to `pdftotext`
               # from poppler-utils. The GitHub-hosted `ubuntu-latest`
               # image does not ship the package; install it explicitly
               # so PDF-fingerprint tests do not throw PdfExtractionFailed.
+              #
+              # avahi-utils is here for a sharper version of the same reason.
+              # The mDNS advertiser looks for `dns-sd` or for
+              # `avahi-publish-service`, and the runner had neither — so the
+              # one test that proves the advertiser cannot wedge a worker at
+              # shutdown skipped in every job, counted in the totals and run
+              # in none of them. The binary is enough; no daemon is needed.
               run: |
                   set -euo pipefail
                   # apt hangs on a bad mirror often enough to have cost a day of CI: the
@@ -78,13 +85,13 @@ jobs:
                   for attempt in 1 2 3; do
                       if sudo timeout 120 apt-get update -qq -o Acquire::Retries=3 -o Acquire::http::Timeout=20 \
                           && sudo timeout 180 apt-get install -y --no-install-recommends \
-                              -o Acquire::Retries=3 -o Acquire::http::Timeout=20 poppler-utils; then
+                              -o Acquire::Retries=3 -o Acquire::http::Timeout=20 poppler-utils avahi-utils; then
                           exit 0
                       fi
                       echo "::warning::apt attempt ${attempt} stalled or failed; retrying."
                       sleep 5
                   done
-                  echo "::error::poppler-utils could not be installed after three attempts."
+                  echo "::error::poppler-utils and avahi-utils could not be installed after three attempts."
                   exit 1
 
             - name: Set up PHP
@@ -199,7 +206,19 @@ jobs:
                   # for the CLI and turns pcov off; this step never collects
                   # coverage, and the coverage workflow sets neither.
                   PHP_INI_SCAN_DIR: ':tools/test-php-ini'
-              run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}"
+              run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}" --log-junit=junit.xml
+
+            - name: Keep this shard's JUnit report
+              # Checked in the `quality` job below rather than here. A shard
+              # collects only its own testsuites, so no single one can tell a
+              # file that ran elsewhere from a file that ran nowhere — which is
+              # the whole question. The three reports have to meet first.
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+              with:
+                  name: junit-shard-${{ matrix.shard }}
+                  path: junit.xml
+                  if-no-files-found: error
+                  retention-days: 1
 
     # Pint and Larastan read the whole tree and do not care about the tests, so
     # they ran on shard 1 to avoid being repeated three times. That made the
@@ -298,6 +317,34 @@ jobs:
               run: |
                   echo "shards: $SHARDS   static analysis: $STATIC"
                   [ "$SHARDS" = success ] && [ "$STATIC" = success ] || exit 1
+
+            - name: Check out the source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Collect the shards' JUnit reports
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+              with:
+                  pattern: junit-shard-*
+                  path: junit-reports
+
+            - name: The skips the shards reported, against the pinned budget
+              # A skipped test prints in the same colour as a passing one and is
+              # counted with it, so a capability no job supplies reads in every
+              # report as a guarantee that holds. The budget names, per file,
+              # the job that actually runs what skipped — and has no value
+              # meaning "nowhere", so a gate nothing can answer has to be fixed
+              # rather than written down.
+              #
+              # All three reports at once, because a pinned file absent from one
+              # shard is only a defect if it is absent from all of them.
+              run: |
+                  set -euo pipefail
+                  find junit-reports -name junit.xml | sort
+                  count=$(find junit-reports -name junit.xml | wc -l)
+                  [ "$count" -eq 3 ] || { echo "::error::expected 3 JUnit reports, found $count"; exit 1; }
+                  python3 .github/scripts/skip-budget.py --job "quality shard" --junit junit-reports/*/junit.xml
 
     # mobile-app quality gate (15-11-PLAN.md Task 2). The desktop `quality`
     # job above builds from the REPO ROOT; the mobile shell is a SEPARATE
@@ -435,17 +482,15 @@ jobs:
             - name: The docs-symbol rule, which needs both Composer roots
               # Run from the repo root so base_path() resolves both classmaps.
               # A skip here is a failure: it would mean the rule once again ran
-              # nowhere, which is the state this step exists to end.
+              # nowhere, which is the state this step exists to end. The check
+              # that says so is the same one every other job runs, reading the
+              # budget entry that points every other job HERE.
               env:
                   APP_ENV: testing
               run: |
                   set -euo pipefail
-                  out=$(vendor/bin/pest tests/Contracts/DocsNameSymbolsThatExistArchTest.php --colors=never)
-                  echo "$out"
-                  if grep -qiE '[0-9]+ skipped' <<< "$out"; then
-                      echo "::error::the docs-symbol rule skipped, so it ran nowhere in this pipeline."
-                      exit 1
-                  fi
+                  vendor/bin/pest tests/Contracts/DocsNameSymbolsThatExistArchTest.php --colors=never --log-junit=junit-docs-symbol.xml
+                  python3 .github/scripts/skip-budget.py --job "docs-symbol (both roots)" --junit junit-docs-symbol.xml
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # The mobile shell must never silently pick up a
@@ -505,4 +550,11 @@ jobs:
                   # root — `tools/` is one of the few directories NOT symlinked
                   # into this second Composer root, so the path steps out.
                   PHP_INI_SCAN_DIR: ':../tools/test-php-ini'
-              run: vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only
+              run: vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only --log-junit=junit-mobile.xml
+
+            - name: The skips the mobile root reported, against the pinned budget
+              # This root is where most of the tree's skips are pointed: a gate
+              # on `nativephp/mobile` is correct in the shards and has to be
+              # false here, or the test runs in neither root. Run from the repo
+              # root so the budget resolves at its own path.
+              run: python3 .github/scripts/skip-budget.py --job "mobile-app quality" --junit mobile-app/junit-mobile.xml
