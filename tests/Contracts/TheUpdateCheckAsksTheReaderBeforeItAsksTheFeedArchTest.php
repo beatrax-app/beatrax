@@ -246,9 +246,12 @@ it('leaves neither reader of the build flag resting on a default', function (): 
     );
 
     // The runtime half: every bundled .env that is given the feed origin must
-    // be given the flag beside it, or the two disagree inside one bundle.
-    $feedWrites = PatternScan::count('/printf\s+\'AUTO_UPDATE_FEED_URL=/', $workflow);
-    $flagWrites = PatternScan::count('/printf\s+\'NATIVEPHP_UPDATER_ENABLED=/', $workflow);
+    // be given the flag beside it, or the two disagree inside one bundle. Both
+    // are `extra` lines handed to the staging action; counted by the assignment
+    // rather than by the shell that used to write it, so this stays true of
+    // however the .env comes to be written.
+    $feedWrites = PatternScan::count('/^\s*AUTO_UPDATE_FEED_URL=\S/m', $workflow);
+    $flagWrites = PatternScan::count('/^\s*NATIVEPHP_UPDATER_ENABLED=\S/m', $workflow);
 
     expect($feedWrites)->toBeGreaterThan(0, 'no staging step writes the feed origin — this guard just scanned the wrong file');
     expect($flagWrites)->toBe($feedWrites, sprintf(
