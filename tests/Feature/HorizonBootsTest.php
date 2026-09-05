@@ -5,37 +5,11 @@ declare(strict_types=1);
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\RedisQueue;
 use Laravel\Horizon\Horizon;
-use Predis\Client as PredisClient;
 
-// The missing-Redis case is an explicit skip predicate, never a
-// swallow-on-throw around the body: swallowing turned "the container is not
-// running" into a silent pass. Nothing enforces that but the reader — this note
-// used to claim a CI grep gate read the file's literal text and tripped if the
-// pattern came back, and no such gate has ever existed in the tree.
-function isRedisReachable(string $host, int $port): bool
-{
-    $errno = 0;
-    $errstr = '';
-    $socket = @fsockopen($host, $port, $errno, $errstr, 1.0);
-    if ($socket === false) {
-        return false;
-    }
-    fclose($socket);
-
-    return true;
-}
-
-it('connects to Redis on 127.0.0.1:6379', function (): void {
-    $client = new PredisClient(['host' => '127.0.0.1', 'port' => 6379]);
-    $response = $client->ping();
-    $payload = is_object($response) && method_exists($response, 'getPayload')
-        ? (string) $response->getPayload()
-        : (string) $response;
-    expect($payload)->toBe('PONG');
-})->skip(
-    fn (): bool => ! isRedisReachable('127.0.0.1', 6379),
-    'Redis container required for this test — run `docker start beatrax-redis` or follow the README setup.',
-);
+// A test that pinged a live Redis on 127.0.0.1:6379 used to open this file. No
+// job runs one, so it skipped in every report it appeared in while being
+// counted as a test — and the server is out of scope by decision: Horizon is a
+// dev-only dependency of the Dev Console and the shipped queue is `database`.
 
 it('Horizon service provider boots without errors', function (): void {
     expect(class_exists(Horizon::class))->toBeTrue();

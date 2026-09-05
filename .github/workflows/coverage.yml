@@ -53,7 +53,7 @@ jobs:
           # code to the commits that introduced it, and it runs in the job
           # below; a shard just runs tests.
 
-      - name: Install poppler-utils (pdftotext)
+      - name: Install poppler-utils (pdftotext) and avahi-utils (mDNS)
         run: |
             set -euo pipefail
             # apt hangs on a bad mirror often enough to have cost a day of CI: the
@@ -63,13 +63,13 @@ jobs:
             for attempt in 1 2 3; do
                 if sudo timeout 120 apt-get update -qq -o Acquire::Retries=3 -o Acquire::http::Timeout=20 \
                     && sudo timeout 180 apt-get install -y --no-install-recommends \
-                        -o Acquire::Retries=3 -o Acquire::http::Timeout=20 poppler-utils; then
+                        -o Acquire::Retries=3 -o Acquire::http::Timeout=20 poppler-utils avahi-utils; then
                     exit 0
                 fi
                 echo "::warning::apt attempt ${attempt} stalled or failed; retrying."
                 sleep 5
             done
-            echo "::error::poppler-utils could not be installed after three attempts."
+            echo "::error::poppler-utils and avahi-utils could not be installed after three attempts."
             exit 1
 
       - name: Set up PHP

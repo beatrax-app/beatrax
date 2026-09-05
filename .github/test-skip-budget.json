@@ -1,0 +1,277 @@
+{
+    "why": [
+        "A skipped test is counted in the same line as a passing one, in a colour nobody reads. A test that skips in EVERY job of the pipeline therefore looks, in every report, exactly like a test that holds — and it holds nothing. This file is the decision about which skips are real capability gates and which job supplies the capability.",
+        "`runs_in` is the load-bearing field, and there is no value for it meaning 'nowhere'. Naming a job is a claim, and .github/scripts/skip-budget.py verifies the claim IN that job: the file has to be collected there and skip nothing there. A gate that no job can answer is not pinnable, so it has to be fixed.",
+        "`markers` counts the `markTestSkipped(` and `->skip(` call sites in the file and is held by tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php. `skipped` counts the TESTS a job reports skipped, which differs: one marker in a beforeEach retires a whole file, and one marker on a datasetted test retires a case per row."
+    ],
+    "jobs": {
+        "quality shard": "ci.yml `quality shard N (PHP 8.5)` — repo-root Composer root, ubuntu-latest, every testsuite in phpunit.xml split across three runners.",
+        "mobile-app quality": "ci.yml `mobile-app quality (PHP 8.5)` — the mobile-app/ Composer root, where nativephp/mobile and the paid plugins are installed. Runs the Mobile testsuite only.",
+        "docs-symbol (both roots)": "ci.yml `mobile-app quality (PHP 8.5)`, the step that runs one file from the REPO root after installing both roots — the only context in which both classmaps exist."
+    },
+    "files": {
+        "Modules/Auth/tests/Feature/RecoveryCodesSaveHonestyTest.php": {
+            "markers": 2,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on the `mobile.recovery-codes.export` route. Modules/Mobile/Routes/web.php registers it unconditionally and the Mobile module is enabled in both roots, so the gate is answered everywhere and these never actually skip."
+        },
+        "Modules/Core/tests/Feature/EncryptedBackupRestoreTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on SQLite3::backup(), which ext-sqlite3 has had since PHP 7.4. Present on every runner the pipeline uses."
+        },
+        "Modules/Core/tests/Feature/HostPipeWatchTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "The one marker left guards proc_open failing, which does not happen on the runner. A second used to sit on the no-host-pipe assertion and read the RUNNER's own stdin: a paratest worker is spawned with a pipe on every descriptor, so under --parallel — which is how every job runs — that assertion skipped everywhere. The probe now builds the no-host case in a child given /dev/null, so there is nothing left to gate on."
+        },
+        "Modules/Core/tests/Unit/NativeZipWriterTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on a system `unzip` to verify the archive with; ubuntu-latest ships one."
+        },
+        "Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on a routable LAN address. A GitHub-hosted runner has a default route and a private address on it."
+        },
+        "Modules/Desktop/tests/Feature/SyncListenerIsCredentialledOnUnlockTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on binding the LAN sync port, which is free on the runner."
+        },
+        "Modules/Desktop/tests/Feature/SyncListenerStartsOnlyWhenEnabledTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on port 51337 being bindable, which it is on the runner."
+        },
+        "Modules/DevMode/tests/Feature/ACountedPhraseTheBrowserAssemblesPicksTheReadersArmTest.php": {
+            "markers": 3,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on the browser plural probe and the node module it runs. Every job that runs tests does `npm ci` before Pest, so node_modules is there."
+        },
+        "Modules/DevMode/tests/Feature/AFinishedRunSaysWhetherItFailedTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix, which the Linux PHP builds setup-php installs enable by default."
+        },
+        "Modules/DevMode/tests/Feature/ArtisanCancelTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/ArtisanRunnerSafeTierTest.php": {
+            "markers": 4,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/ArtisanStreamReconnectTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/CommandArgPromptModalTest.php": {
+            "markers": 4,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/CommandSpawnerTest.php": {
+            "markers": 4,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/DestructiveTripleGateRoundTripTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/DevMode/tests/Feature/PaletteMatchingTest.php": {
+            "markers": 4,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on node_modules being installed. The shard job runs `npm ci --ignore-scripts` before Pest because the Vite manifest is needed for view rendering, and that install is what answers this gate too."
+        },
+        "Modules/DevMode/tests/Feature/TheRunnerPageIsNotTheSurfaceThatSkipsTheArgRulesTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ext-posix; present."
+        },
+        "Modules/Import/tests/Feature/ImportStagingIsAtomicTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on the filesystem reporting inodes; the runner's ext4 root does."
+        },
+        "Modules/Mobile/tests/Feature/AppShellScreenTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 13,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "beforeEach requires Native\\Mobile\\Testing\\Native. nativephp/mobile and nativephp/desktop hard-conflict, so it is installed under mobile-app/ only — one marker retires all thirteen tests in the repo-root job and all thirteen run in the mobile one."
+        },
+        "Modules/Mobile/tests/Feature/MobileRecoveryCodesLocaleTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 1,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "Gated on MobileEnsureDatabaseReady being in the web group, which mobile-app/bootstrap/app.php registers and the repo root does not."
+        },
+        "Modules/Mobile/tests/Feature/MobileRestoreFromBackupTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 1,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "Same gate: the route is only reachable through middleware the mobile root registers."
+        },
+        "Modules/Mobile/tests/Unit/AWebViewErrorPageDoesNotRenderWhatItFailedOnTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 3,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "The upstream Kotlin the patch script rewrites ships inside nativephp/mobile's vendor tree; one marker in a shared helper retires all three tests where that root is absent."
+        },
+        "Modules/Mobile/tests/Unit/Identity/BiometricEnrolmentSaysWhyItWasRefusedTest.php": {
+            "markers": 2,
+            "skipped": {
+                "quality shard": 5,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "BiometricVault comes from nativephp/mobile-biometrics, a paid plugin resolved only from the mobile-app root. One of the two markers sits on a four-row dataset, which is why two markers report five skips."
+        },
+        "Modules/Mobile/tests/Unit/NoInboundDeepLinkSchemeTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 1,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "Reads the packager's own source out of nativephp/mobile's vendor tree."
+        },
+        "Modules/Receipts/tests/Feature/ScanInboxDropFolderJobTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on a non-root euid, because chmod does not restrain root. The GitHub runner executes steps as the unprivileged `runner` user."
+        },
+        "Modules/Receipts/tests/Unit/Pipeline/FileDropEmlBlobStoreTempFileModeTest.php": {
+            "markers": 2,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on the filesystem exposing POSIX mode bits; ext4 does."
+        },
+        "Modules/Receipts/tests/Unit/Pipeline/FileDropEmlBlobStoreWriteFailureTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on not being root, for the same reason as the drop-folder test above."
+        },
+        "Modules/Sync/tests/Feature/DaemonDiesWithItsHostTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on proc_open succeeding, which it does on the runner."
+        },
+        "Modules/Sync/tests/Feature/LocalRelayProvisionerTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on a routable LAN address, which the runner has — the same gate the Desktop relay test passes."
+        },
+        "Modules/Sync/tests/Unit/MdnsAdvertiserCannotBlockOnExitTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on dns-sd or avahi-publish-service being on the host, and ubuntu-latest shipped neither — so it skipped in every job. The shard and coverage runners now install avahi-utils alongside poppler-utils; the binary is all the advertiser looks for."
+        },
+        "tests/Contracts/ChartAxisMoneyFollowsReaderLocaleArchTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 0
+            },
+            "runs_in": "quality shard",
+            "why": "Gated on ICU carrying nl data, which excuses the English-only mobile PHP build. The CI runner's ext-intl carries the full set."
+        },
+        "tests/Contracts/DocsNameSymbolsThatExistArchTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 1,
+                "docs-symbol (both roots)": 0
+            },
+            "runs_in": "docs-symbol (both roots)",
+            "why": "Reads BOTH roots' optimised classmaps, because a class one root never loads still exists. No job had both installed, so it skipped in 100% of runs while reporting green; the mobile job now installs the repo root as well and runs this one file from there. This is the failure this whole budget generalises."
+        }
+    }
+}
