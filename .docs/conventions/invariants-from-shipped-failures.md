@@ -6653,6 +6653,16 @@ The general shape: **a config file is not the configuration.** Anything that
 asserts on what an application is configured to do has to read the merged result
 the framework hands back, not the file this repository happens to own. Asserting
 on the file would have agreed with the deletion and been wrong.
+Its first run found two defects in the reader itself, and how it found them is
+the property worth keeping. Pest writes the JUnit `file` attribute as
+`<path>::<test description>` and the path half is relative to whichever root the
+run started from, so a reader cutting an absolute path at `/Modules/` produced a
+distinct key per test — and the check failed on "the budget has a count and the
+job collected the file not at all" rather than quietly comparing nothing. The
+second was the shard split: a shard collects only its own testsuites, so the
+three reports have to meet in the `quality` job that already collapses them
+before "ran elsewhere" can be told from "ran nowhere". A guard that cannot read
+its input has to say so, which is the same rule it enforces on everyone else.
 
 ## Related
 

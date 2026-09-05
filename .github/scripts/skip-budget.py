@@ -31,24 +31,32 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
-# Both are repo-relative roots that a test path must start with, and the
-# absolute path a runner writes into the report has to be cut back to one of
-# them: the mobile-app job runs from a second Composer root whose Modules/ is a
-# symlink, so the same test file is reported under two prefixes.
-PATH_ANCHORS = ("/Modules/", "/tests/")
+# Pest writes the `file` attribute as "<path>::<test description>", and the path
+# half is relative to whichever root the run started from -- so the same test
+# file is reported one way from the repo root and another from mobile-app/,
+# whose Modules/ is a symlink back here. Cutting at the first ".php" and then at
+# a "Modules/" or "tests/" SEGMENT (rather than a "/Modules/" substring, which a
+# relative path does not carry) gives one key for both.
+PATH_ANCHORS = ("Modules/", "tests/")
+PHP_PATH = re.compile(r"^(.*?\.php)")
 
 
 def repo_relative(path: str) -> str:
     normalised = path.replace("\\", "/")
+    match = PHP_PATH.match(normalised)
+
+    if match is not None:
+        normalised = match.group(1)
 
     for anchor in PATH_ANCHORS:
         index = normalised.find(anchor)
-        if index != -1:
-            return normalised[index + 1 :]
+        if index != -1 and (index == 0 or normalised[index - 1] == "/"):
+            return normalised[index:]
 
     return normalised.lstrip("/")
 
@@ -83,6 +91,16 @@ def report(collected: dict[str, int], skipped: dict[str, int], names: dict[str, 
 def failures(budget: dict, job: str, collected: dict[str, int], skipped: dict[str, int], names: dict[str, list[str]]) -> list[str]:
     files = budget["files"]
     problems = []
+
+    # The denominator, before any verdict is read. Every failure below is phrased
+    # as "the budget expected this and the job did not have it", and a reader that
+    # resolved no path at all satisfies every one of them at once — so the whole
+    # budget would report as broken when what is broken is the reading of it.
+    if collected and not any(path in collected for path in files):
+        return [
+            "the JUnit report resolved to no path the budget knows, so nothing below was "
+            f"actually compared. First few paths as read: {', '.join(sorted(collected)[:3])}"
+        ]
 
     for path, count in sorted(skipped.items()):
         pinned = files.get(path)
