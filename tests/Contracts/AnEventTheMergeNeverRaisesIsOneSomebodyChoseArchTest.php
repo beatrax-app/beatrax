@@ -132,9 +132,11 @@ function eventsTheMergeRaises(): array
  *              is nothing for an arriving row to have caused.
  *   delivery — the origin device already told the reader, and the row it wrote
  *              travels; raising it again notifies one household twice.
- *   covered  — the arriving row DOES have to be answered, and another seam
- *              answers it. `proves` names the file and the pattern that says
- *              so, re-run below, so the claim fails here when it stops holding.
+ *   covered  — the arriving row DOES have to be answered, and the merge path is
+ *              not where the answer belongs: another seam owns it. `proves`
+ *              names the file and the pattern that says so, re-run below, so
+ *              the claim fails here when it stops holding. It says nothing
+ *              about whether that other seam is itself whole.
  *
  * @var array<string, array{why: string, reason: string, proves?: array{0: string, 1: string}}>
  */
@@ -219,7 +221,7 @@ const AN_EVENT_THE_MERGE_NEVER_RAISES = [
     ],
     'Modules\Import\Public\Events\TransactionImported' => [
         'why' => 'covered',
-        'reason' => 'the merge answers all three listeners itself: SearchDocumentRows rebuilds the index, the pair columns travel, and a receipt\'s chain_links row travels',
+        'reason' => 'none of its three listeners wants re-running on arrival: SearchDocumentRows rebuilds the index here, a receipt\'s chain_links row travels, and transfer pairing rides the whole-row create op — where pairing has a hole it is on the capture side, which re-raising this would not reach',
         'proves' => ['Modules/Sync/Internal/Merge/SearchIndexRefresher.php', '/upsertForTransaction/'],
     ],
     'Modules\Ledger\Public\Events\TransactionBatchImported' => [
