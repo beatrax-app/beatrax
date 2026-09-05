@@ -87,9 +87,11 @@ Giving background writers a sanctioned key source is the alternative, and it is 
 the app-lock design rather than merely expensive. Only two durable copies of the data key
 exist, both in one row of `user_app_lock_configs`, and
 [nothing else on the machine can produce it](../auth/app-lock-data-key-lifetime.md).
-`LockOnWindowHideOrClose` withholds the key on every desktop window hide or close, ungated by
-`lock_enabled` — a closed window being unable to read the ledger is the design, not a gap in
-it. A third copy reachable without the user present would make the lock cosmetic and would
+A desktop window hide or close withholds the key from the session that window held — a closed
+window being unable to read the ledger is the design, not a gap in it. It reaches that session
+through a hand-off the window claims on its next request, because the shell's own event
+request holds no session at all
+([why](../desktop/architecture.md#a-native-event-never-holds-the-windows-session)). A third copy reachable without the user present would make the lock cosmetic and would
 put key material somewhere that page's invariant does not cover.
 
 Deferring the write until a key exists was the third option. The codec cannot do it: it
