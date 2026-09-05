@@ -6347,6 +6347,7 @@ later `KEY-----` once at least sixty-four characters sit between them — so one
 occurrence of that header was inert, and the third made the file a finding.
 That is the quiet shape of this defect: nothing about the line that finally
 trips it is different from the two that did not.
+
 ## A gate with no configuration refused a shipped deployment shape
 
 `Modules/Core/tests/Feature/TheBoundaryWidensOnlyByRecordTest.php`
