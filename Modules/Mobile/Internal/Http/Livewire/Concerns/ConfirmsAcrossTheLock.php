@@ -94,7 +94,7 @@ trait ConfirmsAcrossTheLock
 
         $session->forget(self::DEFERRED_CONFIRM_SESSION);
 
-        if ($this->recordConfirmation($digest, $deviceId, $gateway, $session, $userId) !== null) {
+        if ($this->recordConfirmation($digest, $deviceId, $gateway, $userId) !== null) {
             $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger, $lock);
         }
     }
@@ -112,7 +112,6 @@ trait ConfirmsAcrossTheLock
         string $digest,
         string $deviceId,
         PairingGateway $gateway,
-        Session $session,
         int $userId,
     ): ?string {
         $state = $gateway->confirm((int) $this->pairingTokenId, $userId, $deviceId, $digest);

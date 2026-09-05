@@ -601,7 +601,7 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $state = $this->recordConfirmation($digest, $deviceId, $gateway, $session, $userId);
+        $state = $this->recordConfirmation($digest, $deviceId, $gateway, $userId);
 
         if ($state === null) {
             return;
