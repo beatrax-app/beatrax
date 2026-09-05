@@ -87,7 +87,7 @@ final class SensitiveFieldRegistry
         ];
     }
 
-    // The seven mailbox columns are not held back by a predicate; they are held
+    // The eight mailbox columns are not held back by a predicate; they are held
     // back by where their writer runs. Every one is written and read from
     // ShouldQueue jobs alone, and a queue worker builds its own session and so
     // never holds the app-lock key the codec needs.

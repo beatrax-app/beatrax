@@ -389,7 +389,8 @@ Deferred rather than decided: `counterparties.metadata` and `saved_reports.defin
 Seven columns on three mailbox tables — `inbox_messages.subject`, `.sender_name`,
 `.sender_email`; `file_imports.subject`, `.sender_name`, `.sender_email`; and
 `discovered_senders.sender_name` — hold content this page's own rule says should be
-encrypted. An e-mail subject line frequently *is* the merchant, the amount and the order id,
+encrypted. An eighth, `file_imports.source_filename`, arrives by a different door and is
+argued below; the reason all eight end up here is the same one. An e-mail subject line frequently *is* the merchant, the amount and the order id,
 and the receipt matchers copy exactly that pair of strings into the sealed
 `transactions.raw_payload`, so the same value lives in one column under AEAD and in another
 in the clear.
