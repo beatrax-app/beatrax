@@ -232,7 +232,7 @@ class InstallCommand extends Command
 
     private function installLaunchdPlists(): int
     {
-        if (OsFamily::current() !== OsFamily::Darwin) {
+        if (! $this->hostIsMacOs()) {
             $this->error('launchd plists are macOS-only; aborting.');
 
             return self::FAILURE;
@@ -295,10 +295,15 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    // The test subclass overrides both to keep the suite off the real machine.
-    // Narrowing either to private would not error — PHP lets a subclass declare
-    // a same-named private method while the parent keeps calling its own — so
-    // the tests would silently write real LaunchAgents and run launchctl.
+    // The test subclass overrides these three to keep the suite off the real
+    // machine and off its OS. Narrowing any to private would not error — PHP
+    // lets a subclass declare a same-named private method while the parent goes
+    // on calling its own — so the tests would write real LaunchAgents instead.
+    protected function hostIsMacOs(): bool
+    {
+        return OsFamily::current() === OsFamily::Darwin;
+    }
+
     protected function resolveLaunchAgentsDir(string $home): string
     {
         return $home.'/Library/LaunchAgents';
