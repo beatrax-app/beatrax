@@ -404,7 +404,10 @@ Per-page detail that doesn't fit the flow diagrams above:
   `WriteWorkerHeartbeat::CACHE_KEY`, rendered "Ns ago · ttl 60s" when
   fresh, "NOT RUNNING" when stale/missing); queue counts (pending/
   failed/active batches via the raw query builder); and the last
-  command (most recent `dev_mode_audit` row). The console-pane tail
+  command (the calling developer's most recent `dev_mode_audit` row —
+  `causer_id`-scoped like every other read of that table; it was the one
+  read the audit-page sweep missed, and it named another operator's last
+  command on a page whose Clear all cannot reach that row). The console-pane tail
   shows the last 5 structured entries from the log file the configured
   channel writes, via `RecentLogEntriesReader` (continuation lines fold into the
   preceding entry; messages re-scrubbed), each linking to `/dev/logs`
