@@ -269,17 +269,6 @@ Schedule::command('db:backup --force')
     ->daily()
     ->withoutOverlapping(60);
 
-// Daily counterparty garbage collection. It used to run at 04:00
-// Europe/Amsterdam, an hour after the backup, so a freshly-pruned set was
-// captured in the next morning's snapshot — which still holds when both run
-// daily and this entry is defined after the backup. The explicit timezone is
-// gone with the hour: it matched APP_TIMEZONE, and a repeat interval on a
-// phone has no timezone to honour.
-Schedule::command('counterparties:collect-garbage')
-    ->name('counterparties.gc')
-    ->daily()
-    ->withoutOverlapping(30);
-
 // The daily user-notification pass — payment reminders, position digest and
 // savings prompts, three entries that always shared one 09:15 slot.
 //
@@ -313,10 +302,10 @@ Schedule::command('budgets:emit-nudges')
     ->withoutOverlapping(30);
 
 // The notification-inbox retention sweep. It used to run at 04:30 purely to
-// sit clear of the 03:00 backup and 04:00 GC for the SQLite single-writer
-// lock; with all three daily the scheduler already serialises them in one
-// process, and its predicate keys solely on the always-plaintext created_at
-// column, so it stays bounded on a locked or headless device.
+// sit clear of the 03:00 backup for the SQLite single-writer lock; with both
+// daily the scheduler already serialises them in one process, and its
+// predicate keys solely on the always-plaintext created_at column, so it stays
+// bounded on a locked or headless device.
 Schedule::command('notifications:prune')
     ->name('notifications.prune')
     ->daily()

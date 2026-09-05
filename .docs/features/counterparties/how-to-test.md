@@ -24,8 +24,8 @@ isolation.
 - **What they test:**
   - The pipeline stage end-to-end against a real DB
     (`ResolveCounterpartyStageTest`).
-  - The garbage-collector job's two-key preservation + the NULL-out
-    - DELETE ordering (`CounterpartyGarbageCollectorJobTest`).
+  - A rule left pointing at a counterparty a peer deleted
+    (`ARulePointingAtACounterpartyDeletedOnAPeerTest`).
   - The three Livewire pages (`CounterpartyIndexTest`,
     `CounterpartyProfileTest`, `CounterpartyTriageTest`).
   - What a triage decision owes the rest of the app — the op-log
@@ -61,8 +61,8 @@ vendor/bin/pest Modules/Counterparties/tests
 # Just the resolver chain unit tests
 vendor/bin/pest Modules/Counterparties/tests/Unit/CounterpartyResolverTest.php
 
-# Just the GC job
-vendor/bin/pest Modules/Counterparties/tests/Feature/CounterpartyGarbageCollectorJobTest.php
+# Just the peer-delete deactivation
+vendor/bin/pest Modules/Counterparties/tests/Feature/ARulePointingAtACounterpartyDeletedOnAPeerTest.php
 
 # Stop on first failure for a focused debug session
 vendor/bin/pest Modules/Counterparties/tests --stop-on-failure
@@ -97,11 +97,13 @@ composer test
   `bol` and `bol-2` but the test asserts `bol`. Confirm the slug walk
   is the issue (it should produce a stable `bol-2` for the second
   match) and not a missing distinguishing field in `display_name`.
-- **The GC job pruned a row the user still uses** — the row had no
-  transaction in the last 365 days AND no `merchant_aliases.friendly_name`
-  match. Add a per-user alias to anchor the row, or add a recent
-  transaction. The retention window is fixed in the job source; the
-  invariant is "no recent activity AND no explicit anchor".
+- **A counterparty the reader still uses disappeared** — nothing on
+  this device deletes one ([retention](retention.md)), so the delete
+  arrived over sync from a peer running an older build that still
+  prunes. The transactions that named it are untouched and the next
+  import re-resolves the payee into a fresh row; a rule whose action
+  named the old id can be left matching nothing while `/rules` still
+  shows it as on, so check there too.
 - **A counterparty page returns 404 for the owner** — the `slug` in
   the URL does not match any row for the current user. Check the
   `user_id` filter on the underlying query. A rename in triage moves
@@ -218,22 +220,24 @@ and the assertion — see
   INSERT / BEFORE UPDATE OF `type` triggers reject any value outside
   `merchant|personal|bank|government|self_account|unknown`. An
   application typo fails loud as SQLSTATE 23000.
-- **The garbage-collector job is unique per user.**
-  `ShouldBeUniqueUntilProcessing` with `uniqueId() = $userId`
-  collapses a scheduled tick + an on-demand sweep into one job; the
-  lock releases when `handle()` begins so a long-running GC pass
-  never blocks a follow-up tick once executing.
-  (`tests/Feature/CounterpartyGarbageCollectorJobTest.php`)
-- **The garbage-collector preserves rows anchored by either recent
-  activity or a merchant alias.** A row survives if any transaction in
-  the last 365 days references it OR a `merchant_aliases.friendly_name`
-  matches its `merchant_name`. Both keys must be absent for the row to
-  be pruned. (`tests/Feature/CounterpartyGarbageCollectorJobTest.php`)
-- **Garbage collection never cascade-deletes transactions.** The
-  `transactions.counterparty_id` column is NULLed first inside the
-  same transaction, then the `counterparties` row is deleted.
-  Historical transactions retain their data; only the FK link is
-  severed. (`tests/Feature/CounterpartyGarbageCollectorJobTest.php`)
+- **No scheduled task deletes a row the reader authored.** The guard
+  walks every scheduled command into the jobs it dispatches and fails
+  on a `->delete()` against one of the thirteen tables holding user
+  data, or an `->update()` setting a column of one back to `null`. It
+  carries one declared exception, `notifications`, named against the
+  requirement its window is written down in. Two of its cases plant a
+  sweep of each shape, so a guard that stopped reading cannot pass
+  silently.
+  (`tests/Contracts/NoScheduledTaskPrunesUserDataArchTest.php`)
+- **A rule pointing at a counterparty that left the table is switched
+  off.** A delete through the query builder fires no Eloquent model
+  event, so `DeactivateRulesOnReferentDelete` also listens for the
+  `EntityMutated` announcement a writer of the table makes
+  (`table = 'counterparties'`, `mutationType = 'delete'`). The
+  deactivation is scoped to the announced id and the owning user:
+  another reader's rule, and a
+  rule naming a counterparty nobody deleted, both stay active.
+  (`tests/Feature/ARulePointingAtACounterpartyDeletedOnAPeerTest.php`)
 - **The `counterparty_index_view` user preference persists per user.**
   Switching the index view mode writes
   `user_preferences.counterparty_index_view`; a fresh login restores
@@ -256,21 +260,18 @@ and the assertion — see
 - **A row created by step 7 (`unknown`) that becomes resolvable later
   (e.g. the user added a merchant alias)** — the next import-time
   resolution finds the merchant hit at step 3, upserts the new
-  `(user_id, slug)`; the unknown row stays as an orphan and is
-  pruned by the next GC pass.
+  `(user_id, slug)`; the unknown row stays where it is, and a triage
+  decision — a label or an ignore — is the only thing that retires it
+  from the queue.
 - **A `personal` row whose user later adds the IBAN to a known-
   counterparty mapping** — subsequent imports take the step 2 branch
-  and produce a `bank` counterparty; the old `personal` row decays
-  via the GC.
+  and produce a `bank` counterparty; the old `personal` row stays, with
+  the transactions that already point at it.
 - **An import-time resolver exception** — `ResolveCounterpartyStage`
   does NOT catch resolver exceptions; the canonical-transaction
   failure path is the ImportPipeline's responsibility. (The 7-step
   chain is engineered to be exception-free under normal inputs;
   catching here would mask bugs.)
-- **A garbage-collector pass while the user is mid-import** — both
-  paths use the same `(user_id, slug)` uniqueness; the GC's
-  exclusion of recent-activity rows means the just-imported row
-  cannot be pruned in the same pass.
 
 ## Cross-module collaborators
 
@@ -301,7 +302,7 @@ and the assertion — see
   runtime toggle.
 - `user_preferences.counterparty_index_view` — per-user index-page
   view-mode preference (read by `CounterpartyIndex` Livewire SFC).
-- The garbage-collector retention window (365 days) is fixed in the
-  job source.
+- Retention has no knob and no window: a counterparty is kept for good,
+  like every other row the reader authored ([retention](retention.md)).
 - No environment flag changes the resolver's behaviour; it runs the
   same way in local dev, the packaged build, and CI.

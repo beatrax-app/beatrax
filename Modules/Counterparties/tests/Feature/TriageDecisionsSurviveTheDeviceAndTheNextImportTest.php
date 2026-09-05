@@ -16,10 +16,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Public\Events\EntityMutated;
 
-// Triage is the app's second writer of `counterparties`. The resolver and the
-// garbage collector both announce what they wrote; triage wrote silently, kept
-// a slug the display name no longer derives, and hid an ignored row for exactly
-// as long as the session lasted.
+// Triage is the app's second writer of `counterparties`. The resolver announces
+// what it writes; triage wrote silently, kept a slug the display name no longer
+// derives, and hid an ignored row for exactly as long as the session lasted.
 
 function triageDecisionUser(string $username): User
 {

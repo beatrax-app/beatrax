@@ -161,7 +161,7 @@ final class CounterpartyTriage extends Component
         $this->resetErrorBag('draftName');
 
         // merchant_name is the column merchant_aliases.friendly_name anchors
-        // against for retention, so only a merchant earns one.
+        // against, so only a merchant earns one.
         $labeller->label(
             $current,
             $currentUser->id(),

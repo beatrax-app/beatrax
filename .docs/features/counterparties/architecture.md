@@ -32,11 +32,12 @@ What the module explicitly does NOT do:
   The user's own accounts have their own `/accounts/{slug}` surface;
   the resolver short-circuits with `counterpartyId=null` and the
   profile page routes back to the account view.
-- It never cascade-deletes its history. The
-  `transactions.counterparty_id` FK is from the user side only; an
-  orphan counterparty pruned by the garbage-collector job is preceded
-  by an explicit `UPDATE transactions SET counterparty_id = NULL` on
-  every referencing row, so the historical transaction stays put.
+- It never cascade-deletes its history, and it never deletes its own
+  rows on a timer either: counterparties are kept indefinitely and
+  nothing scheduled writes to `transactions` (see
+  [retention](retention.md)). The `transactions.counterparty_id` FK is
+  from the user side only, so even a delete arriving from a peer takes
+  no ledger row with it.
 - It never resolves itself. The 7-step precedence chain depends on
   contracts owned by other modules — `ResolvesKnownCounterpartyIban`
   from `Import`, `MerchantNameResolver` from `Import`. The resolver is
@@ -138,8 +139,6 @@ must carry its own explicit filter regardless of the trait.
   precedence chain.
 - **Internal/Pipeline/ResolveCounterpartyStage** — the `ImportPipeline`
   glue.
-- **Internal/Jobs/CounterpartyGarbageCollectorJob** — the daily
-  per-user prune, `ShouldBeUniqueUntilProcessing` keyed on user id.
 - **Internal/Http/Livewire/** — `CounterpartyIndex` (`/counterparties`),
   `CounterpartyProfile` (`/counterparties/{slug}`),
   `CounterpartyTriage` (`/counterparties/triage`).
@@ -216,13 +215,6 @@ bindings resolve against.
   `withCounterpartyId()`. No-op when the resolver returns `null` or
   a `self_account` DTO.
 
-- `CounterpartyGarbageCollectorJob` — daily per-user prune.
-  Two-key safety: a row survives if either (a) any transaction in the
-  last 365 days references it OR (b) a `merchant_aliases` row anchors
-  it via `friendly_name = counterparties.merchant_name`. The prune
-  runs in one DB transaction, `UPDATE transactions SET counterparty_id
-  = NULL` first, then the `DELETE`.
-
 - `CounterpartyResolved` event — fired by the resolver on every
   upsert. The event-emission discipline keeps the resolver loosely
   coupled to any future surface that wants to react.
@@ -269,7 +261,7 @@ the same three fields.
 queue with keyboard-first ergonomics. It is the app's second writer of
 `counterparties` and behaves like one: every decision goes through
 `LabelCounterparty`, which announces it to the op-log exactly as the
-resolver and the garbage collector do.
+resolver does.
 
 | Key | Action |
 |---|---|
@@ -323,53 +315,17 @@ clips nothing, and the page never scrolls sideways.
 `Modules/Counterparties/tests/Feature/TheTriageCardDrawsOnePrimaryOnOneEdgeTest.php`
 holds the structure that measurement depends on.
 
-## Garbage collector — encryption-aware orphan predicate
+## Retention
 
-`CounterpartyGarbageCollectorJob` runs daily per user
-(`ShouldBeUniqueUntilProcessing` keyed on `"{userId}"`, `tries=3`,
-`backoff=[60,300,900]`, lock via `LockStore::forUniqueJobs()`) and
-prunes `counterparties` rows that are orphans by a two-key check: no
-transaction has linked to the row within 365 days AND no
-`merchant_aliases` row anchors it via `friendly_name =
-counterparties.merchant_name`. A row survives if either key holds — a
-merchant-alias anchor survives a quiet year, and recent activity
-survives an alias rename. The prune runs inside a single DB
-transaction; `transactions.counterparty_id` is NULLed for every
-referencing row before the `DELETE`, so history is never lost (the FK
-carries no cascade, by design — see `add_counterparty_id_to_transactions`).
-Every clause is scoped by an explicit `user_id`; the job never touches
-another user's rows.
-
-`counterparties.merchant_name` is a `SensitiveFieldRegistry` encrypted
-column, but the job's sole dispatch origin is the daily
-`counterparties.gc` scheduler tick — a queue worker with no live
-Session, and therefore never an app-lock KEK. The orphan predicate's
-`merchant_name IS NOT NULL` half (a raw-SQL `whereColumn` equality
-against the always-plaintext `merchant_aliases.friendly_name`) cannot
-be evaluated as-is once encrypted, since AEAD ciphertext never
-byte-equals plaintext. `handle()` therefore branches three ways for
-that half:
-
-- **Not encrypted** — the original raw-SQL equality runs unchanged.
-- **Encrypted with a KEK available** (kept symmetric with
-  `DetectRecurringSeriesJob`'s pattern for a future request-bound
-  dispatch origin; never true for today's sole daemon origin) —
-  candidates are loaded and `SensitiveColumnCodec::decryptValue()`
-  decrypts each row's `merchant_name` in PHP for comparison against the
-  user's alias `friendly_name` set (mirrors
-  `FingerprintStage::detectConflicts()`'s decrypt-before-compare
-  template). Any candidate whose decrypt fails is skipped rather than
-  compared, since a failed decrypt returning raw ciphertext would
-  never match plaintext and would wrongly prune an alias-protected row
-  — preserve-data-on-uncertainty, never a wrongful prune.
-- **Encrypted with no KEK** — the half is skipped entirely and a
-  warning naming the user and the skipped-row count is logged; those
-  candidates are re-evaluated on a future run with an available KEK.
-
-The `merchant_name IS NULL` half of the predicate is always
-plaintext-safe (`SensitiveColumnCodec::encryptAttrs()` only encrypts
-string values, so a NULL merchant_name is never turned into
-ciphertext) and prunes unconditionally regardless of encryption state.
+Nothing prunes `counterparties`, and nothing on a timer writes to
+`transactions`. A row the resolver creates stays. Each device holds a
+partial replica, so "no transaction points at this row" and "the
+transactions that point at it have not arrived yet" are the same
+observation — [retention](retention.md) carries the paired Mac and
+iPhone it was measured on. `tests/Contracts/NoScheduledTaskPrunesUserDataArchTest.php`
+holds the rule: it walks every scheduled command into the jobs it
+dispatches and fails on a `->delete()` against a table of user data, or
+an `->update()` setting a column of one back to `null`.
 
 ## Data flow
 
@@ -424,15 +380,4 @@ GET /counterparties/triage
        → CounterpartyTriageQueue (unresolved rows)
        → per-row TriageSuggestion (the heuristic the resolver
          would re-apply if the user nudges it)
-```
-
-The daily garbage-collector:
-
-```
-Schedule → CounterpartyGarbageCollectorJob (per user, unique-until-processing)
-  → BEGIN TX
-       → identify orphans (no recent tx + no alias)
-       → UPDATE transactions SET counterparty_id = NULL WHERE in (...)
-       → DELETE FROM counterparties WHERE id IN (...)
-     COMMIT
 ```

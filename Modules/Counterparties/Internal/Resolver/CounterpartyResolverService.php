@@ -457,8 +457,8 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
 
     // A row minted by an earlier, thinner pass keeps what that pass knew: an
     // `unknown` CounterpartyTriageQueue then holds forever, and a NULL
-    // merchant_name the garbage collector prunes on. display_name is left
-    // alone — the slug derives from it, so a different name is a different row.
+    // merchant_name no alias can anchor. display_name is left alone — the slug
+    // derives from it, so a different name is a different row.
     /**
      * @param  array<string, mixed>  $metadata
      */
