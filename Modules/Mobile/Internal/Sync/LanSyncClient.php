@@ -206,14 +206,16 @@ final readonly class LanSyncClient
         return new NoiseSession($sendCipher, $recvCipher, $peerStaticRevealed);
     }
 
-    // One connect-time key snapshot serves auth, catch-up and replay, so all
-    // three judge against the same trust set.
+    // One connect-time snapshot serves catch-up and replay, so both judge
+    // signatures against the same set. Auth is NOT one of them: the handshake
+    // answers to deviceX25519Keys(), and a key that reached this map through an
+    // introduction has no X25519 half anywhere for a session to match.
     /**
      * @return array{0: SyncSession, 1: array<string, string>}
      */
     private function buildSyncSession(DeviceIdentityDto $identity): array
     {
-        $deviceKeys = $this->registryService->deviceKeys($identity->userId);
+        $deviceKeys = $this->registryService->signatureVerificationKeys($identity->userId);
 
         $replayer = new OpLogReplayer(
             db: $this->db,
@@ -261,6 +263,12 @@ final readonly class LanSyncClient
         }
 
         $resp = $this->catchUp->parseControlMessage($syncSession->decrypt($respMsg->buffer()));
+
+        // Before the frames, not after: the frame loop can end early on a
+        // timeout, and the one thing that says WHY this exchange came back thin
+        // is the list the peer sent with the count.
+        $this->catchUp->recordIntroductions($userId, $resp, $syncSession->peerDeviceId() ?? '');
+
         $declaredFrameCount = isset($resp['frame_count']) && is_int($resp['frame_count']) ? $resp['frame_count'] : 0;
         $frameCount = max(0, min($declaredFrameCount, GdkEpochDeliveryGateway::MAX_CATCHUP_FRAMES));
 
@@ -279,8 +287,7 @@ final readonly class LanSyncClient
         }
 
         $peerReq = $this->catchUp->parseControlMessage($syncSession->decrypt($peerReqMsg->buffer()));
-        $delta = $this->catchUp->opsAfterWatermark($userId, $this->catchUp->cursorsFrom($peerReq));
-        $myResp = $this->catchUp->buildResponse($delta);
+        [$delta, $myResp] = $this->catchUp->answer($userId, $peerReq, $syncSession->peerDeviceId() ?? '');
         $connection->sendBinary($syncSession->encrypt(json_encode($myResp, JSON_THROW_ON_ERROR)));
 
         // Iterated, not collected: each frame is built as it is sent, so this

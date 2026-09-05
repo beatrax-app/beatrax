@@ -32,6 +32,7 @@ use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
+use Modules\Sync\Internal\Http\Livewire\IntroducedDevicesSection;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -166,14 +167,15 @@ final class SyncServiceProvider extends ServiceProvider
 
     private function registerReplayer(): void
     {
-        // Production OpLogReplayer fed the confirmed-only device-key map.
-        // Tests inject their own throwaway map by constructing OpLogReplayer
-        // directly.
+        // Production OpLogReplayer fed the signature-verification map: paired
+        // devices plus the introductions this reader confirmed, which is the
+        // only map an introduced key ever reaches. Tests inject their own
+        // throwaway map by constructing OpLogReplayer directly.
         $this->app->bind(
             OpLogReplayer::class,
             function (): OpLogReplayer {
                 $deviceKeys = $this->app->make(DeviceRegistryService::class)
-                    ->deviceKeys($this->currentUserId());
+                    ->signatureVerificationKeys($this->currentUserId());
 
                 return new OpLogReplayer(
                     $this->app->make(DatabaseManager::class),
@@ -424,6 +426,7 @@ final class SyncServiceProvider extends ServiceProvider
     {
         $livewire->component('sync.sync-health-page', SyncHealthPage::class);
         $livewire->component('sync.devices-and-sync-settings-section', DevicesAndSyncSettingsSection::class);
+        $livewire->component('sync.introduced-devices-section', IntroducedDevicesSection::class);
         $livewire->component('sync.pairing-flow-modal', PairingFlowModal::class);
         $livewire->component('sync.sync-status-section', SyncStatusSection::class);
     }

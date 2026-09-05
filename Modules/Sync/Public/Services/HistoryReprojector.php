@@ -409,14 +409,15 @@ final readonly class HistoryReprojector
         return array_map(static fn (GdkEpoch $epoch): int => $epoch->epochId, $epochs);
     }
 
-    // Built the way SyncWebSocketHandler builds it — the confirmed-device key
+    // Built the way SyncWebSocketHandler builds it — the signature-verification
     // map read for this user explicitly, never the container's idea of who is
-    // signed in, because this runs where there may be no request at all.
+    // signed in, because this runs where there may be no request at all. A
+    // reprojection is exactly what confirming an introduction is FOR.
     private function buildReplayer(int $userId): OpLogReplayer
     {
         return new OpLogReplayer(
             db: $this->db,
-            deviceKeys: $this->registry->deviceKeys($userId),
+            deviceKeys: $this->registry->signatureVerificationKeys($userId),
             rules: $this->container->make(MergeRulesRegistry::class),
             searchWriter: $this->container->bound(SearchIndexWriterContract::class)
                 ? $this->container->make(SearchIndexWriterContract::class)

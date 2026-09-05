@@ -33,6 +33,31 @@ final readonly class DeviceRegistryService
         return $keys;
     }
 
+    // deviceKeys() widened by the introductions the READER has confirmed, and
+    // widened for one purpose: deciding whether an op-log signature verifies.
+    // A device reachable only through here has no transport key on file and no
+    // confirmed_at anywhere, so no handshake and no epoch wrap can find it.
+    /**
+     * @return array<string, string> device_id => hex Ed25519 public key.
+     *
+     * @link ../../../../.docs/features/sync/introducing-a-device-nobody-can-pair-with.md
+     */
+    public function signatureVerificationKeys(int $userId): array
+    {
+        /** @var array<string, string> $introduced */
+        $introduced = $this->db->connection()
+            ->table('device_introductions')
+            ->where('user_id', $userId)
+            ->whereNotNull('verification_confirmed_at')
+            ->pluck('ed25519_public_key_hex', 'device_id')
+            ->all();
+
+        // Pairing last, so a device that is both paired and introduced verifies
+        // against the key the two-party ceremony wrote. A relayed key may never
+        // displace one a reader compared on two screens.
+        return [...$introduced, ...$this->deviceKeys($userId)];
+    }
+
     // Every key this registry still remembers, CONFIRMED OR REVOKED: the map
     // that verifies HISTORY, never the one that admits a peer. Removal shuts
     // the Noise transport to the device, so retention grants it nothing and

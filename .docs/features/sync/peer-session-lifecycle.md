@@ -364,4 +364,7 @@ rather than tearing down a sync session over one skippable delivery.
   happens to the ops that arrive here.
 - [Device removal and epoch rotation](device-removal-and-epoch-rotation.md) —
   what the mid-session revocation check is reacting to.
+- [Introducing a device nobody can pair with](introducing-a-device-nobody-can-pair-with.md)
+  — why the request names the authors it can verify, and what the answer
+  withholds and offers when it cannot.
 - [Sync architecture](architecture.md) — the surrounding module.

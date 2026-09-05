@@ -323,6 +323,11 @@
                 @endforeach
             </ul>
 
+            {{-- Its own component, not a second loop here: what it offers is a
+                 weaker act than pairing, and this section is already at the
+                 method ceiling the analyser allows. --}}
+            @livewire('sync.introduced-devices-section', key('introduced-devices-section'))
+
             {{-- Pair a new device — dispatch a Livewire event the modal
                  component listens for; it owns its own open state so the hosting
                  <flux:modal> sees a real false→true transition. --}}
