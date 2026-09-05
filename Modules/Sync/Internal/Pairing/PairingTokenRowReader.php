@@ -59,6 +59,25 @@ final readonly class PairingTokenRowReader
                 : PairingState::Expired->value;
     }
 
+    // Whether this device has already taken that code up and is waiting on the
+    // peer. accept() refuses a row past `pending`, and the refusal it hands
+    // back is indistinguishable from the one an unknown code gets — so a screen
+    // that wants to tell those two apart has to ask here.
+    public function awaitsConfirmFor(string $tokenHash, int $userId): bool
+    {
+        if ($tokenHash === '') {
+            return false;
+        }
+
+        $expiresAt = $this->db->connection()->table('pairing_tokens')
+            ->where('token_hash', $tokenHash)
+            ->where('user_id', $userId)
+            ->where('state', PairingState::AwaitingConfirm->value)
+            ->value('expires_at');
+
+        return is_string($expiresAt) && $expiresAt > Instant::zulu($this->clock->now());
+    }
+
     // Either name may be null on a row written before that column existed, so
     // the caller decides the placeholder rather than this reader.
     /**

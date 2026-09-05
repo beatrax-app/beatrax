@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Tożsamość Twojego urządzenia jest zablokowana. Odblokuj aplikację i spróbuj ponownie.',
     'invalid_code' => 'Ten kod jest nieprawidłowy albo wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
+    'already_under_way' => 'To urządzenie już przyjęło ten kod i czeka na potwierdzenie z drugiego urządzenia. Jeśli nie nadejdzie, poproś o nowy kod i użyj go.',
+    'vouched_but_refused' => 'Drugie urządzenie nadal ma ten kod, ale to urządzenie nie mogło go przyjąć. Poproś o nowy kod i użyj go.',
     'code_incomplete' => 'Ten kod nie jest kompletny. Porównaj go z drugim urządzeniem i wpisz go w całości.',
     'code_not_accepted' => 'Żadne urządzenie w tej sieci nie przyjęło tego kodu. Sprawdź kod i czy drugie urządzenie nadal go pokazuje.',
     'no_peer_answered' => 'Nic w tej sieci nie odpowiedziało na ten kod. Sprawdź, czy na drugim urządzeniu działa synchronizacja.',

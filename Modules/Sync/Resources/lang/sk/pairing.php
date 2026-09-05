@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Identita tvojho zariadenia je uzamknutá. Odomkni aplikáciu a skús to znova.',
     'invalid_code' => 'Tento kód je neplatný alebo vypršal. Nechaj druhé zariadenie vygenerovať nový.',
+    'already_under_way' => 'Toto zariadenie už kód prijalo a čaká na potvrdenie z druhého zariadenia. Ak nepríde, nechaj vygenerovať nový kód a použi ten.',
+    'vouched_but_refused' => 'Druhé zariadenie kód stále má, ale toto zariadenie ho nedokázalo prijať. Nechaj na ňom vygenerovať nový kód a použi ten.',
     'code_incomplete' => 'Tento kód nie je úplný. Porovnaj ho s druhým zariadením a zadaj ho celý.',
     'code_not_accepted' => 'Žiadne zariadenie v tejto sieti tento kód neprijalo. Skontroluj kód a či ho druhé zariadenie stále zobrazuje.',
     'no_peer_answered' => 'V tejto sieti na tento kód nič neodpovedalo. Skontroluj, či na druhom zariadení beží synchronizácia.',

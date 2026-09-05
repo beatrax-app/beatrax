@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Enhetsidentiteten din er låst. Lås opp appen og prøv igjen.',
     'invalid_code' => 'Koden er ugyldig eller har utløpt. Be den andre enheten om å generere en ny.',
+    'already_under_way' => 'Denne enheten har allerede tatt imot koden og venter på at den andre enheten bekrefter. Skjer det ikke, be om en ny kode og bruk den.',
+    'vouched_but_refused' => 'Den andre enheten har fortsatt koden, men denne enheten klarte ikke å ta den imot. Be om en ny kode, og bruk den.',
     'code_incomplete' => 'Koden er ikke fullstendig. Sammenlign den med den andre enheten og skriv inn hele koden.',
     'code_not_accepted' => 'Ingen enhet på dette nettverket godtok koden. Sjekk koden, og at den andre enheten fortsatt viser den.',
     'no_peer_answered' => 'Ingenting på dette nettverket svarte på koden. Sjekk at synkronisering kjører på den andre enheten.',

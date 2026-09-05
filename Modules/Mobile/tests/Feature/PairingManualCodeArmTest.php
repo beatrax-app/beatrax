@@ -457,3 +457,48 @@ it('retires the no-search copy the moment the search can run', function (): void
     expect($html)->not->toContain('does not work on iPhone yet')
         ->and($html)->toContain(Lang::get('mobile::pairing.camera_off'));
 });
+
+// The lock screen deliberately stashes the typed code so the reader does not
+// retype 26 characters against a ten-minute TTL, and PairingOfferService serves
+// an AWAITING_CONFIRM row on purpose so a retry can ask again. Both roads lead
+// back to submitCode with a live code — where accept() refuses a row past
+// `pending` with the same bare false an unknown code gets, and the screen read
+// that false as proof the code was dead.
+it('does not call a live code expired when this phone has already taken it up', function (): void {
+    $user = manualArmUser('armresubmit');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    manualArmUnlockedIdentity($user, $session);
+
+    $wordCode = manualArmDesktopOffering();
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $wordCode)
+        ->call('submitCode', null)
+        ->assertSet('step', PairingWizardStep::Confirm->value);
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $wordCode)
+        ->call('submitCode', null)
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.already_under_way'))
+        ->assertSet('flashMessage', fn (string $m): bool => $m !== Lang::get('mobile::pairing.errors.invalid_code'))
+        ->assertSet('flashMessage', fn (string $m): bool => ! str_contains($m, 'expired'));
+});
+
+// The camera arm reads a code off a screen and asks nobody about it, so an
+// unreadable payload really is the whole of what this device knows. That line
+// stays exactly as it was.
+it('still calls an unreadable scanned payload invalid', function (): void {
+    $user = manualArmUser('armqrjunk');
+    test()->actingAs($user);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('submitCode', 'not-a-beatrax-pairing-payload')
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.invalid_code'));
+});

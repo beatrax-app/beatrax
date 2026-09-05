@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Den anden enhed kan ikke nås. Sørg for, at begge er på samme netværk, og at synkronisering er slået til på computeren.',
         'no_road_home' => 'Denne enhed kan ikke søge på netværket, og koden du scannede indeholder ingen adresse til den anden enhed. Bed den om at vise en ny kode, og scan den i stedet.',
         'invalid_code' => 'Koden er ugyldig eller udløbet. Bed den anden enhed om at generere en ny.',
+        'already_under_way' => 'Denne enhed har allerede taget koden imod og venter på, at den anden enhed bekræfter. Sker det ikke, så bed om en ny kode og brug den.',
+        'vouched_but_refused' => 'Den anden enhed har stadig koden, men denne enhed kunne ikke tage den imod. Bed om en ny kode, og brug den.',
         'code_incomplete' => 'Koden er ikke fuldstændig. Sammenlign den med den anden enhed, og indtast hele koden.',
         'code_not_accepted' => 'Ingen enhed på dette netværk accepterede koden. Tjek koden, og at den anden enhed stadig viser den.',
         'no_peer_answered' => 'Intet på dette netværk svarede på koden. Tjek, at synkronisering kører på den anden enhed, eller scan dens kode med kameraet — kameraet søger ikke på netværket.',

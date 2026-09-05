@@ -138,6 +138,28 @@ are statements about **this** connection: the desktop tells the phone that *it* 
 confirms it, and the phone clears its confirmation of the desktop. Neither says anything to a
 third device, and neither is addressed to one.
 
+### The notice is a claim about a removal, and only a removal makes it
+
+Being told is terminal on the receiving side, by design: the drop is monotonic, and the only
+way back is the whole pairing ceremony again. That is what makes the *trigger* load-bearing.
+
+`SyncSession::authenticate()` refuses a device whose X25519 static key is not in the confirmed
+map, and it refuses two very different devices on that one branch: the one this household
+removed, and the one it has never admitted. A phone that has confirmed while this desktop's own
+confirm is still in flight — held over the relay, or deferred behind a lock — is the second
+kind, and telling it that it was removed turned a ceremony minutes from finishing into a
+pairing that could not resume. So `tellPeerItIsRevoked()` now asks
+`DeviceRegistryService::holdsRevokedDeviceWithKeyAgreementKey()` first: a row this registry
+holds for that handshake key, with the confirmation taken off. With no such row there is no
+removal to report, and the connection closes without claiming one. Nothing about admission
+changed — the gate refused the device either way.
+
+The receiving half is narrowed to match. `LanSyncClient` cleared **every** non-self row, on the
+reasoning that it only ever dials one peer; a phone paired with two desktops lost the silent
+one's confirmation to the other one's notice. One notice arrives over one session and speaks
+for one device, so it now goes through `forgetPeerConfirmation()` for that device alone —
+which is the path `SyncWebSocketHandler` already used for the mirror case.
+
 ### Which of the two behaviours is intended
 
 Per-device is what ships, and the copy in the removal modal now says so: alongside "rotates the

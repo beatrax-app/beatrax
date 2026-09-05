@@ -1920,7 +1920,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
-        'Modules/Mobile/Internal/Sync/LanSyncClient.php device_registry 1',
         'Modules/Onboarding/Internal/Http/Livewire/Steps/FirstImportStep.php accounts 1',
         'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php inbox_messages 2',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',

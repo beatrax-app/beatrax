@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'A másik eszköz nem érhető el. Győződj meg róla, hogy mindkettő ugyanazon a hálózaton van, és a szinkronizálás be van kapcsolva az asztali gépen.',
         'no_road_home' => 'Ez az eszköz nem tud keresni a hálózaton, és a beolvasott kód nem tartalmaz címet a másik eszközhöz. Kérd meg, hogy mutasson új kódot, és olvasd be azt.',
         'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
+        'already_under_way' => 'Ez az eszköz már elfogadta a kódot, és a másik eszköz megerősítésére vár. Ha nem érkezik meg, kérj új kódot, és azt használd.',
+        'vouched_but_refused' => 'A másik eszköznél még megvan ez a kód, de ez az eszköz nem tudta elfogadni. Kérj tőle új kódot, és azt használd.',
         'code_incomplete' => 'Ez a kód nem teljes. Vesd össze a másik eszközzel, és add meg az egészet.',
         'code_not_accepted' => 'A hálózaton egyetlen eszköz sem fogadta el ezt a kódot. Ellenőrizd a kódot, és hogy a másik eszköz még mutatja-e.',
         'no_peer_answered' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. Ellenőrizd, hogy fut-e a szinkronizálás a másik eszközön, vagy olvasd be a kódját a kamerával — a kamerának nem kell keresnie a hálózaton.',

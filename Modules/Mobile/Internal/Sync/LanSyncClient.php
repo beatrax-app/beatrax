@@ -112,7 +112,7 @@ final readonly class LanSyncClient
                     'reason' => $e::class,
                 ]);
             } elseif ($e->isPeerRevocation()) {
-                $this->forgetRevokedPeer($identity->userId);
+                $this->forgetRevokedPeer($identity->userId, $this->resolvePeerDeviceId($identity));
             } else {
                 throw $e;
             }
@@ -152,18 +152,19 @@ final readonly class LanSyncClient
         }
     }
 
-    // Every non-self peer, because this client only ever dials one: keeping
-    // the row confirmed asserts trust the other side already withdrew.
-    private function forgetRevokedPeer(int $userId): void
+    // The device that said it and no other. Sweeping every non-self row took
+    // a second desktop's confirmation down with the first one's notice, and
+    // nothing but a fresh ceremony ever puts a confirmation back.
+    /**
+     * @internal Public so the effect is testable without a live amphp dial.
+     */
+    public function forgetRevokedPeer(int $userId, string $peerDeviceId): void
     {
-        $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 0)
-            ->update(['confirmed_at' => null]);
+        $this->registryService->forgetPeerConfirmation($userId, $peerDeviceId);
 
         $this->logger?->warning('LanSyncClient: peer reports this device was removed — local confirmation cleared.', [
             'user_id' => $userId,
+            'peer_device_id' => $peerDeviceId,
         ]);
     }
 

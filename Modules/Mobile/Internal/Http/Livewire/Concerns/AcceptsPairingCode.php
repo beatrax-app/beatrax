@@ -11,6 +11,7 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Sync\Public\Dto\PairingPeerIdentity;
+use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -41,7 +42,7 @@ trait AcceptsPairingCode
             $scanned = $qrBridge->extractIdentity($scannedPayload);
 
             if ($scanned === null) {
-                $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+                $this->flashMessage = Lang::get($this->acceptRefusalKey(PairingAcceptRefusal::NotLiveHere));
             }
 
             return $scanned ?? false;
@@ -175,12 +176,35 @@ trait AcceptsPairingCode
         }
     }
 
+    // Only one ending may call a code unknown or expired. The other two are
+    // refuted by what this submit saw — a live local row, or the minting
+    // device answering for the code — and sending either reader off for a
+    // fresh one ends a ceremony that was still running.
+    private function acceptRefusalKey(PairingAcceptRefusal $refusal): string
+    {
+        return match ($refusal) {
+            PairingAcceptRefusal::AlreadyUnderWay => 'mobile::pairing.errors.already_under_way',
+            PairingAcceptRefusal::VouchedByIssuer => 'mobile::pairing.errors.vouched_but_refused',
+            PairingAcceptRefusal::NotLiveHere => 'mobile::pairing.errors.invalid_code',
+        };
+    }
+
+    /**
+     * @param  InitiatorIdentity|null  $identity  The code's own identity where
+     *                                            this submit read one, so the
+     *                                            refusal can be classified.
+     * @param  bool  $issuerServedItsOffer  True only on the typed arm, where
+     *                                      the minting device answered for the
+     *                                      code on this very submit.
+     */
     private function reportRejectedCode(
         PairingGateway $gateway,
         UrlGenerator $urls,
         Session $session,
         AppLockClientConfig $lock,
         int $userId,
+        ?array $identity,
+        bool $issuerServedItsOffer,
     ): void {
         // Clear the attempt, not just the message: a token expiring mid-flow
         // otherwise leaves stale addressing in place and the next scan is
@@ -195,7 +219,11 @@ trait AcceptsPairingCode
             return;
         }
 
-        $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+        $refusal = $identity === null
+            ? PairingAcceptRefusal::NotLiveHere
+            : $gateway->classifyAcceptRefusal($identity['token'], $userId, $issuerServedItsOffer);
+
+        $this->flashMessage = Lang::get($this->acceptRefusalKey($refusal));
     }
 
     /**

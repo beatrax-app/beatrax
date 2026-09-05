@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Diğer cihaza ulaşılamıyor. Her ikisinin de aynı ağda olduğundan ve masaüstünde senkronizasyonun açık olduğundan emin ol.',
         'no_road_home' => 'Bu cihaz ağda arama yapamıyor ve taradığın kod diğer cihaza ulaşacak bir adres içermiyor. Ondan yeni bir kod göstermesini iste ve onu tara.',
         'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
+        'already_under_way' => 'Bu cihaz o kodu zaten kabul etti ve diğer cihazın onayını bekliyor. Onay gelmezse yeni bir kod iste ve onu kullan.',
+        'vouched_but_refused' => 'Diğer cihaz o kodu hâlâ tutuyor, ancak bu cihaz onu kabul edemedi. Ondan yeni bir kod iste ve onu kullan.',
         'code_incomplete' => 'Bu kod eksik. Diğer cihazdakiyle karşılaştır ve tamamını gir.',
         'code_not_accepted' => 'Bu ağdaki hiçbir cihaz bu kodu kabul etmedi. Kodu ve diğer cihazın onu hâlâ gösterip göstermediğini kontrol et.',
         'no_peer_answered' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazda eşitlemenin çalıştığını kontrol et ya da kodunu kamerayla tara — kameranın ağda arama yapması gerekmez.',

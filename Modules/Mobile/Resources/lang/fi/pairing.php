@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Toiseen laitteeseen ei saada yhteyttä. Varmista, että molemmat ovat samassa verkossa ja synkronointi on päällä työpöytäsovelluksessa.',
         'no_road_home' => 'Tämä laite ei voi etsiä verkosta, eikä skannaamassasi koodissa ole osoitetta toiseen laitteeseen. Pyydä sitä näyttämään uusi koodi ja skannaa se.',
         'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
+        'already_under_way' => 'Tämä laite on jo ottanut koodin vastaan ja odottaa toisen laitteen vahvistusta. Jos sitä ei tule, pyydä uusi koodi ja käytä sitä.',
+        'vouched_but_refused' => 'Toisella laitteella on koodi yhä, mutta tämä laite ei voinut ottaa sitä vastaan. Pyydä siltä uusi koodi ja käytä sitä.',
         'code_incomplete' => 'Tämä koodi ei ole kokonainen. Vertaa sitä toiseen laitteeseen ja syötä se kokonaan.',
         'code_not_accepted' => 'Mikään tämän verkon laite ei hyväksynyt koodia. Tarkista koodi ja se, näyttääkö toinen laite sitä yhä.',
         'no_peer_answered' => 'Mikään tässä verkossa ei vastannut koodiin. Tarkista, että synkronointi on käynnissä toisella laitteella, tai skannaa sen koodi kameralla — kamera ei etsi verkosta.',

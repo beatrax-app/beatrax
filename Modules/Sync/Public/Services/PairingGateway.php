@@ -19,6 +19,7 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use stdClass;
 
@@ -75,6 +76,26 @@ final readonly class PairingGateway
         return $this->discovery->reach()->silenceMeansNoPeers()
             || $this->peerLink->hasRelayRoad()
             || $this->peerLink->knowsWhereToReach($tokenHash, $peerDeviceId);
+    }
+
+    // Which of the three endings a refused accept was. accept() answers a
+    // single `false` for all of them, and the line that fits one of the three
+    // is a falsehood on the other two — so the caller states what it observed
+    // on the way in, and this pairs that with what the local row says.
+    /**
+     * @param  bool  $issuerServedItsOffer  True where the device that minted
+     *                                      the code answered for it on this
+     *                                      submit, which is only the typed arm.
+     */
+    public function classifyAcceptRefusal(string $tokenHex, int $userId, bool $issuerServedItsOffer): PairingAcceptRefusal
+    {
+        if ($this->rows->awaitsConfirmFor(hash('sha256', $tokenHex), $userId)) {
+            return PairingAcceptRefusal::AlreadyUnderWay;
+        }
+
+        return $issuerServedItsOffer
+            ? PairingAcceptRefusal::VouchedByIssuer
+            : PairingAcceptRefusal::NotLiveHere;
     }
 
     // A word-code carries the token alone, so a fresh responder has no local row to

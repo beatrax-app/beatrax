@@ -9,6 +9,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
+use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 
 // The lines the desktop pairing screen shows when it refuses, kept together
@@ -42,6 +43,19 @@ final readonly class PairingRefusalCopy
         return $this->identityLoader->state($userId, $session) === DeviceIdentityState::Unreadable
             ? Lang::get(self::IDENTITY_UNREADABLE_MESSAGE)
             : Lang::get(self::IDENTITY_LOCKED_MESSAGE);
+    }
+
+    // The one line saying a code is unknown or expired, and the two endings
+    // that must never reach it: this device is already past accept for that
+    // code, or the device that minted it answered for it moments ago. Sending
+    // either reader off for a fresh code abandons a ceremony that was live.
+    public function acceptRefusal(PairingAcceptRefusal $refusal): string
+    {
+        return Lang::get(match ($refusal) {
+            PairingAcceptRefusal::AlreadyUnderWay => 'sync::pairing.already_under_way',
+            PairingAcceptRefusal::VouchedByIssuer => 'sync::pairing.vouched_but_refused',
+            PairingAcceptRefusal::NotLiveHere => 'sync::pairing.invalid_code',
+        });
     }
 
     // A typed code names no device, so a peer that answered and refused may

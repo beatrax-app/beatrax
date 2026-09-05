@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'De identiteit van je apparaat is vergrendeld. Ontgrendel de app en probeer het opnieuw.',
     'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
+    'already_under_way' => 'Dit apparaat heeft die code al aangenomen en wacht tot het andere apparaat bevestigt. Gebeurt dat niet, vraag dan een nieuwe code en gebruik die.',
+    'vouched_but_refused' => 'Het andere apparaat heeft die code nog, maar dit apparaat kon hem niet aannemen. Vraag daar een nieuwe code en gebruik die.',
     'code_incomplete' => 'Dat is geen volledige code. Vergelijk hem met het andere apparaat en typ hem helemaal over.',
     'code_not_accepted' => 'Geen enkel apparaat in dit netwerk accepteerde die code. Controleer de code en of het andere apparaat hem nog toont.',
     'no_peer_answered' => 'Niets in dit netwerk reageerde op die code. Controleer of synchronisatie op het andere apparaat draait.',

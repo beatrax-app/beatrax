@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Cihaz kimliğin kilitli. Uygulamanın kilidini açıp yeniden dene.',
     'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
+    'already_under_way' => 'Bu cihaz o kodu zaten kabul etti ve diğer cihazın onayını bekliyor. Onay gelmezse yeni bir kod iste ve onu kullan.',
+    'vouched_but_refused' => 'Diğer cihaz o kodu hâlâ tutuyor, ancak bu cihaz onu kabul edemedi. Ondan yeni bir kod iste ve onu kullan.',
     'code_incomplete' => 'Bu kod eksik. Diğer cihazdakiyle karşılaştır ve tamamını gir.',
     'code_not_accepted' => 'Bu ağdaki hiçbir cihaz bu kodu kabul etmedi. Kodu ve diğer cihazın onu hâlâ gösterip göstermediğini kontrol et.',
     'no_peer_answered' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazda eşitlemenin çalıştığını kontrol et.',

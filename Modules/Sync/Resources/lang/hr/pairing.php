@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Identitet tvog uređaja je zaključan. Otključaj aplikaciju i pokušaj ponovno.',
     'invalid_code' => 'Ovaj kod nije valjan ili je istekao. Zatraži da drugi uređaj generira novi.',
+    'already_under_way' => 'Ovaj uređaj je taj kod već prihvatio i čeka potvrdu s drugog uređaja. Ako ne stigne, zatraži novi kod i upotrijebi njega.',
+    'vouched_but_refused' => 'Drugi uređaj još ima taj kod, ali ga ovaj uređaj nije mogao prihvatiti. Zatraži od njega novi kod i upotrijebi njega.',
     'code_incomplete' => 'Ovaj kod nije potpun. Usporedi ga s drugim uređajem i unesi ga u cijelosti.',
     'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kod. Provjeri kod i prikazuje li ga drugi uređaj još uvijek.',
     'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Provjeri radi li sinkronizacija na drugom uređaju.',

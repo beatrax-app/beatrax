@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
     'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
+    'already_under_way' => 'This device has already taken that code up, and is waiting for the other device to confirm. If it never does, ask for a fresh code and use that.',
+    'vouched_but_refused' => 'The other device still holds that code, but this device could not take it up. Ask it for a fresh code and use that.',
     'code_incomplete' => 'That is not a complete code. Check it against the other device and type all of it.',
     'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
     'no_peer_answered' => 'Nothing on this network answered that code. Check that sync is running on the other device.',

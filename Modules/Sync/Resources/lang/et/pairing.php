@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
     'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
+    'already_under_way' => 'See seade on koodi juba vastu võtnud ja ootab teise seadme kinnitust. Kui seda ei tule, palu uus kood ja kasuta seda.',
+    'vouched_but_refused' => 'Teisel seadmel on see kood alles, aga see seade ei saanud seda vastu võtta. Palu sellelt uus kood ja kasuta seda.',
     'code_incomplete' => 'See kood ei ole täielik. Võrdle seda teise seadmega ja sisesta see tervikuna.',
     'code_not_accepted' => 'Ükski selle võrgu seade ei võtnud koodi vastu. Kontrolli koodi ja seda, kas teine seade näitab seda veel.',
     'no_peer_answered' => 'Selles võrgus ei vastanud sellele koodile miski. Kontrolli, kas teises seadmes töötab sünkroonimine.',

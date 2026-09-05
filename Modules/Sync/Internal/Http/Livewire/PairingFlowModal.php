@@ -341,7 +341,13 @@ final class PairingFlowModal extends Component
         );
 
         if ($accepted === false || ! $accepted instanceof \stdClass) {
-            $this->flashMessage = Lang::get('sync::pairing.invalid_code');
+            // The offer above came back from the device that minted this code,
+            // which is that device vouching for it. Calling it invalid or
+            // expired here contradicted the step that produced the identity,
+            // and sent the reader for a replacement they did not need.
+            $this->flashMessage = $refusalCopy->acceptRefusal(
+                $gateway->classifyAcceptRefusal($initiator['token'], $userId, issuerServedItsOffer: true),
+            );
 
             return;
         }
