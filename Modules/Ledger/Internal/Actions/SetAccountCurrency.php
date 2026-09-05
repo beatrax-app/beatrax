@@ -8,10 +8,10 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Internal\Exceptions\AccountCurrencyRelabelWarning;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\AccountWriter;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -24,7 +24,7 @@ final readonly class SetAccountCurrency
 
     public function __construct(
         private DatabaseManager $db,
-        private Clock $clock,
+        private AccountWriter $accounts,
         private AccountBalanceQuery $balances,
     ) {}
 
@@ -59,13 +59,7 @@ final readonly class SetAccountCurrency
             $this->warnIfTheAccountAlreadyHoldsSomething($accountId, $user, $account, $current, $currency);
         }
 
-        $this->db->connection()->table('accounts')
-            ->where('id', $accountId)
-            ->where('user_id', $user->id)
-            ->update([
-                'default_currency' => $currency,
-                'updated_at' => $this->clock->now()->toDateTimeString(),
-            ]);
+        $this->accounts->write($user->id, $accountId, ['default_currency' => $currency]);
     }
 
     // Nothing stored is rewritten, so the only thing that moves is which line

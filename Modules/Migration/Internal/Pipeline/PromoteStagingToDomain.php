@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
@@ -38,6 +40,7 @@ use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Support\MigrationSourceFormat;
+use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
@@ -51,6 +54,7 @@ final class PromoteStagingToDomain
 
     public function __construct(
         private readonly DatabaseManager $db,
+        private readonly Container $container,
         private readonly Clock $clock,
         private readonly SourceMapWriter $sourceMapWriter,
         private readonly UnmappedItemReporter $unmappedItems,
@@ -415,11 +419,21 @@ final class PromoteStagingToDomain
             }
 
             // CanonicalTransaction::toAttributes() hard-stamps 'cleared' for any
-            // non-'manual' sourceFormat, so the staged status is re-applied here.
+            // non-'manual' sourceFormat, so the staged status is re-applied
+            // here — and announced, because the create op RecordTransactions
+            // captured a moment ago already carries the stamped value.
+            $stagedStatus = self::toString($row->cleared_status);
             $this->db->connection()->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
-                ->update(['status' => self::toString($row->cleared_status)]);
+                ->update(['status' => $stagedStatus]);
+
+            $this->container->make(Dispatcher::class)->dispatch(new TransactionMutated(
+                transactionId: $transactionId,
+                userId: $user->id,
+                mutationType: 'edit',
+                dirtyFields: ['status' => $stagedStatus],
+            ));
 
             $this->sourceMapWriter->record(
                 $user,

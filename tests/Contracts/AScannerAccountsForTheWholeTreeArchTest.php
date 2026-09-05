@@ -137,7 +137,7 @@ it('accounts for every root holding first-party code, in every scope a guard can
 // A scope that reads almost nothing reports the same clean tree as a scope that
 // found nothing wrong, so the walk's own size is asserted before any guard
 // reads a verdict off it. The floors sit far under today's counts -- 9,333,
-// 6,500 and 276 -- so only a broken walk trips them.
+// 6,500, 276 and 6,333 -- so only a broken walk trips them.
 it('gives every scope a floor its walk cannot quietly fall under', function (string $scope, int $floor): void {
     expect(count(RepoTree::files($scope)))->toBeGreaterThan(
         $floor,
@@ -148,6 +148,7 @@ it('gives every scope a floor its walk cannot quietly fall under', function (str
     'every PHP file' => [RepoTree::EVERY_PHP_FILE, 8000],
     'the production PHP' => [RepoTree::PRODUCTION_PHP, 5000],
     'every Blade view' => [RepoTree::EVERY_BLADE_VIEW, 200],
+    'the runtime domain PHP' => [RepoTree::RUNTIME_DOMAIN_PHP, 4000],
 ]);
 
 // A guard that cannot go red is a guard that says nothing, and the three

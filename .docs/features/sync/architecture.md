@@ -1635,6 +1635,47 @@ one dispatch per call site.
 writes and announces each with `EntityMutated`. When adding capture, count the
 writers of the table, not the dispatches.
 
+### A captured table can still have an uncaptured column
+
+Counting writers is still one question short. A row travels as a whole-row
+create the first time anything captures it, and after that only as the Sets its
+writers announce — so a column first written *after* that create reaches a peer
+never, whatever else the table announces.
+
+`accounts` was the shape at its clearest. The row is captured as a parent of the
+first transaction that names it, and every number a reader later puts on it —
+the currency on `/accounts`, the forecast buffer and opening balance on the
+forecast panel, the starting balance the import wizard asks them to confirm —
+was written by a bare `->update()` afterwards. `Ledger\Public\Services\AccountWriter`
+is now the one seam for all five, and it announces the columns it was handed.
+
+`transactions.pair_transaction_id` was the same defect with a sharper edge.
+`TransferPairer` wrote the link on **both** legs and dispatched nothing, so it
+travelled only inside a create — and a transfer spans two accounts, which is two
+statements and usually two import runs. A pair joining a new leg to an older one
+therefore reached the peer one-sided: the new leg named its partner, the partner
+named nobody, and the dashboard on that device went on netting a transfer it
+could only see half of. A pair formed by `pairOrphansForUser` after the capture
+travelled not at all, and the whole-table backfill skips a row that already
+carries a create op, so nothing ever went back for it.
+`Transfers\Internal\Services\PairLinkWriter` owns the write and announces both
+legs.
+
+That link is a foreign key into its own table, so an announced Set routinely
+arrives before the partner row does. `SelfReferenceDeferral` already held
+exactly that case for a column inside a create; `OpLogEntryApplier` now hands it
+a Set on the same columns rather than letting the key refuse it and recording a
+strategy error nothing retries. The deferral writes the link the moment the
+partner lands — in the same batch, a later one, or on a later day through
+`resolveFromHistory()`, which reads the Set back out of the log.
+
+`ASyncedColumnIsAnnouncedByItsWriterArchTest` is the guard, and it is the third
+of a family: the delete guard asks this of a removal, the `users` guard asks it
+of the settings row, and this one asks it of every column `MergeRulesRegistry`
+declares mergeable, on every covered table. A writer whose *caller* announces is
+pinned there with the file that proves it, and the pin is compared in both
+directions so it cannot outlive the reason it was granted for.
+
 ### `system_alerts` travels only where it is owned
 
 `system_alerts` captures in part, and the split is the point. Six probe write

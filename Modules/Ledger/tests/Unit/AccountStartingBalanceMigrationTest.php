@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Modules\Ledger\Internal\Services\BackfillStartingBalanceFromStatementSummaries;
@@ -121,9 +120,8 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'opening_balance_date' => CarbonImmutable::parse('2026-03-20 00:00:00'),
     ]);
 
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $service = new BackfillStartingBalanceFromStatementSummaries($db);
+    /** @var BackfillStartingBalanceFromStatementSummaries $service */
+    $service = $this->app->make(BackfillStartingBalanceFromStatementSummaries::class);
     $service->run();
 
     $accountA->refresh();
@@ -173,9 +171,8 @@ it('is idempotent — re-running the backfill does not overwrite a non-null star
         'opening_balance_date' => CarbonImmutable::parse('2026-02-01 00:00:00'),
     ]);
 
-    /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
-    $service = new BackfillStartingBalanceFromStatementSummaries($db);
+    /** @var BackfillStartingBalanceFromStatementSummaries $service */
+    $service = $this->app->make(BackfillStartingBalanceFromStatementSummaries::class);
     $service->run();
     $service->run();
 

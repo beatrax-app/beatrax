@@ -108,6 +108,41 @@ function selfRefPairCreates(int $userId, int $accountId, int $importRunId): arra
     return $creates;
 }
 
+// The same coordinate as a create's field, carried by the op type an EDIT uses.
+// TransferPairer pairs a new leg against an older one, so the link reaches a
+// peer as a Set on a row that already exists, long after either create.
+function selfRefSet(int $pk, ?int $partner, int $userId, int $hlc): OpLogEntry
+{
+    return new OpLogEntry(
+        userId: $userId,
+        deviceId: 'self-ref-device',
+        table: 'transactions',
+        pk: $pk,
+        field: 'pair_transaction_id',
+        opType: OpType::Set,
+        // PHP null is the clear sentinel and travels as SQL NULL, never as the
+        // JSON text "null" — the same contract OpLogWriter::writeSet keeps.
+        value: $partner === null ? null : json_encode($partner, JSON_THROW_ON_ERROR),
+        hlcL: $hlc,
+        hlcC: 0,
+        signature: str_repeat('0', 128),
+    );
+}
+
+/**
+ * @return array<string, array<int|string, array<string, list<OpLogEntry>>>>
+ */
+function selfRefUnpairedCreates(int $userId, int $accountId, int $importRunId): array
+{
+    $creates = selfRefPairCreates($userId, $accountId, $importRunId);
+
+    foreach ([251, 295] as $pk) {
+        unset($creates['transactions'][$pk]['pair_transaction_id']);
+    }
+
+    return $creates;
+}
+
 function selfRefImportRun(DatabaseManager $db, int $userId): int
 {
     return (int) $db->connection()->table('import_runs')->insertGetId([
@@ -217,6 +252,111 @@ it('resolves a self-reference whose target lands in a later batch', function ():
     // household, so losing it moves what the reader is shown.
     expect((int) $rows[0]->pair_transaction_id)->toBe(295, '251 must find the partner that arrived after it')
         ->and((int) $rows[1]->pair_transaction_id)->toBe(251);
+});
+
+it('holds a Set naming a partner that has not arrived, and writes it when it does', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('deferred-set-replay')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+    $creates = selfRefUnpairedCreates($userId, $accountId, selfRefImportRun($db, $userId));
+
+    $touched = new ReplayedRows($db);
+    $pendingDeletes = [];
+
+    /** @var OpLogEntryApplier $applier */
+    $applier = app(OpLogEntryApplier::class);
+
+    $applier->applyCreates(['transactions' => [251 => $creates['transactions'][251]]], [], $userId, '2026-06-10 12:00:00', $touched);
+
+    // The pairing Set arrives before the partner row, which is the ordinary
+    // shape: a transfer spans two accounts and one statement is one account.
+    $applier->applyFieldMerges(
+        ['transactions' => [251 => ['pair_transaction_id' => [selfRefSet(251, 295, $userId, 5)]]]],
+        [],
+        $userId,
+        '2026-06-10 12:00:00',
+        $pendingDeletes,
+        $touched,
+    );
+
+    // Written through, the foreign key refuses it and the applier's own catch
+    // records a strategy error nothing ever retries.
+    expect($db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())
+        ->toBe(0, 'a link waiting for its partner is not a refusal to record')
+        ->and($db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))->toBeNull();
+
+    $applier->applyCreates(['transactions' => [295 => $creates['transactions'][295]]], [], $userId, '2026-06-10 12:00:00', $touched);
+
+    expect((int) $db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))
+        ->toBe(295, 'the held link must be written the moment the partner lands');
+});
+
+it('writes a Set whose partner is already here', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('present-partner-set')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+
+    $touched = new ReplayedRows($db);
+    $pendingDeletes = [];
+
+    /** @var OpLogEntryApplier $applier */
+    $applier = app(OpLogEntryApplier::class);
+
+    $applier->applyCreates(selfRefUnpairedCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched);
+
+    $applier->applyFieldMerges(
+        ['transactions' => [
+            251 => ['pair_transaction_id' => [selfRefSet(251, 295, $userId, 5)]],
+            295 => ['pair_transaction_id' => [selfRefSet(295, 251, $userId, 5)]],
+        ]],
+        [],
+        $userId,
+        '2026-06-10 12:00:00',
+        $pendingDeletes,
+        $touched,
+    );
+
+    $rows = $db->connection()->table('transactions')->whereIn('id', [251, 295])->orderBy('id')->get(['id', 'pair_transaction_id']);
+
+    expect((int) $rows[0]->pair_transaction_id)->toBe(295)
+        ->and((int) $rows[1]->pair_transaction_id)->toBe(251);
+});
+
+it('clears a link on a Set carrying null, which names no partner to wait for', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $userId = (int) selfRefUser('cleared-link-set')->id;
+
+    selfRefUnlock($userId);
+    $accountId = selfRefAccount($db, $userId);
+
+    $touched = new ReplayedRows($db);
+    $pendingDeletes = [];
+
+    /** @var OpLogEntryApplier $applier */
+    $applier = app(OpLogEntryApplier::class);
+
+    $applier->applyCreates(selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched);
+
+    // Reclassifying a leg out of the transfer types breaks the pair on both
+    // rows, and a cleared link has no referent, so it takes the ordinary path.
+    $applier->applyFieldMerges(
+        ['transactions' => [251 => ['pair_transaction_id' => [selfRefSet(251, null, $userId, 9)]]]],
+        [],
+        $userId,
+        '2026-06-10 12:00:00',
+        $pendingDeletes,
+        $touched,
+    );
+
+    expect($db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))->toBeNull()
+        ->and((int) $db->connection()->table('transactions')->where('id', 295)->value('pair_transaction_id'))->toBe(251);
 });
 
 it('defers every self-referential foreign key the schema declares', function (): void {

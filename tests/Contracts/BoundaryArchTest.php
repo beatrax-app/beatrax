@@ -1907,8 +1907,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
         'Modules/DevMode/Internal/Queue/QueueActions.php jobs 2',
-        'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php accounts 1',
-        'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php transactions 1',
         // The counterparty blind-index sweep re-keys the matching columns of
@@ -1920,12 +1918,15 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
-        'Modules/Onboarding/Internal/Http/Livewire/Steps/FirstImportStep.php accounts 1',
         'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php inbox_messages 2',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
-        'Modules/Transfers/Internal/Services/TransferPairer.php transactions 2',
+        // `pair_transaction_id` names a row in the table Ledger owns, and both
+        // legs have to carry it or neither does. The Transfers module is the one
+        // that knows a pair exists, so the link is written here and announced
+        // here; four raw writes across three modules collapsed into this one.
+        'Modules/Transfers/Internal/Services/PairLinkWriter.php transactions 1',
         'Modules/Transfers/Public/Services/PairUnlinker.php transactions 1',
     ];
 
@@ -2310,6 +2311,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/APairingSendNeverDeclinesInSilenceArchTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingPeerLink',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
+        'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
@@ -2343,6 +2345,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobileImportBootstrap',
         'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
+        'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',

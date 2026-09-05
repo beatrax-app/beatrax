@@ -8,11 +8,11 @@ use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use Modules\Ledger\Public\Services\AccountWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -22,7 +22,7 @@ final readonly class SetAccountForecastBuffer
 {
     public function __construct(
         private DatabaseManager $db,
-        private Clock $clock,
+        private AccountWriter $accounts,
         private BusDispatcher $bus,
     ) {}
 
@@ -41,15 +41,7 @@ final readonly class SetAccountForecastBuffer
             throw new InvalidArgumentException(Lang::get('forecasting::buffer.errors.non_negative'));
         }
 
-        $this->db->connection()->transaction(function () use ($accountId, $user, $bufferMinor): void {
-            $this->db->connection()->table('accounts')
-                ->where('id', $accountId)
-                ->where('user_id', $user->id)
-                ->update([
-                    'forecast_min_buffer_minor' => $bufferMinor,
-                    'updated_at' => $this->clock->now()->toDateTimeString(),
-                ]);
-        });
+        $this->accounts->write($user->id, $accountId, ['forecast_min_buffer_minor' => $bufferMinor]);
 
         foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(

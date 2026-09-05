@@ -97,10 +97,15 @@ final class MergeRulesRegistry
                 // carry defaults and stay out of the required set.
                 '_create_required' => ['source_format', 'raw_file_path', 'sha256', 'uploaded_at'],
             ],
+            // pair_transaction_id names a row in this same table, so a Set
+            // carrying it can land before its partner: SelfReferenceDeferral
+            // holds such a Set rather than letting the foreign key refuse it,
+            // exactly as it already does for the column inside a create.
             'transactions' => [
                 'category_id' => ['nullable' => true],
                 'note' => ['nullable' => true],
                 'counterparty_id' => ['nullable' => true],
+                'pair_transaction_id' => ['nullable' => true],
                 'type' => ['nullable' => false],
                 'status' => ['nullable' => false],
                 '_delete_wins' => true,
@@ -260,12 +265,17 @@ final class MergeRulesRegistry
                 '_create_required' => ['goal_id', 'transaction_id'],
             ],
             // `default_currency` carries a DB default('EUR') so it MUST NOT
-            // appear in `_create_required` (same trap as saved_reports.pinned /
-            // envelope_settings.overspend_mode). name/slug/kind/iban are the
-            // NOT-NULL-without-default columns.
+            // appear in `_create_required` (same trap as saved_reports.pinned).
+            // name/slug/kind/iban are the NOT-NULL-without-default ones; every
+            // anchor below is written after the row's create op has travelled.
             'accounts' => [
                 'name' => ['nullable' => false],
                 'default_currency' => ['nullable' => false],
+                'forecast_min_buffer_minor' => ['nullable' => true],
+                'opening_balance_minor' => ['nullable' => true],
+                'opening_balance_as_of_date' => ['nullable' => true],
+                'starting_balance_minor' => ['nullable' => true],
+                'starting_balance_date' => ['nullable' => true],
                 '_delete_wins' => false,
                 '_create_required' => ['name', 'slug', 'kind', 'iban'],
             ],

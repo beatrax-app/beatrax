@@ -7,7 +7,6 @@ namespace Modules\Transfers\Internal\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
@@ -27,7 +26,7 @@ final readonly class TransferPairer implements PairsTransferLegs
 
     public function __construct(
         private DatabaseManager $db,
-        private Clock $clock,
+        private PairLinkWriter $links,
         private ResolvesKnownCounterpartyIban $aliasResolver,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
@@ -129,33 +128,9 @@ final readonly class TransferPairer implements PairsTransferLegs
         return $aliasAccountId === $ownAccountId ? null : $aliasAccountId;
     }
 
-    // Both sides in one transaction. Uniqueness rules out a concurrent run for
-    // the same user; it does not rule out a crash between two statements, and
-    // that half-pair does not heal: pairOrphansForUser finds the partner while
-    // counterLegOnAccount's unpairedOnly narrowing hides the leg pointing at it.
     private function linkPair(Transaction $tx, User $user, int $partnerId): void
     {
-        $now = $this->clock->now()->toDateTimeString();
-        $connection = $this->db->connection();
-
-        $connection->transaction(function () use ($connection, $tx, $user, $partnerId, $now): void {
-            $connection
-                ->table('transactions')
-                ->where('user_id', $user->id)
-                ->where('id', $tx->id)
-                ->update([
-                    'pair_transaction_id' => $partnerId,
-                    'updated_at' => $now,
-                ]);
-            $connection
-                ->table('transactions')
-                ->where('user_id', $user->id)
-                ->where('id', $partnerId)
-                ->update([
-                    'pair_transaction_id' => $tx->id,
-                    'updated_at' => $now,
-                ]);
-        });
+        $this->links->link($user->id, $tx->id, $partnerId);
 
         // The row was written through the query builder, so the caller's model is
         // re-synced by hand and observers see the post-pair state.
