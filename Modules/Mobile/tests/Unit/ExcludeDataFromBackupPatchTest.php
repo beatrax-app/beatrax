@@ -66,9 +66,23 @@ XML;
 function withIosScaffold(string $root, string $body): string
 {
     mkdir($root.'/nativephp/ios/NativePHP', 0700, true);
-    file_put_contents($root.'/nativephp/ios/NativePHP/NativePHPApp.swift', $body);
+    file_put_contents(
+        $root.'/nativephp/ios/NativePHP/NativePHPApp.swift',
+        $body.stockPreparePhpEnvironment(),
+    );
 
     return $root;
+}
+
+// The script patches two sites and exits 1 if either anchor is missing, so a
+// scaffold carrying only the first is not a shell this script has ever met.
+function stockPreparePhpEnvironment(): string
+{
+    return "\n"
+        ."    private func preparePhpEnvironment() -> String {\n"
+        ."        let phpIniPath = createPhpIni()\n"
+        ."        return phpIniPath\n"
+        ."    }\n";
 }
 
 // Concatenated rather than heredoc: the anchor the script matches is

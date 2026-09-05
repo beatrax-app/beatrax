@@ -344,11 +344,12 @@ seeds is one the peer's own row can no longer land beside. See
     the dev `database.sqlite` (a data leak) and defeating the
     fresh-install onboarding gate. `isMobileRuntime()` therefore
     detects the runtime STRUCTURALLY as a fallback: NativePHP mobile
-    relocates `base_path()` into `<app_storage>/laravel` and
-    provisions a sibling `persisted_data` store (created by the native
-    layer before the PHP runtime serves a request), so the sibling
-    directory existing is a request-load-stable mobile signal that
-    never matches on desktop/host. `databaseFile()` targets that
+    relocates `base_path()` into the shell's own tree —
+    `<app_storage>/laravel` on Android, `<container>/Documents/app` on
+    iOS — and provisions a sibling `persisted_data` store (created by
+    the native layer before the PHP runtime serves a request), so the
+    sibling directory existing is a request-load-stable mobile signal
+    that never matches on desktop/host. `databaseFile()` targets that
     sibling persisted store on mobile — empty on a genuine fresh
     install, retained across app updates.
 - `EnsureAppKey::run()` — first-launch APP_KEY mint, guarded by a

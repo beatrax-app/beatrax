@@ -90,3 +90,31 @@ if (! function_exists('beatraxRewrite')) {
         return $rewritten;
     }
 }
+
+if (! function_exists('beatraxSourcePath')) {
+    /**
+     * A file from the APPLICATION source, not the generated scaffold.
+     *
+     * The desktop root holds scripts/ and Modules/ as siblings, and a
+     * materialized mobile-build tree dereferences mobile-app/Modules into the
+     * same shape — so one probe answers both. BEATRAX_NATIVE_ROOT deliberately
+     * does not apply: it names a scaffold to patch, never the source of truth
+     * a patch is derived from.
+     *
+     * @param  string  $relative  path under the composer root, e.g. 'Modules/Core/...'
+     * @return string|null the first existing candidate, or null when the source
+     *                     tree is not reachable from this script
+     */
+    function beatraxSourcePath(string $relative): ?string
+    {
+        foreach ([dirname(__DIR__), dirname(__DIR__).'/mobile-app'] as $root) {
+            $candidate = $root.'/'.ltrim($relative, '/');
+
+            if (file_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+}

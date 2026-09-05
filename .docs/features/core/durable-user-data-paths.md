@@ -89,6 +89,15 @@ provisioned by the native layer before the PHP runtime serves its first
 request. Its existence is stable across every request-load, and it never
 matches on desktop or host.
 
+On Android `LaravelEnvironment.kt` has always created it. On iOS nothing native
+did — the directory was made by the `->booting()` hook's own `@mkdir`, which is
+inside the PHP runtime rather than ahead of it. `prepareDurableStore()`, injected
+into the iOS shell by `scripts/nativephp_exclude_data_from_backup.php`, now
+creates it in `preparePhpEnvironment()` before PHP is embedded. That ordering is
+not cosmetic: `NSURLIsExcludedFromBackupKey` is set on a node that exists, so a
+shell arriving after PHP's `@mkdir` would be flagging a directory it did not
+make, one launch late.
+
 It asks `platformSignal()` rather than `platform()` deliberately: a shell
 NativePHP names but `MobilePlatform` does not model is still a mobile runtime,
 and answering `false` would send that device's durable user data back into the
@@ -156,6 +165,24 @@ default connection is not this file's `databaseFile()` at all — the vendored
 desktop service provider rewrites `database.default` to its own `nativephp`
 connection, which in debug builds is `database/nativephp.sqlite` inside the
 project and in packaged builds is `NATIVEPHP_DATABASE_PATH`.
+
+## One name for the store, read by two very different callers
+
+The directory name, the database's relative path and `storage/app` live in
+`Modules\Core\Public\Support\PersistedStore`, not in this class. That looks
+like indirection for its own sake until you see who the second caller is:
+`scripts/nativephp_exclude_data_from_backup.php` builds the iOS shell's
+backup-exclusion from the same constants, so the tree the shell flags is the
+tree this class resolves, by construction.
+
+They were not held together before, and they disagreed. The exclusion was set on
+`Library/Application Support` while the store is under `Documents`, so the SQLite
+ledger, the GDK keyring, the sync identity and the staged secrets were all in
+iCloud backup. A hardware check reported the requirement satisfied because it
+confirmed "a database" was excluded without recording which one — and the file it
+could have read was a 4 KB empty stub. `ExcludeDataFromBackupScriptTest` now
+asserts the excluded directories against what this class answers, rather than
+against a string in a Swift file.
 
 ## Path traversal
 
