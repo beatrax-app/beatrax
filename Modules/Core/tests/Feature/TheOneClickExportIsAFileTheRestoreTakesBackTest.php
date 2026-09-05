@@ -150,7 +150,12 @@ it('refuses an archive that holds no backup of ours, and leaves the live file al
     expect(fn () => app(RestoreEncryptedBackup::class)($foreign, 'a-good-passphrase'))
         ->toThrow(BackupFormatException::class, 'holds no Beatrax backup');
 
-    expect(roundTripMarker($live))->toBe('EXPORTED');
+    // A refusal a reader retries, so the staging file the lift was about to
+    // fill goes with it rather than leaving one empty 0600 file per attempt.
+    $staged = glob(UserDataPathService::appPath('tmp-restore').DIRECTORY_SEPARATOR.'*') ?: [];
+
+    expect(roundTripMarker($live))->toBe('EXPORTED')
+        ->and($staged)->toBe([]);
 });
 
 it('tells an archive from a bare encrypted backup by its first four bytes', function (): void {

@@ -103,7 +103,17 @@ final readonly class RestoreEncryptedBackup
             throw new BackupIoException('The staged backup could not be made owner-only: '.$lifted);
         }
 
-        $this->exportArchive->liftBackupInto($uploadedPath, $lifted);
+        try {
+            $this->exportArchive->liftBackupInto($uploadedPath, $lifted);
+        } catch (Throwable $e) {
+            // Made owner-only before the lift, so the file exists by the time
+            // one throws. The refusals here are the ones a reader retries, and
+            // an empty 0600 file per attempt is what the staging area fills up
+            // with when the cleanup lives only on the path that succeeded.
+            $this->files->delete($lifted);
+
+            throw $e;
+        }
 
         return $lifted;
     }
