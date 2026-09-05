@@ -268,13 +268,13 @@ it('reports an update that leaves a mergeable column unannounced', function (): 
     // The third shape: an assignment and a save, two statements apart, with
     // the model class standing in for the table.
     $save = '->save'.'()';
-    $viaSave = "<?php \$goal = Goal::find(\$id); \$goal->target_minor = \$m; \$goal".$save.';';
+    $viaSave = '<?php $goal = Goal::find($id); $goal->target_minor = $m; $goal'.$save.';';
     expect(SyncedColumnWrites::updatesColumn('goals', 'target_minor', $viaSave, 'Goal'))->toBeTrue()
         ->and(SyncedColumnWrites::updatesColumn('goals', 'target_minor', $viaSave, null))->toBeFalse()
-        ->and(SyncedColumnWrites::updatesColumn('goals', 'target_minor', "<?php \$goal->target_minor = \$m;", 'Goal'))->toBeFalse();
+        ->and(SyncedColumnWrites::updatesColumn('goals', 'target_minor', '<?php $goal->target_minor = $m;', 'Goal'))->toBeFalse();
 
     // A model whose name is a prefix of another's is not that other model.
-    $splitSave = "<?php \$leg = new TransactionSplit; \$leg->note = \$n; \$leg".$save.';';
+    $splitSave = '<?php $leg = new TransactionSplit; $leg->note = $n; $leg'.$save.';';
     expect(SyncedColumnWrites::updatesColumn('transactions', 'note', $splitSave, 'Transaction'))->toBeFalse();
 
     // A reason quoted in prose beside a write is not the write.
