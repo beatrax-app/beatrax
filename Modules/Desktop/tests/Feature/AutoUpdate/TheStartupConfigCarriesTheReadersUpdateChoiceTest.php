@@ -6,7 +6,7 @@ use Illuminate\Console\Events\CommandStarting;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Listeners\ApplyUpdateCheckChoiceToStartupConfig;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 // `native:config` is a separate artisan process the Electron main process runs
 // at bootstrap; its JSON reply is the only thing the main process knows before
@@ -27,7 +27,7 @@ function startupConfigReader(bool $checkEnabled): User
 
 function startupConfigStarting(string $command): CommandStarting
 {
-    return new CommandStarting($command, new ArrayInput([]), new NullOutput);
+    return new CommandStarting($command, new ArrayInput([]), new BufferedOutput);
 }
 
 it('turns the Electron boot poll off when the startup config is read', function (): void {

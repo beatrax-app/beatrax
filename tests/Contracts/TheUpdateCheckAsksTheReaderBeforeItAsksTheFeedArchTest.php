@@ -135,10 +135,8 @@ it('narrows the Electron boot poll by the same answer', function (): void {
     $configPath = updateSwitchDesktopRoot().'/config/nativephp.php';
 
     expect(is_file($configPath))->toBeTrue('the desktop config/nativephp.php was not found from either composer root');
-    expect((string) file_get_contents($configPath))->toContain(
-        "'updater' =>",
-        'the boot-time updater key this guard is about has gone — rewrite the guard, do not delete it',
-    );
+    expect(str_contains((string) file_get_contents($configPath), "'updater' =>"))
+        ->toBeTrue('the boot-time updater key this guard is about has gone — rewrite the guard, do not delete it');
 
     $narrowers = [];
     foreach (updateSwitchFilesNaming("'".UPDATE_SWITCH_BOOT_KEY."'") as $relative) {
