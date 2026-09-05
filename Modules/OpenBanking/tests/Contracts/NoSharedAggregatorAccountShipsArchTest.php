@@ -115,7 +115,7 @@ it('ships no aggregator private key of its own', function (): void {
         ."account by another name. Offenders:\n  ".implode("\n  ", $carriers),
     );
 
-    $violatingSample = 'private const string KEY = "-----BEGIN PRIVATE KEY-----\\nMIIE...\\n-----END PRIVATE KEY-----";';
+    $violatingSample = 'private const string KEY = "-----BEGIN '.'PRIVATE KEY-----\\nMIIE...\\n-----END PRIVATE KEY-----";';
     expect(PatternScan::matches(NO_SHARED_AGGREGATOR_PEM_PATTERN, $violatingSample))->toBeTrue();
 
     $safeSample = '$pem = $credentials->privateKeyPem;';

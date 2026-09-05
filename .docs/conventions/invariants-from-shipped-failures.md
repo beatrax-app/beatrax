@@ -6264,6 +6264,90 @@ that sweep plucks the ids in one chain and deletes them in the next. Both are
 now asserted against: an exemption has to name a table the guard would
 otherwise have caught, and some scheduled task has to actually prune it.
 
+## A test fixture shaped like a secret
+
+`tests/Contracts/ATestFixtureIsNeverShapedLikeASecretArchTest.php`
+
+A test that proves a credential is scrubbed, redacted or consumed needs a
+credential to prove it with, and the obvious way to write one is to spell it
+out. Three fixtures did: a passphrase and a six-digit PIN in the mobile
+credentials setup test, a live-key prefix in the dev-console redaction test, and
+a hex digest beside the word `key` in a counterparty provenance test. Each one
+matched a rule in the secret scanner's default set — `generic-api-key` twice and
+`stripe-access-token` once.
+
+None of them failed the branch that wrote it. The shared security workflow
+checks out with `fetch-depth: 0`, which fetches **every ref**, and runs
+`gitleaks git .` with no `--log-opts`, so the scan walks the whole repository
+rather than the pull request under review. The consequence is the part worth
+remembering: the check went red on four to nine *other* contributors' open pull
+requests, naming a file and a line their diffs did not contain. Whoever was
+reading that failure had no way to reach the cause from it, and a scan of their
+own branch reproduced nothing — only `--log-opts="--all"` sees what CI sees.
+
+The remedy that shipped each time is a **runtime-assembled literal** plus an
+assertion on the value it produces, never an allowlist entry and never an inline
+suppression:
+
+```php
+$key = 'sk_'.'test_'.'51H8xQ2Kj3nRtYuIoP0aSdFgHjKlZ';
+$hex = str_repeat('a1b2c3d4', 8);
+$phrase = implode('-', ['correct', 'horse', 'battery', 'staple']);
+```
+
+The value is unchanged, so what the test proved it still proves; the *source
+text* no longer carries a contiguous run any rule matches. Which fragment to
+split is not arbitrary. A vendor rule keys on its prefix, so `sk_` splits from
+`test_`. `generic-api-key` matches a long high-entropy run near a name that says
+key, so the run has to be built rather than written — and note that renaming the
+variable does not help, because `$expectedKey = '…'` reads to that rule exactly
+as `api_key: '…'` does.
+
+The guard has to agree with the gate or it is worse than nothing, so it does not
+invent a notion of "secret-shaped". `.gitleaks.toml` here declares
+`useDefault = true` and no rules of its own, which means the ruleset CI applies
+is the one compiled into the gitleaks binary the workflow downloads — a Go
+binary no PHP test can read. So that ruleset is vendored, verbatim and at the
+pinned version, at `tests/Contracts/Fixtures/gitleaks/v8.30.1/gitleaks.toml`,
+and read at run time by `Tests\Contracts\Support\GitleaksRuleset`;
+`Tests\Contracts\Support\SecretShapedValues` reproduces the detection order the
+scanner runs, down to the keyword prefilter, the capture group entropy is
+measured on, the two allowlist passes, and the rule that drops a generic finding
+when a named vendor rule covered the same line. Both halves of the exemption set
+are honoured — upstream's own, which is why the vendored file keeps its upstream
+basename and is skipped exactly as the configuration at the repository root is,
+and the handful this repository adds.
+
+That agreement is measured rather than asserted. Run against the whole working
+tree, gitleaks 8.30.1 and the PHP reading returned the same verdict file for
+file — including on the one fixture that was carrying a match, which they agreed
+on down to the line and the rule id. Over a 45-probe corpus of vendor keys,
+generic keys, PEM blocks, JWTs, and the assembled forms that are the remedy, the
+two verdict sets are identical, rule id by rule id. Where they can still diverge is written down rather than hoped away:
+the scanner runs up to five base64 decoding passes over a fragment and this
+reading runs none, it counts entropy per rune where PCRE counts bytes, and the
+guard walks the test roots rather than every path in git. All three directions
+are false negatives — the guard is quieter than the gate, never louder — which
+is the safe way round for a rule whose false positives would be argued with.
+
+Four things keep it from going quietly inert. Every pattern in the vendored
+ruleset must compile under PCRE, so a rule that cannot be read is named rather
+than left scanning nothing. `.gitleaks.toml` must still extend the defaults and
+declare no rules of its own, because the moment it does not, the vendored copy
+has stopped describing what CI runs. A dataset of assembled probes asserts both
+directions — the shapes that must be found and the remedies that must not be —
+against the reader rather than against the tree. And every path exempted in
+`.gitleaks.toml` is re-scanned with that exemption withheld: an entry whose file
+would no longer fail without it has outlived what earned it, and an exclusion
+nobody is auditing is the thing this rule exists to avoid needing.
+
+It found one on the way in. `OpenBankingWizardModalTest` carried the same PEM
+header three times, and the private-key rule spans from a `BEGIN` line to a
+later `KEY-----` once at least sixty-four characters sit between them — so one
+occurrence of that header was inert, and the third made the file a finding.
+That is the quiet shape of this defect: nothing about the line that finally
+trips it is different from the two that did not.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
