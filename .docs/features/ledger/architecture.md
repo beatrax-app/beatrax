@@ -1141,8 +1141,8 @@ transactions posted on or before the statement date to `reconciled`;
 `Public/Services/TransactionStatusWriter` mirrors `EnvelopeWriter`'s
 shape: one DB transaction per operation, events dispatched only after
 commit. It is the only thing in the tree that transitions the column,
-and `BoundaryArchTest::noOtherTransactionStatusMutator` is what keeps
-that true.
+and the arch invariant `noOtherTransactionStatusMutator` is what
+keeps that true.
 
 **Why one writer.** A `reconciled` row is the reader's own assertion
 that Beatrax and a bank statement agree, so every mutator on the page
