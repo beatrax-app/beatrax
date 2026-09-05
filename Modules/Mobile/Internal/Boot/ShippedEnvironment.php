@@ -11,7 +11,7 @@ use Modules\Core\Public\Support\PatternScan;
 // it reads on a desktop is not consulted at all. A debuggable phone build opens
 // the artisan runner and the query panel to the only account a phone has.
 /**
- * @link ../../../../../.docs/features/dev-mode/the-console-on-a-shipped-build.md
+ * @link ../../../../.docs/features/dev-mode/the-console-on-a-shipped-build.md
  */
 final class ShippedEnvironment
 {
