@@ -103,7 +103,7 @@ function catchBodiesLeftEmptyOnPurpose(): array
         ],
         'Modules/Sync/Internal/Merge/SearchIndexRefresher.php' => [
             'count' => 1,
-            'why' => 'FTS freshness runs outside the merge transaction by construction, and an index hiccup must never break merge determinism.',
+            'why' => 'It wraps the warning that IS the report of a stale index; a logger failing on a full disk must not take merge determinism down with it.',
         ],
         'Modules/Sync/Internal/Merge/SelfReferenceDeferral.php' => [
             'count' => 1,

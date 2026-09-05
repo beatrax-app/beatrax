@@ -11,6 +11,7 @@ return [
     'error' => 'Bir veya daha fazla cihazda senkronizasyon hatası',
     'syncing' => 'Senkronize ediliyor…',
     'offline' => 'Cihazlar çevrimdışı',
+    'behind' => 'Değişiklikler henüz gönderilmedi',
     'all_synced' => 'Tüm cihazlar güncel',
     'synced' => 'senkronize edildi',
 

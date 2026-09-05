@@ -12,6 +12,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Status\PeerFailure;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Modules\Sync\Public\SyncEvents;
@@ -27,10 +29,10 @@ final class SyncStatusSection extends Component
      */
     public array $peerStatuses = [];
 
-    /**
-     * @var 'all_synced'|'syncing'|'offline'|'error'|'unknown'
-     */
-    public string $overallStatus = 'unknown';
+    // The backing value, not the case: a Livewire property rehydrates from the
+    // client payload with no enum coercion, so the enum is rebuilt in render()
+    // where the view needs it.
+    public string $overallStatus = SyncOverallStatus::Unknown->value;
 
     public ?string $lastSyncedHuman = null;
 
@@ -53,7 +55,7 @@ final class SyncStatusSection extends Component
             $now,
             $devices->otherDeviceNames($userId),
         );
-        $this->overallStatus = $statusService->overallStatus($userId);
+        $this->overallStatus = $statusService->overallStatus($userId)->value;
         $this->lastSyncedHuman = $statusService->lastSyncedHuman($now, $userId);
     }
 
@@ -100,7 +102,9 @@ final class SyncStatusSection extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('sync::livewire.sync-status-section');
+        return $views->make('sync::livewire.sync-status-section', [
+            'overall' => SyncOverallStatus::tryFrom($this->overallStatus) ?? SyncOverallStatus::Unknown,
+        ]);
     }
 
     /**
@@ -144,39 +148,11 @@ final class SyncStatusSection extends Component
         return $viewModels;
     }
 
-    // Ordered most specific first: a message naming both the relay and a
-    // timeout is reported as a relay problem. Each row carries a set of
-    // needles, since the same failure reaches us phrased several ways. The
-    // 'label' is a translation key resolved via Lang::get in deriveErrorLabel.
-    /**
-     * @var list<array{needles: list<string>, label: string}>
-     */
-    private const array ERROR_LABELS = [
-        ['needles' => ['relay'], 'label' => 'sync::status.labels.relay_unreachable'],
-        // 'authentication' is deliberately absent: it contains 'auth', so a
-        // needle for it could never match anything the shorter one missed.
-        ['needles' => ['handshake', 'verify', 'auth'], 'label' => 'sync::status.labels.handshake_failed'],
-        ['needles' => ['connection', 'connect', 'reach', 'timeout'], 'label' => 'sync::status.labels.cannot_reach_peer'],
-    ];
-
     // Empty string when the row did not fail, so the view renders no label
-    // rather than an empty one. An unrecognised message — including none at
-    // all — still says the connection failed, because it did.
+    // rather than an empty one. The reading itself lives in PeerFailure, which
+    // is also what decides whether the aggregate above calls this peer an error.
     private function deriveErrorLabel(string $status, ?string $errorMessage): string
     {
-        if ($status !== 'failed') {
-            return '';
-        }
-
-        $lower = strtolower($errorMessage ?? '');
-        foreach (self::ERROR_LABELS as $candidate) {
-            foreach ($candidate['needles'] as $needle) {
-                if (str_contains($lower, $needle)) {
-                    return Lang::get($candidate['label']);
-                }
-            }
-        }
-
-        return Lang::get('sync::status.labels.connection_failed');
+        return $status === 'failed' ? Lang::get(PeerFailure::labelKey($errorMessage)) : '';
     }
 }

@@ -11,6 +11,7 @@ return [
     'error' => 'Chyba synchronizácie na jednom alebo viacerých zariadeniach',
     'syncing' => 'Synchronizuje sa…',
     'offline' => 'Zariadenia offline',
+    'behind' => 'Zmeny zatiaľ neodoslané',
     'all_synced' => 'Všetky zariadenia sú aktuálne',
     'synced' => 'zosynchronizované',
 

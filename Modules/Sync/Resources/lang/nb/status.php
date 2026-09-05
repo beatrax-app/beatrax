@@ -11,6 +11,7 @@ return [
     'error' => 'Synkroniseringsfeil på én eller flere enheter',
     'syncing' => 'Synkroniserer…',
     'offline' => 'Enheter frakoblet',
+    'behind' => 'Endringer er ikke sendt ennå',
     'all_synced' => 'Alle enheter er oppdatert',
     'synced' => 'synkronisert',
 
