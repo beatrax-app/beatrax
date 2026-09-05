@@ -1468,6 +1468,48 @@ Two tests hold the line: every foreign key must be classified as owning or not
 owning, and no foreign key may declare a cascade
 (`Modules/Sync/tests/Feature/EveryForeignKeySaysWhoOwnsTheRowTest.php`).
 
+### The receiver is the only side that can clear its own derived rows
+
+That cascade ran on the **local** delete path only, and it announces every child
+it takes whose table travels — that announcement is the compensating operation
+a peer replays. It can announce nothing for a child in a table that never leaves
+a device, and no version of the origin could: the phone's scheduled projection
+writes `forecast_runs` behind a scenario the desktop created, and the desktop
+has never heard of those rows.
+
+So the desktop's tombstone met a foreign key the phone could not satisfy.
+`applyDeletions()` deleted the parent row directly, `NO ACTION` refused it, and
+the entry was filed as `delete_blocked_by_reference` — a reason nothing arriving
+later could ever answer, because the rows blocking it exist on one device and
+are named in nobody's log. Eleven foreign keys have that shape: `card_statements`,
+`statement_summaries` and `forecast_shortfall_windows` behind `accounts`,
+`statement_summaries` behind `import_runs`, `forecast_runs` and
+`forecast_shortfall_windows` behind `forecast_scenarios`,
+`pending_enrichment_conflicts` behind `transactions`,
+`recurring_series_transitions` behind `recurring_series`, and the three alert
+tables behind their own acknowledgements and transitions.
+
+`DependentRowCascade::clearDeviceLocalChildren()` is the arrival half of the
+same walk, run from the applier's retry pass before a refused tombstone is
+recorded, and it descends **only** through tables that do not travel. A
+travelling child is deliberately left where it is: deleting one here writes no
+operation, so the peer's own history of the row would be the only account of it
+left and the next replay hands it straight back. Such a child goes by its own
+tombstone, ordered children-first, or not at all — and while it is still there
+the parent's tombstone is held rather than applied.
+
+Held, now, rather than filed and forgotten. `delete_blocked_by_reference` sits
+in `QuarantineReason::recoverable()`, because what blocks it can be a row whose
+own tombstone is still to arrive. `HistoryReprojector` retires the hold once the
+row it names is gone — the mirror of the create refusals it retires once the row
+is there — and both sweeps bound their `DELETE` by the reasons they asked about,
+so neither retires one verdict on the strength of the other's answer.
+
+`Modules/Sync/tests/Arch/ADeviceLocalChildNeverBlocksAPeersTombstoneArchTest.php`
+holds both halves: every `NO ACTION` key whose child never leaves the device and
+whose parent a tombstone can reach must be classified as owned, and the applier
+must run the sweep before it records the hold.
+
 ## Capture must cover every table the merge registry declares
 
 `MergeRulesRegistry` names the tables sync knows how to merge. Capture is a

@@ -155,9 +155,22 @@ final readonly class HistoryReprojector
     // spent by its row existing — that row was never the thing in question.
     private function clearSettled(int $userId): void
     {
+        $this->retireHolds($userId, QuarantineReason::createRefusals(), spentWhenPresent: true);
+        $this->retireHolds($userId, QuarantineReason::deleteRefusals(), spentWhenPresent: false);
+    }
+
+    // One sweep read from both sides: a create is answered by the row turning
+    // up and a blocked delete by it going away. The reasons bound the delete as
+    // well as the read — clearing every hold on the pair would retire one
+    // verdict on the strength of the opposite one's answer.
+    /**
+     * @param  list<string>  $reasons
+     */
+    private function retireHolds(int $userId, array $reasons, bool $spentWhenPresent): void
+    {
         $held = $this->db->connection()->table('op_log_quarantine')
             ->where('user_id', $userId)
-            ->whereIn('reason', QuarantineReason::createRefusals())
+            ->whereIn('reason', $reasons)
             ->distinct()
             ->limit(self::SETTLED_SWEEP_LIMIT)
             ->get(['table_name', 'pk']);
@@ -166,7 +179,7 @@ final readonly class HistoryReprojector
             $table = is_string($row->table_name ?? null) ? $row->table_name : '';
             $pk = isset($row->pk) && (is_string($row->pk) || is_numeric($row->pk)) ? (string) $row->pk : '';
 
-            if ($table === '' || $pk === '' || ! $this->rowIsHere(['table' => $table, 'pk' => $pk], $userId)) {
+            if ($table === '' || $pk === '' || $this->rowIsHere(['table' => $table, 'pk' => $pk], $userId) !== $spentWhenPresent) {
                 continue;
             }
 
@@ -174,6 +187,7 @@ final readonly class HistoryReprojector
                 ->where('user_id', $userId)
                 ->where('table_name', $table)
                 ->where('pk', $pk)
+                ->whereIn('reason', $reasons)
                 ->delete();
         }
     }

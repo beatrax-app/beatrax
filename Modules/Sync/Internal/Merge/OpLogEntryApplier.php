@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Psr\Log\LoggerInterface;
 
 final readonly class OpLogEntryApplier
@@ -30,6 +31,7 @@ final readonly class OpLogEntryApplier
         private AlreadyPresentCreate $alreadyPresent,
         private SuppliedCreationTime $creationTime,
         private SplitOverfillGate $splitOverfill,
+        private DependentRowCascade $cascade,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -579,6 +581,8 @@ final readonly class OpLogEntryApplier
         }
 
         foreach ($refused as $blocked) {
+            $this->clearDeviceLocalChildren($blocked['table'], $blocked['pk'], $userId);
+
             if ($this->deleteRow($blocked['table'], $blocked['pk'], $userId)) {
                 $documents->rowDeleted($blocked['table'], $blocked['documents']);
 
@@ -586,6 +590,23 @@ final readonly class OpLogEntryApplier
             }
 
             $this->recordBlockedDelete($blocked['table'], $blocked['pk'], $blocked['tomb'], $now);
+        }
+    }
+
+    // The local delete path announces every child that travels, and that
+    // announcement is the compensating op. It cannot name the rows the
+    // RECEIVER derived for itself — a nightly projection behind a synced
+    // scenario — so the key refused a tombstone no later op could unblock.
+    private function clearDeviceLocalChildren(string $table, int|string $pk, int $userId): void
+    {
+        try {
+            $this->cascade->clearDeviceLocalChildren($table, $pk, $userId);
+        } catch (QueryException $e) {
+            $this->logger?->warning('OpLogEntryApplier: a device-local child of a deleted row could not be cleared.', [
+                'table' => $table,
+                'pk' => $pk,
+                ...SafeExceptionContext::describe($e),
+            ]);
         }
     }
 

@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Public\Events\EntityMutated;
 
 // Deletes the rows a parent row owns, so the app rather than the database
@@ -113,15 +114,45 @@ final readonly class DependentRowCascade
         return $events;
     }
 
+    // The arrival half of the same walk, for a tombstone that came from a peer.
+    // The rows this device derived behind the parent are named in no operation
+    // anywhere: the origin has never heard of them, so it cannot list them in a
+    // compensating op and the receiver is the only side that can clear them.
+    public function clearDeviceLocalChildren(string $parentTable, int|string $parentId, int $userId): void
+    {
+        $events = [];
+        $seen = [];
+
+        $this->sweep($parentTable, [$parentId], $userId, $events, $seen, deviceLocalOnly: true);
+    }
+
+    // A table whose rows leave this device. The three rule tables carry merge
+    // rules so an older peer's op still applies, and nothing ever puts one on
+    // the wire — a child sitting in one is as invisible to the origin as a
+    // child in a table the registry does not name at all.
+    public function travels(string $table): bool
+    {
+        return array_key_exists($table, $this->rules->rules())
+            && ! in_array($table, OpLogBackfiller::DEVICE_LOCAL_TABLES, true);
+    }
+
     /**
      * @param  list<int|string>  $parentIds
      * @param  list<EntityMutated>  $events
      * @param  array<string, true>  $seen
      */
-    private function sweep(string $parentTable, array $parentIds, int $userId, array &$events, array &$seen): void
+    private function sweep(string $parentTable, array $parentIds, int $userId, array &$events, array &$seen, bool $deviceLocalOnly = false): void
     {
         foreach (self::OWNED_BY[$parentTable] ?? [] as $ownedKey) {
             [$childTable, $column] = explode('.', $ownedKey, 2);
+
+            // A travelling child is removed by its own tombstone or not at
+            // all: deleting one here writes no op, so the peer's history of
+            // the row is the only account left and hands it straight back.
+            if ($deviceLocalOnly && $this->travels($childTable)) {
+                continue;
+            }
+
             $fresh = $this->unseen($childTable, $this->childIds($childTable, $column, $parentIds, $userId), $seen);
             if ($fresh === []) {
                 continue;
@@ -129,10 +160,10 @@ final readonly class DependentRowCascade
 
             // Deepest first: a grandchild whose parent is already gone can no
             // longer be found by the column that owns it.
-            $this->sweep($childTable, $fresh, $userId, $events, $seen);
+            $this->sweep($childTable, $fresh, $userId, $events, $seen, $deviceLocalOnly);
             $this->deleteRows($childTable, $fresh, $userId);
 
-            if (! array_key_exists($childTable, $this->rules->rules())) {
+            if ($deviceLocalOnly || ! array_key_exists($childTable, $this->rules->rules())) {
                 continue;
             }
 
