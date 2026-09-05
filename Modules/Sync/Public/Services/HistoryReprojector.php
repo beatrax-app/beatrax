@@ -62,6 +62,7 @@ final readonly class HistoryReprojector
         // reasons that are not recoverable never reach the pass below, so this
         // is the only thing that ever clears one.
         $this->clearSettled($userId);
+        $this->ownAuthorship($userId)->delete();
 
         // Before the early returns, because a history with nothing left to
         // replay is exactly the one whose links are ready to close: a transfer
@@ -367,12 +368,41 @@ final readonly class HistoryReprojector
             ->whereNotIn('gdk_epoch', $held);
     }
 
+    // A hold naming THIS device as the author, which cannot be a real refusal:
+    // the row was written here before the op was, so nothing about it is
+    // missing. A daemon serving a peer holds no app-lock key and quarantined
+    // our own entries in bursts; nothing was ever going to clear them.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#the-entries-a-locked-desktop-quarantines
+     */
+    private function ownAuthorship(int $userId): Builder
+    {
+        $query = $this->db->connection()
+            ->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('reason', QuarantineReason::GdkDecryptFailed->value);
+
+        $localDeviceId = $this->registry->localDeviceId($userId) ?? '';
+
+        // An install with no self row has no id to match on, and matching the
+        // empty string would name every hold whose author column is blank.
+        return $localDeviceId === ''
+            ? $query->whereRaw('1 = 0')
+            : $query->where('device_id', $localDeviceId);
+    }
+
     // The cheap half of the question, for a caller deciding whether the exact
     // one is worth the keyring read. Epoch-blind on purpose: it answers "has
     // anything arrived that no pass has looked at", one seek on the index this
     // table already carries.
     public function hasUnexaminedQuarantine(int $userId, ?string $since): bool
     {
+        // Asked outside the window: these predate every watermark that was
+        // stamped over them, and the window is what made them permanent.
+        if ($this->ownAuthorship($userId)->exists()) {
+            return true;
+        }
+
         $query = $this->recoverableQuarantine($userId);
 
         if ($since !== null) {

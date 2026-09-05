@@ -173,6 +173,34 @@ audit-only, and until this change nothing on desktop ever replayed from it. `Mod
 exposed; that method is gone, and the phone reaches the same bounded pass every other caller
 takes, `HistoryReprojector::replayQuarantined()`.
 
+Two things this section used to claim were measured false on real hardware, and both are fixed
+rather than restated.
+
+**The desktop quarantined its OWN entries.** `op_log_quarantine` held 121 rows in one pairing
+run and 19 in the next, reason `gdk_decrypt_failed`, `device_id` equal to the desktop's own,
+written in a three-second burst while a phone ran its first sync. Nineteen were identical across
+both runs: seventeen `tax_transaction_tags` and both `transaction_splits`. The catch-up exchange
+is symmetric, and `PeerCatchUpExchanger::opsAfterWatermark()` answers with the ops of every
+registered author rather than only its own — which is correct, and is how a third device's
+history reaches a phone that has never met it. On a first sync the desktop holds no cursor for
+the new phone, so it asks for everything, and the phone hands back the history it has just been
+given, our own ops among it. The daemon holds no key, so every sealed field of our own log
+failed its decrypt and was recorded as a refusal naming us as the author.
+
+A device cannot be missing its own writes: the row is written here before the op is.
+`SyncSession::receiveOps()` now recognises an entry it signed itself that the durable log
+already holds byte-identically, and sets it aside — not *held*, the way an author no key
+verifies is held, but **accounted for**, so the peer's cursor advances past it and the same
+echo is not offered again on every reconnect.
+
+**Unlocking did not clear them.** A live desktop still carried 23 of those rows three days
+after the run that wrote them, with `history_reprojected_at` stamped an hour and forty-eight
+minutes *after* they were created — so every later pass filtered them out on `created_at >`
+and the marks that were meant to stop a recurring replay had made a hold permanent instead.
+`HistoryReprojector` now retires a hold naming this device as its own author before the pass
+does anything else, and `hasUnexaminedQuarantine()` asks for one outside the window, because a
+watermark stamped over a row is exactly what made it invisible.
+
 ### Why the recovery is not a rebuild
 
 `reproject()` was a full `OpLogRebuilder::rebuild()`: drop triggers, delete every op-created
@@ -235,19 +263,25 @@ again.
 
 Both marks are stamped whenever a pass **ran**, not only when it replayed something. A pass that
 looked and found only entries it has no key for has still answered the question for this
-keyring, and leaving the marks behind is what made it ask again on every request.
+keyring, and leaving the marks behind is what made it ask again on every request. What that
+cannot be allowed to cover is a hold the pass never *reached* — the one above, which no keyring
+change would ever reopen — so the reasons that are spent by construction are retired outside the
+window rather than filtered by it.
 
 ### What the reader is told
 
 A desktop that has been synced to but not opened holds the data in its op log and shows none of
-it. Nothing is lost and it appears on the next unlocked request, but a screen that is briefly
-behind and a sync that is broken look identical from the reader's side, so the state has a name.
+it. Nothing is lost and it appears on the next unlocked request — provided the pass can still
+see it, which is the correction [above](#the-entries-a-locked-desktop-quarantines) — but a
+screen that is briefly behind and a sync that is broken look identical from the reader's side,
+so the state has a name.
 
 `SyncBacklogState` sits beside `QuarantineReason` — the same rows, read for a different
 question — and borrows `GdkWrapOutcome`'s vocabulary rather than inventing a second one:
 
 - **`Deferred`** — received, decodable here, not yet written into the tables the screens read.
-  It clears by itself on the next request. The notice exists so the gap does not read as loss.
+  It clears by itself on the next request that holds a key. The notice exists so the gap does
+  not read as loss.
 - **`AwaitingKey`** — received, and this device holds no key for the epoch it was sealed under.
   Time does not clear this one, so it must not borrow the other's words: telling somebody to
   unlock where unlocking cannot help is worse than saying nothing. The remedy is a pairing one —
