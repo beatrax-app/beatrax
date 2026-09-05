@@ -184,7 +184,18 @@ it('refuses to install launchd plists on a host that is not macOS', function ():
 // hostIsMacOs() itself, so the real one runs nowhere. This asks the shipped one
 // what it thinks, which is the reading a released binary actually takes.
 it('answers the host OS from the runtime the process is on', function (): void {
-    $command = app(InstallCommand::class);
+    // The double is set to the opposite of the truth first, so resolving it by
+    // mistake cannot pass: app(InstallCommand::class) returns the subclass
+    // beforeEach binds, which is the override this case exists to see past.
+    CaptureBootstrapInstallCommand::$hostIsMacOs = PHP_OS_FAMILY !== 'Darwin';
+
+    $command = new InstallCommand(
+        app(Repository::class),
+        app(Dispatcher::class),
+        app(DatabaseManager::class),
+        app(Filesystem::class),
+        app(Application::class),
+    );
 
     expect((new ReflectionMethod($command, 'hostIsMacOs'))->invoke($command))
         ->toBe(PHP_OS_FAMILY === 'Darwin');
