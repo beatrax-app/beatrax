@@ -2242,6 +2242,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Notifications/tests/Feature/TwoRemindersFourWeeksApartDoNotShareOneTitleTest.php -> Modules\\Recurring\\Internal\\Jobs\\EmitPaymentRemindersJob',
         'Modules/Onboarding/tests/Feature/AConfirmedStartingBalanceIsCheckedBeforeItIsWrittenTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/AFundingTagTookFourCharactersOffAStandInTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
+        'Modules/Onboarding/tests/Feature/ARefusedRunMustNotVetoTheBatchItWasStagedWithTest.php -> Modules\\Import\\Internal\\Enums\\ConfirmRefusal',
+        'Modules/Onboarding/tests/Feature/ARefusedRunMustNotVetoTheBatchItWasStagedWithTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepCacheContentsTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConnectPaypalStepReuseExistingAccountTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',
         'Modules/Onboarding/tests/Feature/ConsolidatedPreviewLoadTest.php -> Modules\\Import\\Internal\\Pipeline\\PreviewCache',

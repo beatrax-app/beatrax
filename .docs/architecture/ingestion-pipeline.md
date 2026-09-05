@@ -64,8 +64,8 @@ anything raised by `RecordReceipt` for one message is logged, recorded on the
 run's `ReceiptCaptureLog` as an unreadable ordinal, and the read moves to the
 next message. `MboxIterator` does the same for a message that overruns
 `UploadLimits::MAX_MESSAGE_BYTES` — the buffer is dropped, the ordinal is
-recorded, and the scan resumes at the next `From ` delimiter — but only for a
-caller that handed it a `ReceiptCaptureLog`. A caller with nowhere to record a
+recorded, and the scan resumes at the next mbox `From` delimiter line — but
+only for a caller that handed it a `ReceiptCaptureLog`. A caller with nowhere to record a
 skipped ordinal still gets `MboxReadException`, because a quietly shorter
 archive is the failure this is fixing: `ScanInboxDropFolderJob` has no preview
 to report on, and its answer stays a quarantined file in `failed/` the reader
