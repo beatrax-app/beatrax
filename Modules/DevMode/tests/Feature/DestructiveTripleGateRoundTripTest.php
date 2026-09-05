@@ -39,7 +39,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when Dev Mode env is of
         ->withSession(['dev_mode.advanced' => true])
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
-            'args' => ['from' => '/tmp/x.sqlite'],
+            'args' => ['path' => '/tmp/x.sqlite'],
             'confirmed_typed' => 'Beatrax',
         ]);
 
@@ -53,7 +53,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when session.advanced i
     $response = $this->actingAs($user)
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
-            'args' => ['from' => '/tmp/x.sqlite'],
+            'args' => ['path' => '/tmp/x.sqlite'],
             'confirmed_typed' => 'Beatrax',
         ]);
 
@@ -68,7 +68,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when confirmed_typed is
         ->withSession(['dev_mode.advanced' => true])
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
-            'args' => ['from' => '/tmp/x.sqlite'],
+            'args' => ['path' => '/tmp/x.sqlite'],
             'confirmed_typed' => 'beatrax',
         ]);
 
@@ -98,8 +98,8 @@ it('spawns a destructive command + returns 202 + run_id + pid when all three gat
     $response = $this->actingAs($user)
         ->withSession(['dev_mode.advanced' => true])
         ->postJson('/dev/artisan/destructive-spawn', [
-            'command' => 'migrate:fresh', // DESTRUCTIVE tier
-            'args' => [],
+            'command' => 'beatrax:regenerate-recovery-codes', // DESTRUCTIVE tier
+            'args' => ['username' => 'no-such-account-for-the-round-trip'],
             'confirmed_typed' => 'Beatrax',
         ]);
 
@@ -116,5 +116,5 @@ it('spawns a destructive command + returns 202 + run_id + pid when all three gat
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
     expect($record->tier)->toBe(CommandTier::Destructive);
-    expect($record->command)->toBe('migrate:fresh');
+    expect($record->command)->toBe('beatrax:regenerate-recovery-codes');
 });

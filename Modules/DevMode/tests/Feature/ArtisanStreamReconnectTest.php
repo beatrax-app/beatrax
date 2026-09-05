@@ -193,7 +193,7 @@ it('rejects a DESTRUCTIVE-tier command at POST /dev/artisan/spawn with 403', fun
 
     $response = $this->actingAs($user)->postJson('/dev/artisan/spawn', [
         'command' => 'db:restore',
-        'args' => ['from' => '/tmp/x'],
+        'args' => ['path' => '/tmp/x'],
     ]);
 
     $response->assertStatus(403);

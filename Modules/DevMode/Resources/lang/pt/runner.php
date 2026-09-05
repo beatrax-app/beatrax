@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Fazer cópia da base de dados', 'description' => 'Escreve uma cópia SQLite com data e hora na pasta das cópias de segurança (ou no caminho indicado).'],
+        'db_backup' => ['label' => 'Fazer cópia da base de dados', 'description' => 'Escreve uma cópia SQLite com data e hora na pasta das cópias de segurança.'],
         'doctor' => ['label' => 'Executar o doctor', 'description' => 'Indica as versões instaladas de PHP / Composer / SQLite e verifica os mínimos.'],
         'failed_jobs' => ['label' => 'Limpar as tarefas falhadas', 'description' => 'Limpa as entradas já resolvidas da tabela failed_jobs gerida pelo Laravel.'],
         'cache_clear' => ['label' => 'Limpar a cache', 'description' => 'Esvazia a cache da aplicação.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Repetir as tarefas falhadas', 'description' => 'Repete uma tarefa (por id) ou todas as tarefas falhadas (id vazio).'],
         'rederive_fingerprints' => ['label' => 'Recalcular as impressões digitais', 'description' => 'Recalcula a impressão digital de cada transação com a versão de normalização atual.'],
         'db_restore' => ['label' => 'Restaurar a base de dados', 'description' => 'Substitui a base de dados atual pelo ficheiro de cópia de segurança indicado.'],
-        'migrate_fresh' => ['label' => 'Eliminar as tabelas e migrar de novo', 'description' => 'Elimina todas as tabelas e volta a executar todas as migrações.'],
-        'reset_password' => ['label' => 'Repor a palavra-passe', 'description' => 'Repõe a palavra-passe de um utilizador de forma interativa (recusa a utilização não interativa).'],
         'regenerate_recovery_codes' => ['label' => 'Gerar novos códigos de recuperação', 'description' => 'Gera de novo os 10 códigos de recuperação de utilização única de um utilizador.'],
         'grant_dev' => ['label' => 'Conceder acesso de programador', 'description' => 'Define is_developer=true para o utilizador indicado.'],
         'install' => ['label' => 'Executar a instalação', 'description' => 'Configuração inicial idempotente. Voltar a executá-la numa instalação já configurada é destrutivo.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Ficheiro de destino', 'help' => 'Deixa em branco para usar a pasta de cópias de segurança predefinida.', 'placeholder' => '/caminho/para/backup.sqlite (opcional)'],
         'action' => ['label' => 'Ação'],
         'config' => ['label' => 'Chave de configuração', 'help' => 'O ficheiro de configuração ou a chave com pontos a imprimir, por exemplo `app` ou `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id da tarefa', 'help' => 'Deixa em branco para repetir todas as tarefas falhadas; indica um id para repetir apenas uma.', 'placeholder' => 'todas (ou um id específico)'],
         'queue' => ['label' => 'Nome da fila', 'help' => 'Filtro de fila opcional; por omissão, todas as filas.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Caminho do ficheiro de cópia de segurança', 'help' => 'Substitui a base de dados atual pelo ficheiro que estiver no caminho indicado.', 'placeholder' => '/caminho/para/backup.sqlite'],
+        'path' => ['label' => 'Caminho do ficheiro de cópia de segurança', 'help' => 'Substitui a base de dados atual pelo ficheiro que estiver no caminho indicado.', 'placeholder' => '/caminho/para/backup.sqlite'],
         'username' => ['label' => 'Nome de utilizador', 'placeholder' => 'alice'],
     ],
 ];

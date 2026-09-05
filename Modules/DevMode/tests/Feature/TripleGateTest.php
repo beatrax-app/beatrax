@@ -34,7 +34,7 @@ it('rejects with dev_mode_off when DevModeFlag->isOn() returns false', function 
     $this->actingAs($user);
 
     Livewire::test(TripleGateModal::class)
-        ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/x'])
+        ->dispatch('triple-gate:open', command: 'db:restore', args: ['path' => '/tmp/x'])
         ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertHasErrors(['_gate'])
@@ -75,7 +75,7 @@ it('dispatches triple-gate:confirmed when all three gates pass', function (): vo
     session()->put('dev_mode.advanced', true);
 
     Livewire::test(TripleGateModal::class)
-        ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/backup.sqlite'])
+        ->dispatch('triple-gate:open', command: 'db:restore', args: ['path' => '/tmp/backup.sqlite'])
         ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertDispatched('triple-gate:confirmed')
@@ -146,7 +146,7 @@ it('opens the modal it was just asked to gate', function (): void {
     $this->actingAs(tripleGateUser('triple-gate-opens'));
 
     Livewire::test(TripleGateModal::class)
-        ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/x'])
+        ->dispatch('triple-gate:open', command: 'db:restore', args: ['path' => '/tmp/x'])
         ->assertSet('command', 'db:restore')
         ->assertDispatched('modal-show', name: 'triple-gate');
 });

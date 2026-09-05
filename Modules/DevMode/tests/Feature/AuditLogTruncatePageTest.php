@@ -34,7 +34,7 @@ it('truncateAll deletes the calling developer\'s dev_mode_audit rows', function 
         exitCode: 0, stdoutExcerpt: 'output ok', errorExcerpt: '',
     ));
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
+        command: 'db:restore', args: ['path' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -121,7 +121,7 @@ it('renders the stderr block in the Copy payload when error_excerpt is non-empty
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
+        command: 'db:restore', args: ['path' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),

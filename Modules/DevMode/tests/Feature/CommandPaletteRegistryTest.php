@@ -90,7 +90,7 @@ it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZER
     expect($names)->toContain('beatrax:doctor');
     expect($names)->toContain('cache:clear');
     expect($names)->not->toContain('db:restore');
-    expect($names)->not->toContain('migrate:fresh');
+    expect($names)->not->toContain('beatrax:grant-dev');
 });
 
 it('emits a palette JSON without any dev rows for a non-developer', function (): void {

@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Datenbank sichern', 'description' => 'Schreibt eine SQLite-Kopie mit Zeitstempel in das Backup-Verzeichnis (oder an den angegebenen Pfad).'],
+        'db_backup' => ['label' => 'Datenbank sichern', 'description' => 'Schreibt eine SQLite-Kopie mit Zeitstempel in das Backup-Verzeichnis.'],
         'doctor' => ['label' => 'Doctor ausführen', 'description' => 'Meldet die installierten Versionen von PHP / Composer / SQLite und prüft die Mindestanforderungen.'],
         'failed_jobs' => ['label' => 'Fehlgeschlagene Jobs aufräumen', 'description' => 'Entfernt erledigte Einträge aus der von Laravel verwalteten Tabelle failed_jobs.'],
         'cache_clear' => ['label' => 'Cache leeren', 'description' => 'Leert den Cache-Speicher der Anwendung.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Fehlgeschlagene Jobs wiederholen', 'description' => 'Wiederholt einen Job (per ID) oder jeden fehlgeschlagenen Job (leere ID).'],
         'rederive_fingerprints' => ['label' => 'Fingerprints neu berechnen', 'description' => 'Berechnet jeden Transaktions-Fingerprint mit der aktuellen Normalisierungsversion neu.'],
         'db_restore' => ['label' => 'Datenbank wiederherstellen', 'description' => 'Ersetzt die aktuelle Datenbank durch die angegebene Backup-Datei.'],
-        'migrate_fresh' => ['label' => 'Tabellen löschen und neu migrieren', 'description' => 'Löscht jede Tabelle und führt danach jede Migration erneut aus.'],
-        'reset_password' => ['label' => 'Passwort zurücksetzen', 'description' => 'Setzt ein Benutzerpasswort interaktiv zurück (verweigert die nicht-interaktive Nutzung).'],
         'regenerate_recovery_codes' => ['label' => 'Wiederherstellungscodes neu erzeugen', 'description' => 'Erzeugt die 10 einmalig nutzbaren Wiederherstellungscodes eines Benutzers neu.'],
         'grant_dev' => ['label' => 'Entwicklerzugriff gewähren', 'description' => 'Setzt is_developer=true für den angegebenen Benutzer.'],
         'install' => ['label' => 'Installation ausführen', 'description' => 'Idempotente Ersteinrichtung. Ein erneuter Lauf auf einer eingerichteten Installation ist destruktiv.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Zieldatei', 'help' => 'Leer lassen, um das Standard-Backup-Verzeichnis zu verwenden.', 'placeholder' => '/pfad/zu/backup.sqlite (optional)'],
         'action' => ['label' => 'Aktion'],
         'config' => ['label' => 'Konfigurationsschlüssel', 'help' => 'Die Konfigurationsdatei oder der Schlüssel in Punktschreibweise, z. B. `app` oder `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Job-ID', 'help' => 'Leer lassen, um jeden fehlgeschlagenen Job zu wiederholen; mit einer ID wird ein einzelner Eintrag wiederholt.', 'placeholder' => 'alle (oder eine bestimmte ID)'],
         'queue' => ['label' => 'Queue-Name', 'help' => 'Optionaler Queue-Filter; standardmäßig alle Queues.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Pfad zur Backup-Datei', 'help' => 'Ersetzt die aktuelle Datenbank durch die Datei am angegebenen Pfad.', 'placeholder' => '/pfad/zu/backup.sqlite'],
+        'path' => ['label' => 'Pfad zur Backup-Datei', 'help' => 'Ersetzt die aktuelle Datenbank durch die Datei am angegebenen Pfad.', 'placeholder' => '/pfad/zu/backup.sqlite'],
         'username' => ['label' => 'Benutzername', 'placeholder' => 'alice'],
     ],
 ];

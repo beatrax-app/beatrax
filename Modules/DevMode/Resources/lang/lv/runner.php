@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Izveidot datubāzes dublējumu', 'description' => 'Ieraksta SQLite kopiju ar laika zīmogu dublējumu mapē (vai norādītajā ceļā).'],
+        'db_backup' => ['label' => 'Izveidot datubāzes dublējumu', 'description' => 'Ieraksta SQLite kopiju ar laika zīmogu dublējumu mapē.'],
         'doctor' => ['label' => 'Palaist doctor', 'description' => 'Ziņo instalētās PHP / Composer / SQLite versijas un pārbauda minimālās prasības.'],
         'failed_jobs' => ['label' => 'Iztīrīt neizdevušos uzdevumus', 'description' => 'Noņem atrisinātos ierakstus no Laravel pārvaldītās tabulas failed_jobs.'],
         'cache_clear' => ['label' => 'Notīrīt kešatmiņu', 'description' => 'Iztukšo lietotnes kešatmiņas krātuvi.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Atkārtot neizdevušos uzdevumus', 'description' => 'Atkārto vienu uzdevumu (pēc id) vai katru neizdevušos uzdevumu (tukšs id).'],
         'rederive_fingerprints' => ['label' => 'Atkārtoti atvasināt nospiedumus', 'description' => 'Pārrēķina katra darījuma nospiedumu ar pašreizējo normalizācijas versiju.'],
         'db_restore' => ['label' => 'Atjaunot datubāzi', 'description' => 'Aizstāj pašreizējo datubāzi ar norādīto dublējuma failu.'],
-        'migrate_fresh' => ['label' => 'Nomest tabulas un migrēt no jauna', 'description' => 'Nomet katru tabulu un pēc tam izpilda katru migrāciju no jauna.'],
-        'reset_password' => ['label' => 'Atiestatīt paroli', 'description' => 'Interaktīvi atiestata lietotāja paroli (atsakās no neinteraktīvas lietošanas).'],
         'regenerate_recovery_codes' => ['label' => 'Ģenerēt jaunus atkopšanas kodus', 'description' => 'No jauna ģenerē lietotāja 10 vienreiz lietojamos atkopšanas kodus.'],
         'grant_dev' => ['label' => 'Piešķirt izstrādātāja piekļuvi', 'description' => 'Norādītajam lietotājam iestata is_developer=true.'],
         'install' => ['label' => 'Palaist instalēšanu', 'description' => 'Idempotenta pirmās palaišanas uzstādīšana. Atkārtota palaišana jau konfigurētā instalācijā ir destruktīva.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Mērķa fails', 'help' => 'Atstājiet tukšu, lai izmantotu noklusējuma dublējumu mapi.', 'placeholder' => '/ceļš/uz/backup.sqlite (nav obligāts)'],
         'action' => ['label' => 'Darbība'],
         'config' => ['label' => 'Konfigurācijas atslēga', 'help' => 'Konfigurācijas fails vai ar punktiem atdalīta atslēga, ko izdrukāt, piem., `app` vai `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Uzdevuma id', 'help' => 'Atstājiet tukšu, lai atkārtotu katru neizdevušos uzdevumu; norādiet id, lai atkārtotu vienu ierakstu.', 'placeholder' => 'visi (vai konkrēts id)'],
         'queue' => ['label' => 'Rindas nosaukums', 'help' => 'Neobligāts rindas filtrs; pēc noklusējuma visas rindas.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Ceļš uz dublējuma failu', 'help' => 'Aizstāj pašreizējo datubāzi ar failu norādītajā ceļā.', 'placeholder' => '/ceļš/uz/backup.sqlite'],
+        'path' => ['label' => 'Ceļš uz dublējuma failu', 'help' => 'Aizstāj pašreizējo datubāzi ar failu norādītajā ceļā.', 'placeholder' => '/ceļš/uz/backup.sqlite'],
         'username' => ['label' => 'Lietotājvārds', 'placeholder' => 'alice'],
     ],
 ];

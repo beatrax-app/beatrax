@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Sikkerhedskopiér databasen', 'description' => 'Skriver en SQLite-kopi med tidsstempel til backupmappen (eller til den angivne sti).'],
+        'db_backup' => ['label' => 'Sikkerhedskopiér databasen', 'description' => 'Skriver en SQLite-kopi med tidsstempel til backupmappen.'],
         'doctor' => ['label' => 'Kør doctor', 'description' => 'Rapporterer de installerede versioner af PHP / Composer / SQLite og kontrollerer minimumskravene.'],
         'failed_jobs' => ['label' => 'Ryd op i mislykkede jobs', 'description' => 'Rydder afsluttede rækker fra tabellen failed_jobs, som Laravel styrer.'],
         'cache_clear' => ['label' => 'Ryd cachen', 'description' => 'Tømmer applikationens cachelager.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Prøv mislykkede jobs igen', 'description' => 'Prøver ét job (efter id) eller alle mislykkede jobs (tomt id) igen.'],
         'rederive_fingerprints' => ['label' => 'Genberegn fingeraftryk', 'description' => 'Genberegner hvert transaktionsfingeraftryk med den nuværende normaliseringsversion.'],
         'db_restore' => ['label' => 'Gendan databasen', 'description' => 'Erstatter den nuværende database med den angivne backupfil.'],
-        'migrate_fresh' => ['label' => 'Slet tabeller og migrér igen', 'description' => 'Sletter alle tabeller og kører derefter alle migreringer igen.'],
-        'reset_password' => ['label' => 'Nulstil adgangskode', 'description' => 'Nulstiller en brugers adgangskode interaktivt (afviser ikke-interaktiv brug).'],
         'regenerate_recovery_codes' => ['label' => 'Generér nye gendannelseskoder', 'description' => 'Genererer en brugers 10 gendannelseskoder til engangsbrug på ny.'],
         'grant_dev' => ['label' => 'Giv udvikleradgang', 'description' => 'Sætter is_developer=true for den angivne bruger.'],
         'install' => ['label' => 'Kør installationen', 'description' => 'Idempotent førstegangsopsætning. At køre den igen på en konfigureret installation er destruktivt.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Destinationsfil', 'help' => 'Lad feltet stå tomt for at bruge standardbackupmappen.', 'placeholder' => '/sti/til/backup.sqlite (valgfri)'],
         'action' => ['label' => 'Handling'],
         'config' => ['label' => 'Konfigurationsnøgle', 'help' => 'Konfigurationsfilen eller den punktopdelte nøgle, der skal vises, f.eks. `app` eller `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Job-id', 'help' => 'Lad feltet stå tomt for at prøve alle mislykkede jobs igen; angiv et id for kun at prøve ét igen.', 'placeholder' => 'alle (eller et bestemt id)'],
         'queue' => ['label' => 'Kønavn', 'help' => 'Valgfrit køfilter; som standard alle køer.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Sti til backupfilen', 'help' => 'Erstatter den nuværende database med filen på den angivne sti.', 'placeholder' => '/sti/til/backup.sqlite'],
+        'path' => ['label' => 'Sti til backupfilen', 'help' => 'Erstatter den nuværende database med filen på den angivne sti.', 'placeholder' => '/sti/til/backup.sqlite'],
         'username' => ['label' => 'Brugernavn', 'placeholder' => 'alice'],
     ],
 ];

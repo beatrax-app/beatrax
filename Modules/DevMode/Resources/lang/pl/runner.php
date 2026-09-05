@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Utwórz kopię zapasową bazy', 'description' => 'Zapisuje kopię SQLite ze znacznikiem czasu do katalogu kopii zapasowych (lub pod podaną ścieżkę).'],
+        'db_backup' => ['label' => 'Utwórz kopię zapasową bazy', 'description' => 'Zapisuje kopię SQLite ze znacznikiem czasu do katalogu kopii zapasowych.'],
         'doctor' => ['label' => 'Uruchom doctor', 'description' => 'Raportuje zainstalowane wersje PHP / Composer / SQLite i sprawdza wymagane minima.'],
         'failed_jobs' => ['label' => 'Wyczyść nieudane zadania', 'description' => 'Usuwa rozwiązane wpisy z tabeli failed_jobs zarządzanej przez Laravela.'],
         'cache_clear' => ['label' => 'Wyczyść pamięć podręczną', 'description' => 'Opróżnia pamięć podręczną aplikacji.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Ponów nieudane zadania', 'description' => 'Ponawia jedno zadanie (po id) albo każde nieudane zadanie (puste id).'],
         'rederive_fingerprints' => ['label' => 'Przelicz odciski ponownie', 'description' => 'Przelicza odcisk każdej transakcji przy użyciu bieżącej wersji normalizacji.'],
         'db_restore' => ['label' => 'Przywróć bazę danych', 'description' => 'Zastępuje bieżącą bazę danych podanym plikiem kopii zapasowej.'],
-        'migrate_fresh' => ['label' => 'Usuń tabele i migruj od nowa', 'description' => 'Usuwa każdą tabelę, a następnie uruchamia ponownie każdą migrację.'],
-        'reset_password' => ['label' => 'Zresetuj hasło', 'description' => 'Interaktywnie resetuje hasło użytkownika (odmawia działania nieinteraktywnego).'],
         'regenerate_recovery_codes' => ['label' => 'Wygeneruj ponownie kody odzyskiwania', 'description' => 'Generuje od nowa 10 jednorazowych kodów odzyskiwania użytkownika.'],
         'grant_dev' => ['label' => 'Przyznaj dostęp deweloperski', 'description' => 'Ustawia is_developer=true dla podanego użytkownika.'],
         'install' => ['label' => 'Uruchom instalację', 'description' => 'Idempotentna konfiguracja przy pierwszym uruchomieniu. Ponowne uruchomienie na skonfigurowanej instalacji jest destrukcyjne.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Plik docelowy', 'help' => 'Zostaw puste, aby użyć domyślnego katalogu kopii zapasowych.', 'placeholder' => '/ścieżka/do/backup.sqlite (opcjonalnie)'],
         'action' => ['label' => 'Akcja'],
         'config' => ['label' => 'Klucz konfiguracji', 'help' => 'Plik konfiguracyjny lub klucz z kropkami do wypisania, np. `app` albo `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id zadania', 'help' => 'Zostaw puste, aby ponowić każde nieudane zadanie; podaj id, aby ponowić pojedynczy wpis.', 'placeholder' => 'wszystkie (lub konkretne id)'],
         'queue' => ['label' => 'Nazwa kolejki', 'help' => 'Opcjonalny filtr kolejki; domyślnie wszystkie kolejki.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Ścieżka pliku kopii zapasowej', 'help' => 'Zastępuje bieżącą bazę danych plikiem spod podanej ścieżki.', 'placeholder' => '/ścieżka/do/backup.sqlite'],
+        'path' => ['label' => 'Ścieżka pliku kopii zapasowej', 'help' => 'Zastępuje bieżącą bazę danych plikiem spod podanej ścieżki.', 'placeholder' => '/ścieżka/do/backup.sqlite'],
         'username' => ['label' => 'Nazwa użytkownika', 'placeholder' => 'alice'],
     ],
 ];
