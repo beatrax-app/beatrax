@@ -29,11 +29,11 @@ declare(strict_types=1);
  */
 
 /*
- * The three purpose strings are read from the file the twenty-five translations
- * live in rather than written out here. Info.plist carries the base language and
- * <locale>.lproj/InfoPlist.strings carries the rest, so two copies of the same
- * sentence would drift the moment one of them was reworded — and the drift would
- * show only as a prompt whose English and Dutch say different things.
+ * The three purpose strings are read from the same tree the twenty-five
+ * translations live in rather than written out here. Info.plist carries the base
+ * language and <locale>.lproj/InfoPlist.strings carries the rest, so two copies
+ * of the same sentence would drift the moment one was reworded — and the drift
+ * would show only as a prompt whose English and Dutch say different things.
  *
  * A `require` rather than a config() read: config is what this file is producing,
  * and the same array is read by a build script that runs with no framework.
@@ -45,15 +45,13 @@ declare(strict_types=1);
  *
  * @see ../../scripts/nativephp_ios_purpose_string_localisations.php
  */
-$purposeStringsFile = array_values(array_filter(
-    [__DIR__.'/../Modules/Mobile/Resources/ios/purpose-strings.php', __DIR__.'/../../Modules/Mobile/Resources/ios/purpose-strings.php'],
-    'is_file',
-))[0] ?? null;
+$purposeStringsFile = array_values(array_filter([
+    __DIR__.'/../Modules/Mobile/Resources/ios/lang/en/purpose-strings.php',
+    __DIR__.'/../../Modules/Mobile/Resources/ios/lang/en/purpose-strings.php',
+], 'is_file'))[0] ?? null;
 
-/** @var array<string, array<string, string>> $purposeStrings */
-$purposeStrings = $purposeStringsFile === null ? ['en' => []] : require $purposeStringsFile;
-
-$englishPurposeStrings = $purposeStrings['en'];
+/** @var array<string, string> $englishPurposeStrings */
+$englishPurposeStrings = $purposeStringsFile === null ? [] : require $purposeStringsFile;
 
 return [
     // 'DEBUG' is not a placeholder: the shells treat that exact string as

@@ -35,10 +35,18 @@ function purposeStringRepoRoot(): string
 /** @return array<string, array<string, string>> locale => Info.plist key => sentence */
 function localisedPurposeStrings(): array
 {
-    /** @var array<string, array<string, string>> $strings */
-    $strings = require purposeStringRepoRoot().'/Modules/Mobile/Resources/ios/purpose-strings.php';
+    $localised = [];
 
-    return $strings;
+    foreach (glob(purposeStringRepoRoot().'/Modules/Mobile/Resources/ios/lang/*/purpose-strings.php') ?: [] as $file) {
+        /** @var array<string, string> $strings */
+        $strings = require $file;
+
+        $localised[basename(dirname($file))] = $strings;
+    }
+
+    ksort($localised);
+
+    return $localised;
 }
 
 /** @return list<string> every locale the interface ships in, read off the lang tree */
@@ -61,8 +69,8 @@ it('carries a purpose string for every language the interface ships in', functio
 
     expect($localised)->toBe($shipped, sprintf(
         "The interface ships in %d languages and the purpose strings in %d.\n".
-        'A locale added to the interface has to be added to '.
-        'Modules/Mobile/Resources/ios/purpose-strings.php as well.',
+        'A locale added to the interface needs a '.
+        'Modules/Mobile/Resources/ios/lang/<locale>/purpose-strings.php as well.',
         count($shipped),
         count($localised),
     ));

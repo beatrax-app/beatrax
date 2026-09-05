@@ -14,11 +14,11 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  * ID prompt, which is the one that releases the key the ledger is encrypted
  * with.
  *
- * The strings themselves live in Modules/Mobile/Resources/ios/purpose-strings.php
- * because they never pass through the translator: iOS reads them out of the
- * bundle before any PHP runs, and this script runs with no framework loaded.
- * mobile-app/config/nativephp.php reads the `en` entry from the same file, so
- * the base plist value and the twenty-five translations cannot drift apart.
+ * The strings themselves live under Modules/Mobile/Resources/ios/lang/ because
+ * they never pass through the translator: iOS reads them out of the bundle
+ * before any PHP runs, and this script runs with no framework loaded.
+ * mobile-app/config/nativephp.php reads the `en` file from the same tree, so the
+ * base plist value and the twenty-five translations cannot drift apart.
  *
  * They land as <locale>.lproj/InfoPlist.strings inside NativePHP/, which the
  * Xcode project declares as a PBXFileSystemSynchronizedRootGroup — every file
@@ -35,7 +35,7 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  * anchor is a hard failure rather than a silent skip.
  */
 
-const PURPOSE_STRING_SOURCE = '/Modules/Mobile/Resources/ios/purpose-strings.php';
+const PURPOSE_STRING_SOURCE = '/Modules/Mobile/Resources/ios/lang';
 
 const PURPOSE_STRING_BASE_LOCALE = 'en';
 
@@ -75,12 +75,32 @@ function purposeStringSource(): ?string
         : [$override, dirname($override), dirname(__DIR__)];
 
     foreach ($roots as $root) {
-        if (is_file($root.PURPOSE_STRING_SOURCE)) {
+        if (is_dir($root.PURPOSE_STRING_SOURCE)) {
             return $root.PURPOSE_STRING_SOURCE;
         }
     }
 
     return null;
+}
+
+/**
+ * One file per locale, so a translated tree matches the exclusion the spell
+ * checker already applies to every other `lang/<locale>/` directory.
+ *
+ * @return array<string, array<string, string>>
+ */
+function purposeStringsByLocale(string $directory): array
+{
+    $localised = [];
+
+    foreach (glob($directory.'/*/purpose-strings.php') ?: [] as $file) {
+        /** @var array<string, string> $strings */
+        $strings = require $file;
+
+        $localised[basename(dirname($file))] = $strings;
+    }
+
+    return $localised;
 }
 
 $ios = beatraxScaffoldPath('ios/NativePHP.xcodeproj/project.pbxproj');
@@ -98,8 +118,12 @@ if ($source === null) {
     exit(1);
 }
 
-/** @var array<string, array<string, string>> $localised */
-$localised = require $source;
+$localised = purposeStringsByLocale($source);
+
+if ($localised === []) {
+    fwrite(STDERR, "nativephp_ios_purpose_string_localisations: {$source} holds no locale at all.\n");
+    exit(1);
+}
 
 $pbxproj = (string) file_get_contents($ios);
 
