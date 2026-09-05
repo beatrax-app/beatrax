@@ -11,6 +11,7 @@ return [
     'error' => 'Szinkronizálási hiba egy vagy több eszközön',
     'syncing' => 'Szinkronizálás…',
     'offline' => 'Az eszközök offline',
+    'withheld' => 'A változtatások még nem érkeztek meg',
     'behind' => 'A változtatások még nincsenek elküldve',
     'all_synced' => 'Minden eszköz naprakész',
     'synced' => 'szinkronizálva',

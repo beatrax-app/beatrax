@@ -7,6 +7,8 @@ return [
     'heading' => 'Denne enhed er synkroniseret',
     'records' => 'Kopierede :count post fra :peer.|Kopierede :count poster fra :peer.',
     'records_none' => 'Ajour med :peer. Der var ikke noget nyt at kopiere.',
+    'withheld' => ':count ændring er ikke kommet frem endnu.|:count ændringer er ikke kommet frem endnu.',
+    'withheld_action' => 'De er signeret af en enhed, som denne enhed ikke kan tjekke. Intet er tabt — alt bliver på :peer og kommer, hvis en af dine enheder videregiver den identitet, og du bekræfter den under :section.',
     'how_it_works' => 'Herfra og frem',
     'automatic_title' => 'Du bestemmer, hvornår den synkroniserer',
     'automatic_body' => 'Alt, du ændrer på den ene enhed, dukker op på den anden, næste gang du trykker på :action. Den kan ikke køre i baggrunden — app-låsen har den eneste nøgle.',

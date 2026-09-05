@@ -18,6 +18,7 @@ final readonly class SyncStatusService
         private DatabaseManager $db,
         private DeferredOpCaptures $deferred,
         private BackfillProgress $backfill,
+        private WithheldHistoryReport $withheld,
     ) {}
 
     /**
@@ -88,14 +89,25 @@ final readonly class SyncStatusService
             // exchange yesterday and cannot be reached today is offline. That
             // arm could not answer offline at all, so it said the opposite.
             $seen->unreachable => SyncOverallStatus::Offline,
-            // "Up to date" is a claim about this device's changes, not just
-            // about the last session closing cleanly. Anything written since
-            // then has not been anywhere, and saying otherwise is how a goal
-            // that only ever existed on one phone looked fully synced.
-            $seen->finished => $this->hasUndeliveredLocalOps($userId)
-                ? SyncOverallStatus::Behind
-                : SyncOverallStatus::AllSynced,
+            $seen->finished => $this->settledStatus($userId),
             default => SyncOverallStatus::Offline,
+        };
+    }
+
+    // What is true once every exchange has closed cleanly. "Up to date" is a
+    // claim about the whole ledger, not about the last session ending well,
+    // and two separate things make it false: work this device has not sent,
+    // and work a peer will not send until the reader confirms its author.
+    private function settledStatus(int $userId): SyncOverallStatus
+    {
+        // A hold outranks being behind on what CLEARS it, never on whether
+        // the reader has an act: an unsent change leaves on the next exchange,
+        // and a hold leaves on none — including the half of them no peer can
+        // ever offer an identity for.
+        return match (true) {
+            $this->withheld->isHolding($userId) => SyncOverallStatus::Withheld,
+            $this->hasUndeliveredLocalOps($userId) => SyncOverallStatus::Behind,
+            default => SyncOverallStatus::AllSynced,
         };
     }
 

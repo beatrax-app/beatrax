@@ -279,6 +279,7 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
         'percent' => 0,
         'phase' => SyncPhase::Pending,
         'blocked' => SyncBlockedReason::NoPeer,
+        'withheld' => 0,
     ]);
     expect($db->connection()->table('mobile_sync_progress')->where('user_id', $user->id)->count())->toBe(0);
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(0);

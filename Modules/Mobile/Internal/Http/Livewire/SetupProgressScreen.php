@@ -125,7 +125,7 @@ final class SetupProgressScreen extends Component
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}  $progress
+     * @param  array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}  $progress
      */
     private function applyProgress(array $progress): void
     {
@@ -143,11 +143,12 @@ final class SetupProgressScreen extends Component
     {
         // The cursor's expected count only ever equals what has already been
         // applied, so treating it as a total renders a full bar the instant
-        // the first row lands.
+        // the first row lands. A peer holding entries back is the one thing
+        // that makes it a real total — and a full bar over one is a lie.
         $hasRealTotal = $this->recordsExpected !== null && $this->recordsExpected > $this->recordsApplied;
 
         return match (true) {
-            $this->phase === SyncPhase::Complete => 100,
+            $this->phase === SyncPhase::Complete => $hasRealTotal ? $transferPercent : 100,
             $this->step === SetupStep::Transfer && $hasRealTotal => $transferPercent,
             default => 0,
         };

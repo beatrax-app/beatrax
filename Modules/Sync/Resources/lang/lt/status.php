@@ -11,6 +11,7 @@ return [
     'error' => 'Sinchronizavimo klaida viename ar keliuose įrenginiuose',
     'syncing' => 'Sinchronizuojama…',
     'offline' => 'Įrenginiai neprisijungę',
+    'withheld' => 'Pakeitimai dar negauti',
     'behind' => 'Pakeitimai dar neišsiųsti',
     'all_synced' => 'Visi įrenginiai atnaujinti',
     'synced' => 'sinchronizuota',

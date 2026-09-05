@@ -7,6 +7,8 @@ return [
     'heading' => 'Tämä laite on synkronoitu',
     'records' => 'Kopioitiin :count tietue. Lähde: :peer.|Kopioitiin :count tietuetta. Lähde: :peer.',
     'records_none' => 'Ei uutta kopioitavaa — kaikki on jo ajan tasalla. Lähde: :peer.',
+    'withheld' => ':count muutos ei ole vielä saapunut.|:count muutosta ei ole vielä saapunut.',
+    'withheld_action' => 'Ne on allekirjoittanut laite, jota tämä laite ei voi tarkistaa. Mitään ei katoa — kaikki jää laitteelle :peer ja saapuu, kun jokin laitteistasi välittää tuon identiteetin ja sinä vahvistat sen kohdassa :section.',
     'how_it_works' => 'Tästä eteenpäin',
     'automatic_title' => 'Sinä päätät, milloin synkronoidaan',
     'automatic_body' => 'Kaikki, mitä muutat kummalla tahansa laitteella, näkyy toisella seuraavalla kerralla, kun napautat :action. Taustalla se ei voi toimia — sovelluslukko pitää ainoaa avainta.',

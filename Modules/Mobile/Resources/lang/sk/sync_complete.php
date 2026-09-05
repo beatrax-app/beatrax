@@ -7,6 +7,8 @@ return [
     'heading' => 'Toto zariadenie je zosynchronizované',
     'records' => 'Skopírovaný :count záznam zo zariadenia :peer.|Skopírované :count záznamy zo zariadenia :peer.|Skopírovaných :count záznamov zo zariadenia :peer.',
     'records_none' => 'Všetko je aktuálne, nebolo čo kopírovať. Zdroj: :peer.',
+    'withheld' => ':count zmena zatiaľ nedorazila.|:count zmeny zatiaľ nedorazili.|:count zmien zatiaľ nedorazilo.',
+    'withheld_action' => 'Podpísalo ich zariadenie, ktoré toto zariadenie nedokáže overiť. Nič sa nestráca — všetko zostáva na zariadení :peer a dorazí, keď niektoré tvoje zariadenie odovzdá tú identitu a ty ju potvrdíš v časti :section.',
     'how_it_works' => 'Odteraz',
     'automatic_title' => 'Ty rozhoduješ, kedy sa synchronizuje',
     'automatic_body' => 'Čokoľvek zmeníš na jednom zariadení, objaví sa aj na druhom, keď nabudúce klepneš na :action. Na pozadí bežať nemôže — zámok aplikácie drží jediný kľúč.',

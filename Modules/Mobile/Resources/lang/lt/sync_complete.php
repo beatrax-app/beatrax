@@ -7,6 +7,8 @@ return [
     'heading' => 'Šis įrenginys sinchronizuotas',
     'records' => 'Iš :peer nukopijuotas :count įrašas.|Iš :peer nukopijuoti :count įrašai.|Iš :peer nukopijuota :count įrašų.',
     'records_none' => 'Iš :peer kopijuoti nebuvo ko — viskas jau suvienodinta.',
+    'withheld' => ':count pakeitimas dar neatkeliavo.|:count pakeitimai dar neatkeliavo.|:count pakeitimų dar neatkeliavo.',
+    'withheld_action' => 'Juos pasirašė įrenginys, kurio šis įrenginys negali patikrinti. Niekas neprarasta — viskas lieka įrenginyje :peer ir atkeliaus, kai kuris nors tavo įrenginys perduos tą tapatybę ir tu ją patvirtinsi skiltyje :section.',
     'how_it_works' => 'Nuo šiol',
     'automatic_title' => 'Tu pasirenki, kada sinchronizuoti',
     'automatic_body' => 'Viskas, ką pakeisi viename įrenginyje, atsiras kitame kitą kartą, kai paliesi :action. Fone veikti negali — programėlės užraktas saugo vienintelį raktą.',

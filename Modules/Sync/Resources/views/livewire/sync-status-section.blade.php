@@ -9,6 +9,7 @@
       - Explicit error states: Relay unreachable / Can't reach peer / Handshake-verify failed.
       - Offline state when a peer cannot be reached.
       - Behind state when this device holds changes no session has carried.
+      - Withheld state when a peer is holding entries this device cannot verify.
 
     Aesthetic: calm slate per sketch-findings-beatrax — emerald-600 = OK,
     amber-700 = warn, rose-700 = fail, slate-500 = muted / offline.
@@ -61,6 +62,23 @@
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
             {{ Lang::get($overall->labelKey()) }}
+        </x-core::alert>
+
+    @elseif ($overall === SyncOverallStatus::Withheld)
+        {{-- Info for the reason Behind is: a peer holding history back for an
+             author this device cannot check is the exchange working as
+             designed. What it must not be is invisible, because the reader is
+             the only one who can end it and the detail sits further down. --}}
+        <x-core::alert
+            tone="info"
+            class="flex items-center gap-2"
+            data-testid="sync-status-overall"
+        >
+            <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true"></span>
+            {{ Lang::get($overall->labelKey()) }}
+            @if ($lastSyncedHuman !== null)
+                <span>&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
+            @endif
         </x-core::alert>
 
     @elseif ($overall === SyncOverallStatus::Behind)

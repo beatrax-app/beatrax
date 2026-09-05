@@ -133,6 +133,58 @@ A reason that deliberately reaches no reader is allowed, and has to be written
 into `QUARANTINE_READER_DELIBERATELY_UNREAD` with the argument for it. The list
 is empty.
 
+## A hold is not a quarantine, and it needed its own line
+
+A quarantined operation arrived and was refused here. A **withheld** one never
+arrived: the peer read the `verifiable` list on the catch-up request, left the
+author out of the answer, and said how many entries it kept and for whom. The
+receiving device's cursor for that author does not move, so the entries are
+owed rather than lost: they arrive in full if that author is ever confirmed
+here.
+
+*If* is doing real work in that sentence. A peer relays history for every author
+it holds a key for, and vouches for only the ones it paired with, so a hold
+comes in two kinds and only one of them has an act in it. Where an identity was
+offered, the reader confirms it and the entries follow. Where the peer knows the
+author only through an introduction of its own, it may carry the data and may
+not pass the identity on — a vouch made on the strength of a vouch is a chain —
+so the count arrives with nothing beside it and no confirmation anywhere ends
+it. **Copy on any of these surfaces therefore names a condition, never an act:**
+*"arrives once one of your devices passes on that identity and you confirm it"*
+is still true when nothing ever does, and *"confirm that device to recover
+these"* is a button that will not be there.
+
+That is also why it could not borrow the quarantine's surfaces. Nothing was
+refused, so `op_log_quarantine` has no row; nothing is broken, so `Error` would
+be wrong; nothing is in flight, so `Syncing` would be wrong.
+`SyncOverallStatus::Withheld` is its own line, ranked above `Behind` and below
+`Offline`. The ranking does not rest on the reader having an act — half the time
+they do not. It rests on what clears the state: an unsent change leaves on the
+next exchange, and a hold leaves on no exchange at all. A state nothing in the
+system will resolve on its own outranks one that resolves itself, whether or not
+the reader can hurry it along.
+
+Two surfaces read it, and both read it through one object:
+
+- `SyncStatusService::overallStatus()` for the aggregate the settings screen and
+  the phone's sync screen both mount.
+- `InitialSyncPuller`, which is the harder case. Its completion report is the
+  only thing a reader sees during setup, and it computed `records_expected` as
+  `records_applied`, so a first sync short by an entire replaced phone's history
+  drew a full bar and a "This device is synced" heading. The expected count is
+  now what arrived **plus** what the peer declared held, and `SyncCompleteScreen`
+  carries the sentence that says which.
+
+`WithheldHistoryReport` is that one object. It exists because the answer is not
+the ledger row: a row names the last exchange's report, and an author the reader
+has confirmed since is one the *next* exchange withholds nothing for. Filtering
+on what this device can verify **now** is what keeps a confirmation from leaving
+a warning standing on one screen and cleared on another.
+
+The count it totals is the largest report per author, never the sum across
+peers. Two peers holding the same author's work back are two accounts of one
+gap.
+
 ## Related
 
 - [Sync architecture](architecture.md) — the merge layer that produces these refusals

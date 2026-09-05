@@ -21,6 +21,12 @@ final class SyncCompleteScreen extends Component
 {
     public int $recordsApplied = 0;
 
+    // Entries a peer declared it is holding back for an author this device
+    // cannot verify. This screen is the only place the reader is ever told
+    // the first sync came up short, so a count with no line to carry it is
+    // a history that quietly ends here.
+    public int $withheldEntries = 0;
+
     // The peer this device just caught up from, named rather than described,
     // so the confirmation is about a device the user recognises.
     public string $peerName = '';
@@ -36,6 +42,12 @@ final class SyncCompleteScreen extends Component
     #[Locked]
     public string $syncAction = '';
 
+    // Named from the section's own heading for the reason $syncAction is: the
+    // held-back detail lives there, and a screen inventing its own name for it
+    // sends the reader looking for a place that is not on the phone.
+    #[Locked]
+    public string $devicesSection = '';
+
     public function mount(
         CurrentUser $currentUser,
         InitialSyncPuller $puller,
@@ -44,7 +56,9 @@ final class SyncCompleteScreen extends Component
     ): void {
         $userId = $currentUser->id();
 
-        $this->recordsApplied = $puller->progress($userId)['records_applied'];
+        $progress = $puller->progress($userId);
+        $this->recordsApplied = $progress['records_applied'];
+        $this->withheldEntries = $progress['withheld'];
 
         $names = $devices->otherDeviceNames($userId);
         $first = reset($names);
@@ -55,6 +69,7 @@ final class SyncCompleteScreen extends Component
 
         $this->hasRelay = $relayHost->host() !== null;
         $this->syncAction = Lang::get('mobile::sync.sync_now');
+        $this->devicesSection = Lang::get('sync::devices.heading');
     }
 
     public function continueToApp(UrlGenerator $urls): void

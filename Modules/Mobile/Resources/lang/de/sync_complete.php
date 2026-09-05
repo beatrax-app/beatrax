@@ -7,6 +7,8 @@ return [
     'heading' => 'Dieses Gerät ist synchronisiert',
     'records' => ':count Datensatz von :peer kopiert.|:count Datensätze von :peer kopiert.',
     'records_none' => 'Auf dem Stand von :peer. Es gab nichts Neues zu kopieren.',
+    'withheld' => ':count Änderung ist noch nicht angekommen.|:count Änderungen sind noch nicht angekommen.',
+    'withheld_action' => 'Signiert von einem Gerät, das dieses Gerät nicht prüfen kann. Nichts geht verloren — alles bleibt auf :peer und kommt an, sobald eines deiner Geräte diese Identität weitergibt und du sie unter :section bestätigst.',
     'how_it_works' => 'Ab jetzt',
     'automatic_title' => 'Du entscheidest, wann synchronisiert wird',
     'automatic_body' => 'Alles, was du auf einem der Geräte änderst, erscheint auf dem anderen, sobald du das nächste Mal auf :action tippst. Im Hintergrund geht das nicht — die App-Sperre hält den einzigen Schlüssel.',

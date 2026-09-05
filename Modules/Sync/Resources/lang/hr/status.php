@@ -11,6 +11,7 @@ return [
     'error' => 'Pogreška sinkronizacije na jednom ili više uređaja',
     'syncing' => 'Sinkronizacija…',
     'offline' => 'Uređaji izvan mreže',
+    'withheld' => 'Promjene još nisu primljene',
     'behind' => 'Promjene još nisu poslane',
     'all_synced' => 'Svi uređaji su ažurni',
     'synced' => 'sinkronizirano',

@@ -7,6 +7,8 @@ return [
     'heading' => 'Dit apparaat is gesynchroniseerd',
     'records' => ':count record gekopieerd van :peer.|:count records gekopieerd van :peer.',
     'records_none' => 'Bijgewerkt met :peer. Er was niets nieuws om te kopiëren.',
+    'withheld' => ':count wijziging is nog niet binnengekomen.|:count wijzigingen zijn nog niet binnengekomen.',
+    'withheld_action' => 'Ondertekend door een apparaat dat dit apparaat niet kan controleren. Er gaat niets verloren — alles blijft op :peer en komt binnen zodra een van je apparaten die identiteit doorgeeft en jij die bevestigt bij :section.',
     'how_it_works' => 'Vanaf nu',
     'automatic_title' => 'Jij bepaalt wanneer er gesynchroniseerd wordt',
     'automatic_body' => 'Wat je op het ene apparaat wijzigt, verschijnt op het andere zodra je de volgende keer op :action tikt. Op de achtergrond kan het niet — de app-vergrendeling heeft de enige sleutel.',

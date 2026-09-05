@@ -11,6 +11,7 @@ return [
     'error' => 'Synchronisatiefout op een of meer apparaten',
     'syncing' => 'Synchroniseren…',
     'offline' => 'Apparaten offline',
+    'withheld' => 'Wijzigingen nog niet ontvangen',
     'behind' => 'Wijzigingen nog niet verzonden',
     'all_synced' => 'Alle apparaten zijn up-to-date',
     'synced' => 'gesynchroniseerd',

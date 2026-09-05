@@ -7,6 +7,8 @@ return [
     'heading' => 'Ovaj uređaj je sinhronizovan',
     'records' => 'Kopiran :count zapis sa uređaja :peer.|Kopirana :count zapisa sa uređaja :peer.|Kopirano :count zapisa sa uređaja :peer.',
     'records_none' => 'Sve je usaglašeno — nije bilo ničeg novog za kopiranje. Izvorni uređaj: :peer.',
+    'withheld' => ':count promena još nije stigla.|:count promene još nisu stigle.|:count promena još nije stiglo.',
+    'withheld_action' => 'Potpisao ih je uređaj koji ovaj uređaj ne može da proveri. Ništa nije izgubljeno — sve ostaje na uređaju :peer i stići će ako neki tvoj uređaj prosledi taj identitet i ti ga potvrdiš u odeljku :section.',
     'how_it_works' => 'Od sada nadalje',
     'automatic_title' => 'Ti biraš kada se sinhronizuje',
     'automatic_body' => 'Šta god promeniš na jednom uređaju, pojaviće se na drugom sledeći put kad dodirneš :action. U pozadini ne može da radi — zaključavanje aplikacije čuva jedini ključ.',

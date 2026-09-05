@@ -12,8 +12,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Sync\Internal\Pairing\DeviceIntroductionService;
-use Modules\Sync\Internal\Transport\WithheldLedger;
-use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\WithheldHistoryReport;
 
 // The device list's second half: keys a confirmed peer relayed for a device
 // this household can no longer pair with. Its own component rather than a
@@ -47,10 +46,9 @@ final class IntroducedDevicesSection extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         DeviceIntroductionService $service,
-        WithheldLedger $ledger,
-        DeviceRegistryService $registry,
+        WithheldHistoryReport $report,
     ): void {
-        $this->reload($db, $service, $ledger, $registry, $currentUser->user()->id);
+        $this->reload($db, $service, $report, $currentUser->user()->id);
     }
 
     public function confirmIntroduction(
@@ -58,8 +56,7 @@ final class IntroducedDevicesSection extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         DeviceIntroductionService $service,
-        WithheldLedger $ledger,
-        DeviceRegistryService $registry,
+        WithheldHistoryReport $report,
     ): void {
         $id = DerivedRowId::fromWire($introductionId);
         $userId = $currentUser->user()->id;
@@ -71,7 +68,7 @@ final class IntroducedDevicesSection extends Component
             $service->confirm($userId, $id);
         }
 
-        $this->reload($db, $service, $ledger, $registry, $userId);
+        $this->reload($db, $service, $report, $userId);
     }
 
     public function dismissIntroduction(
@@ -79,8 +76,7 @@ final class IntroducedDevicesSection extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         DeviceIntroductionService $service,
-        WithheldLedger $ledger,
-        DeviceRegistryService $registry,
+        WithheldHistoryReport $report,
     ): void {
         $id = DerivedRowId::fromWire($introductionId);
         $userId = $currentUser->user()->id;
@@ -89,14 +85,13 @@ final class IntroducedDevicesSection extends Component
             $service->forget($userId, $id);
         }
 
-        $this->reload($db, $service, $ledger, $registry, $userId);
+        $this->reload($db, $service, $report, $userId);
     }
 
     private function reload(
         DatabaseManager $db,
         DeviceIntroductionService $service,
-        WithheldLedger $ledger,
-        DeviceRegistryService $registry,
+        WithheldHistoryReport $report,
         int $userId,
     ): void {
         $names = $db->connection()->table('device_registry')
@@ -105,10 +100,15 @@ final class IntroducedDevicesSection extends Component
             ->all();
 
         $rows = $service->forUser($userId);
-        $counts = $ledger->forUser($userId);
+
+        // Already narrowed to the authors this device still cannot verify, so
+        // a reader who has just confirmed an introduction is not told the next
+        // exchange's answer a sync early — and the aggregate status upstairs
+        // reads the same list rather than a second spelling of it.
+        $counts = $report->stillHeldFor($userId);
 
         $this->introductions = $this->introductionsFrom($rows, $names, $counts);
-        $this->withheld = $this->heldBackFrom($rows, $names, $counts, $registry->deviceKeys($userId));
+        $this->withheld = $this->heldBackFrom($rows, $names, $counts);
     }
 
     // Names, not ids, for the device that vouched — and the raw id when this
@@ -150,10 +150,9 @@ final class IntroducedDevicesSection extends Component
      * @param  array<int, \stdClass>  $rows
      * @param  array<array-key, mixed>  $names
      * @param  list<array{peer_device_id: string, author_device_id: string, entry_count: int}>  $counts
-     * @param  array<string, string>  $paired  Authors a two-party ceremony already answers for.
      * @return list<array<string, mixed>>
      */
-    private function heldBackFrom(array $rows, array $names, array $counts, array $paired): array
+    private function heldBackFrom(array $rows, array $names, array $counts): array
     {
         $introduced = array_map(
             static fn (\stdClass $row): string => is_string($row->device_id) ? $row->device_id : '',
@@ -162,12 +161,11 @@ final class IntroducedDevicesSection extends Component
         $held = [];
 
         foreach ($counts as $count) {
-            // A report is a claim about the exchange that carried it. An author
-            // this device can now verify is one the NEXT exchange withholds
-            // nothing for, so repeating it here would state a narrowing that
-            // has already ended.
-            if (in_array($count['author_device_id'], $introduced, true)
-                || isset($paired[$count['author_device_id']])) {
+            // An author with an identity on offer is listed above instead,
+            // where the button that ends the withholding is. Repeating it here
+            // would put the same narrowing on the screen twice, once without
+            // the act that resolves it.
+            if (in_array($count['author_device_id'], $introduced, true)) {
                 continue;
             }
 
