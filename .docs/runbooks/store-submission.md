@@ -185,26 +185,19 @@ does.
 
 ## Signing identities and their expiries
 
-The inventory is split across two pages and this one adds no third copy of it:
-[repo security setup](repo-security-setup.md#release-signing) holds the desktop
-identities, [the mobile release runbook](mobile-release.md#expiry) the mobile
-ones.
+Every identity the pipeline requires, its expiry, and the command or page that
+expiry is read from are in the
+[signing identity register](signing-identities.md).
 
-What is worth recording here is the part that is **not** covered, because a
-store listing turns an unnoticed expiry from an inconvenience into an outage.
-These identities are required by the pipeline and have no expiry recorded
-anywhere:
+This section used to point at two other pages and add a third table of its own
+for what neither covered — the App Store Connect API key, the provisioning
+profile, the publisher key, the build token, the licence and the keystore
+certificate. A split inventory is how six things a submission depends on came
+to be recorded on none of the pages that hold it. There is one page now, and a
+test compares it against the workflows in both directions.
 
-| Identity | Where it is required | Where its expiry would come from |
-|---|---|---|
-| App Store Connect API key | `APP_STORE_API_*`, and Bifrost's iOS panel | App Store Connect → Users and Access → Integrations |
-| Ed25519 publisher release key | `ED25519_PRIVATE_KEY`, `release.yml` | No expiry by construction; needs a rotation date and an owner instead |
-| `BIFROST_BUILD_TOKEN` | `mobile-bifrost-publish.yml` | GitHub → fine-grained token settings |
-| NativePHP licence | `NATIVEPHP_LICENSE_*`, `release.yml` | The NativePHP account |
-| Android keystore certificate | `ANDROID_SIGNING_CERT_SHA256` | `keytool -list -v` on the keystore |
-
-Nothing warns before any identity lapses, including the four that *are*
-recorded.
+Nothing still warns before an identity lapses, and a store listing turns that
+from an inconvenience into an outage. Read the register before a submission.
 
 ## The two desktop stores
 

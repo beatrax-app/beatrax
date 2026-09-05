@@ -259,7 +259,8 @@ The Azure Trusted Signing account `beatraxsigning` (`rg-beatrax-signing`,
 North Europe, Basic SKU) holds one Public Trust certificate profile,
 `beatrax-public-trust`, issued against identity validation
 `1433edcb-d405-4bc3-95de-474a39ae2796` — organisation `NightWorks.io`,
-Completed, valid to 2028-10-17.
+Completed. Its validity window is in the
+[signing identity register](signing-identities.md).
 
 This section previously described the opposite state, and the way that was
 missed is the thing to learn from: every credential was confirmed to
@@ -295,8 +296,9 @@ Two properties of Trusted Signing that surprise people reading this later:
   Dropping timestamping would make Windows builds stop verifying within 72
   hours of signing, long after the release looked successful.
 
-The service principal's client secret (`rbac`, hint `S6~`) expires
-**2027-07-15**. Nothing warns before it lapses.
+The service principal's client secret is the `rbac` one, hint `S6~`. Its
+expiry is in the [signing identity register](signing-identities.md), along
+with the `az` query that reads it.
 
 `publisherName` is required by electron-builder 26 but not emitted by
 NativePHP, so `scripts/nativephp_azure_publisher_name.php` patches it into
@@ -327,11 +329,14 @@ real signature before it is uploaded.
 
 ### Expiry
 
-The Developer ID certificate expires **2027-02-01** — a short window,
-capped by the Developer Program membership rather than the usual five
-years. The Azure client secret expires **2027-07-15**. Neither expiry
-fails the build on its own; macOS in particular degrades back to ad-hoc,
-which is what the artifact verification exists to catch.
+Every date, and the command that reads it, is in the
+[signing identity register](signing-identities.md) — one page, because this
+inventory used to be split across three and five identities ended up
+recorded on none of them.
+
+What belongs here is what an expiry does to a build: nothing, on its own.
+macOS in particular degrades back to an ad-hoc signature rather than
+failing, which is what the artifact verification exists to catch.
 
 ## What this runbook does not cover
 
@@ -339,7 +344,8 @@ which is what the artifact verification exists to catch.
   above are repository-scoped; gating them behind an environment with
   required reviewers is a reasonable hardening step and has not been done.
 - **Mobile signing.** Android and iOS are built and signed by Bifrost from
-  credentials uploaded to its own panel, not from this repository. The
+  credentials uploaded to its own panel, not from this repository; their
+  expiries are in the [signing identity register](signing-identities.md). The
   Android release keystore and its passwords live in 1Password; a local
   release build reads them from `mobile-app/.env` (see
   `mobile-app/.env.example`).
