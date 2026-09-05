@@ -22,16 +22,19 @@ beforeEach(function (): void {
 });
 
 it('lands the user back on the in-progress step with the resume banner', function (): void {
-    // Left mid connect-card: the representative resume case.
+    // Left mid connect-card: the representative resume case. Every step before
+    // it is done or skipped, because that is the only arrangement the reader
+    // could have walked into and the only one the jump guard would let them
+    // back into.
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
-        ->where('step_key', 'welcome')
+        ->whereIn('step_key', ['welcome', 'connect-bank'])
         ->update(['status' => 'done']);
 
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
-        ->where('step_key', 'connect-bank')
-        ->update(['status' => 'done']);
+        ->where('step_key', 'connect-paypal')
+        ->update(['status' => 'skipped']);
 
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)

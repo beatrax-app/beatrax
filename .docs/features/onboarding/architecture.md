@@ -46,10 +46,12 @@ What the module explicitly does NOT do:
 - It never persists transactions itself. The first-import step
   delegates to `ConfirmImport` (Import); the per-account
   starting-balance write goes through Ledger.
-- It never re-runs already-completed steps. The
-  `ResumeStepResolver` is the authoritative resumer; a user who
-  has completed step 3 lands on step 4 on every return until the
-  wizard is fully complete.
+- It never sends a user back through a step they have finished.
+  The `ResumeStepResolver` is the authoritative resumer; a user
+  who has completed step 3 lands on step 4 on every return until
+  the wizard is fully complete. Walking back is the reader's own
+  choice: the Back control reopens the step it moves to, and
+  from then on that is the step they resume onto.
 
 ## Module boundary
 
@@ -84,7 +86,12 @@ thing that forces the event onto a Public surface.
   from it renders a skip button that dispatches and goes
   nowhere, which is how `first-import` shipped once. The
   wizard's navigation uses this registry; tests assert the
-  order.
+  order. It also holds `isReachable($stepKey, $progress)` — the
+  jump gate, which is a statement about this order and so lives
+  with it: a step is reachable when every step before it in
+  `steps()` is `done` or `skipped`. `SetupWizard` and
+  `ResumeStepResolver` both ask this one copy, because two
+  spellings of the rule are two answers waiting to disagree.
 - **Internal/Services/WizardProgressInitializer** — seeds one
   `wizard_progress` row per registry step for a fresh install.
   Insert-only per `(user_id, step_key)` — `UserInstalled` is
@@ -96,16 +103,22 @@ thing that forces the event onto a Public surface.
   the resume resolver would drop a finished user back into the wizard
   at the new step on their next visit. A fresh install or an
   in-progress user still gets the normal `pending` seed.
-- **Internal/Services/ResumeStepResolver** — looks up the
-  user's `wizard_progress` rows and resolves the step to mount:
-  any `in_progress` row wins first (drops the user back exactly
-  where they were mid-step); else the first `pending` step in
-  registry order (keeps the wizard moving forward past
+- **Internal/Services/ResumeStepResolver** — reads the per-step
+  status map from `WizardProgressQuery` and resolves the step to
+  mount: the first `in_progress` step wins (drops the user back
+  exactly where they were mid-step); else the earliest `pending`
+  step in registry order (keeps the wizard moving forward past
   completed/skipped steps); else the empty-string sentinel
   meaning every step is done or skipped (callers bounce to `/`).
-  Filters explicitly by `user_id` rather than relying on
-  `BelongsToUser`'s global scope, which falls through under
-  unauthenticated CLI/queue/test contexts.
+  Both arms are filtered through the registry's jump gate, so the
+  step it resumes onto is one the reader could also have jumped
+  to. That matters for a step reopened by the Back control and
+  then left behind a step inserted ahead of it: rather than
+  stranding the reader on a step the gate would refuse, the
+  resolver reopens the earliest reachable pending one.
+  `WizardProgressQuery` filters explicitly by `user_id` rather
+  than relying on `BelongsToUser`'s global scope, which falls
+  through under unauthenticated CLI/queue/test contexts.
 - **Internal/Listeners/InitializeWizardProgressOnInstall** —
   `UserInstalled` listener that runs the initializer.
 - **Internal/Http/Livewire/SetupWizard** — the parent SFC
@@ -156,8 +169,8 @@ anonymous Blade components for the per-step UI shell.
   it wrong: a step added after a user finished the wizard seeds
   `skipped`, not `pending`.
 - `ResumeStepResolver::resolve($userId)` — returns the step key
-  to mount: any `in_progress` row first, else the first
-  `pending` step in registry order, else the empty string. It
+  to mount: the first reachable `in_progress` step, else the
+  earliest reachable `pending` one, else the empty string. It
   does NOT return `'done'` as a sentinel — `done` is a real
   step key in the registry, so a sentinel spelled the same way
   could not be told from "mount the done step". The empty
@@ -166,7 +179,8 @@ anonymous Blade components for the per-step UI shell.
 - `WizardProgressQuery::list($userId)` — the per-step status
   map the progress strip renders, defaulting an absent row to
   `pending` so a partially-seeded user still gets a coherent
-  strip. Internal, and consumed only by `SetupWizard`.
+  strip. Internal, and the one shape the jump gate and the
+  resolver both read.
 - `WizardCompleted` event — carries the user id, dispatched by
   `DoneStep::finish()` just before it redirects to `/`. Nothing
   listens to it today; it is the seam, not a wiring.
@@ -202,6 +216,16 @@ step, under a control whose aria-label says it "saves your progress".
 The per-step "Skip this step" control is the other exit, and that one
 does mark its own row `skipped` — through `SetupWizard::skip()`, gated
 on `WizardStepRegistry::isSkippable()`.
+
+Because "Resume later" writes nothing, the row that says where the reader
+was has to be written when they got there. Moving forward writes it:
+`advance()` marks the step it leaves `done` or `skipped` and the next step
+becomes the resolver's first pending one. Moving back is the other
+direction, and `goToStep()` writes it — the step it lands on goes
+`in_progress` with its `completed_at` cleared, so a reader who walks back
+to a finished step and then leaves comes back to that step rather than to
+the one they had already left. It is the only production writer of
+`in_progress`.
 
 Once every row is `done` or `skipped` there is nothing to resume.
 `mount()` then renders the terminal step — `WizardStepRegistry::lastStep()`
@@ -247,7 +271,11 @@ rows keep recording what the user did versus dropped and a later
 client-side tampering (`wire:model="currentStepKey"`-style attacks):
 the target step must be in the registry and every step before it must
 already be `done` or `skipped` — a user can walk back to a completed
-step but never jump ahead.
+step but never jump ahead. Past that gate it marks the step it lands on
+`in_progress`, which is what a later visit resumes onto. Un-completing a
+step the caller had already completed is all a forged call buys, and the
+Back control is the only thing in the UI that reaches it — there is no
+forward jump for the reopened step to block.
 
 The connector step pattern (e.g. ConnectBankStep):
 
@@ -418,7 +446,12 @@ into one `DB::transaction()`, so the commit is truly atomic: either
 everything lands or nothing does. The preview is rebuilt at commit
 time (Livewire invokes action methods without running `render()`
 first) using only `ready`-status sections, so a half-broken upload
-doesn't take the whole batch down. Chain resolution and recurring
+doesn't take the whole batch down. A run the confirm still refuses
+that late is left `previewed` and the rest commit around it — but if
+every offered run is refused, `EveryStagedRunWasRefusedException`
+takes the transaction down with it, so the step stays where it was
+and the reader reads "Nothing was changed — try again" instead of
+being advanced past an import that never happened. Chain resolution and recurring
 detection are dispatched once, **after** the transaction commits —
 their failure does not undo committed data; it just means the next
 scheduled sweep catches up.

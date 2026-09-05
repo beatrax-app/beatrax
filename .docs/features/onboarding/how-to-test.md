@@ -11,8 +11,12 @@ isolation.
     step, re-fire stays at one row per step, a step already
     past `pending` is left alone, and a step added after the
     wizard finished seeds `skipped` rather than `pending`.
-  - `ResumeStepResolverTest` — in_progress wins, then first
-    pending in registry order, then the empty-string sentinel.
+  - `ResumeStepResolverTest` — in_progress wins, then earliest
+    pending in registry order, then the empty-string sentinel;
+    plus the two the jump gate decides — an in_progress step
+    behind a pending one falls back to that pending step, and
+    `done` is still returned as a step key while its own row has
+    not been completed.
   - `WizardSkippableStepsTest` — which step keys `isSkippable()`
     admits.
 
@@ -141,12 +145,20 @@ and the assertion — see
   `tests/Feature/ReRunWizardTest.php`)
 - **The wizard always resumes from the first incomplete
   step.** An `in_progress` row wins over any pending one; failing
-  that, the first `pending` step in registry order. A user with
+  that, the earliest `pending` step in registry order. Both are
+  filtered through the jump gate, so a step the reader could not
+  jump to is not one they are dropped onto either. A user with
   no incomplete step left gets the empty-string sentinel, NOT
   `'done'` — `'done'` is a real step key, and returning it would
   send a finished user back into the wizard.
   (`tests/Unit/ResumeStepResolverTest.php`,
   `tests/Feature/ResumeWizardTest.php`)
+- **A step the reader walked back to is the step they resume
+  onto.** The Back control marks its target `in_progress` and
+  clears its `completed_at`, so leaving through "Resume later" —
+  which writes nothing — and returning lands on the step being
+  worked on rather than the one already left behind.
+  (`tests/Feature/TheStepAReaderWentBackToIsWhereTheyResumeTest.php`)
 - **A fresh signup redirects to `/setup-wizard`.** The
   post-signup destination is the wizard, not the dashboard.
   (`tests/Feature/SignupRoutesToSetupTest.php`)
@@ -174,6 +186,13 @@ and the assertion — see
   rollback during commit unwinds every per-account write.
   (`tests/Feature/FirstImportStepCommitEverythingTest.php`,
   `tests/Feature/FirstImportStepCommitRollbackTest.php`)
+- **A commit that imported nothing is not a completed step.** One
+  refused run still lets the rest commit and the step complete;
+  every run refused rolls the batch back, leaves the row off
+  `done`, dispatches no completion, and shows the "Nothing was
+  changed — try again" sentence rather than "Nothing to commit."
+  (`tests/Feature/ACommitThatImportedNothingIsNotACompletedStepTest.php`,
+  `tests/Feature/ARefusedRunMustNotVetoTheBatchItWasStagedWithTest.php`)
 - **`StartingBalanceCard` is idempotent.** Confirming the
   same starting-balance value twice is a no-op; the
   underlying write goes through Ledger's sanctioned writer.

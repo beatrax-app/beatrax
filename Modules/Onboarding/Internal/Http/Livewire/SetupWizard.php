@@ -126,40 +126,43 @@ final class SetupWizard extends Component
         $this->allComplete = false;
     }
 
-    public function goToStep(string $stepKey, WizardStepRegistry $registry, CurrentUser $currentUser, WizardProgressQuery $query): void
-    {
-        $progress = $query->list($currentUser->id());
-        if (! self::isReachable($stepKey, $registry, $progress)) {
+    // The Back button and the platform back gesture both land here, and the step
+    // they land on is the one the reader is now working on: recording that is
+    // what "Resume later" has to leave behind for the resolver to find, since it
+    // writes nothing of its own.
+    public function goToStep(
+        string $stepKey,
+        WizardStepRegistry $registry,
+        CurrentUser $currentUser,
+        WizardProgressQuery $query,
+        DatabaseManager $db,
+        Clock $clock,
+    ): void {
+        $userId = $currentUser->id();
+        if (! $registry->isReachable($stepKey, $query->list($userId))) {
             return;
         }
 
+        $this->reopen($db, $clock, $userId, $stepKey);
+
         $this->currentStepKey = $stepKey;
-        $this->progress = $progress;
+        $this->progress = $query->list($userId);
         $this->announceStepChange();
     }
 
-    // The gate belongs to the value, not to the one method that asks for it:
-    // currentStepKey is a public property, so a payload reaches any step by
-    // setting it and then completing it, without ever calling goToStep().
-    /**
-     * @param  array<string, array{status: string, completed_at: ?string}>  $progress
-     */
-    private static function isReachable(string $stepKey, WizardStepRegistry $registry, array $progress): bool
+    private function reopen(DatabaseManager $db, Clock $clock, int $userId, string $stepKey): void
     {
-        $steps = $registry->steps();
-        $targetIndex = array_search($stepKey, $steps, strict: true);
-        if ($targetIndex === false) {
-            return false;
-        }
+        $now = $clock->now()->toDateTimeString();
 
-        for ($i = 0; $i < $targetIndex; $i++) {
-            $priorStatus = $progress[$steps[$i]]['status'] ?? WizardStepStatus::Pending->value;
-            if ($priorStatus !== WizardStepStatus::Done->value && $priorStatus !== WizardStepStatus::Skipped->value) {
-                return false;
-            }
-        }
-
-        return true;
+        $db->connection()
+            ->table('wizard_progress')
+            ->where('user_id', $userId)
+            ->where('step_key', $stepKey)
+            ->update([
+                'status' => WizardStepStatus::InProgress->value,
+                'completed_at' => null,
+                'updated_at' => $now,
+            ]);
     }
 
     #[On('wizard.step.completed')]
@@ -169,8 +172,9 @@ final class SetupWizard extends Component
         WizardStepRegistry $registry,
         WizardProgressQuery $query,
         Clock $clock,
+        ResumeStepResolver $resume,
     ): void {
-        $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Done->value);
+        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Done->value);
     }
 
     // The view hides skip on non-skippable steps; this guard is the
@@ -182,12 +186,13 @@ final class SetupWizard extends Component
         WizardStepRegistry $registry,
         WizardProgressQuery $query,
         Clock $clock,
+        ResumeStepResolver $resume,
     ): void {
         if (! $registry->isSkippable($this->currentStepKey)) {
             return;
         }
 
-        $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Skipped->value);
+        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Skipped->value);
     }
 
     // "Resume later", whose aria-label promises it saves your progress. It
@@ -234,17 +239,20 @@ final class SetupWizard extends Component
         ]);
     }
 
+    // The gate belongs to the value, not to the one method that asks for it:
+    // currentStepKey is a public property, so a payload reaches any step by
+    // setting it and then completing it, without ever calling goToStep().
     private function advance(
         DatabaseManager $db,
         CurrentUser $currentUser,
         WizardStepRegistry $registry,
         WizardProgressQuery $query,
         Clock $clock,
+        ResumeStepResolver $resume,
         string $terminalStatus,
     ): void {
         $userId = $currentUser->id();
-        $progress = $query->list($userId);
-        if (! self::isReachable($this->currentStepKey, $registry, $progress)) {
+        if (! $registry->isReachable($this->currentStepKey, $query->list($userId))) {
             return;
         }
 
@@ -260,14 +268,16 @@ final class SetupWizard extends Component
                 'updated_at' => $now,
             ]);
 
-        $steps = $registry->steps();
-        $currentIndex = array_search($this->currentStepKey, $steps, strict: true);
-        $nextIndex = $currentIndex === false ? null : $currentIndex + 1;
+        // The earliest step still unfinished, not the one after this in the
+        // list. The two differ only after a Back: the step following the
+        // reopened one is usually already done, and walking the reader back
+        // through it is the thing Back exists to avoid.
+        $next = $resume->resolve($userId);
 
-        if ($nextIndex !== null && isset($steps[$nextIndex])) {
-            $this->currentStepKey = $steps[$nextIndex];
-        } else {
+        if ($next === '') {
             $this->allComplete = true;
+        } else {
+            $this->currentStepKey = $next;
         }
 
         $this->isResuming = false;

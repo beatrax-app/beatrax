@@ -373,6 +373,15 @@ run id, and carries on; the run keeps its `previewed` status and the reader can
 upload it again. Anything else still rolls the batch back, because anything
 else is not a statement about one run.
 
+Carrying on stops at zero. The method returns how many runs it actually
+confirmed, and a count of zero raises
+`EveryStagedRunWasRefusedException` inside the same transaction — logged at
+`error` naming how many runs were offered and how many were refused, where a
+single refusal is logged at `warning`. Rolling back is what keeps the
+`wizard_progress` row off `done`: a commit that imported no transaction at all
+is not a completed step, and the reader is told nothing was changed rather than
+being advanced past a review they never got.
+
 `OpenBankingSyncRunner` records the refusal as a failed attempt and does
 **not** advance `last_successful_sync_at`, so the window stays open and
 the rows land on the next run once the reader names the account. Whether
