@@ -9,41 +9,11 @@ use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
+use Modules\Desktop\Tests\Support\RecordingColdStartVault;
 
 // The enclave/safeStorage blob wraps the DATA KEY, and a PIN change re-wraps
 // that same key rather than replacing it. Forgetting on every passphrase event
 // deleted a blob that still opened the correct key.
-
-final class RecordingColdStartVault implements ColdStartVault
-{
-    /** @var list<int> */
-    public array $forgotten = [];
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    public function isEnrolled(int $userId): bool
-    {
-        return true;
-    }
-
-    public function enroll(int $userId, string $dataKey): bool
-    {
-        return true;
-    }
-
-    public function recover(int $userId, string $reason): ?string
-    {
-        return null;
-    }
-
-    public function forget(int $userId): void
-    {
-        $this->forgotten[] = $userId;
-    }
-}
 
 function touchIdVaultUser(string $username): User
 {

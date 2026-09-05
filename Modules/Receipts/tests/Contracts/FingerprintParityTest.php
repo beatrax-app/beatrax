@@ -6,9 +6,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
-use Modules\Ingestion\Public\Contracts\AccountResolver;
-use Modules\Ingestion\Public\Dto\AccountResolution;
-use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -20,6 +17,8 @@ use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
+use Modules\Receipts\Tests\Support\FixedIcsAccountResolver;
+use Modules\Receipts\Tests\Support\FixedPaypalAccountResolver;
 
 // A CSV row and its .eml receipt have to hash to the same fingerprint: the
 // ENRICHED disposition in FingerprintStage::classify is what makes cross-format
@@ -42,30 +41,6 @@ dataset('fingerprintParityPairs', [
         'matcherKey' => 'ics-receipt',
     ],
 ]);
-
-// The fingerprint tuple includes accountId, so both sides only have to agree on
-// the id for the two hashes to collapse onto each other.
-final class FixedPaypalAccountResolver implements AccountResolver
-{
-    public function __construct(private readonly int $accountId) {}
-
-    public function resolve(string $iban): KnownAccount
-    {
-        return new KnownAccount($this->accountId);
-    }
-}
-
-// IcsPdfAdapter resolves the own-IBAN once before it starts iterating and does
-// nothing with the answer, so a non-throwing implementation is all this arm needs.
-final class FixedIcsAccountResolver implements AccountResolver
-{
-    public function __construct(private readonly int $accountId) {}
-
-    public function resolve(string $iban): AccountResolution
-    {
-        return AccountResolution::known($this->accountId);
-    }
-}
 
 // A declared pair whose fixtures are absent is a contract that never runs, so
 // the absence fails here rather than skipping quietly.

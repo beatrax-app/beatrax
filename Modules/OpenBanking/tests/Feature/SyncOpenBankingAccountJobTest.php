@@ -14,66 +14,16 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Support\LockStore;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\FetchWalk;
-use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Tests\Support\SojaLockObservingRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\SojaOrphaningRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\SojaStubRemoteSourceAdapter;
 
 uses(RefreshDatabase::class);
-
-final class SojaStubRemoteSourceAdapter implements RemoteSourceAdapter
-{
-    public bool $called = false;
-
-    public function __construct(private readonly ?Throwable $throws = null) {}
-
-    public function format(): string
-    {
-        return 'enable-banking';
-    }
-
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
-    {
-        $this->called = true;
-        if ($this->throws !== null) {
-            throw $this->throws;
-        }
-
-        // This job's contract is the bookkeeping around a fetch, not dedup.
-        yield from [];
-
-        return FetchWalk::exhausted();
-    }
-}
-
-// ON DELETE CASCADE clears user_id when the owner account goes away. Doing it
-// from inside fetch() is that happening while the attempt is in flight.
-final class SojaOrphaningRemoteSourceAdapter implements RemoteSourceAdapter
-{
-    public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly int $connectionId,
-    ) {}
-
-    public function format(): string
-    {
-        return 'enable-banking';
-    }
-
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
-    {
-        $this->db->connection()->table('open_banking_connections')
-            ->where('id', $this->connectionId)
-            ->update(['user_id' => null]);
-
-        yield from [];
-
-        return FetchWalk::exhausted();
-    }
-}
 
 function sojaUser(string $username): User
 {
@@ -385,40 +335,3 @@ it('holds the connection\'s own uniqueness key for the duration of the fetch', f
     expect($after->get())->toBeTrue();
     $after->release();
 });
-
-// Reports whether the connection's uniqueness key is still free at the moment
-// the fetch runs, which is the window a manual sync would race.
-final class SojaLockObservingRemoteSourceAdapter implements RemoteSourceAdapter
-{
-    /**
-     * @param  Closure(bool): void  $report
-     */
-    public function __construct(
-        private readonly int $connectionId,
-        private readonly Closure $report,
-    ) {}
-
-    public function format(): string
-    {
-        return 'enable-banking';
-    }
-
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
-    {
-        $probe = LockStore::forUniqueJobs()->lock(
-            UniqueLock::getKey(new SyncOpenBankingAccountJob($this->connectionId)),
-            SyncOpenBankingAccountJob::UNIQUE_FOR_SECONDS,
-        );
-
-        $free = $probe->get();
-        if ($free) {
-            $probe->release();
-        }
-
-        ($this->report)($free);
-
-        yield from [];
-
-        return FetchWalk::exhausted();
-    }
-}

@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
+use Modules\Tax\Tests\Support\TaxExportShareSheet;
 
 uses(RefreshDatabase::class);
 
@@ -15,35 +16,6 @@ uses(RefreshDatabase::class);
 // nothing about the shell they were answering into. The Android WebView
 // registers no DownloadListener, so the round-trip ran, the CSV was built, and
 // the reader got no file, no error and an unchanged page.
-
-final class TaxExportShareSheet extends ShareSheetExport
-{
-    /** @var array<string, string> */
-    public array $handed = [];
-
-    public function __construct(private readonly bool $dropsDownloads = true) {}
-
-    public function replacesWebViewDownload(): bool
-    {
-        return $this->dropsDownloads;
-    }
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    public function export(
-        string $filename,
-        string $contents,
-        ?string $shareTitle = null,
-        ?string $shareMessage = null,
-    ): FileExportOutcome {
-        $this->handed[$filename] = $contents;
-
-        return FileExportOutcome::Shared;
-    }
-}
 
 function taxExportReader(): User
 {

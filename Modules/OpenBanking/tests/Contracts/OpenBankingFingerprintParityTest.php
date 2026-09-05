@@ -9,39 +9,17 @@ use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Transaction;
-use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
+use Modules\OpenBanking\Tests\Support\ParityStubHttpClient;
 
 uses(RefreshDatabase::class);
 
 // The fixtures make this falsifiable: two rows exist verbatim in both the EB
 // JSON and the ASN CAMT.053 file (must dedup), one is PDNG (dropped), and one
 // has no CAMT twin — so a run that dropped everything could not pass.
-
-final class ParityStubHttpClient extends EnableBankingHttpClient
-{
-    /**
-     * @param  array<string, mixed>  $transactionsResponse
-     * @param  array<string, mixed>  $accountDetailsResponse
-     */
-    public function __construct(
-        private readonly array $transactionsResponse,
-        private readonly array $accountDetailsResponse,
-    ) {}
-
-    public function accountDetails(string $uid): array
-    {
-        return $this->accountDetailsResponse;
-    }
-
-    public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-    {
-        return $this->transactionsResponse;
-    }
-}
 
 it('an EB fetch overlapping a prior CAMT.053 import commits ZERO net-new rows for the shared transactions, and commits the EB-only row as new', function (): void {
     $seeded = $this->seedFixtureUserAndAccount();

@@ -7,28 +7,12 @@ use Illuminate\Testing\TestResponse;
 use Livewire\Component;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Core\Public\Support\LivewireClientRefusal;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Mobile\Tests\Support\ReaderlessCallProbe;
 
 uses(RefreshDatabase::class);
-
-// Stands in for the next action on an auth-free route that forgets to repeat
-// mount()'s check: the seam behind the guard has to be provable without waiting
-// for a second real one to ship.
-final class ReaderlessCallProbe extends Component
-{
-    public function boom(CurrentUser $currentUser): void
-    {
-        $currentUser->user();
-    }
-
-    public function render(): string
-    {
-        return '<div></div>';
-    }
-}
 
 // /mobile/import renders before any account exists, so it sits outside the auth
 // group and mount() opens with an isAuthenticated() check for that reason. A

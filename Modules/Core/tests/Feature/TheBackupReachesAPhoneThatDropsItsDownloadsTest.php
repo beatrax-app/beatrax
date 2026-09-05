@@ -16,6 +16,7 @@ use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Tests\Support\BackupShareSheet;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 
@@ -31,43 +32,6 @@ use Modules\Mobile\Public\Services\ShareSheetExport;
 // of the WebView download route. The OS share sheet is a route the phone does
 // have, so the feature comes back and only a shell with no sheet at all is
 // told there is nothing here for it.
-
-final class BackupShareSheet extends ShareSheetExport
-{
-    /** @var list<array{string, string}> */
-    public array $handed = [];
-
-    public function __construct(
-        private readonly bool $dropsDownloads = true,
-        private readonly bool $available = true,
-        private readonly FileExportOutcome $outcome = FileExportOutcome::Shared,
-    ) {}
-
-    public function replacesWebViewDownload(): bool
-    {
-        return $this->dropsDownloads;
-    }
-
-    public function isAvailable(): bool
-    {
-        return $this->available;
-    }
-
-    public function exportFile(
-        string $sourcePath,
-        string $filename,
-        ?string $shareTitle = null,
-        ?string $shareMessage = null,
-    ): FileExportOutcome {
-        $this->handed[] = [$filename, (string) file_get_contents($sourcePath)];
-
-        if ($this->outcome === FileExportOutcome::Shared) {
-            @unlink($sourcePath);
-        }
-
-        return $this->outcome;
-    }
-}
 
 // Stands in for the VACUUM INTO the transactional test harness refuses
 // ("cannot VACUUM from within a transaction"), so the component's own decision

@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
+use Modules\Mobile\Tests\Support\RecordingDispatchMobileNotification;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
@@ -16,25 +17,6 @@ uses(RefreshDatabase::class);
 // facade, so the recording subclass below overrides the protected fire() seam
 // rather than asserting an outbound call. The real class is exercised in the
 // plugin-absent test, which is the case every CI machine runs.
-
-/**
- * @param  array<int, array{notificationId: string, title: string, body: string, deepLinkRoute: string|null}>  $fired
- */
-final class RecordingDispatchMobileNotification extends DispatchMobileNotification
-{
-    /** @var array<int, array{notificationId: string, title: string, body: string, deepLinkRoute: string|null}> */
-    public array $fired = [];
-
-    protected function fire(string $notificationId, string $title, string $body, ?string $deepLinkRoute): void
-    {
-        $this->fired[] = [
-            'notificationId' => $notificationId,
-            'title' => $title,
-            'body' => $body,
-            'deepLinkRoute' => $deepLinkRoute,
-        ];
-    }
-}
 
 function donMobileUser(string $username): User
 {
