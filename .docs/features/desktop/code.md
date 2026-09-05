@@ -21,6 +21,7 @@ Modules/Desktop/
 │   │   ├── BoundedNativeApiClient.php
 │   │   ├── DesktopColdStartVault.php
 │   │   ├── DesktopKeyCustodian.php
+│   │   ├── FileOpenHandoff.php
 │   │   ├── FileOpenIntake.php
 │   │   ├── FirstLaunchBootstrap.php
 │   │   ├── LoopbackProbe.php
@@ -29,6 +30,8 @@ Modules/Desktop/
 │   │   ├── PendingFileIntent.php
 │   │   ├── RelayListenerProcess.php
 │   │   ├── SafeStorageSecretShield.php
+│   │   ├── ShellHandoff.php
+│   │   ├── ShellState.php
 │   │   ├── SubmenuItem.php
 │   │   ├── SyncListenerProcess.php
 │   │   ├── WindowCloseBehavior.php
@@ -119,9 +122,10 @@ separate, longer-lived UI element.
   is the same question phrased for the caller). `persistChoice($user,
   $choice)` is the write and throws on anything outside
   `{quit, tray}`.
-- `Internal/Native/WindowFocusState` — singleton holding the
-  focused / blurred flag. Flipped by closures registered in the
-  provider's boot on `WindowFocused` / `WindowBlurred`.
+- `Internal/Native/WindowFocusState` — the focused / blurred flag,
+  written by `TrackWindowFocus` on `WindowFocused` / `WindowBlurred`
+  and kept on `ShellState`, because the requests that read it are not
+  the requests that write it. Absent reads as focused.
 - `Internal/Native/OsThemeProbe` — concrete `OsThemeSignal`.
 - `Internal/Native/BoundedNativeApiClient` — bound over NativePHP's
   `Client` in `DesktopServiceProvider`, holding every Electron API
@@ -139,7 +143,12 @@ separate, longer-lived UI element.
   its one caller is a shell event that has none.
 - `Internal/Native/ShellHandoff` — the slot a shell event leaves a fact
   in for the window to claim, for the app lock and the file intent
-  alike.
+  alike. Reading spends it.
+- `Internal/Native/ShellState` — the store underneath it: slot-keyed
+  facts in the `database` cache store, read without spending, written
+  forever or with a TTL. Everything a shell event has to leave behind
+  goes through here, because the event's own process does not outlive
+  the request.
 - `Internal/Listeners/ApplyCloseWindowChoice` — handles the JS-glued
   POST that follows the close-window prompt. Applies either
   `App::quit()` or `Window::current()->hide()`.
@@ -166,8 +175,12 @@ separate, longer-lived UI element.
 - `Internal/Listeners/NavigateOnNotificationDeepLink::handle($event)`
   — calls `Window::current()->url($event->url)`.
 - `Internal/Listeners/SurfaceWorkerCrashAlert::handle($event)` —
-  rolling-window crash counter; raises a `SystemAlert` on
-  threshold-crossing.
+  rolling-window crash counter on `ShellState`; raises a `SystemAlert`
+  on threshold-crossing. The window is pruned on the write and on the
+  read, and only the newest three stamps are kept.
+- `Internal/Listeners/TrackWindowFocus` — writes the focus flag on
+  `WindowFocused` / `WindowBlurred`, and clears it on
+  `ApplicationBooted` so a launch starts from the default.
 - `Internal/Http/Livewire/SetupScreen` — first-run setup landing.
 - `Internal/Http/Livewire/WelcomeScreen` — first-launch welcome.
 - `Internal/Http/Livewire/CloseWindowPrompt` — the modal that
@@ -179,10 +192,12 @@ separate, longer-lived UI element.
 
 This module owns no domain models. The `users.close_behavior`
 column it reads is owned by [`Core`'s migration](../core/code.md). The
-`PendingFileIntent` state lives in the Laravel session. The hand-off
-`ShellHandoff` writes lives in the `cache` table, which
+`PendingFileIntent` state lives in the Laravel session. Everything
+`ShellState` holds — the hand-off slots, the focus flag, the per-alias
+crash window — lives in the `cache` table, which
 `SyncCoverageIsDeclaredTest` lists as a framework table, so it never
-travels.
+travels. That is the right answer for all three: a crash on the desktop
+is not a crash on the phone.
 
 If the module ships migrations in the future (e.g. a file-staging
 audit table), they will land under `Database/Migrations/`.
@@ -192,16 +207,16 @@ audit table), they will land under `Database/Migrations/`.
 `DesktopServiceProvider::register()`:
 
 - Singletons the internals whose identity matters: `AppMenuBuilder`,
-  `WindowFocusState`, `ShellHandoff`, `PendingFileIntent`,
+  `ShellState`, `ShellHandoff`, `PendingFileIntent`,
   `ContinuePendingFileIntentAfterLogin`,
   `NavigateOnNotificationDeepLink`, `ApplyCloseWindowChoice`,
-  `NativeBiometricUnlock` and `DesktopKeyCustodian`.
-  `SurfaceWorkerCrashAlert` is a singleton because the rolling crash
-  counter lives on the listener and is meant to survive from one
-  `ProcessExited` to the next — which it does not; see "Known risks" in
-  [architecture.md](architecture.md). The listeners not on this list
-  — `DispatchOsNotification`, `HandleNativeOpenFile` — are resolved
-  fresh per event on purpose; they hold no state between events.
+  `NativeBiometricUnlock`, `SafeStorageBackendProbe` and
+  `DesktopKeyCustodian`. `WindowFocusState` and
+  `SurfaceWorkerCrashAlert` are deliberately **not** on that list any
+  more: both were bound as singletons to carry state from one shell
+  event to the next, which a per-request container cannot do, and
+  neither holds any state now. See
+  [State a shell event writes does not outlive its request](architecture.md#state-a-shell-event-writes-does-not-outlive-its-request).
 - Binds `RemembersPendingFileIntent` → `FileOpenHandoff`, the half
   that holds no session.
 - Binds NativePHP's `Client` → `BoundedNativeApiClient`, globally and
@@ -237,15 +252,16 @@ audit table), they will land under `Database/Migrations/`.
   `AppLockUnlocked`. These have to work off-bundle, so nothing gates the
   subscriptions; whatever NativePHP each one touches is gated inside its
   own handler instead, and two of them touch none at all.
-- Subscribes `HandleNativeOpenFile` and `DemandLockOnWindowHideOrClose`
-  above the gate as well, and for a stronger reason than convenience: a
-  shell event nothing off-bundle can drive is a guarantee nothing off-bundle
-  can prove, which is how the session-writing versions of both shipped.
-  Neither reaches Electron — one validates a path, the other writes a
-  hand-off slot.
+- Subscribes `HandleNativeOpenFile`, `DemandLockOnWindowHideOrClose` and
+  `TrackWindowFocus` above the gate as well, and for a stronger reason
+  than convenience: a shell event nothing off-bundle can drive is a
+  guarantee nothing off-bundle can prove, which is how the
+  session-writing versions of the first two shipped and how the focus
+  flag came to be read as a constant. None of the three reaches Electron
+  — one validates a path, the other two write a device-local slot.
 - Returns at the gate unless `config('nativephp-internal.running')` is
-  `true`. Everything after it is bundle-only: the focus-state flippers,
-  `DispatchOsNotification`, `SurfaceWorkerCrashAlert`,
-  `NavigateOnNotificationDeepLink`, and the three auto-update listeners.
-  CI and test runs stop at the return and never reach the NativePHP HTTP
-  client.
+  `true`. Everything after it is bundle-only: `DispatchOsNotification`,
+  `SurfaceWorkerCrashAlert`, `NavigateOnNotificationDeepLink`, and the
+  three auto-update listeners. Those are the *readers* of the focus flag;
+  the writer sits above. CI and test runs stop at the return and never
+  reach the NativePHP HTTP client.
