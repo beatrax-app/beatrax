@@ -25,6 +25,10 @@ const DIRECTIONAL_BAR_SEAM = 'Modules/Core/Resources/views/components/progress-b
 // is not a part of a one-directional whole; `proves` re-checks the reason
 // against the file, so an exemption that stops being true fails here.
 const DIRECTIONAL_SHARE_PINS = [
+    'Modules/Counterparties/Resources/views/livewire/profile-tabs/bank.blade.php' => [
+        'reason' => 'a relative-size bar: the numerator is one row magnitude and the denominator the largest magnitude on the panel, so neither end carries a sign and no row has to add back up to anything',
+        'proves' => '/\$maxBar = max\(1,[\s\S]*\$absMinor = abs\(/',
+    ],
     'Modules/DriftAlerts/Database/Seeders/Demo/DemoDriftAlertsSeeder.php' => [
         'reason' => 'the evaluator own test re-spelled, so the demo cannot carry an alert the shipped detector would have refused, and it refuses the same sign flip before it divides',
         'proves' => '/\(\$priorMinor > 0\) !== \(\$latestMinor > 0\)/',
@@ -32,6 +36,10 @@ const DIRECTIONAL_SHARE_PINS = [
     'Modules/DriftAlerts/Internal/AmountMovement.php' => [
         'reason' => 'a ratio between two magnitudes of one series, refused outright when the baseline is nought or the pair flips sign, so neither end can be the wrong way round',
         'proves' => '/\(\$priorMinor > 0\) === \(\$latestMinor > 0\)/',
+    ],
+    'Modules/Forecasting/Resources/views/livewire/partials/series-confidence-row.blade.php' => [
+        'reason' => 'the width of one series confidence band as a fraction of its own point estimate, refused when that point is nought, and the figure leaves as a number inside a sentence rather than as a share of a whole',
+        'proves' => '/\$confidence->pointMinor !== 0/',
     ],
     'Modules/Goals/Public/Services/GoalProjectionService.php' => [
         'reason' => 'days rather than a share: a remaining balance over a daily rate is how long the goal takes, and the answer leaves here as a date',
@@ -344,10 +352,15 @@ function directionalBarFault(array $binding): ?string
     return null;
 }
 
+// Read as two lists rather than one spread: a file pinned for both rules has
+// one key, and merging them would drop whichever reason was written first --
+// leaving a granted exemption nothing ever re-checks.
 it('still holds each pinned share and each pinned bar to the reason it was granted for', function (): void {
-    foreach ([...DIRECTIONAL_SHARE_PINS, ...DIRECTIONAL_BAR_PINS] as $relative => $pin) {
-        $source = (string) file_get_contents(base_path($relative));
+    foreach ([DIRECTIONAL_SHARE_PINS, DIRECTIONAL_BAR_PINS] as $pins) {
+        foreach ($pins as $relative => $pin) {
+            $source = (string) file_get_contents(base_path($relative));
 
-        expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
+            expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
+        }
     }
 });

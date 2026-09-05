@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 
 /**
@@ -124,30 +123,6 @@ function catchBodiesLeftEmptyOnPurpose(): array
     ];
 }
 
-// A Blade file carries no opening PHP tag, so token_get_all reads the whole of
-// it as inline HTML and a scan built on that alone cannot see the PHP inside an
-// @php block. 151 files here have one. The blocks are lifted into a synthetic
-// source so this guard reads them like any other file.
-/**
- * @return list<array{0:int,1:string,2:int}|string>
- */
-function catchScanTokens(string $path): array
-{
-    if (! str_ends_with($path, '.blade.php')) {
-        return BackendSourceFiles::codeTokens($path);
-    }
-
-    // The seam raises when PCRE gives up, which here would otherwise read as
-    // "this template holds no @php blocks" -- the failure this whole guard is
-    // about, one level up.
-    $blocks = PatternScan::all('/@php\b(?!\s*\()(.*?)@endphp/s', (string) file_get_contents($path));
-
-    return array_values(array_filter(
-        token_get_all('<?php '.implode(";\n", $blocks[1])),
-        static fn (array|string $token): bool => ! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true),
-    ));
-}
-
 // Comments are stripped before the scan, so a body holding only prose is read
 // as the empty body it is — that is the spelling every one of the twenty-five
 // already uses, and a guard fooled by it would report a clean tree.
@@ -159,7 +134,7 @@ function emptyCatchBodiesByFile(): array
     $counts = [];
 
     foreach (BackendSourceFiles::all() as $path) {
-        $tokens = catchScanTokens($path);
+        $tokens = BackendSourceFiles::codeTokens($path);
         $found = 0;
 
         foreach ($tokens as $index => $token) {
@@ -280,10 +255,10 @@ it('leaves no declared entry that no longer names an empty catch', function (): 
 
 // The scan above is only worth its result if it still reads what it claims to.
 // A Blade @php block holds exactly one PHP catch in this tree; finding it is
-// how this guard proves it has not gone blind to the 151 files that could hold
-// the next one.
+// how this guard proves BladePhpSource, which BackendSourceFiles reads every
+// template through, has not gone blind to the files that hold the next one.
 it('still reads the PHP inside a Blade template', function (): void {
-    $tokens = catchScanTokens(base_path('Modules/Forecasting/Resources/views/livewire/forecast-highlights-tile.blade.php'));
+    $tokens = BackendSourceFiles::codeTokens(base_path('Modules/Forecasting/Resources/views/livewire/forecast-highlights-tile.blade.php'));
 
     $catches = array_filter($tokens, static fn (array|string $token): bool => is_array($token) && $token[0] === T_CATCH);
 

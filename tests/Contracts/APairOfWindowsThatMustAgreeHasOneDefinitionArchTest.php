@@ -8,6 +8,7 @@ use Modules\Calendar\Internal\Services\CalendarMonthWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\WeekStart;
 use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Ledger\Internal\Enums\DateRangePreset;
@@ -318,7 +319,7 @@ function windowRuleCallSites(): array
     $found = [];
 
     foreach (windowRuleFiles() as $path) {
-        $source = (string) file_get_contents($path);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
         $stripped = '';
         foreach (token_get_all($source) as $token) {
             $stripped .= is_array($token)
@@ -377,7 +378,7 @@ it('counts no forward horizon in whole months (noMonthCountedHorizon)', function
     $offenders = [];
 
     foreach (windowRuleFiles() as $path) {
-        $source = (string) file_get_contents($path);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
         $stripped = '';
         foreach (token_get_all($source) as $token) {
             $stripped .= is_array($token)

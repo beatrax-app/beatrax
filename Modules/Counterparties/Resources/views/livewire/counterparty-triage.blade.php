@@ -1,6 +1,7 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
+@use('Modules\Core\Public\Support\PatternScan')
 @use('Carbon\CarbonImmutable')
 {{--
     /counterparties/triage focused single-card queue.
@@ -145,7 +146,7 @@
                     };
                 @endphp
                 <section class="{{ $bannerClass }}" aria-label="{{ Lang::get('counterparties::triage.suggested_aria') }}">
-                    <span>{!! preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', e($bannerCopy)) !!}</span>
+                    <span>{!! PatternScan::replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', e($bannerCopy)) !!}</span>
                     <span style="font-size: var(--text-xs); color: inherit; opacity: 0.85;">
                         {{ $suggestion->reasoning }}
                     </span>

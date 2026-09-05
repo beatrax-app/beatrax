@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 
 /**
@@ -79,7 +81,7 @@ it('reads the answer of every chmod that ships', function (): void {
     $offenders = [];
 
     foreach (discardedChmodShippedFiles() as $path) {
-        if (discardedChmodLines((string) file_get_contents(base_path($path))) !== []) {
+        if (discardedChmodLines(BladePhpSource::forPath($path, (string) file_get_contents(base_path($path)))) !== []) {
             $offenders[] = $path;
         }
     }
