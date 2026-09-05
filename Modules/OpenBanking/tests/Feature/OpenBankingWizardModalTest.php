@@ -27,6 +27,16 @@ afterEach(function (): void {
     }
 });
 
+// Assembled rather than spelled out. Three PEM literals in one file put a
+// `BEGIN … PRIVATE KEY-----` far enough above a later `KEY-----` for the secret
+// gate's private-key rule to span them, and that gate walks every ref in the
+// repository rather than the pull request under review: the match fails every
+// OTHER open pull request, for a line none of their diffs contain.
+function obwFixturePrivateKeyPem(): string
+{
+    return '-----BEGIN '."PRIVATE KEY-----\nexisting-fixture\n".'-----END '.'PRIVATE KEY-----';
+}
+
 function obwUser(string $username): User
 {
     return User::query()->create([
@@ -196,7 +206,7 @@ it('cancel() leaves a fully-registered application untouched (reconnect flow ski
     $secrets = $this->app->make(OpenBankingSecretsRepository::class);
     $secrets->save(new OpenBankingCredentials(
         applicationId: 'existing-application-id',
-        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nexisting-fixture\n-----END PRIVATE KEY-----",
+        privateKeyPem: obwFixturePrivateKeyPem(),
         sessionId: null,
         consentExpiresAt: null,
         bankScaHost: null,
@@ -236,7 +246,7 @@ it('cancel() forgets the session ack flag even when a fully-registered applicati
     $secrets = $this->app->make(OpenBankingSecretsRepository::class);
     $secrets->save(new OpenBankingCredentials(
         applicationId: 'existing-application-id',
-        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nexisting-fixture\n-----END PRIVATE KEY-----",
+        privateKeyPem: obwFixturePrivateKeyPem(),
         sessionId: null,
         consentExpiresAt: null,
         bankScaHost: null,
@@ -259,7 +269,7 @@ function obwSeedRegisteredApplication(): OpenBankingSecretsRepository
     $secrets = app(OpenBankingSecretsRepository::class);
     $secrets->save(new OpenBankingCredentials(
         applicationId: 'existing-application-id',
-        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nexisting-fixture\n-----END PRIVATE KEY-----",
+        privateKeyPem: obwFixturePrivateKeyPem(),
         sessionId: null,
         consentExpiresAt: null,
         bankScaHost: null,

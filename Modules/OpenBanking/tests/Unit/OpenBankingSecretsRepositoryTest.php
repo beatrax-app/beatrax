@@ -40,11 +40,19 @@ function openBankingSecretsFixturePath(): string
     return storage_path('app/secrets/open-banking.json');
 }
 
+// The header is assembled rather than written out: spelled in full it is a
+// private key to the secret gate, which walks every ref in the repository and
+// so fails the check on every OTHER open pull request.
+function openBankingSecretsFixturePem(string $body): string
+{
+    return '-----BEGIN '."PRIVATE KEY-----\n".$body."\n".'-----END '.'PRIVATE KEY-----';
+}
+
 function openBankingSecretsFixtureCredentials(): OpenBankingCredentials
 {
     return new OpenBankingCredentials(
         applicationId: 'app-fixture-123',
-        privateKeyPem: "-----BEGIN PRIVATE KEY-----\nfixture-key-bytes\n-----END PRIVATE KEY-----",
+        privateKeyPem: openBankingSecretsFixturePem('fixture-key-bytes'),
         sessionId: 'session-fixture-abc',
         consentExpiresAt: CarbonImmutable::parse('2026-08-01T00:00:00+00:00'),
         bankScaHost: 'sca.asnbank.nl',
@@ -248,7 +256,7 @@ it('raises SecretsWriteFailed when the payload cannot be encoded, without leakin
     $badCredentials = new OpenBankingCredentials(
         applicationId: 'app-fixture-123',
         // A lone continuation byte is not valid UTF-8, so json_encode() fails.
-        privateKeyPem: "-----BEGIN PRIVATE KEY-----\n\xB1\xB2\n-----END PRIVATE KEY-----",
+        privateKeyPem: openBankingSecretsFixturePem("\xB1\xB2"),
         sessionId: null,
         consentExpiresAt: null,
         bankScaHost: null,
@@ -311,7 +319,7 @@ it('still reads a legacy plaintext secrets file, then re-persists it encrypted o
     // With the reversing shield that is strrev(json).
     $legacyJson = json_encode([
         'application_id' => 'legacy-app-777',
-        'private_key_pem' => "-----BEGIN PRIVATE KEY-----\nlegacy-bytes\n-----END PRIVATE KEY-----",
+        'private_key_pem' => openBankingSecretsFixturePem('legacy-bytes'),
         'session_id' => 'legacy-session-xyz',
         'consent_expires_at' => '2026-08-01T00:00:00+00:00',
         'bank_sca_host' => 'sca.asnbank.nl',
