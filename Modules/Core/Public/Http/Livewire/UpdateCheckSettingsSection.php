@@ -37,8 +37,16 @@ final class UpdateCheckSettingsSection extends Component
         $this->onPhone = UserDataPathService::platform() !== null;
     }
 
+    // Both methods are public endpoints whatever the view renders, and the
+    // view is the only thing that stopped either being called on a phone. The
+    // releases page is where the installers are, so reaching it from a store
+    // build is a route to an out-of-store binary rather than a dead control.
     public function toggle(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
     {
+        if ($this->onPhone) {
+            return;
+        }
+
         $this->enabled = ! $this->enabled;
 
         ($writeUserPreference)($currentUser->user()->id, ['auto_update_check_enabled' => $this->enabled]);
@@ -46,6 +54,10 @@ final class UpdateCheckSettingsSection extends Component
 
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
+        if ($this->onPhone) {
+            return;
+        }
+
         $opener(ProjectLinks::LATEST_RELEASE_URL);
     }
 

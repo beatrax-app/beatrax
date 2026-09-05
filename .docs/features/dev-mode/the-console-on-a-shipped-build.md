@@ -45,6 +45,22 @@ suite carries `APP_ENV=testing`. Those two are the whole of the allow-list, and
 they are the same pair `NoiseHandshakeState::setEphemeralKeypair()` refuses
 outside of — one vocabulary for "this is not a build anybody was shipped".
 
+That was, until recently, the whole of the guarantee: a property of one YAML
+file rather than of the build. A phone build driven from anywhere else —
+`php artisan mobile:package-android` on a developer's machine, a second
+pipeline — started from `mobile-app/.env.example`, which carries `APP_ENV=local`
+and `APP_DEBUG=true`, and shipped an APK whose console opened to whoever
+installed it. `PackageAndroidCommand` now refuses to package until the `.env`
+it is about to bundle carries both keys, the same way it already refuses an
+unpinned `NATIVEPHP_APP_ID`; `ShippedEnvironment` is the predicate, and it reads
+the first uncommented assignment because that is the one Dotenv lets reach
+`config()`.
+
+On a mobile runtime `APP_DEBUG` is the only lever that matters. `dev_mode` is
+not consulted on that branch at all, so stripping `BEATRAX_DEV_MODE` from the
+bundled `.env` — which the packager does — protects the desktop and nothing
+else.
+
 ## Why the desktop flag is the environment variable and not a launcher switch
 
 `BEATRAX_DEV_MODE` is listed in `cleanup_env_keys` in `config/nativephp.php`, so

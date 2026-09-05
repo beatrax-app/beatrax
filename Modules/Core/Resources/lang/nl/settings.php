@@ -170,7 +170,7 @@ return [
     'about_updates' => [
         'heading' => 'Over updates',
         'body' => 'Beatrax werkt zichzelf automatisch bij zodra het is geïnstalleerd. Na het installeren van de allereerste versie komen toekomstige versies binnen via een banner in de app — je hoeft GitHub niet opnieuw te bezoeken. Mocht een toekomstige update ooit niet lukken, dan kun je altijd handmatig de nieuwste installer downloaden van de releasespagina.',
-        'body_phone' => 'Hier werkt Beatrax zichzelf niet bij. Nieuwe versies van de telefoon-app komen via de App Store of Google Play, net als je andere apps. Op de releasespagina staat wat er in elke versie is veranderd.',
+        'body_phone' => 'Hier werkt Beatrax zichzelf niet bij. Nieuwe versies van de telefoon-app komen via de App Store of Google Play, net als je andere apps.',
         'check_label' => 'Automatisch op updates controleren',
         'check_on' => 'Beatrax vraagt de releasefeed of er een nieuwere ondertekende versie bestaat. Er wordt niets gedownload totdat je zelf kiest om te installeren.',
         'check_off' => 'Er wordt niet op updates gecontroleerd en er verlaat niets dit apparaat. Nieuwe versies vind je door zelf de releasespagina te openen.',

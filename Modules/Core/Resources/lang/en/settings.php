@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'About updates',
         'body' => "Beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.",
-        'body_phone' => 'Beatrax does not update itself here. New versions of the phone app arrive through the App Store or Google Play, the same way your other apps do. The releases page lists what changed in each one.',
+        'body_phone' => 'Beatrax does not update itself here. New versions of the phone app arrive through the App Store or Google Play, the same way your other apps do.',
         'check_label' => 'Check for updates automatically',
         'check_on' => 'Beatrax asks the release feed whether a newer signed version exists. Nothing is downloaded until you choose to install it.',
         'check_off' => 'No update check is made and nothing leaves this device. New versions are found by opening the releases page yourself.',

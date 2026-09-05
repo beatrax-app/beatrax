@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection;
+use Native\Desktop\Contracts\Shell as ShellContract;
+use Native\Desktop\Fakes\ShellFake;
 
 // "Beatrax updates itself automatically once installed" is the desktop's
 // electron-updater chain. All three listeners behind it —
@@ -45,11 +47,40 @@ it('names the store that updates a phone, instead of an in-app banner it never s
         ->assertSee('App Store or Google Play');
 });
 
-it('still offers the releases page on a phone, which is the one thing that does work there', function (): void {
+// This case used to assert the opposite, on the reasoning that opening the
+// releases page is the one update affordance that works on a phone. It is also
+// where the installers are, so on a store build it is an in-app route to an
+// out-of-store binary — and a sentence naming the store above a control that
+// bypasses it is precisely the shape a switched sentence is not allowed to
+// excuse.
+it('offers no route to the releases page on a phone, where that page is where the installers are', function (): void {
     putenv('NATIVEPHP_PLATFORM=android');
 
     Livewire::test(UpdateCheckSettingsSection::class)
-        ->assertSee('Open releases page');
+        ->assertDontSee('Open releases page');
+});
+
+// The button is gone from the markup; the method it called is still an
+// addressable endpoint, and the view is not what decides who may reach it.
+it('opens nothing when the releases endpoint is called on a phone anyway', function (): void {
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    $shell = new ShellFake;
+    $this->app->instance(ShellContract::class, $shell);
+
+    Livewire::test(UpdateCheckSettingsSection::class)->call('openReleasesPage');
+
+    expect($shell->openExternalCalls)->toBe([]);
+});
+
+it('does not write an update preference the phone has no updater for', function (): void {
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    Livewire::test(UpdateCheckSettingsSection::class)
+        ->call('toggle')
+        ->assertSet('enabled', true);
+
+    expect($this->reader->fresh()->auto_update_check_enabled)->not->toBeFalse();
 });
 
 it('offers no update switch on a phone, where it would govern nothing', function (): void {
