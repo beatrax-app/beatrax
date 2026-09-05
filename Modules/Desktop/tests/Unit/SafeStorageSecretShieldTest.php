@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Config\Repository;
+use Illuminate\Http\Client\Factory;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
@@ -12,7 +13,7 @@ use Native\Desktop\System;
 function shieldBackend(string $backend): SafeStorageBackendProbe
 {
     return new SafeStorageBackendProbe(
-        new StubElectronApi((string) json_encode(['result' => $backend])),
+        new StubElectronApi(app(Factory::class), (string) json_encode(['result' => $backend])),
         'Linux',
     );
 }

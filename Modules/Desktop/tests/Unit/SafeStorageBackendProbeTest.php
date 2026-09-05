@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Client\Factory;
 use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Tests\Support\StubElectronApi;
 
@@ -17,7 +18,7 @@ function backendProbeOn(string $platformFamily, StubElectronApi $api): SafeStora
 
 function backendReporting(string $backend): StubElectronApi
 {
-    return new StubElectronApi((string) json_encode(['result' => $backend]));
+    return new StubElectronApi(app(Factory::class), (string) json_encode(['result' => $backend]));
 }
 
 it('never asks the shell off Linux, where safeStorage has one backend', function (string $platformFamily): void {
@@ -39,18 +40,18 @@ it('refuses a Linux desktop whose safeStorage protects nothing', function (strin
 // its failure and let the build carry on, has no such route. That silence is
 // the case the old code read as protection.
 it('fails closed on Linux when the route is absent', function (): void {
-    $api = new StubElectronApi('<!DOCTYPE html>Cannot GET', 404);
+    $api = new StubElectronApi(app(Factory::class), '<!DOCTYPE html>Cannot GET', 404);
 
     expect(backendProbeOn('Linux', $api)->protects())->toBeFalse()
         ->and($api->endpoints)->toBe(['system/'.SafeStorageBackendProbe::BACKEND_ROUTE]);
 });
 
 it('fails closed on Linux when the shell refuses the call', function (): void {
-    expect(backendProbeOn('Linux', new StubElectronApi(refusesToConnect: true))->protects())->toBeFalse();
+    expect(backendProbeOn('Linux', new StubElectronApi(app(Factory::class), refusesToConnect: true))->protects())->toBeFalse();
 });
 
 it('fails closed on Linux when the shell answers without a backend name', function (string $body): void {
-    expect(backendProbeOn('Linux', new StubElectronApi($body))->protects())->toBeFalse();
+    expect(backendProbeOn('Linux', new StubElectronApi(app(Factory::class), $body))->protects())->toBeFalse();
 })->with([
     '{"result":null}',
     '{"result":""}',
