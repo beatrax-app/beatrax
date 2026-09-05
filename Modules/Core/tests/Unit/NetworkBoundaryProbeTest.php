@@ -45,7 +45,7 @@ it('warns about an entry it threw away, and names it back', function (): void {
 
     expect($result->severity)->toBe(ProbeSeverity::Warning->value);
     expect($result->message)->toContain('0.0.0.0');
-    expect($result->message)->toContain('Ignored 1 entry');
+    expect($result->message)->toContain('Ignored 1 configured entry');
     expect($result->metadata['refused_interfaces'])->toBe('0.0.0.0');
     expect($result->metadata['state'])->toBe('loopback');
 });
@@ -54,7 +54,7 @@ it('counts more than one thrown-away entry in the plural', function (): void {
     $result = networkBoundaryProbe('0.0.0.0, 192.168.1.0/24')->run();
 
     expect($result->severity)->toBe(ProbeSeverity::Warning->value);
-    expect($result->message)->toContain('Ignored 2 entries');
+    expect($result->message)->toContain('Ignored 2 configured entries');
     expect($result->metadata['refused_interfaces'])->toBe('0.0.0.0 192.168.1.0/24');
 });
 
