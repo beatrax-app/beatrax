@@ -25,18 +25,20 @@ use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
+use Modules\Desktop\Internal\Http\Middleware\ClaimShellLockDemand;
 use Modules\Desktop\Internal\Http\Middleware\ContinueToStagedFile;
 use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ApplyUpdateCheckChoiceToStartupConfig;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
+use Modules\Desktop\Internal\Listeners\DemandLockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Listeners\ForgetColdStartVaultOnKeyRotation;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
-use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
 use Modules\Desktop\Internal\Listeners\RebuildAppMenuOnAuthChange;
 use Modules\Desktop\Internal\Listeners\StartSyncListenerOnEnable;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
+use Modules\Desktop\Internal\Listeners\TrackWindowFocus;
 use Modules\Desktop\Internal\Listeners\TriggerUpdateDownload;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
@@ -44,10 +46,12 @@ use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\BoundedNativeApiClient;
 use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
+use Modules\Desktop\Internal\Native\FileOpenHandoff;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
+use Modules\Desktop\Internal\Native\ShellHandoff;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
@@ -78,8 +82,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // survive across every ProcessExited event.
         $this->app->singleton(SurfaceWorkerCrashAlert::class);
 
+        $this->app->singleton(ShellHandoff::class);
+
         $this->app->singleton(PendingFileIntent::class);
-        $this->app->bind(RemembersPendingFileIntent::class, PendingFileIntent::class);
+
+        // Bound to the write-only half, which holds no session: the contract is
+        // called from a shell event, and the reader above is called from the
+        // window. Nothing may reach from the first to the second.
+        $this->app->bind(RemembersPendingFileIntent::class, FileOpenHandoff::class);
 
         $this->app->singleton(ContinuePendingFileIntentAfterLogin::class);
         $this->app->singleton(NavigateOnNotificationDeepLink::class);
@@ -130,6 +140,11 @@ final class DesktopServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events, Router $router): void
     {
+        // Ahead of ContinueToStagedFile, which answers a staged file with a
+        // redirect and would carry the demand past this on the one request the
+        // window makes after a close.
+        $router->pushMiddlewareToGroup('web', ClaimShellLockDemand::class);
+
         // NOT bundle-gated, for the same reason the Login listener below is not:
         // the file-open round-trip has to work in local dev and in tests, and
         // the intent it reads is session-scoped, so it is absent everywhere else.
@@ -164,6 +179,14 @@ final class DesktopServiceProvider extends ServiceProvider
         // tests too, and the listener touches only the Session contract, no facade.
         $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
 
+        // Also not bundle-gated, and for a stronger reason than convenience: a
+        // shell event nothing off-bundle can drive is a guarantee nothing
+        // off-bundle can prove, which is how the session-writing versions of
+        // both of these shipped.
+        $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
+        $events->listen(WindowHidden::class, [DemandLockOnWindowHideOrClose::class, 'handle']);
+        $events->listen(WindowClosed::class, [DemandLockOnWindowHideOrClose::class, 'handle']);
+
         // Signing in and out are the only two moments the developer submenu's
         // answer changes, and the boot-time build never sees either.
         $events->listen(Login::class, [RebuildAppMenuOnAuthChange::class, 'handle']);
@@ -196,20 +219,11 @@ final class DesktopServiceProvider extends ServiceProvider
             return;
         }
 
-        $focusState = $this->app->make(WindowFocusState::class);
-        $events->listen(WindowFocused::class, static function () use ($focusState): void {
-            $focusState->markFocused();
-        });
-        $events->listen(WindowBlurred::class, static function () use ($focusState): void {
-            $focusState->markBlurred();
-        });
+        $events->listen(WindowFocused::class, [TrackWindowFocus::class, 'handleFocused']);
+        $events->listen(WindowBlurred::class, [TrackWindowFocus::class, 'handleBlurred']);
 
         $events->listen(NotificationDeliverable::class, [DispatchOsNotification::class, 'handleNotificationDeliverable']);
         $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
-        $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
-
-        $events->listen(WindowHidden::class, [LockOnWindowHideOrClose::class, 'handle']);
-        $events->listen(WindowClosed::class, [LockOnWindowHideOrClose::class, 'handle']);
 
         $events->listen(NotificationDeepLink::class, [NavigateOnNotificationDeepLink::class, 'handle']);
 

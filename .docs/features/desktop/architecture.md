@@ -32,9 +32,8 @@ What the module explicitly does NOT do:
   domain event lives in the owning module.
 - It never reaches Electron from local dev or CI. Everything below the
   gate in `DesktopServiceProvider::boot()` — the focus-state flippers,
-  the OS-notification dispatcher, the crash watchdog, the file-open
-  bridge, the lock-on-hide listener, the deep-link navigator and the
-  auto-update chain — is subscribed only when
+  the OS-notification dispatcher, the crash watchdog, the deep-link
+  navigator and the auto-update chain — is subscribed only when
   `config('nativephp-internal.running') === true`. The listeners
   registered *above* that gate are the ones whose round-trip has to work
   off-bundle, so the subscription list itself is not the gate — each of
@@ -65,9 +64,11 @@ What the module explicitly does NOT do:
     script. "Absence of a binding is itself the signal."
   - `RemembersPendingFileIntent::remember($path, $extension)` — the
     contract's one method, and the whole of it. The `Import` and
-    `Receipts` listeners persist a validated path into the
-    session-scoped store; the reading half stays Internal, which is
-    what makes the contract write-only across the boundary.
+    `Receipts` listeners persist a validated path through it; the
+    reading half stays Internal, which is what makes the contract
+    write-only across the boundary. It binds to `FileOpenHandoff`, not
+    to the session-scoped reader, because it is called from a shell
+    event and so has no session to write to.
 - **Events/**
   - `FileOpenedFromOs` — raised by `Internal\Native\FileOpenIntake`
     after a validated file path is admitted. Listeners in `Import`
@@ -95,10 +96,15 @@ What the module explicitly does NOT do:
   - `FileOpenIntake` — the security boundary for OS-supplied paths.
     Validates the path is admissible (extension allow-list, size
     bound, no path traversal) before raising `FileOpenedFromOs`.
-  - `PendingFileIntent` — session-scoped store the
-    `RemembersPendingFileIntent` contract binds to.
+  - `PendingFileIntent` — the session-scoped read half. Claims what
+    `FileOpenHandoff` left on `ShellHandoff` into the reader's own
+    session on the first request that asks for it.
+  - `FileOpenHandoff` — the write half, bound to
+    `RemembersPendingFileIntent`. Holds no session.
+  - `ShellHandoff` — the slot a shell event leaves a fact in for the
+    window to claim. See below.
 - **Internal/NativeAppServiceProvider** — the NativePHP-side
-  provider. Registers the close-intercept hook, the persistent
+  provider. Opens the one window, registers the persistent
   macOS tray (composed directly in the Electron main process by
   `scripts/nativephp_inject_persistent_tray.php`), and the desktop
   shell's NativePHP-specific bootstrap.
@@ -106,9 +112,10 @@ What the module explicitly does NOT do:
   - `ApplyCloseWindowChoice` — handles the JS-glued POST that
     follows the close-window prompt.
   - `ContinuePendingFileIntentAfterLogin` — fires on Laravel
-    `Login` and re-reads the pending intent, which is what drops one
-    whose file has gone. The redirect to the staging page belongs to
-    the `ContinueToStagedFile` middleware.
+    `Login` and reads the pending intent, which both claims the
+    shell's hand-off into this session and drops an intent whose file
+    has gone. The redirect to the staging page belongs to the
+    `ContinueToStagedFile` middleware.
   - `DispatchOsNotification` — the single handler,
     `handleNotificationDeliverable`, for the Notifications module's
     `NotificationDeliverable` event. Consults the Notifications module's
@@ -256,9 +263,12 @@ User opens a .csv from Finder / Explorer
             → dispatch FileOpenedFromOs($path, $extension) on success
             → return without a trace on rejection (no event, no log)
   → Import / Receipts listeners pick up FileOpenedFromOs
-       → PendingFileIntent::remember($path)
+       → FileOpenHandoff::remember($path) leaves it on ShellHandoff.
+         The shell's request has no session, and at cold start there is
+         no window yet either, so the fact waits for one.
   → after login: ContinuePendingFileIntentAfterLogin::handle
-       → PendingFileIntent::pending() drops an intent whose file has gone
+       → PendingFileIntent::pending() claims the hand-off into this
+         session, and drops an intent whose file has gone
   → next HTML GET: ContinueToStagedFile (pushed onto the `web` group by
     DesktopServiceProvider) redirects to /desktop/file-staging, which
     consumes the intent on mount so it redirects exactly once
@@ -301,9 +311,14 @@ User clicks the native X button
                          → App::quit() or Window::current()->hide()
        → 'quit' / 'tray' → same ApplyCloseWindowChoice path directly
   → WindowHidden / WindowClosed (either outcome)
-       → LockOnWindowHideOrClose::handle()
-            → AppLockKeyService::withhold() — immediate lock, no grace
-              period; the OS app-switcher snapshot must never show data
+       → DemandLockOnWindowHideOrClose::handle()
+            → ShellHandoff::leave(LOCK_DEMANDED) — the shell's own request
+              holds no session, so it records the fact and nothing more
+  → the window's next request (web group)
+       → ClaimShellLockDemand
+            → AppLockKeyService::withhold($request->session()) — the store
+              the reader actually holds. No grace period. The OS
+              app-switcher snapshot is the privacy veil's job, client-side.
 ```
 
 ### Cross-platform OS file-open ingress
@@ -423,24 +438,92 @@ key twice by design — so the listener's `forget()` arm is currently reached by
 nothing, and the paths that genuinely rotate the data key do not raise the
 event at all.
 
+## A native event never holds the window's session
+
+The shell delivers every `Native\Desktop\Events\*` event by posting
+`_native/api/events` from the **Electron main process**. NativePHP's
+`notifyLaravel()` sends it over axios with an `X-NativePHP-Secret` header and
+nothing else: no cookie jar, no BrowserWindow, no `beatrax_session`. The route
+is loaded by the package's own `loadRoutesFrom()` and so carries neither the
+`web` group nor `StartSession` — and attaching `StartSession` would not help,
+because with no cookie it would begin a fresh anonymous session rather than the
+reader's.
+
+So a PHP listener bound to such an event resolves a `Session` that was started
+from no request, and the store it writes is discarded unsaved when the request
+ends. That is a property of the transport, not a bug in one handler, and two
+handlers relied on it anyway:
+
+- the app lock. `LockOnWindowHideOrClose` called
+  `AppLockKeyService::withhold()` on that store, so **closing or hiding the
+  window locked nothing the reader's window could see**. Sessions here are
+  30-day persistent cookies by design (`scripts/nativephp_keep_webview_cookies.php`
+  says why: "the app-lock, not cookie lifetime, is what actually protects the
+  data here"), so reopening the app restored an unlocked session.
+- the OS file-open. `PendingFileIntent` wrote the validated path into the same
+  store, so a double-clicked `.csv` was staged nowhere. That write is
+  `FileOpenHandoff::remember()` now, on a class that holds no session at all.
+
+`ShellHandoff` is the answer to both. A shell-event listener leaves a bare fact
+in a device-local slot; the window claims it on its own next request, where the
+session is real. `ClaimShellLockDemand` (in the `web` group) engages the lock;
+`PendingFileIntent::pending()` claims the file intent into the reader's session.
+
+Two properties of the transport decide the shape, and neither is negotiable:
+
+- **a closed window cannot be told anything.** `window.on('close')` in the
+  plugin's `window.ts` deletes the window from `state.windows` *before* it calls
+  `notifyLaravel`, and `broadcastToWindows` iterates exactly that map, so the
+  renderer being closed never receives its own `WindowClosed`.
+- **a file-open can precede the window.** `app.on('open-file')` fires at cold
+  start when a document launched the app, before any BrowserWindow exists.
+
+Where the page *can* hear the event, hearing it in the page is the better
+answer, and the mobile shells already do exactly that: they post from inside the
+WebView and consume the result as Livewire browser events
+(`native:Native\Mobile\Events\…`), on an ordinary request with the web group,
+the real session and the auth guard. `POST /desktop/close-action` is the same
+pattern on this side.
+
+`tests/Contracts/AShellEventNeverReachesTheWindowsSessionArchTest.php` walks the
+call graph out of every shell-event listener — through imports, through the
+listeners of events those classes dispatch, and through container bindings — and
+fails when any of it names session or auth state. Models and jobs are leaves: an
+Eloquent class drags in `BelongsToUser`'s scope, and a job runs on the worker. It
+also refuses a shell event handed to a **closure**, which is the one binding
+shape carrying code no import scan can follow — `TrackWindowFocus` exists because
+of that rule.
+
+### What is left uncovered
+
+A lock demand is written when the shell says the window went away, and it
+survives a quit because it is stored device-locally. Nothing is written when the
+process dies without notice — a force quit, a power cut, an OOM kill. Such a
+session comes back unlocked until the ordinary idle timeout elapses, which it
+then does on the next request, because the session's own `last_activity` is from
+whenever the app died. Closing that last gap needs a lock demanded at boot
+rather than at close.
+
 ## Known risks
 
-`LockOnWindowHideOrClose` locks the session the instant NativePHP
-fires `WindowHidden`/`WindowClosed`, dispatched from the Electron main
-process over its own internal HTTP channel. That channel is
-`POST _native/api/events`, declared in `nativephp/desktop/routes/api.php`
-behind `OptionalNightwatchNever` and `PreventRegularBrowserAccess` and
-**no `web` group** — so no `StartSession`, and the store this listener
-withholds against was never started from the WebView cookie and is never
-saved. The main process holds NativePHP's own security cookie, not a Laravel
-session cookie, so there is no session for that route to start: attaching
-`StartSession` to it would begin a fresh anonymous session rather than the
-reader's. The downstream lock failure is not reproducible in-process (tests
-share one session, so they pass either way). The client-side privacy veil and
-the grace-window server lock still cover the backgrounding case in the
-meantime; confirming — or fixing, via a session-independent per-user
-`locked_at` marker `AppLockMiddleware` could consult instead — is
-open follow-up work before this guarantee is relied on in production.
+**State a shell event writes does not outlive its request.** Every
+`_native/api/events` POST is its own PHP request, so a container singleton is
+constructed fresh for each one. Two pieces of desktop state are held that way
+and neither accumulates:
+
+- `SurfaceWorkerCrashAlert` keeps `exitTimestampsByAlias` on the listener and
+  escalates only at three exits inside five minutes. Each `ProcessExited`
+  arrives in a request of its own, so the array starts empty every time, the
+  count never reaches three, and **the worker-crash alert never fires**.
+- `WindowFocusState` is written by the `WindowFocused`/`WindowBlurred` listeners
+  and read by `SurfaceWorkerCrashAlert` before it pushes an OS toast. Every
+  request reads the constructed default, `true`, so even a reached escalation
+  would decide the window is in front of the reader and stay quiet.
+
+Same family as the session defects above — state a shell event writes, read from
+somewhere that shell event cannot reach — and the same shape of fix: put it
+where the next request can see it. Not done here because it changes a
+user-visible notification that only a real bundle can judge.
 
 ## First-launch route gate
 
