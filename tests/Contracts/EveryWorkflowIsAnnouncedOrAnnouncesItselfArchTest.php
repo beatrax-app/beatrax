@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Both composer roots run this suite, and from mobile-app/ the workflows sit
 // one level up. Resolving only the desktop path would let the guard pass by
 // reading an empty directory.
@@ -26,10 +28,10 @@ function workflowNames(string $directory): array
     $names = [];
 
     foreach ((array) glob($directory.'/*.yml') as $file) {
-        $source = (string) file_get_contents((string) $file);
+        $declared = PatternScan::first('/^name:[ \t]*(\S+)/m', (string) file_get_contents((string) $file));
 
-        if (preg_match('/^name:[ \t]*(\S+)/m', $source, $match) === 1) {
-            $names[basename((string) $file)] = $match[1];
+        if ($declared !== []) {
+            $names[basename((string) $file)] = $declared[1];
         }
     }
 
@@ -41,17 +43,19 @@ function workflowNames(string $directory): array
  */
 function buildLogListens(string $source): array
 {
-    if (preg_match('/^\s*workflows:\s*\[(?<inline>[^\]]*)\]/m', $source, $match) === 1) {
-        return array_values(array_filter(array_map(trim(...), explode(',', $match['inline']))));
+    $inline = PatternScan::first('/^\s*workflows:[ \t]*\[([^\]]*)\]/m', $source);
+
+    if ($inline !== []) {
+        return array_values(array_filter(array_map(trim(...), explode(',', $inline[1]))));
     }
 
-    if (preg_match('/^\s*workflows:\s*\n(?<block>(?:\s*-[ \t]*\S+\n)+)/m', $source, $match) !== 1) {
+    $block = PatternScan::first('/^\s*workflows:[ \t]*\n((?:[ \t]*-[ \t]*\S+\n)+)/m', $source);
+
+    if ($block === []) {
         return [];
     }
 
-    preg_match_all('/-[ \t]*(\S+)/', $match['block'], $entries);
-
-    return $entries[1];
+    return array_map(static fn (array $set): string => $set[1], PatternScan::sets('/-[ \t]*(\S+)/', $block[1]));
 }
 
 it('reports on every workflow that does not already hold its own webhook', function (): void {
@@ -89,7 +93,7 @@ it('never decides a commit is green from a list of checks written down here', fu
     $source = (string) file_get_contents($directory.'/discord-build.yml');
 
     // The required contexts are read from the branch ruleset at run time. A
-    // copy kept here would go stale the first time a job is renamed, and a
+    // copy kept here would go stale the first time a job was renamed, and a
     // notifier reading a short list calls a commit green too early.
     expect($source)->not->toContain('quality (PHP 8.5)')
         ->and($source)->not->toContain('SonarCloud')
