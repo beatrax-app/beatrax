@@ -33,19 +33,30 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "SPESE TRIMESTRALI"
     name: "Spese trimestrali"
+    key: quarterly_fee
   - pattern: "SPESE PER OPERAZIONE"
     name: "Spese per operazione"
+    key: transaction_fee
   - pattern: "SPESE DI ISTRUTTORIA"
     name: "Spese di istruttoria"
+    key: loan_arrangement_fee
   - pattern: "CANONE MENSILE"
     name: "Canone mensile"
+    key: monthly_fee
   - pattern: "CANONE ANNUALE"
     name: "Canone annuale"
+    key: annual_fee
   - pattern: "LIQUIDAZIONE INTERESSI"
     name: "Liquidazione interessi"
+    key: debit_interest
   - pattern: 'regex:\bCOMMISSION[EI]\b'
     name: "Commissioni"
+    key: commission

@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Frais bancaires',
+        'account_maintenance' => 'Frais de tenue de compte',
+        'monthly_fee' => 'Frais mensuels',
+        'quarterly_fee' => 'Frais trimestriels',
+        'annual_fee' => 'Frais annuels',
+        'card_fee' => 'Cotisation carte',
+        'transaction_fee' => 'Frais de transaction',
+        'transfer_fee' => 'Frais de virement',
+        'withdrawal_fee' => 'Frais de retrait',
+        'transaction_levy' => 'Taxe sur les transactions',
+        'foreign_transaction_fee' => 'Frais de change',
+        'commission' => 'Commission',
+        'debit_interest' => 'Intérêts débiteurs',
+        'overdraft' => 'Frais de découvert',
+        'overdraft_interest' => 'Agios',
+        'insufficient_funds' => 'Frais de rejet',
+        'penalty_fee' => 'Pénalité',
+        'loan_arrangement_fee' => 'Frais de dossier',
     ],
 
     'cp_card' => [

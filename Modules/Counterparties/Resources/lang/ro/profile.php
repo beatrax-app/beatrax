@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Asistență și anulare',
         'cancel_by_email' => 'Anulare prin e-mail',
         'withheld' => 'link reținut',
+        'notes_language' => 'În :language, așa cum publică furnizorul.',
     ],
 ];

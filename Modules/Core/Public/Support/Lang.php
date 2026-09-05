@@ -34,6 +34,14 @@ final class Lang
         return is_string($line) ? $line : $key;
     }
 
+    // The locale the reader is being answered in. A view that has to compare
+    // it against some OTHER language — a corpus paragraph written in the
+    // provider's — asks here rather than resolving the translator itself.
+    public static function locale(): string
+    {
+        return Container::getInstance()->make(Translator::class)->getLocale();
+    }
+
     // The whole group as a flat key => line map, for a caller that has to ask
     // which keys a group HOLDS rather than what one of them says. A group with
     // no file behind it comes back from the translator as the key string, which

@@ -20,17 +20,27 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: 'regex:GEBYR(ER)?\b'
     name: "Gebyr"
+    key: bank_fee
   - pattern: "ÅRSAVGIFT"
     name: "Årsavgift"
+    key: annual_fee
   - pattern: "VALUTAPÅSLAG"
     name: "Valutapåslag"
+    key: foreign_transaction_fee
   - pattern: "OVERTREKKSRENTE"
     name: "Overtrekksrente"
+    key: overdraft_interest
   - pattern: "DEBETRENTE"
     name: "Debetrente"
+    key: debit_interest
   - pattern: 'regex:\bRENTER\b'
     name: "Renter"
+    key: debit_interest

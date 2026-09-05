@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Comisión bancaria',
+        'account_maintenance' => 'Comisión de mantenimiento',
+        'monthly_fee' => 'Cuota mensual',
+        'quarterly_fee' => 'Cuota trimestral',
+        'annual_fee' => 'Cuota anual',
+        'card_fee' => 'Comisión de tarjeta',
+        'transaction_fee' => 'Comisión por transacción',
+        'transfer_fee' => 'Comisión por transferencia',
+        'withdrawal_fee' => 'Comisión por retirada',
+        'transaction_levy' => 'Impuesto sobre transacciones',
+        'foreign_transaction_fee' => 'Comisión por cambio de divisa',
+        'commission' => 'Comisión',
+        'debit_interest' => 'Intereses deudores',
+        'overdraft' => 'Comisión por descubierto',
+        'overdraft_interest' => 'Intereses de descubierto',
+        'insufficient_funds' => 'Comisión por impago',
+        'penalty_fee' => 'Penalización',
+        'loan_arrangement_fee' => 'Comisión de apertura',
     ],
 
     'cp_card' => [

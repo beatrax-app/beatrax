@@ -99,8 +99,21 @@ final class ClassificationRuleProvider
             return null;
         }
 
-        $name = is_string($raw['name'] ?? null) && trim($raw['name']) !== '' ? trim($raw['name']) : null;
+        return new ClassificationRule(
+            pattern: $pattern,
+            name: self::trimmed($raw, 'name'),
+            region: $region,
+            key: self::trimmed($raw, 'key'),
+        );
+    }
 
-        return new ClassificationRule(pattern: $pattern, name: $name, region: $region);
+    /**
+     * @param  array<int|string, mixed>  $raw
+     */
+    private static function trimmed(array $raw, string $field): ?string
+    {
+        $value = $raw[$field] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 }

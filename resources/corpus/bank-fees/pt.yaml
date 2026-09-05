@@ -20,15 +20,24 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "MANUTENÇÃO DE CONTA"
     name: "Comissão de manutenção de conta"
+    key: account_maintenance
   - pattern: 'regex:\bCOMISS'
     name: "Comissão bancária"
+    key: bank_fee
   - pattern: 'regex:\bANUIDADE\b'
     name: "Anuidade"
+    key: annual_fee
   - pattern: 'regex:\bDESCOBERTO\b'
     name: "Comissão de descoberto"
+    key: overdraft
   - pattern: "JUROS DEVEDORES"
     name: "Juros devedores"
+    key: debit_interest

@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Assistenza e disdetta',
         'cancel_by_email' => 'Disdici via email',
         'withheld' => 'collegamento non proposto',
+        'notes_language' => 'In :language, come lo pubblica il fornitore.',
     ],
 ];

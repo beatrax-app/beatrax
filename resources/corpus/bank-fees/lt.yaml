@@ -20,15 +20,24 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "TVARKYMO MOKESTIS"
     name: "Sąskaitos tvarkymo mokestis"
+    key: account_maintenance
   - pattern: "APTARNAVIMO MOKESTIS"
     name: "Aptarnavimo mokestis"
+    key: account_maintenance
   - pattern: "ADMINISTRAVIMO MOKESTIS"
     name: "Administravimo mokestis"
+    key: account_maintenance
   - pattern: 'regex:\bKOMISIN'
     name: "Komisinis mokestis"
+    key: commission
   - pattern: "PALŪKAN"
     name: "Palūkanos"
+    key: debit_interest

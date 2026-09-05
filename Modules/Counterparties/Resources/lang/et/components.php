@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Pangatasu',
+        'account_maintenance' => 'Haldustasu',
+        'monthly_fee' => 'Kuutasu',
+        'quarterly_fee' => 'Kvartalitasu',
+        'annual_fee' => 'Aastatasu',
+        'card_fee' => 'Kaarditasu',
+        'transaction_fee' => 'Tehingutasu',
+        'transfer_fee' => 'Ülekandetasu',
+        'withdrawal_fee' => 'Väljavõtmistasu',
+        'transaction_levy' => 'Tehingumaks',
+        'foreign_transaction_fee' => 'Valuutavahetustasu',
+        'commission' => 'Komisjonitasu',
+        'debit_interest' => 'Deebetintress',
+        'overdraft' => 'Arvelduskrediidi tasu',
+        'overdraft_interest' => 'Arvelduskrediidi intress',
+        'insufficient_funds' => 'Katteta makse tasu',
+        'penalty_fee' => 'Viivis',
+        'loan_arrangement_fee' => 'Lepingutasu',
     ],
 
     'cp_card' => [

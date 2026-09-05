@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Translation\Translator;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Symfony\Component\Yaml\Yaml;
 
 // A seeder writes words into a column, and every screen afterwards reads that
@@ -79,39 +80,54 @@ function seededWordingFiles(): array
     return array_values($files);
 }
 
-// Every bundled corpus tree, and whether its entries carry a `key` — the thing a
-// row stores and a screen re-resolves it by. Only a keyed tree is this rule's
-// subject; the rest reach a screen through a different seam, and two of them
-// reach it in the jurisdiction's language and are recorded here as open.
+// How each bundled corpus tree gets its wording into the reader's language.
+// A tree is keyed when a row stores something a screen re-resolves it by; the
+// two keyed ones differ only in where the wording for that key lives, and the
+// arithmetic in each `reason` is why they differ.
+const CORPUS_IN_CORPUS = 'the entry carries its own wording, per locale';
+
+const CORPUS_IN_LANG = 'the entry key resolves through a lang group';
+
+const CORPUS_PROPER_NOUN = 'the wording is a proper noun and reads the same everywhere';
+
+const CORPUS_DECLARED_LANGUAGE = 'the prose stays the provider\'s, and the file declares which language that is';
+
+/** @var list<string> the resolutions that mean a row stores a key */
+const CORPUS_KEYED = [CORPUS_IN_CORPUS, CORPUS_IN_LANG];
+
 const CORPUS_TREES = [
     'tax' => [
-        'keyed' => true,
-        'reason' => 'corpus_key is stored on tax_deduction_categories and read back for display',
+        'resolution' => CORPUS_IN_CORPUS,
+        'reason' => 'corpus_key is stored on tax_deduction_categories and read back for display. A lang group would owe 398 entries across 33 jurisdictions a line in all 26 locales — 31,044 strings, 24 locales\' worth of it English pasted into another language\'s file, and an outright failure of ALocaleIsWrittenInTheScriptItShipsIn for el, bg and uk',
+    ],
+    'bank-fees' => [
+        'resolution' => CORPUS_IN_LANG,
+        'group' => 'counterparties::components.default_name.',
+        'vocabulary' => CounterpartyDefaultName::FEE_KINDS,
+        'reason' => '257 entries carry 166 distinct fee words for 18 kinds of charge, so the KIND is what a reader outside the jurisdiction needs. 18 keys x 26 locales is 468 strings and serves every locale; the same corpus carrying its own wording would be 6,682, and even the two-locale contract the tax tree uses would be 514 and leave 24 locales on English forever',
     ],
     'merchants' => [
-        'keyed' => false,
+        'resolution' => CORPUS_PROPER_NOUN,
         'reason' => 'pattern => a trading name — a proper noun that reads the same in every language, and the Counterparties seam already treats it as the entity\'s own words',
     ],
     'government' => [
-        'keyed' => false,
+        'resolution' => CORPUS_PROPER_NOUN,
         'reason' => 'pattern => the registered name of a public body — a proper noun, as above',
     ],
-    'bank-fees' => [
-        'keyed' => false,
-        'reason' => 'OPEN, not fixed here: pattern => a fee word in the jurisdiction language ("Bankkosten", "Rente"), which is not a proper noun. It reaches a screen as a counterparty display name, so it belongs to the CounterpartyDefaultName provenance seam rather than this one',
-    ],
     'support' => [
-        'keyed' => false,
-        'reason' => 'OPEN, not fixed here: `notes` is a paragraph of cancellation guidance written in the jurisdiction language, rendered on the subscription support panel',
+        'resolution' => CORPUS_DECLARED_LANGUAGE,
+        'renders' => 'Modules/Counterparties/Resources/views/livewire/profile-tabs/partials/support-resources.blade.php',
+        'proves' => '/lang="\{\{ \$notesLocale->value \}\}"/',
+        'reason' => '`notes` is a researched paragraph on how ONE provider cancels, carrying phone numbers, notice periods and postal addresses. 608 of them in 32 files: a lang group owes 15,808 paragraphs, and even the tax tree\'s two-locale contract owes 1,203 more — 420,000 characters of operational fact restated by somebody who cannot verify it. It stays the provider\'s prose, and the card tags it and names the language',
     ],
 ];
 
-/** @return list<string> the bundled corpus files of every keyed tree */
-function seededWordingCorpora(): array
+/** @return list<string> the bundled corpus files of every tree resolving the named way */
+function seededWordingCorporaResolving(string ...$resolutions): array
 {
     $paths = [];
     foreach (CORPUS_TREES as $tree => $entry) {
-        if ($entry['keyed'] === true) {
+        if (in_array($entry['resolution'], $resolutions, true)) {
             $paths = array_merge($paths, glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: []);
         }
     }
@@ -120,18 +136,21 @@ function seededWordingCorpora(): array
     return array_values($paths);
 }
 
-/** @return list<string> every corpus file whose tree is declared unkeyed */
-function seededWordingUnkeyedCorpora(): array
+/** @return list<array<array-key, mixed>> every entry of every file in the named tree */
+function seededWordingEntriesIn(string $tree): array
 {
-    $paths = [];
-    foreach (CORPUS_TREES as $tree => $entry) {
-        if ($entry['keyed'] === false) {
-            $paths = array_merge($paths, glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: []);
+    $entries = [];
+    foreach (glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: [] as $path) {
+        /** @var array<array-key, mixed> $parsed */
+        $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+        foreach (is_array($parsed['entries'] ?? null) ? $parsed['entries'] : [] as $row) {
+            if (is_array($row)) {
+                $entries[] = $row;
+            }
         }
     }
-    sort($paths);
 
-    return array_values($paths);
+    return $entries;
 }
 
 function seededWordingResolves(string $key): bool
@@ -248,11 +267,11 @@ it('classifies every bundled corpus tree', function (): void {
     ]));
 });
 
-// The classification has to stay true: a tree declared unkeyed that grows a
-// `key` has quietly become this rule's subject without being checked.
-it('finds no key in a tree declared unkeyed', function (): void {
+// The classification has to stay true: a tree resolved some other way that
+// grows a `key` has quietly become this rule's subject without being checked.
+it('finds no key in a tree that resolves without one', function (): void {
     $keyed = [];
-    foreach (seededWordingUnkeyedCorpora() as $path) {
+    foreach (seededWordingCorporaResolving(CORPUS_PROPER_NOUN, CORPUS_DECLARED_LANGUAGE) as $path) {
         /** @var array<array-key, mixed> $parsed */
         $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
 
@@ -267,7 +286,88 @@ it('finds no key in a tree declared unkeyed', function (): void {
         }
     }
 
-    expect($keyed)->toBe([], 'a tree declared unkeyed now carries a key: '.implode(', ', $keyed));
+    expect($keyed)->toBe([], 'a tree that resolves without a key now carries one: '.implode(', ', $keyed));
+});
+
+// Three lists have to agree or a fee row answers with a key: the keys the
+// corpus actually uses, the closed vocabulary the seam will accept back off a
+// row, and the lines the lang group holds. Checking only the last would pass a
+// corpus key no reader ever reaches, because nothing would have looked for it.
+it('resolves every key a lang-backed corpus tree uses, in English and Dutch', function (): void {
+    $checked = 0;
+    foreach (CORPUS_TREES as $tree => $entry) {
+        if ($entry['resolution'] !== CORPUS_IN_LANG) {
+            continue;
+        }
+
+        $used = [];
+        foreach (seededWordingEntriesIn($tree) as $row) {
+            if (is_string($row['name'] ?? null)) {
+                $used[] = is_string($row['key'] ?? null) ? $row['key'] : '(none)';
+            }
+        }
+        $used = array_values(array_unique($used));
+        sort($used);
+
+        /** @var list<string> $vocabulary */
+        $vocabulary = $entry['vocabulary'];
+        $declared = $vocabulary;
+        sort($declared);
+
+        expect($used)->toBe($declared, $tree.': the keys the corpus uses are not the vocabulary the seam accepts. A key outside it resolves to nothing and leaves the row in the jurisdiction\'s wording.');
+
+        /** @var string $group */
+        $group = $entry['group'];
+        $missing = array_values(array_filter(
+            $vocabulary,
+            static fn (string $key): bool => ! seededWordingResolves($group.$key),
+        ));
+
+        expect($missing)->toBe([], $tree.': corpus keys with no line to resolve to: '.implode(', ', $missing));
+        $checked++;
+    }
+
+    expect($checked)->toBeGreaterThan(0);
+});
+
+// Prose that stays in the provider's language is only an answer while the
+// reader is told which language that is. The file has to name one this app
+// ships, and the card that prints the paragraph has to still be tagging it.
+it('names a shipped locale on every file whose prose stays the provider\'s', function (): void {
+    $offenders = [];
+    foreach (CORPUS_TREES as $tree => $entry) {
+        if ($entry['resolution'] !== CORPUS_DECLARED_LANGUAGE) {
+            continue;
+        }
+
+        $files = glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: [];
+        expect($files)->not->toBe([]);
+
+        foreach ($files as $path) {
+            /** @var array<array-key, mixed> $parsed */
+            $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+            $lang = $parsed['lang'] ?? null;
+            if (! is_string($lang) || Locale::tryFrom($lang) === null) {
+                $offenders[] = str_replace(base_path().'/', '', $path).': lang is '.var_export($lang, true);
+            }
+        }
+
+        /** @var string $renders */
+        $renders = $entry['renders'];
+        /** @var string $proves */
+        $proves = $entry['proves'];
+        $markup = (string) file_get_contents(base_path($renders));
+        if (PatternScan::all($proves, $markup)[0] === []) {
+            $offenders[] = $renders.': no longer tags the prose with the language the file declares';
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'A tree whose prose stays in the provider\'s language owes the reader the name of',
+        'that language, and a screen reader the tag. Every file must declare a `lang:` this',
+        'app ships a locale for, and the card must still carry it:',
+        '  '.implode("\n  ", $offenders),
+    ]));
 });
 
 // The corpus carries its own wording rather than a lang group: 398 entries
@@ -276,7 +376,7 @@ it('finds no key in a tree declared unkeyed', function (): void {
 // file. English is required because it is the fallback every other reader lands
 // on; Dutch because it is the second locale the product ships.
 it('carries English and Dutch wording for every bundled corpus entry', function (): void {
-    $corpora = seededWordingCorpora();
+    $corpora = seededWordingCorporaResolving(CORPUS_IN_CORPUS);
     expect($corpora)->not->toBe([]);
 
     $entries = 0;

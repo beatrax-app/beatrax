@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankgebühr',
+        'account_maintenance' => 'Kontoführungsgebühr',
+        'monthly_fee' => 'Monatsgebühr',
+        'quarterly_fee' => 'Quartalsgebühr',
+        'annual_fee' => 'Jahresgebühr',
+        'card_fee' => 'Kartengebühr',
+        'transaction_fee' => 'Transaktionsgebühr',
+        'transfer_fee' => 'Überweisungsgebühr',
+        'withdrawal_fee' => 'Abhebungsgebühr',
+        'transaction_levy' => 'Transaktionsabgabe',
+        'foreign_transaction_fee' => 'Fremdwährungsgebühr',
+        'commission' => 'Provision',
+        'debit_interest' => 'Sollzinsen',
+        'overdraft' => 'Überziehungsgebühr',
+        'overdraft_interest' => 'Überziehungszinsen',
+        'insufficient_funds' => 'Rücklastschriftgebühr',
+        'penalty_fee' => 'Strafgebühr',
+        'loan_arrangement_fee' => 'Bearbeitungsgebühr',
     ],
 
     'cp_card' => [

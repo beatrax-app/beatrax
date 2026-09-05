@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankavgift',
+        'account_maintenance' => 'Kontoavgift',
+        'monthly_fee' => 'Månadsavgift',
+        'quarterly_fee' => 'Kvartalsavgift',
+        'annual_fee' => 'Årsavgift',
+        'card_fee' => 'Kortavgift',
+        'transaction_fee' => 'Transaktionsavgift',
+        'transfer_fee' => 'Överföringsavgift',
+        'withdrawal_fee' => 'Uttagsavgift',
+        'transaction_levy' => 'Transaktionsskatt',
+        'foreign_transaction_fee' => 'Valutapåslag',
+        'commission' => 'Provision',
+        'debit_interest' => 'Skuldränta',
+        'overdraft' => 'Övertrasseringsavgift',
+        'overdraft_interest' => 'Övertrasseringsränta',
+        'insufficient_funds' => 'Avgift för täckningsbrist',
+        'penalty_fee' => 'Straffavgift',
+        'loan_arrangement_fee' => 'Uppläggningsavgift',
     ],
 
     'cp_card' => [
