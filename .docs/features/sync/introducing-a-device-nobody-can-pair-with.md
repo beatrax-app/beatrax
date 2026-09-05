@@ -80,8 +80,10 @@ enforced by where the key lives and what is stored beside it.
   Noise static key a session authenticates against has nowhere to land even if
   a query were widened by mistake.
 - **One reader.** `DeviceRegistryService::signatureVerificationKeys()` is the
-  only method that reads the table's keys, and it feeds only the four places
-  that build `OpLogReplayer`'s `$deviceKeys` map.
+  only method that reads the table's keys. It feeds the four places that build
+  `OpLogReplayer`'s `$deviceKeys` map, and one more: the list of authors this
+  device advertises it can verify, which has to be the same set or the device
+  asks for ops it will then refuse. All five are pinned by an arch test.
 
 What deliberately keeps using `deviceKeys()` — the paired-only map — is as much
 of the boundary as what does not:
@@ -91,6 +93,11 @@ of the boundary as what does not:
 | `GdkEpochControlHandler::confirmedSenderKey()` | Epoch delivery. E2-R19 names it. |
 | `InitialSyncPuller::resolvePeerDeviceId()` | Chooses which peer to dial; an introduced device is not dialable. |
 | `DeviceRegistryService::deviceX25519Keys()` | Transport authentication, already pinned by `AConfirmedPeerKeyHasOneSourceArchTest`. |
+
+`AReplayIsAdmittedOnlyByAConfirmedDeviceKeyArchTest` covers the other half. It
+allows either admission anchor at a replayer site and still refuses the retained
+map — and it reads the second anchor back, so accepting a wider map stays
+conditional on that map being the reader's own confirmations and nothing else.
 
 ## A cursor is not spent on a refusal
 
