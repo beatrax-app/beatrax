@@ -178,3 +178,14 @@ it('refuses to install launchd plists on a host that is not macOS', function ():
     expect(glob($this->sandbox.'/*.plist'))->toBe([]);
     expect(CaptureBootstrapInstallCommand::$capturedBootstraps)->toBe([]);
 });
+
+// The override above is what keeps the suite off the runner's OS, and an
+// override is also how a seam stops being read at all: every case here answers
+// hostIsMacOs() itself, so the real one runs nowhere. This asks the shipped one
+// what it thinks, which is the reading a released binary actually takes.
+it('answers the host OS from the runtime the process is on', function (): void {
+    $command = app(InstallCommand::class);
+
+    expect((new ReflectionMethod($command, 'hostIsMacOs'))->invoke($command))
+        ->toBe(PHP_OS_FAMILY === 'Darwin');
+});
