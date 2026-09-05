@@ -36,6 +36,10 @@ const BLADE_SCANNER_WALKS_NO_TEMPLATE = [
         'reason' => 'reads the guard tree, which holds no template',
         'proves' => '#/Contracts/\*\.php#',
     ],
+    'tests/Contracts/AScannerAccountsForTheWholeTreeArchTest.php' => [
+        'reason' => 'reads the scanner-support classes to find the root names they write out; that directory holds no template, and the Blade roots it asks RepoTree about are names rather than files it opens',
+        'proves' => '#/Contracts/Support/\*\.php#',
+    ],
     'tests/Contracts/AReaderFacingRowNamesTheDayTheLedgerStoresArchTest.php' => [
         'reason' => 'reads a template on a branch of its own and reaches the tokeniser only for a PHP file',
         'proves' => '#if \(str_ends_with\(\$path, .\.blade\.php.\)\) \{#',
