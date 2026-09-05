@@ -28,6 +28,31 @@ declare(strict_types=1);
  * `routes/` via symlinks — one shared domain codebase, two app shells.
  */
 
+/*
+ * The three purpose strings are read from the same tree the twenty-five
+ * translations live in rather than written out here. Info.plist carries the base
+ * language and <locale>.lproj/InfoPlist.strings carries the rest, so two copies
+ * of the same sentence would drift the moment one was reworded — and the drift
+ * would show only as a prompt whose English and Dutch say different things.
+ *
+ * A `require` rather than a config() read: config is what this file is producing,
+ * and the same array is read by a build script that runs with no framework.
+ *
+ * Two candidate paths because Modules/ is not one place. Here it is a symlink to
+ * ../Modules, so it resolves through mobile-app/; in a materialized Bifrost tree
+ * this root IS the repo root and Modules/ sits beside config/. Probed rather
+ * than assumed, the same way every patch script probes for the scaffold.
+ *
+ * @see ../../scripts/nativephp_ios_purpose_string_localisations.php
+ */
+$purposeStringsFile = array_values(array_filter([
+    __DIR__.'/../Modules/Mobile/Resources/ios/lang/en/purpose-strings.php',
+    __DIR__.'/../../Modules/Mobile/Resources/ios/lang/en/purpose-strings.php',
+], 'is_file'))[0] ?? null;
+
+/** @var array<string, string> $englishPurposeStrings */
+$englishPurposeStrings = $purposeStringsFile === null ? [] : require $purposeStringsFile;
+
 return [
     // 'DEBUG' is not a placeholder: the shells treat that exact string as
     // "always re-extract the PHP bundle on launch". Without it a dev build
@@ -111,10 +136,7 @@ return [
      * is documented as app-level Info.plist overrides. App Store Connect
      * refuses a submission with no category.
      */
-    'permissions' => [
-        'NSLocalNetworkUsageDescription' => 'Beatrax uses your local network to sync your finances directly with your other Beatrax devices — nothing ever leaves your home network for this.',
-        'NSCameraUsageDescription' => 'Beatrax uses the camera to scan the pairing code shown on your other device. Nothing is photographed or stored.',
-        'NSFaceIDUsageDescription' => 'Beatrax uses Face ID to unlock your finances and release the key your data is encrypted with.',
+    'permissions' => $englishPurposeStrings + [
         'LSApplicationCategoryType' => 'public.app-category.finance',
     ],
 

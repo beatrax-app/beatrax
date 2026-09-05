@@ -47,6 +47,7 @@ $patches = [
     'nativephp_ios_privacy_manifest',
     'nativephp_ios_export_compliance',
     'nativephp_ios_app_category',
+    'nativephp_ios_purpose_string_localisations',
     'nativephp_dedupe_background_task_identifiers',
 ];
 

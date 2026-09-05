@@ -54,16 +54,19 @@ final readonly class NativeBuildPatches
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',
+        'nativephp_ios_purpose_string_localisations.php',
         'nativephp_dedupe_background_task_identifiers.php',
     ];
 
     // A cosmetic patch that fails degrades to the unpatched shell, which is
-    // visible on the device. These three are invisible until App Store Connect
-    // rejects the upload, so they stop it here instead.
+    // visible on the device. These four are invisible: three until App Store
+    // Connect rejects the upload, and the fourth until a reader is asked for
+    // their face in a language they do not speak.
     private const array REQUIRED_SCRIPTS = [
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',
+        'nativephp_ios_purpose_string_localisations.php',
     ];
 
     public function __construct(

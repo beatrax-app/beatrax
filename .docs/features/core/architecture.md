@@ -33,8 +33,10 @@ What the module explicitly does NOT do:
   it does not decide what counts as an alert. The clock returns time;
   it does not decide how often a job runs. The CLI commands run
   procedures; they do not decide policy.
-- It never reaches a remote network on its own. The single outbound
-  exception is `ElectronUpdateChannel`, which fetches the publisher
+- It never reaches a remote network on its own. This module's single
+  outbound exception — the product has six others, in other modules, all
+  of them listed in [the store submission page](../../runbooks/store-submission.md#the-outbound-call-catalogue)
+  — is `ElectronUpdateChannel`, which fetches the publisher
   update manifest from a fixed URL configured by the bundle (see
   [ADR 0004](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0004-local-only-hosting.md)). Even that fetch
   is gated by Ed25519 signature verification before any side effect

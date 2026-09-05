@@ -33,9 +33,10 @@ What the module explicitly does NOT do:
 - It never persists a scenario's projected balance curve into the
   ledger. Every projection is a per-run artefact saved to
   `forecast_runs.result_json`.
-- It never speaks to the network. The projection is local-only;
-  the only outbound surface in the codebase is the auto-update
-  channel in `Core`.
+- It never speaks to the network. The projection is local-only. The
+  codebase's outbound surface is seven calls, not one, and it is
+  enumerated in [the store submission page](../../runbooks/store-submission.md#the-outbound-call-catalogue);
+  none of them is reached from here.
 
 ## Module boundary
 
