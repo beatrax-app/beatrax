@@ -121,17 +121,17 @@ final readonly class SyncStatusService
                 ->all(),
         );
 
-        if (! $lastSessionEnd instanceof CarbonImmutable) {
-            return false;
-        }
-
         $selfDeviceId = $this->db->connection()
             ->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', true)
             ->value('device_id');
 
-        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+        // No session to measure from and no identity to measure are the same
+        // answer: nothing here can be shown to be owed. Asked together because
+        // the second is one indexed lookup, and the memory note below is about
+        // op_log_entries, which this does not touch.
+        if (! $lastSessionEnd instanceof CarbonImmutable || ! is_string($selfDeviceId) || $selfDeviceId === '') {
             return false;
         }
 
