@@ -235,6 +235,7 @@ trait AcceptsPairingCode
         array $identity,
         int $userId,
         Session $session,
+        AppLockClientConfig $lock,
     ): void {
         $tokenHash = hash('sha256', $identity['token']);
 
@@ -244,7 +245,15 @@ trait AcceptsPairingCode
         $this->importDesktopDeviceId = $identity['deviceId'];
 
         try {
-            $gateway->sendResponderAccept($userId, $tokenHash, $identity['deviceId'], $session);
+            // The lock can land between the page load the middleware cleared
+            // and this submit, and a send it refuses throws nothing — so the
+            // step this method was called from would otherwise render as a
+            // ceremony under way with nothing behind it.
+            $this->flashMessage = $this->frameSendNotice(
+                $gateway->sendResponderAccept($userId, $tokenHash, $identity['deviceId'], $session),
+                $lock,
+                $userId,
+            );
         } catch (Throwable $e) {
             $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay delivery failed.', [
                 'pairing_token_id' => $this->pairingTokenId,
