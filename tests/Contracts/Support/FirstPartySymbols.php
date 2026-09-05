@@ -7,10 +7,7 @@ namespace Tests\Contracts\Support;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use ReflectionClass;
-use SplFileInfo;
 use Throwable;
 
 // Whether `SomeClass::someMember` names something that exists. Two guards ask
@@ -88,32 +85,20 @@ final class FirstPartySymbols
     }
 
     /**
+     * The whole tree rather than the two roots this walk used to open. A narrow
+     * walk here does not miss an offender, it invents one: a class declared
+     * under database/ or scripts/ read as absent, and the comment naming it
+     * reported as naming nothing.
+     *
      * @return list<string>
      */
     public static function phpFiles(): array
     {
-        $files = [];
-
-        foreach ([base_path('Modules'), base_path('app')] as $root) {
-            if (! is_dir($root)) {
-                continue;
-            }
-
-            /** @var SplFileInfo $file */
-            foreach (new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-            ) as $file) {
-                $path = $file->getPathname();
-
-                if ($file->isFile() && str_ends_with($path, '.php') && ! str_contains($path, '/Database/Migrations/')) {
-                    $files[] = $path;
-                }
-            }
-        }
-
-        sort($files);
-
-        return $files;
+        return array_values(array_filter(
+            RepoTree::files(RepoTree::EVERY_PHP_FILE),
+            static fn (string $path): bool => ! str_contains($path, '/Database/Migrations/')
+                && ! str_contains($path, '/migrations/'),
+        ));
     }
 
     private static function builderAnswers(string $member): bool

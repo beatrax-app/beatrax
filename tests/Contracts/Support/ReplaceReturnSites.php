@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
-
 // Every `preg_replace`/`preg_replace_callback`/`preg_split` call in product
 // code, and what the call site does with the value PCRE handed back. The walk
 // itself is PcreCallSites; this class is the reading a replacer's answer has
@@ -29,40 +25,18 @@ final class ReplaceReturnSites
 
     private const array TYPE_TESTS = ['is_string', 'is_array'];
 
-    private const array PRODUCTION_ROOTS = ['Modules', 'app', 'database', 'routes', 'config', 'bootstrap'];
-
     /**
      * The guard tree reads its own subjects and is held to the same rule by
      * `AStoppedScanIsNeverReadAsAnEmptyOneArchTest`, which owns that walk. This
-     * one covers the code that ships.
+     * one covers the code that ships, and it means all of it: the six roots
+     * this list used to name left out scripts/, where five casts were blanking
+     * the Android manifest a build at a time.
      *
      * @return list<string>
      */
     public static function files(): array
     {
-        $files = [];
-
-        foreach (self::PRODUCTION_ROOTS as $root) {
-            $dir = base_path($root);
-            if (! is_dir($dir)) {
-                continue;
-            }
-
-            /** @var SplFileInfo $file */
-            foreach (new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-            ) as $file) {
-                $path = $file->getPathname();
-
-                if ($file->isFile() && str_ends_with($path, '.php') && ! str_contains($path, '/vendor/') && ! str_contains($path, '/tests/')) {
-                    $files[] = $path;
-                }
-            }
-        }
-
-        sort($files);
-
-        return $files;
+        return RepoTree::files(RepoTree::PRODUCTION_PHP);
     }
 
     /**
