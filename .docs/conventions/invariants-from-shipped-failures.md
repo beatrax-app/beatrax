@@ -6483,6 +6483,7 @@ the field, so the banner drops a row that is indistinguishable from one above it
 — same kind, same severity, same stored sentence, same copy line, same minute.
 A duplicate that reaches a reader costs more than its own row: a critical
 sentence said twice is one nobody believes the third time.
+
 ## A skip that no job could answer
 
 `tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php`
