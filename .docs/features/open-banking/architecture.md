@@ -121,8 +121,9 @@ shape, adapted for Enable Banking's two-step `/auth` → `/sessions` exchange
 ## Settings page: server-authoritative enable gate
 
 `OpenBankingSettingsPage` (`/settings/open-banking`) is the trust surface:
-an off-by-default toggle gated behind a loud third-party-data warning, an
-always-visible transparency panel, and the consent-expiry re-link flow. The
+an off-by-default toggle gated behind a loud third-party-data warning, and
+one always-visible transparency panel per connected bank carrying that
+bank's own consent-expiry re-link flow. The
 interaction contract spans a full page navigation to the bank's consent
 screen and back, so the "the warning was shown and acknowledged" state
 cannot live on a single component instance — it has to survive in the
@@ -162,11 +163,12 @@ session.
   for. `connectAnotherBank()` opens the wizard straight at the bank picker,
   since the application is already registered and the third-party warning
   was answered when the first bank was linked.
-- `disconnect()` clears the reader's on-disk secrets file and blanks `enabled`/
-  `consent_expires_at` on **every** row belonging to the user, not just the
-  one connection currently displayed — otherwise an orphaned row from a
-  different, previously-linked institution would keep being picked up by
-  the scheduler after the user believes they fully disconnected.
+- `disconnect()` is deliberately all-or-nothing: it deletes the reader's
+  whole secrets file and blanks `enabled`/`consent_expires_at` on **every**
+  row belonging to them, however many banks they had connected. The reader
+  is turning the connector off, not one bank; a row left enabled would keep
+  its place in tomorrow's schedule after they believe they are off, and a
+  session left on disk would still be spendable.
 
 ## Dedup / fingerprint parity contract
 
@@ -296,8 +298,8 @@ SNS, or a free-text "other" institution id — never hardcoded); and
 `Consent` hands off to the consent/SCA dance. The done and error states are
 not a step of the wizard: `OpenBankingCallbackController` redirects to
 `settings.open-banking` with a flash value and the settings page renders
-it. A reconnect flow (triggered from the settings page's consent-expiry
-banner) can skip straight to `WizardStep::Bank`, reusing the
+it. A reconnect flow (triggered from the consent-expiry banner on the
+affected bank's own card) can skip straight to `WizardStep::Bank`, reusing the
 already-registered application — `open()` only honors a requested start
 step when `hasApplication()` is true, so a reconnect can never accidentally
 regenerate a keypair or wipe an existing registration. The requested step
