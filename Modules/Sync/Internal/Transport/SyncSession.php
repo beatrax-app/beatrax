@@ -11,6 +11,8 @@ use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
+use Modules\Sync\Internal\Merge\PriorAuthorship;
+use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
@@ -34,6 +36,10 @@ final class SyncSession
     }
 
     private ?string $peerDeviceId = null;
+
+    private ?string $localDeviceId = null;
+
+    private ?PriorAuthorship $authorship = null;
 
     private string $status = 'handshaking';
 
@@ -87,6 +93,7 @@ final class SyncSession
 
         $this->noiseSession = $noiseSession;
         $this->peerDeviceId = $matchedDeviceId;
+        $this->localDeviceId = $localDeviceId;
         $this->status = 'active';
 
         // Bookkeeping only, deliberately best-effort: losing a race for the
@@ -189,6 +196,10 @@ final class SyncSession
         // entry no later confirmation could bring back.
         $verified = [];
 
+        // Kept apart from the refusals below: these are not refused, they are
+        // already ours. They advance the peer's cursor and reach no strategy.
+        $ownHistory = [];
+
         // Counted per author and reported once. A line per entry is why this
         // went unread: a peer whose history was signed by a retired identity
         // wrote the same warning six thousand times, and the run still looked
@@ -209,6 +220,12 @@ final class SyncSession
                     'device_id' => $entry->deviceId,
                     'reason' => 'signature_invalid',
                 ]);
+
+                continue;
+            }
+
+            if ($this->isOwnHistoryComingBack($entry, $userId)) {
+                $ownHistory[] = $entry;
 
                 continue;
             }
@@ -237,26 +254,54 @@ final class SyncSession
             ]);
         }
 
-        if ($verified === []) {
+        if ($ownHistory !== []) {
+            $this->logger?->debug('SyncSession: skipped this device\'s own entries offered back by a peer.', [
+                'device_id' => $this->localDeviceId,
+                'skipped' => count($ownHistory),
+                'received' => count($entries),
+            ]);
+        }
+
+        if ($verified === [] && $ownHistory === []) {
             return;
         }
 
-        // Synchronous: SyncWebSocketHandler bounds attacker pacing
-        // out-of-band via a per-receive TimeoutCancellation and a
-        // MAX_CATCHUP_FRAMES cap, so a malicious peer cannot pin the fiber
-        // or grow the op_log unboundedly via this call.
-        $this->replayer->replay($verified, $userId);
+        if ($verified !== []) {
+            // Synchronous: SyncWebSocketHandler bounds attacker pacing
+            // out-of-band via a per-receive TimeoutCancellation and a
+            // MAX_CATCHUP_FRAMES cap, so a malicious peer cannot pin the fiber
+            // or grow the op_log unboundedly via this call.
+            $this->replayer->replay($verified, $userId);
+        }
 
-        // After the replay, never before, and only over $verified: a cursor
-        // advanced past an entry this device refused asks the peer to skip it
-        // next time, and nothing else ever sends it again — which would make
-        // confirming an introduction afterwards rescue nothing.
+        // After the replay, never before, and only over what this device
+        // accounted for: a cursor advanced past an entry it REFUSED asks the
+        // peer to skip it forever. Our own history back is accounted for —
+        // withholding it re-offers the same echo on every reconnect.
         $this->watermarks()->advance(
             $userId,
             $this->peerDeviceId ?? '',
-            $verified,
+            [...$verified, ...$ownHistory],
             Instant::zulu($this->clock->now()),
         );
+    }
+
+    // An op THIS device signed, offered back by a peer we sent it to: nothing
+    // to merge, since the row was written here before the op was. The durable
+    // log is asked rather than assumed, so a device missing its own history
+    // still takes it.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#the-entries-a-locked-desktop-quarantines
+     */
+    private function isOwnHistoryComingBack(OpLogEntry $entry, int $userId): bool
+    {
+        if ($this->localDeviceId === null || $entry->deviceId !== $this->localDeviceId) {
+            return false;
+        }
+
+        $this->authorship ??= new PriorAuthorship($this->db, $this->registryService);
+
+        return $this->authorship->alreadyAccepted($entry, $userId);
     }
 
     // Built per call rather than injected: this class is constructed by hand in

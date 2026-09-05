@@ -6,6 +6,7 @@ namespace Modules\Core\Public\Services;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Internal\Encryption\PlaintextResidueSweep;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Sync\Public\Services\EncryptionRecoveryMarkers;
 use Modules\Sync\Public\Services\HistoryReprojector;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -22,6 +23,10 @@ final readonly class SealedLedgerRecovery
         private EncryptionRecoveryMarkers $markers,
         private PlaintextResidueSweep $sweep,
         private LoggerInterface $log,
+        // Nullable for the same reason DoctorCommand's probe is: a build
+        // without the Search module registers no implementation, and the
+        // recovery this class exists for must still run.
+        private ?SearchIndexRepairContract $searchIndex = null,
     ) {}
 
     // Rows a background writer left in the clear, and peer entries a locked
@@ -40,13 +45,17 @@ final readonly class SealedLedgerRecovery
         $since = $this->markers->historyReprojectedAt($userId);
 
         $needsReseal = $this->markers->resealedColumnsDigest($userId) !== $digest;
+        // Asked here rather than after the gate below: an index body a keyless
+        // drain emptied is owed work with no quarantine row and no keyring
+        // move behind it, so neither of the two questions above finds it.
+        $needsIndexRepair = $this->searchIndex?->hasWork($userId, $fingerprint) ?? false;
         // Deliberately the cheap, epoch-blind question. The exact one needs the
         // keyring, and asking it here would make every page load of an enrolled
         // device decrypt a key file to learn there is nothing to do.
         $mayHaveWork = $fingerprint !== $lastFingerprint
             || $this->reprojector->hasUnexaminedQuarantine($userId, $since);
 
-        if (! $needsReseal && ! $mayHaveWork) {
+        if (! $needsReseal && ! $mayHaveWork && ! $needsIndexRepair) {
             return;
         }
 
@@ -60,6 +69,13 @@ final readonly class SealedLedgerRecovery
 
         if ($needsReseal) {
             $this->resealResidue($userId, $session, $digest);
+        }
+
+        // Not nullsafe: only a bound implementation can have answered true
+        // above, and the property is readonly, so the null case cannot arrive
+        // here.
+        if ($needsIndexRepair) {
+            $this->searchIndex->repair($userId, $fingerprint);
         }
     }
 

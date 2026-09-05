@@ -272,11 +272,14 @@ function deviceRegistryRow(int $userId, string $deviceId, string $name, bool $is
 }
 
 // The status row is the surface a reader returns to; the enable modal is read
-// once, on the way in. SearchIndexWriter decrypts sealed columns straight into
+// once, on the way in. SearchIndexWriter reads sealed columns through
+// SearchSourceText::read() and writes their plaintext into
 // transaction_search_docs.search_body, so the field list below is derived from
 // that file rather than restated here: a column added to search_body with no
 // matching disclosure fails this test instead of shipping as a quiet
-// under-disclosure.
+// under-disclosure. Both spellings are read, because the writer routed its
+// decrypts through a collaborator and a pattern that knew only the old one
+// would have reported no columns at all rather than a missing disclosure.
 it('the encryption-on status row names the search index and every column SearchIndexWriter leaves in the clear', function (): void {
     $writerPath = dirname(__DIR__, 3).'/Search/Internal/Services/SearchIndexWriter.php';
     expect(is_file($writerPath))->toBeTrue();
@@ -284,7 +287,7 @@ it('the encryption-on status row names the search index and every column SearchI
     $source = file_get_contents($writerPath);
     expect($source)->toBeString();
 
-    $matches = PatternScan::sets("/decryptValue\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '');
+    $matches = PatternScan::sets("/(?:decryptValue|->read)\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '');
 
     $indexedInTheClear = [];
     foreach ($matches as $match) {
@@ -292,6 +295,11 @@ it('the encryption-on status row names the search index and every column SearchI
     }
     $indexedInTheClear = array_values(array_unique($indexedInTheClear));
     sort($indexedInTheClear);
+
+    // Said separately from the comparison below, because a pattern that has
+    // stopped matching answers "no columns are in the clear" — which is the
+    // reassuring shape of the two failures, not the alarming one.
+    expect($indexedInTheClear)->not->toBe([], 'the writer names no decrypted columns, so this guard is reading the wrong shape');
 
     // Each column the writer decrypts, paired with the words the permanent
     // status row has to spend on it. A new column breaks the first

@@ -153,6 +153,7 @@ What the module explicitly does NOT do:
   | `CashBookPage` | CashBook | a manual entry is deleted |
   | `SearchIndexRefresher` | Sync | a merged op changed a transaction |
   | `OpLogRebuilder` | Sync | history is replayed from the op log |
+  | `SearchIndexRepair` | Search | a keyless process refused a body and a keyed one is here |
 
   A write that skips the writer leaves the index stale, and nothing
   but a search that no longer finds the row will say so. The list is
@@ -198,6 +199,67 @@ What the module explicitly does NOT do:
   a warning when the indexed count doesn't match the transaction count,
   so neither a partial run nor a skipped row is silently treated as
   complete.
+
+## A column this process cannot read
+
+The index body is a plaintext shadow of three sealed columns —
+`transactions.counterparty_name`, `transactions.description` and the
+whole-transaction `tax_transaction_tags.note`. It is the only searchable copy
+of them, which is why the shadow is disclosed rather than hidden.
+
+`SensitiveColumnCodec::decryptValue()` never throws. Handed ciphertext it holds
+no epoch for, it returns the empty string with `decrypted: false`. That is the
+right answer for a screen, which renders a blank cell, and the wrong one for
+this index, which wrote the blank over the words.
+
+`sync:serve` is a console daemon with no app-lock key, and a peer's catch-up is
+replayed inside it, so every transaction the merge touched was re-indexed from
+columns that process could not open. Measured across two pairing runs on two
+real devices: **99 of 148** bodies emptied in the first and **5 of 148** in the
+second, against **0 of 148** taken minutes before pairing and **0 of 21** for an
+account that never synced. The desktop answered *"No transactions match"* for a
+merchant its own ledger still held, while the phone that had just synced from it
+found the row. Nothing threw, so the refresher's catch never fired and no row
+anywhere recorded that it had happened.
+
+Both writers now read a source column through one collaborator,
+`SearchSourceText::read()`, which returns null for exactly the shape the codec
+blanks. `ReindexSearchCommand` already refused such a row and left the count
+short; `SearchIndexWriter` wrote it. One index with two answers was the defect,
+so the rule lives in one place.
+
+On a refusal `SearchIndexWriter` writes nothing at all. The stored doc is left
+as it stands — a stale body still finds the row, an emptied one finds nothing —
+and the coordinate is recorded in `search_index_repairs`, which holds
+`(user_id, transaction_id, requested_at)` and no ledger content, because the
+content is precisely what the refusing process could not read. One warning per
+user per process names the refusal in the log, and the owed count reaches
+`FtsHealthCheck`, so the doctor probe can report an index whose row count
+matches the table and whose bodies are waiting for a key.
+
+`SearchIndexRepair` drains that queue, `DRAIN_LIMIT` coordinates at a time,
+through the same writer — so a row still unreadable is re-queued by the writer
+rather than judged a second time by something that could disagree with it. It
+runs from `Core::SealedLedgerRecovery`, beside the op-log re-projection and the
+plaintext-residue re-seal, for the reason those two live there: on a desktop a
+web request is the only thing that holds the app-lock key.
+
+A pass that could not open a row stamps `failed_fingerprint` with the caller's
+own keyring hash, and the gate skips a row already answered under it. Without
+that bound a column sealed to an epoch whose wrap never reached this device is
+re-decrypted on every request forever and recovers nothing — the same
+recurrence, and the same cure, as
+[telling "not yet openable" apart from "never openable here"](../sync/sensitive-columns-at-rest.md#telling-not-yet-openable-apart-from-never-openable-here).
+The fingerprint is read without the app-lock key and changes whenever an epoch
+is appended, replaced or rewrapped, so the arrival of the missing wrap is what
+reopens the question.
+
+The migration that creates the table seeds it from the damage already on disk —
+an empty body over a transaction that still carries a description, a
+counterparty name or a whole-transaction note — so an index emptied before this
+shipped repairs itself on the next unlocked request. Without that seed there is
+nothing to find it: neither a later sync nor time rebuilds a body, and
+`search:reindex` cannot, because a console run holds no key either.
 
 ## Data flow
 

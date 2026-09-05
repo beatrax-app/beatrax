@@ -129,6 +129,7 @@ function derivedFromSyncedInputTables(): array
         'forecast_runs' => 'A record of a projection this device computed from transactions that do travel.',
         'forecast_shortfall_windows' => 'The output of that projection, recomputed by each device\'s own run.',
         'transaction_search_docs' => 'The search index over transactions; rebuilt locally, never a source of truth.',
+        'search_index_repairs' => 'The transactions whose index body a keyless process here could not build. A peer that could read them has nothing to repair, and the coordinate is spent the moment this device rebuilds one.',
         'ledger_backfill_state' => 'How far this device has got through its own backfill.',
     ];
 }

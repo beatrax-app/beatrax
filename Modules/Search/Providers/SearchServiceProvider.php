@@ -13,8 +13,10 @@ use Modules\Search\Internal\Console\ReindexSearchCommand;
 use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
 use Modules\Search\Internal\Services\PaletteSectionComposer;
 use Modules\Search\Internal\Services\QueryParser;
+use Modules\Search\Internal\Services\SearchIndexRepair;
 use Modules\Search\Internal\Services\SearchIndexWriter;
 use Modules\Search\Internal\Services\SearchTokenFilters;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
@@ -29,6 +31,11 @@ final class SearchServiceProvider extends ServiceProvider
         $this->app->singleton(
             SearchIndexWriterContract::class,
             SearchIndexWriter::class,
+        );
+
+        $this->app->singleton(
+            SearchIndexRepairContract::class,
+            SearchIndexRepair::class,
         );
 
         $this->app->singleton(FtsHealthCheck::class);

@@ -13,6 +13,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Search\Internal\Services\SearchDocumentBody;
+use Modules\Search\Internal\Services\SearchSourceText;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -33,6 +34,7 @@ final class ReindexSearchCommand extends Command
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
+        private readonly SearchSourceText $source,
         // A factory, not the session itself: resolving a session builds the
         // encrypter, and Artisan constructs every command merely to list it.
         private readonly SessionFactory $session,
@@ -185,9 +187,9 @@ final class ReindexSearchCommand extends Command
 
             // Decrypted before the body is built, so FTS5 tokenizes plaintext
             // — identical treatment to SearchIndexWriter's single-row path.
-            $counterparty = $this->decrypt('transactions', 'counterparty_name', $row->counterparty_name, $userId, $session);
-            $description = $this->decrypt('transactions', 'description', $row->description, $userId, $session);
-            $note = $this->decrypt('tax_transaction_tags', 'note', $notesByTxId[$txId] ?? null, $userId, $session);
+            $counterparty = $this->source->read('transactions', 'counterparty_name', $row->counterparty_name, $userId, $session);
+            $description = $this->source->read('transactions', 'description', $row->description, $userId, $session);
+            $note = $this->source->read('tax_transaction_tags', 'note', $notesByTxId[$txId] ?? null, $userId, $session);
 
             // Indexing a blank body would claim success over a row that can no
             // longer be found at all. Left out instead, so the count comes up
@@ -208,23 +210,6 @@ final class ReindexSearchCommand extends Command
         }
 
         return count($docs);
-    }
-
-    // Null when the codec BLANKED the value rather than handing it back: that
-    // shape, and only that shape, means ciphertext no epoch in this keyring
-    // opens. A plaintext row comes back untouched and indexes normally.
-    /**
-     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
-     */
-    private function decrypt(string $table, string $column, mixed $stored, int $userId, Session $session): ?string
-    {
-        if (! is_string($stored) || $stored === '') {
-            return '';
-        }
-
-        $result = $this->codec->decryptValue($table, $column, $stored, $userId, $session);
-
-        return ! $result['decrypted'] && $result['value'] === '' ? null : $result['value'];
     }
 
     // Fail loudly on a partial run — a mismatched count means the index
