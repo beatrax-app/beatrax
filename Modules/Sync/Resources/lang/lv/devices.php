@@ -91,4 +91,17 @@ return [
     'backlog_heading' => 'Gaida pievienošanu',
     'backlog_deferred' => 'Šī ierīce ir saņēmusi datus no citas ierīces un vēl nav tos pievienojusi tavai uzskaitei. Nekas nepazūd — tie tiek pievienoti automātiski, parasti mirklī.',
     'backlog_awaiting_key' => 'Šī ierīce ir saņēmusi datus, kuriem tai vēl nav atslēgas. Nekas nepazūd. Atver lietotni savienotajā ierīcē, kamēr šī ir atvērta, lai abas varētu savienoties un atslēgu nosūtīt.',
+    'introduced_heading' => 'Par to galvo cita ierīce',
+    'introduced_trust' => 'Cita tava ierīce ir nodevusi tālāk tādas ierīces identitāti, ar kuru šī nekad nav bijusi sapārota. Apstiprināšana ļauj šai ierīcei pārbaudīt, ko tā ierīce ir parakstījusi, un neko citu — pieslēgties šeit tā nevar, un atslēga tai nekad netiek nosūtīta. Nav otra ekrāna, ar ko salīdzināt, tāpēc tu uzticies tai ierīcei, kas identitāti nodeva tālāk.',
+    'introduced_by' => 'Nodevusi ierīce :name',
+    'introduced_confirmed' => 'Apstiprināta parakstiem',
+    'introduced_unconfirmed' => 'Nav apstiprināta',
+    'introduced_fingerprint' => 'Saņemtās atslēgas nospiedums:',
+    // i18n-review: lv · introduced_withheld — the zero arm copies the genitive
+    // plural health.skipped uses, so it reads "0 izmaiņu nav lasāmas"; a native
+    // reader settles whether that arm wants "nav lasāmu" instead.
+    'introduced_withheld' => ':count izmaiņu nav lasāmas, kamēr neapstiprini|:count izmaiņa nav lasāma, kamēr neapstiprini|:count izmaiņas nav lasāmas, kamēr neapstiprini',
+    'introduced_confirm' => 'Apstiprināt šo ierīci',
+    'introduced_dismiss' => 'Noraidīt',
+    'introduced_dismiss_aria' => 'Noraidīt: :name',
 ];
