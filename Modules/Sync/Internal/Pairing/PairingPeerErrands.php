@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
+use Modules\Sync\Public\Enums\PairingFrameSend;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -35,7 +36,15 @@ final readonly class PairingPeerErrands
     public function announceResponderAccept(int $userId, string $tokenHash, string $initiatorDeviceId, Session $session): void
     {
         try {
-            $this->peerLink->sendResponderAccept($userId, $tokenHash, $initiatorDeviceId, $session);
+            // Read rather than dropped. The one caller loads the identity in
+            // this same request and refuses before reaching here, so this arm
+            // means a second caller skipped that check — a line in the log
+            // rather than the silence it used to be.
+            if ($this->peerLink->sendResponderAccept($userId, $tokenHash, $initiatorDeviceId, $session) === PairingFrameSend::NoUsableIdentity) {
+                $this->logger->warning('Pairing: PAIR_RESPONDER_ACCEPT was not sent — this device holds no identity to sign it with.', [
+                    'user_id' => $userId,
+                ]);
+            }
         } catch (Throwable $e) {
             // The trust gate is already rendered, and the courier holds the
             // frame for the peer to collect on every road but the one where

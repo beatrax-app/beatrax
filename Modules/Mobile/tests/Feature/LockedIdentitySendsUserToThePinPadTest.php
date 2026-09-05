@@ -57,14 +57,30 @@ it('routes every locked-identity branch to the lock screen', function (): void {
     expect($component)->toContain('private function sendToUnlock(')
         ->and($component)->toContain("route('mobile.lock')");
 
-    // The copy must not survive anywhere that does not also open the PIN pad,
-    // and the only place it is produced is inside the helper that redirects.
-    $occurrences = PatternScan::count(
-        "/mobile::pairing\.errors\.identity_locked/",
-        $component
+    // "Produced only where it redirects" became "produced in only one place":
+    // the line is now also the confirm step's status when the lock takes the
+    // identity out from under a live ceremony, and there the Confirm button is
+    // the road to the PIN pad — it carries the tap across the unlock.
+    $sources = glob(base_path('Modules/Mobile/Internal/Http/Livewire/Concerns/*.php')) ?: [];
+    $sources[] = base_path('Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php');
+
+    $occurrences = 0;
+    foreach ($sources as $source) {
+        $occurrences += PatternScan::count(
+            "/mobile::pairing\.errors\.identity_locked/",
+            (string) file_get_contents($source),
+        );
+    }
+
+    expect($occurrences)->toBe(1, 'identity_locked is produced in more than one place across this screen and its '
+        .'concerns, so a branch can show it without anyone having checked that branch offers a way to the PIN pad');
+
+    // And that one place is the helper both roads read it from.
+    $notice = (string) file_get_contents(
+        base_path('Modules/Mobile/Internal/Http/Livewire/Concerns/ConfirmsAcrossTheLock.php')
     );
 
-    expect($occurrences)->toBe(1, 'identity_locked is produced somewhere that does not open the PIN pad');
+    expect($notice)->toContain('private function identityUnavailableNotice(');
 });
 
 it('keeps a lock route to send them to', function (): void {

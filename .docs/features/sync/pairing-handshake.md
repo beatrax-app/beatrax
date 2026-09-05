@@ -731,6 +731,83 @@ The copy does not claim the lock is off, because it is not. The app still locks
 on its own schedule and still demands the passphrase. What outlives the timeout
 is the pairing window, and that is what the line says.
 
+### A ceremony that cannot speak says so
+
+Holding the window open is only half of it. `mobile.pair` is on
+`AppLockMiddleware::ALLOWED_ROUTE_NAMES` deliberately — the screen is driven
+entirely by `wire:poll`, which is not activity, so without the exemption the PIN
+pad dropped over a working ceremony. The cost is that the idle timeout takes the
+*identity* out from under a trust gate that keeps its *screen*: Livewire's
+persistent middleware re-runs this middleware against the originating route, so
+the poll that trips `idleExpired()` locks the session and is then waved through
+as an exempt route.
+
+Everything the phone owes the other device at that moment goes through
+`DeviceIdentityLoader::load()`, which answers `null` for a sealed key-file. Both
+sends took that `null` as a reason to `return`, and a `return` is indistinguishable
+from a delivery. Measured on an iPhone 12 mini: **fifty-eight relay drains, zero
+`POST /pair/frame`, four minutes**, with *"Compare these words"* and a live
+Confirm button on screen throughout — the poll's success branch even cleared the
+message on every tick.
+
+So `PairingPeerLink`'s two sends return `PairingFrameSend` instead. It is not a
+delivery result: a road that refuses still throws, and the courier still holds
+what it cannot hand over. It names the two ways a send never *started* —
+`NoUsableIdentity` and `NoLocalCeremony` — and `Sent` for the rest.
+
+**Not a throw, and not a fourth `PairingAcceptRefusal`.** Throwing would put the
+existing catch's *"Cannot reach the other device. Make sure both are on the same
+network"* in front of a reader whose network was never the reason, which is the
+rule [the typed refusal](#a-refused-accept-has-three-endings-and-one-of-them-may-say-expired)
+exists for. And `PairingAcceptRefusal` answers a different question at a different
+moment — why a *code* produced no accepted pairing, classified from the local row
+plus what the submit observed. `classifyAcceptRefusal()` takes a token hex and
+whether the issuer served its offer, and neither means anything to a re-emit three
+minutes after the accept. Same pattern, deliberately not the same enum: one
+`match` per surface, each owning its own copy.
+
+The line the phone shows is the one it already had — `identity_locked`, or
+`identity_needs_lock` where there is no lock to open — resolved in one place now
+that both `sendToUnlock()` and the poll read it.
+
+The same lock outlives the token. Five idle minutes into a ten-minute ceremony
+leaves the poll reading `expired` off `PairingTokenRowReader::state()` for a row
+whose column still says `awaiting_confirm` — exactly the row
+`extendCeremonyAcrossLock()` revives. So the poll's "this ended out of sight"
+branch asks whether the reader can act on it first: a row that is *gone* is gone
+under either key, but a *lapse* while locked is not reported as one, because
+sending that reader for a fresh code ends a ceremony the unlock would have won.
+
+### A tap made against a locked identity is carried, not dropped
+
+Tapping Confirm while locked bounced to the PIN pad and lost the tap: the reader
+re-authenticated and had to compare six words and tap again, against a token that
+had spent five of its ten minutes locked.
+
+`confirmMatch()` now takes the safety digest **before** it asks for a device id,
+and stashes it in the session when that comes back `null`. The digest is the
+fingerprint of the six words the human actually compared, so what travels across
+the unlock is the confirmation they gave, not a licence to confirm whatever the
+row says on the way back — a responder that rebinds while the reader is at the PIN
+pad still makes `confirm()` refuse, and the refusal is rendered.
+
+It is applied by `mount()`, on the page load the unlock redirects into, and only
+after the resume above has rebuilt the step the tap was made on. `mount()` stops
+there rather than advancing to success even when the peer had already confirmed:
+the poll owns that transition and the settlement behind it, and a second owner is
+a second policy.
+
+Nothing new holds the deadline open. `HoldPairingCeremonyOpenOnUnlock` already
+fires on `AppLockUnlocked`, which `LockStateManager::unlock()` dispatches from
+the funnel all five unlock paths arrive at, the mobile PIN included — so the
+window is extended by the unlock itself, before the carried tap is applied.
+
+`APairingSendNeverDeclinesInSilenceArchTest` holds the shape: a send in these
+seams that reads this device's own identity may not return `void`, and no caller
+may drop the answer. `PairingFrameCourier`'s same-named sends stay `void` because
+they read no identity and decline nothing — every failure there is a throw, and a
+throw cannot be discarded — and the four lines reaching them are pinned.
+
 ## What a confirmation is bound to
 
 `confirm()` takes the fingerprint of the six words the human actually compared and

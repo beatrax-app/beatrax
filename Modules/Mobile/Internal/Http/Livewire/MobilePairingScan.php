@@ -26,6 +26,7 @@ use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
+use Modules\Mobile\Internal\Http\Livewire\Concerns\ConfirmsAcrossTheLock;
 use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Pairing\PairingEncryptionActivation;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
@@ -43,6 +44,7 @@ final class MobilePairingScan extends Component
     use AcceptsPairingCode;
     use AnnouncesStepChanges;
     use ChoosesCodeEntryArm;
+    use ConfirmsAcrossTheLock;
     use HoldsFlashMessage;
 
     // Read once by MobileLockScreen::mount(). A public property cannot carry
@@ -52,6 +54,10 @@ final class MobilePairingScan extends Component
     // Put, not flashed: the lock screen render, the PIN post and the redirect
     // back are three requests, and a flash survives only the first.
     public const string TYPED_CODE_SESSION = 'mobile.pairing.typed_code';
+
+    // Here rather than on the concern that reads it: a trait constant cannot be
+    // named through the trait, and the two keys above are already the screen's.
+    public const string DEFERRED_CONFIRM_SESSION = 'mobile.pairing.deferred_confirm';
 
     // `native:` plus the PHP event class the plugin fired. Plain strings
     // because the plugin lives only in mobile-app/vendor, unresolvable here.
@@ -133,6 +139,9 @@ final class MobilePairingScan extends Component
         DeviceRegistryService $devices,
         UrlGenerator $urls,
         Session $session,
+        DatabaseManager $db,
+        LoggerInterface $logger,
+        AppLockClientConfig $lock,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -198,6 +207,11 @@ final class MobilePairingScan extends Component
             // so the trust gate asked a reader to confirm a pairing between two
             // blanks — while the desktop beside it named both devices.
             $this->hydrateDeviceNames($gateway, $devices, $userId);
+
+            // Last, on the page load the unlock redirects into: the reader
+            // tapped confirm against a locked identity, and everything above
+            // has just rebuilt the step that tap was made on.
+            $this->applyDeferredConfirm($gateway, $session, $db, $logger, $lock, $userId);
 
             return;
         }
@@ -271,10 +285,12 @@ final class MobilePairingScan extends Component
 
     private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
     {
+        $notice = $this->identityUnavailableNotice($lock, $userId);
+
         // With no app lock the identity is unreadable because none was ever
         // set up, and the PIN-only lock screen is a dead end. Say so instead.
         if (! $lock->isEnabled($userId)) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_needs_lock');
+            $this->flashMessage = $notice;
 
             return;
         }
@@ -282,7 +298,7 @@ final class MobilePairingScan extends Component
         // Flashed, not set on $this: navigate:false is a full page load into
         // MobileLockScreen, which renders its own flashMessage. Setting this
         // component's property sent the user to a PIN pad with no explanation.
-        $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
+        $session->flash(self::LOCKED_IDENTITY_FLASH, $notice);
 
         // The code is already typed, and mount() clears it on the way back, so
         // the reader retyped 26 characters against a ten-minute TTL the lock
@@ -374,7 +390,7 @@ final class MobilePairingScan extends Component
         // Best-effort: a relay failure never dead-ends the confirm step
         // already rendered above; the desktop's poll simply does not advance.
         if ($identity !== null) {
-            $this->announceResponderAccept($gateway, $logger, $identity, $userId, $session);
+            $this->announceResponderAccept($gateway, $logger, $identity, $userId, $session, $lock);
         }
     }
 
@@ -389,6 +405,7 @@ final class MobilePairingScan extends Component
         MobileImportIntentGate $importIntent,
         DatabaseManager $db,
         LoggerInterface $logger,
+        AppLockClientConfig $lock,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -418,8 +435,15 @@ final class MobilePairingScan extends Component
             && $this->importDesktopDeviceId !== ''
         ) {
             try {
-                $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session);
-                $this->flashMessage = '';
+                // The answer is rendered, not dropped. A locked identity makes
+                // this a no-op that throws nothing, so clearing the message
+                // here left the step drawing a live Confirm button over four
+                // minutes in which not one frame was sent.
+                $this->flashMessage = $this->frameSendNotice(
+                    $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session),
+                    $lock,
+                    $userId,
+                );
             } catch (Throwable $e) {
                 // The courier throws only when no road home is open at all.
                 // Swallowing that left the user watching a spinner forever.
@@ -438,12 +462,17 @@ final class MobilePairingScan extends Component
         // not on a flag a refused tap also sets.
         if ($state !== PairingGateway::STATE_CONFIRMED
             && $gateway->hasConfirmedLocally((int) $this->pairingTokenId, $userId, $session)) {
-            $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger);
+            $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger, $lock);
         }
 
-        // Expired, refused or cancelled on the other device: without this the
-        // poll spins forever on a handshake that already ended out of sight.
-        if ($state === null || $state === PairingGateway::STATE_EXPIRED) {
+        // Without this the poll spins forever on a handshake that ended out
+        // of sight. A lapse is not that while this device is locked: the
+        // unlock revives an awaiting_confirm row it owns a side of, so a
+        // fresh code here abandons a ceremony that was still winnable.
+        $endedForGood = $state === null
+            || ($state === PairingGateway::STATE_EXPIRED && $gateway->hasUsableIdentity($userId, $session));
+
+        if ($endedForGood) {
             $this->resetPairingAttempt();
             $this->awaitingPeer = false;
             $this->flashMessage = Lang::get($this->acceptRefusalKey(PairingAcceptRefusal::NotLiveHere));
@@ -556,40 +585,31 @@ final class MobilePairingScan extends Component
 
         $userId = $currentUser->user()->id;
 
-        // The gateway derives the confirming side from this device id, never
-        // from client state.
+        // Bound to the words on screen rather than to whatever the row says
+        // now, so a responder that rebinds cannot inherit this tap.
+        $digest = $gateway->safetyDigestOf($this->safetyWords);
+
+        // Null means locked, and the tap travels to the far side of the PIN pad
+        // rather than being spent: sending a reader to re-authenticate and then
+        // forgetting what they came to do made the unlock cost them the
+        // confirmation as well as the time.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
+            $this->deferConfirmAcrossUnlock($session, $digest);
             $this->sendToUnlock($urls, $session, $lock, $userId);
 
             return;
         }
 
-        // Bound to the words on screen rather than to whatever the row says
-        // now, so a responder that rebinds cannot inherit this tap.
-        $state = $gateway->confirm(
-            (int) $this->pairingTokenId,
-            $userId,
-            $deviceId,
-            $gateway->safetyDigestOf($this->safetyWords),
-        );
+        $state = $this->recordConfirmation($digest, $deviceId, $gateway, $userId);
 
-        // Refused: the keys behind those words are not the ones the row binds
-        // any more. Silence here reads as "waiting for the other device", which
-        // is how a responder that rebinds stalls a ceremony unseen.
         if ($state === null) {
-            $this->awaitingPeer = false;
-            $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
-            $this->flashMessage = Lang::get('mobile::pairing.errors.safety_number_changed');
-
             return;
         }
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side independently confirms too.
-        $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger);
-
-        $this->awaitingPeer = $state !== PairingGateway::STATE_CONFIRMED;
+        $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger, $lock);
 
         if ($state === PairingGateway::STATE_CONFIRMED) {
             $this->moveTo(PairingWizardStep::Success);
@@ -604,6 +624,7 @@ final class MobilePairingScan extends Component
         DatabaseManager $db,
         Session $session,
         LoggerInterface $logger,
+        AppLockClientConfig $lock,
     ): void {
         // Scoped as well as #[Locked]: this runs whatever confirm() returned,
         // so the id's provenance is the only thing keeping the read in-account.
@@ -617,7 +638,19 @@ final class MobilePairingScan extends Component
         }
 
         try {
-            $gateway->sendConfirm($userId, (int) $this->pairingTokenId, $initiatorDeviceId, $session);
+            // Same rule as the accept re-emit: a confirmation that never left
+            // is a stalled ceremony. Set only, never cleared — that re-emit
+            // owns clearing, and wiping its "no road home" line because a
+            // confirm happened to go out restores the silence it was added for.
+            $notice = $this->frameSendNotice(
+                $gateway->sendConfirm($userId, (int) $this->pairingTokenId, $initiatorDeviceId, $session),
+                $lock,
+                $userId,
+            );
+
+            if ($notice !== '') {
+                $this->flashMessage = $notice;
+            }
         } catch (Throwable $e) {
             $logger->warning('MobilePairingScan: cross-device PAIR_CONFIRM relay delivery failed.', [
                 'pairing_token_id' => $this->pairingTokenId,

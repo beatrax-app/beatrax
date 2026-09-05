@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 
 // Every road PairingGateway has to the other device, with the collaborators
@@ -82,12 +83,14 @@ final readonly class PairingPeerLink
     }
 
     // The responder's OWN keys always come from the LOCAL identity, never wire
-    // content. Silent no-op when that identity is locked or unavailable.
-    public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): void
+    // content. Answers which ending this was rather than returning quietly: a
+    // caller polling every three seconds has no other way to tell a frame that
+    // went out from one a locked identity could never have signed.
+    public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): PairingFrameSend
     {
         $identity = $this->identityLoader->load($userId, $session);
         if ($identity === null) {
-            return;
+            return PairingFrameSend::NoUsableIdentity;
         }
 
         $this->frameCourier->sendResponderAccept(
@@ -100,24 +103,30 @@ final readonly class PairingPeerLink
             // machine calls itself rather than a placeholder.
             $this->deviceNameDetector->detect(),
         );
+
+        return PairingFrameSend::Sent;
     }
 
     // Reads token_hash from the local row so the caller never reconstructs trust
-    // state itself. No-op when the identity is locked or $tokenId matches no row.
-    public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): void
+    // state itself. Its two refusals are named for the same reason the accept's
+    // is: they are the ones no exception marks, and the screen above has to say
+    // something true about a confirmation that never left.
+    public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): PairingFrameSend
     {
         $identity = $this->identityLoader->load($userId, $session);
         if ($identity === null) {
-            return;
+            return PairingFrameSend::NoUsableIdentity;
         }
 
         $tokenHash = $this->rows->tokenHash($tokenId, $userId);
 
         if ($tokenHash === null) {
-            return;
+            return PairingFrameSend::NoLocalCeremony;
         }
 
         $this->frameCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
+
+        return PairingFrameSend::Sent;
     }
 
     public function drainPairingFrames(int $userId, ?Session $session): void
