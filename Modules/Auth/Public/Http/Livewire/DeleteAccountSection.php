@@ -60,8 +60,10 @@ final class DeleteAccountSection extends Component
         } catch (Throwable $e) {
             $this->password = '';
 
-            // DeleteAccountAction swallows everything past the commit, so this
-            // message cannot claim a rollback that did not happen.
+            // Everything past the commit is residue the action logs rather
+            // than raises, and the identity purge that must not fail silently
+            // sits inside the transaction -- so a throw arriving here really
+            // did roll back, and the message may say so.
             $log->error('DeleteAccountSection: account deletion failed and was rolled back.', SafeExceptionContext::describe($e));
 
             $this->failure = Lang::get('auth::delete_account.error_failed');

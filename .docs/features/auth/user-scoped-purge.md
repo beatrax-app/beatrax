@@ -57,3 +57,24 @@ Each is swept explicitly, and each is a table where ownership is not a column:
 - **Files and the keychain, on the reset path.** `DeleteAccountAction` adds
   `UserScopedFilePurge` and `ColdStartVault::forget()` around the row purge.
   The reset does neither, because the demo seeders write neither.
+
+## The two file tiers, and why one is inside the transaction
+
+`UserScopedFilePurge` splits the account's files by what a paired peer could put
+the account back through.
+
+`keyedToTheAccount()` is the sync identity, the group keyring and the
+open-banking connector secret — three unlinks, run *inside* the deletion
+transaction beside `ColdStartVault::forget()` and irreversible on the same
+terms. Each path is read back after the removal, because
+`Illuminate\Filesystem\Filesystem::delete()` reports a refused unlink by
+returning `false` and never by throwing: the return value was ignored, so the
+ordinary failure was not merely swallowed, it was never noticed. A survivor
+throws, the transaction rolls back, and the screen's "Nothing was changed" is
+true — which is the state the requirement is about, because a device that still
+holds the identity is a device a peer can restore the account onto.
+
+`residue()` is the downloaded mail and, for the last account on the device, the
+device-wide trees. Those are bulk deletes whose survival is disclosure rather
+than a way back in, so they run after the commit, each path independent of the
+others, and a survivor is logged **by name** rather than as a count.

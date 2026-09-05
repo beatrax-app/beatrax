@@ -57,7 +57,7 @@ final readonly class DeleteAccountAction
 
         $successorId = $this->successorAdministratorId($connection, $user);
 
-        $connection->transaction(function () use ($connection, $userId, $successorId): void {
+        $lastAccountOnDevice = $connection->transaction(function () use ($connection, $userId, $successorId): bool {
             if ($successorId !== null) {
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
@@ -68,15 +68,24 @@ final readonly class DeleteAccountAction
             $this->coldStartVault->forget($userId);
 
             ($this->purgeData)($connection, $userId);
+
+            // Beside the keychain clear, and irreversible on the same terms.
+            // A peer holds the history; what stops it putting the account back
+            // is that this device no longer holds the identity or the keyring,
+            // so a deletion reported over surviving key material is the defect.
+            $this->purgeFiles->keyedToTheAccount($userId);
+
+            return $connection->table('users')->count() === 0;
         });
 
-        $this->settleAfterPurge($connection, $userId);
+        $this->settleAfterPurge($connection, $userId, $lastAccountOnDevice);
     }
 
-    // Past the commit, where no failure can bring the account back. Swallowed
-    // rather than thrown: a caller reading a post-commit throw as "rolled
-    // back" told the user nothing had changed.
-    private function settleAfterPurge(Connection $connection, int $userId): void
+    // Past the commit, where no failure can bring the account back, and only
+    // for what a peer cannot rebuild the account from: bulk mail, and the
+    // device-wide trees. Logged rather than thrown, because a caller reading a
+    // post-commit throw as "rolled back" told the user nothing had changed.
+    private function settleAfterPurge(Connection $connection, int $userId, bool $lastAccountOnDevice): void
     {
         try {
             $this->rebuildSearchIndex($connection);
@@ -84,16 +93,33 @@ final readonly class DeleteAccountAction
             $this->log->error('DeleteAccountAction: search index rebuild failed after the purge committed.', SafeExceptionContext::describe($e));
         }
 
-        try {
-            ($this->purgeFiles)($userId, $connection->table('users')->count() === 0);
-        } catch (Throwable $e) {
-            $this->log->error('DeleteAccountAction: file purge failed after the purge committed; residue left on disk.', SafeExceptionContext::describe($e));
-        }
+        $this->reportResidue($userId, $lastAccountOnDevice);
 
         try {
             ($this->logout)();
         } catch (Throwable $e) {
             $this->log->error('DeleteAccountAction: logout failed after the purge committed.', SafeExceptionContext::describe($e));
+        }
+    }
+
+    // Named, not counted. "The purge failed" sent whoever read the log to
+    // guess which of eight trees is still there, on the one device that holds
+    // the answer.
+    private function reportResidue(int $userId, bool $lastAccountOnDevice): void
+    {
+        try {
+            $survivors = $this->purgeFiles->residue($userId, $lastAccountOnDevice);
+        } catch (Throwable $e) {
+            $this->log->error('DeleteAccountAction: residue purge failed after the deletion committed.', SafeExceptionContext::describe($e));
+
+            return;
+        }
+
+        if ($survivors !== []) {
+            $this->log->error('DeleteAccountAction: residue left on disk after the deletion committed.', [
+                'user_id' => $userId,
+                'paths' => $survivors,
+            ]);
         }
     }
 

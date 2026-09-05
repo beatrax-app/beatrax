@@ -328,54 +328,96 @@ it('keeps no plaintext password in the component after a failed purge', function
     expect(json_encode($component->snapshot))->not->toContain('owner-password-12');
 });
 
-// Refuses one unlink, the way a held handle does on Windows. Narrow because
-// this replaces the shared `files` binding Blade and the translator use too.
-function deleteAccountRefuseFileDeletes(UserDataPathService $paths, int $userId): void
+// Refuses one path, the way a held handle does on Windows. Narrow because this
+// replaces the shared `files` binding Blade and the translator use too. Both
+// spellings of refusal, because the one that reaches production is the quiet
+// one: unlink() failing makes delete() return false, and never throws.
+function deleteAccountRefuseFileDeletes(UserDataPathService $paths, string $relative, bool $throwing = false): string
 {
-    $blocked = $paths->appRelative(sprintf('sync/identity/%d.enc', $userId));
+    $blocked = $paths->appRelative($relative);
 
     $real = app(Filesystem::class);
     $real->ensureDirectoryExists(dirname($blocked));
     $real->put($blocked, 'fixture');
 
-    $files = new class($blocked) extends Filesystem
+    $files = new class($blocked, $throwing) extends Filesystem
     {
-        public function __construct(private readonly string $blocked) {}
+        public function __construct(private readonly string $blocked, private readonly bool $throwing) {}
 
         public function delete($paths): bool
         {
-            if ($paths === $this->blocked) {
+            if ($paths !== $this->blocked) {
+                return parent::delete($paths);
+            }
+
+            if ($this->throwing) {
                 throw new RuntimeException('unlink(): Resource temporarily unavailable');
             }
 
-            return parent::delete($paths);
+            return false;
         }
     };
 
     app()->instance('files', $files);
     app()->instance(Filesystem::class, $files);
+
+    return $blocked;
 }
 
-it('finishes the deletion when the file purge fails after the commit', function (): void {
+// The residue tier removes trees, not files, so refusing one takes the other
+// half of the Filesystem surface.
+function deleteAccountRefuseTreeDeletes(UserDataPathService $paths, string $relative): string
+{
+    $blocked = $paths->appRelative($relative);
+
+    $real = app(Filesystem::class);
+    $real->ensureDirectoryExists($blocked);
+    $real->put($blocked.'/message.eml', 'fixture');
+
+    $files = new class($blocked) extends Filesystem
+    {
+        public function __construct(private readonly string $blocked) {}
+
+        public function deleteDirectory($directory, $preserve = false): bool
+        {
+            return $directory === $this->blocked ? false : parent::deleteDirectory($directory, $preserve);
+        }
+    };
+
+    app()->instance('files', $files);
+    app()->instance(Filesystem::class, $files);
+
+    return $blocked;
+}
+
+// The requirement is that a peer cannot put the account back, and the identity
+// is what a peer would put it back through. A refused unlink that commits the
+// deletion anyway reaches exactly the state the requirement forbids -- and
+// reached it through a false return nothing read.
+it('refuses the deletion when the sync identity it must remove survives', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $owner = deleteAccountUser('owner', administrator: true);
     deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
 
+    $before = deleteAccountOwnedRowCount($db, $owner->id);
+
     $this->actingAs($owner);
-    deleteAccountRefuseFileDeletes(app(UserDataPathService::class), $owner->id);
+    $blocked = deleteAccountRefuseFileDeletes(
+        app(UserDataPathService::class),
+        sprintf('sync/identity/%d.enc', $owner->id),
+    );
 
-    // The rows are gone by the time the unlink fails, so throwing reported
-    // "nothing was changed" over a committed purge.
-    app(DeleteAccountAction::class)($owner, 'owner-password-12');
+    expect(fn () => app(DeleteAccountAction::class)($owner, 'owner-password-12'))
+        ->toThrow(RuntimeException::class);
 
-    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse()
-        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe(0)
-        ->and(auth()->check())->toBeFalse();
+    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue()
+        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe($before)
+        ->and($blocked)->toBeFile();
 });
 
-it('does not tell the user nothing changed when the account is already gone', function (): void {
+it('rolls back rather than commit over a group keyring that would not go', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -383,7 +425,59 @@ it('does not tell the user nothing changed when the account is already gone', fu
     deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
 
     $this->actingAs($owner);
-    deleteAccountRefuseFileDeletes(app(UserDataPathService::class), $owner->id);
+    deleteAccountRefuseFileDeletes(
+        app(UserDataPathService::class),
+        sprintf('sync/gdk/%d.enc', $owner->id),
+        throwing: true,
+    );
+
+    expect(fn () => app(DeleteAccountAction::class)($owner, 'owner-password-12'))
+        ->toThrow(RuntimeException::class);
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+});
+
+it('tells the reader nothing changed, and nothing has', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+
+    $this->actingAs($owner);
+    deleteAccountRefuseFileDeletes(
+        app(UserDataPathService::class),
+        sprintf('sync/identity/%d.enc', $owner->id),
+    );
+
+    Livewire::test(DeleteAccountSection::class)
+        ->set('password', 'owner-password-12')
+        ->call('deleteAccount')
+        ->assertNoRedirect()
+        ->assertSee('Your account was not deleted');
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+});
+
+// Downloaded mail is the account's data and goes with it, but it is not what a
+// peer restores an account from -- so a tree that will not delete is reported
+// and left, rather than holding the whole deletion hostage.
+it('completes the deletion when only downloaded mail survives the purge', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+
+    // A household member stays, so the device-wide tier is not reached and the
+    // refused directory is the only thing the purge could not do.
+    deleteAccountUser('partner', administrator: false);
+
+    $this->actingAs($owner);
+    $blocked = deleteAccountRefuseTreeDeletes(
+        app(UserDataPathService::class),
+        sprintf('inbox/%d', $owner->id),
+    );
 
     Livewire::test(DeleteAccountSection::class)
         ->set('password', 'owner-password-12')
@@ -391,7 +485,34 @@ it('does not tell the user nothing changed when the account is already gone', fu
         ->assertSet('failure', null)
         ->assertRedirect('/');
 
-    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse()
+        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe(0)
+        ->and(auth()->check())->toBeFalse()
+        ->and($blocked)->toBeDirectory();
+});
+
+// The aggregator credential is keyed to the account and is unlocked money
+// access, so it leaves with the identity rather than waiting for the last
+// account on the device to go.
+it('takes the connector secret keyed to the account with it', function (): void {
+    $owner = deleteAccountUser('owner', administrator: true);
+    $partner = deleteAccountUser('partner', administrator: false);
+
+    $paths = app(UserDataPathService::class);
+    $files = app(Filesystem::class);
+
+    foreach ([$owner->id, $partner->id] as $id) {
+        $secret = $paths->appRelative(sprintf('secrets/open-banking/%d.json', $id));
+        $files->ensureDirectoryExists(dirname($secret));
+        $files->put($secret, '{"client_secret":"connector-'.$id.'"}');
+    }
+
+    $this->actingAs($owner);
+
+    app(DeleteAccountAction::class)($owner, 'owner-password-12');
+
+    expect($paths->appRelative(sprintf('secrets/open-banking/%d.json', $owner->id)))->not->toBeFile()
+        ->and($paths->appRelative(sprintf('secrets/open-banking/%d.json', $partner->id)))->toBeFile();
 });
 
 // `jobs` carries no user_id -- the owner is serialised inside the payload --
