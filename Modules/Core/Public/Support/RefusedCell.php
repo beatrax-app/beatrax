@@ -36,16 +36,18 @@ final readonly class RefusedCell
 
     // A cell that will not parse is as likely to be bytes as text: control
     // characters would break the entry into lines nothing reads back together,
-    // and an invalid sequence would break the encoder that writes it. The
-    // length survives the cap, so a 70-byte cell is legible from a 40KB one.
+    // and an invalid sequence — including the one the cap can cut a glyph in
+    // half to make — would break the encoder that writes it.
     private static function excerpt(string $value): string
     {
-        $printable = PatternScan::replace('/[[:cntrl:]]+/', ' ', $value);
+        // Capped before the scan rather than after, so the pattern is never
+        // handed a subject larger than the answer can be. The true length is
+        // read off the raw value, so a 70-byte cell stays legible from a 40KB
+        // one whatever this returns.
+        $capped = strlen($value) <= self::MAX_VALUE_BYTES
+            ? $value
+            : substr($value, 0, self::MAX_VALUE_BYTES).'…';
 
-        if (strlen($printable) <= self::MAX_VALUE_BYTES) {
-            return mb_scrub($printable, 'UTF-8');
-        }
-
-        return mb_scrub(substr($printable, 0, self::MAX_VALUE_BYTES), 'UTF-8').'…';
+        return mb_scrub(PatternScan::replace('/[[:cntrl:]]+/', ' ', $capped), 'UTF-8');
     }
 }

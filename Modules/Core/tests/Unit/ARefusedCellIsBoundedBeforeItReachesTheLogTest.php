@@ -37,6 +37,16 @@ it('keeps the cell on one line, whatever the file put in it', function (): void 
     expect($context['refused_value'])->toBe('line one line two tabbed');
 });
 
+it('survives the cap landing in the middle of a glyph', function (): void {
+    $value = str_repeat('a', RefusedCell::MAX_VALUE_BYTES - 1).'€uro';
+
+    $context = (new RefusedCell('Register.csv', 'Outflow', $value))->toLogContext();
+
+    expect(mb_check_encoding($context['refused_value'], 'UTF-8'))->toBeTrue()
+        ->and($context['refused_value'])->toStartWith(str_repeat('a', RefusedCell::MAX_VALUE_BYTES - 1))
+        ->and($context['refused_value_bytes'])->toBe(strlen($value));
+});
+
 it('writes an unreadable byte sequence as something the log encoder can carry', function (): void {
     $context = (new RefusedCell('Register.csv', 'Payee', "caf\xE9 bar"))->toLogContext();
 
