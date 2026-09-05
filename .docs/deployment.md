@@ -16,6 +16,12 @@ Two paths are documented:
 Both finish with the interactive **`php artisan beatrax:setup`** command, which
 writes `.env`, configures the database, and runs the install.
 
+> **Read [Opening the loopback boundary](#opening-the-loopback-boundary) before
+> you finish either path.** A fresh install answers on loopback only and refuses
+> every other interface with `404` — including the ones your browser will use.
+> Reaching it from another machine is one explicit setting, and nothing in the
+> steps below sets it for you.
+
 ## Requirements
 
 - PHP **8.5** with extensions: `intl`, `pcntl`, `posix`, `pdo_sqlite`,
@@ -54,7 +60,8 @@ COMPOSE="docker compose -f deploy/server/docker-compose.yml"
 # 1. Configure the stack (this file is the single source of truth for all
 #    app processes, so set the secrets here — not via beatrax:setup).
 cp deploy/server/.env.example deploy/server/.env
-#    edit deploy/server/.env: set a strong DB_PASSWORD and your APP_URL
+#    edit deploy/server/.env: set APP_URL, and BEATRAX_SERVED_INTERFACES if
+#    this install is reached from another machine
 
 # 2. Generate an application key and paste it into deploy/server/.env as APP_KEY
 $COMPOSE run --rm app php artisan key:generate --show
@@ -81,6 +88,11 @@ $COMPOSE exec app php artisan beatrax:install --no-interaction \
 
 Open `http://localhost:8000` (or your `APP_URL`). The queue worker and
 scheduler already run as their own services.
+
+`localhost` works out of the box; **your `APP_URL` does not until you name the
+interfaces you serve on** — see [Opening the loopback
+boundary](#opening-the-loopback-boundary). FrankenPHP publishes no bind address
+at all, so on this path the boundary is decided by `APP_URL`'s host.
 
 To update later:
 
@@ -117,9 +129,16 @@ php artisan beatrax:setup
 
 ### Serving the app
 
-- **Quick start:** `php artisan serve` (development-grade).
-- **Production:** point nginx/Caddy at `public/` and run PHP-FPM. A minimal
-  nginx vhost is in `deploy/server/nginx.conf`.
+- **Quick start:** `php artisan serve` (development-grade). It binds
+  `127.0.0.1` by default and publishes no bind address, so reaching it from
+  another machine needs both settings in [Opening the loopback
+  boundary](#opening-the-loopback-boundary).
+- **Production:** point nginx/Caddy at `public/` and run PHP-FPM. There is no
+  vhost shipped in `deploy/server/` — the Docker recipe above uses FrankenPHP
+  and needs none. Whatever you write, keep `fastcgi_param SERVER_ADDR
+  $server_addr;` (nginx's stock `fastcgi_params` has it): that value is what
+  `BEATRAX_SERVED_INTERFACES` is matched against, and a dispatcher that drops
+  it leaves every request refused with not-found.
 
 ### Background workers
 
@@ -147,6 +166,66 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
+
+---
+
+## Opening the loopback boundary
+
+**A fresh install answers on loopback only.** Every request that arrives on any
+other interface is refused with `404`, by `LoopbackOnly` prepended as global
+middleware — before routing, before auth, on every route including `/health`.
+That is the default in all three deployment shapes and it does not change on its
+own. Bring the Docker stack up without the setting below and every request from
+another machine is a not-found, including the ones that look like the app is
+simply broken.
+
+Widening it takes one setting, and it names the interfaces you serve on:
+
+```dotenv
+# The bind addresses this install answers on, beyond loopback.
+BEATRAX_SERVED_INTERFACES=192.168.1.50
+APP_URL=https://beatrax.example.com
+```
+
+Both halves are load-bearing:
+
+- **`BEATRAX_SERVED_INTERFACES`** is compared against the bind address the SAPI
+  publishes (`SERVER_ADDR`) — nginx and php-fpm publish one. Only literal IP
+  addresses are accepted, IPv4 or IPv6, comma-separated. A hostname, a CIDR
+  range, and the wildcards `0.0.0.0` and `::` are each **ignored and reported**,
+  never expanded: this setting is a list of interfaces, and it must not be able
+  to spell "everything".
+- **`APP_URL`** is what authorises a remote request under a runtime that
+  publishes *no* bind address — which is what the shipped FrankenPHP image does,
+  and what `php artisan serve` does. There the host the client asked for is the
+  only evidence the request carries, so it must equal `APP_URL`'s host, and that
+  host must be something other than `localhost`. `TrustedHostGuard` allow-lists
+  the same host, so the two gates admit exactly one name.
+
+Check what the install actually decided, without reading the config back:
+
+```bash
+php artisan beatrax:doctor          # names the interfaces taken and refused
+curl -s http://127.0.0.1:8000/health
+# {"status":"ok", ... ,"network_boundary":"widened"}
+```
+
+`network_boundary` is `loopback` or `widened` and nothing else. It never lists
+the interfaces: once the boundary is open that response crosses the network, and
+an inventory of the other interfaces served would be a disclosure rather than a
+diagnosis. The interface list is in `beatrax:doctor`, where the caller already
+holds a shell on the machine.
+
+### What is still in front of the app once it is open
+
+Widening moves the app from "unreachable" to "reachable and asking who you are".
+What remains is the sign-in, the app-lock PIN, and `TrustedHostGuard`. What does
+**not** appear is transport security: the shipped image serves plain HTTP on
+port 80 and Beatrax terminates no TLS of its own. On an open network that means
+the password and every rendered balance travel in clear. Put it behind a VPN, a
+Tailscale/WireGuard address, or a reverse proxy holding a certificate — and
+prefer naming *that* private address in `BEATRAX_SERVED_INTERFACES` over a LAN
+address the whole subnet can reach.
 
 ---
 
@@ -201,7 +280,8 @@ rest](features/sync/sensitive-columns-at-rest.md#where-the-key-lives-on-a-phone-
 
 | Key | Purpose |
 |-----|---------|
-| `APP_URL` | Public URL the app is served at |
+| `APP_URL` | Public URL the app is served at. Its host is also what a widened install accepts as a `Host` where the runtime publishes no bind address |
+| `BEATRAX_SERVED_INTERFACES` | Comma-separated literal IP addresses this install serves on beyond loopback. Empty (the default) refuses every non-loopback request with not-found |
 | `APP_ENV` / `APP_DEBUG` | `production` / `false` on a server |
 | `DB_CONNECTION` | `sqlite` (default), `pgsql`, `mysql`, or `mariadb` |
 | `DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` | Server DB connection |

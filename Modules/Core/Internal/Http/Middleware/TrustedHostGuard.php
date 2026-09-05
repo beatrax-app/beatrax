@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Http\Middleware;
 
 use Closure;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Request;
+use Modules\Core\Internal\Support\NetworkBoundary;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class TrustedHostGuard
 {
-    public function __construct(private Repository $config) {}
+    public function __construct(private NetworkBoundary $boundary) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -40,24 +40,10 @@ final readonly class TrustedHostGuard
             return true;
         }
 
-        return in_array(strtolower($host), $this->allowedHosts(), true);
-    }
-
-    // The bundled desktop and mobile shells load the app over loopback names,
-    // and a self-hoster reaches it under the host baked into APP_URL. A Host
-    // outside that set — an attacker-controlled domain rebound to loopback is
-    // the case that matters — is one this server does not serve.
-    /** @return list<string> */
-    private function allowedHosts(): array
-    {
-        $hosts = ['localhost', '127.0.0.1', '::1', '[::1]'];
-
-        $configured = $this->config->get('app.url');
-        $host = is_string($configured) ? parse_url($configured, PHP_URL_HOST) : null;
-        if (is_string($host) && $host !== '') {
-            $hosts[] = strtolower($host);
-        }
-
-        return $hosts;
+        // The same object LoopbackOnly asks about interfaces answers this,
+        // so the two halves cannot drift into allowing different things: the
+        // host baked into APP_URL is both what this admits and what the other
+        // reads a widened install's remote requests against.
+        return in_array(strtolower($host), $this->boundary->allowedHosts(), true);
     }
 }

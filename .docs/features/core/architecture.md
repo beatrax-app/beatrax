@@ -827,9 +827,12 @@ a refresh in the same tab keeps it hidden, but a fresh login resets it.
 
 Middleware (`LoopbackOnly`, `TrustedHostGuard`, `NoStoreFinancialData`):
 
-`LoopbackOnly` refuses any request whose `SERVER_ADDR` is not a
-loopback address, throwing a 404 `NotFoundHttpException` so the app
-never advertises its existence to non-loopback callers. A request with
+`LoopbackOnly` refuses any request whose `SERVER_ADDR` is neither a
+loopback address nor an interface this install recorded itself as
+serving, throwing a 404 `NotFoundHttpException` so the app never
+advertises its existence to a caller it does not serve. With nothing
+recorded — the shipped default in every bundle — that is exactly the
+loopback-only gate it has always been. A request with
 no `SERVER_ADDR` at all is decided by the SAPI, not by the console
 check alone. The console context (CLI, queue worker, Pest fixtures)
 passes, and so does a SAPI that serves without publishing a bind
@@ -838,7 +841,11 @@ into PHP in-process: no listening socket exists, nothing off the device
 can reach it, and it passes unconditionally. `cli-server` publishes no
 address either but does bind a real socket, and `--host=0.0.0.0` binds
 every interface, so it has to answer for the peer it is talking to and
-passes only when `REMOTE_ADDR` is loopback. A real HTTP SAPI (php-fpm,
+passes only when `REMOTE_ADDR` is loopback. `frankenphp` is the same
+case and is why the whole self-hosted shape used to 404: the runtime
+the `deploy/server/` recipe ships registers `SERVER_NAME` and
+`SERVER_PORT` and no `SERVER_ADDR` at all, so it fell through to the
+closed branch on every route. A real HTTP SAPI (php-fpm,
 mod_php) arriving without one still fails closed, so a production
 listener MUST set `SERVER_ADDR` (most web servers do by default; a
 custom php-fpm dispatcher may not, and there it 404s until it does).
@@ -854,10 +861,28 @@ binary form returned by `inet_pton` so textual representation variants
 normalise correctly. `TrustedHostGuard` is the second half of that
 boundary: it validates the client-supplied `Host` against an allow-list
 of the loopback names the bundled shells use plus the host baked into
-`APP_URL`, 404ing anything else. LoopbackOnly alone cannot see a DNS
+`APP_URL`, 404ing anything else. Both halves read one
+`NetworkBoundary`, so the interface rule and the name rule cannot drift
+into admitting different things — which they had, the guard
+allow-listing an `APP_URL` host for a self-hoster the other half
+refused one middleware earlier. LoopbackOnly alone cannot see a DNS
 rebinding attack — a website that rebinds its own domain to 127.0.0.1
 reaches a genuinely loopback socket — so the Host check is what refuses
 the attacker-controlled domain the browser sends in that case.
+
+Widening the boundary is one recorded setting and never a switch:
+`BEATRAX_SERVED_INTERFACES` is a comma-separated list of literal IP
+addresses, matched against the published bind address in `inet_pton`
+binary form. A hostname, a CIDR range and the wildcards `0.0.0.0` /
+`::` are each dropped and reported by `beatrax:doctor` rather than
+resolved or expanded, because this names interfaces and must not be
+able to spell "everything". Where the runtime publishes no bind address
+there is no interface to check, so a remote request is authorised by
+`APP_URL`'s host instead — and only when that host names something past
+loopback, since a caller on the LAN writes its own `Host` header and
+`localhost` is the one it would write. The state — `loopback` or
+`widened`, never the interface list — is the fifth key on `/health`.
+See [deployment](../../deployment.md#opening-the-loopback-boundary).
 `NoStoreFinancialData` adds strict no-store
 cache-control headers to every response, preventing the browser from
 caching authenticated finance pages where the back button could
