@@ -55,6 +55,10 @@ final class MobilePairingScan extends Component
     // back are three requests, and a flash survives only the first.
     public const string TYPED_CODE_SESSION = 'mobile.pairing.typed_code';
 
+    // Here rather than on the concern that reads it: a trait constant cannot be
+    // named through the trait, and the two keys above are already the screen's.
+    public const string DEFERRED_CONFIRM_SESSION = 'mobile.pairing.deferred_confirm';
+
     // `native:` plus the PHP event class the plugin fired. Plain strings
     // because the plugin lives only in mobile-app/vendor, unresolvable here.
     private const string EVENT_CODE_SCANNED = 'native:Native\Mobile\Events\Scanner\CodeScanned';

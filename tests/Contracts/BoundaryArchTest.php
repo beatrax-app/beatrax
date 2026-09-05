@@ -2305,6 +2305,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // second copy in the test: a column added there without an announcing
         // writer is exactly what this guard exists to catch, and a hardcoded
         // list would go quiet the moment the two drifted.
+        'tests/Contracts/APairingSendNeverDeclinesInSilenceArchTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingPeerLink',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',

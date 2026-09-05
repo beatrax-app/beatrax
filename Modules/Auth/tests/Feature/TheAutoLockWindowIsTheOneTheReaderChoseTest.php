@@ -44,19 +44,26 @@ it('hands the client the window the reader saved and not a default', function ()
 
 // The reported measurement, as an assertion: eight minutes of doing nothing
 // under a thirty-minute window is not a lock. A reader read at boot, a cached
-// five, or a default falling back would each land on the lock screen here.
+// five, or a default falling back would each lock the session here.
+// Read off the lock flag rather than the status code, because this fixture's
+// dashboard redirects for reasons of its own and a 302 says nothing about who
+// locked what — the sibling suspended-timer test reads the target for the same
+// reason.
 it('does not lock eight minutes into a thirty-minute window', function (): void {
     $user = chosenWindowUser(30);
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->withSession([
             LockStateManager::SESSION_KEY => false,
             AppLockMiddleware::SESSION_LAST_ACTIVITY => CarbonImmutable::now()->getTimestamp() - 480,
         ])
-        ->get(route('dashboard'))
-        ->assertOk();
+        ->get(route('dashboard'));
+
+    expect($response->headers->get('Location'))->not->toBe(route('auth.lock'))
+        ->and(session(LockStateManager::SESSION_KEY))->toBeFalse();
 });
 
+// The positive control, so the pair cannot both pass by never locking at all.
 it('locks once the window the reader chose has actually run out', function (): void {
     $user = chosenWindowUser(30);
 
@@ -67,6 +74,8 @@ it('locks once the window the reader chose has actually run out', function (): v
         ])
         ->get(route('dashboard'))
         ->assertRedirect(route('auth.lock'));
+
+    expect(session(LockStateManager::SESSION_KEY))->toBeTrue();
 });
 
 // The second window, and the reason a thirty-minute setting can still be
@@ -84,4 +93,6 @@ it('locks on the background marker whatever window the reader chose', function (
         ])
         ->get(route('dashboard'))
         ->assertRedirect(route('auth.lock'));
+
+    expect(session(LockStateManager::SESSION_KEY))->toBeTrue();
 });

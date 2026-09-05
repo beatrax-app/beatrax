@@ -21,10 +21,6 @@ use Psr\Log\LoggerInterface;
  */
 trait ConfirmsAcrossTheLock
 {
-    // Put, not flashed: the PIN pad, the POST that answers it and the redirect
-    // back are three requests, and a flash survives only the first.
-    public const string DEFERRED_CONFIRM_SESSION = 'mobile.pairing.deferred_confirm';
-
     // The one place that turns "this device holds no identity it can open" into
     // a sentence, because the remedy differs: a PIN pad answers a locked one and
     // strands a device that never had a lock to unlock.

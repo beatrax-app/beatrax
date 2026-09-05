@@ -11,9 +11,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\Lang;
-use Modules\Mobile\Internal\Http\Livewire\Concerns\ConfirmsAcrossTheLock;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
-use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Services\PairingGateway;
 
@@ -83,7 +81,7 @@ beforeEach(function (): void {
     $this->session = $session;
 
     AppLockTestHarness::unlock($session, $this->dataKey);
-    app(DeviceIdentityService::class)->generateAndPersist((int) $this->user->id, $session);
+    app(PairingGateway::class)->enableSyncIdentityWithoutEpoch((int) $this->user->id, $session);
 
     $this->deviceId = (string) app(PairingGateway::class)->currentDeviceId((int) $this->user->id, $session);
     $this->row = lockMidCeremonyRow((int) $this->user->id, $this->deviceId);
@@ -140,7 +138,7 @@ it('carries a confirm tap made while locked across the unlock', function (): voi
     $component->call('confirmMatch')->assertRedirect(route('mobile.lock'));
 
     expect(DB::table('pairing_tokens')->where('id', $this->row['id'])->value('responder_confirmed_at'))->toBeNull()
-        ->and($this->session->get(ConfirmsAcrossTheLock::DEFERRED_CONFIRM_SESSION))->toBeArray();
+        ->and($this->session->get(MobilePairingScan::DEFERRED_CONFIRM_SESSION))->toBeArray();
 
     AppLockTestHarness::unlock($this->session, $this->dataKey);
 
@@ -149,7 +147,7 @@ it('carries a confirm tap made while locked across the unlock', function (): voi
         ->assertSet('awaitingPeer', true);
 
     expect(DB::table('pairing_tokens')->where('id', $this->row['id'])->value('responder_confirmed_at'))->not->toBeNull()
-        ->and($this->session->get(ConfirmsAcrossTheLock::DEFERRED_CONFIRM_SESSION))->toBeNull();
+        ->and($this->session->get(MobilePairingScan::DEFERRED_CONFIRM_SESSION))->toBeNull();
 });
 
 // The lock outlives the token: five idle minutes into a ten-minute ceremony
