@@ -34,9 +34,15 @@ What the module explicitly does NOT do:
   is `InboxMessageQuery` and the file on disk, never a provider client
   or an OAuth surface, and `noEmailFetchFromReceipts` fails the build
   on any file under `Modules/Receipts/` that imports one.
-- It never persists transactions. Enrichments flow through
-  `Import::ApplyEnrichments`; statement summaries flow through
-  `Ledger::RecordsStatementSummary`.
+- It never inserts a transaction, and rewrites one only where the reader
+  asked it to. Enrichments flow through `Import::ApplyEnrichments`;
+  statement summaries flow through `Ledger::RecordsStatementSummary`. The
+  one exception is `ApplyReceiptConflictResolution`, which applies the
+  answer a reader gave to a conflict `ApplyEnrichments` had already
+  recorded — see [Resolving a conflict is a ledger
+  write](#resolving-a-conflict-is-a-ledger-write). `crossModuleRawTableWrites`
+  pins that file and that table by name, so a second writer fails the
+  build rather than joining it.
 - It never matches without a registered sender. The matcher
   registry is a tag-discovered list (PayPal / ICS / Google Play
   in v1.0.0); unknown senders are logged and skipped.

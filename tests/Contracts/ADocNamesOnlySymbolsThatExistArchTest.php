@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/arch-invariants.md
@@ -30,6 +31,10 @@ const DOC_SYMBOL_PAGE_ROOTS = ['.docs', 'README.md', 'CONTRIBUTING.md', 'NOTICE.
 // name nothing because there is nothing yet to name.
 const DOC_SYMBOL_PAGES_NAMING_NOTHING_REAL = '.docs/features/_template/';
 
+// Not RepoTree, unlike the suite walk below. Five of these roots are files at
+// the top level, and RepoTree covers directories only — rootsIn() drops a
+// depth-1 path outright, so AGENTS.md and its four neighbours are unreachable
+// through files() and invisible to its accounting. Re-pointing would drop them.
 /** @return list<string> every page a reader of this repository is handed */
 function docSymbolPages(): array
 {
@@ -60,7 +65,9 @@ function docSymbolPages(): array
 }
 
 // Memoised: four rules read the same two walks, and the suite walk alone opens
-// well over two thousand files.
+// well over two thousand files. RepoTree carries the roots, so a suite that
+// grew a third home is this rule's subject without anyone re-listing it, and a
+// covered root that goes silent raises there rather than narrowing here.
 /** @return list<string> every PHP file the suite is made of */
 function docSymbolSuiteFiles(): array
 {
@@ -70,19 +77,10 @@ function docSymbolSuiteFiles(): array
         return $cached;
     }
 
-    $files = [];
-
-    foreach (Finder::create()->files()->in(base_path('tests'))->name('*.php') as $file) {
-        $files[] = $file->getPathname();
-    }
-
-    foreach (Finder::create()->files()->in(base_path('Modules'))->path('/tests/')->name('*.php') as $file) {
-        $files[] = $file->getPathname();
-    }
-
-    sort($files);
-
-    return $cached = $files;
+    return $cached = array_values(array_filter(
+        RepoTree::files(RepoTree::EVERY_PHP_FILE),
+        static fn (string $path): bool => str_contains($path, '/tests/'),
+    ));
 }
 
 /**

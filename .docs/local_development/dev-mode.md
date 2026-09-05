@@ -29,9 +29,10 @@ When a user has `is_developer = true`:
   is true, which `BEATRAX_DEV_MODE` sets, **and** the Horizon service provider class is
   loadable. Horizon is a `require-dev` package, so a `--no-dev` install drops it and the
   route is never declared — a second guard beyond the flag, and the reason a shipped
-  bundle has no such surface rather than a shut one. `BEATRAX_RUNTIME` gates nothing:
-  `.env.bundled` writes `BEATRAX_RUNTIME=bundle` on the line below `BEATRAX_DEV_MODE`,
-  and no PHP in either Composer root reads it.
+  bundle has no such surface rather than a shut one. There is no second runtime
+  switch beside it: `.env.bundled` carried a `BEATRAX_RUNTIME=bundle` that no PHP in
+  either Composer root read, and it has been removed — a key that names a distinction
+  the code does not make is one a later reader wires the wrong thing to.
 - **App menu Developer submenu** — the native menu bar in the desktop bundle gains a
   Developer submenu with shortcuts to the same Dev Console pages.
 
@@ -77,7 +78,11 @@ Two reasons:
   process: the safe tier is what the ⌘K palette offers, and the destructive tier —
   `db:restore`, `beatrax:regenerate-recovery-codes`, `beatrax:grant-dev` and
   `beatrax:install` — is reachable only through `DestructiveSpawnController`, past all
-  three `TripleGateModal` locks. Anything outside both lists is not gated by an extra
+  three `TripleGateModal` locks. `beatrax:install` earns that tier on the re-run rather
+  than the first install: it calls `migrate --force` against a live ledger, and the
+  `UserInstalled` it re-dispatches puts a re-parented default category back where the
+  seeder wants it and re-creates a default rule the reader deleted. Neither has an
+  inverse. Anything outside both lists is not gated by an extra
   confirmation, it is absent: `migrate`, `migrate:fresh`, `db:wipe`, `db:seed` and
   `beatrax:reset-password` are never registered, and asking `CommandSpawner` for one
   throws before a process exists.

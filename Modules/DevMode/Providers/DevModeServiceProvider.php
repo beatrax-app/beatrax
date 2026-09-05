@@ -274,6 +274,10 @@ final class DevModeServiceProvider extends ServiceProvider
                 ],
                 descriptionKey: 'dev::runner.command.grant_dev.description',
             ),
+            // Destructive for what a RE-RUN does, not for the first install:
+            // `migrate --force` applies pending migrations to a live ledger, and
+            // re-dispatching UserInstalled re-parents a default category the
+            // reader moved and re-creates a default rule they deleted.
             new CommandSpec(
                 name: 'beatrax:install',
                 labelKey: 'dev::runner.command.install.label',
@@ -399,10 +403,10 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(AppActionRegistry::class, static function (Application $app): AppActionRegistryImpl {
             $router = $app->make(Router::class);
 
-            // Every row navigates. Two of them named an event instead, and
-            // nothing in the tree listened for either: the palette closed, the
-            // pick was filed under Recent, and the mailbox was never read while
-            // the theme was never written. A row here carries a URL or nothing.
+            // Every row navigates, and the DTO now admits nothing else. Two of
+            // them named an event instead, and nothing in the tree listened for
+            // either: the palette closed, the pick was filed under Recent, and
+            // the mailbox went unread while the theme went unwritten.
             $actions = [];
 
             $importsNew = self::resolveRouteUrl($router, Destination::Imports->routeName());
@@ -412,7 +416,6 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.run_import.label',
                     hintKey: 'dev::palette.action.run_import.hint',
                     icon: '⊕',
-                    handlerEvent: null,
                     url: $importsNew,
                     keywords: ['upload', 'csv', 'statement'],
                 );
@@ -425,7 +428,6 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.scan_email.label',
                     hintKey: 'dev::palette.action.scan_email.hint',
                     icon: '✉️',
-                    handlerEvent: null,
                     url: $inboxes,
                     keywords: ['inbox', 'gmail', 'sync', 'scan'],
                 );
@@ -438,7 +440,6 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.open_profile.label',
                     hintKey: 'dev::palette.action.open_profile.hint',
                     icon: '⚙️',
-                    handlerEvent: null,
                     url: $settings,
                     keywords: ['profile', 'preferences', 'account'],
                 );
@@ -448,7 +449,6 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.toggle_theme.label',
                     hintKey: 'dev::palette.action.toggle_theme.hint',
                     icon: '◐',
-                    handlerEvent: null,
                     url: $settings,
                     keywords: ['dark', 'light', 'appearance', 'theme'],
                 );

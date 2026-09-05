@@ -339,6 +339,8 @@ and the assertion — see
   skipped-update-version list.
 - `BEATRAX_DEV_MODE` (env) — the developer-mode gate, read once as
   `config('app.dev_mode')` and `false` in a packaged build. There is no
-  second runtime distinguisher: `.env.bundled` also writes
-  `BEATRAX_RUNTIME`, which nothing in the tree reads, and the queue
-  driver comes from `QUEUE_CONNECTION`. See [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md).
+  second runtime distinguisher: `.env.bundled` carried a `BEATRAX_RUNTIME`
+  beside it that nothing in the tree ever read, and it has been removed
+  rather than wired — `UserDataPathService` already tells a desktop
+  bundle from a phone from a checkout. The queue driver comes from
+  `QUEUE_CONNECTION`. See [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md).

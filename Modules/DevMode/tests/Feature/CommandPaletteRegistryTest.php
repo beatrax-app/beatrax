@@ -136,7 +136,6 @@ it('persists Recent picks to dev_mode.palette_recent:{userId} with dedupe + cap-
             'hint' => 'Hint '.$id,
             'source' => 'view',
             'url' => '/'.$id,
-            'handler' => null,
             'name' => null,
             'tier' => null,
         ]);

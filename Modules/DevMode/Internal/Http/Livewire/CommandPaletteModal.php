@@ -23,7 +23,7 @@ use Modules\Search\Public\Contracts\SearchResultsProvider;
 final class CommandPaletteModal extends Component
 {
     /**
-     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}>
+     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string}>
      */
     public array $recent = [];
 
@@ -49,7 +49,7 @@ final class CommandPaletteModal extends Component
     // Alpine has already navigated by the time this fires; it only persists
     // the pick so the Recent rail rebuilds on the next open.
     /**
-     * @param  array{id?: mixed, label?: mixed, icon?: mixed, hint?: mixed, source?: mixed, url?: mixed, handler?: mixed, name?: mixed, tier?: mixed}  $entry
+     * @param  array{id?: mixed, label?: mixed, icon?: mixed, hint?: mixed, source?: mixed, url?: mixed, name?: mixed, tier?: mixed}  $entry
      */
     #[On('palette:picked')]
     public function pickEntry(array $entry, CurrentUser $user, CacheRepository $cache): void
@@ -95,7 +95,7 @@ final class CommandPaletteModal extends Component
     }
 
     /**
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     public function buildRegistry(
         CurrentUser $user,
@@ -116,7 +116,7 @@ final class CommandPaletteModal extends Component
     }
 
     /**
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     private function viewRows(NavigationRegistry $nav, bool $isDeveloper): array
     {
@@ -139,7 +139,6 @@ final class CommandPaletteModal extends Component
                 'source' => $source->value,
                 'sourceLabel' => $source->label(),
                 'url' => $entry->url,
-                'handler' => null,
                 'name' => null,
                 'tier' => null,
                 'hasArgs' => false,
@@ -151,7 +150,7 @@ final class CommandPaletteModal extends Component
     }
 
     /**
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     private function devCommandRows(DevCommandRegistry $commands): array
     {
@@ -171,7 +170,6 @@ final class CommandPaletteModal extends Component
                 'source' => PaletteSource::Dev->value,
                 'sourceLabel' => PaletteSource::Dev->label(),
                 'url' => null,
-                'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
                 'name' => $spec->name,
                 'tier' => CommandTier::Safe->value,
                 'hasArgs' => $hasArgs,
@@ -183,7 +181,7 @@ final class CommandPaletteModal extends Component
     }
 
     /**
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     private function actionRows(AppActionRegistry $actions): array
     {
@@ -198,7 +196,6 @@ final class CommandPaletteModal extends Component
                 'source' => PaletteSource::Action->value,
                 'sourceLabel' => PaletteSource::Action->label(),
                 'url' => $action->url,
-                'handler' => $action->handlerEvent,
                 'name' => null,
                 'tier' => null,
                 'hasArgs' => false,
@@ -210,7 +207,7 @@ final class CommandPaletteModal extends Component
     }
 
     /**
-     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}>
+     * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string}>
      */
     private function loadRecent(CurrentUser $user, CacheRepository $cache): array
     {
@@ -240,7 +237,7 @@ final class CommandPaletteModal extends Component
 
     /**
      * @param  array<array-key, mixed>  $entry
-     * @return array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}
+     * @return array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string}
      */
     private function normalizeRecentEntry(array $entry, string $id): array
     {
@@ -253,7 +250,6 @@ final class CommandPaletteModal extends Component
             // source is a stale or edited entry rather than a new kind.
             'source' => (PaletteSource::tryFrom(is_string($entry['source'] ?? null) ? $entry['source'] : '') ?? PaletteSource::View)->value,
             'url' => is_string($entry['url'] ?? null) ? $entry['url'] : null,
-            'handler' => is_string($entry['handler'] ?? null) ? $entry['handler'] : null,
             'name' => is_string($entry['name'] ?? null) ? $entry['name'] : null,
             'tier' => is_string($entry['tier'] ?? null) ? $entry['tier'] : null,
         ];

@@ -63,7 +63,11 @@ const CLIENT_ONLY_TIMINGS = [
 
 // Walked rather than globbed: a script moved into a subdirectory would leave a
 // flat glob reporting a clean tree over a file nobody opened, which is the
-// shape this guard exists to refuse in the first place.
+// shape this guard exists to refuse in the first place. Not RepoTree either:
+// its scopes carry .php and .blade.php only, and the roots git says hold .js
+// are resources, build, and vite.config.js at the top level — a depth-1 path
+// RepoTree cannot reach. A scope here would widen the subject to every script
+// under resources/, which is not what this guard is about.
 /** @return list<string> every script the browser is served */
 function readerWindowScripts(): array
 {

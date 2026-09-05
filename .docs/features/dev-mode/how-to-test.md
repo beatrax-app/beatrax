@@ -310,10 +310,11 @@ and the assertion — see
 - `users.is_developer` — per-user developer flag. The owner of the
   install carries it (set true at signup); partner accounts default
   to false.
-- No second runtime switch. `.env.bundled` sets `BEATRAX_RUNTIME`,
-  but no PHP in this tree reads it — the system-snapshot page's
-  runtime block is the installed `nativephp/laravel` version and
-  `php_uname()`, and the dev gate is `BEATRAX_DEV_MODE` alone.
+- No second runtime switch. `.env.bundled` used to set a
+  `BEATRAX_RUNTIME` no PHP in this tree read; it is gone. The
+  system-snapshot page's runtime block is the installed
+  `nativephp/laravel` version and `php_uname()`, and the dev gate is
+  `BEATRAX_DEV_MODE` alone.
 - `dev_mode_audit` retention — the `beatrax:prune-dev-audit` command
   takes a retention argument; the operator runs it periodically.
 - No per-user opt-out for the audit log; every dev action is

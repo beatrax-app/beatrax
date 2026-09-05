@@ -31,7 +31,6 @@ import { createPaletteMatcher } from './palette-match.js';
  *     calmer surface that dispatches the spawn intent only — it
  *     does NOT render an inline arg form here.
  *   - any other row with `url`            → window.location.href.
- *   - any other row with `handlerEvent`   → Livewire.dispatch().
  *
  * Every selection also dispatches `palette:picked` so the Livewire
  * `CommandPaletteModal` component can write the entry into the
@@ -403,7 +402,6 @@ export const palette = (registry, recent, arms) => ({
                         hint: 'Transaction search',
                         source: 'search',
                         url: '/transactions?q=' + encodeURIComponent(this.query),
-                        handler: null,
                         name: null,
                         tier: null,
                     },
@@ -437,7 +435,6 @@ export const palette = (registry, recent, arms) => ({
                         hint: 'See all results',
                         source: 'search',
                         url: '/transactions?q=' + encodeURIComponent(q),
-                        handler: null,
                         name: null,
                         tier: null,
                     },
@@ -505,10 +502,6 @@ export const palette = (registry, recent, arms) => ({
         }
         if (item.url) {
             window.location.href = item.url;
-            return;
-        }
-        if (item.handler && window.Livewire) {
-            window.Livewire.dispatch(item.handler);
         }
     },
 
