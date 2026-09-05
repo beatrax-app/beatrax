@@ -10,6 +10,8 @@ return [
     // reads well when the device name is long.
     'records' => 'Iz naprave :peer je kopiran :count zapis.|Iz naprave :peer sta kopirana :count zapisa.|Iz naprave :peer so kopirani :count zapisi.|Iz naprave :peer je kopiranih :count zapisov.',
     'records_none' => 'Vse je usklajeno — nič novega ni bilo za kopiranje. Izvorna naprava: :peer.',
+    'withheld' => ':count sprememba še ni prispela.|:count spremembi še nista prispeli.|:count spremembe še niso prispele.|:count sprememb še ni prispelo.',
+    'withheld_action' => 'Podpisala jih je naprava, ki je ta naprava ne more preveriti. Nič ni izgubljeno — vse ostane na napravi :peer in bo prispelo, ko katera od tvojih naprav posreduje to identiteto in jo potrdiš v razdelku :section.',
     'how_it_works' => 'Od zdaj naprej',
     'automatic_title' => 'Ti izbereš, kdaj se sinhronizira',
     'automatic_body' => 'Karkoli spremeniš na eni napravi, se pokaže na drugi, ko se naslednjič dotakneš :action. V ozadju ne more teči — zaklep aplikacije hrani edini ključ.',

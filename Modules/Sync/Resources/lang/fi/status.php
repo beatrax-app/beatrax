@@ -11,6 +11,7 @@ return [
     'error' => 'Synkronointivirhe yhdellä tai useammalla laitteella',
     'syncing' => 'Synkronoidaan…',
     'offline' => 'Laitteet offline-tilassa',
+    'withheld' => 'Muutoksia ei ole vielä vastaanotettu',
     'behind' => 'Muutoksia ei ole vielä lähetetty',
     'all_synced' => 'Kaikki laitteet ajan tasalla',
     'synced' => 'synkronoitu',

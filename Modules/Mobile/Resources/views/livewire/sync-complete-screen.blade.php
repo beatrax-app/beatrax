@@ -41,6 +41,17 @@
                     {{ Lang::choice('mobile::sync_complete.records', $recordsApplied, ['peer' => $peerName]) }}
                 @endif
             </p>
+
+            {{-- The one place this flow can say the history came up short. The
+                 heading above is a claim about the transfer, which did finish;
+                 what did not is the ledger, and a reader who leaves here
+                 unaware of that has no later screen to learn it from. --}}
+            @if ($withheldEntries > 0)
+                <x-core::alert tone="info" class="text-left" data-testid="sync-complete-withheld">
+                    <p>{{ Lang::choice('mobile::sync_complete.withheld', $withheldEntries) }}</p>
+                    <p class="mt-2">{{ Lang::get('mobile::sync_complete.withheld_action', ['peer' => $peerName, 'section' => $devicesSection]) }}</p>
+                </x-core::alert>
+            @endif
         </div>
 
         <div class="space-y-5">

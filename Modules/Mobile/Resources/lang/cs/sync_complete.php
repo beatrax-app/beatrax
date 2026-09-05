@@ -7,6 +7,8 @@ return [
     'heading' => 'Toto zařízení je synchronizované',
     'records' => 'Zkopírován :count záznam z :peer.|Zkopírovány :count záznamy z :peer.|Zkopírováno :count záznamů z :peer.',
     'records_none' => 'Vše je aktuální — nebylo co kopírovat. Zdroj: :peer.',
+    'withheld' => ':count změna zatím nedorazila.|:count změny zatím nedorazily.|:count změn zatím nedorazilo.',
+    'withheld_action' => 'Podepsalo je zařízení, které toto zařízení nemůže ověřit. Nic není ztraceno — vše zůstává na zařízení :peer a dorazí, jakmile některé tvé zařízení předá tuto identitu a ty ji potvrdíš v části :section.',
     'how_it_works' => 'Od téhle chvíle',
     'automatic_title' => 'Kdy se synchronizuje, určuješ ty',
     'automatic_body' => 'Cokoli změníš na jednom zařízení, objeví se na druhém, až příště klepneš na :action. Na pozadí běžet nemůže — zámek aplikace drží jediný klíč.',

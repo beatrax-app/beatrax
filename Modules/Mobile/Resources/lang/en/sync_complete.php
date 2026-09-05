@@ -7,6 +7,8 @@ return [
     'heading' => 'This device is synced',
     'records' => 'Copied :count record from :peer.|Copied :count records from :peer.',
     'records_none' => 'Caught up with :peer. There was nothing new to copy.',
+    'withheld' => ':count change has not arrived yet.|:count changes have not arrived yet.',
+    'withheld_action' => 'Signed by a device this one cannot check. Nothing is lost — it stays on :peer, and arrives once one of your devices passes on that identity and you confirm it under :section.',
     'how_it_works' => 'From here on',
     'automatic_title' => 'You choose when it syncs',
     'automatic_body' => 'Anything you change on either device shows up on the other the next time you tap :action. It cannot run in the background — the app lock holds the only key.',

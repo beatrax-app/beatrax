@@ -7,6 +7,8 @@ return [
     'heading' => 'Acest dispozitiv este sincronizat',
     'records' => 'S-a copiat :count înregistrare de pe :peer.|S-au copiat :count înregistrări de pe :peer.|S-au copiat :count de înregistrări de pe :peer.',
     'records_none' => 'La zi cu :peer. Nu a fost nimic nou de copiat.',
+    'withheld' => ':count modificare nu a ajuns încă.|:count modificări nu au ajuns încă.|:count de modificări nu au ajuns încă.',
+    'withheld_action' => 'Sunt semnate de un dispozitiv pe care acesta nu îl poate verifica. Nimic nu se pierde — totul rămâne pe :peer și va ajunge dacă unul dintre dispozitivele tale transmite acea identitate și o confirmi în :section.',
     'how_it_works' => 'De acum înainte',
     'automatic_title' => 'Tu alegi când se sincronizează',
     'automatic_body' => 'Orice modifici pe oricare dintre dispozitive apare și pe celălalt data următoare când atingi :action. Nu poate rula în fundal — blocarea aplicației păstrează singura cheie.',

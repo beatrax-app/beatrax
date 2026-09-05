@@ -17,6 +17,11 @@ enum SyncOverallStatus: string
 
     case Offline = 'offline';
 
+    // A peer is holding entries back for an author this device cannot verify.
+    // Not a failure and not an exchange: the history is intact on the device
+    // that holds it, and only the reader confirming that author releases it.
+    case Withheld = 'withheld';
+
     // Changes made after the last session closed, with nothing in flight to
     // carry them. This state used to borrow "syncing", which told the reader an
     // exchange was in progress while nothing at all was connected.
@@ -34,6 +39,7 @@ enum SyncOverallStatus: string
             self::Error => 'sync::status.error',
             self::Syncing => 'sync::status.syncing',
             self::Offline => 'sync::status.offline',
+            self::Withheld => 'sync::status.withheld',
             self::Behind => 'sync::status.behind',
             self::AllSynced => 'sync::status.all_synced',
         };

@@ -7,6 +7,8 @@ return [
     'heading' => 'Šī ierīce ir sinhronizēta',
     'records' => 'No :peer nokopēti :count ierakstu.|No :peer nokopēts :count ieraksts.|No :peer nokopēti :count ieraksti.',
     'records_none' => 'Viss ir aktuāls — nekas jauns nebija jākopē. Avota ierīce: :peer.',
+    'withheld' => ':count izmaiņu vēl nav saņemtas.|:count izmaiņa vēl nav saņemta.|:count izmaiņas vēl nav saņemtas.',
+    'withheld_action' => 'Tās parakstījusi ierīce, ko šī ierīce nevar pārbaudīt. Nekas nav zudis — viss paliek ierīcē :peer un nonāks šeit, kad kāda tava ierīce nodos tālāk to identitāti un tu to apstiprināsi sadaļā :section.',
     'how_it_works' => 'No šī brīža',
     'automatic_title' => 'Jūs izvēlaties, kad sinhronizēt',
     'automatic_body' => 'Viss, ko maināt vienā ierīcē, parādās otrā nākamajā reizē, kad pieskaraties :action. Fonā tā darboties nevar — lietotnes bloķēšana glabā vienīgo atslēgu.',

@@ -7,6 +7,8 @@ return [
     'heading' => 'Cet appareil est synchronisé',
     'records' => ':count enregistrement copié depuis :peer.|:count enregistrements copiés depuis :peer.',
     'records_none' => 'À jour avec :peer. Il n\'y avait rien de nouveau à copier.',
+    'withheld' => ':count changement n\'est pas encore arrivé.|:count changements ne sont pas encore arrivés.',
+    'withheld_action' => 'Signés par un appareil que celui-ci ne peut pas vérifier. Rien n\'est perdu — tout reste sur :peer et arrivera si l\'un de tes appareils transmet cette identité et que tu la confirmes dans :section.',
     'how_it_works' => 'À partir de maintenant',
     'automatic_title' => 'C’est toi qui choisis quand ça se synchronise',
     'automatic_body' => 'Tout ce que tu modifies sur l\'un des appareils apparaît sur l\'autre la prochaine fois que tu appuies sur :action. Ça ne peut pas tourner en arrière-plan — le verrou de l\'app détient la seule clé.',
