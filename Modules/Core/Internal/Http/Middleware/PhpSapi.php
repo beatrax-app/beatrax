@@ -14,6 +14,12 @@ enum PhpSapi: string
     // can receive a request that crossed a network.
     case CliServer = 'cli-server';
 
+    // The runtime the self-host recipe ships. It registers SERVER_NAME and
+    // SERVER_PORT and no SERVER_ADDR at all, so the address gate had nothing to
+    // read and refused the whole deployment shape — every route, every request,
+    // from the first `docker compose up`.
+    case FrankenPhp = 'frankenphp';
+
     // The mobile shell calling into PHP in-process: no listening socket at all,
     // so nothing can reach it from off the device.
     case Embed = 'embed';
@@ -24,7 +30,7 @@ enum PhpSapi: string
     {
         return match ($this) {
             self::Embed => true,
-            self::CliServer => false,
+            self::CliServer, self::FrankenPhp => false,
         };
     }
 }

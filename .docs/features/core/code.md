@@ -77,6 +77,8 @@ Modules/Core/
 │   ├── Http/
 │   │   ├── Middleware/
 │   │   │   ├── LoopbackOnly.php
+│   │   │   ├── PhpSapi.php
+│   │   │   ├── TrustedHostGuard.php
 │   │   │   └── NoStoreFinancialData.php
 │   │   └── Livewire/
 │   │       ├── Dashboard.php
@@ -205,9 +207,20 @@ Modules/Core/
 - `Internal/Console/Probes/Probe` — interface. Each probe returns a
   `ProbeResult` carrying `(level, summary, detail)`.
 - `Internal/Http/Middleware/LoopbackOnly` — refuses any request whose
-  `SERVER_ADDR` is not a loopback address (127.x.x.x, `::1`,
-  IPv4-mapped-IPv6). Throws `NotFoundHttpException` so the app never
-  acknowledges its existence to a non-loopback caller.
+  `SERVER_ADDR` is neither a loopback address (127.x.x.x, `::1`,
+  IPv4-mapped-IPv6) nor an interface the install recorded itself as
+  serving. Throws `NotFoundHttpException` so the app never
+  acknowledges its existence to a caller it does not serve.
+- `Internal/Support/NetworkBoundary` — the one object both address
+  gates read, so they cannot allow different things. Owns the served
+  interfaces (`BEATRAX_SERVED_INTERFACES`), the `APP_URL` host, and
+  what each may not be talked into meaning.
+- `Internal/Support/NetworkAddress` — `inet_pton` comparison of two
+  addresses, collapsing the IPv4-mapped-IPv6 spelling onto the IPv4
+  one, plus the loopback and wildcard tests both gates ask.
+- `Internal/Console/Probes/NetworkBoundaryProbe` — the operator's
+  read of the boundary: interfaces taken, entries refused, and whether
+  `APP_URL` agrees with the widening.
 - `Internal/Http/Middleware/NoStoreFinancialData` — sets
   `Cache-Control: no-store` on every authenticated response so the
   browser never caches a transaction list.

@@ -155,25 +155,48 @@ and the assertion — see
   `appPath('first-launch.app-key-generated')` is the idempotency
   signal; subsequent invocations short-circuit.
   (`tests/Feature/Bootstrap/AppKeyRegenerationTest.php`)
-- **`/health` returns a deterministic four-key JSON object — `status`,
-  `app_version`, `php_version`, `sqlite_version` — with no
-  timestamp.** An external probe can equality-check the entire body
-  without normalising volatile fields.
-  (`tests/Feature/HealthEndpointTest.php`)
+- **`/health` returns a deterministic five-key JSON object — `status`,
+  `app_version`, `php_version`, `sqlite_version`, `network_boundary` —
+  with no timestamp.** An external probe can equality-check the entire
+  body without normalising volatile fields.
+  (`Modules/Core/tests/Feature/HealthEndpointTest.php`)
+- **`network_boundary` is `loopback` or `widened` and never names an
+  interface.** Once the boundary is open that body crosses the network,
+  where an inventory of the other interfaces served would be a
+  disclosure rather than a diagnosis; the interface list lives in
+  `beatrax:doctor` instead. A record the gate refused keeps reporting
+  `loopback`, because it widened nothing.
+  (`Modules/Core/tests/Feature/HealthEndpointTest.php`)
 - **`/health` is auth-free.** A non-loopback request still hits
   `LoopbackOnly` and gets 404; an unauthenticated loopback request
   passes through.
-- **Every non-loopback request raises 404.** `LoopbackOnly` middleware
-  inspects `SERVER_ADDR`; if a non-loopback IP is set, it throws
+- **Every non-loopback request raises 404 unless the install recorded
+  that interface.** `LoopbackOnly` middleware inspects `SERVER_ADDR`;
+  an address that is neither loopback nor recorded throws
   `NotFoundHttpException`. A request carrying no `SERVER_ADDR` is
   decided by the SAPI: the console context passes, `embed` (the mobile
   shell, which has no listening socket) passes unconditionally,
-  `cli-server` passes only for a loopback `REMOTE_ADDR`, and every
-  other SAPI fails closed. The middleware takes the SAPI as a
+  `cli-server` and `frankenphp` pass for a loopback `REMOTE_ADDR`, and
+  every other SAPI fails closed. The middleware takes the SAPI as a
   constructor argument so all four branches are drivable from a test
   (`Modules/Core/tests/Unit/LoopbackOnlySapiTest.php`). The detection
   covers IPv4 127.0.0.0/8, IPv6 `::1`, and the IPv4-mapped-IPv6
   `::ffff:127.x.x.x` form on binary-form (`inet_pton`) comparison.
+- **Nothing recorded is the shipped default, and it behaves exactly as
+  the loopback-only gate did.** `tests/Feature/LoopbackOnlyTest.php` is
+  unchanged and still passes; the widened cases live beside it in
+  `Modules/Core/tests/Feature/TheBoundaryWidensOnlyByRecordTest.php`.
+- **The record cannot be talked into meaning "everything".** A
+  wildcard (`0.0.0.0`, `::`, `::ffff:0.0.0.0`), a CIDR range and a
+  hostname are each dropped and reported, never expanded or resolved,
+  and none of them serves a single extra address
+  (`Modules/Core/tests/Unit/NetworkBoundaryTest.php`).
+- **A remote peer under a runtime that publishes no bind address is
+  authorised by `APP_URL`'s host, and only past loopback.** A caller on
+  the LAN writes its own `Host` header, so a recorded host of
+  `localhost` would be satisfied by all of them; that install refuses
+  every remote request and `beatrax:doctor` says so
+  (`Modules/Core/tests/Unit/NetworkBoundaryProbeTest.php`).
 - **Every authenticated response carries `Cache-Control: no-store`.**
   `NoStoreFinancialData` is pushed onto the `auth` middleware group
   so the browser never caches a transaction list.
