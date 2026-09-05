@@ -9,6 +9,10 @@ use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 
 final class YnabCsvColumnMap
 {
+    public const string REGISTER_FILE = 'Register.csv';
+
+    public const string BUDGET_FILE = 'Budget.csv';
+
     /** @var list<string> */
     private const array REGISTER_COMMON_HEADERS = ['Account', 'Date', 'Payee', 'Memo', 'Outflow', 'Inflow', 'Cleared'];
 
@@ -27,7 +31,7 @@ final class YnabCsvColumnMap
     public function assertRegisterHeader(array $header, string $format): void
     {
         $extra = $format === MigrationSourceProduct::Ynab4->value ? self::REGISTER_YNAB4_EXTRA_HEADERS : self::REGISTER_NYNAB_EXTRA_HEADERS;
-        $this->assertHeaderContains($header, [...self::REGISTER_COMMON_HEADERS, ...$extra], 'Register.csv');
+        $this->assertHeaderContains($header, [...self::REGISTER_COMMON_HEADERS, ...$extra], self::REGISTER_FILE);
     }
 
     /**
@@ -35,7 +39,7 @@ final class YnabCsvColumnMap
      */
     public function assertBudgetHeader(array $header): void
     {
-        $this->assertHeaderContains($header, self::BUDGET_HEADERS, 'Budget.csv');
+        $this->assertHeaderContains($header, self::BUDGET_HEADERS, self::BUDGET_FILE);
     }
 
     /**

@@ -25,6 +25,20 @@ final class SafeExceptionContext
         return ['reason' => $e::class, 'sqlstate' => $sqlstate];
     }
 
+    // describe() stays a strip: it is handed every exception a broad catch can
+    // receive, and cannot know which of them quotes a row. This one is handed
+    // the same throwable and answers nothing unless the class itself promised a
+    // cell, which is a claim its own throws are read against.
+    /**
+     * @return array{refused_file: string, refused_column: string, refused_value: string, refused_value_bytes: int}|array{}
+     */
+    public static function refusedCell(Throwable $e): array
+    {
+        $cell = $e instanceof NamesTheCellItRefused ? $e->refusedCell() : null;
+
+        return $cell?->toLogContext() ?? [];
+    }
+
     // The unqualified name, for a line a reader sees rather than a log. Same
     // guarantee as describe(): it names the failure, never the row.
     public static function shortName(Throwable $e): string
