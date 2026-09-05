@@ -264,6 +264,14 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
+            # No signing guard and no artifact interrogation here, where the
+            # macOS and Windows legs carry both, and that is deliberate rather
+            # than missing: Linux has no OS-level signature a desktop verifies,
+            # so there is nothing to guard for or to interrogate. Its integrity
+            # signal is added at publish time by release.yml — the Ed25519-signed
+            # `latest-linux.yml` over the AppImage, and the Ed25519-signed
+            # checksum file over that and the `.deb`. This workflow publishes
+            # nothing, so neither exists on this path.
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:

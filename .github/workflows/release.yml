@@ -35,10 +35,16 @@
 #      lives in `config/auto_update.php` so installed bundles verify
 #      the signature via `sodium_crypto_sign_verify_detached` on every
 #      poll.
-#   3. The verify-published job re-downloads the published manifests
-#      and re-runs the Ed25519 verification — catches CDN partial-
-#      upload races and silently-skipped upload steps before a release
-#      goes "green" to humans while broken in flight.
+#   3. A manifest binds only the one installer its `path:` names, so the
+#      publish job also writes a SHA-256 checksum file over every
+#      downloaded artefact and signs that with the same key. It is what
+#      the `.msi`, the `.deb` and the `.apk` are checked against.
+#   4. The verify-published job re-downloads the published manifests and
+#      the checksum file, re-runs the Ed25519 verification, and asserts
+#      that every asset on the page appears in the checksum file —
+#      catches CDN partial-upload races, silently-skipped upload steps,
+#      and an artefact nothing vouches for, before a release goes
+#      "green" to humans while broken in flight.
 
 name: release
 
@@ -592,6 +598,41 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
+            # This is the position the macOS and Windows legs hold their
+            # signing guard and their artifact interrogation, and Linux
+            # deliberately has neither. There is no desktop equivalent of
+            # Developer ID or Authenticode that a `.deb` or an AppImage
+            # carries and a Linux desktop checks on launch, so a signing
+            # identity here would be one nothing verifies. What stands in
+            # for it is the project's own chain: the Ed25519-signed
+            # `latest-linux.yml` emitted below covers the AppImage, and the
+            # Ed25519-signed checksum file the publish job writes covers
+            # both artefacts.
+            #
+            # That leaves one thing worth asserting, because nothing else
+            # does: the upload step's `if-no-files-found: error` fires only
+            # when the whole path list matches nothing, so a Linux build
+            # that stopped producing a `.deb` would publish an AppImage and
+            # look green.
+            - name: Linux carries no OS-level signature, and this is what stands in for it
+              run: |
+                  set -euo pipefail
+                  cd nativephp/electron/dist
+                  missing=()
+                  compgen -G '*.AppImage' > /dev/null || missing+=('*.AppImage')
+                  compgen -G '*.deb' > /dev/null || missing+=('*.deb')
+                  if [ "${#missing[@]}" -gt 0 ]; then
+                      echo "::error::the Linux build produced no ${missing[*]}, so that artefact would be missing from the release rather than unsigned."
+                      exit 1
+                  fi
+                  {
+                      echo '### Linux integrity'
+                      echo
+                      echo 'No OS-level code signature, by design — Linux has no equivalent a desktop verifies.'
+                      echo 'The AppImage is covered by the Ed25519-signed latest-linux.yml; both it and'
+                      echo 'the .deb are covered by the Ed25519-signed checksum file.'
+                  } >> "$GITHUB_STEP_SUMMARY"
+
             - name: Emit auto-update manifest (latest-linux.yml)
               env:
                   TAG_REF: ${{ github.ref_name }}
@@ -813,26 +854,66 @@ jobs:
               with:
                   path: artifacts
 
-            - name: Sign latest.yml with Ed25519
+            - name: Write the checksum file covering every published artefact
+              # Each publisher manifest binds exactly the one installer its
+              # `path:` field names, so the `.msi`, the `.deb` and the `.apk`
+              # reach the release page with nothing a downloader can check them
+              # against. This list covers whatever was downloaded, so an
+              # artefact added to any build job is covered the day it appears
+              # rather than the day somebody remembers this step.
+              #
+              # Written before the signing pass below, and therefore signed by
+              # it: an unsigned list of hashes is only as trustworthy as the
+              # page it sits on, which is the page it exists to vouch for.
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  CHECKSUMS="beatrax-${TAG#v}-checksums.txt"
+
+                  mapfile -t ASSETS < <(find artifacts -type f | sort)
+                  if [ "${#ASSETS[@]}" -eq 0 ]; then
+                      echo "::error::no artefacts were downloaded, so there is nothing to checksum."
+                      exit 1
+                  fi
+
+                  # `shasum -c` resolves each line against the working
+                  # directory, and a downloader has every asset in one flat
+                  # folder. Two artefacts sharing a basename would make one
+                  # line silently check the other file.
+                  duplicates=$(printf '%s\n' "${ASSETS[@]}" | xargs -n1 basename | sort | uniq -d)
+                  if [ -n "$duplicates" ]; then
+                      echo "::error::two published artefacts share a basename, which a flat download cannot tell apart: $(printf '%s' "$duplicates" | tr '\n' ' ')"
+                      exit 1
+                  fi
+
+                  mkdir -p artifacts/checksums
+                  for asset in "${ASSETS[@]}"; do
+                      printf '%s  %s\n' "$(sha256sum "$asset" | cut -d' ' -f1)" "$(basename "$asset")"
+                  done | sort -k2 > "artifacts/checksums/${CHECKSUMS}"
+
+                  echo "--- ${CHECKSUMS} ---"
+                  cat "artifacts/checksums/${CHECKSUMS}"
+
+            - name: Sign the publisher manifests and the checksum file with Ed25519
               env:
                   ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
               run: |
                   set -euo pipefail
                   # Locate every publisher manifest electron-updater
-                  # produced. `actions/download-artifact` flattens each
-                  # platform under `artifacts/<name>/`, so the find pass
-                  # picks up `latest.yml` / `latest-mac.yml` /
-                  # `latest-linux.yml` regardless of where they landed.
-                  # The matching `latest.yml.sig` / `latest-mac.yml.sig`
-                  # / `latest-linux.yml.sig` siblings are written in
-                  # place next to each manifest.
-                  mapfile -t MANIFESTS < <(find artifacts -name 'latest*.yml' -type f)
-                  if [ "${#MANIFESTS[@]}" -eq 0 ]; then
-                      echo "No publisher manifests found under artifacts/ — nothing to sign."
+                  # produced, plus the checksum file written above.
+                  # `actions/download-artifact` flattens each platform under
+                  # `artifacts/<name>/`, so the find pass picks up
+                  # `latest.yml` / `latest-mac.yml` / `latest-linux.yml`
+                  # regardless of where they landed. Each `.sig` sibling is
+                  # written in place next to the file it covers.
+                  mapfile -t SIGNABLE < <(find artifacts -type f \( -name 'latest*.yml' -o -name '*-checksums.txt' \))
+                  if [ "${#SIGNABLE[@]}" -eq 0 ]; then
+                      echo "No publisher manifests or checksum file found under artifacts/ — nothing to sign."
                       exit 1
                   fi
-                  for manifest in "${MANIFESTS[@]}"; do
-                      echo "Signing ${manifest}"
+                  for signable in "${SIGNABLE[@]}"; do
+                      echo "Signing ${signable}"
                       # shellcheck disable=SC2016  # inline PHP: $body is a PHP variable, not a shell one
                       php -r '
                           $body = file_get_contents($argv[1]);
@@ -840,7 +921,7 @@ jobs:
                           $secret = sodium_hex2bin(getenv("ED25519_PRIVATE_KEY"));
                           $sig = sodium_crypto_sign_detached($body, $secret);
                           file_put_contents($argv[1] . ".sig", bin2hex($sig));
-                      ' -- "$manifest"
+                      ' -- "$signable"
                   done
 
             - name: Generate release notes (git-cliff)
@@ -886,10 +967,12 @@ jobs:
                   # stay as draft so a human can review + publish.
                   draft: true
                   prerelease: ${{ contains(github.ref_name, '-') }}
-                  # Every platform artifact PLUS the Ed25519 detached
-                  # signature for each publisher manifest. Installed
-                  # bundles fetch the matching `.sig` alongside the
-                  # manifest and verify before any download proceeds.
+                  # Every platform artifact, the checksum file, and the
+                  # Ed25519 detached signature written beside each of the
+                  # things that carry one. Installed bundles fetch the
+                  # matching `.sig` alongside the manifest and verify before
+                  # any download proceeds; a human verifying by hand reads
+                  # the checksum file and its own `.sig`.
                   files: |
                       artifacts/**/*
                       artifacts/**/latest*.yml.sig
@@ -931,7 +1014,7 @@ jobs:
                   coverage: none
                   tools: composer:v2
 
-            - name: Download published manifests + signatures
+            - name: Download published manifests, checksum file + signatures
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   # Via env, never inline: a crafted tag name must not reach the
@@ -943,9 +1026,11 @@ jobs:
                   gh release download "$TAG" \
                       --dir verify \
                       --pattern 'latest*.yml' \
-                      --pattern 'latest*.yml.sig'
+                      --pattern 'latest*.yml.sig' \
+                      --pattern '*-checksums.txt' \
+                      --pattern '*-checksums.txt.sig'
 
-            - name: Re-verify every published manifest with sodium_crypto_sign_verify_detached
+            - name: Re-verify every signed file with sodium_crypto_sign_verify_detached
               run: |
                   set -euo pipefail
                   # Read the publisher public hex from the committed
@@ -957,18 +1042,18 @@ jobs:
                       echo "Could not extract publisher_public_key_hex from config/auto_update.php"
                       exit 1
                   fi
-                  mapfile -t MANIFESTS < <(find verify -name 'latest*.yml' -not -name '*.sig' -type f)
-                  if [ "${#MANIFESTS[@]}" -eq 0 ]; then
-                      echo "No published manifests downloaded — verification cannot run."
+                  mapfile -t SIGNED < <(find verify -type f -not -name '*.sig' \( -name 'latest*.yml' -o -name '*-checksums.txt' \))
+                  if [ "${#SIGNED[@]}" -eq 0 ]; then
+                      echo "Neither a manifest nor a checksum file was downloaded — verification cannot run."
                       exit 1
                   fi
-                  for manifest in "${MANIFESTS[@]}"; do
-                      sig_file="${manifest}.sig"
+                  for signed in "${SIGNED[@]}"; do
+                      sig_file="${signed}.sig"
                       if [ ! -f "$sig_file" ]; then
-                          echo "Missing signature for ${manifest}"
+                          echo "Missing signature for ${signed}"
                           exit 1
                       fi
-                      echo "Verifying ${manifest}"
+                      echo "Verifying ${signed}"
                       # shellcheck disable=SC2016  # inline PHP: $body is a PHP variable, not a shell one
                       PUBLIC_HEX="$PUBLIC_HEX" php -r '
                           $body = file_get_contents($argv[1]);
@@ -976,6 +1061,50 @@ jobs:
                           $public = sodium_hex2bin(getenv("PUBLIC_HEX"));
                           $sig = sodium_hex2bin($sigHex);
                           exit(sodium_crypto_sign_verify_detached($sig, $body, $public) ? 0 : 1);
-                      ' -- "$manifest"
+                      ' -- "$signed"
                   done
-                  echo "Every published manifest verifies cleanly against the embedded publisher public key."
+                  echo "Every published manifest and the checksum file verify cleanly against the embedded publisher public key."
+
+            - name: Every published asset appears in the signed checksum file
+              # A checksum file that quietly stopped covering one artefact is
+              # indistinguishable, on the page, from one that covers them all.
+              # The page itself is the only honest input here, so the asset
+              # list is read back from the release rather than from the tree
+              # the publish job happened to hold.
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  CHECKSUMS=$(find verify -type f -name '*-checksums.txt' -print -quit)
+                  if [ -z "$CHECKSUMS" ]; then
+                      echo "::error::the release carries no checksum file, so every artefact without a manifest entry has nothing to verify against."
+                      exit 1
+                  fi
+
+                  mapfile -t COVERED < <(sed -E 's/^[0-9a-f]{64}  //' "$CHECKSUMS")
+
+                  uncovered=()
+                  while IFS= read -r asset; do
+                      # A detached signature is checked by the key, not by a
+                      # hash, and the checksum file cannot list itself.
+                      case "$asset" in
+                          *.sig | *-checksums.txt) continue ;;
+                      esac
+                      found=""
+                      for name in "${COVERED[@]}"; do
+                          if [ "$name" = "$asset" ]; then
+                              found="yes"
+                              break
+                          fi
+                      done
+                      if [ -z "$found" ]; then
+                          uncovered+=("$asset")
+                      fi
+                  done < <(gh release view "$TAG" --json assets --jq '.assets[].name')
+
+                  if [ "${#uncovered[@]}" -gt 0 ]; then
+                      echo "::error::published with no entry in ${CHECKSUMS##*/}, so a downloader has nothing to check them against: ${uncovered[*]}"
+                      exit 1
+                  fi
+                  echo "Every published asset is covered by the signed checksum file."
