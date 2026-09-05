@@ -62,22 +62,31 @@ final readonly class NetworkBoundary
     // address this install has recorded itself as serving on.
     public function serves(string $serverAddress): bool
     {
-        if (NetworkAddress::isLoopback($serverAddress)) {
-            return true;
-        }
-
         $key = NetworkAddress::comparable($serverAddress);
+
         if ($key === null) {
             return false;
         }
 
+        return NetworkAddress::isLoopback($serverAddress)
+            || in_array($key, $this->servedKeys(), true);
+    }
+
+    // Compared as keys rather than as text: the operator writes one spelling of
+    // an address and the SAPI publishes whichever its listener accepted on.
+    /** @return list<string> */
+    private function servedKeys(): array
+    {
+        $keys = [];
+
         foreach ($this->servedInterfaces() as $address) {
-            if (NetworkAddress::comparable($address) === $key) {
-                return true;
+            $key = NetworkAddress::comparable($address);
+            if ($key !== null) {
+                $keys[] = $key;
             }
         }
 
-        return false;
+        return $keys;
     }
 
     // FrankenPHP and the built-in server bind a real socket and publish no bind

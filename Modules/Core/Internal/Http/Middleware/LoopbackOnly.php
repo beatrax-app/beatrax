@@ -64,15 +64,18 @@ final readonly class LoopbackOnly
             return false;
         }
 
-        if ($sapi->cannotBeReachedOffDevice()) {
-            return true;
-        }
+        return $sapi->cannotBeReachedOffDevice()
+            || $this->peerIsLocal($request)
+            || $this->boundary->servesUnderRecordedHost($request->getHost());
+    }
 
+    // REMOTE_ADDR is the TCP peer the kernel saw, never a header a caller can
+    // choose, so a loopback value means the request never crossed a network —
+    // whatever interface the SAPI declined to name.
+    private function peerIsLocal(Request $request): bool
+    {
         $remote = $request->server('REMOTE_ADDR');
-        if (is_string($remote) && NetworkAddress::isLoopback($remote)) {
-            return true;
-        }
 
-        return $this->boundary->servesUnderRecordedHost($request->getHost());
+        return is_string($remote) && NetworkAddress::isLoopback($remote);
     }
 }

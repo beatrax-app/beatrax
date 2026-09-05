@@ -49,6 +49,19 @@ final readonly class NetworkBoundaryProbe implements Probe
             );
         }
 
+        return $this->widened($served, $metadata);
+    }
+
+    // Widening is a decision, not a fault, so it reads `ok` and names where the
+    // boundary is open. The one genuine fault here is a widening APP_URL
+    // contradicts, which leaves a bind-address-less runtime refusing everything
+    // remote while the interface record says otherwise.
+    /**
+     * @param  list<string>  $served
+     * @param  array<string, scalar|null>  $metadata
+     */
+    private function widened(array $served, array $metadata): ProbeResult
+    {
         $authority = $this->boundary->remoteHostAuthority();
 
         if ($authority === null) {
