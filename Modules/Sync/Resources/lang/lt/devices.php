@@ -6,7 +6,7 @@ return [
     'heading' => 'Įrenginiai ir sinchronizavimas',
 
     'enable_sync' => 'Įjungti sinchronizavimą',
-    'enable_sync_help' => 'Saugiai dalykis savo duomenimis tarp patikimų įrenginių. Reikia programėlės užrakto. Kai jis įjungtas, duomenys užšifruojami, o programėlės užrakto nebegalima išjungti.',
+    'enable_sync_help' => 'Saugiai dalykis savo duomenimis tarp patikimų įrenginių. Reikia programėlės užrakto. Įjungimo atšaukti nepavyks: nuo tada duomenys šifruojami, o išjungti nebegalima nei sinchronizavimo, nei programėlės užrakto.',
 
     'app_lock_notice' => 'Kad įjungtum sinchronizavimą, pirma nustatyk programėlės užraktą.',
     'go_to_app_lock' => 'Eiti į programėlės užraktą',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Atrakinus šis susiejimas atveriamas iš naujo, o ne leidžiama jam pasibaigti, todėl jis trunka ilgiau nei jūsų nustatytas programos užrakto laikas. Jis baigiasi, kai jį užbaigiate arba atšaukiate.',
 
     'relay_endpoint' => 'Retransliavimo adresas',
-    'relay_endpoint_help' => 'Neprivaloma. Nurodžius, neprisijungę įrenginiai sinchronizuojasi per šį retransliatorių. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
-    'relay_endpoint_help_phone' => 'Neprivaloma. Nurodžius, pakeitimai keliauja per šį retransliatorių net tada, kai tavo įrenginiai nėra tame pačiame tinkle. Šis įrenginys juos pasiima, kai sinchronizuoji iš šio ekrano — niekada fone, nes programėlės užraktas saugo vienintelį raktą. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
+    'relay_endpoint_help' => 'Neprivaloma. Retransliatorius leidžia dviem įrenginiams užbaigti susiejimą ir apsikeisti šifravimo raktais, kai jie negali pasiekti vienas kito tiesiogiai. Pačios operacijos ir toliau sinchronizuojamos tik tada, kai abu įrenginiai yra tame pačiame tinkle. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
+    'relay_endpoint_help_phone' => 'Neprivaloma. Retransliatorius leidžia dviem įrenginiams užbaigti susiejimą ir apsikeisti šifravimo raktais, kai jie negali pasiekti vienas kito tiesiogiai. Pačios operacijos ir toliau sinchronizuojamos tik tada, kai abu įrenginiai yra tame pačiame tinkle. Šis įrenginys pasiima tai, kas jo laukia, kai sinchronizuoji iš šio ekrano — niekada fone, nes programėlės užraktas saugo vienintelį raktą. Palik tuščią, jei nori tik tiesioginio LAN&#8209;ryšio.',
     'relay_endpoint_aria' => 'Retransliavimo adreso URL',
     'relay_insecure_warning' => 'Šis retransliavimo adresas naudoja paprastą HTTP. Nors retransliatorius tavo duomenų niekada neiššifruoja, nesaugus ryšys atskleidžia šifruotų duomenų dydžius ir laiką tinklo stebėtojams. Geriausią privatumą užtikrina <strong>https://</strong> adresas.',
 

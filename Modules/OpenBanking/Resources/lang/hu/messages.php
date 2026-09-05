@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Illeszd be az alkalmazásazonosítót',
         'application_id_label' => 'Alkalmazásazonosító',
-        'step3_help' => 'Ezt az adatbázison kívüli helyi fájlban, szigorú jogosultságokkal tároljuk, és soha nem hagyja el ezt az eszközt.',
+        'step3_help' => 'Az adatbázison kívüli helyi fájlban tároljuk, amelyet csak te olvashatsz. Ez azonosítja az alkalmazásodat az Enable Banking felé, ezért minden kéréssel együtt utazik — a privát kulcsod soha.',
 
         'step4_title' => 'Válaszd ki a bankod',
         'via_enable_banking' => 'az Enable Bankingen keresztül',

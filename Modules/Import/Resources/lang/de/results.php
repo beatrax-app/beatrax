@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Weiteren Kontoauszug hochladen',
 
     'chain' => [
-        'heading' => 'Ketten werden aufgelöst…',
-        'pending' => 'In der Warteschlange. Der Ketten-Resolver startet gleich.',
+        'heading' => 'Kettenauflösung',
+        'pending' => 'Die Kettenauflösung ist nicht gestartet, daher wurden keine Finanzierungsketten verknüpft.',
         'running' => 'Finanzierungsketten werden verknüpft und Kontoauszugsabrechnungen zerlegt.',
     ],
 

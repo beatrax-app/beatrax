@@ -68,7 +68,7 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs twenty-one patches, applied from the mobile root's
+**The generated shell needs a set of patches, applied from the mobile root's
 `post-update-cmd`.** The authoritative list is
 `Modules\Mobile\Internal\Boot\NativeBuildPatches::SCRIPTS`, which
 `scripts/nativephp_patch_all.php` mirrors; `native:install` regenerates the
@@ -221,7 +221,7 @@ being ASCII is also what makes the format restriction go away rather than move:
 a PDF crosses as safely as a CSV, which the string-typed bridge body could
 never have done.
 
-### The decode is streamed, and the advertised maximum is enforced
+### The decode is streamed, and the transport maximum is enforced
 
 Encoding costs memory on both ends, and the server end had none of it bounded.
 `base64_decode()` on the whole payload put a third full copy of the file beside
@@ -230,10 +230,9 @@ four times the attached file live at once. Against the phone's 128 MB (the
 interpreter's compiled default: NativePHP's Android shell writes a `php.ini`
 with no `memory_limit` in it, and Beatrax patches in only the two upload
 directives plus `zend.exception_ignore_args`), and with a routed `web` request
-costing ~10 MB over a bare
-harness, **20 MB — the size the product advertises in three places — was a
-fatal**, not a 422. Memory exhaustion is `E_ERROR`: no response, no log entry,
-no retry, nothing the reader could act on.
+costing ~10 MB over a bare harness, **a file at the transport's own 20 MB
+ceiling was a fatal**, not a 422. Memory exhaustion is `E_ERROR`: no response,
+no log entry, no retry, nothing the reader could act on.
 
 The decode now runs a slice at a time straight onto the staging file, so the
 peak no longer tracks the payload: 20 MB went from 118.9 MB peak (and a fatal
@@ -248,12 +247,29 @@ enforced by running out of memory is not a limit. And the *number* of files is
 capped: `post_max_size` bounded the bytes and nothing bounded the count, so a
 body of ten thousand one-byte entries was ten thousand staged temp files.
 
-`MAX_BYTES` is the fourth place the same number is written — the other three
-are `resources/js/mobile-upload.js`, which refuses the pick, and the two
-shells' `php.ini` patches, which decide whether the request arrives at all.
-None of the four can see the others, so `EncodedUploadTransportTest` reads all
-four and fails on a drift: a body the client sends and the transport refuses is
-a wasted upload, and one the shell drops never arrives to be refused.
+Three ceilings meet here, and they are not three spellings of one number.
+
+The **file** ceiling is the transport's 20 MB. `MAX_BYTES` refuses the body,
+`MAX_UPLOAD_BYTES` in `resources/js/mobile-upload.js` refuses the pick, and
+`upload_max_filesize` in the two shells' `php.ini` patches decides whether the
+request arrives at all. None of them can see the others, so
+`EncodedUploadTransportTest` reads them together and fails on a drift, and
+`TheUploadCeilingIsOneNumberArchTest` holds the client against the iOS patch by
+itself: a client ceiling above the server's admits a pick that allocates ~3.7×
+the file in the content process and takes the WebView down with no crash report
+at all.
+
+The **body** ceiling is `post_max_size`, and it has to be the larger of the two,
+because what crosses is base64 — four thirds of the file, plus the JSON around
+it. Set equal to the file ceiling it would put the last quarter of a legal file
+out of reach. `TheUploadCeilingIsOneNumberArchTest` requires it to clear
+`ceil(file × 4 / 3)`.
+
+The ceiling a **reader** is given is neither. It is `UploadLimits::MAX_KB`, half
+the transport's, and the onboarding copy says it in words —
+`onboarding::connect_bank.errors.file_max` asks for a statement under 10 MB.
+Every layer beneath it is deliberately wider, so a file the product accepts is
+never one the shell drops on the way in.
 
 Both halves are inert off that shell: the shim checks `location.protocol` and
 does nothing on http/https, and the middleware acts only on its own marker
@@ -974,15 +990,17 @@ implementation, scheduled once, running the same way on both platforms. Its
 expression has to be one of
 `Modules\Core\Public\Scheduling\MobileBackgroundSchedule::RUNNER_INTERVALS`.
 
-That class is also the declaration of intent. `requiredOnDevice()` names every
-task the phone must run, `desktopOnly()` names the ones it deliberately does not
-and why, and `mobileRootOnly()` names the two that exist only where
-`nativephp/mobile-background-tasks` is installed. The `Background schedule`
-probe in `beatrax:doctor` fails on anything required that stops reaching the
-manifest, and
+That class is also the declaration of intent, in four lists.
+`requiredOnDevice()` names every task the phone must run, `desktopOnly()` names
+the ones it deliberately does not and why, `mobileRootOnly()` names what exists
+only where `nativephp/mobile-background-tasks` is installed, and
+`impossibleOnDevice()` names what no schedule on a phone can ever complete —
+`mobile.sync-pull`, for the reason above. The `Background schedule` probe in
+`beatrax:doctor` fails on anything required that stops reaching the manifest,
+and
 `Modules/Mobile/tests/Unit/TheBackgroundManifestCarriesEveryTaskThePhoneMustRunTest.php`
 fails in CI for the same reason — including for a task that is scheduled but
-declared in neither list, which is the shape the original twenty had.
+declared in none of the four, which is the shape the original twenty had.
 
 The inbox-fetch pipeline is the one thing still written as closures, and that is
 a decision rather than an omission: it fetches whole `.eml` bodies over IMAP

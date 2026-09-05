@@ -6,7 +6,7 @@ return [
     'heading' => 'Urządzenia i synchronizacja',
 
     'enable_sync' => 'Włącz synchronizację',
-    'enable_sync_help' => 'Bezpiecznie udostępniaj swoje dane zaufanym urządzeniom. Wymaga blokady aplikacji. Gdy jest włączona, dane zostają zaszyfrowane, a blokady aplikacji nie da się już wyłączyć.',
+    'enable_sync_help' => 'Bezpiecznie udostępniaj swoje dane zaufanym urządzeniom. Wymaga blokady aplikacji. Włączenia nie da się cofnąć: od tej chwili dane są zaszyfrowane, a wyłączyć nie można już ani synchronizacji, ani blokady aplikacji.',
 
     'app_lock_notice' => 'Najpierw ustaw blokadę aplikacji, aby włączyć synchronizację.',
     'go_to_app_lock' => 'Przejdź do Blokady aplikacji',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Odblokowanie ponownie otwiera to parowanie, zamiast pozwolić mu wygasnąć, więc trwa dłużej niż ustawiony przez Ciebie limit blokady aplikacji. Kończy się, gdy je dokończysz lub anulujesz.',
 
     'relay_endpoint' => 'Adres przekaźnika',
-    'relay_endpoint_help' => 'Opcjonalne. Gdy jest ustawiony, urządzenia offline synchronizują się przez ten przekaźnik. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
-    'relay_endpoint_help_phone' => 'Opcjonalne. Gdy jest ustawiony, zmiany podróżują przez ten przekaźnik nawet wtedy, gdy Twoje urządzenia nie są w tej samej sieci. To urządzenie odbiera je, gdy synchronizujesz z tego ekranu — nigdy w tle, bo blokada aplikacji przechowuje jedyny klucz. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
+    'relay_endpoint_help' => 'Opcjonalne. Przekaźnik pozwala dwóm urządzeniom dokończyć parowanie i wymienić klucze szyfrowania, gdy nie mogą połączyć się bezpośrednio. Same transakcje nadal synchronizują się tylko wtedy, gdy oba urządzenia są w tej samej sieci. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
+    'relay_endpoint_help_phone' => 'Opcjonalne. Przekaźnik pozwala dwóm urządzeniom dokończyć parowanie i wymienić klucze szyfrowania, gdy nie mogą połączyć się bezpośrednio. Same transakcje nadal synchronizują się tylko wtedy, gdy oba urządzenia są w tej samej sieci. To urządzenie odbiera to, co na nie czeka, gdy synchronizujesz z tego ekranu — nigdy w tle, bo blokada aplikacji przechowuje jedyny klucz. Zostaw puste, aby korzystać wyłącznie z połączenia LAN&#8209;bezpośredniego.',
     'relay_endpoint_aria' => 'Adres URL przekaźnika',
     'relay_insecure_warning' => 'Ten adres przekaźnika używa zwykłego HTTP. Przekaźnik nigdy nie odszyfrowuje Twoich danych, ale niezabezpieczone połączenie ujawnia obserwatorom sieci rozmiary i czasy zaszyfrowanych przesyłek. Dla najlepszej prywatności użyj adresu <strong>https://</strong>.',
 

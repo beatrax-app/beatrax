@@ -16,23 +16,43 @@ Modules/Desktop/
 ├── Internal/
 │   ├── NativeAppServiceProvider.php
 │   ├── Native/
-│   │   ├── BoundedNativeApiClient.php
-│   │   ├── FirstLaunchBootstrap.php
 │   │   ├── AppMenuBuilder.php
-│   │   ├── WindowCloseBehavior.php
-│   │   ├── WindowFocusState.php
-│   │   ├── OsThemeProbe.php
+│   │   ├── AppWindow.php
+│   │   ├── BoundedNativeApiClient.php
+│   │   ├── DesktopColdStartVault.php
+│   │   ├── DesktopKeyCustodian.php
 │   │   ├── FileOpenIntake.php
-│   │   └── PendingFileIntent.php
+│   │   ├── FirstLaunchBootstrap.php
+│   │   ├── LoopbackProbe.php
+│   │   ├── NativeBiometricUnlock.php
+│   │   ├── OsThemeProbe.php
+│   │   ├── PendingFileIntent.php
+│   │   ├── RelayListenerProcess.php
+│   │   ├── SafeStorageSecretShield.php
+│   │   ├── SubmenuItem.php
+│   │   ├── SyncListenerProcess.php
+│   │   ├── WindowCloseBehavior.php
+│   │   └── WindowFocusState.php
 │   ├── Listeners/
 │   │   ├── ApplyCloseWindowChoice.php
 │   │   ├── ContinuePendingFileIntentAfterLogin.php
 │   │   ├── DispatchOsNotification.php
+│   │   ├── ForgetColdStartVaultOnKeyRotation.php
 │   │   ├── HandleNativeOpenFile.php
+│   │   ├── LockOnWindowHideOrClose.php
 │   │   ├── NavigateOnNotificationDeepLink.php
-│   │   └── SurfaceWorkerCrashAlert.php
+│   │   ├── RebuildAppMenuOnAuthChange.php
+│   │   ├── StartSyncListenerOnEnable.php
+│   │   ├── SurfaceWorkerCrashAlert.php
+│   │   ├── TriggerUpdateDownload.php
+│   │   ├── VerifyAndAnnounceUpdate.php
+│   │   └── VerifyAndInstallDownload.php
 │   └── Http/
+│       ├── CloseActionController.php
 │       ├── Middleware/
+│       │   ├── ContinueToStagedFile.php
+│       │   ├── EnsureDatabaseReady.php
+│       │   └── RecoverSealedLedger.php
 │       └── Livewire/
 │           ├── SetupScreen.php
 │           ├── WelcomeScreen.php
@@ -61,9 +81,11 @@ separate, longer-lived UI element.
     inside the NativePHP bundle. The layout's
     `app()->bound(OsThemeSignal::class)` check is the documented
     discoverability gate.
-  - `RemembersPendingFileIntent::remember(string $path) /
-    consume()` → `?string`. Session-scoped store for the OS-supplied
-    file path the user opened before logging in.
+  - `RemembersPendingFileIntent::remember(string $path, string $extension): void`
+    — the contract's only method. Session-scoped store for the
+    OS-supplied file path the user opened before logging in. Reading it
+    back is Internal (`PendingFileIntent::pending()`, then `clear()`),
+    so across the module boundary the contract is write-only.
 - **Events/**
   - `FileOpenedFromOs` — `(string $path, string $extension)`. Raised
     by `FileOpenIntake::receive()` after validation succeeds — the
@@ -112,14 +134,22 @@ separate, longer-lived UI element.
 - `Internal/Listeners/ApplyCloseWindowChoice` — handles the JS-glued
   POST that follows the close-window prompt. Applies either
   `App::quit()` or `Window::current()->hide()`.
-- `Internal/Listeners/ContinuePendingFileIntentAfterLogin::handle($event)`
-  — fires on Laravel `Login`. Reads `PendingFileIntent`; redirects
-  to the staging page when an intent is present. The subscription is
-  NOT bundle-gated — the round-trip must work in local dev / CI / test
-  runs.
-- `Internal/Listeners/DispatchOsNotification` — four `handle*`
-  methods (one per domain event). Each consults `WindowFocusState`
-  first and stays quiet when focused.
+- `Internal/Listeners/ContinuePendingFileIntentAfterLogin::handle()`
+  — fires on Laravel `Login` and takes no arguments. It reads
+  `PendingFileIntent::pending()` purely for that reader's side effect:
+  an intent whose file has since gone is dropped here, so nobody is
+  sent to a staging screen with nothing on it. The redirect itself is
+  the `ContinueToStagedFile` middleware's, on the next HTML GET. The
+  subscription is NOT bundle-gated — the round-trip must work in local
+  dev / CI / test runs.
+- `Internal/Listeners/DispatchOsNotification::handleNotificationDeliverable($event)`
+  — the module's only notification handler, and the only one it needs:
+  the Notifications module decides what to notify and raises one
+  `NotificationDeliverable` for every trigger. It asks
+  `SuppressionEvaluator::shouldDeliver()` first, `WindowFocusState`
+  second, and swaps in a detail-free body when the decision carries the
+  per-device hide-details preference.
+  (`Modules/Desktop/tests/Unit/DispatchOsNotificationTest.php`)
 - `Internal/Listeners/HandleNativeOpenFile::handle($event)` —
   subscribes to the NativePHP `OpenFile` event; feeds the path to
   `FileOpenIntake`.
@@ -149,28 +179,54 @@ audit table), they will land under `Database/Migrations/`.
 
 `DesktopServiceProvider::register()`:
 
-- Singletons every native-chrome internal: `AppMenuBuilder`,
-  `WindowFocusState`, `DispatchOsNotification`,
-  `SurfaceWorkerCrashAlert`, `WindowCloseBehavior`,
-  `PendingFileIntent`, `ContinuePendingFileIntentAfterLogin`,
-  `HandleNativeOpenFile`, `NavigateOnNotificationDeepLink`,
-  `ApplyCloseWindowChoice`.
+- Singletons the internals whose identity matters: `AppMenuBuilder`,
+  `WindowFocusState`, `PendingFileIntent`,
+  `ContinuePendingFileIntentAfterLogin`,
+  `NavigateOnNotificationDeepLink`, `ApplyCloseWindowChoice`,
+  `NativeBiometricUnlock` and `DesktopKeyCustodian`.
+  `SurfaceWorkerCrashAlert` is a singleton for a load-bearing reason:
+  the rolling crash counter lives on the listener and has to survive
+  from one `ProcessExited` to the next. The listeners not on this list
+  — `DispatchOsNotification`, `HandleNativeOpenFile` — are resolved
+  fresh per event on purpose; they hold no state between events.
 - Binds `RemembersPendingFileIntent` → `PendingFileIntent`.
-- Conditionally binds `OsThemeSignal` → `OsThemeProbe` only when
-  `config('nativephp-internal.running') === true`. Outside the
-  bundle the binding is absent; the layout's gated check decides
-  fallback behaviour.
+- Binds NativePHP's `Client` → `BoundedNativeApiClient`, globally and
+  unconditionally, so no call can inherit the vendor's hour-long
+  timeout.
+- Behind `config('nativephp-internal.running') === true`, binds
+  `OsThemeSignal` → `OsThemeProbe`, `KeyCustodian` →
+  `DesktopKeyCustodian`, `ColdStartVault` → `DesktopColdStartVault`
+  and `SecretShield` → `SafeStorageSecretShield`, and re-asserts
+  `nativephp-internal.secret` from the live process environment.
+  Outside the bundle none of those bindings exist: the layout's gated
+  `app()->bound()` check decides the theme fallback, and Auth's
+  pass-through defaults hold the session key.
 
 `DesktopServiceProvider::boot()`:
 
-- Loads migrations, routes, views (all file-/dir-existence guarded).
+- Pushes `ContinueToStagedFile` onto the `web` middleware group. Not
+  bundle-gated, for the same reason the `Login` subscription below is
+  not.
+- Loads the module's migrations, routes, views and translations (each
+  guarded on the directory existing).
 - Registers the four Livewire components under the `desktop.*`
   namespace.
-- Subscribes `ContinuePendingFileIntentAfterLogin` to Laravel
-  `Login` unconditionally (the round-trip must work in local dev / CI).
-- Bundle-gated: subscribes the focus-state flippers, the four
-  `DispatchOsNotification` handlers, the `SurfaceWorkerCrashAlert`
-  handler, the `HandleNativeOpenFile` handler, and the
-  `NavigateOnNotificationDeepLink` handler. The gate is
-  `config('nativephp-internal.running') === true`; CI / test runs
-  short-circuit the boot and never reach the NativePHP HTTP client.
+- Registers a queue `looping` callback that clears the per-process time
+  limit and exits when the host app has gone. Not bundle-gated, and it
+  must precede the gate: it has to light up inside the spawned
+  `queue:work` process, which never sets `nativephp-internal.running`.
+- Subscribes, above the gate: `ContinuePendingFileIntentAfterLogin` and
+  `RebuildAppMenuOnAuthChange` to `Login` (the latter also to
+  `Logout`), `ForgetColdStartVaultOnKeyRotation` to
+  `AppLockPassphraseChanged`, and `StartSyncListenerOnEnable` to
+  `DeviceSyncEnabled`, `SyncTransportCredentialsAvailable` and
+  `AppLockUnlocked`. These have to work off-bundle, so nothing gates the
+  subscriptions; whatever NativePHP each one touches is gated inside its
+  own handler instead, and two of them touch none at all.
+- Returns at the gate unless `config('nativephp-internal.running')` is
+  `true`. Everything after it is bundle-only: the focus-state flippers,
+  `DispatchOsNotification`, `SurfaceWorkerCrashAlert`,
+  `HandleNativeOpenFile`, `LockOnWindowHideOrClose` on both
+  `WindowHidden` and `WindowClosed`, `NavigateOnNotificationDeepLink`,
+  and the three auto-update listeners. CI and test runs stop at the
+  return and never reach the NativePHP HTTP client.

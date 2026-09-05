@@ -12,7 +12,7 @@ return [
     // i18n-review: sr · reapply_confirm — "druga strana" is this locale's counterparty,
     // but standing in a bare list of nouns it reads as "the other side". Whether it needs
     // a fuller phrase here, or the list a different order, wants a native call.
-    'reapply_confirm' => 'Ponovo primeniti sva pravila na celu tvoju istoriju? Svaka kategorija, druga strana, beleška i poreska oznaka koju je postavilo pravilo biće prepisana. Ono što je postavljeno ručno ostaje, kao i sve na usaglašenom izvodu. Stare vrednosti ništa ne vraća.',
+    'reapply_confirm' => 'Ponovo primeniti sva pravila na celu tvoju istoriju? Svaka kategorija, druga strana, beleška i poreska oznaka koju je postavilo pravilo biće prepisana. Ono što je postavljeno ručno ostaje, kao i sve na usaglašenom izvodu ili na transakciji koju si podelio. Stare vrednosti ništa ne vraća.',
     'reapplying' => 'Ponovna primena…',
     'new_rule' => 'Novo pravilo',
 

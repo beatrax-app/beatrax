@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Čarovnik ni mogel razrešiti aktivnega koraka. Za izhod uporabi Nadaljuj pozneje →, naslednji zagon pa bo stanje obnovil.',
 
     'privacy' => 'Tvoji podatki ostanejo na tej napravi',
+    'privacy_connector' => 'Tvoji podatki ostanejo na tej napravi. Ta korak poveže tvoj nabiralnik z Googlom ali Microsoftom.',
     'need_help' => 'Potrebuješ pomoč?',
     'need_help_aria' => 'Potrebuješ pomoč? Odpre stran s prijavami težav za Beatrax na GitHubu',
 ];

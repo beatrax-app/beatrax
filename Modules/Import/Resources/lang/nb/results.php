@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Last opp en ny kontoutskrift',
 
     'chain' => [
-        'heading' => 'Løser opp kjeder…',
-        'pending' => 'I kø. Kjedeløseren starter snart.',
+        'heading' => 'Kjedeløsning',
+        'pending' => 'Kjedeløsningen startet ikke, så finansieringskjedene ble ikke koblet sammen.',
         'running' => 'Kobler sammen finansieringskjeder og deler opp oppgjør fra kontoutskriften.',
     ],
 

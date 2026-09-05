@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Nahrát další výpis z účtu',
 
     'chain' => [
-        'heading' => 'Řeší se řetězce…',
-        'pending' => 'Ve frontě. Řešení řetězců se brzy spustí.',
+        'heading' => 'Řešení řetězců',
+        'pending' => 'Řešení řetězců se nespustilo, takže řetězce financování nebyly propojeny.',
         'running' => 'Propojují se řetězce financování a rozkládají se vyrovnání z výpisu z účtu.',
     ],
 

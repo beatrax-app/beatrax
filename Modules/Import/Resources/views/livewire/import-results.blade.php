@@ -18,8 +18,13 @@
          starts. A failed run is the dashboard's banner to raise, not a second
          notice competing with it here. --}}
     @if ($chainResolutionStatus === JobRunStatus::Pending || $chainResolutionStatus === JobRunStatus::Running)
+        {{-- The poll and the pulse belong to Running alone. The resolver is
+             dispatched synchronously by the confirm, so a row still reading
+             Pending here is one that never started and that nothing will
+             restart: animating it paints work that is not happening, and the
+             poll re-reads a column no writer is going to touch. --}}
         <section
-            wire:poll.2s.keep-alive
+            @if ($chainResolutionStatus === JobRunStatus::Running) wire:poll.2s.keep-alive @endif
             aria-live="polite"
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
         >
@@ -31,7 +36,9 @@
                     {{ Lang::get('import::results.chain.running') }}
                 @endif
             </p>
-            <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
+            @if ($chainResolutionStatus === JobRunStatus::Running)
+                <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
+            @endif
         </section>
     @endif
 

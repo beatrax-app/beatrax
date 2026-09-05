@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Dove sono i miei dati?',
-    'intro' => 'Beatrax salva tutto su questo dispositivo. Niente viene inviato a un server, niente si sincronizza con il cloud, niente esce da questo dispositivo se non lo esporti tu.',
+    'intro' => 'Beatrax salva tutto su questo dispositivo. Non esiste un server Beatrax né un account nel cloud. Esce solo ciò che colleghi tu — una casella di posta, una banca tramite Enable Banking, i dispositivi che associ per la sincronizzazione — più una richiesta giornaliera dei tassi di cambio. Ogni collegamento lo dice nella schermata in cui lo attivi.',
 
     'lives_here' => 'I tuoi dati si trovano qui',
     'copy' => 'Copia',

@@ -20,11 +20,20 @@ final class EnvelopeMoveId
     // with both rows, so the pair is unique wherever the arithmetic is run.
     // period_start is in the tuple because a rekey re-creates the row against
     // a new period, and both devices rekey on their own.
-    public static function for(string $moveGroupId, EnvelopeMoveKind $kind, string $periodStart): int
+    /**
+     * @param  EnvelopeMoveKind|string  $kind  The stored spelling, passed raw where it
+     *                                         was read back off the synced column: `kind` carries no CHECK
+     *                                         constraint, so a peer on a newer build lands a spelling this enum
+     *                                         has no case for, and the id must not depend on having one. An
+     *                                         enum argument folds to its own `value`, so no existing id moves.
+     *
+     * @link ../../../../.docs/features/sync/a-peer-may-be-on-a-newer-version.md
+     */
+    public static function for(string $moveGroupId, EnvelopeMoveKind|string $kind, string $periodStart): int
     {
         return DerivedRowId::for('envelope_moves', [
             'move_group_id' => $moveGroupId,
-            'kind' => $kind->value,
+            'kind' => $kind instanceof EnvelopeMoveKind ? $kind->value : $kind,
             'period_start' => $periodStart,
         ]);
     }

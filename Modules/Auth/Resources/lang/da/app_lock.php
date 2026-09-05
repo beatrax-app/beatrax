@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Behold biometri',
 
     'auto_lock' => 'Lås automatisk efter',
+    'auto_lock_note' => 'Beatrax låser efter så lang tid uden aktivitet — og tidligere, hvis du forlader den: at skifte til en anden app eller skjule eller lukke vinduet låser Beatrax inden for :window, uanset hvad denne indstilling siger.',
     'idle_1' => '1 minut',
     'idle_5' => '5 minutter',
     'idle_15' => '15 minutter',

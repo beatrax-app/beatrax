@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Pagaidām izlaist',
     'mark_ignored' => 'Vairs nejautāt par šo',
-    'not_now_note' => 'Neviena no tām nemaina darījuma partneri — jūs varat to marķēt vēlāk darījuma partneru lapā.',
+    'skip_note' => 'Izlaišana neko neieraksta — tā tikai pāriet uz nākamo nezināmo.',
+    'mark_ignored_note' => 'Tas atzīmē darījuma partneri kā ignorētu, tāpēc tas paliek ārpus šīs rindas. Nosaukums, veids un vēsture netiek mainīti, un jūs to varat marķēt vēlāk darījuma partneru lapā.',
     'previous' => 'Iepriekšējais nezināmais',
 
     'kbd_yes' => 'jā',

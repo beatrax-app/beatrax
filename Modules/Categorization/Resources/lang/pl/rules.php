@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Reguły pozostają na tym urządzeniu. Nie są udostępniane innym Twoim urządzeniom.',
 
     'reapply' => 'Zastosuj reguły ponownie do historii',
-    'reapply_confirm' => 'Zastosować ponownie wszystkie reguły do całej Twojej historii? Każda kategoria, kontrahent, notatka i znacznik podatkowy ustawione przez regułę zostaną nadpisane. To, co ustawiono ręcznie, zostaje, tak samo jak wszystko na uzgodnionym wyciągu. Nic nie przywróci starych wartości.',
+    'reapply_confirm' => 'Zastosować ponownie wszystkie reguły do całej Twojej historii? Każda kategoria, kontrahent, notatka i znacznik podatkowy ustawione przez regułę zostaną nadpisane. To, co ustawiono ręcznie, zostaje, tak samo jak wszystko na uzgodnionym wyciągu lub na transakcji, którą podzielono. Nic nie przywróci starych wartości.',
     'reapplying' => 'Ponowne stosowanie…',
     'new_rule' => 'Nowa reguła',
 

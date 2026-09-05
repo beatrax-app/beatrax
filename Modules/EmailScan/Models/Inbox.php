@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// No column here carries a secret: credentials live exclusively in the
-// chmod-600 JSON repository on disk.
+// No column here carries a secret: credentials live exclusively on the
+// oauth_secrets row, in columns the model casts as encrypted.
 /**
  * @property int $id
  * @property int|null $user_id

@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Biometrie behalten',
 
     'auto_lock' => 'Automatisch sperren nach',
+    'auto_lock_note' => 'Beatrax sperrt nach dieser Zeit ohne Aktivität — und früher, wenn du es verlässt: Zu einer anderen App wechseln oder das Fenster ausblenden oder schließen sperrt Beatrax innerhalb von :window, unabhängig von dieser Einstellung.',
     'idle_1' => '1 Minute',
     'idle_5' => '5 Minuten',
     'idle_15' => '15 Minuten',

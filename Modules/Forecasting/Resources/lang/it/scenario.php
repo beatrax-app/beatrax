@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Sposta la data di una serie',
-            'desc' => 'Sposta in avanti la prossima occorrenza o tutte quelle successive.',
+            'desc' => 'Sposta la prossima occorrenza, o tutte quelle successive, a un\'altra data.',
         ],
     ],
 

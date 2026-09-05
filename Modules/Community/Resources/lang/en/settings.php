@@ -23,6 +23,6 @@ return [
         'title' => 'Update the shared list on app updates',
         'help' => 'Refresh the bundled list every time Beatrax updates itself.',
         'help_phone' => 'Refresh the bundled list every time a new version of Beatrax is installed from the App Store or Google Play.',
-        'note' => 'Activates with a future app update — see Settings → About for the current version.',
+        'note' => 'Activates with a future app update — the version you are running is shown at the top of the sidebar.',
     ],
 ];

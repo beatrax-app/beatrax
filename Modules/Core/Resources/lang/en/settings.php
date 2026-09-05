@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Amount display',
-        'label' => 'Default view on the transactions list',
+        'label' => 'Default view for amounts',
         'eur_only' => 'Settled amount',
         'original' => 'Original amount',
-        'help' => 'You can still switch per page from the transactions list.',
+        'help' => 'Applies to the transactions list and the totals on the dashboard. You can still switch per page, but only from the transactions list.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Exchange rates',
         'fetch_online' => 'Fetch current rates online',
-        'online_on' => 'Rates fetched from ECB daily. Only currency pair lookups — no personal data.',
+        'online_on' => 'Rates fetched daily from the ECB, falling back to Frankfurter if the ECB is unreachable. Only currency pair lookups — no personal data.',
         'last_updated' => 'Last updated: :date.',
-        'online_off' => 'Bundled rates are used. No data leaves this device.',
+        'online_off' => 'The rates already on this device stay in use, with the bundled snapshot as the fallback. No data leaves this device.',
         'fetch_aria' => 'Fetch current exchange rates online',
         'refreshing' => 'Refreshing…',
         'next_refresh' => 'Auto-refresh: once a day',

@@ -6,7 +6,7 @@ return [
     'heading' => 'Uređaji i sinkronizacija',
 
     'enable_sync' => 'Uključi sinkronizaciju',
-    'enable_sync_help' => 'Sigurno dijeli svoje podatke među pouzdanim uređajima. Zahtijeva zaključavanje aplikacije. Kada je uključeno, podaci se šifriraju i zaključavanje aplikacije više se ne može isključiti.',
+    'enable_sync_help' => 'Sigurno dijeli svoje podatke među pouzdanim uređajima. Zahtijeva zaključavanje aplikacije. Uključivanje se ne može poništiti: podaci su od tog trenutka šifrirani, a ni sinkronizacija ni zaključavanje aplikacije više se ne mogu isključiti.',
 
     'app_lock_notice' => 'Prvo postavi zaključavanje aplikacije da uključiš sinkronizaciju.',
     'go_to_app_lock' => 'Idi na Zaključavanje aplikacije',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Otključavanje ponovno otvara ovo uparivanje umjesto da mu pusti da istekne, pa traje dulje od vremena zaključavanja aplikacije koje ste postavili. Završava kad ga dovršite ili otkažete.',
 
     'relay_endpoint' => 'Krajnja točka releja',
-    'relay_endpoint_help' => 'Neobavezno. Kad je postavljena, uređaji izvan mreže sinkroniziraju se preko ovog releja. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
-    'relay_endpoint_help_phone' => 'Neobavezno. Kad je postavljena, promjene putuju kroz ovaj relej i kad tvoji uređaji nisu na istoj mreži. Ovaj ih uređaj preuzima kad sinkroniziraš s ovog zaslona — nikad u pozadini, jer zaključavanje aplikacije čuva jedini ključ. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
+    'relay_endpoint_help' => 'Neobavezno. Relej omogućuje dvama uređajima da dovrše uparivanje i razmijene ključeve za šifriranje kad ne mogu izravno doprijeti jedan do drugoga. Same transakcije i dalje se sinkroniziraju samo kad su oba uređaja na istoj mreži. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
+    'relay_endpoint_help_phone' => 'Neobavezno. Relej omogućuje dvama uređajima da dovrše uparivanje i razmijene ključeve za šifriranje kad ne mogu izravno doprijeti jedan do drugoga. Same transakcije i dalje se sinkroniziraju samo kad su oba uređaja na istoj mreži. Ovaj uređaj preuzima ono što ga čeka kad sinkroniziraš s ovog zaslona — nikad u pozadini, jer zaključavanje aplikacije čuva jedini ključ. Ostavi prazno samo za izravnu vezu unutar LAN&#8209;a.',
     'relay_endpoint_aria' => 'URL krajnje točke releja',
     'relay_insecure_warning' => 'Ova krajnja točka releja koristi običan HTTP. Iako relej nikad ne dešifrira tvoje podatke, nesigurna veza otkriva promatračima mreže veličine šifriranih podataka i vrijeme slanja. Za najbolju privatnost upotrijebi <strong>https://</strong> krajnju točku.',
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Välkommen',
     'h1' => 'Låt Beatrax lära känna dina pengar.',
-    'lede' => 'Ungefär 5 minuter. Inget lämnar den här enheten — allt du kopplar stannar i en fil på den.',
+    'lede' => 'Ungefär 5 minuter. Beatrax håller din historik i en fil på den här enheten — det enda steget som når ut är att koppla en inkorg, och det kan du hoppa över.',
     'tagline' => 'Det här ställer vi in:',
 
     'bank_title' => 'Din bank',

@@ -37,9 +37,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'İçe aktarmayı çalıştır', 'hint' => 'İçe aktarma sihirbazını aç'],
-        'scan_email' => ['label' => 'E-postaları şimdi tara', 'hint' => 'Gelen kutusu eşitlemesini hemen çalıştır'],
+        'scan_email' => ['label' => 'Gelen kutularını aç', 'hint' => 'Bağlı posta kutuların'],
         'open_profile' => ['label' => 'Profili aç', 'hint' => 'Ayarlar — hesap ve tercihler'],
-        'toggle_theme' => ['label' => 'Temayı değiştir', 'hint' => 'Açık ve koyu tema arasında geçiş yap'],
+        'toggle_theme' => ['label' => 'Görünüm ayarlarını aç', 'hint' => 'Açık, koyu veya sistem'],
     ],
 
     'run_command' => ':command çalıştır',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Dev genel bakış', 'hint' => 'Sistem kartları + son çalıştırmalar'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'İzin verilen komutları çalıştır'],
-        'audit' => ['label' => 'Dev denetim günlüğü', 'hint' => 'Geliştirici modundaki her işlem'],
+        'audit' => ['label' => 'Dev denetim günlüğü', 'hint' => 'Geliştirici modunda yaptığın işlemler'],
         'logs' => ['label' => 'Log izleyici', 'hint' => 'Canlı laravel-*.log akışı'],
         'queue' => ['label' => 'Kuyruk denetleyicisi', 'hint' => 'Bekleyen / başarısız / batch'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sistem probeları'],

@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Ühenda uuesti',
     'disconnect' => 'Ühenda lahti',
+    'disconnect_confirm' => 'Kas ühendada :email lahti? See eemaldab selle postkasti salvestatud volitused, selle skannimisajaloo ja saatjad, keda oled lisanud või peitnud. Beatraxi juba salvestatud kviitungeid see ei mõjuta. Uuesti ühendamine alustab skannimist nullist.',
     'scan_now' => 'Skanni kohe',
     'scan_in_progress_title' => 'Skannimine juba käib',
 

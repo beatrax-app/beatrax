@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Cola o ID da tua aplicação',
         'application_id_label' => 'ID da aplicação',
-        'step3_help' => 'Isto fica guardado num ficheiro local fora da base de dados, com permissões restritivas, e nunca sai deste dispositivo.',
+        'step3_help' => 'Fica guardado num ficheiro local fora da base de dados, legível apenas por ti. Identifica a tua aplicação perante o Enable Banking, por isso viaja em cada pedido — a tua chave privada nunca.',
 
         'step4_title' => 'Escolhe o teu banco',
         'via_enable_banking' => 'através do Enable Banking',

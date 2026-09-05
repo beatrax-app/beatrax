@@ -50,31 +50,31 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Zálohovať databázu', 'description' => 'Zapíše kópiu SQLite s časovou pečiatkou do priečinka so zálohami.'],
-        'doctor' => ['label' => 'Spustiť doctor', 'description' => 'Nahlási nainštalované verzie PHP / Composer / SQLite a overí minimálne požiadavky.'],
-        'failed_jobs' => ['label' => 'Vyčistiť zlyhané úlohy', 'description' => 'Odstráni vyriešené záznamy z tabuľky failed_jobs spravovanej Laravelom.'],
+        'db_backup' => ['label' => 'Zálohovať databázu', 'description' => 'Zapíše kópiu SQLite s časovou pečiatkou do priečinka so zálohami, ibaže sa databáza od poslednej zálohy nezmenila. Ponechaná kópia zároveň odstráni staršie zálohy podľa pravidiel uchovávania.'],
+        'doctor' => ['label' => 'Spustiť doctor', 'description' => 'Spustí sadu prevádzkových kontrol a nahlási pass / warn / fail pre každý riadok. Riadok warn alebo fail znamená nenulový návratový kód.'],
+        'failed_jobs' => ['label' => 'Vyčistiť zlyhané úlohy', 'description' => 'Zmaže z tabuľky failed_jobs spravovanej Laravelom každý riadok starší než 30 dní, či už bola úloha zopakovaná, alebo nie.'],
         'cache_clear' => ['label' => 'Vymazať vyrovnávaciu pamäť', 'description' => 'Vyprázdni úložisko vyrovnávacej pamäte aplikácie.'],
         // i18n-review: sk · command.route_list — «routa» is borrowed, because
         // «cesta» is already this locale's word for a filesystem path in
         // system.php. A native should confirm the borrowing reads here.
         'route_list' => ['label' => 'Vypísať routy', 'description' => 'Vypíše každú registrovanú HTTP routu na stdout.'],
-        'config_show' => ['label' => 'Zobraziť konfiguráciu', 'description' => 'Vypíše hodnotu zadaného konfiguračného kľúča s bodkami.'],
+        'config_show' => ['label' => 'Zobraziť konfiguráciu', 'description' => 'Vypíše celý konfiguračný súbor alebo hodnotu kľúča s bodkami v ňom.'],
         // i18n-review: sk · command.view_clear — «zobrazenie» is taken by the
         // palette's own views, so the Blade template cache is «pohľady» here to
         // keep the two apart. Confirm that split reads.
         'view_clear' => ['label' => 'Vymazať vyrovnávaciu pamäť pohľadov', 'description' => 'Vyprázdni vyrovnávaciu pamäť skompilovaných pohľadov Blade.'],
-        'queue_retry' => ['label' => 'Zopakovať zlyhané úlohy', 'description' => 'Zopakuje jednu úlohu (podľa id) alebo každú zlyhanú úlohu (prázdne id).'],
-        'rederive_fingerprints' => ['label' => 'Znova odvodiť odtlačky', 'description' => 'Prepočíta odtlačok každej transakcie s aktuálnou verziou normalizácie.'],
+        'queue_retry' => ['label' => 'Zopakovať zlyhané úlohy', 'description' => 'Zopakuje jednu zlyhanú úlohu podľa id alebo každú zlyhanú úlohu, keď zadáš `all`.'],
+        'rederive_fingerprints' => ['label' => 'Znova odvodiť odtlačky', 'description' => 'Prepočíta odtlačok každej transakcie, ktorá je stále pod aktuálnou verziou normalizácie. Spustenie odtiaľto nahlási počet a nič nezapíše.'],
         'db_restore' => ['label' => 'Obnoviť databázu', 'description' => 'Nahradí aktuálnu databázu zadaným súborom zálohy.'],
         'regenerate_recovery_codes' => ['label' => 'Znova vygenerovať záložné kódy', 'description' => 'Znova vygeneruje 10 jednorazových záložných kódov používateľa.'],
         'grant_dev' => ['label' => 'Udeliť vývojársky prístup', 'description' => 'Nastaví is_developer=true pre zadaného používateľa.'],
-        'install' => ['label' => 'Spustiť inštaláciu', 'description' => 'Idempotentné prvé nastavenie. Opätovné spustenie na nakonfigurovanej inštalácii je deštruktívne.'],
+        'install' => ['label' => 'Spustiť inštaláciu', 'description' => 'Idempotentné prvé nastavenie: schéma databázy, referenčné údaje a jediný používateľský účet. Opätovné spustenie na nakonfigurovanej inštalácii znova potvrdí existujúci účet a heslo nechá bez zmeny.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Akcia'],
         'config' => ['label' => 'Konfiguračný kľúč', 'help' => 'Konfiguračný súbor alebo kľúč s bodkami, ktorý sa má vypísať, napr. `app` alebo `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'Id úlohy', 'help' => 'Nechaj prázdne, aby sa zopakovala každá zlyhaná úloha; zadaním id zopakuješ jediný záznam.', 'placeholder' => 'všetky (alebo konkrétne id)'],
+        'id' => ['label' => 'Id úlohy', 'help' => 'Zadaj `all`, aby sa zopakovala každá zlyhaná úloha, alebo id úlohy pre jediný záznam. Prázdne pole nezopakuje nič.', 'placeholder' => 'all (alebo konkrétne id)'],
         'queue' => ['label' => 'Názov frontu', 'help' => 'Voliteľný filter podľa frontu; predvolene všetky fronty.', 'placeholder' => 'default'],
         'path' => ['label' => 'Cesta k súboru zálohy', 'help' => 'Nahradí aktuálnu databázu súborom na zadanej ceste.', 'placeholder' => '/cesta/k/backup.sqlite'],
         'username' => ['label' => 'Používateľské meno', 'placeholder' => 'alice'],

@@ -21,10 +21,13 @@ return [
         'help_touch' => 'Näita sortimisreal nuppu „Aita teistel see tuvastada“, et saaksid ühe puudutusega jagatud nimekirja ettepaneku saata.',
     ],
 
+    // i18n-review: et · update_on_updates.note — "külgriba" is the form used
+    // here; Estonian interfaces also say "külgpaan", and this app names the
+    // element in no other line, so a reader has no house term to match it to.
     'update_on_updates' => [
         'title' => 'Uuenda jagatud nimekirja koos rakendusega',
         'help' => 'Värskenda kaasas olevat nimekirja iga kord, kui Beatrax end uuendab.',
         'help_phone' => 'Värskenda kaasas olevat nimekirja iga kord, kui App Store’ist või Google Playst paigaldatakse Beatraxi uus versioon.',
-        'note' => 'Aktiveerub tulevase rakenduse uuendusega — praegust versiooni vaata jaotisest Seaded → Teave.',
+        'note' => 'Aktiveerub tulevase rakenduse uuendusega — kasutatav versioon on näha külgriba ülaosas.',
     ],
 ];

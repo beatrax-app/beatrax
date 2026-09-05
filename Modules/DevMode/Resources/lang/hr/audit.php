@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Zapisnik revizije',
-    'subtitle' => 'Svaka naredba, radnja u redu čekanja i SQL upit pokrenuti kroz razvojnu konzolu.',
+    'subtitle' => 'Naredbe, radnje u redu čekanja i SQL upiti koje si pokrenuo kroz razvojnu konzolu.',
     'clear_all' => 'Očisti sve',
-    'clear_all_confirm' => 'Očistiti svaki unos zapisnika revizije? Ovo se ne može poništiti.',
+    'clear_all_confirm' => 'Očistiti svaki unos zapisnika revizije koji si zabilježio? Ovo se ne može poništiti.',
     'filter_tier' => 'Razina',
     'filter_all' => 'Sve',
     'filter_command' => 'Naredba',

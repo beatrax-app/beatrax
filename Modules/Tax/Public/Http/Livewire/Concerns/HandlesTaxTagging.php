@@ -232,7 +232,6 @@ trait HandlesTaxTagging
         CurrentUser $u,
         TaxTagQuery $q,
         Clock $c,
-        TransactionStatusQuery $status,
     ): void {
         if ($this->batchSuggestion === null) {
             return;
@@ -253,14 +252,10 @@ trait HandlesTaxTagging
         // a different one. The seasonal year only covers a pre-snapshot state.
         $taxYear = self::batchTaxYear($this->batchSuggestion) ?? $this->resolveCurrentTaxYear($c);
 
+        // Reconciled rows are already out of this list: the query behind it is
+        // the same one the banner counted with, which is what keeps the number
+        // the reader agreed to and the number written the same.
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
-
-        // One query, before tagging: the banner only writes editable rows and the
-        // count below only reports rows actually written.
-        $reconciledIds = $status->reconciledIdsAmong($user->id, $ids);
-        if ($reconciledIds !== []) {
-            $ids = array_values(array_diff($ids, $reconciledIds));
-        }
 
         // array_key_exists, not ??: a snapshotted null means "saved with no
         // category/note", and ?? would fall through to whatever picker state an
@@ -294,8 +289,9 @@ trait HandlesTaxTagging
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true;
 
-        // Nothing written is still an answer: every candidate was reconciled,
-        // and a banner that closed in silence reads as a tag that happened.
+        // Nothing written is still an answer: every candidate went out of reach
+        // between the offer and the click, and a banner that closed in silence
+        // reads as a tag that happened.
         $this->toast($count === 0
             ? Lang::get('tax::messages.batch_none_reconciled')
             : Lang::choice('tax::messages.batch_tagged', $count));

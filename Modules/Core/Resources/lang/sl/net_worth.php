@@ -23,9 +23,11 @@ return [
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'tečaji na dan :date iz vira :source',
 
-    'stale_bundled' => 'Uporablja se tečaj iz priložene kopije. Za aktualne tečaje v Nastavitvah vklopi spletno osveževanje.',
-    'stale_old' => 'Ta tečaj je starejši od 3 dni. Naslednje spletno osveževanje ga bo posodobilo.',
+    'stale_bundled' => 'Uporablja se tečaj iz priložene kopije, starejši od :count dneva. Za aktualne tečaje v Nastavitvah vklopi spletno osveževanje.|Uporablja se tečaj iz priložene kopije, starejši od :count dni. Za aktualne tečaje v Nastavitvah vklopi spletno osveževanje.|Uporablja se tečaj iz priložene kopije, starejši od :count dni. Za aktualne tečaje v Nastavitvah vklopi spletno osveževanje.|Uporablja se tečaj iz priložene kopije, starejši od :count dni. Za aktualne tečaje v Nastavitvah vklopi spletno osveževanje.',
+    'stale_old' => 'Ta tečaj je starejši od :count dneva. Naslednje spletno osveževanje ga bo posodobilo.|Ta tečaj je starejši od :count dni. Naslednje spletno osveževanje ga bo posodobilo.|Ta tečaj je starejši od :count dni. Naslednje spletno osveževanje ga bo posodobilo.|Ta tečaj je starejši od :count dni. Naslednje spletno osveževanje ga bo posodobilo.',
+    'stale_offline' => 'Ta tečaj je starejši od :count dneva, spletno osveževanje pa je izklopljeno. Vklopi ga v Nastavitvah, da se tečaj posodobi.|Ta tečaj je starejši od :count dni, spletno osveževanje pa je izklopljeno. Vklopi ga v Nastavitvah, da se tečaj posodobi.|Ta tečaj je starejši od :count dni, spletno osveževanje pa je izklopljeno. Vklopi ga v Nastavitvah, da se tečaj posodobi.|Ta tečaj je starejši od :count dni, spletno osveževanje pa je izklopljeno. Vklopi ga v Nastavitvah, da se tečaj posodobi.',
 
+    'source_ecb' => 'ECB',
     'source_bundled' => 'Priložena kopija',
     'source_transaction' => 'Zabeleženi tečaj',
     'source_fallback' => 'tečaji',

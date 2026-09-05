@@ -5,7 +5,7 @@
     component UNCHANGED below (reuse, not rebuild; overall banner +
     per-device list) + this screen's own initial-sync "{n} of {m} records"
     progress line -> "Sync now" primary CTA (accent-ink, min-h-44px) ->
-    "Network" section (Heading role) with the "Pause sync on cellular"
+    "Network" section (phone only, Heading role) with the "Pause sync on cellular"
     toggle (`.switch`/`.switch--on` markup reused verbatim from
     devices-and-sync-settings-section.blade.php).
 
@@ -89,7 +89,9 @@
             </p>
         @endif
 
-        <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sync-background-note">{{ Lang::get('mobile::sync.background_note') }}</p>
+        {{-- A desktop runs sync:serve as a child process and answers peers
+             without a press; a phone has no such daemon and says so. --}}
+        <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sync-background-note">{{ Lang::get($onPhone ? 'mobile::sync.background_note_phone' : 'mobile::sync.background_note') }}</p>
     </div>
 
     {{-- Device identity, pairing and the encryption controls. This is the
@@ -113,26 +115,31 @@
         @livewire('auth.app-lock-settings-section')
     </section>
 
-    <section class="space-y-3">
-        <x-core::section-heading :title="Lang::get('mobile::sync.network')" />
+    {{-- Phone only. The written policy has exactly one reader, the phone's own
+         sync trigger; the desktop daemon never consults it, so on a desktop
+         this switch named a setting that governed nothing at all. --}}
+    @if ($onPhone)
+        <section class="space-y-3" data-testid="sync-network">
+            <x-core::section-heading :title="Lang::get('mobile::sync.network')" />
 
-        {{-- ===== "Pause sync on cellular" toggle ===== --}}
-        <x-core::setting-row
-            :label="Lang::get('mobile::sync.pause_cellular')"
-            :description="Lang::get('mobile::sync.pause_cellular_help')"
-        >
-            {{-- The .switch track is 44x26px and app.css only grows it to a
-                 44px target under @media (pointer: coarse). This wrapper is what
-                 holds WCAG 2.5.5 on a mouse-driven build of the same screen. --}}
-            <div class="min-w-[44px] min-h-[44px] flex items-center justify-center">
-                <x-core::switch
-                    :on="$pauseOnCellular"
-                    :label="Lang::get('mobile::sync.pause_cellular')"
-                    wire:click="toggleCellularPause"
-                />
-            </div>
-        </x-core::setting-row>
-    </section>
+            {{-- ===== "Pause sync on cellular" toggle ===== --}}
+            <x-core::setting-row
+                :label="Lang::get('mobile::sync.pause_cellular')"
+                :description="Lang::get('mobile::sync.pause_cellular_help')"
+            >
+                {{-- The .switch track is 44x26px and app.css only grows it to a
+                     44px target under @media (pointer: coarse). This wrapper is what
+                     holds WCAG 2.5.5 on a mouse-driven build of the same screen. --}}
+                <div class="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <x-core::switch
+                        :on="$pauseOnCellular"
+                        :label="Lang::get('mobile::sync.pause_cellular')"
+                        wire:click="toggleCellularPause"
+                    />
+                </div>
+            </x-core::setting-row>
+        </section>
+    @endif
 
     {{-- The three sections below moved off Settings. They answer the same
          question the rest of this page does — where this install's data comes

@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Şimdilik atla',
     'mark_ignored' => 'Bunu bir daha sorma',
-    'not_now_note' => 'İkisi de karşı tarafı değiştirmez — onu daha sonra Karşı taraflar sayfasından yine etiketleyebilirsin.',
+    'skip_note' => 'Atlamak hiçbir şey yazmaz — yalnızca sonraki bilinmeyene geçer.',
+    'mark_ignored_note' => 'Bu, karşı tarafı yok sayıldı olarak işaretler; böylece bu sıranın dışında kalır. Adı, türü ve geçmişi değişmez ve onu daha sonra Karşı taraflar sayfasından yine etiketleyebilirsin.',
     'previous' => 'Önceki bilinmeyen',
 
     'kbd_yes' => 'evet',

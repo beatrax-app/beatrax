@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => '¿Dónde están mis datos?',
-    'intro' => 'Beatrax lo guarda todo en este dispositivo. No se envía nada a ningún servidor, nada se sincroniza con la nube y nada sale de este dispositivo si no lo exportas tú.',
+    'intro' => 'Beatrax lo guarda todo en este dispositivo. No hay ningún servidor de Beatrax ni cuenta en la nube. Solo sale lo que tú conectas — una bandeja de entrada, un banco a través de Enable Banking, los dispositivos que emparejas para sincronizar — más una consulta diaria de los tipos de cambio. Cada conexión lo dice en la pantalla donde la activas.',
 
     'lives_here' => 'Tus datos están aquí',
     'copy' => 'Copiar',

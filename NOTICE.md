@@ -46,9 +46,9 @@ run, and modify — but not as an instrument for human-rights abuse. We
 did not invent that obligation; we adopted a license that names it
 clearly.
 
-For the longer-form reasoning — including why we didn't pay for code-signing
-certificates and what that means for install-time security warnings — see
-[`.docs/legal/license-rationale.md`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md).
+For the longer-form reasoning behind the licence choice, see
+[`90-appendix/license-rationale.md`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md)
+in the specification.
 
 ## composer.json `license` field
 

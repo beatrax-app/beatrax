@@ -7,9 +7,9 @@ isolation.
 
 - **Location:** `Modules/Ingestion/tests/Unit/`
 - **What they test:** every per-source helper class against
-  fixture inputs — amount parsers (Asn / Ics / Paypal),
-  date parsers, column maps, header profiles, the MT940 lexer
-  - Tag 61 + Tag 86 parsers, the PayPal CSV language profile +
+  fixture inputs — amount parsers (Asn / Ics / Paypal), date
+  parsers, column maps, header profiles, the MT940 lexer +
+  Tag 61 + Tag 86 parsers, the PayPal CSV language profile +
   rollup, the PDF text extractor (smoke).
 - **The two PDF readers:** `PdfTextExtractorTest` covers the
   reader choice and the three refusals; the drawing-only and
@@ -52,13 +52,33 @@ isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noContentSniffingFormatDetection` — forbids
-  any adapter from inspecting file content to choose a format.
-  The user-declared id is the only entry point.
-- The repo-wide `noIngestionWritesToTransactions` — forbids
-  any class in `Modules\Ingestion\` from importing
-  `Modules\Ledger\Models\Transaction` for write. Adapters are
-  read-only over the file.
+- Nothing forbids an adapter from reading file content, and
+  every adapter does read it:
+  `HeaderSniffer::sniff(string $localPath, string $declaredFormat)`
+  opens the file to derive the delimiter, header presence and
+  column count. What no adapter does is *choose* the format,
+  and the signature is the evidence — the sniffer is handed the
+  answer and only checks it. A file that disagrees with the
+  declared id raises `SniffMismatchException` instead of being
+  re-identified as something else. That is a design the
+  adapters keep, not a rule the build checks.
+- `tests/Contracts/OfferedFormatsResolveToAParserArchTest.php`
+  is the gate that does exist around that design, and it holds
+  one set from both ends. The first case reads every upload
+  picker's `SUPPORTED_FORMATS` and default selection and fails
+  a format that neither
+  `SourceAdapterRegistry::supportedFormats()` nor the receipt
+  arm can parse; the second walks `SourceFormat::cases()` and
+  fails one with no adapter bound. The ids on offer and the
+  parsers bound stay the same set, which is what makes handing
+  the sniffer a declared id safe.
+- `Modules\Ingestion\` writes no transactions: it holds no
+  reference to the `transactions` table and never imports
+  `Modules\Ledger\Models\Transaction` at all. What keeps it
+  that way is `crossModuleRawTableWrites`, which pins every raw
+  write a module makes against a table another module created,
+  by file and table. No Ingestion entry is on that list, so the
+  first one fails the build.
 
 ## How to run the suite for just this module
 
@@ -94,14 +114,17 @@ composer test
   name to `PaypalCsvEventTypeMap` mapping to the appropriate
   payment type; ship the change with a covering unit test.
 - **`UnsupportedPaypalCsvLanguageException`** — the export was
-  in an unsupported language. Either add the language profile
-  - column map for the new language, or change the PayPal
-  export language to one already supported (en, nl).
-- **`PdfExtractionFailed` on a fresh ICS PDF** — the
-  underlying text extractor produced zero positional hits.
-  Open the PDF in a viewer; if it renders text-as-image (some
-  consumer-portal exports do under certain print options), the
-  user re-exports as a text-based PDF.
+  in an unsupported language. Either add the language
+  profile + column map for the new language, or change the
+  PayPal export language to one already supported (en, nl).
+- **`PdfHasNoTextLayerException` on a fresh ICS PDF** — the
+  file parsed and its pages carry no words. Open the PDF in a
+  viewer; if it renders text-as-image (some consumer-portal
+  exports do under certain print options), the user re-exports
+  as a text-based PDF. `PdfExtractionFailed` is the other
+  answer, and it means something coarser: the path is not a
+  readable `.pdf`, the file is over the size cap, or the
+  reader failed on the object graph.
 - **A CSV preview shows duplicate rows** — the adapter likely
   did not skip a mid-file repeated header row. Inspect the
   raw file for "header inside the body" and extend the
@@ -142,11 +165,15 @@ and the assertion — see
 - **The CAMT.053 adapter handles every sub-version ASN exports.**
   001.02, 001.03, 001.08. The underlying `genkgo/camt` library
   covers them; the adapter is a thin DTO-mapping layer.
-- **The MT940 adapter handles the ASN-specific narrative
-  conventions.** ASN's Tag 86 narrative shape differs slightly
-  from the standard SWIFT MT940; the module-local
-  `AsnMt940Tag86Parser` + `AsnMt940CounterpartyCleaner` handle
-  the divergence.
+- **The MT940 adapter reads the structured Tag 86 narrative.**
+  `kingsquare/php-mt940` hands back the subfield block as text,
+  so the module-local `Mt940Tag86Parser` splits the GVC code and
+  its `?`-delimited keywords (`EREF`, `MREF`, `SVWZ`, `IBAN`, …)
+  and `Mt940CounterpartyCleaner` strips the GVC prefix, the
+  SWIFT transaction-type prefix, a BIC and the SEPA markers off
+  the counterparty name. Neither is ASN-specific: the shapes
+  they handle are the SEPA conventions every Dutch bank emits,
+  and an unstructured narrative falls through to the raw text.
 - **The PayPal CSV adapter is multi-language.**
   `PaypalCsvLanguageProfile` detects en / nl etc.; the column
   map flips accordingly. An unsupported language raises
@@ -161,19 +188,33 @@ and the assertion — see
   `PaypalCsvEventTypeMap` is the source of truth; adding a new
   event type is one edit in the map. The exception's message
   carries the unknown type so the user can report it.
-- **The ICS PDF adapter raises `PdfExtractionFailed` for any
-  unreadable PDF.** No silent fallback to "best-effort"
-  parsing; the user uploads a corrected file.
+- **The ICS PDF adapter refuses rather than guessing.** There
+  is no fallback to "best-effort" parsing. The three refusals a
+  reader can act on are Public and typed —
+  `PdfPasswordProtectedException`, `PdfHasNoTextLayerException`
+  and `PdfReaderUnavailableException` — and `ImportPipeline`
+  maps each to its own `ImportFailureReason`. Everything else
+  stays `PdfExtractionFailed`, which is `Internal` and which
+  the pipeline does not map, so it lands on the
+  `FileStoppedShort` default: the reader is told the header
+  matched and the format is right, and is advised to try a
+  shorter date range. That is the wrong advice for a file the
+  extractor could not open at all.
 - **Adapter parsers never write to the database.** This module
   is read-only over the file; persistence is the pipeline's
   responsibility downstream.
 
 ## Edge cases
 
-- **A file in the wrong character set** — `HeaderSniffer`
-  flags the mismatch via `SniffResult.mismatchFlags`. The
-  wizard surfaces it; the user re-saves in UTF-8 (or
-  Windows-1252 for legacy ICS exports).
+- **A file in the wrong character set** — nothing detects it.
+  `SniffResult.encoding` is the encoding the preset declares
+  for that format, not one read off the bytes, and the CSV
+  adapters hand it to `CharsetConverter` to transcode into
+  UTF-8. A file saved in a different set is read as though it
+  were the declared one, so the mismatch surfaces as mangled
+  text in the preview — unless it also broke the header line,
+  in which case the sniffer raises `SniffMismatchException`
+  first.
 - **An empty file** — adapter yields zero DTOs; pipeline
   produces an empty preview; confirm is a no-op.
 - **A CSV with trailing repeated header rows** (user pasted
@@ -184,10 +225,12 @@ and the assertion — see
 - **A PayPal CSV in an unsupported language profile** —
   `UnsupportedPaypalCsvLanguageException`. The user changes the
   PayPal export language to one in the profile set.
-- **An ICS PDF whose text extraction produces zero positional
-  hits** — `PdfExtractionFailed`; the user uploads a fresh
-  PDF (sometimes the consumer-portal export hits an edge case
-  on a long statement page).
+- **An ICS PDF whose text extraction produces no words** —
+  `PdfHasNoTextLayerException`; the user re-exports the
+  statement as a text-based PDF. A file the reader could not
+  open at all is `PdfExtractionFailed` instead, and that one
+  reaches the wizard under the generic file-stopped-short
+  reason.
 - **A PayPal CSV row whose amount has no sign character** —
   `PaypalAmountParser` infers sign from the event type
   (`Express Checkout Payment Sent` → negative;

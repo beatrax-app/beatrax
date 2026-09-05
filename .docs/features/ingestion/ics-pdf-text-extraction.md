@@ -114,7 +114,12 @@ install a program that would not have helped and could not be installed:
 | `PdfReaderUnavailableException` | `PdfReaderUnavailable` | neither `pdftotext` nor `smalot/pdfparser` is present. A packaging fault, not a platform one |
 
 Everything else — an unreadable file, a Process error, a malformed
-object graph — stays `PdfExtractionFailed`.
+object graph — stays `PdfExtractionFailed`. That one is `Internal` and
+`ImportPipeline` maps only the three above, so it falls through to the
+`FileStoppedShort` default, whose copy tells the reader the header
+matched and the format is right and suggests a shorter date range. For
+a file the extractor could not open at all, that is advice they cannot
+act on.
 
 ## Raw text and cleaned text are both needed
 
@@ -235,11 +240,15 @@ step. A caller that abandons the iterator early leaves it at `null`.
 ## Amounts and dates
 
 `IcsAmountParser` reads the Dutch convention — comma is the decimal
-separator, period is the thousands separator — and requires exactly two
-fractional digits. It strips currency symbols and a closed list of ISO
-alpha-3 codes rather than a general `\b[A-Z]{3}\b`, which would
-over-consume a three-letter token that is not a currency. The symbols
-come from `Money::SYMBOLS` rather than a list of its own.
+separator, period is the thousands separator — and requires exactly as
+many fractional digits as the row's own currency has, which it asks
+`CurrencyScale::decimals()` for: two for a euro, none for a yen. A
+statement prints two amount columns and the left one is not always in
+euros, so the currency the caller read off the row is what decides the
+shape. It strips currency symbols and a closed list of ISO alpha-3
+codes rather than a general `\b[A-Z]{3}\b`, which would over-consume a
+three-letter token that is not a currency. The symbols come from
+`Money::SYMBOLS` rather than a list of its own.
 
 Only the **grammar** is local. Once the figure has passed the Dutch
 shape check the string→minor step is

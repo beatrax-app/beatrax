@@ -43,17 +43,26 @@ Practical recipes for exercising the `DevMode` module in isolation.
 
 ## Contract / arch invariants
 
-- `noUnsanctionedAuditWriter` — only `AuditWriter` may write to
-  `dev_mode_audit`.
 - `noHorizonImportsInShippedBuildCode` — only
   `app/Providers/HorizonServiceProvider.php` may import a Horizon
   symbol. `class_exists(\Laravel\Horizon\…)` arguments are stripped
   from the scan first so the inline FQCN inside this provider's
   `boot()` is legal.
-- `noFacadeCallsInDevModeProvider` — the provider must use
-  constructor / method DI for `Router`, `Config\Repository`,
-  `LivewireManager`, `Dispatcher`; the `view()`, `config()`,
-  `app()` global helpers are forbidden.
+- Nothing enforces mechanically that a `dev_mode_audit` row is only
+  ever inserted through `AuditWriter`.
+  `Internal\Audit\SpatieAuditWriter` is the contract's one
+  implementation and the only inserter, and
+  `Internal\Console\PruneDevAuditCommand` deletes aged rows through
+  the `DevModeActivity` model, but no test pins either — it is a
+  review convention.
+- Nothing enforces mechanically that `DevModeServiceProvider` keeps to
+  dependency injection either. It does take `Router`,
+  `Config\Repository`, `LivewireManager` and `Dispatcher` by DI and
+  calls no `view()`, `config()` or `app()` global helper, so the
+  convention holds by inspection. The two guards of that shape that do
+  exist are scoped to `Modules/Core/Internal/Console/`:
+  `noFacadeCallsFromCoreConsoleCommands` and
+  `noLaravelGlobalHelpersInCoreConsoleCommands`.
 
 ## How to run the suite for just this module
 
@@ -176,9 +185,13 @@ and the assertion — see
   subshell writes, since neither caller holds the code itself. A
   cancel is a `__cancelled` flag merged onto that same row, never a
   second event.
-- **`AuditWriter` is the only sanctioned path to a
-  `dev_mode_audit` row.** Direct INSERTs are blocked by the
-  `noUnsanctionedAuditWriter` arch invariant.
+- **`AuditWriter` is the only sanctioned path to a `dev_mode_audit`
+  row.** `Internal\Audit\SpatieAuditWriter` is its one
+  implementation and the only code that inserts. Nothing in the suite
+  pins that, so a direct INSERT would pass the build; deleting is the
+  exception the convention already makes, since
+  `Internal\Console\PruneDevAuditCommand` prunes aged rows through
+  the `DevModeActivity` model.
 - **`/dev/audit` reads and clears through one predicate.** Both
   `render()` and `truncateAll()` filter on `log_name` plus
   `causer_id`, so Clear all takes the rows the page shows and no
@@ -297,8 +310,10 @@ and the assertion — see
 - `users.is_developer` — per-user developer flag. The owner of the
   install carries it (set true at signup); partner accounts default
   to false.
-- `BEATRAX_RUNTIME=local` (env) — informs the system-snapshot page's
-  presentation; does NOT affect the dev gate.
+- No second runtime switch. `.env.bundled` sets `BEATRAX_RUNTIME`,
+  but no PHP in this tree reads it — the system-snapshot page's
+  runtime block is the installed `nativephp/laravel` version and
+  `php_uname()`, and the dev gate is `BEATRAX_DEV_MODE` alone.
 - `dev_mode_audit` retention — the `beatrax:prune-dev-audit` command
   takes a retention argument; the operator runs it periodically.
 - No per-user opt-out for the audit log; every dev action is

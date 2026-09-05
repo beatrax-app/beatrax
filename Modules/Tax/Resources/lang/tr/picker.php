@@ -30,7 +30,7 @@ return [
     // i18n-review: tr · batch_confirm — :name is a counterparty. This follows the
     // neighbouring batch_before and says "işyeri", while rules.chip_counterparty says
     // "karşı taraf". Which of the two this dialog wants is the open call.
-    'batch_confirm' => ':name adlı işyerinden kalan tüm işlemler vergiden indirilebilir olarak etiketlensin mi? Her biri bu kategoriyi ve bu notu alır. Etiket sonradan yalnızca tek tek işlemlerden kaldırılabilir.',
+    'batch_confirm' => ':name için :year vergi yılına ait :count işlem daha vergiden indirilebilir olarak etiketlensin mi? Her biri bu kategoriyi ve bu notu alır. Tamamlanmış mutabakattaki işlemlere dokunulmaz, etiket sonradan ise yalnızca tek tek işlemlerden kaldırılabilir.',
     'batch_tag_all' => 'Tümünü etiketle',
     'batch_dismiss' => 'Kapat',
 ];

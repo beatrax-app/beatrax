@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'L\'assistant n\'a pas pu déterminer l\'étape active. Utilise Reprendre plus tard → pour sortir ; le prochain chargement rétablira la situation.',
 
     'privacy' => 'Tes données restent sur cet appareil',
+    'privacy_connector' => 'Tes données restent sur cet appareil. Cette étape connecte ta boîte de réception à Google ou Microsoft.',
     'need_help' => 'Besoin d\'aide ?',
     'need_help_aria' => 'Besoin d\'aide ? Ouvre la page des tickets Beatrax sur GitHub',
 ];

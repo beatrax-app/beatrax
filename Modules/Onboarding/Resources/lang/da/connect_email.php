@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Kun læseadgang',
         'reads_label' => 'Beatrax læser',
         'reads_sub' => 'Kun kvitteringer',
-        'token_label' => 'Token bliver lokalt',
-        'token_sub' => 'Krypteret fil',
+        'token_label' => 'Token gemmes krypteret',
+        'token_sub' => 'I den lokale database',
     ],
 
     'authorize_gmail' => 'Autorisér med Gmail',

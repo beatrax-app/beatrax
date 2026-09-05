@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Viisard ei suutnud aktiivset sammu tuvastada. Vali väljumiseks Jätka hiljem → ja järgmine avamine taastab olukorra.',
 
     'privacy' => 'Sinu andmed jäävad sellesse seadmesse',
+    'privacy_connector' => 'Sinu andmed jäävad sellesse seadmesse. See samm ühendab sinu postkasti Google\'i või Microsoftiga.',
     'need_help' => 'Vajad abi?',
     'need_help_aria' => 'Vajad abi? Avab GitHubis Beatraxi probleemide lehe',
 ];

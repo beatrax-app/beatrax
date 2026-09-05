@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Kje so moji podatki?',
-    'intro' => 'Beatrax vse shranjuje na tej napravi. Nič se ne pošilja na strežnik, nič se ne sinhronizira v oblak, nič ne zapusti te naprave, dokler tega sam ne izvoziš.',
+    'intro' => 'Beatrax vse shranjuje na tej napravi. Strežnika Beatrax in računa v oblaku ni. Ven gre samo tisto, kar sam povežeš — nabiralnik, banka prek Enable Bankinga, naprave, ki jih seznaniš za sinhronizacijo — in poleg tega dnevna poizvedba za menjalne tečaje. Vsaka povezava to pove na zaslonu, kjer jo vklopiš.',
 
     'lives_here' => 'Tvoji podatki živijo tukaj',
     'copy' => 'Kopiraj',

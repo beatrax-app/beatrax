@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Przesuń datę serii',
-            'desc' => 'Przesuń w przód następne lub wszystkie kolejne wystąpienia.',
+            'desc' => 'Przenieś następne lub wszystkie kolejne wystąpienia na inną datę.',
         ],
     ],
 

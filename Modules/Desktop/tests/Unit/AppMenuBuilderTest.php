@@ -50,7 +50,7 @@ it('includes the Beatrax-specific File menu entries', function (): void {
 
     expect(json_encode($file, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE))
         ->toContain('Import file…')
-        ->toContain('Scan email now');
+        ->toContain('Email inboxes…');
 });
 
 it('includes the Beatrax-specific Help menu entries', function (): void {

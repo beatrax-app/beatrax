@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Dziennik audytu',
-    'subtitle' => 'Każde polecenie, działanie kolejki i zapytanie SQL uruchomione przez konsolę deweloperską.',
+    'subtitle' => 'Polecenia, działania kolejki i zapytania SQL, które uruchomiłeś przez konsolę deweloperską.',
     'clear_all' => 'Wyczyść wszystko',
-    'clear_all_confirm' => 'Wyczyścić wszystkie wpisy dziennika audytu? Tej operacji nie można cofnąć.',
+    'clear_all_confirm' => 'Wyczyścić wszystkie zapisane przez ciebie wpisy dziennika audytu? Tej operacji nie można cofnąć.',
     'filter_tier' => 'Poziom',
     'filter_all' => 'Wszystkie',
     'filter_command' => 'Polecenie',

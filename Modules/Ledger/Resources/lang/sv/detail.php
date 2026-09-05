@@ -97,7 +97,7 @@ return [
         'heading' => 'Ta bort transaktionen',
         'help' => 'Tar bort den här transaktionen permanent. Åtgärden kan inte ångras.',
         'button' => 'Ta bort',
-        'confirm_prompt' => 'Ta bort den här transaktionen? Anteckning, uppdelning och skatteetiketter följer med.',
+        'confirm_prompt' => 'Ta bort den här transaktionen? Anteckning, uppdelning, skatteetiketter och ett eventuellt bidrag till ett sparmål följer med. Är den det ena benet i en överföring blir det andra benet omklassificerat.',
         'confirm' => 'Ja, ta bort',
         'cancel' => 'Avbryt',
     ],

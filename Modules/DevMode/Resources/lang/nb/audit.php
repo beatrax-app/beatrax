@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Revisjonslogg',
-    'subtitle' => 'Hver kommando, køhandling og SQL-spørring som er kjørt via Dev Console.',
+    'subtitle' => 'Kommandoene, køhandlingene og SQL-spørringene du har kjørt via Dev Console.',
     'clear_all' => 'Tøm alt',
-    'clear_all_confirm' => 'Tømme alle oppføringer i revisjonsloggen? Dette kan ikke angres.',
+    'clear_all_confirm' => 'Tømme alle oppføringene du selv har laget i revisjonsloggen? Dette kan ikke angres.',
     'filter_tier' => 'Nivå',
     'filter_all' => 'Alle',
     'filter_command' => 'Kommando',

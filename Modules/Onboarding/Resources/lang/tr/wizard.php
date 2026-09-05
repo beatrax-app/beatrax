@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Sihirbaz etkin adımı belirleyemedi. Çıkmak için Sonra devam et → seçeneğini kullan; bir sonraki açılışta durum düzelecek.',
 
     'privacy' => 'Verilerin bu cihazda kalır',
+    'privacy_connector' => 'Verilerin bu cihazda kalır. Bu adım gelen kutunu Google veya Microsoft\'a bağlar.',
     'need_help' => 'Yardım gerekiyor mu?',
     'need_help_aria' => 'Yardım gerekiyor mu? Beatrax sorunlar sayfasını GitHub üzerinde açar',
 ];

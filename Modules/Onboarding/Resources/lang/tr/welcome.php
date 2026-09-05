@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Hoş geldin',
     'h1' => 'Beatrax paranı tanısın.',
-    'lede' => 'Yaklaşık 5 dakika. Hiçbir şey bu cihazdan çıkmaz — bağladığın her şey cihazdaki bir dosyada kalır.',
+    'lede' => 'Yaklaşık 5 dakika. Beatrax geçmişini bu cihazdaki bir dosyada tutar — dışarıya uzanan tek adım bir gelen kutusu bağlamaktır, onu da atlayabilirsin.',
     'tagline' => 'Kuracaklarımız şunlar:',
 
     'bank_title' => 'Bankan',

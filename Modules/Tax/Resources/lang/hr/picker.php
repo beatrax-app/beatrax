@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Označiti još :count iz',
     'batch_after' => '?',
-    'batch_confirm' => 'Označiti sve preostale transakcije od :name kao porezno priznate? Svaka od njih dobiva ovu kategoriju i ovu bilješku. Oznaka se poslije skida jedna po jedna transakcija.',
+    'batch_confirm' => 'Označiti još :count transakciju od :name za poreznu godinu :year kao porezno priznatu? Dobiva ovu kategoriju i ovu bilješku. Transakcije na dovršenom usklađivanju ostaju netaknute, a oznaka se poslije skida jedna po jedna transakcija.|Označiti još :count transakcije od :name za poreznu godinu :year kao porezno priznate? Svaka od njih dobiva ovu kategoriju i ovu bilješku. Transakcije na dovršenom usklađivanju ostaju netaknute, a oznaka se poslije skida jedna po jedna transakcija.|Označiti još :count transakcija od :name za poreznu godinu :year kao porezno priznate? Svaka od njih dobiva ovu kategoriju i ovu bilješku. Transakcije na dovršenom usklađivanju ostaju netaknute, a oznaka se poslije skida jedna po jedna transakcija.',
     'batch_tag_all' => 'Označi sve',
     'batch_dismiss' => 'Odbaci',
 ];

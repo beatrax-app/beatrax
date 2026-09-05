@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Kreator nie mógł ustalić aktywnego kroku. Użyj „Wróć później →”, aby wyjść — kolejne uruchomienie przywróci stan.',
 
     'privacy' => 'Twoje dane zostają na tym urządzeniu',
+    'privacy_connector' => 'Twoje dane zostają na tym urządzeniu. Ten krok łączy Twoją skrzynkę odbiorczą z Google albo Microsoftem.',
     'need_help' => 'Potrzebujesz pomocy?',
     'need_help_aria' => 'Potrzebujesz pomocy? Otwiera stronę zgłoszeń Beatrax na GitHubie',
 ];

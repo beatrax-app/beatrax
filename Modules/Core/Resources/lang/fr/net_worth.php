@@ -23,9 +23,11 @@ return [
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'taux au :date issus de :source',
 
-    'stale_bundled' => 'Beatrax utilise un taux de l\'instantané intégré. Active l\'actualisation en ligne dans les Paramètres pour des taux à jour.',
-    'stale_old' => 'Ce taux date de plus de 3 jours. La prochaine actualisation en ligne le mettra à jour.',
+    'stale_bundled' => 'Beatrax utilise un taux de l’instantané intégré, vieux de plus de :count jour. Active l’actualisation en ligne dans les Paramètres pour des taux à jour.|Beatrax utilise un taux de l’instantané intégré, vieux de plus de :count jours. Active l’actualisation en ligne dans les Paramètres pour des taux à jour.',
+    'stale_old' => 'Ce taux date de plus de :count jour. La prochaine actualisation en ligne le mettra à jour.|Ce taux date de plus de :count jours. La prochaine actualisation en ligne le mettra à jour.',
+    'stale_offline' => 'Ce taux date de plus de :count jour et l’actualisation en ligne est désactivée. Active-la dans les Paramètres pour le mettre à jour.|Ce taux date de plus de :count jours et l’actualisation en ligne est désactivée. Active-la dans les Paramètres pour le mettre à jour.',
 
+    'source_ecb' => 'BCE',
     'source_bundled' => 'Instantané intégré',
     'source_transaction' => 'Taux enregistré',
     'source_fallback' => 'taux',

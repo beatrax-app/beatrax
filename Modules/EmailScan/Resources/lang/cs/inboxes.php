@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Připojit znovu',
     'disconnect' => 'Odpojit',
+    'disconnect_confirm' => 'Odpojit :email? Odstraní to uložené přihlašovací údaje této schránky, její historii skenování i odesílatele, které jsi přidal nebo zamítl. Účtenky, které už jsou v Beatraxu, to neovlivní. Opětovné připojení začne skenovat od začátku.',
     'scan_now' => 'Skenovat',
     'scan_in_progress_title' => 'Skenování už běží',
 

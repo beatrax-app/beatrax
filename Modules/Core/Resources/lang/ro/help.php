@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Unde sunt datele mele?',
-    'intro' => 'Beatrax păstrează totul pe acest dispozitiv. Nimic nu este trimis către un server, nimic nu se sincronizează în cloud, nimic nu părăsește acest dispozitiv fără să exporți tu.',
+    'intro' => 'Beatrax păstrează totul pe acest dispozitiv. Nu există niciun server Beatrax și niciun cont în cloud. Iese doar ceea ce conectezi tu — o căsuță de e-mail, o bancă prin Enable Banking, dispozitivele pe care le împerechezi pentru sincronizare — plus o interogare zilnică a cursurilor valutare. Fiecare conexiune spune asta pe ecranul de unde o activezi.',
 
     'lives_here' => 'Datele tale sunt aici',
     'copy' => 'Copiază',

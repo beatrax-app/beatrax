@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Tutar gösterimi',
-        'label' => 'İşlem listesindeki varsayılan görünüm',
+        'label' => 'Tutarlar için varsayılan görünüm',
         'eur_only' => 'Tahsil edilen tutar',
         'original' => 'Orijinal tutar',
-        'help' => 'İşlem listesinden sayfa bazında yine de değiştirebilirsin.',
+        'help' => "İşlem listesi ve Panel'deki toplamlar için geçerlidir. Sayfa bazında yine de değiştirebilirsin, ama yalnızca işlem listesinden.",
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Döviz kurları',
         'fetch_online' => 'Güncel kurları çevrimiçi al',
-        'online_on' => "Kurlar her gün ECB'den alınır. Yalnızca para birimi çifti sorguları — kişisel veri yok.",
+        'online_on' => "Kurlar her gün ECB'den ya da ECB'ye ulaşılamazsa Frankfurter'dan alınır. Yalnızca para birimi çifti sorguları — kişisel veri yok.",
         'last_updated' => 'Son güncelleme: :date.',
-        'online_off' => 'Uygulamayla birlikte gelen kurlar kullanılıyor. Bu cihazdan hiçbir veri çıkmıyor.',
+        'online_off' => 'Bu cihazda zaten var olan kurlar kullanılmaya devam ediyor, yedek olarak da uygulamayla birlikte gelen anlık görüntü var. Bu cihazdan hiçbir veri çıkmıyor.',
         'fetch_aria' => 'Güncel döviz kurlarını çevrimiçi al',
         'refreshing' => 'Yenileniyor…',
         'next_refresh' => 'Otomatik yenileme: günde bir kez',

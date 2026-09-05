@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Revizioni log',
-    'subtitle' => 'Svaka komanda, radnja u redu čekanja i SQL upit pokrenuti kroz razvojnu konzolu.',
+    'subtitle' => 'Komande, radnje u redu čekanja i SQL upiti koje si pokrenuo kroz razvojnu konzolu.',
     'clear_all' => 'Očisti sve',
-    'clear_all_confirm' => 'Očistiti svaki unos revizionog loga? Ovo ne može da se poništi.',
+    'clear_all_confirm' => 'Očistiti svaki unos revizionog loga koji si zabeležio? Ovo ne može da se poništi.',
     'filter_tier' => 'Nivo',
     'filter_all' => 'Sve',
     'filter_command' => 'Komanda',

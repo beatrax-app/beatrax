@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Prikaz zneska',
-        'label' => 'Privzeti pogled na seznamu transakcij',
+        'label' => 'Privzeti pogled zneskov',
         'eur_only' => 'Poravnani znesek',
         'original' => 'Izvirni znesek',
-        'help' => 'Pogled lahko še vedno preklopiš za vsako stran s seznama transakcij.',
+        'help' => 'Velja za seznam transakcij in za skupne zneske na nadzorni plošči. Pogled lahko še vedno preklopiš za vsako stran, a le s seznama transakcij.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Menjalni tečaji',
         'fetch_online' => 'Pridobi aktualne tečaje iz spleta',
-        'online_on' => 'Tečaji se dnevno pridobivajo od ECB. Samo poizvedbe o valutnih parih — brez osebnih podatkov.',
+        'online_on' => 'Tečaji se dnevno pridobivajo od ECB ali od Frankfurterja, če ECB ni dosegljiv. Samo poizvedbe o valutnih parih — brez osebnih podatkov.',
         'last_updated' => 'Zadnja posodobitev: :date.',
-        'online_off' => 'Uporabljajo se priloženi tečaji. Noben podatek ne zapusti te naprave.',
+        'online_off' => 'Še naprej se uporabljajo že shranjeni tečaji, priložena kopija pa služi kot rezerva. Noben podatek ne zapusti te naprave.',
         'fetch_aria' => 'Pridobi aktualne menjalne tečaje iz spleta',
         'refreshing' => 'Osveževanje…',
         'next_refresh' => 'Samodejno osveževanje: enkrat na dan',

@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Nur Lesezugriff',
         'reads_label' => 'Beatrax liest',
         'reads_sub' => 'Nur Belege',
-        'token_label' => 'Token bleibt lokal',
-        'token_sub' => 'Verschlüsselte Datei',
+        'token_label' => 'Token verschlüsselt gespeichert',
+        'token_sub' => 'In der lokalen Datenbank',
     ],
 
     'authorize_gmail' => 'Mit Gmail autorisieren',

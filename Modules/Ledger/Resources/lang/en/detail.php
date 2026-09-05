@@ -99,7 +99,7 @@ return [
         'heading' => 'Delete transaction',
         'help' => 'Permanently removes this transaction. This action cannot be undone.',
         'button' => 'Delete',
-        'confirm_prompt' => 'Delete this transaction? Its note, split and tax tags go with it.',
+        'confirm_prompt' => 'Delete this transaction? Its note, split, tax tags and any goal contribution go with it. If it is one leg of a transfer, the other leg is reclassified.',
         'confirm' => 'Yes, delete',
         'cancel' => 'Cancel',
     ],

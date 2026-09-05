@@ -25,6 +25,6 @@ return [
         'title' => 'Actualizează lista comună la actualizările aplicației',
         'help' => 'Reîmprospătează lista livrată cu aplicația de fiecare dată când Beatrax se actualizează.',
         'help_phone' => 'Reîmprospătează lista livrată cu aplicația de fiecare dată când se instalează o versiune nouă de Beatrax din App Store sau Google Play.',
-        'note' => 'Se activează la o actualizare viitoare a aplicației — vezi Setări → Despre pentru versiunea curentă.',
+        'note' => 'Se activează la o actualizare viitoare a aplicației — versiunea pe care o folosești este afișată în partea de sus a barei laterale.',
     ],
 ];

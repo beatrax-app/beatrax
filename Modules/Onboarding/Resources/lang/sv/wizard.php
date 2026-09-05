@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Guiden kunde inte avgöra vilket steg som är aktivt. Använd Fortsätt senare → för att avsluta, så återställs det nästa gång sidan laddas.',
 
     'privacy' => 'Dina data stannar på den här enheten',
+    'privacy_connector' => 'Dina data stannar på den här enheten. Det här steget kopplar din inkorg till Google eller Microsoft.',
     'need_help' => 'Behöver du hjälp?',
     'need_help_aria' => 'Behöver du hjälp? Öppnar Beatrax issues-sida på GitHub',
 ];

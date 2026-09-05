@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Bun venit',
     'h1' => 'Hai să îl învățăm pe Beatrax banii tăi.',
-    'lede' => 'Cam 5 minute. Nimic nu părăsește acest dispozitiv — tot ce conectezi rămâne într-un fișier de pe el.',
+    'lede' => 'Cam 5 minute. Beatrax îți ține istoricul într-un fișier de pe acest dispozitiv — singurul pas care iese în afară este conectarea unei căsuțe de e-mail, iar pe acesta îl poți sări.',
     'tagline' => 'Iată ce vom configura:',
 
     'bank_title' => 'Banca ta',

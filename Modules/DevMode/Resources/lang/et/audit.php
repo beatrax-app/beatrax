@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Auditilogi',
-    'subtitle' => 'Iga käsk, järjekorratoiming ja SQL-päring, mis on arenduskonsooli kaudu käivitatud.',
+    'subtitle' => 'Käsud, järjekorratoimingud ja SQL-päringud, mille oled arenduskonsooli kaudu käivitanud.',
     'clear_all' => 'Tühjenda kõik',
-    'clear_all_confirm' => 'Kas kustutada kõik auditilogi kirjed? Seda ei saa tagasi võtta.',
+    'clear_all_confirm' => 'Kas kustutada kõik auditilogi kirjed, mille sina tekitasid? Seda ei saa tagasi võtta.',
     'filter_tier' => 'Tase',
     'filter_all' => 'Kõik',
     'filter_command' => 'Käsk',

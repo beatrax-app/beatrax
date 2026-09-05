@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Palikti biometriją',
 
     'auto_lock' => 'Automatiškai užrakinti po',
+    'auto_lock_note' => 'Beatrax užsirakina po tiek laiko be veiksmų — ir anksčiau, jei ją palieki: perjungus į kitą programėlę arba paslėpus ar užvėrus langą, Beatrax užsirakina per :window, nepaisant šio nustatymo.',
     'idle_1' => '1 minutės',
     'idle_5' => '5 minučių',
     'idle_15' => '15 minučių',

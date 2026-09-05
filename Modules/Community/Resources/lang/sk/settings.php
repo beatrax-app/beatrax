@@ -25,6 +25,6 @@ return [
         'title' => 'Aktualizovať zdieľaný zoznam pri aktualizáciách aplikácie',
         'help' => 'Obnoví priložený zoznam vždy, keď sa Beatrax aktualizuje.',
         'help_phone' => 'Obnoví priložený zoznam vždy, keď sa z App Store alebo Google Play nainštaluje nová verzia Beatraxu.',
-        'note' => 'Aktivuje sa s budúcou aktualizáciou aplikácie — aktuálnu verziu nájdeš v časti Nastavenia → O aplikácii.',
+        'note' => 'Aktivuje sa s budúcou aktualizáciou aplikácie — verziu, ktorú používaš, nájdeš hore v bočnom paneli.',
     ],
 ];

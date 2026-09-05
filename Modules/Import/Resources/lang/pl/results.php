@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Wgraj kolejny wyciąg',
 
     'chain' => [
-        'heading' => 'Rozwiązywanie łańcuchów…',
-        'pending' => 'W kolejce. Rozwiązywanie łańcuchów wkrótce się rozpocznie.',
+        'heading' => 'Rozwiązywanie łańcuchów',
+        'pending' => 'Rozwiązywanie łańcuchów nie ruszyło, więc łańcuchy finansowania nie zostały połączone.',
         'running' => 'Trwa łączenie łańcuchów finansowania i rozkładanie rozliczeń z wyciągu.',
     ],
 

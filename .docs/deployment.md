@@ -24,8 +24,16 @@ writes `.env`, configures the database, and runs the install.
 
 ## Requirements
 
-- PHP **8.5** with extensions: `intl`, `pcntl`, `posix`, `pdo_sqlite`,
-  `zip`, `bcmath`, `zlib`, `iconv` — the last two are what the in-app PDF
+- PHP **8.5** with the extensions `composer.json` requires: `ctype`, `curl`,
+  `dom`, `filter`, `iconv`, `intl`, `libxml`, `mbstring`, `openssl`, `pcntl`,
+  `pdo`, `pdo_sqlite`, `posix`, `simplexml`, `sodium`, `sqlite3`, `tokenizer`,
+  `zip`, `zlib`. Composer refuses the install without any one of them, and
+  several carry a whole subsystem the list does not name: `sodium` is the
+  app-lock KDF, `BackupEncryptor`, the Ed25519 signature check on a desktop
+  update manifest and the crypto under every sync frame, so an install without
+  it has no lock screen and no sync at all; `dom`, `libxml` and `simplexml`
+  are what the CAMT.053 statement reader parses with; `zip` writes the
+  export-everything archive; and `zlib` and `iconv` are what the in-app PDF
   reader decompresses and transcodes statement streams with.
 - `poppler-utils` (`pdftotext`) is **optional**. It is preferred for PDF
   statement ingestion where it is installed; without it the app falls back
@@ -38,7 +46,7 @@ writes `.env`, configures the database, and runs the install.
 - **SQLite.** It is the only supported database, in every deployment shape.
 
 > **Not PostgreSQL or MySQL, and not by omission.** The schema is SQLite-only:
-> thirty-two migrations use `RAISE(ABORT)` enum-guard triggers, and full-text
+> thirty-seven migrations install `RAISE(ABORT)` guard triggers, and full-text
 > search is an FTS5 virtual table. `artisan migrate` against a server database
 > fails on the first substantive table. See
 > [ADR-0022](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0022-sqlite-only-schema.md).
@@ -298,7 +306,8 @@ rest](features/sync/sensitive-columns-at-rest.md#where-the-key-lives-on-a-phone-
 
 ## Configuration reference
 
-`beatrax:setup` writes these; you can also set them by hand in `.env`:
+`beatrax:setup` writes `APP_URL`, `APP_ENV`, `APP_DEBUG` and `DB_CONNECTION`.
+The rest you set by hand in `.env`:
 
 | Key | Purpose |
 |-----|---------|

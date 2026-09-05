@@ -6,7 +6,7 @@ return [
     'heading' => 'Naprave in sinhronizacija',
 
     'enable_sync' => 'Vklopi sinhronizacijo',
-    'enable_sync_help' => 'Varno deli svoje podatke med zaupanja vrednimi napravami. Zahteva zaklepanje aplikacije. Ko je vklopljeno, so tvoji podatki šifrirani, zaklepanja aplikacije pa ni več mogoče izklopiti.',
+    'enable_sync_help' => 'Varno deli svoje podatke med zaupanja vrednimi napravami. Zahteva zaklepanje aplikacije. Vklopa ni mogoče razveljaviti: podatki so od tedaj šifrirani, izklopiti pa ni več mogoče niti sinhronizacije niti zaklepanja aplikacije.',
 
     'app_lock_notice' => 'Najprej nastavi zaklepanje aplikacije, da vklopiš sinhronizacijo.',
     'go_to_app_lock' => 'Pojdi na Zaklepanje aplikacije',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Odklepanje to seznanjanje znova odpre, namesto da bi mu pustilo poteči, zato traja dlje od nastavljenega časa zaklepanja aplikacije. Konča se, ko ga dokončate ali prekličete.',
 
     'relay_endpoint' => 'Končna točka releja',
-    'relay_endpoint_help' => 'Neobvezno. Ko je nastavljena, se naprave brez povezave sinhronizirajo prek tega releja. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
-    'relay_endpoint_help_phone' => 'Neobvezno. Ko je nastavljena, spremembe potujejo prek tega releja tudi takrat, ko tvoji napravi nista v istem omrežju. Ta naprava jih prevzame, ko sinhroniziraš s tega zaslona — nikoli v ozadju, ker zaklep aplikacije hrani edini ključ. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
+    'relay_endpoint_help' => 'Neobvezno. Relej dvema napravama omogoča, da dokončata seznanjanje in si izmenjata šifrirna ključa, kadar druga do druge ne moreta neposredno. Same transakcije se še vedno sinhronizirajo le, kadar sta obe napravi v istem omrežju. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
+    'relay_endpoint_help_phone' => 'Neobvezno. Relej dvema napravama omogoča, da dokončata seznanjanje in si izmenjata šifrirna ključa, kadar druga do druge ne moreta neposredno. Same transakcije se še vedno sinhronizirajo le, kadar sta obe napravi v istem omrežju. Ta naprava prevzame, kar jo čaka, ko sinhroniziraš s tega zaslona — nikoli v ozadju, ker zaklep aplikacije hrani edini ključ. Pusti prazno samo za neposredno povezavo znotraj LAN&#8209;a.',
     'relay_endpoint_aria' => 'URL končne točke releja',
     'relay_insecure_warning' => 'Ta končna točka releja uporablja navaden HTTP. Čeprav rele tvojih podatkov nikoli ne dešifrira, nezavarovana povezava opazovalcem omrežja razkrije velikosti šifriranih podatkov in čas pošiljanja. Za najboljšo zasebnost uporabi končno točko <strong>https://</strong>.',
 

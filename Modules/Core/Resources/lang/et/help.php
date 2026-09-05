@@ -9,7 +9,10 @@ return [
     ],
 
     'page_title' => 'Kus mu andmed on?',
-    'intro' => 'Beatrax hoiab kõike selles seadmes. Midagi ei saadeta serverisse, midagi ei sünkroonita pilve ja midagi ei lahku sellest seadmest enne, kui sa selle ise ekspordid.',
+    // i18n-review: et · intro — "the devices you pair for sync" became the
+    // relative "seadmed, mille sünkroonimiseks seod". A native should say
+    // whether that reads inside an em-dash list, or wants a clause of its own.
+    'intro' => 'Beatrax hoiab kõike selles seadmes. Beatraxi serverit ega pilvekontot ei ole. Välja läheb ainult see, mille sa ise ühendad — postkast, pank Enable Bankingu kaudu, seadmed, mille sünkroonimiseks seod — ja lisaks igapäevane vahetuskursside päring. Iga ühendus ütleb seda ekraanil, kus sa selle sisse lülitad.',
 
     'lives_here' => 'Sinu andmed asuvad siin',
     'copy' => 'Kopeeri',

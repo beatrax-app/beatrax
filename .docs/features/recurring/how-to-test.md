@@ -34,10 +34,17 @@ isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide
-  `noRecurringSeriesStateWritesOutsideMachine` — only
+- The repo-wide `noOtherRecurringSeriesStateMutator` — only
   `Internal\StateMachines\RecurringSeriesStateMachine` may
-  write `recurring_series.state`.
+  write `recurring_series.state`. It targets the `state` key in
+  the update payload specifically: the latest amount, the monthly
+  equivalent, the next-expected charge and the funding-chain link
+  are refreshed without the machine by design.
+- `noRecurringSeriesWritesFromDriftAlerts` — a separate gate,
+  and the one that keeps `DriftAlerts` analytical. No file under
+  `Modules/DriftAlerts/` may write the table at all, through the
+  model or through a raw builder; its reads are unrestricted and
+  go through `RecurringSeriesQuery`.
 - The repo-wide module-boundary invariant — forbids any
   external module from importing
   `Modules\Recurring\Internal\*` or
@@ -121,8 +128,7 @@ and the assertion — see
   product's load-bearing UX guarantee.
 - **`RecurringSeriesStateMachine` is the SOLE sanctioned
   mutator of `recurring_series.state`.** Any other write is
-  forbidden by the
-  `noRecurringSeriesStateWritesOutsideMachine` arch
+  forbidden by the `noOtherRecurringSeriesStateMutator` arch
   invariant. The audit row in
   `recurring_series_transitions` is appended on every
   transition.

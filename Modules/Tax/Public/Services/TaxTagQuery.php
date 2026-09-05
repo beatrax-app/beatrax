@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Modules\Tax\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -230,20 +232,8 @@ final readonly class TaxTagQuery
             )
             : '';
 
-        $untaggedCount = $connection
-            ->table(TaggedRowScope::TRANSACTIONS)
-            ->leftJoin(TaggedRowScope::TAGS, static function (JoinClause $join) use ($userId): void {
-                $join->on('tag.transaction_id', '=', 't.id')
-                    ->where('tag.user_id', '=', $userId);
-            })
-            ->whereNull('tag.id')
-            ->where('t.user_id', $userId)
-            ->where('t.counterparty_id', $cpId)
+        $untaggedCount = $this->untaggedForCounterparty($userId, $cpId, $taxYear)
             ->where('t.id', '!=', $transactionId)
-            ->whereRaw(
-                TaggedRowScope::TRANSACTION_YEAR.' = ?',
-                [$taxYear],
-            )
             ->count();
 
         return new BatchTagSuggestion(
@@ -258,7 +248,18 @@ final readonly class TaxTagQuery
      */
     public function untaggedIdsForCounterparty(int $userId, int $counterpartyId, int $taxYear): array
     {
-        $rows = $this->db->connection()
+        $rows = $this->untaggedForCounterparty($userId, $counterpartyId, $taxYear)->pluck('t.id');
+
+        return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
+    }
+
+    // One predicate behind the banner's offer and the banner's write, so the
+    // two cannot say different numbers. A reconcile freezes exactly the
+    // classification a tag is, so a row it covers is neither counted nor
+    // tagged — counting them offered seven and wrote three.
+    private function untaggedForCounterparty(int $userId, int $counterpartyId, int $taxYear): QueryBuilder
+    {
+        return $this->db->connection()
             ->table(TaggedRowScope::TRANSACTIONS)
             ->leftJoin(TaggedRowScope::TAGS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
@@ -267,13 +268,11 @@ final readonly class TaxTagQuery
             ->whereNull('tag.id')
             ->where('t.user_id', $userId)
             ->where('t.counterparty_id', $counterpartyId)
+            ->where('t.status', '!=', ClearedStatus::Reconciled->value)
             ->whereRaw(
                 TaggedRowScope::TRANSACTION_YEAR.' = ?',
                 [$taxYear],
-            )
-            ->pluck('t.id');
-
-        return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
+            );
     }
 
     // What the badge on a transaction row prints: the corpus's short label in

@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Biyometriyi koru',
 
     'auto_lock' => 'Şu süreden sonra otomatik kilitle',
+    'auto_lock_note' => "Beatrax bu süre boyunca hiçbir işlem yapılmazsa kilitlenir — uygulamadan ayrılırsan daha da erken: başka bir uygulamaya geçmek ya da pencereyi gizlemek veya kapatmak, bu ayar ne derse desin, Beatrax'ı en fazla :window içinde kilitler.",
     'idle_1' => '1 dakika',
     'idle_5' => '5 dakika',
     'idle_15' => '15 dakika',

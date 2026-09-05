@@ -7,13 +7,16 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scheduling\MobileBackgroundSchedule;
+use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
 
-// "offline devices sync via this relay" reads as an unattended pull. On a phone
-// there is none: MobileBackgroundSchedule::impossibleOnDevice() names
-// mobile.sync-pull as work no device schedule can complete, and the only caller
+// "offline devices sync via this relay" promised two things at once, and the
+// relay does neither. It carries pairing frames and GDK epoch wraps; op-log
+// frames only ever cross the Noise socket. And on a phone there is no
+// unattended pull at all: MobileBackgroundSchedule::impossibleOnDevice() names
+// mobile.sync-pull as work no device schedule can complete, so the only caller
 // of the burst outside setup is the Sync now tap on this very screen.
 
 beforeEach(function (): void {
@@ -53,10 +56,12 @@ it('has no background sync to describe on a device, by the scheduler declaration
     expect(MobileBackgroundSchedule::impossibleOnDevice())->toHaveKey('mobile.sync-pull');
 });
 
-it('keeps the unattended wording on the desktop, which really does collect while it runs', function (): void {
+it('never offers the relay as a road a transaction can take', function (): void {
     Livewire::test(DevicesAndSyncSettingsSection::class)
         ->assertSet('onPhone', false)
-        ->assertSee('offline devices sync via this relay');
+        ->assertDontSee('offline devices sync via this relay')
+        ->assertSee('complete pairing and exchange encryption keys')
+        ->assertSee('Transactions themselves still sync only when both devices are on the same network');
 });
 
 it('tells a phone reader the relay still waits on a sync they start', function (): void {
@@ -64,6 +69,13 @@ it('tells a phone reader the relay still waits on a sync they start', function (
 
     Livewire::test(DevicesAndSyncSettingsSection::class)
         ->assertSet('onPhone', true)
-        ->assertDontSee('offline devices sync via this relay')
+        ->assertSee('Transactions themselves still sync only when both devices are on the same network')
         ->assertSee('when you sync from this screen');
+});
+
+it('says the same thing about transactions as the sentence one screen along', function (): void {
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->assertSee('when both devices are on the same network');
+
+    expect(Lang::get('mobile::sync.result.unreachable'))->toContain('same network');
 });

@@ -20,10 +20,6 @@ use Modules\Core\Public\Enums\Duration;
  */
 final readonly class LockIdleClock
 {
-    // Mirrors lock.js's GRACE_MS, and is the only clock that works on Android:
-    // a suspended WebView never fires the page timer.
-    private const int BACKGROUND_GRACE_SECONDS = 30;
-
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -54,7 +50,7 @@ final readonly class LockIdleClock
             return false;
         }
 
-        return $this->clock->now()->getTimestamp() - $markedAt >= self::BACKGROUND_GRACE_SECONDS;
+        return $this->clock->now()->getTimestamp() - $markedAt >= IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS;
     }
 
     // The row's stamp is the seed, not the answer: it carries a session that

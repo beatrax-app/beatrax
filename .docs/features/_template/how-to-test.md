@@ -144,6 +144,6 @@ guards the module respects:
 
 - `users.<preference_column>` — what it toggles.
 - `config('<module-key>.option')` — what it controls.
-- `BEATRAX_RUNTIME=local` — whether the module behaves differently
-  under the developer-mode runtime override (see
-  [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md)).
+- `BEATRAX_DEV_MODE` — whether the module behaves differently with
+  developer mode on. This is the only runtime switch; read it through
+  `config('app.dev_mode')` rather than from the environment.

@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Kur yra mano duomenys?',
-    'intro' => 'Beatrax viską saugo šiame įrenginyje. Niekas nesiunčiama į serverį, niekas nesinchronizuojama su debesija, niekas neišeina iš šio įrenginio, kol pats to neeksportuoji.',
+    'intro' => 'Beatrax viską saugo šiame įrenginyje. Nėra jokio Beatrax serverio ir jokios paskyros debesijoje. Į išorę keliauja tik tai, ką pats prijungi — pašto dėžutė, bankas per Enable Banking, įrenginiai, kuriuos susieji sinchronizavimui — ir dar kasdienė valiutų kursų užklausa. Kiekvienas ryšys tai pasako tame lange, kuriame jį įjungi.',
 
     'lives_here' => 'Tavo duomenys yra čia',
     'copy' => 'Kopijuoti',

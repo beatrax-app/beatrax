@@ -25,6 +25,6 @@ return [
         'title' => 'Uppdatera den delade listan vid appuppdateringar',
         'help' => 'Hämta den medföljande listan på nytt varje gång Beatrax uppdaterar sig själv.',
         'help_phone' => 'Hämta den medföljande listan på nytt varje gång en ny version av Beatrax installeras från App Store eller Google Play.',
-        'note' => 'Aktiveras med en framtida appuppdatering — se Inställningar → Om för aktuell version.',
+        'note' => 'Aktiveras med en framtida appuppdatering — versionen du kör visas högst upp i sidopanelen.',
     ],
 ];

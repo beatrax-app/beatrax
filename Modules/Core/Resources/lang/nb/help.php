@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Hvor er dataene mine?',
-    'intro' => 'Beatrax lagrer alt på denne enheten. Ingenting sendes til en server, ingenting synkroniseres til skyen, og ingenting forlater enheten uten at du eksporterer det.',
+    'intro' => 'Beatrax lagrer alt på denne enheten. Det finnes ingen Beatrax-server og ingen skykonto. Det eneste som går ut, er det du selv kobler til — en innboks, en bank via Enable Banking, enhetene du parer for synkronisering — pluss et daglig oppslag av valutakurser. Hver tilkobling sier fra om det på skjermen der du slår den på.',
 
     'lives_here' => 'Dataene dine ligger her',
     'copy' => 'Kopier',

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Tarkastusloki',
-    'subtitle' => 'Jokainen komento, jonotoiminto ja SQL-kysely, joka on ajettu kehityskonsolin kautta.',
+    'subtitle' => 'Komennot, jonotoiminnot ja SQL-kyselyt, jotka olet ajanut kehityskonsolin kautta.',
     'clear_all' => 'Tyhjennä kaikki',
-    'clear_all_confirm' => 'Tyhjennetäänkö kaikki tarkastuslokin rivit? Tätä ei voi kumota.',
+    'clear_all_confirm' => 'Tyhjennetäänkö kaikki omat tarkastuslokin rivit? Tätä ei voi kumota.',
     'filter_tier' => 'Taso',
     'filter_all' => 'Kaikki',
     'filter_command' => 'Komento',

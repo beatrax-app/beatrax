@@ -97,7 +97,7 @@ return [
         'heading' => 'Slett transaksjonen',
         'help' => 'Fjerner denne transaksjonen permanent. Handlingen kan ikke angres.',
         'button' => 'Slett',
-        'confirm_prompt' => 'Slette denne transaksjonen? Notat, fordeling og skattemerker forsvinner med den.',
+        'confirm_prompt' => 'Slette denne transaksjonen? Notat, fordeling, skattemerker og et eventuelt bidrag til et sparemål forsvinner med den. Er den det ene benet i en overføring, blir det andre benet omklassifisert.',
         'confirm' => 'Ja, slett',
         'cancel' => 'Avbryt',
     ],

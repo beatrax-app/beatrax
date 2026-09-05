@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\FX\Public\Services\ExchangeRateService')
 @use('Modules\FX\Public\Support\BundledRates')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -18,8 +19,11 @@
     $conversionActive = $netWorth->ratesSource !== null;
 
     // Human-readable provider label for the disclosure copy (UI-SPEC §7.2).
+    // The institution's acronym is localised — several locales say BCE and one
+    // says the Greek form — while Frankfurter is a service name that stays
+    // itself in all twenty-six.
     $sourceLabel = static fn (?string $source): string => match ($source) {
-        'ecb' => 'ECB',
+        'ecb' => Lang::get('core::net_worth.source_ecb'),
         'frankfurter' => 'Frankfurter',
         BundledRates::SOURCE => Lang::get('core::net_worth.source_bundled'),
         'transaction' => Lang::get('core::net_worth.source_transaction'),
@@ -27,12 +31,14 @@
         default => ucfirst($source),
     };
 
-    // Stale-note copy depends on the rate's provenance (UI-SPEC §7.2): a bundled
-    // snapshot tells the user to enable online refresh; a merely-old online rate
-    // (staleness is age-based, independent of source) just notes its age.
-    $staleNote = static fn (?string $source): string => $source === BundledRates::SOURCE
-        ? Lang::get('core::net_worth.stale_bundled')
-        : Lang::get('core::net_worth.stale_old');
+    // Stale-note copy depends on provenance AND on the toggle (UI-SPEC §7.2).
+    // Only fx:refresh-rates ends the wait and it skips a reader who has online
+    // fetching off, so promising them a next refresh names a job nothing runs.
+    $staleNote = static fn (?string $source): string => match (true) {
+        $source === BundledRates::SOURCE => Lang::choice('core::net_worth.stale_bundled', ExchangeRateService::STALE_DAYS_THRESHOLD),
+        ! $fxOnlineEnabled => Lang::choice('core::net_worth.stale_offline', ExchangeRateService::STALE_DAYS_THRESHOLD),
+        default => Lang::choice('core::net_worth.stale_old', ExchangeRateService::STALE_DAYS_THRESHOLD),
+    };
 
     // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
     // (brick/money cross-rate). Rate::forDisplay(), not a fixed four places:

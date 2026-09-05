@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Fájl',
         'file_import' => 'Fájl importálása…',
-        'file_scan_email' => 'E-mail vizsgálata most',
+        'file_scan_email' => 'E-mail-postafiókok…',
         'help' => 'Súgó',
         'help_github_repo' => 'GitHub-repó',
         'help_report_issue' => 'Hiba bejelentése',
         'help_about' => 'A Beatraxról',
         'developer_submenu' => 'Fejlesztő',
         'dev_open_console' => 'Dev Console megnyitása',
-        'dev_run_command' => '⌘K Parancs futtatása',
+        'dev_run_command' => 'Parancs futtatása…',
     ],
 
     'worker_alert' => [

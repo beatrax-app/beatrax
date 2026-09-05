@@ -11,7 +11,7 @@ return [
     'cancel' => 'Atcelt',
     'save_connect' => 'Saglabāt un pievienot',
 
-    'secret_help' => 'Tie tiek glabāti lokālā konfigurācijas failā ārpus datubāzes ar ierobežojošām atļaujām un nekad nepamet šo ierīci.',
+    'secret_help' => 'Tiek glabāts šifrēts šīs ierīces datubāzē. Beatrax to nosūta tikai Google vai Microsoft, lai iegūtu un atjaunotu jūsu piekļuves pilnvaru — nekur citur.',
 
     'gmail' => [
         'step1_title' => 'Atveriet Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Ievadiet Google OAuth client ID, kas beidzas ar .apps.googleusercontent.com.',
         'google_secret' => 'Ievadiet Google OAuth client secret, kas sākas ar GOCSPX-.',
         'google_published' => 'Apstipriniet, ka OAuth piekrišanas ekrāns ir pārslēgts uz „In production”.',
-        'write_failed' => 'Neizdevās saglabāt jūsu OAuth klientu diskā — pārbaudiet noslēpumu direktorijas atļaujas un mēģiniet vēlreiz.',
+        'write_failed' => 'Neizdevās saglabāt jūsu OAuth klientu — ierakstīšana šīs ierīces datubāzē neizdevās. Mēģiniet vēlreiz.',
     ],
 ];

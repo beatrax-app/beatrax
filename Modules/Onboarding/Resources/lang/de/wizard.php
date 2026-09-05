@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Der Assistent konnte den aktiven Schritt nicht bestimmen. Nutze Später fortsetzen →, um zu beenden; beim nächsten Laden wird das behoben.',
 
     'privacy' => 'Deine Daten bleiben auf diesem Gerät',
+    'privacy_connector' => 'Deine Daten bleiben auf diesem Gerät. Dieser Schritt verbindet dein Postfach mit Google oder Microsoft.',
     'need_help' => 'Brauchst du Hilfe?',
     'need_help_aria' => 'Brauchst du Hilfe? Öffnet die Beatrax-Issues-Seite auf GitHub',
 ];

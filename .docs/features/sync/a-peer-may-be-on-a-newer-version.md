@@ -54,8 +54,11 @@ amount — the amount with the sign it was stored with, which is a fact and not
 a derivation — and loses only the direction word and the `+` that would have
 claimed one.
 
-Nothing is dropped, so nothing is silently missing from a total either:
-`netMoved()` sums `amount_minor` over the rows and never consults `kind`.
+Nothing is dropped, so nothing is silently missing from a total either.
+`CarryoverQuery::batchMoves()` reaches `EnvelopeRow::$netMovedMinor` through a
+`SUM(amount_minor) AS net_minor` over `envelope_moves`, and
+`PotAllocationLedger` sums `pot_movements.amount_minor` the same way. Neither
+consults `kind`.
 
 ## The rule
 

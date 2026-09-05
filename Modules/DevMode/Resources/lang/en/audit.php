@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Audit log',
-    'subtitle' => 'Every command, queue action, and SQL query run through the Dev Console.',
+    'subtitle' => 'The commands, queue actions, and SQL queries you have run through the Dev Console.',
     'clear_all' => 'Clear all',
-    'clear_all_confirm' => 'Clear every audit log entry? This cannot be undone.',
+    'clear_all_confirm' => 'Clear every audit entry you recorded? This cannot be undone.',
     'filter_tier' => 'Tier',
     'filter_all' => 'All',
     'filter_command' => 'Command',

@@ -399,6 +399,10 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(AppActionRegistry::class, static function (Application $app): AppActionRegistryImpl {
             $router = $app->make(Router::class);
 
+            // Every row navigates. Two of them named an event instead, and
+            // nothing in the tree listened for either: the palette closed, the
+            // pick was filed under Recent, and the mailbox was never read while
+            // the theme was never written. A row here carries a URL or nothing.
             $actions = [];
 
             $importsNew = self::resolveRouteUrl($router, Destination::Imports->routeName());
@@ -421,9 +425,9 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.scan_email.label',
                     hintKey: 'dev::palette.action.scan_email.hint',
                     icon: '✉️',
-                    handlerEvent: 'email-scan.run',
-                    url: null,
-                    keywords: ['inbox', 'gmail', 'imap', 'sync'],
+                    handlerEvent: null,
+                    url: $inboxes,
+                    keywords: ['inbox', 'gmail', 'sync', 'scan'],
                 );
             }
 
@@ -444,9 +448,9 @@ final class DevModeServiceProvider extends ServiceProvider
                     labelKey: 'dev::palette.action.toggle_theme.label',
                     hintKey: 'dev::palette.action.toggle_theme.hint',
                     icon: '◐',
-                    handlerEvent: 'theme.cycle',
-                    url: null,
-                    keywords: ['dark', 'light', 'appearance'],
+                    handlerEvent: null,
+                    url: $settings,
+                    keywords: ['dark', 'light', 'appearance', 'theme'],
                 );
             }
 

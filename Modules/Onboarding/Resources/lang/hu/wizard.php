@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'A varázsló nem tudta feloldani az aktív lépést. A kilépéshez használd a Folytatás később → lehetőséget, a következő indításkor helyreáll.',
 
     'privacy' => 'Az adataid ezen az eszközön maradnak',
+    'privacy_connector' => 'Az adataid ezen az eszközön maradnak. Ez a lépés összeköti a postafiókodat a Google-lel vagy a Microsofttal.',
     'need_help' => 'Segítség kell?',
     'need_help_aria' => 'Segítség kell? Megnyitja a Beatrax hibajegyoldalát a GitHubon',
 ];

@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Ainult lugemisõigus',
         'reads_label' => 'Beatrax loeb',
         'reads_sub' => 'Ainult kviitungeid',
-        'token_label' => 'Luba jääb seadmesse',
-        'token_sub' => 'Krüpteeritud fail',
+        'token_label' => 'Luba salvestatakse krüpteeritult',
+        'token_sub' => 'Kohalikus andmebaasis',
     ],
 
     'authorize_gmail' => 'Anna luba Gmailiga',

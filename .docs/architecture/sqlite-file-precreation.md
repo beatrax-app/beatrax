@@ -70,10 +70,12 @@ the file to be empty; only *seeding* it would.
 **Desktop packaging.** `php artisan native:build` copies the working tree, then
 runs `composer install`, whose `post-autoload-dump` script runs
 `package:discover` — which boots the whole application inside the copied build
-tree. `database/*.sqlite` is stripped from that copy by
-`cleanup_exclude_files` (see
-[desktop build file exclusions](../features/desktop/build-file-exclusions.md)),
-so the file genuinely is not there. Without this hook the build aborts at
+tree. That copy is filtered as it walks, and `database/*.sqlite` is one of the
+patterns NativePHP's own vendored `nativephp-internal` list contributes to the
+filter — not one this repository wrote — so the file is never copied in the
+first place (see
+[desktop build file exclusions](../features/desktop/build-file-exclusions.md)
+for how the two lists merge). Without this hook the build aborts at
 discovery, long before electron-builder ever gets to sign anything.
 
 **A genuine fresh install.** On a newly installed desktop bundle

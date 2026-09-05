@@ -11,7 +11,7 @@ return [
     'cancel' => 'Anulează',
     'save_connect' => 'Salvează și conectează',
 
-    'secret_help' => 'Acestea sunt stocate într-un fișier local de configurare, în afara bazei de date, cu permisiuni restrictive, și nu părăsesc niciodată acest dispozitiv.',
+    'secret_help' => 'Se stochează criptat în baza de date de pe acest dispozitiv. Beatrax îl trimite doar către Google sau Microsoft, ca să obțină și să reînnoiască tokenul tău de acces — nicăieri altundeva.',
 
     'gmail' => [
         'step1_title' => 'Deschide Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Introdu un ID de client OAuth Google care se termină în .apps.googleusercontent.com.',
         'google_secret' => 'Introdu un secret de client OAuth Google care începe cu GOCSPX-.',
         'google_published' => 'Confirmă că ai trecut ecranul de consimțământ OAuth în „In production”.',
-        'write_failed' => 'Clientul OAuth nu a putut fi salvat pe disc — verifică permisiunile directorului de secrete și încearcă din nou.',
+        'write_failed' => 'Clientul OAuth nu a putut fi salvat — scrierea în baza de date de pe acest dispozitiv a eșuat. Încearcă din nou.',
     ],
 ];

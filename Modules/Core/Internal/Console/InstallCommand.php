@@ -23,11 +23,11 @@ class InstallCommand extends Command
         {--username= : Username for the single-user account}
         {--password= : Password for the single-user account}
         {--period-start-day=1 : Period start day (1-28, 1 = calendar month, 25 = salary cycle)}
-        {--launchd : Install macOS launchd plists for Horizon + scheduler + (optional) Redis}
+        {--launchd : Install the macOS launchd plists for Horizon + scheduler + (optional) Redis INSTEAD of installing — no migrations, no seed, no account}
         {--without-redis : Skip the optional Redis plist (use when Docker Desktop auto-starts the container on login)}';
 
     /** @var string */
-    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create or re-confirm the single user, and re-dispatch UserInstalled so seed listeners can heal missing reference data. Pass --launchd to install macOS background workers.';
+    protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create or re-confirm the single user, and re-dispatch UserInstalled so seed listeners can heal missing reference data. Passing --launchd does none of that and installs the macOS background workers instead.';
 
     // Per-vendor product names plus `Library/CloudStorage`, the canonical macOS
     // mountpoint that catches every provider Apple registers with the system.

@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Avvia un\'importazione', 'hint' => 'Apri la procedura guidata di importazione'],
-        'scan_email' => ['label' => 'Scansiona le email ora', 'hint' => 'Esegui subito la sincronizzazione della casella di posta'],
+        'scan_email' => ['label' => 'Apri le caselle di posta', 'hint' => 'Le tue caselle collegate'],
         'open_profile' => ['label' => 'Apri il profilo', 'hint' => 'Impostazioni — account e preferenze'],
-        'toggle_theme' => ['label' => 'Cambia tema', 'hint' => 'Alterna tra il tema chiaro e quello scuro'],
+        'toggle_theme' => ['label' => "Apri le impostazioni dell'aspetto", 'hint' => 'Chiaro, scuro o sistema'],
     ],
 
     'run_command' => 'Esegui :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Panoramica dev', 'hint' => 'Riquadri di sistema + esecuzioni recenti'],
         'artisan' => ['label' => 'Runner Artisan', 'hint' => 'Esegui i comandi autorizzati'],
-        'audit' => ['label' => 'Log di audit dev', 'hint' => 'Ogni azione della modalità sviluppatore'],
+        'audit' => ['label' => 'Log di audit dev', 'hint' => 'Le tue azioni in modalità sviluppatore'],
         'logs' => ['label' => 'Tail dei log', 'hint' => 'Flusso live di laravel-*.log'],
         'queue' => ['label' => 'Ispettore della coda', 'hint' => 'In attesa / falliti / batch'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Probe di sistema'],

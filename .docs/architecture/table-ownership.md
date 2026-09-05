@@ -16,9 +16,10 @@ There is no hand-written table-to-module map, and there should never be one — 
 list like that is wrong the day after somebody adds a migration. Ownership is
 derived at test time by `boundaryTableOwnership()` in
 [`tests/Contracts/BoundaryArchTest.php`](../../tests/Contracts/BoundaryArchTest.php),
-which reads every migration under `Modules/*/Database/Migrations/` plus the four
-framework ones under `database/migrations/` and records, per table, the module
-whose migration created it.
+which reads every migration under `Modules/*/Database/Migrations/` and under
+`database/migrations/` — the framework's own four migrations, plus the
+application-level schema rewrites that belong to no module — and records, per
+table, the module whose migration created it.
 
 Three spellings create a table in this repo and all three are recognised:
 
@@ -26,11 +27,11 @@ Three spellings create a table in this repo and all three are recognised:
 | --- | --- |
 | `Schema::create('x', …)` | the earliest Ledger and Core migrations, and the framework's own |
 | `$this->schema()->create('x', …)` | every migration extending `Modules\Core\Database\Support\ModuleMigration` — the DI-only form, which is most of them |
-| raw `CREATE TABLE` / `CREATE VIRTUAL TABLE` | `hlc_clock_state` and the two FTS5 tables, whose definitions a `Blueprint` cannot express |
+| raw `CREATE TABLE` / `CREATE VIRTUAL TABLE` | `hlc_clock_state` and `sync_peer_catch_up_state`, whose compound primary keys a `Blueprint` cannot express, and the FTS5 pair `transaction_search_docs` / `transaction_search_fts` |
 
 Ownership only means something while exactly one module creates a table, so the
 invariant asserts that too: a table created by two modules fails the test rather
-than letting the derivation silently pick one. Today **95 tables, none
+than letting the derivation silently pick one. **No table in the tree is
 contested.** The framework's own tables (`cache`, `cache_locks`, `jobs`,
 `job_batches`, `failed_jobs`) have no owning module and are attributed to
 `@root`; a module writing them is a crossing like any other.

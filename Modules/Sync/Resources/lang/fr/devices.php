@@ -6,7 +6,7 @@ return [
     'heading' => 'Appareils et synchronisation',
 
     'enable_sync' => 'Activer la synchronisation',
-    'enable_sync_help' => 'Partage tes données en toute sécurité entre tes appareils de confiance. Nécessite un verrouillage de l\'app. Une fois activé, tes données sont chiffrées et le verrouillage de l\'app ne peut plus être désactivé.',
+    'enable_sync_help' => 'Partage tes données en toute sécurité entre tes appareils de confiance. Nécessite un verrouillage de l\'app. L\'activation est définitive : tes données sont chiffrées à partir de là, et ni la synchronisation ni le verrouillage de l\'app ne peuvent plus être désactivés.',
 
     'app_lock_notice' => 'Configure d\'abord un verrouillage de l\'app pour activer la synchronisation.',
     'go_to_app_lock' => 'Aller au verrouillage de l\'app',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Le déverrouillage rouvre cet appairage au lieu de le laisser expirer : il survit donc au délai de verrouillage que vous avez défini. Il prend fin dès que vous le terminez ou l’annulez.',
 
     'relay_endpoint' => 'Point de terminaison du relais',
-    'relay_endpoint_help' => 'Facultatif. Une fois défini, les appareils hors ligne se synchronisent via ce relais. Laisse vide pour du LAN&#8209;direct uniquement.',
-    'relay_endpoint_help_phone' => 'Facultatif. Une fois défini, les changements transitent par ce relais même quand tes appareils ne sont pas sur le même réseau. Cet appareil les récupère quand tu synchronises depuis cet écran — jamais en arrière-plan, car le verrou de l\'app détient la seule clé. Laisse vide pour du LAN&#8209;direct uniquement.',
+    'relay_endpoint_help' => 'Facultatif. Un relais permet à deux appareils de terminer l\'appairage et d\'échanger leurs clés de chiffrement quand ils ne peuvent pas se joindre directement. Les transactions elles-mêmes ne se synchronisent toujours que lorsque les deux appareils sont sur le même réseau. Laisse vide pour du LAN&#8209;direct uniquement.',
+    'relay_endpoint_help_phone' => 'Facultatif. Un relais permet à deux appareils de terminer l\'appairage et d\'échanger leurs clés de chiffrement quand ils ne peuvent pas se joindre directement. Les transactions elles-mêmes ne se synchronisent toujours que lorsque les deux appareils sont sur le même réseau. Cet appareil récupère ce qui l\'attend quand tu synchronises depuis cet écran — jamais en arrière-plan, car le verrou de l\'app détient la seule clé. Laisse vide pour du LAN&#8209;direct uniquement.',
     'relay_endpoint_aria' => 'URL du point de terminaison du relais',
     'relay_insecure_warning' => 'Ce point de terminaison de relais utilise du HTTP simple. Même si le relais ne déchiffre jamais tes données, une connexion non sécurisée expose la taille des paquets chiffrés et leur horodatage aux observateurs du réseau. Utilise un point de terminaison <strong>https://</strong> pour une confidentialité optimale.',
 

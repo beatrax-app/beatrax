@@ -314,9 +314,13 @@ seeds is one the peer's own row can no longer land beside. See
 
 - `UserDataPathService` — every read of `database_path()`,
   `storage_path()`, `base_path()` outside this class is forbidden by
-  the arch invariant `noRawPathHelpersOutsidePathService`. The
-  `NATIVEPHP_STORAGE_PATH` env var redirects the storage root for the
-  packaged build. `getenv()` is used (not Laravel's `env()` helper)
+  the arch invariant
+  `noStoragePathHardCodedOutsideUserDataPathService`, which sweeps
+  `Modules`, `app` and `config` for the hard-coded storage literals
+  `database.sqlite` and `storage/app/` in the same pass — so no other
+  file can reach a path either through a helper or by writing one out.
+  The `NATIVEPHP_STORAGE_PATH` env var redirects the storage root for
+  the packaged build. `getenv()` is used (not Laravel's `env()` helper)
   because it is unconditional at every boot stage, which is what makes
   the static accessors safe to call from `config/*.php` files evaluated
   before the container exists.
@@ -595,8 +599,10 @@ Backup & restore CLI (`db:backup` / `db:restore`):
 
 `BackupDatabaseCommand` produces a consistent SQLite backup via
 `VACUUM INTO`, validates the output with `PRAGMA integrity_check`, and
-applies the retention sweep (`BackupRetentionPolicy`: 7 newest
-dailies - 4 most-recent Sundays). Each successful run writes a `.meta.json`
+applies the retention sweep (`BackupRetentionPolicy` keeps the 7
+newest dailies together with the 4 most-recent Sundays; the two sets
+are unioned, so a Sunday inside the last week is one file and not
+two). Each successful run writes a `.meta.json`
 sidecar at chmod 0600 capturing the source `PRAGMA data_version`, so a
 follow-up call without `--force` can smart-skip when no commits
 happened since the last backup. Mechanics worth calling out:
@@ -813,11 +819,13 @@ exposes an Alpine.js keyboard listener (←, →, t). First-run handling
 happens at the route layer (the `/` handler redirects to
 `/imports/new` before this component mounts) so it's a single HTTP hop,
 not a Livewire round-trip. `$periodStartStr` is a client-controlled
-string, always resolved through `resolvePeriod()`, which validates the
-`Y-m-d` shape and round-trips the parsed date (refusing e.g.
-"2026-02-30", which Carbon happily accepts as "2026-03-02") — a
-malformed value can never reach `CarbonImmutable::parse` and 500 the
-page. The failed-chain-resolution toast reads `chain_resolution_runs`
+string, always re-validated through `Ledger`'s
+`PeriodQuery::resolveAnchor()` before use, which reads it through
+`SafeDate::dayOrNull()` — a strict `Y-m-d` round-trip, so "2026-02-30"
+is refused rather than accepted as "2026-03-02" the way Carbon would —
+and answers with the current period when it fails, so a malformed value
+comes back as a period rather than reaching `CarbonImmutable::parse()`
+uncaught and 500ing the page. The failed-chain-resolution toast reads `chain_resolution_runs`
 filtered by exact `user_id` match (never a substring `LIKE` against
 `failed_jobs.payload`, which would leak across users with id prefixes
 like 1 vs 11) and is gated on `$isDeveloper` — non-developers see

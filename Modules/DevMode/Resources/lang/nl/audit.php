@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Auditlog',
-    'subtitle' => 'Elk commando, elke wachtrijactie en elke SQL-query uitgevoerd via de Dev Console.',
+    'subtitle' => 'Elk commando, elke wachtrijactie en elke SQL-query die jij via de Dev Console hebt uitgevoerd.',
     'clear_all' => 'Alles wissen',
-    'clear_all_confirm' => 'Elke auditlogregel wissen? Dit kan niet ongedaan worden gemaakt.',
+    'clear_all_confirm' => 'Elke auditlogregel wissen die jij hebt vastgelegd? Dit kan niet ongedaan worden gemaakt.',
     'filter_tier' => 'Tier',
     'filter_all' => 'Alle',
     'filter_command' => 'Commando',

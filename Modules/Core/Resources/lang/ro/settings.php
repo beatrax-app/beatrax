@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Afișarea sumei',
-        'label' => 'Vizualizarea implicită din lista de tranzacții',
+        'label' => 'Vizualizarea implicită a sumelor',
         'eur_only' => 'Sumă decontată',
         'original' => 'Sumă originală',
-        'help' => 'Poți schimba în continuare pentru fiecare pagină din lista de tranzacții.',
+        'help' => 'Se aplică listei de tranzacții și totalurilor din tabloul de bord. Poți schimba în continuare pentru fiecare pagină, dar numai din lista de tranzacții.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Cursuri valutare',
         'fetch_online' => 'Preia online cursurile actuale',
-        'online_on' => 'Cursurile sunt preluate zilnic de la ECB. Doar interogări de perechi valutare — fără date personale.',
+        'online_on' => 'Cursurile sunt preluate zilnic de la ECB sau de la Frankfurter, dacă ECB nu este disponibil. Doar interogări de perechi valutare — fără date personale.',
         'last_updated' => 'Ultima actualizare: :date.',
-        'online_off' => 'Se folosesc cursurile incluse în aplicație. Niciun fel de date nu părăsesc acest dispozitiv.',
+        'online_off' => 'Se folosesc în continuare cursurile deja existente, iar instantaneul inclus servește ca rezervă. Niciun fel de date nu părăsesc acest dispozitiv.',
         'fetch_aria' => 'Preia online cursurile valutare actuale',
         'refreshing' => 'Se reîmprospătează…',
         'next_refresh' => 'Reîmprospătare automată: o dată pe zi',

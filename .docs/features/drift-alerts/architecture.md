@@ -100,8 +100,19 @@ What the module explicitly does NOT do:
 - **Internal/Jobs/RevivedExpiredDriftSnoozesJob** — sweeps
   expired snoozes back to `open` so the user sees them again.
 - **Internal/Mapping/DriftAlertDtoMapper** — DB row → DTO.
-- **Internal/Http/Livewire/** — `DriftPage` (`/drift`),
-  `DashboardDriftBadge`, `DriftThresholdEditor`.
+- **Internal/Http/Livewire/** — `DriftPage` (`/drift`) and
+  `SubscriptionDriftWatchPage`.
+
+`DashboardDriftBadge`, `DriftThresholdEditor` and
+`SavingsInsightsCard` sit in `Public/Http/Livewire/` instead, because
+a neighbour's Blade mounts each of them: `Shell`'s dashboard renders
+the badge and the insights card, and `Recurring`'s
+`/recurring/series/{seriesId}` renders the threshold editor. The
+placement is required rather than tidy — a module's
+`Internal\Http\Livewire` may only be used inside that module, so a
+component another module reaches for has to be on the Public side.
+The alias mount itself is a dependency no import declares, and
+`pinnedCrossModuleLivewireMounts` pins all three pairs.
 
 ## `DriftAlertQuery` read contract
 
@@ -347,12 +358,15 @@ arbitrary code path bypasses this class). `acknowledged` and
 `ALLOWED_TRANSITIONS`).
 
 `transition()` mirrors `RecurringSeriesStateMachine`: opens a
-transaction, sets `PRAGMA busy_timeout = 5000`, takes a row lock
-(`lockForUpdate()`), validates against `ALLOWED_TRANSITIONS`, writes the
-new state + `updated_at`, and inserts exactly one
-`drift_alert_transitions` row carrying the full audit metadata. Two
-concurrent detectors that briefly contend on the same alert row serialise
-rather than fail. `toIntOrNull()` silently degrades a corrupted/zero/
+transaction, takes a row lock (`lockForUpdate()`), validates against
+`ALLOWED_TRANSITIONS`, writes the new state + `updated_at`, and inserts
+exactly one `drift_alert_transitions` row carrying the full audit
+metadata. Two concurrent detectors that briefly contend on the same
+alert row serialise rather than fail on the connection's own
+`busy_timeout` — the thirty seconds `config/database.php` asks for,
+applied once per connection by `SqliteOptimizationsProvider`. Neither
+machine sets a pragma of its own, and lowering one inside a transaction
+would fail `tests/Contracts/OneConnectionHoldsOneBusyTimeoutArchTest.php`. `toIntOrNull()` silently degrades a corrupted/zero/
 negative `user_id` to `null` on the audit-row FK so the transition
 contract ("write exactly one `drift_alert_transitions` row per legal
 state flip") stays resilient against a corrupted source row — callers

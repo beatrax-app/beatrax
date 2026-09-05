@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Verilerim nerede?',
-    'intro' => 'Beatrax her şeyi bu cihazda saklar. Hiçbir şey sunucuya gönderilmez, hiçbir şey buluta senkronize edilmez, sen dışa aktarmadıkça hiçbir şey bu cihazdan çıkmaz.',
+    'intro' => 'Beatrax her şeyi bu cihazda saklar. Beatrax sunucusu ve bulut hesabı yoktur. Dışarı yalnızca senin bağladığın şeyler çıkar — bir gelen kutusu, Enable Banking üzerinden bir banka, senkronizasyon için eşleştirdiğin cihazlar — ve bir de günlük döviz kuru sorgusu. Her bağlantı bunu, onu açtığın ekranda söyler.',
 
     'lives_here' => 'Verilerin burada duruyor',
     'copy' => 'Kopyala',

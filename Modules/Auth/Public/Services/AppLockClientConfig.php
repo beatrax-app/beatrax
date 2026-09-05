@@ -6,6 +6,7 @@ namespace Modules\Auth\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Core\Public\Enums\Duration;
 
 // One source of truth for "does this session have a lock at all", read by the
@@ -41,6 +42,15 @@ final readonly class AppLockClientConfig
         }
 
         return CarbonImmutable::parse($value);
+    }
+
+    // The window leaving the foreground locks on, which the idle timeout
+    // does not govern. It reaches the layout through here for the boundary
+    // reason every other lock value does, and it leaves the constant the one
+    // definition the settings copy and lock.js's timer both read.
+    public function backgroundGraceMs(): int
+    {
+        return IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS * Duration::Second->milliseconds();
     }
 
     public function idleTimeoutMs(int $userId): ?int

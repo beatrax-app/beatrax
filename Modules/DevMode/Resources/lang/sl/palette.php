@@ -34,12 +34,12 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Zaženi uvoz', 'hint' => 'Odpri čarovnika za uvoz'],
-        'scan_email' => ['label' => 'Preglej e-pošto zdaj', 'hint' => 'Takoj zaženi sinhronizacijo nabiralnika'],
+        'scan_email' => ['label' => 'Odpri nabiralnike', 'hint' => 'Tvoji povezani nabiralniki'],
         // i18n-review: sl · action.open_profile.hint — «nastavitve» is this locale's word for
         // both Settings and preferences, so the second half says «možnosti». Confirm that
         // reads as preferences rather than as feature options.
         'open_profile' => ['label' => 'Odpri profil', 'hint' => 'Nastavitve — račun in možnosti'],
-        'toggle_theme' => ['label' => 'Zamenjaj temo', 'hint' => 'Preklop med svetlo in temno temo'],
+        'toggle_theme' => ['label' => 'Odpri nastavitve videza', 'hint' => 'Svetla, temna ali sistemska'],
     ],
 
     'run_command' => 'Zaženi :command',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Razvijalski pregled', 'hint' => 'Sistemske ploščice + nedavni zagoni'],
         'artisan' => ['label' => 'Zaganjalnik Artisan', 'hint' => 'Zaganjanje ukazov s seznama dovoljenih'],
-        'audit' => ['label' => 'Revizijski dnevnik', 'hint' => 'Vsako dejanje v razvijalskem načinu'],
+        'audit' => ['label' => 'Revizijski dnevnik', 'hint' => 'Tvoja dejanja v razvijalskem načinu'],
         'logs' => ['label' => 'Sledenje dnevniku', 'hint' => 'Sprotni tok laravel-*.log'],
         'queue' => ['label' => 'Pregledovalnik čakalne vrste', 'hint' => 'V čakanju / neuspela / paketi'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sistemska preverjanja'],

@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'La procedura guidata non è riuscita a determinare il passaggio attivo. Usa Riprendi più tardi → per uscire; al prossimo avvio verrà ripristinato.',
 
     'privacy' => 'I tuoi dati restano su questo dispositivo',
+    'privacy_connector' => 'I tuoi dati restano su questo dispositivo. Questo passaggio collega la tua posta in arrivo a Google o Microsoft.',
     'need_help' => 'Ti serve aiuto?',
     'need_help_aria' => 'Ti serve aiuto? Apre la pagina delle issue di Beatrax su GitHub',
 ];

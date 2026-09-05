@@ -86,11 +86,23 @@ statement, so a replayed or negative settlement is inert rather than
 destructive.
 
 The read, the arithmetic and the write all happen inside one
-`$connection->transaction()`, which opens with
-`PRAGMA busy_timeout = 5000`. Laravel opens SQLite transactions in
-DEFERRED mode, so the write fence is not taken at `BEGIN`; the pragma
-asks SQLite to wait up to five seconds for a competing writer instead
-of raising `SQLITE_BUSY` on first contention.
+`$connection->transaction()`, and the machine issues no pragma of its
+own. It does not need one: the writable SQLite connection is
+configured `transaction_mode = IMMEDIATE`, so `BEGIN` takes the write
+lock before the `SELECT` runs and there is no read-then-write upgrade
+left for SQLite to refuse outright — see
+[SQLite write locks](../../architecture/sqlite-write-locks.md). The
+wait for a competing writer is the connection's own `busy_timeout`,
+the thirty seconds `config/database.php` asks for, applied once per
+connection by `SqliteOptimizationsProvider`.
+
+Setting that pragma here instead would fail
+`tests/Contracts/OneConnectionHoldsOneBusyTimeoutArchTest.php`.
+`PRAGMA busy_timeout` is connection-scoped and outlives the
+transaction that issues it, so a transaction lowering it to five
+seconds leaves every later statement on that connection waiting five
+seconds too — which is how a forecast job came to die with "database
+is locked".
 
 An unknown statement id raises
 `Modules\Chains\Internal\Exceptions\CardStatementNotFoundException`
@@ -106,18 +118,20 @@ caller. When an ASN-side bulk settlement matches a statement within
 tolerance and covers at least one expense, the resolver writes the
 per-expense `chain_links` rows and then hands `applySettlement()` the
 transfer's magnitude **plus whatever credits were carried into that
-statement** — the tolerance test above has already spent them, so told
-the payment alone the machine left a statement nobody owed anything on
-reading `partially_settled` forever. A settlement that covers no expense is left
-alone entirely — there would be no link recording that it was applied,
-and the next pass would apply it again. If the
-resulting state is `overpaid`, it writes a `card_statement_credits` row
-for the surplus. The matching algorithm — the tolerance arms, the
+statement**. The tolerance test above has already spent those credits,
+so telling the machine about the payment alone leaves a statement
+nobody owes anything on reading `partially_settled` forever. A
+settlement that covers no expense is left alone entirely: nothing would
+record that it had been applied, so the next pass would apply it again.
+If the resulting state is `overpaid`, the resolver writes a
+`card_statement_credits` row for the surplus. The matching algorithm — the tolerance arms, the
 period window and the sign convention of the delta — is described in
 [chain resolution](../../architecture/chain-resolution.md).
 
-The `noCardStatementStateWritesOutsideMachine` arch invariant keeps
-this the only mutator: no other file may write `card_statements.state`.
+The `noOtherCardStatementStateMutator` arch invariant keeps this the
+only mutator: no other file under `Modules/Chains/` may write
+`card_statements.state`, and a module that does not own the table is
+held off it by `crossModuleRawTableWrites`.
 
 ## Credits between statements
 

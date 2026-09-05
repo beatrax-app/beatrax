@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Pastumti serijos datą',
-            'desc' => 'Perkelti kitą arba visus tolesnius įvykius į priekį.',
+            'desc' => 'Perkelti kitą arba visus tolesnius įvykius į kitą datą.',
         ],
     ],
 

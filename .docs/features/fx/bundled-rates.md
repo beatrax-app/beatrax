@@ -7,21 +7,26 @@ online.
 
 ## Why a migration loads it
 
-`FetchFxRatesJob` is the only writer to `exchange_rates`, and its first act is
-to return when `users.fx_online_enabled` is false — correctly, because that flag
-is the consent gate for the app's only outbound traffic. `BundledSnapshotProvider`
-sits in the same registry as the two network providers, so the refusal took the
-offline provider down with the online ones.
+`FetchFxRatesJob`'s first act is to return when `users.fx_online_enabled` is
+false — correctly, because that flag is the consent gate for the app's only
+outbound traffic. It was the one writer to `exchange_rates`, and
+`BundledSnapshotProvider` sits in the same registry as the two network
+providers, so the refusal took the offline provider down with the online ones
+and an install that never went online held no rates at all.
 
 The consequence was silent. `ExchangeRateService` returns
 `ConversionResult::noRate()` on an empty rate set — the amount comes back in the
 currency it arrived in — so a reader who chose USD as their reporting currency
-saw every total keep its euro sign and its euro value, while Settings said
-"Bundled rates are used. No data leaves this device."
+saw every total keep its euro sign and its euro value, while Settings told them
+their rates were covered. `core::settings.exchange_rates.online_off` still says
+so — "The rates already on this device stay in use, with the bundled snapshot
+as the fallback. No data leaves this device." — and the migration below is what
+makes the fallback half of that sentence true.
 
 `2026_08_23_000010_seed_bundled_exchange_rates` writes the snapshot into
-`exchange_rates` at install and on upgrade. The rows carry `source = 'bundled'`,
-which is part of the table's unique key, so:
+`exchange_rates` through `Internal/Services/SeedBundledExchangeRates`, at
+install and on upgrade; it is the table's second writer. The rows carry
+`source = 'bundled'`, which is part of the table's unique key, so:
 
 - a live provider's row for the same day is a separate row and is never
   overwritten;

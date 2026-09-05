@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Passer pour l\'instant',
     'mark_ignored' => 'Ne plus me le demander',
-    'not_now_note' => 'Aucun des deux ne modifie le tiers — tu peux encore l\'étiqueter plus tard depuis la page Tiers.',
+    'skip_note' => 'Passer n\'écrit rien — cela avance simplement à l\'inconnu suivant.',
+    'mark_ignored_note' => 'Cela marque le tiers comme ignoré, pour qu\'il reste hors de cette file. Son nom, son type et son historique ne changent pas, et tu peux encore l\'étiqueter plus tard depuis la page Tiers.',
     'previous' => 'Inconnu précédent',
 
     'kbd_yes' => 'oui',

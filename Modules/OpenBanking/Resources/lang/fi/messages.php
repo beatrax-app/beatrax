@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Liitä sovellustunnuksesi',
         'application_id_label' => 'Sovellustunnus',
-        'step3_help' => 'Tämä tallennetaan paikalliseen tiedostoon tietokannan ulkopuolelle rajoitetuin käyttöoikeuksin, eikä se poistu tältä laitteelta.',
+        'step3_help' => 'Tallennetaan paikalliseen tiedostoon tietokannan ulkopuolelle, ja vain sinä voit lukea sen. Se kertoo Enable Bankingille, mikä sovellus on kyseessä, joten se kulkee mukana jokaisessa pyynnössä — yksityinen avaimesi ei koskaan.',
 
         'step4_title' => 'Valitse pankkisi',
         'via_enable_banking' => 'Enable Bankingin kautta',

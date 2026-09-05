@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Pievienot atkārtoti',
     'disconnect' => 'Atvienot',
+    'disconnect_confirm' => 'Vai atvienot :email? Tas dzēš šīs pastkastes saglabātos piekļuves datus, tās skenēšanas vēsturi un sūtītājus, kurus pievienojāt vai aizvērāt. Beatrax jau reģistrētos čekus tas neietekmē. Pievienojot atkārtoti, skenēšana sākas no jauna.',
     'scan_now' => 'Skenēt tagad',
     'scan_in_progress_title' => 'Skenēšana jau notiek',
 

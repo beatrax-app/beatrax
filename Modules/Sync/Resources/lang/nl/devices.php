@@ -6,7 +6,7 @@ return [
     'heading' => 'Apparaten & synchronisatie',
 
     'enable_sync' => 'Synchronisatie inschakelen',
-    'enable_sync_help' => 'Deel je gegevens veilig tussen vertrouwde apparaten. Vereist een app-vergrendeling. Zodra die aanstaat, worden je gegevens versleuteld en kan de app-vergrendeling niet meer worden uitgezet.',
+    'enable_sync_help' => 'Deel je gegevens veilig tussen vertrouwde apparaten. Vereist een app-vergrendeling. Aanzetten kan niet ongedaan worden gemaakt: je gegevens zijn vanaf dat moment versleuteld en noch de synchronisatie noch de app-vergrendeling kan nog worden uitgezet.',
 
     'app_lock_notice' => 'Stel eerst een app-vergrendeling in om synchronisatie in te schakelen.',
     'go_to_app_lock' => 'Ga naar App-vergrendeling',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Ontgrendelen heropent deze koppeling in plaats van hem te laten verlopen, dus hij duurt langer dan de app-vergrendeltijd die je hebt ingesteld. Hij eindigt zodra je hem voltooit of annuleert.',
 
     'relay_endpoint' => 'Relay-endpoint',
-    'relay_endpoint_help' => 'Optioneel. Als dit is ingesteld, synchroniseren offline apparaten via deze relay. Laat leeg voor alleen LAN&#8209;direct.',
-    'relay_endpoint_help_phone' => 'Optioneel. Als dit is ingesteld, reizen wijzigingen via deze relay, ook als je apparaten niet op hetzelfde netwerk zitten. Dit apparaat haalt ze op wanneer je vanaf dit scherm synchroniseert — nooit op de achtergrond, want de app-vergrendeling heeft de enige sleutel. Laat leeg voor alleen LAN&#8209;direct.',
+    'relay_endpoint_help' => 'Optioneel. Een relay laat twee apparaten de koppeling afronden en versleutelingssleutels uitwisselen wanneer ze elkaar niet rechtstreeks kunnen bereiken. De transacties zelf synchroniseren nog steeds alleen wanneer beide apparaten op hetzelfde netwerk zitten. Laat leeg voor alleen LAN&#8209;direct.',
+    'relay_endpoint_help_phone' => 'Optioneel. Een relay laat twee apparaten de koppeling afronden en versleutelingssleutels uitwisselen wanneer ze elkaar niet rechtstreeks kunnen bereiken. De transacties zelf synchroniseren nog steeds alleen wanneer beide apparaten op hetzelfde netwerk zitten. Dit apparaat haalt op wat er klaarstaat wanneer je vanaf dit scherm synchroniseert — nooit op de achtergrond, want de app-vergrendeling heeft de enige sleutel. Laat leeg voor alleen LAN&#8209;direct.',
     'relay_endpoint_aria' => 'Relay-endpoint-URL',
     'relay_insecure_warning' => 'Dit relay-endpoint gebruikt gewoon HTTP. De relay ontsleutelt je gegevens weliswaar nooit, maar een onbeveiligde verbinding stelt versleutelde groottes en timing bloot aan waarnemers op het netwerk. Gebruik een <strong>https://</strong>-endpoint voor de beste privacy.',
 

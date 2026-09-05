@@ -88,9 +88,13 @@ Practical recipes for exercising the `Chains` module in isolation.
 - The repo-wide `crossModuleRawTableWrites` arch invariant — every
   raw-table write `Modules/Chains/` makes against a table it does not
   own is pinned by file, line, and table.
-- The repo-wide `noCardStatementStateWritesOutsideMachine` arch
-  invariant — only `Internal\CardStatementStateMachine` may write
-  `card_statements.state`.
+- The `noOtherCardStatementStateMutator` arch invariant — it walks
+  every non-test PHP file under `Modules/Chains/` bar
+  `Internal/CardStatementStateMachine`, and fails on an `update()`
+  that sets `state` through either the `card_statements` query builder
+  or the `CardStatement` model. Outside this module the column is
+  covered by `crossModuleRawTableWrites` above, which pins no writer
+  of `card_statements` anywhere.
 
 ## How to run the suite for just this module
 
@@ -162,9 +166,10 @@ and the assertion — see
   pinned by `crossModuleRawTableWrites`.
 - **The state machine is the sole mutator of
   `card_statements.state`.** No write outside
-  `Internal\CardStatementStateMachine` may change that column;
-  enforced by the `noCardStatementStateWritesOutsideMachine` arch
-  invariant.
+  `Internal\CardStatementStateMachine` may change that column:
+  `noOtherCardStatementStateMutator` holds the inside of this module
+  and `crossModuleRawTableWrites` holds every module that does not own
+  the table.
 - **Every successful resolver pass is idempotent.** Re-running the
   resolver against the same data produces the same `chain_links` rows;
   the `evidence.signature_hash` collision is a no-op. (`tests/Contracts/ChainResolutionIdempotencyTest.php`)

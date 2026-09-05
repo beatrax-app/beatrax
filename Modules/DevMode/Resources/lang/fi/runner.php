@@ -50,28 +50,28 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Varmuuskopioi tietokanta', 'description' => 'Kirjoittaa aikaleimatun SQLite-kopion varmuuskopiohakemistoon.'],
-        'doctor' => ['label' => 'Suorita doctor', 'description' => 'Ilmoittaa asennetut PHP-, Composer- ja SQLite-versiot ja tarkistaa vähimmäisvaatimukset.'],
-        'failed_jobs' => ['label' => 'Siivoa epäonnistuneet työt', 'description' => 'Siivoaa käsitellyt rivit Laravelin hallitsemasta failed_jobs-taulusta.'],
+        'db_backup' => ['label' => 'Varmuuskopioi tietokanta', 'description' => 'Kirjoittaa aikaleimatun SQLite-kopion varmuuskopiohakemistoon, ellei tietokanta ole pysynyt muuttumattomana edellisen kopion jälkeen. Talteen jäävä kopio poistaa myös vanhemmat varmuuskopiot säilytyskäytännön mukaan.'],
+        'doctor' => ['label' => 'Suorita doctor', 'description' => 'Ajaa operatiivisen testisarjan ja ilmoittaa jokaiselta riviltä pass / warn / fail. Warn- tai fail-rivi tuottaa nollasta poikkeavan paluukoodin.'],
+        'failed_jobs' => ['label' => 'Siivoa epäonnistuneet työt', 'description' => 'Poistaa Laravelin hallitsemasta failed_jobs-taulusta jokaisen rivin, joka on yli 30 päivää vanha, riippumatta siitä yritettiinkö työtä koskaan uudelleen.'],
         'cache_clear' => ['label' => 'Tyhjennä välimuisti', 'description' => 'Tyhjentää sovelluksen välimuistin.'],
         'route_list' => ['label' => 'Listaa reitit', 'description' => 'Tulostaa jokaisen rekisteröidyn HTTP-reitin vakiotulosteeseen.'],
-        'config_show' => ['label' => 'Näytä asetukset', 'description' => 'Tulostaa annetun asetusavaimen arvon.'],
+        'config_show' => ['label' => 'Näytä asetukset', 'description' => 'Tulostaa kokonaisen asetustiedoston tai sen sisältämän pisteillä erotellun avaimen arvon.'],
         'view_clear' => ['label' => 'Tyhjennä näkymävälimuisti', 'description' => 'Tyhjentää käännettyjen Blade-näkymien välimuistin.'],
-        'queue_retry' => ['label' => 'Yritä epäonnistuneita töitä uudelleen', 'description' => 'Yrittää yhtä työtä (tunnisteella) tai kaikkia epäonnistuneita töitä (tyhjä tunniste) uudelleen.'],
-        'rederive_fingerprints' => ['label' => 'Laske sormenjäljet uudelleen', 'description' => 'Laskee jokaisen tapahtuman sormenjäljen uudelleen nykyisellä normalisointiversiolla.'],
+        'queue_retry' => ['label' => 'Yritä epäonnistuneita töitä uudelleen', 'description' => 'Yrittää yhtä epäonnistunutta työtä uudelleen tunnisteen perusteella tai kaikkia, jos annat `all`.'],
+        'rederive_fingerprints' => ['label' => 'Laske sormenjäljet uudelleen', 'description' => 'Laskee uudelleen sormenjäljen jokaiselle tapahtumalle, jonka normalisointiversio on yhä nykyistä pienempi. Täältä ajettuna se ilmoittaa määrän eikä kirjoita mitään.'],
         'db_restore' => ['label' => 'Palauta tietokanta', 'description' => 'Korvaa nykyisen tietokannan annetulla varmuuskopiotiedostolla.'],
         'regenerate_recovery_codes' => ['label' => 'Luo palautuskoodit uudelleen', 'description' => 'Luo käyttäjän 10 kertakäyttöistä palautuskoodia uudelleen.'],
         'grant_dev' => ['label' => 'Myönnä kehittäjäoikeudet', 'description' => 'Asettaa annetulle käyttäjälle is_developer=true.'],
         // i18n-review: fi · command.install.description — Idempotentti is a loanword
         // with no settled native form. The sentence relies on the reader knowing
         // the property rather than the word, which a native eye should confirm.
-        'install' => ['label' => 'Suorita asennus', 'description' => 'Idempotentti ensiasennus. Sen ajaminen uudelleen valmiiseen asennukseen on tuhoisaa.'],
+        'install' => ['label' => 'Suorita asennus', 'description' => 'Idempotentti ensiasennus: tietokannan rakenne, viitetiedot ja ainoa käyttäjätili. Uudelleenajo valmiiseen asennukseen vahvistaa olemassa olevan tilin uudelleen eikä muuta salasanaa.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Toiminto'],
         'config' => ['label' => 'Asetusavain', 'help' => 'Tulostettava asetustiedosto tai pisteillä eroteltu avain, esimerkiksi `app` tai `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'Työn tunniste', 'help' => 'Jätä tyhjäksi, niin kaikkia epäonnistuneita töitä yritetään uudelleen; anna tunniste, niin vain yhtä.', 'placeholder' => 'kaikki (tai tietty tunniste)'],
+        'id' => ['label' => 'Työn tunniste', 'help' => 'Kirjoita `all`, niin kaikkia epäonnistuneita töitä yritetään uudelleen, tai työn tunniste, niin vain yhtä. Tyhjä kenttä ei yritä mitään uudelleen.', 'placeholder' => 'all (tai tietty tunniste)'],
         'queue' => ['label' => 'Jonon nimi', 'help' => 'Valinnainen jonosuodatin; oletuksena kaikki jonot.', 'placeholder' => 'default'],
         'path' => ['label' => 'Varmuuskopiotiedoston polku', 'help' => 'Korvaa nykyisen tietokannan annetussa polussa olevalla tiedostolla.', 'placeholder' => '/polku/tiedostoon/backup.sqlite'],
         'username' => ['label' => 'Käyttäjätunnus', 'placeholder' => 'alice'],

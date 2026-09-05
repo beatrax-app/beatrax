@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Wyświetlanie kwoty',
-        'label' => 'Domyślny widok na liście transakcji',
+        'label' => 'Domyślny widok kwot',
         'eur_only' => 'Kwota rozliczona',
         'original' => 'Kwota pierwotna',
-        'help' => 'Widok nadal można przełączać dla każdej strony z poziomu listy transakcji.',
+        'help' => 'Dotyczy listy transakcji i sum na pulpicie. Widok nadal można przełączać dla każdej strony, ale tylko z poziomu listy transakcji.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Kursy walut',
         'fetch_online' => 'Pobieraj aktualne kursy online',
-        'online_on' => 'Kursy pobierane codziennie z ECB. Tylko zapytania o pary walutowe — bez danych osobowych.',
+        'online_on' => 'Kursy pobierane codziennie z ECB lub z Frankfurtera, gdy ECB jest niedostępny. Tylko zapytania o pary walutowe — bez danych osobowych.',
         'last_updated' => 'Ostatnia aktualizacja: :date.',
-        'online_off' => 'Używane są kursy dołączone do aplikacji. Żadne dane nie opuszczają tego urządzenia.',
+        'online_off' => 'Nadal używane są już zapisane kursy, a dołączona migawka służy jako zapas. Żadne dane nie opuszczają tego urządzenia.',
         'fetch_aria' => 'Pobierz aktualne kursy walut online',
         'refreshing' => 'Odświeżanie…',
         'next_refresh' => 'Automatyczne odświeżanie: raz dziennie',

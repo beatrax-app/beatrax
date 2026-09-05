@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Import uitvoeren', 'hint' => 'De importwizard openen'],
-        'scan_email' => ['label' => 'E-mail nu scannen', 'hint' => 'De synchronisatie van het postvak meteen uitvoeren'],
+        'scan_email' => ['label' => 'Postvakken openen', 'hint' => 'Je gekoppelde postvakken'],
         'open_profile' => ['label' => 'Profiel openen', 'hint' => 'Instellingen — account en voorkeuren'],
-        'toggle_theme' => ['label' => 'Thema wisselen', 'hint' => 'Wisselen tussen licht en donker thema'],
+        'toggle_theme' => ['label' => 'Weergave-instellingen openen', 'hint' => 'Licht, donker of systeem'],
     ],
 
     'run_command' => ':command uitvoeren',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Dev-overzicht', 'hint' => 'Systeemtegels + recente runs'],
         'artisan' => ['label' => 'Artisan-runner', 'hint' => "Commando's uit de whitelist uitvoeren"],
-        'audit' => ['label' => 'Dev-auditlog', 'hint' => 'Elke actie in dev-modus'],
+        'audit' => ['label' => 'Dev-auditlog', 'hint' => 'Jouw acties in dev-modus'],
         'logs' => ['label' => 'Log-tailer', 'hint' => 'Live stream van laravel-*.log'],
         'queue' => ['label' => 'Wachtrij-inspecteur', 'hint' => 'In behandeling / mislukt / batches'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Systeemprobes'],

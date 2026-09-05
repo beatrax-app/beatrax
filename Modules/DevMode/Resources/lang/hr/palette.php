@@ -38,12 +38,12 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Pokreni uvoz', 'hint' => 'Otvori čarobnjak za uvoz'],
-        'scan_email' => ['label' => 'Skeniraj e-poštu sada', 'hint' => 'Odmah pokreni sinkronizaciju sandučića'],
+        'scan_email' => ['label' => 'Otvori sandučiće', 'hint' => 'Tvoji povezani sandučići'],
         // i18n-review: hr · action.open_profile.hint — «postavke» is this locale's word for
         // both Settings and preferences, so the second half says «mogućnosti». Confirm that
         // reads as preferences and not as feature options.
         'open_profile' => ['label' => 'Otvori profil', 'hint' => 'Postavke — račun i mogućnosti'],
-        'toggle_theme' => ['label' => 'Promijeni temu', 'hint' => 'Prebaci između svijetle i tamne teme'],
+        'toggle_theme' => ['label' => 'Otvori postavke izgleda', 'hint' => 'Svijetla, tamna ili sustavska'],
     ],
 
     'run_command' => 'Pokreni :command',
@@ -51,7 +51,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Razvojni pregled', 'hint' => 'Pločice sustava + nedavna pokretanja'],
         'artisan' => ['label' => 'Artisan pokretač', 'hint' => 'Pokretanje dopuštenih naredbi'],
-        'audit' => ['label' => 'Razvojni zapisnik revizije', 'hint' => 'Svaka radnja u razvojnom načinu rada'],
+        'audit' => ['label' => 'Razvojni zapisnik revizije', 'hint' => 'Tvoje radnje u razvojnom načinu rada'],
         'logs' => ['label' => 'Praćenje zapisnika', 'hint' => 'Prijenos uživo datoteke laravel-*.log'],
         'queue' => ['label' => 'Inspektor reda čekanja', 'hint' => 'Na čekanju / neuspjeli / grupe'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Provjere sustava'],

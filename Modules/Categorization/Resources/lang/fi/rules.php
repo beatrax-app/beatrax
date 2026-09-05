@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Säännöt pysyvät tässä laitteessa. Niitä ei jaeta muiden laitteidesi kanssa.',
 
     'reapply' => 'Käytä sääntöjä historiaan uudelleen',
-    'reapply_confirm' => 'Käytetäänkö kaikkia sääntöjä uudelleen koko historiaasi? Jokainen kategoria, vastapuoli, muistiinpano ja verotunniste, jonka sääntö on asettanut, kirjoitetaan yli. Käsin asettamasi tiedot säilyvät, samoin kaikki täsmäytetyllä tiliotteella oleva. Mikään ei palauta vanhoja arvoja.',
+    'reapply_confirm' => 'Käytetäänkö kaikkia sääntöjä uudelleen koko historiaasi? Jokainen kategoria, vastapuoli, muistiinpano ja verotunniste, jonka sääntö on asettanut, kirjoitetaan yli. Käsin asettamasi tiedot säilyvät, samoin kaikki täsmäytetyllä tiliotteella tai jakamassasi tapahtumassa oleva. Mikään ei palauta vanhoja arvoja.',
     'reapplying' => 'Käytetään uudelleen…',
     'new_rule' => 'Uusi sääntö',
 

@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Subir otro extracto',
 
     'chain' => [
-        'heading' => 'Resolviendo cadenas…',
-        'pending' => 'En cola. El resolutor de cadenas empezará en breve.',
+        'heading' => 'Resolución de cadenas',
+        'pending' => 'La resolución de cadenas no llegó a empezar, así que no se enlazaron cadenas de financiación.',
         'running' => 'Enlazando cadenas de financiación y descomponiendo liquidaciones del extracto.',
     ],
 

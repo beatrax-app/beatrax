@@ -97,7 +97,7 @@ return [
         'heading' => 'İşlemi sil',
         'help' => 'Bu işlemi kalıcı olarak kaldırır. Bu eylem geri alınamaz.',
         'button' => 'Sil',
-        'confirm_prompt' => 'Bu işlem silinsin mi? Notu, dağılımı ve vergi etiketleri de gider.',
+        'confirm_prompt' => 'Bu işlem silinsin mi? Notu, dağılımı, vergi etiketleri ve varsa bir birikim hedefine sayılan katkısı da gider. Bir transferin bir bacağıysa, diğer bacak yeniden sınıflandırılır.',
         'confirm' => 'Evet, sil',
         'cancel' => 'İptal',
     ],

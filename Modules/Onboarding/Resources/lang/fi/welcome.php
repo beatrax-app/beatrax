@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Tervetuloa',
     'h1' => 'Opetetaan Beatrax tuntemaan rahasi.',
-    'lede' => 'Noin 5 minuuttia. Mikään ei poistu tältä laitteelta — kaikki, minkä yhdistät, pysyy tiedostossa sen sisällä.',
+    'lede' => 'Noin 5 minuuttia. Beatrax pitää historiasi tiedostossa tällä laitteella — ainoa vaihe, joka ottaa yhteyden ulospäin, on postilaatikon yhdistäminen, ja sen voit ohittaa.',
     'tagline' => 'Näin otamme sen käyttöön:',
 
     'bank_title' => 'Pankkisi',

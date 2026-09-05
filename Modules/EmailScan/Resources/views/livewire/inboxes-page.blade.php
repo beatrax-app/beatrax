@@ -204,7 +204,7 @@
                             size="sm"
                             class="gap-1"
                             wire:click="disconnect('{{ $inbox->inboxId }}')"
-                            wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect') }}"
+                            wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect_confirm', ['email' => $inbox->email]) }}"
                             data-testid="disconnect-inbox-{{ $inbox->inboxId }}"
                         >{{ Lang::get('email-scan::inboxes.disconnect') }}</x-core::secondary-button>
                     </div>

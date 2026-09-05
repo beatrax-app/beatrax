@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Protokol auditu',
-    'subtitle' => 'Každý příkaz, akce fronty a SQL dotaz spuštěný přes vývojářskou konzoli.',
+    'subtitle' => 'Příkazy, akce fronty a SQL dotazy, které jsi spustil přes vývojářskou konzoli.',
     'clear_all' => 'Vymazat vše',
-    'clear_all_confirm' => 'Vymazat všechny záznamy protokolu auditu? Tohle nejde vzít zpět.',
+    'clear_all_confirm' => 'Vymazat všechny záznamy protokolu auditu, které jsi vytvořil? Tohle nejde vzít zpět.',
     'filter_tier' => 'Úroveň',
     'filter_all' => 'Vše',
     'filter_command' => 'Příkaz',

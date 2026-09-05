@@ -6,7 +6,7 @@ return [
     'heading' => 'Laitteet ja synkronointi',
 
     'enable_sync' => 'Ota synkronointi käyttöön',
-    'enable_sync_help' => 'Jaa tietosi turvallisesti luotettujen laitteiden kesken. Vaatii sovelluslukon. Kun se on päällä, tietosi salataan eikä sovelluslukkoa voi enää poistaa käytöstä.',
+    'enable_sync_help' => 'Jaa tietosi turvallisesti luotettujen laitteiden kesken. Vaatii sovelluslukon. Käyttöönottoa ei voi perua: tietosi salataan siitä hetkestä alkaen, eikä synkronointia eikä sovelluslukkoa voi enää poistaa käytöstä.',
 
     'app_lock_notice' => 'Aseta ensin sovelluslukko, niin voit ottaa synkronoinnin käyttöön.',
     'go_to_app_lock' => 'Siirry sovelluslukkoon',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Lukituksen avaaminen avaa tämän laiteparin uudelleen sen sijaan, että antaisi sen vanhentua, joten se kestää asettamaasi sovelluslukituksen aikakatkaisua pidempään. Se päättyy, kun viimeistelet tai peruutat sen.',
 
     'relay_endpoint' => 'Välityspalvelimen osoite',
-    'relay_endpoint_help' => 'Valinnainen. Kun tämä on asetettu, verkon ulkopuolella olevat laitteet synkronoivat tämän välityspalvelimen kautta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
-    'relay_endpoint_help_phone' => 'Valinnainen. Kun tämä on asetettu, muutokset kulkevat tämän välityspalvelimen kautta myös silloin, kun laitteesi eivät ole samassa verkossa. Tämä laite noutaa ne, kun synkronoit tältä näytöltä — ei koskaan taustalla, koska sovelluslukko pitää ainoaa avainta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
+    'relay_endpoint_help' => 'Valinnainen. Välityspalvelin antaa kahden laitteen viimeistellä parituksen ja vaihtaa salausavaimet silloin, kun ne eivät tavoita toisiaan suoraan. Itse tapahtumat synkronoituvat edelleen vain, kun molemmat laitteet ovat samassa verkossa. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
+    'relay_endpoint_help_phone' => 'Valinnainen. Välityspalvelin antaa kahden laitteen viimeistellä parituksen ja vaihtaa salausavaimet silloin, kun ne eivät tavoita toisiaan suoraan. Itse tapahtumat synkronoituvat edelleen vain, kun molemmat laitteet ovat samassa verkossa. Tämä laite noutaa sitä odottavat tiedot, kun synkronoit tältä näytöltä — ei koskaan taustalla, koska sovelluslukko pitää ainoaa avainta. Jätä tyhjäksi, jos haluat vain LAN&#8209;suoran yhteyden.',
     'relay_endpoint_aria' => 'Välityspalvelimen URL-osoite',
     'relay_insecure_warning' => 'Tämä välityspalvelimen osoite käyttää salaamatonta HTTP-yhteyttä. Vaikka välityspalvelin ei koskaan pura tietojesi salausta, suojaamaton yhteys paljastaa salattujen viestien koot ja ajoituksen verkkoa tarkkaileville. Käytä <strong>https://</strong>-osoitetta parhaan yksityisyyden vuoksi.',
 

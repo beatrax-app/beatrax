@@ -308,9 +308,11 @@ All service
 collaborators arrive as method parameters (no constructor injection,
 project-wide rule for Livewire `Component` subclasses); every action
 re-checks `CurrentUser` before any write. The `periodStartStr` client
-property is always re-validated through `resolvePeriod()` against a strict
-`Y-m-d` round-trip before use, so a malformed value can never reach
-`CarbonImmutable::parse()` uncaught.
+property is always re-validated through `Ledger`'s
+`PeriodQuery::resolveAnchor()` before use, which reads it through
+`SafeDate::dayOrNull()` — a strict `Y-m-d` round-trip — and answers with
+the current period when it fails, so a malformed value comes back as a
+period rather than reaching `CarbonImmutable::parse()` uncaught.
 
 The page renders the period `CarryoverQuery::boundedPeriodFor()` hands back,
 never the one its anchor resolved to. The fold clamps a target outside

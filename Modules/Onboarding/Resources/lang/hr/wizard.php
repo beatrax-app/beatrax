@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Čarobnjak nije mogao odrediti aktivni korak. Upotrijebi Nastavi kasnije → za izlaz, a sljedeće pokretanje će se oporaviti.',
 
     'privacy' => 'Tvoji podaci ostaju na ovom uređaju',
+    'privacy_connector' => 'Tvoji podaci ostaju na ovom uređaju. Ovaj korak povezuje tvoju pristiglu poštu s Googleom ili Microsoftom.',
     'need_help' => 'Trebaš pomoć?',
     'need_help_aria' => 'Trebaš pomoć? Otvara stranicu s prijavama grešaka za Beatrax na GitHubu',
 ];

@@ -19,10 +19,12 @@ docker compose run --rm php php --version
 If it reports 8.4 or 8.3, the image is stale — rebuild it with `docker compose build
 --no-cache php` so it picks up the pinned `php:8.5-cli` base.
 
-The CI matrix runs both 8.4 and 8.5, so code that requires 8.5-only constructs (`array
-unpacking with string keys`, etc.) breaks the 8.4 axis even if it runs locally on 8.5.
-When in doubt, run `composer require --dev php:^8.4` in a throwaway branch and re-run
-the suite — it surfaces accidental 8.5-only syntax in seconds.
+There is only one PHP version in play. `composer.json` requires `"php": "^8.5"`, the
+Docker image targets 8.5, and CI runs a single `php: ['8.5']` axis — three test shards
+of it plus a static-analysis job, and nothing on 8.4. So a constraint complaint is a
+stale image or a host PHP older than the project, never a second axis you have to keep
+happy. Rebuilding the image is the fix; narrowing the `php` constraint in
+`composer.json` is not, and 8.5-only syntax is free to use.
 
 ## "Class 'Sodium' not found" / Ed25519 verification fails
 
@@ -39,24 +41,28 @@ If the extension is missing, the image is stale or the extension install step in
 `docker/php8.5/Dockerfile` was edited — rebuild with `docker compose build --no-cache
 php`.
 
-## NativePHP build fails — no 8.5 binary
+## NativePHP build fails on a missing PHP binary
 
-`nativephp/php-bin` currently ships pre-compiled binaries for PHP 8.1, 8.2, 8.3, and
-8.4 only. There is no 8.5 binary available yet. The shipped bundle is therefore built
-against 8.4, even though the developer machine runs 8.5.
+`php artisan native:build` does not compile PHP. It copies a pre-built static binary out
+of `nativephp/php-bin`, and it chooses which one from the version of PHP running the
+build: NativePHP exports `NATIVEPHP_PHP_BINARY_VERSION` as
+`PHP_MAJOR_VERSION.PHP_MINOR_VERSION`, and the extraction step then looks for
+`php-<that>.zip`. So a missing-binary failure always has the same cause — the machine is
+on a PHP minor the package carries no binary for.
 
-If `php artisan native:build` fails with a message about a missing binary for the
-detected PHP version, the project's `composer.json` `php` constraint has likely been
-narrowed away from `^8.4`. Confirm:
+Check what is actually in the package before assuming anything:
 
 ```sh
-jq -r '.require.php' composer.json
-# Expected: ^8.4   (note: NOT ^8.5)
+ls vendor/nativephp/php-bin/bin/mac/arm64/
+# php-8.3.zip  php-8.4.zip  php-8.5.zip
 ```
 
-The two-PHP setup is deliberate: dev box runs 8.5 for the most recent language and
-tooling support, shipped bundle runs 8.4 because that is what NativePHP has binaries
-for, and CI runs both axes so neither path silently regresses.
+`mac/x64`, `win/x64`, `linux/x64` and `linux/arm64` carry the same three. 8.5 is one of
+them, so the version this project requires is also the version the shipped bundle is
+built against — there is no two-PHP split to keep in your head. Run `php --version` and
+line the shell up with the project; do not reach for `composer.json` and narrow the
+`php` constraint, which adds no binary and breaks the pin the rest of the toolchain
+runs on.
 
 ## "Database is locked" during a long-running command
 
