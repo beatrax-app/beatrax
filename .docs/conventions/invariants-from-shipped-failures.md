@@ -6348,6 +6348,49 @@ occurrence of that header was inert, and the third made the file a finding.
 That is the quiet shape of this defect: nothing about the line that finally
 trips it is different from the two that did not.
 
+## A gate with no configuration refused a shipped deployment shape
+
+`Modules/Core/tests/Feature/TheBoundaryWidensOnlyByRecordTest.php`
+
+`LoopbackOnly` threw not-found on every non-loopback `SERVER_ADDR`, with no
+configuration, no environment flag and no carve-out of any kind. The platform
+matrix lists **Self-hosted** as shipped and describes it as reached over the
+household's own network, and `TrustedHostGuard` — prepended on the very next
+line — allow-lists `APP_URL`'s host with a comment saying a self-hoster reaches
+it under that name. One middleware refused the request the next one was written
+to admit, and the disagreement sat in the tree unnoticed because the half that
+refused runs first, so the half that would have allowed it never saw a request
+to judge.
+
+The shape was not merely awkward, it was unreachable except by accident: a
+reverse proxy bound to loopback on the same machine passes, because the proxy's
+own connection reports a loopback bind address. Every documented path that binds
+a real interface 404'd.
+
+The second half is the one no amount of reading the gate would have found.
+FrankenPHP — the runtime `deploy/server/Dockerfile` ships — registers
+`REMOTE_ADDR`, `SERVER_NAME`, `SERVER_PORT` and `HTTP_HOST`, and **no
+`SERVER_ADDR` at all**. So the documented Docker recipe did not fail the address
+comparison; it fell past it into the branch for a SAPI that never advertised
+where it bound, and failed closed there. `migrate` succeeded, three containers
+stayed up, and the app answered nothing. Matching interfaces alone would have
+left it exactly as broken, which is why the fix had to name the runtime
+(`PhpSapi::FrankenPhp`) as well as widen the rule.
+
+Two invariants came out of it. **The widening names interfaces and cannot spell
+"everything"**: literal addresses only, and a wildcard, a CIDR range or a
+hostname is dropped and named back by `beatrax:doctor` rather than expanded or
+resolved — all three wildcard spellings (`0.0.0.0`, `::`, `::ffff:0.0.0.0`)
+collapse to one all-zero key, so one test covers them. **Where the runtime
+publishes no bind address there is no interface to check**, so the recorded
+`APP_URL` host stands in for one — and only where it names something past
+loopback, because a caller on the LAN writes its own `Host` header and
+`localhost` is the one it would write.
+
+Both halves of the boundary now read a single `NetworkBoundary`. Two rules about
+one boundary, held in two classes, will disagree; the only question is how long
+before anyone notices.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

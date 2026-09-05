@@ -13,10 +13,15 @@ final readonly class RuntimeHealthSnapshot
 {
     public function __construct(
         private DatabaseManager $db,
+        private NetworkBoundary $boundary,
     ) {}
 
+    // The boundary state is a fixed word, never the interface list: an operator
+    // needs to know the boundary is open without reading config, and once it IS
+    // open this body is reachable from the network, where an inventory of the
+    // other interfaces served would be a disclosure and not a diagnosis.
     /**
-     * @return array{status: string, app_version: string, php_version: string, sqlite_version: string}
+     * @return array{status: string, app_version: string, php_version: string, sqlite_version: string, network_boundary: string}
      */
     public function __invoke(): array
     {
@@ -28,6 +33,7 @@ final readonly class RuntimeHealthSnapshot
             'app_version' => is_string($envVersion) && $envVersion !== '' ? $envVersion : 'dev',
             'php_version' => PHP_VERSION,
             'sqlite_version' => is_string($rawSqliteVersion) ? $rawSqliteVersion : '',
+            'network_boundary' => $this->boundary->state()->value,
         ];
     }
 }

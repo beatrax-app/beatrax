@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Modules\Core\Internal\Console\Probes\BackgroundScheduleProbe;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
+use Modules\Core\Internal\Console\Probes\NetworkBoundaryProbe;
 use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
 use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
@@ -37,6 +38,7 @@ final class DoctorCommand extends Command
         private readonly SynchronousModeProbe $synchronousProbe,
         private readonly BackupFreshnessProbe $backupFreshnessProbe,
         private readonly BackgroundScheduleProbe $backgroundScheduleProbe,
+        private readonly NetworkBoundaryProbe $networkBoundaryProbe,
         private readonly ?FtsHealthCheck $ftsHealth = null,
     ) {
         parent::__construct();
@@ -64,6 +66,7 @@ final class DoctorCommand extends Command
             $this->synchronousProbe,
             $this->backupFreshnessProbe,
             $this->backgroundScheduleProbe,
+            $this->networkBoundaryProbe,
         ];
 
         foreach ($probes as $probe) {
