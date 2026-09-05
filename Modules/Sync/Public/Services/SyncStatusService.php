@@ -7,6 +7,8 @@ namespace Modules\Sync\Public\Services;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Internal\Status\PeerSessionTally;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 
 final readonly class SyncStatusService
 {
@@ -63,45 +65,33 @@ final readonly class SyncStatusService
             ->delete();
     }
 
-    // Priority order: an errored peer outranks a syncing one, which outranks
-    // a finished one. Written as the ladder the caller reads rather than as
-    // nested guards, so the order is the code rather than a comment beside it.
-    /**
-     * @return 'all_synced'|'syncing'|'offline'|'error'|'unknown'
-     */
-    public function overallStatus(int $userId): string
+    // Priority order: a peer needing attention outranks one mid-exchange, which
+    // outranks one that cannot be reached, which outranks a finished one.
+    // Written as the ladder the caller reads rather than as nested guards.
+    public function overallStatus(int $userId): SyncOverallStatus
     {
         $rows = $this->peerStatuses($userId);
         if ($rows === []) {
-            return 'unknown';
+            return SyncOverallStatus::Unknown;
         }
 
-        $hasError = false;
-        $hasSyncing = false;
-        $hasFinished = false;
-
-        foreach ($rows as $row) {
-            $vars = get_object_vars($row);
-            $status = is_string($vars['status'] ?? null) ? $vars['status'] : '';
-            $errorMsg = is_string($vars['error_message'] ?? null) ? $vars['error_message'] : '';
-            $lastSeen = is_string($vars['last_seen_at'] ?? null) ? $vars['last_seen_at'] : '';
-
-            $hasError = $hasError || ($status === 'failed' && $errorMsg !== '');
-            $hasSyncing = $hasSyncing || in_array($status, ['connecting', 'handshaking', 'active'], true);
-            // A closed row, or a failed one that was seen at least once, means
-            // the sync finished and the peer has since gone away.
-            $hasFinished = $hasFinished || $status === 'closed' || ($status === 'failed' && $lastSeen !== '');
-        }
+        $seen = PeerSessionTally::over($rows);
 
         return match (true) {
-            $hasError => 'error',
-            $hasSyncing => 'syncing',
+            $seen->error => SyncOverallStatus::Error,
+            $seen->syncing => SyncOverallStatus::Syncing,
+            // Before the finished arm, not after it: a peer that closed an
+            // exchange yesterday and cannot be reached today is offline. That
+            // arm could not answer offline at all, so it said the opposite.
+            $seen->unreachable => SyncOverallStatus::Offline,
             // "Up to date" is a claim about this device's changes, not just
             // about the last session closing cleanly. Anything written since
             // then has not been anywhere, and saying otherwise is how a goal
             // that only ever existed on one phone looked fully synced.
-            $hasFinished => $this->hasUndeliveredLocalOps($userId) ? 'syncing' : 'all_synced',
-            default => 'offline',
+            $seen->finished => $this->hasUndeliveredLocalOps($userId)
+                ? SyncOverallStatus::Behind
+                : SyncOverallStatus::AllSynced,
+            default => SyncOverallStatus::Offline,
         };
     }
 

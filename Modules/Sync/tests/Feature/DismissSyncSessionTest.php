@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 // sync_sessions rows outlive the registry rows they name, so a failed
@@ -52,7 +53,7 @@ function dismissConfirmedDevice(DatabaseManager $db, int $userId, string $device
     ]);
 }
 
-it('removes a single recorded session and clears the error it was holding', function (): void {
+it('removes a single recorded session and clears the state it was holding', function (): void {
     $db = app(DatabaseManager::class);
     $userId = dismissUser('dismiss-single');
 
@@ -61,12 +62,14 @@ it('removes a single recorded session and clears the error it was holding', func
     /** @var SyncStatusService $status */
     $status = app(SyncStatusService::class);
 
-    expect($status->overallStatus($userId))->toBe('error');
+    // "Connection failed" is a peer that cannot be reached, which is ordinary,
+    // so the row holds the surface on offline rather than on error.
+    expect($status->overallStatus($userId))->toBe(SyncOverallStatus::Offline);
 
     $status->forgetSession($userId, 'unknown');
 
     expect($status->peerStatuses($userId))->toBe([])
-        ->and($status->overallStatus($userId))->toBe('unknown', 'the error must go with the row');
+        ->and($status->overallStatus($userId))->toBe(SyncOverallStatus::Unknown, 'the state must go with the row');
 });
 
 it('sweeps sessions no confirmed device backs and keeps the live one', function (): void {

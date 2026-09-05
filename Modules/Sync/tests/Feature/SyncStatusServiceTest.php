@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
@@ -39,30 +40,46 @@ function sssService(): SyncStatusService
 }
 
 it('reports unknown when the user has no sessions at all', function (): void {
-    expect(sssService()->overallStatus(1))->toBe('unknown');
+    expect(sssService()->overallStatus(1))->toBe(SyncOverallStatus::Unknown);
 });
 
 // A row that errored outranks one that is mid-handshake, because a peer needing
 // attention should not be hidden behind one that is merely busy.
-it('ranks an errored peer above a syncing one, and a syncing one above a finished one', function (array $rows, string $expected): void {
+it('ranks an errored peer above a syncing one, a syncing one above an unreachable one, and that above a finished one', function (array $rows, SyncOverallStatus $expected): void {
     sssSeed(1, $rows);
 
     expect(sssService()->overallStatus(1))->toBe($expected);
 })->with([
-    'failed with a message' => [[['status' => 'failed', 'error_message' => 'handshake rejected']], 'error'],
+    'failed to verify' => [[['status' => 'failed', 'error_message' => 'handshake rejected']], SyncOverallStatus::Error],
     'error outranks syncing' => [[
         ['status' => 'active'],
         ['status' => 'failed', 'error_message' => 'handshake rejected'],
-    ], 'error'],
-    'connecting' => [[['status' => 'connecting']], 'syncing'],
-    'handshaking' => [[['status' => 'handshaking']], 'syncing'],
-    'active' => [[['status' => 'active']], 'syncing'],
+    ], SyncOverallStatus::Error],
+    'connecting' => [[['status' => 'connecting']], SyncOverallStatus::Syncing],
+    'handshaking' => [[['status' => 'handshaking']], SyncOverallStatus::Syncing],
+    'active' => [[['status' => 'active']], SyncOverallStatus::Syncing],
     'syncing outranks finished' => [[
         ['status' => 'closed'],
         ['status' => 'connecting'],
-    ], 'syncing'],
-    'closed' => [[['status' => 'closed']], 'all_synced'],
-    'failed but seen before' => [[['status' => 'failed', 'last_seen_at' => '2026-07-19 05:00:00']], 'all_synced'],
+    ], SyncOverallStatus::Syncing],
+    'closed' => [[['status' => 'closed']], SyncOverallStatus::AllSynced],
+    // What the arm could not say. A peer that finished an exchange and cannot
+    // be reached now was reported as up to date, over a row the same screen
+    // was already labelling "Can't reach peer".
+    'failed but seen before' => [
+        [['status' => 'failed', 'error_message' => 'connection refused', 'last_seen_at' => '2026-07-19 05:00:00']],
+        SyncOverallStatus::Offline,
+    ],
+    'unreachable outranks a finished peer beside it' => [[
+        ['status' => 'closed'],
+        ['status' => 'failed', 'error_message' => 'could not reach peer'],
+    ], SyncOverallStatus::Offline],
+    // Unrecognised, and not a fault: the per-peer label calls this "Connection
+    // failed", so the banner above it must not call it an error.
+    'a failure this build has no reading of' => [
+        [['status' => 'failed', 'error_message' => 'ECONNRESET', 'last_seen_at' => '2026-07-19 05:00:00']],
+        SyncOverallStatus::Offline,
+    ],
 ]);
 
 // A failure that never connected is not a completed sync: calling it all_synced
@@ -70,15 +87,15 @@ it('ranks an errored peer above a syncing one, and a syncing one above a finishe
 it('reports offline for a peer that failed without ever being seen', function (): void {
     sssSeed(1, [['status' => 'failed', 'error_message' => '', 'last_seen_at' => null]]);
 
-    expect(sssService()->overallStatus(1))->toBe('offline');
+    expect(sssService()->overallStatus(1))->toBe(SyncOverallStatus::Offline);
 });
 
 it('scopes the status to the asking user', function (): void {
     sssSeed(1, [['status' => 'closed']]);
-    sssSeed(2, [['status' => 'failed', 'error_message' => 'not yours']]);
+    sssSeed(2, [['status' => 'failed', 'error_message' => 'handshake rejected']]);
 
-    expect(sssService()->overallStatus(1))->toBe('all_synced')
-        ->and(sssService()->overallStatus(2))->toBe('error');
+    expect(sssService()->overallStatus(1))->toBe(SyncOverallStatus::AllSynced)
+        ->and(sssService()->overallStatus(2))->toBe(SyncOverallStatus::Error);
 });
 
 it('has no last-synced time before any peer has been seen', function (): void {

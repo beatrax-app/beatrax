@@ -11,6 +11,7 @@ return [
     'error' => 'Sinhronizācijas kļūda vienā vai vairākās ierīcēs',
     'syncing' => 'Sinhronizē…',
     'offline' => 'Ierīces bezsaistē',
+    'behind' => 'Izmaiņas vēl nav nosūtītas',
     'all_synced' => 'Visas ierīces ir aktuālas',
     'synced' => 'sinhronizēts',
 

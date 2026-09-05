@@ -11,6 +11,7 @@ return [
     'error' => 'Sünkroonimise viga ühes või mitmes seadmes',
     'syncing' => 'Sünkroonin…',
     'offline' => 'Seadmed on võrgust väljas',
+    'behind' => 'Muudatused on veel saatmata',
     'all_synced' => 'Kõik seadmed on ajakohased',
     'synced' => 'sünkroonitud',
 

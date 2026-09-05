@@ -11,6 +11,7 @@ return [
     'error' => 'Error de sincronización en uno o más dispositivos',
     'syncing' => 'Sincronizando…',
     'offline' => 'Dispositivos sin conexión',
+    'behind' => 'Cambios aún no enviados',
     'all_synced' => 'Todos los dispositivos están al día',
     'synced' => 'sincronizado',
 
