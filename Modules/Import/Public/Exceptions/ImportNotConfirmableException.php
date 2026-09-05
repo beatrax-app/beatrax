@@ -22,4 +22,12 @@ final class ImportNotConfirmableException extends RuntimeException
             $refusal->sentence(),
         ));
     }
+
+    // Read by callers that fetch their own source and decide whether to try
+    // again. A method, because reaching the same answer through $refusal would
+    // make the caller name a Modules\Import\Internal enum.
+    public function anotherReadCouldDiffer(): bool
+    {
+        return $this->refusal->anotherReadCouldDiffer();
+    }
 }

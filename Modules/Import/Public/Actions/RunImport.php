@@ -16,6 +16,7 @@ use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\RemoteFetchPath;
+use Modules\Import\Internal\Services\StatementDerivedRecords;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
@@ -41,6 +42,7 @@ final readonly class RunImport implements RunsImports
         private Clock $clock,
         private ConfirmImport $confirmAction,
         private StorageFactory $storage,
+        private StatementDerivedRecords $derivedRecords,
     ) {}
 
     public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult
@@ -53,13 +55,7 @@ final readonly class RunImport implements RunsImports
         $existing = $this->findRun($user, $sha);
 
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
-            // This SHA256 already imported and landed, so the re-parse would
-            // be identical and expensive.
-            return new ImportPreviewResult(
-                importRunId: $existing->id,
-                rows: [],
-                accountsToName: [],
-            );
+            return $this->alreadyLanded($existing, $user);
         }
 
         $stablePath = $this->copyToStableLocation($localPath, $user, $sha, $sourceFormat);
@@ -83,11 +79,7 @@ final readonly class RunImport implements RunsImports
                 // committed between the SELECT and this INSERT.
                 $raced = $this->reReadAfterRace($user, $sha);
                 if ($raced->status === ImportRunStatus::Confirmed->value) {
-                    return new ImportPreviewResult(
-                        importRunId: $raced->id,
-                        rows: [],
-                        accountsToName: [],
-                    );
+                    return $this->alreadyLanded($raced, $user);
                 }
                 $importRun = $this->resetPreviewedRun($raced, $sourceFormat, $stablePath);
             }
@@ -193,11 +185,7 @@ final readonly class RunImport implements RunsImports
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
             // Same short-circuit as runFromUpload(): this window already
             // fetched and landed.
-            return new ImportPreviewResult(
-                importRunId: $existing->id,
-                rows: [],
-                accountsToName: [],
-            );
+            return $this->alreadyLanded($existing, $user);
         }
 
         if ($existing !== null) {
@@ -219,11 +207,7 @@ final readonly class RunImport implements RunsImports
                 // loser re-reads rather than 500-ing.
                 $raced = $this->reReadAfterRace($user, $idempotencyKey);
                 if ($raced->status === ImportRunStatus::Confirmed->value) {
-                    return new ImportPreviewResult(
-                        importRunId: $raced->id,
-                        rows: [],
-                        accountsToName: [],
-                    );
+                    return $this->alreadyLanded($raced, $user);
                 }
                 $importRun = $this->resetPreviewedRun($raced, $sourceFormat, null);
             }
@@ -239,6 +223,21 @@ final readonly class RunImport implements RunsImports
             $importRun->id,
             $this->cache->writer($importRun->id),
         ));
+    }
+
+    // This key already imported and landed, so re-parsing would produce the
+    // identical run at the identical cost. Parsing is the only part skipped:
+    // uploading the same file again is how a reader asks for a card statement
+    // or a starting balance they deleted back, and the promotion is idempotent.
+    private function alreadyLanded(ImportRun $run, User $user): ImportPreviewResult
+    {
+        $this->derivedRecords->promoteFor($run->id, $user);
+
+        return new ImportPreviewResult(
+            importRunId: $run->id,
+            rows: [],
+            accountsToName: [],
+        );
     }
 
     // The rows come back off the chunks the pipeline just wrote, a window at a

@@ -372,12 +372,14 @@ final class PreviewWizard extends Component
             $needsIcsAccountName = $prompt->needsIcsAccountName($this->importRunId, $currentUser);
             $needsPaypalAccountName = $prompt->needsPaypalAccountName($this->importRunId, $currentUser);
             $needsGooglePlayAccountName = $prompt->needsGooglePlayAccountName($this->importRunId, $currentUser);
+            $confirmRefused = $head?->confirmRefusal() !== null;
         } catch (PreviewCacheCorruptedException) {
             $this->previewUnreadable = true;
             $preview = null;
             $needsIcsAccountName = false;
             $needsPaypalAccountName = false;
             $needsGooglePlayAccountName = false;
+            $confirmRefused = true;
         }
 
         return $views->make('import::livewire.preview-wizard', [
@@ -388,6 +390,10 @@ final class PreviewWizard extends Component
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'needsGooglePlayAccountName' => $needsGooglePlayAccountName,
+            // The button reads the same rule confirm() and ConfirmImport read,
+            // rather than the blade restating it: the third copy was the one
+            // that never learned a file could stop being read part-way.
+            'confirmRefused' => $confirmRefused,
             'importableRowCount' => self::importableRowCount($preview),
             'failedRowCount' => self::failedRowCount($preview),
             'standInAccountNames' => self::standInAccountNames($preview, $standInNames),

@@ -55,11 +55,16 @@ final class PreviewHead extends Data
         return $this->rowCount - $this->errorCount;
     }
 
-    // The one confirmable rule, read by the wizard's guard and enforced by
-    // ConfirmImport. Held in the wizard alone it was a rule only the reader
-    // clicking Confirm ever met; a scheduled bank sync went straight past it.
+    // The one confirmable rule, on the run rather than the wizard, so a
+    // headless caller meets it too. A file-level failure comes first, and
+    // nothing later removes it: 499 entries of a 1200-entry statement would
+    // otherwise land whole and end the ledger mid-month with nothing saying so.
     public function confirmRefusal(): ?ConfirmRefusal
     {
+        if ($this->fileFailureReason !== null) {
+            return ConfirmRefusal::FileDidNotReadInFull;
+        }
+
         if ($this->accountsToName !== []) {
             return ConfirmRefusal::AccountsToName;
         }

@@ -68,10 +68,10 @@ it('re-confirming the same import_run does NOT duplicate card_statements rows', 
 });
 
 it('re-confirming an already-confirmed import_run short-circuits via the status=confirmed path and never calls the upserter', function (): void {
-    // The status=confirmed short-circuit is the ONLY path that bypasses the
-    // post-commit upsert: a zero-inserts confirm on a not-yet-confirmed run
-    // still calls the upserter, so a re-import can refill a manually deleted
-    // card_statements row.
+    // The status=confirmed short-circuit is the only path through this action
+    // that bypasses the post-commit upsert: a zero-inserts confirm on a
+    // not-yet-confirmed run still calls the upserter. Re-uploading the file is
+    // served by RunImport::alreadyLanded(), which never reaches this action.
     $spy = new class($this->app->make(CardStatementUpserter::class)) implements UpsertsCardStatements
     {
         public int $callCount = 0;

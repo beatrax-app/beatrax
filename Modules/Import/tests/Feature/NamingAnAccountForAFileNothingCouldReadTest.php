@@ -102,7 +102,8 @@ it('creates no account when a PayPal name is submitted for a file nothing could 
 });
 
 // The account a reader named still has to survive a run that read SOME rows and
-// stopped: those rows are importable, and the account is what they land in.
+// stopped. The run itself is refused, but the account is durable work: it is
+// what the rows land in once the file is uploaded again and read in full.
 it('still asks for a card name when the file failed partway but rows were read', function (): void {
     $user = unreadableFileUser('ics-partial');
 
