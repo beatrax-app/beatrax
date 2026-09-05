@@ -9,49 +9,152 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "si_splosna_olajsava"
     name: "Splošna olajšava"
     short_name: "Splošna"
     hint: "Osnovna olajšava za vse rezidente, katere višina je odvisna od skupnega dohodka"
+    i18n:
+      en:
+        name: "General allowance"
+        short_name: "General"
+        hint: "Basic allowance for all residents, the amount of which depends on total income"
+      nl:
+        name: "Algemene aftrek"
+        short_name: "Algemeen"
+        hint: "Basisaftrek voor alle inwoners, waarvan de hoogte afhangt van het totale inkomen"
   - key: "si_osebna_olajsava_invalid"
     name: "Osebna olajšava za invalida s 100 % telesno okvaro"
     short_name: "Invalid"
     hint: "Olajšava za zavezanca s 100-odstotno telesno okvaro"
+    i18n:
+      en:
+        name: "Personal allowance for 100% physical disability"
+        short_name: "Disability"
+        hint: "Allowance for a taxpayer with a 100-percent physical impairment"
+      nl:
+        name: "Persoonlijke aftrek bij 100% lichamelijke beperking"
+        short_name: "Invaliditeit"
+        hint: "Aftrek voor een belastingplichtige met een lichamelijke beperking van 100 procent"
   - key: "si_seniorska_olajsava"
     name: "Osebna olajšava po dopolnjenem 70. letu starosti"
     short_name: "Seniorska"
     hint: "Olajšava za zavezanca, ki je v davčnem letu dopolnil 70 let"
+    i18n:
+      en:
+        name: "Personal allowance from the age of 70"
+        short_name: "Age 70+"
+        hint: "Allowance for a taxpayer who reached the age of 70 during the tax year"
+      nl:
+        name: "Persoonlijke aftrek vanaf 70 jaar"
+        short_name: "70-plussers"
+        hint: "Aftrek voor een belastingplichtige die in het belastingjaar 70 jaar is geworden"
   - key: "si_olajsava_zascita_resevanje"
     name: "Osebna olajšava za prostovoljno opravljanje nalog zaščite in reševanja"
     short_name: "Zaščita"
     hint: "Olajšava za neprekinjeno vsaj desetletno prostovoljno in nepoklicno opravljanje operativnih nalog"
+    i18n:
+      en:
+        name: "Personal allowance for voluntary civil protection and rescue duty"
+        short_name: "Rescue duty"
+        hint: "Allowance for at least ten unbroken years of voluntary, non-professional operational duty"
+      nl:
+        name: "Persoonlijke aftrek voor vrijwillige hulpverlening en reddingswerk"
+        short_name: "Reddingswerk"
+        hint: "Aftrek voor ten minste tien onafgebroken jaren vrijwillige, niet-beroepsmatige operationele inzet"
   - key: "si_posebna_osebna_olajsava_dijak_student"
     name: "Posebna osebna olajšava za dijaka ali študenta"
     short_name: "Dijak/štud."
     hint: "Olajšava za rezidenta, ki se izobražuje in ima status dijaka ali študenta"
+    i18n:
+      en:
+        name: "Special personal allowance for pupils and students"
+        short_name: "Pupil/student"
+        hint: "Allowance for a resident in education who has pupil or student status"
+      nl:
+        name: "Bijzondere persoonlijke aftrek voor scholieren en studenten"
+        short_name: "Scholier/stud."
+        hint: "Aftrek voor een inwoner die onderwijs volgt en de status van scholier of student heeft"
   - key: "si_olajsava_za_mlade"
     name: "Posebna osebna olajšava do dopolnjenega 29. leta starosti"
     short_name: "Za mlade"
     hint: "Olajšava za prejemnika dohodka iz delovnega razmerja do dopolnjenega 29. leta"
+    i18n:
+      en:
+        name: "Special personal allowance up to the age of 29"
+        short_name: "Under 29"
+        hint: "Allowance for recipients of employment income up to the age of 29"
+      nl:
+        name: "Bijzondere persoonlijke aftrek tot 29 jaar"
+        short_name: "Tot 29 jaar"
+        hint: "Aftrek voor ontvangers van inkomen uit dienstbetrekking tot de leeftijd van 29 jaar"
   - key: "si_olajsava_vzdrzevani_otroci"
     name: "Posebna olajšava za vzdrževane otroke"
     short_name: "Otroci"
     hint: "Olajšava, ki narašča z zaporednim številom vzdrževanih otrok"
+    i18n:
+      en:
+        name: "Special allowance for dependent children"
+        short_name: "Children"
+        hint: "Allowance that rises with each further dependent child"
+      nl:
+        name: "Bijzondere aftrek voor kinderen ten laste"
+        short_name: "Kinderen"
+        hint: "Aftrek die oploopt met elk volgend kind ten laste"
   - key: "si_olajsava_vzdrzevani_druzinski_clani"
     name: "Posebna olajšava za druge vzdrževane družinske člane"
     short_name: "Vzdrževani"
     hint: "Olajšava za vsakega drugega vzdrževanega družinskega člana"
+    i18n:
+      en:
+        name: "Special allowance for other dependent family members"
+        short_name: "Dependants"
+        hint: "Allowance for every other dependent family member"
+      nl:
+        name: "Bijzondere aftrek voor andere gezinsleden ten laste"
+        short_name: "Ten laste"
+        hint: "Aftrek voor elk ander gezinslid dat ten laste komt"
   - key: "si_olajsava_pokojninsko_zavarovanje"
     name: "Olajšava za prostovoljno dodatno pokojninsko zavarovanje"
     short_name: "Pokojninska"
     hint: "Vplačane premije prostovoljnega dodatnega pokojninskega zavarovanja"
+    i18n:
+      en:
+        name: "Allowance for voluntary supplementary pension insurance"
+        short_name: "Pension"
+        hint: "Premiums paid for voluntary supplementary pension insurance"
+      nl:
+        name: "Aftrek voor vrijwillige aanvullende pensioenverzekering"
+        short_name: "Pensioenpremies"
+        hint: "Betaalde premies voor een vrijwillige aanvullende pensioenverzekering"
   - key: "si_dejanski_stroski"
     name: "Dejanski stroški prevoza na delo in prehrane med delom"
     short_name: "Dej. stroški"
     hint: "Uveljavljanje dejanskih stroškov namesto priznanih pavšalnih zneskov"
+    i18n:
+      en:
+        name: "Actual costs of commuting and meals at work"
+        short_name: "Actual costs"
+        hint: "Claiming actual costs instead of the recognised flat-rate amounts"
+      nl:
+        name: "Werkelijke kosten van woon-werkverkeer en maaltijden op het werk"
+        short_name: "Werk. kosten"
+        hint: "Werkelijke kosten opvoeren in plaats van de erkende forfaitaire bedragen"
   - key: "si_namenitev_dohodnine"
     name: "Namenitev dela dohodnine za donacije"
     short_name: "Donacije"
     hint: "Do 1 % odmerjene dohodnine nevladnim organizacijam, sindikatom, cerkvam ter šolskim in vrtčevskim skladom"
+    i18n:
+      en:
+        name: "Allocating part of your income tax to donations"
+        short_name: "Donations"
+        hint: "Up to 1% of assessed income tax to non-governmental organisations, trade unions, churches and school or nursery funds"
+      nl:
+        name: "Deel van de inkomstenbelasting bestemmen voor giften"
+        short_name: "Giften"
+        hint: "Tot 1% van de vastgestelde inkomstenbelasting aan maatschappelijke organisaties, vakbonden, kerken en school- en kinderopvangfondsen"

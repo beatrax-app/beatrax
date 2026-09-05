@@ -12,33 +12,100 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "sk_nezdanitelna_cast_na_danovnika"
     name: "Nezdaniteľná časť základu dane na daňovníka"
     short_name: "Na daňovníka"
     hint: "Základná nezdaniteľná časť, ktorá sa znižuje pri vyššom základe dane"
+    i18n:
+      en:
+        name: "Tax-free part of the tax base for the taxpayer"
+        short_name: "Taxpayer"
+        hint: "Basic tax-free amount, which is reduced at a higher tax base"
+      nl:
+        name: "Belastingvrije voet voor de belastingplichtige"
+        short_name: "Vrije voet"
+        hint: "Basisbedrag dat belastingvrij blijft en lager wordt bij een hogere belastinggrondslag"
   - key: "sk_nezdanitelna_cast_na_manzela"
     name: "Nezdaniteľná časť základu dane na manželku alebo manžela"
     short_name: "Na manželku"
     hint: "Nezdaniteľná časť podľa vlastných príjmov manželky alebo manžela"
+    i18n:
+      en:
+        name: "Tax-free part of the tax base for a spouse"
+        short_name: "Spouse"
+        hint: "Tax-free amount determined by the own income of the spouse"
+      nl:
+        name: "Belastingvrije voet voor de echtgenoot of echtgenote"
+        short_name: "Echtgenoot"
+        hint: "Belastingvrij bedrag dat afhangt van het eigen inkomen van de echtgenoot of echtgenote"
   - key: "sk_prispevky_na_dds"
     name: "Príspevky na doplnkové dôchodkové sporenie"
     short_name: "III. pilier"
     hint: "Vlastné príspevky zaplatené na doplnkové dôchodkové sporenie v treťom pilieri"
+    i18n:
+      en:
+        name: "Contributions to supplementary pension saving (III. pilier)"
+        short_name: "III. pilier"
+        hint: "Your own contributions paid into supplementary pension saving in the third pillar"
+      nl:
+        name: "Pensioenpremies voor aanvullend pensioensparen (III. pilier)"
+        short_name: "III. pilier"
+        hint: "Eigen premies betaald voor aanvullend pensioensparen in de derde pijler"
   - key: "sk_danovy_bonus_na_dieta"
     name: "Daňový bonus na vyživované dieťa"
     short_name: "Bonus dieťa"
     hint: "Bonus na každé vyživované dieťa žijúce s daňovníkom v domácnosti"
+    i18n:
+      en:
+        name: "Tax bonus for a dependent child"
+        short_name: "Child bonus"
+        hint: "Bonus for every dependent child living with the taxpayer in the same household"
+      nl:
+        name: "Belastingbonus voor een kind ten laste"
+        short_name: "Kinderbonus"
+        hint: "Bonus voor elk kind ten laste dat met de belastingplichtige in één huishouden woont"
   - key: "sk_danovy_bonus_na_zaplatene_uroky"
     name: "Daňový bonus na zaplatené úroky"
     short_name: "Bonus úroky"
     hint: "Bonus z úrokov zaplatených z úveru na bývanie pre mladých"
+    i18n:
+      en:
+        name: "Tax bonus on interest paid"
+        short_name: "Interest bonus"
+        hint: "Bonus on the interest paid on a housing loan for young people"
+      nl:
+        name: "Belastingbonus op betaalde rente"
+        short_name: "Rentebonus"
+        hint: "Bonus op de rente betaald op een woningkrediet voor jongeren"
   - key: "sk_podiel_zaplatenej_dane"
     name: "Použitie podielu zaplatenej dane na osobitné účely"
     short_name: "Podiel dane"
     hint: "Poukázanie 2 % zaplatenej dane určenému prijímateľovi, 3 % pri dobrovoľníckej činnosti"
+    i18n:
+      en:
+        name: "Assigning a share of the tax paid to a designated purpose"
+        short_name: "Share of tax"
+        hint: "Assigning 2% of the tax paid to a designated recipient, 3% with voluntary work"
+      nl:
+        name: "Een deel van de betaalde belasting bestemmen voor bijzondere doelen"
+        short_name: "Deel belasting"
+        hint: "Toewijzing van 2% van de betaalde belasting aan een aangewezen ontvanger, 3% bij vrijwilligerswerk"
   - key: "sk_podiel_zaplatenej_dane_rodicovi"
     name: "Použitie podielu zaplatenej dane pre rodiča"
     short_name: "Pre rodiča"
     hint: "Poukázanie 2 % zaplatenej dane každému určenému rodičovi poberajúcemu dôchodok"
+    i18n:
+      en:
+        name: "Assigning a share of the tax paid to a parent"
+        short_name: "To a parent"
+        hint: "Assigning 2% of the tax paid to each designated parent who receives a pension"
+      nl:
+        name: "Een deel van de betaalde belasting bestemmen voor een ouder"
+        short_name: "Voor een ouder"
+        hint: "Toewijzing van 2% van de betaalde belasting aan elke aangewezen ouder met een pensioen"

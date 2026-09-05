@@ -15,53 +15,165 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "ro_deducere_personala"
     name: "Deducere personală de bază și suplimentară"
     short_name: "Ded. pers."
     hint: "Deducere lunară acordată de angajator la funcția de bază, în funcție de venit și de persoanele în întreținere"
+    i18n:
+      en:
+        name: "Basic and additional personal allowance"
+        short_name: "Personal allow."
+        hint: "Monthly allowance granted by the employer at the main place of work, based on income and dependants"
+      nl:
+        name: "Basis- en aanvullende persoonlijke aftrek"
+        short_name: "Pers. aftrek"
+        hint: "Maandelijkse aftrek die de werkgever bij de hoofdbetrekking toekent, afhankelijk van het inkomen en het aantal personen ten laste"
   - key: "ro_cotizatie_sindicala"
     name: "Cotizația sindicală"
     short_name: "Sindicat"
     hint: "Cotizația plătită sindicatului, dedusă lunar de angajator din venitul salarial"
+    i18n:
+      en:
+        name: "Union dues"
+        short_name: "Union dues"
+        hint: "Dues paid to the union, deducted monthly by the employer from salary income"
+      nl:
+        name: "Vakbondscontributie"
+        short_name: "Vakbond"
+        hint: "Contributie aan de vakbond, maandelijks door de werkgever ingehouden op het salaris"
   - key: "ro_pensii_facultative"
     name: "Contribuții la fonduri de pensii facultative (Pilonul III)"
     short_name: "Pilon III"
     hint: "Contribuții proprii la pensii facultative din România sau din UE/SEE, deductibile în limita unui plafon anual"
+    i18n:
+      en:
+        name: "Contributions to voluntary pension funds (Pilonul III)"
+        short_name: "Pilonul III"
+        hint: "Own contributions to voluntary pensions in Romania or the EU/EEA, deductible up to an annual ceiling"
+      nl:
+        name: "Pensioenpremies voor vrijwillige pensioenfondsen (Pilonul III)"
+        short_name: "Pilonul III"
+        hint: "Eigen premies voor vrijwillig pensioen in Roemenië of de EU/EER, aftrekbaar tot een jaarlijks plafond"
   - key: "ro_asigurare_sanatate_voluntara"
     name: "Prime de asigurare voluntară de sănătate și abonamente medicale"
     short_name: "Sănătate"
     hint: "Prime de asigurare voluntară de sănătate și abonamente medicale, în limita unui plafon anual"
+    i18n:
+      en:
+        name: "Voluntary health insurance premiums and medical subscriptions"
+        short_name: "Health"
+        hint: "Voluntary health insurance premiums and medical subscriptions, up to an annual ceiling"
+      nl:
+        name: "Vrijwillige zorgverzekeringspremies en medische abonnementen"
+        short_name: "Zorgverzekering"
+        hint: "Premies voor een vrijwillige zorgverzekering en medische abonnementen, tot een jaarlijks plafond"
   - key: "ro_abonament_sportiv"
     name: "Abonamente pentru practicarea sportului și educației fizice"
     short_name: "Sport"
     hint: "Abonamente la săli și facilități sportive, în limita unui plafon anual"
+    i18n:
+      en:
+        name: "Sport and physical activity memberships"
+        short_name: "Sport"
+        hint: "Memberships of gyms and sports facilities, up to an annual ceiling"
+      nl:
+        name: "Abonnementen voor sport en lichamelijke opvoeding"
+        short_name: "Sport"
+        hint: "Abonnementen op sportscholen en sportfaciliteiten, tot een jaarlijks plafond"
   - key: "ro_investitii_actiuni_etf"
     name: "Sume plătite pentru dobândirea de acțiuni, obligațiuni și titluri ETF"
     short_name: "Acțiuni/ETF"
     hint: "Sume plătite prin intermediari autorizați pentru titluri financiare, în limita unui plafon anual"
+    i18n:
+      en:
+        name: "Amounts paid to acquire shares, bonds and ETF units"
+        short_name: "Shares/ETF"
+        hint: "Amounts paid through authorised intermediaries for financial securities, up to an annual ceiling"
+      nl:
+        name: "Bedragen betaald voor aandelen, obligaties en ETF-participaties"
+        short_name: "Aandelen/ETF"
+        hint: "Bedragen die via erkende tussenpersonen aan effecten zijn besteed, tot een jaarlijks plafond"
   - key: "ro_contributii_sociale"
     name: "Contribuții sociale obligatorii (CAS și CASS)"
     short_name: "CAS/CASS"
     hint: "Contribuțiile obligatorii de pensie și sănătate, scăzute înainte de calculul impozitului"
+    i18n:
+      en:
+        name: "Mandatory social contributions (CAS and CASS)"
+        short_name: "CAS/CASS"
+        hint: "Mandatory pension and health contributions, deducted before the tax is calculated"
+      nl:
+        name: "Verplichte sociale premies (CAS en CASS)"
+        short_name: "CAS/CASS"
+        hint: "Verplichte pensioen- en zorgpremies, afgetrokken voordat de belasting wordt berekend"
   - key: "ro_cheltuieli_activitate_independenta"
     name: "Cheltuieli deductibile în sistem real din activități independente"
     short_name: "Chelt. PFA"
     hint: "Cheltuieli efectuate în scopul realizării de venituri din activități independente"
+    i18n:
+      en:
+        name: "Deductible self-employed business expenses under the real system"
+        short_name: "Self-empl. exp."
+        hint: "Expenses incurred in order to earn income from self-employed activity"
+      nl:
+        name: "Aftrekbare ondernemerskosten uit zelfstandige activiteiten"
+        short_name: "Ondernemerskosten"
+        hint: "Kosten gemaakt om inkomsten uit zelfstandige activiteiten te verwerven"
   - key: "ro_cotizatii_profesionale"
     name: "Cotizații profesionale și contribuții obligatorii la organizații profesionale"
     short_name: "Cotiz. prof."
     hint: "Cotizații către asociații și organizații profesionale, deductibile limitat"
+    i18n:
+      en:
+        name: "Professional fees and mandatory contributions to professional bodies"
+        short_name: "Prof. fees"
+        hint: "Fees to professional associations and bodies, deductible within limits"
+      nl:
+        name: "Beroepscontributies en verplichte bijdragen aan beroepsorganisaties"
+        short_name: "Beroepscontr."
+        hint: "Contributies aan beroepsverenigingen en beroepsorganisaties, beperkt aftrekbaar"
   - key: "ro_cota_forfetara_chirii"
     name: "Cota forfetară de cheltuieli pentru cedarea folosinței bunurilor"
     short_name: "Forfetar 20%"
     hint: "Cheltuială forfetară scăzută automat din chiria brută; sistemul real nu mai este disponibil"
+    i18n:
+      en:
+        name: "Flat-rate expense allowance on rental income"
+        short_name: "Flat rate 20%"
+        hint: "Flat-rate expense deducted automatically from the gross rent; the real system is no longer available"
+      nl:
+        name: "Forfaitaire kostenaftrek bij verhuur van bezittingen"
+        short_name: "Forfait 20%"
+        hint: "Forfaitaire kosten die automatisch van de brutohuur worden afgetrokken; het werkelijke stelsel bestaat niet meer"
   - key: "ro_cota_forfetara_drepturi_autor"
     name: "Cota forfetară de cheltuieli pentru drepturi de proprietate intelectuală"
     short_name: "Forfetar 40%"
     hint: "Cheltuială forfetară scăzută din venitul brut din drepturi de autor și drepturi conexe"
+    i18n:
+      en:
+        name: "Flat-rate expense allowance on intellectual property income"
+        short_name: "Flat rate 40%"
+        hint: "Flat-rate expense deducted from gross income from copyright and related rights"
+      nl:
+        name: "Forfaitaire kostenaftrek bij inkomsten uit intellectueel eigendom"
+        short_name: "Forfait 40%"
+        hint: "Forfaitaire kosten die van het bruto-inkomen uit auteursrechten en naburige rechten worden afgetrokken"
   - key: "ro_redirectionare_3_5"
     name: "Redirecționarea a până la 3,5% din impozitul pe veniturile din salarii"
     short_name: "3,5% ONG"
     hint: "Direcționarea unei părți din impozitul deja reținut către entități nonprofit, unități de cult sau burse private, prin formularul 230"
+    i18n:
+      en:
+        name: "Redirecting up to 3.5% of the tax on salary income"
+        short_name: "3.5% to charity"
+        hint: "Directing part of the tax already withheld to non-profit bodies, religious institutions or private scholarships, using form 230"
+      nl:
+        name: "Doorsluizen van maximaal 3,5% van de loonbelasting"
+        short_name: "3,5% giften"
+        hint: "Een deel van de al ingehouden belasting toewijzen aan non-profitorganisaties, kerkelijke instellingen of particuliere beurzen, via formulier 230"

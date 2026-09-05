@@ -11,65 +11,204 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "es_prevision_social"
     name: "Aportaciones a sistemas de previsión social"
     short_name: "Plan pensión"
     hint: "Aportaciones a planes de pensiones y sistemas de previsión social"
+    i18n:
+      en:
+        name: "Contributions to pension and social provision schemes"
+        short_name: "Plan de pensiones"
+        hint: "Contributions to a Plan de pensiones and other social provision schemes"
+      nl:
+        name: "Inleg in pensioenregelingen en sociale voorzieningen"
+        short_name: "Plan de pensiones"
+        hint: "Inleg in een Plan de pensiones en andere sociale voorzieningsregelingen"
   - key: "es_prevision_social_conyuge"
     name: "Aportaciones al plan de pensiones del cónyuge"
     short_name: "Plan cónyuge"
     hint: "Aportaciones al plan del cónyuge con rentas del trabajo reducidas"
+    i18n:
+      en:
+        name: "Contributions to a Plan de pensiones for your spouse"
+        short_name: "Spouse plan"
+        hint: "Contributions to the plan of a spouse with low earned income"
+      nl:
+        name: "Inleg in het Plan de pensiones van de partner"
+        short_name: "Plan partner"
+        hint: "Inleg in het plan van een partner met een laag arbeidsinkomen"
   - key: "es_patrimonios_protegidos"
     name: "Aportaciones a patrimonios protegidos de personas con discapacidad"
     short_name: "Patrim.prot."
     hint: "Aportaciones al patrimonio protegido de un familiar con discapacidad"
+    i18n:
+      en:
+        name: "Contributions to protected assets of people with a disability"
+        short_name: "Protected assets"
+        hint: "Contributions to the protected assets of a relative with a disability"
+      nl:
+        name: "Inleg in beschermd vermogen van mensen met een beperking"
+        short_name: "Beschermd vermogen"
+        hint: "Inleg in het beschermd vermogen van een familielid met een beperking"
   - key: "es_pension_compensatoria"
     name: "Pensiones compensatorias y anualidades por alimentos"
     short_name: "Pensión comp"
     hint: "Pensión compensatoria al cónyuge fijada por resolución judicial"
+    i18n:
+      en:
+        name: "Compensatory maintenance and alimony payments"
+        short_name: "Maintenance"
+        hint: "Maintenance paid to a spouse under a court order"
+      nl:
+        name: "Partneralimentatie en alimentatie voor levensonderhoud"
+        short_name: "Alimentatie"
+        hint: "Alimentatie aan de partner die door de rechter is vastgesteld"
   - key: "es_cuotas_profesionales"
     name: "Cuotas sindicales y de colegios profesionales"
     short_name: "Cuotas prof."
     hint: "Cuotas sindicales, colegiación obligatoria y defensa jurídica"
+    i18n:
+      en:
+        name: "Union dues and professional body fees"
+        short_name: "Union and prof. fees"
+        hint: "Union dues, compulsory professional registration and legal defence"
+      nl:
+        name: "Vakbondscontributie en contributie beroepsorganisatie"
+        short_name: "Contributies"
+        hint: "Vakbondscontributie, verplichte beroepsinschrijving en juridische bijstand"
   - key: "es_gastos_actividad"
     name: "Gastos deducibles de actividades económicas"
     short_name: "Autónomos"
     hint: "Gastos de la actividad económica en estimación directa"
+    i18n:
+      en:
+        name: "Deductible business expenses"
+        short_name: "Business exp."
+        hint: "Costs of the business under the estimación directa regime"
+      nl:
+        name: "Aftrekbare ondernemerskosten"
+        short_name: "Ondernemerskosten"
+        hint: "Kosten van de onderneming onder de regeling estimación directa"
   - key: "es_vivienda_habitual"
     name: "Inversión en vivienda habitual (régimen transitorio)"
     short_name: "Vivienda hab"
     hint: "Régimen transitorio para viviendas adquiridas antes de 2013"
+    i18n:
+      en:
+        name: "Investment in a main home (transitional regime)"
+        short_name: "Main home"
+        hint: "Transitional regime for homes bought before 2013"
+      nl:
+        name: "Investering in de eigen woning (overgangsregeling)"
+        short_name: "Eigen woning"
+        hint: "Overgangsregeling voor woningen gekocht voor 2013"
   - key: "es_alquiler_vivienda"
     name: "Alquiler de la vivienda habitual (régimen transitorio)"
     short_name: "Alquiler"
     hint: "Régimen transitorio para contratos anteriores a 2015"
+    i18n:
+      en:
+        name: "Rent for a main home (transitional regime)"
+        short_name: "Rent"
+        hint: "Transitional regime for contracts signed before 2015"
+      nl:
+        name: "Huur van de eigen woning (overgangsregeling)"
+        short_name: "Huur"
+        hint: "Overgangsregeling voor contracten van voor 2015"
   - key: "es_eficiencia_energetica"
     name: "Obras de mejora de eficiencia energética en viviendas"
     short_name: "Eficiencia"
     hint: "Obras que mejoran la eficiencia energética de la vivienda"
+    i18n:
+      en:
+        name: "Energy efficiency improvements to homes"
+        short_name: "Energy works"
+        hint: "Works that improve the energy efficiency of the home"
+      nl:
+        name: "Energiebesparende maatregelen aan woningen"
+        short_name: "Energiebesparing"
+        hint: "Werkzaamheden die de energiezuinigheid van de woning verbeteren"
   - key: "es_donativos"
     name: "Donativos y otras aportaciones"
     short_name: "Donativos"
     hint: "Donativos a entidades sin fines lucrativos y a partidos políticos"
+    i18n:
+      en:
+        name: "Donations and other contributions"
+        short_name: "Donations"
+        hint: "Donations to non-profit organisations and political parties"
+      nl:
+        name: "Giften en andere bijdragen"
+        short_name: "Giften"
+        hint: "Giften aan instellingen zonder winstoogmerk en aan politieke partijen"
   - key: "es_empresas_nueva_creacion"
     name: "Inversión en empresas de nueva o reciente creación"
     short_name: "Inv. empresa"
     hint: "Suscripción de acciones o participaciones en empresas nuevas"
+    i18n:
+      en:
+        name: "Investment in new or recently created companies"
+        short_name: "New company inv."
+        hint: "Subscribing for shares or holdings in new companies"
+      nl:
+        name: "Investering in nieuwe of pas opgerichte bedrijven"
+        short_name: "Investering bedrijf"
+        hint: "Inschrijven op aandelen of participaties in nieuwe bedrijven"
   - key: "es_vehiculos_electricos"
     name: "Vehículos eléctricos enchufables y puntos de recarga"
     short_name: "Coche eléct."
     hint: "Compra de vehículo eléctrico enchufable e instalación de recarga"
+    i18n:
+      en:
+        name: "Plug-in electric vehicles and charging points"
+        short_name: "Electric car"
+        hint: "Buying a plug-in electric vehicle and installing a charging point"
+      nl:
+        name: "Elektrische plug-inauto en laadpunten"
+        short_name: "Elektrische auto"
+        hint: "Aanschaf van een elektrische plug-inauto en aanleg van een laadpunt"
   - key: "es_maternidad"
     name: "Deducción por maternidad y gastos de guardería"
     short_name: "Maternidad"
     hint: "Madres trabajadoras y gastos de custodia en guardería autorizada"
+    i18n:
+      en:
+        name: "Maternity deduction and childcare costs"
+        short_name: "Maternity"
+        hint: "Working mothers and childcare costs at an authorised nursery"
+      nl:
+        name: "Moederschapsaftrek en kinderopvangkosten"
+        short_name: "Moederschap"
+        hint: "Werkende moeders en kinderopvangkosten bij een erkende kinderopvang"
   - key: "es_familia_numerosa"
     name: "Familia numerosa y personas con discapacidad a cargo"
     short_name: "Familia num."
     hint: "Familia numerosa, discapacidad a cargo o ascendiente con dos hijos"
+    i18n:
+      en:
+        name: "Large family and dependants with a disability"
+        short_name: "Large family"
+        hint: "Large family, a dependant with a disability, or a parent with two children"
+      nl:
+        name: "Groot gezin en personen met een beperking ten laste"
+        short_name: "Groot gezin"
+        hint: "Groot gezin, iemand met een beperking ten laste of een ouder met twee kinderen"
   - key: "es_deducciones_autonomicas"
     name: "Deducciones autonómicas"
     short_name: "Autonómica"
     hint: "Deducciones aprobadas por la comunidad autónoma de residencia"
+    i18n:
+      en:
+        name: "Regional deductions"
+        short_name: "Regional"
+        hint: "Deductions approved by your comunidad autónoma of residence"
+      nl:
+        name: "Regionale aftrekposten"
+        short_name: "Regionaal"
+        hint: "Aftrekposten vastgesteld door de comunidad autónoma waar je woont"

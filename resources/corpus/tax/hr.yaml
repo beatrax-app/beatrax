@@ -10,37 +10,113 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "hr_osnovni_osobni_odbitak"
     name: "Osnovni osobni odbitak"
     short_name: "Osobni odb."
     hint: "Neoporezivi dio dohotka koji se priznaje svakom rezidentu"
+    i18n:
+      en:
+        name: "Basic personal allowance"
+        short_name: "Basic allowance"
+        hint: "The tax-free part of income granted to every resident"
+      nl:
+        name: "Basis persoonlijke aftrek"
+        short_name: "Basisaftrek"
+        hint: "Het onbelaste deel van het inkomen dat elke inwoner krijgt"
   - key: "hr_uzdrzavani_clanovi"
     name: "Uvećanje osobnog odbitka za uzdržavane članove uže obitelji"
     short_name: "Uzdržavani"
     hint: "Uvećanje po koeficijentu za bračnog druga i druge uzdržavane članove uže obitelji"
+    i18n:
+      en:
+        name: "Increased personal allowance for dependent close family members"
+        short_name: "Dependants"
+        hint: "An increase by coefficient for a spouse and other dependent close family members"
+      nl:
+        name: "Verhoging van de persoonlijke aftrek voor gezinsleden ten laste"
+        short_name: "Gezinsleden"
+        hint: "Verhoging via een coëfficiënt voor de echtgenoot en andere naaste gezinsleden ten laste"
   - key: "hr_uzdrzavana_djeca"
     name: "Uvećanje osobnog odbitka za uzdržavanu djecu"
     short_name: "Djeca"
     hint: "Uvećanje po koeficijentu koji raste s rednim brojem uzdržavanog djeteta"
+    i18n:
+      en:
+        name: "Increased personal allowance for dependent children"
+        short_name: "Children"
+        hint: "An increase by coefficient that rises with each further dependent child"
+      nl:
+        name: "Verhoging van de persoonlijke aftrek voor kinderen ten laste"
+        short_name: "Kinderen"
+        hint: "Verhoging via een coëfficiënt die stijgt met het rangnummer van het kind ten laste"
   - key: "hr_invalidnost"
     name: "Uvećanje osobnog odbitka za invalidnost i tjelesno oštećenje"
     short_name: "Invalidnost"
     hint: "Uvećanje za utvrđenu invalidnost poreznog obveznika ili uzdržavanog člana"
+    i18n:
+      en:
+        name: "Increased personal allowance for disability and bodily impairment"
+        short_name: "Disability"
+        hint: "An increase for an established disability of the taxpayer or a dependant"
+      nl:
+        name: "Verhoging van de persoonlijke aftrek bij invaliditeit en lichamelijk letsel"
+        short_name: "Invaliditeit"
+        hint: "Verhoging bij vastgestelde invaliditeit van de belastingplichtige of van iemand ten laste"
   - key: "hr_darovanja"
     name: "Darovanja"
     short_name: "Darovanja"
     hint: "Darovanja u kulturne, znanstvene, odgojno-obrazovne, zdravstvene i humanitarne svrhe"
+    i18n:
+      en:
+        name: "Donations"
+        short_name: "Donations"
+        hint: "Donations for cultural, scientific, educational, health and humanitarian purposes"
+      nl:
+        name: "Giften"
+        short_name: "Giften"
+        hint: "Giften voor culturele, wetenschappelijke, educatieve, medische en humanitaire doelen"
   - key: "hr_doprinosi_zdravstveno"
     name: "Doprinosi za obvezno zdravstveno osiguranje"
     short_name: "Zdrav. dopr."
     hint: "Plaćeni doprinosi za obvezno zdravstveno osiguranje u tuzemstvu"
+    i18n:
+      en:
+        name: "Compulsory health insurance contributions"
+        short_name: "Health ins."
+        hint: "Contributions paid for compulsory health insurance in Croatia"
+      nl:
+        name: "Zorgverzekeringspremies"
+        short_name: "Zorgverzekering"
+        hint: "Betaalde premies voor de verplichte zorgverzekering in Kroatië"
   - key: "hr_potpomognuta_podrucja"
     name: "Uvećani osobni odbitak za potpomognuta područja i Vukovar"
     short_name: "Potpomognuto"
     hint: "Veći osobni odbitak za obveznike s prebivalištem na potpomognutom području I. skupine i u Vukovaru"
+    i18n:
+      en:
+        name: "Increased personal allowance for assisted areas and Vukovar"
+        short_name: "Assisted areas"
+        hint: "A higher personal allowance for taxpayers resident in a group I assisted area or in Vukovar"
+      nl:
+        name: "Verhoogde persoonlijke aftrek voor steungebieden en Vukovar"
+        short_name: "Steungebieden"
+        hint: "Hogere persoonlijke aftrek voor belastingplichtigen met woonplaats in een steungebied van groep I en in Vukovar"
   - key: "hr_porez_placen_u_inozemstvu"
     name: "Uračunavanje poreza plaćenog u inozemstvu"
     short_name: "Inozemstvo"
     hint: "Porez na dohodak plaćen u inozemstvu koji se uračunava u tuzemnu obvezu"
+    i18n:
+      en:
+        name: "Credit for tax paid abroad"
+        short_name: "Tax paid abroad"
+        hint: "Income tax paid abroad that is credited against your domestic liability"
+      nl:
+        name: "Verrekening van in het buitenland betaalde belasting"
+        short_name: "Buitenland"
+        hint: "In het buitenland betaalde inkomstenbelasting die met de binnenlandse aanslag wordt verrekend"

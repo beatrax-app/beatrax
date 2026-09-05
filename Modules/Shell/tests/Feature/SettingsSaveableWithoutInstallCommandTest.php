@@ -45,3 +45,18 @@ it('saves the period start day, which the currency validator used to block', fun
     expect((int) DB::table('users')->where('id', $this->settingsUser->id)->value('period_start_day'))
         ->toBe(25);
 });
+
+// The base-currency select reads `currencies.name`, which is seeded in English,
+// so a Dutch reader was offered "Pound Sterling" from the very reference table
+// the account-currency editor names as its precedent.
+it('offers the reporting-currency select its options in the reader language', function (): void {
+    app()->setLocale('nl');
+
+    /** @var array<string, string> $options */
+    $options = Livewire::actingAs($this->settingsUser)->test(SettingsPage::class)->viewData('currencyOptions');
+
+    app()->setLocale('en');
+
+    expect($options['GBP'])->toBe('Britse pond')
+        ->and($options['EUR'])->toBe('Euro');
+});

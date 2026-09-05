@@ -40,7 +40,7 @@ return [
         'choose' => 'Válassz országot…',
         'switch_note' => 'A váltás új kategóriákat ad hozzá — a meglévő címkék soha nem változnak.',
 
-        'wording_note' => 'Az adókategóriák nevei a :country országban használt adóbevallásból származnak, ezért az alkalmazás minden nyelvén az adott ország szavaival maradnak.',
+        'wording_note' => 'Az adókategóriák nevei a saját nyelveden jelennek meg; a(z) :country adóbevallás a saját szavait használja.',
 
         'countries' => [
             'at' => 'Ausztria',

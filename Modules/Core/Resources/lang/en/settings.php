@@ -40,7 +40,7 @@ return [
         'choose' => 'Choose a country…',
         'switch_note' => 'Switching adds new categories — existing tags are never changed.',
 
-        'wording_note' => 'Tax category names come from the tax return used in :country, so they stay in its own words in every app language.',
+        'wording_note' => 'Tax category names are shown in your language; the :country tax return itself uses its own wording.',
 
         'countries' => [
             'at' => 'Austria',

@@ -11,10 +11,10 @@ use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 uses(RefreshDatabase::class);
 
-// The tax corpus is the filing country's own wording — "Zorgkosten", not
-// "Healthcare costs" — because it has to match the boxes on that country's
-// return. It is the one thing the country brings in its own language, and the
-// screen that lists it has to say so rather than deny it one card above.
+// The corpus seeds the filing country's own wording into the column —
+// "Zorgkosten", not "Healthcare costs" — and that column is unchanged. What
+// changed is the reading of it: the names now follow the reader, and the note
+// beside them says the return is the thing that keeps the country's words.
 
 function wordingNoteUser(string $username, string $country): User
 {
@@ -32,7 +32,9 @@ function wordingNoteUser(string $username, string $country): User
     return $user->fresh();
 }
 
-it('seeds the Dutch corpus in Dutch for an English reader', function (): void {
+// The stored column is still the jurisdiction's, which is what the corpus_key
+// resolution reads past. Nothing here asserts what a screen shows.
+it('still seeds the Dutch corpus into the column in Dutch', function (): void {
     $user = wordingNoteUser('wording-seeded', 'nl');
 
     $names = DB::table('tax_deduction_categories')
@@ -43,15 +45,15 @@ it('seeds the Dutch corpus in Dutch for an English reader', function (): void {
     expect($names)->toContain('Zorgkosten');
 });
 
-// The claim the help line makes is about the app. The exception is named
-// beside the words it is about, on the same screen and in the same card.
-it('names the country whose wording the categories keep', function (): void {
+// The note used to say the list keeps the country's words in every app
+// language. It says the opposite now, because the list does.
+it('names the country whose return keeps its own wording', function (): void {
     $user = wordingNoteUser('wording-note-en', 'nl');
     $this->actingAs($user);
 
     Livewire::test(SettingsPage::class)
         ->assertSeeHtml('data-testid="settings-country-wording-note"')
-        ->assertSee('Tax category names come from the tax return used in Netherlands, so they stay in its own words in every app language.');
+        ->assertSee('Tax category names are shown in your language; the Netherlands tax return itself uses its own wording.');
 });
 
 // Nothing is seeded without a country, so there is no foreign wording to
@@ -64,7 +66,7 @@ it('says nothing about wording when no country is chosen', function (): void {
         ->assertDontSeeHtml('data-testid="settings-country-wording-note"');
 });
 
-// The note itself follows the reader even though the words it describes do not.
+// The note follows the reader, and so now do the words it describes.
 it('reads in the reader’s own language, naming the country in that language', function (): void {
     $user = wordingNoteUser('wording-note-nl', 'de');
     DB::table('users')->where('id', $user->id)->update(['locale' => 'nl']);
@@ -72,6 +74,6 @@ it('reads in the reader’s own language, naming the country in that language', 
     $this->actingAs($user->fresh())
         ->get(route('settings'))
         ->assertOk()
-        ->assertSee('Namen van belastingcategorieën komen uit de aangifte die in Duitsland wordt gebruikt', false)
+        ->assertSee('op de belastingaangifte van Duitsland staan ze in de eigen woorden van dat land', false)
         ->assertDontSee(':country');
 });

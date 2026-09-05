@@ -6,29 +6,87 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "us_medical_dental"
     name: "Medical and dental expenses"
     short_name: "Medical"
     hint: "Out-of-pocket medical expenses exceeding 7.5% of AGI"
+    i18n:
+      en:
+        name: "Medical and dental expenses"
+        short_name: "Medical"
+        hint: "Out-of-pocket medical expenses exceeding 7.5% of AGI"
+      nl:
+        name: "Zorgkosten en tandartskosten"
+        short_name: "Zorgkosten"
+        hint: "Eigen zorgkosten boven 7,5% van het AGI"
   - key: "us_charitable_contributions"
     name: "Charitable contributions"
     short_name: "Charitable"
     hint: "Cash and non-cash gifts to qualifying 501(c)(3) organizations"
+    i18n:
+      en:
+        name: "Charitable contributions"
+        short_name: "Charitable"
+        hint: "Cash and non-cash gifts to qualifying 501(c)(3) organizations"
+      nl:
+        name: "Giften aan goede doelen"
+        short_name: "Giften"
+        hint: "Geldelijke en niet-geldelijke giften aan kwalificerende 501(c)(3)-organisaties"
   - key: "us_mortgage_interest"
     name: "Mortgage interest"
     short_name: "Mortg. int."
     hint: "Home mortgage interest on primary and secondary residence"
+    i18n:
+      en:
+        name: "Mortgage interest"
+        short_name: "Mortg. int."
+        hint: "Home mortgage interest on primary and secondary residence"
+      nl:
+        name: "Hypotheekrente"
+        short_name: "Hypotheekrente"
+        hint: "Hypotheekrente op de eerste en de tweede woning"
   - key: "us_state_local_tax"
     name: "State and local taxes (SALT)"
     short_name: "SALT"
     hint: "State/local income or sales taxes and property taxes (cap $10,000)"
+    i18n:
+      en:
+        name: "State and local taxes (SALT)"
+        short_name: "SALT"
+        hint: "State/local income or sales taxes and property taxes (cap $10,000)"
+      nl:
+        name: "Staats- en lokale belastingen (SALT)"
+        short_name: "SALT"
+        hint: "Inkomsten- of omzetbelasting van staat en gemeente plus onroerendezaakbelasting (maximaal $10,000)"
   - key: "us_business_expenses"
     name: "Business expenses (Schedule C)"
     short_name: "Bus. exp."
     hint: "Ordinary and necessary expenses for self-employed individuals"
+    i18n:
+      en:
+        name: "Business expenses (Schedule C)"
+        short_name: "Bus. exp."
+        hint: "Ordinary and necessary expenses for self-employed individuals"
+      nl:
+        name: "Ondernemerskosten (Schedule C)"
+        short_name: "Ondernemerskosten"
+        hint: "Gebruikelijke en noodzakelijke kosten voor zelfstandigen"
   - key: "us_student_loan_interest"
     name: "Student loan interest"
     short_name: "Student loan"
     hint: "Interest paid on qualified student loans (above-the-line deduction)"
+    i18n:
+      en:
+        name: "Student loan interest"
+        short_name: "Student loan"
+        hint: "Interest paid on qualified student loans (above-the-line deduction)"
+      nl:
+        name: "Rente op studieleningen"
+        short_name: "Studielening"
+        hint: "Betaalde rente op kwalificerende studieleningen (above-the-line-aftrek)"

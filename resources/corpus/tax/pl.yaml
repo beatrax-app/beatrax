@@ -10,77 +10,243 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "pl_ulga_na_dzieci"
     name: "Ulga na dziecko (ulga prorodzinna)"
     short_name: "Na dzieci"
     hint: "Odliczenie od podatku dla rodziców, opiekunów prawnych i rodzin zastępczych"
+    i18n:
+      en:
+        name: "Child relief (ulga prorodzinna)"
+        short_name: "Child relief"
+        hint: "Deduction from tax for parents, legal guardians and foster families"
+      nl:
+        name: "Kinderkorting (ulga prorodzinna)"
+        short_name: "Kinderkorting"
+        hint: "Aftrek van de belasting voor ouders, wettelijke voogden en pleeggezinnen"
   - key: "pl_ulga_termomodernizacyjna"
     name: "Ulga termomodernizacyjna"
     short_name: "Termomod."
     hint: "Wydatki na przedsięwzięcie termomodernizacyjne we własnym budynku jednorodzinnym"
+    i18n:
+      en:
+        name: "Thermal modernisation relief"
+        short_name: "Energy saving"
+        hint: "Spending on a thermal modernisation project in your own single-family building"
+      nl:
+        name: "Aftrek voor energiebesparende maatregelen"
+        short_name: "Energiebesparing"
+        hint: "Uitgaven voor een energiebesparingsproject in je eigen eengezinswoning"
   - key: "pl_ulga_rehabilitacyjna"
     name: "Ulga rehabilitacyjna"
     short_name: "Rehabilit."
     hint: "Wydatki na cele rehabilitacyjne i ułatwienie wykonywania czynności życiowych"
+    i18n:
+      en:
+        name: "Rehabilitation relief"
+        short_name: "Rehabilitation"
+        hint: "Spending on rehabilitation and on making everyday activities easier"
+      nl:
+        name: "Aftrek voor revalidatiekosten"
+        short_name: "Revalidatie"
+        hint: "Uitgaven voor revalidatie en voor het vergemakkelijken van dagelijkse handelingen"
   - key: "pl_ulga_na_internet"
     name: "Ulga na internet"
     short_name: "Internet"
     hint: "Wydatki na użytkowanie sieci Internet w dwóch kolejno po sobie następujących latach"
+    i18n:
+      en:
+        name: "Internet relief"
+        short_name: "Internet"
+        hint: "Spending on internet use in two consecutive years"
+      nl:
+        name: "Internetaftrek"
+        short_name: "Internet"
+        hint: "Uitgaven voor internetgebruik in twee opeenvolgende jaren"
   - key: "pl_ulga_na_ikze"
     name: "Ulga na IKZE"
     short_name: "IKZE"
     hint: "Wpłaty na indywidualne konto zabezpieczenia emerytalnego"
+    i18n:
+      en:
+        name: "IKZE retirement account relief"
+        short_name: "IKZE"
+        hint: "Payments into an individual retirement security account"
+      nl:
+        name: "IKZE-aftrek voor pensioenrekening"
+        short_name: "IKZE"
+        hint: "Inleg op een individuele rekening voor pensioenopbouw"
   - key: "pl_ulga_na_zabytki"
     name: "Ulga na zabytki"
     short_name: "Zabytki"
     hint: "Wydatki na prace konserwatorskie i roboty budowlane w zabytku nieruchomym"
+    i18n:
+      en:
+        name: "Historic monument relief"
+        short_name: "Monuments"
+        hint: "Spending on conservation work and building work on a listed property"
+      nl:
+        name: "Aftrek voor monumenten"
+        short_name: "Monumenten"
+        hint: "Uitgaven voor restauratiewerk en bouwwerkzaamheden aan een monumentaal pand"
   - key: "pl_ulga_dla_mlodych"
     name: "Ulga dla młodych"
     short_name: "Dla młodych"
     hint: "Zwolnienie przychodów podatnika, który nie ukończył 26. roku życia"
+    i18n:
+      en:
+        name: "Relief for young people"
+        short_name: "Under 26"
+        hint: "Exemption of income for a taxpayer who has not yet reached the age of 26"
+      nl:
+        name: "Vrijstelling voor jongeren"
+        short_name: "Onder de 26"
+        hint: "Vrijstelling van inkomen voor een belastingplichtige die nog geen 26 jaar is"
   - key: "pl_ulga_na_powrot"
     name: "Ulga na powrót"
     short_name: "Na powrót"
     hint: "Zwolnienie dla osób, które przeniosły miejsce zamieszkania do Polski"
+    i18n:
+      en:
+        name: "Relief on return to Poland"
+        short_name: "Return relief"
+        hint: "Exemption for people who have moved their place of residence to Poland"
+      nl:
+        name: "Vrijstelling bij terugkeer naar Polen"
+        short_name: "Terugkeer"
+        hint: "Vrijstelling voor mensen die hun woonplaats naar Polen hebben verplaatst"
   - key: "pl_ulga_dla_rodzin_4plus"
     name: "Ulga dla rodzin 4+"
     short_name: "Rodzina 4+"
     hint: "Zwolnienie dla podatnika wychowującego co najmniej czworo dzieci"
+    i18n:
+      en:
+        name: "Relief for families with 4+ children"
+        short_name: "Family 4+"
+        hint: "Exemption for a taxpayer raising at least four children"
+      nl:
+        name: "Vrijstelling voor gezinnen met 4+ kinderen"
+        short_name: "Gezin 4+"
+        hint: "Vrijstelling voor een belastingplichtige die ten minste vier kinderen opvoedt"
   - key: "pl_ulga_dla_pracujacych_seniorow"
     name: "Ulga dla pracujących seniorów"
     short_name: "Seniorzy"
     hint: "Zwolnienie dla osoby w wieku emerytalnym, która nie pobiera emerytury i pracuje"
+    i18n:
+      en:
+        name: "Relief for working seniors"
+        short_name: "Seniors"
+        hint: "Exemption for a person of pension age who works and draws no pension"
+      nl:
+        name: "Vrijstelling voor werkende senioren"
+        short_name: "Senioren"
+        hint: "Vrijstelling voor iemand van pensioenleeftijd die werkt en geen pensioen ontvangt"
   - key: "pl_darowizna_pozytek_publiczny"
     name: "Darowizna na cele pożytku publicznego"
     short_name: "Darow. OPP"
     hint: "Darowizny na cele określone w ustawie o działalności pożytku publicznego"
+    i18n:
+      en:
+        name: "Donation for public benefit purposes"
+        short_name: "Public benefit"
+        hint: "Donations for the purposes set out in the Public Benefit Activity Act"
+      nl:
+        name: "Gift voor doelen van openbaar nut"
+        short_name: "Giften OPP"
+        hint: "Giften voor doelen genoemd in de wet op activiteiten van openbaar nut"
   - key: "pl_darowizna_krwiodawstwo"
     name: "Darowizna na cele krwiodawstwa"
     short_name: "Krwiodawstwo"
     hint: "Odliczenie dla honorowych dawców krwi i osocza"
+    i18n:
+      en:
+        name: "Donation of blood"
+        short_name: "Blood donation"
+        hint: "Deduction for honorary donors of blood and plasma"
+      nl:
+        name: "Gift in de vorm van bloeddonatie"
+        short_name: "Bloeddonatie"
+        hint: "Aftrek voor onbetaalde donoren van bloed en plasma"
   - key: "pl_darowizna_kult_religijny"
     name: "Darowizna na cele kultu religijnego"
     short_name: "Kult relig."
     hint: "Darowizny na rzecz kościoła lub związku wyznaniowego"
+    i18n:
+      en:
+        name: "Donation for religious worship"
+        short_name: "Religious"
+        hint: "Donations to a church or a religious association"
+      nl:
+        name: "Gift voor de eredienst"
+        short_name: "Eredienst"
+        hint: "Giften aan een kerk of een religieus genootschap"
   - key: "pl_darowizna_odbudowa_zabytkow"
     name: "Darowizna na odbudowę Pałacu Saskiego"
     short_name: "Pałac Saski"
     hint: "Darowizny na odbudowę Pałacu Saskiego, Pałacu Brühla i kamienic przy ul. Królewskiej"
+    i18n:
+      en:
+        name: "Donation for rebuilding Pałac Saski"
+        short_name: "Pałac Saski"
+        hint: "Donations for rebuilding Pałac Saski, Pałac Brühla and the townhouses on ul. Królewska"
+      nl:
+        name: "Gift voor de wederopbouw van Pałac Saski"
+        short_name: "Pałac Saski"
+        hint: "Giften voor de wederopbouw van Pałac Saski, Pałac Brühla en de panden aan ul. Królewska"
   - key: "pl_darowizna_koscielna"
     name: "Darowizna na działalność charytatywno-opiekuńczą kościelnych osób prawnych"
     short_name: "Kościelna"
     hint: "Darowizny wynikające z odrębnych ustaw o stosunku państwa do kościołów"
+    i18n:
+      en:
+        name: "Donation for the charitable and care work of church legal persons"
+        short_name: "Church charity"
+        hint: "Donations arising from separate acts on the relationship of the state to churches"
+      nl:
+        name: "Gift voor charitatief en zorgwerk van kerkelijke rechtspersonen"
+        short_name: "Kerkelijke gift"
+        hint: "Giften op grond van afzonderlijke wetten over de verhouding tussen staat en kerken"
   - key: "pl_skladki_spoleczne"
     name: "Składki na ubezpieczenie społeczne"
     short_name: "Składki ZUS"
     hint: "Zapłacone składki emerytalne, rentowe, chorobowe i wypadkowe"
+    i18n:
+      en:
+        name: "Social insurance contributions"
+        short_name: "ZUS contributions"
+        hint: "Pension, disability, sickness and accident contributions paid"
+      nl:
+        name: "Premies sociale verzekeringen"
+        short_name: "ZUS-premies"
+        hint: "Betaalde premies voor pensioen, arbeidsongeschiktheid, ziekte en ongevallen"
   - key: "pl_skladki_zwiazki_zawodowe"
     name: "Składki na rzecz związków zawodowych"
     short_name: "Związki zaw."
     hint: "Składki członkowskie zapłacone na rzecz związków zawodowych"
+    i18n:
+      en:
+        name: "Trade union contributions"
+        short_name: "Union dues"
+        hint: "Membership dues paid to trade unions"
+      nl:
+        name: "Vakbondscontributie"
+        short_name: "Vakbondscontributie"
+        hint: "Betaalde lidmaatschapscontributie aan vakbonden"
   - key: "pl_1_5_proc_opp"
     name: "Przekazanie 1,5% podatku na rzecz OPP"
     short_name: "1,5% OPP"
     hint: "Wskazanie organizacji pożytku publicznego, której urząd przekaże część podatku"
+    i18n:
+      en:
+        name: "Transfer of 1.5% of tax to a public benefit organisation"
+        short_name: "1.5% OPP"
+        hint: "Naming the public benefit organisation the tax office will pass part of the tax to"
+      nl:
+        name: "Overdracht van 1,5% van de belasting aan een OPP"
+        short_name: "1,5% OPP"
+        hint: "Aanwijzen van de organisatie van openbaar nut waaraan de fiscus een deel van de belasting overmaakt"

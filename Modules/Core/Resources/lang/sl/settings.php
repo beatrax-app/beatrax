@@ -40,7 +40,7 @@ return [
         'choose' => 'Izberi državo…',
         'switch_note' => 'Zamenjava doda nove kategorije — obstoječe oznake se nikoli ne spremenijo.',
 
-        'wording_note' => 'Imena davčnih kategorij izhajajo iz davčne napovedi, ki se uporablja v :country, zato ostanejo v besedah te države v vseh jezikih aplikacije.',
+        'wording_note' => 'Imena davčnih kategorij so v vašem jeziku; davčna napoved v :country uporablja svoje izraze.',
 
         'countries' => [
             'at' => 'Avstrija',

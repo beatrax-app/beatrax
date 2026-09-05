@@ -126,6 +126,7 @@ duplicat = "duplicat"      # ro: "duplicate"
 importerad = "importerad"  # sv: "imported"
 Leeg = "Leeg"                    # nl: "empty", in a goal name
 Deterministisch = "Deterministisch"  # nl: "deterministic"
+Japanse = "Japanse"              # nl: "Japanese", in a currency name
 Extracto = "Extracto"            # es: "statement"
 klick = "klick"                  # de/sv: "click", in the touch-copy guard
 

@@ -40,7 +40,7 @@ return [
         'choose' => 'Izvēlieties valsti…',
         'switch_note' => 'Pārslēgšana pievieno jaunas kategorijas — esošās atzīmes netiek mainītas.',
 
-        'wording_note' => 'Nodokļu kategoriju nosaukumi nāk no nodokļu deklarācijas, ko izmanto :country, tāpēc tie paliek šīs valsts vārdos visās lietotnes valodās.',
+        'wording_note' => 'Nodokļu kategoriju nosaukumi tiek rādīti tavā valodā; :country nodokļu deklarācija lieto savus terminus.',
 
         'countries' => [
             'at' => 'Austrija',

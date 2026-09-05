@@ -10,45 +10,139 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "lt_npd"
     name: "Metinis neapmokestinamasis pajamų dydis (NPD)"
     short_name: "NPD"
     hint: "Neapmokestinama metinių su darbo santykiais susijusių pajamų dalis"
+    i18n:
+      en:
+        name: "Annual tax-exempt amount (NPD)"
+        short_name: "NPD"
+        hint: "The tax-exempt share of annual employment-related income"
+      nl:
+        name: "Jaarlijks belastingvrij bedrag (NPD)"
+        short_name: "NPD"
+        hint: "Het belastingvrije deel van het jaarlijkse inkomen uit dienstbetrekking"
   - key: "lt_npd_negalia"
     name: "Padidintas NPD asmenims, kuriems nustatytas dalyvumo lygis"
     short_name: "NPD negalia"
     hint: "Didesnis NPD gyventojams, kuriems nustatytas dalyvumo ar neįgalumo lygis"
+    i18n:
+      en:
+        name: "Increased NPD for people with an assessed participation level"
+        short_name: "NPD disability"
+        hint: "A higher NPD for residents with an assessed participation or disability level"
+      nl:
+        name: "Verhoogde NPD voor personen met een vastgesteld participatieniveau"
+        short_name: "NPD handicap"
+        hint: "Een hogere NPD voor inwoners met een vastgesteld participatie- of arbeidsongeschiktheidsniveau"
   - key: "lt_gyvybes_draudimas"
     name: "Gyvybės draudimo įmokos"
     short_name: "Gyv. draud."
     hint: "Įmokos pagal iki 2024 m. gruodžio 31 d. sudarytą gyvybės draudimo sutartį"
+    i18n:
+      en:
+        name: "Life insurance premiums"
+        short_name: "Life insurance"
+        hint: "Premiums under a life insurance contract concluded before 31 December 2024"
+      nl:
+        name: "Levensverzekeringspremies"
+        short_name: "Levensverz."
+        hint: "Premies op een levensverzekering die is afgesloten voor 31 december 2024"
   - key: "lt_pensiju_iii_pakopa"
     name: "Pensijų įmokos į III pakopos pensijų fondus"
     short_name: "III pakopa"
     hint: "Įmokos pagal iki 2024 m. gruodžio 31 d. sudarytą pensijų kaupimo sutartį"
+    i18n:
+      en:
+        name: "Pension contributions to III pakopa third-pillar funds"
+        short_name: "III pakopa"
+        hint: "Contributions under a pension savings contract concluded before 31 December 2024"
+      nl:
+        name: "Pensioenpremies voor III pakopa-fondsen van de derde pijler"
+        short_name: "III pakopa"
+        hint: "Premies op een pensioenspaarovereenkomst die is afgesloten voor 31 december 2024"
   - key: "lt_pensiju_ii_pakopa_papildomos"
     name: "Papildomos kaupiamosios pensijų įmokos į II pakopos fondus"
     short_name: "II pakopa"
     hint: "Savo lėšomis mokamos II pakopos įmokos, viršijančios privalomą dalį"
+    i18n:
+      en:
+        name: "Additional pension contributions to II pakopa second-pillar funds"
+        short_name: "II pakopa"
+        hint: "II pakopa contributions paid from your own funds above the compulsory share"
+      nl:
+        name: "Aanvullende pensioenpremies voor II pakopa-fondsen van de tweede pijler"
+        short_name: "II pakopa"
+        hint: "Uit eigen middelen betaalde II pakopa-premies boven het verplichte deel"
   - key: "lt_studijos_profesinis_mokymas"
     name: "Įmokos už studijas ar profesinį mokymą"
     short_name: "Studijos"
     hint: "Mokestis už aukštojo mokslo studijas ar formalųjį profesinį mokymą"
+    i18n:
+      en:
+        name: "Payments for study or vocational training"
+        short_name: "Study fees"
+        hint: "Fees for higher education studies or formal vocational training"
+      nl:
+        name: "Studiekosten voor studie of beroepsopleiding"
+        short_name: "Studiekosten"
+        hint: "Kosten voor hoger onderwijs of formele beroepsopleiding"
   - key: "lt_busto_kredito_palukanos"
     name: "Palūkanos už kreditą būstui įsigyti ar statyti"
     short_name: "Palūkanos"
     hint: "Palūkanos už vieną iki 2008 m. gruodžio 31 d. paimtą kreditą vienam būstui"
+    i18n:
+      en:
+        name: "Interest on a loan to buy or build a home"
+        short_name: "Mortgage interest"
+        hint: "Interest on one loan for one home taken out before 31 December 2008"
+      nl:
+        name: "Rente op een lening voor de aankoop of bouw van een woning"
+        short_name: "Hypotheekrente"
+        hint: "Rente op een lening voor een woning die is afgesloten voor 31 december 2008"
   - key: "lt_parama_1_2_proc"
     name: "Pajamų mokesčio dalies skyrimas paramos gavėjams"
     short_name: "Parama 1,2%"
     hint: "Pajamų mokesčio dalies skyrimas paramos gavėjo statusą turinčioms organizacijoms"
+    i18n:
+      en:
+        name: "Assigning part of income tax to registered charities"
+        short_name: "Parama 1,2%"
+        hint: "Assigning part of your income tax to organisations holding charity recipient status"
+      nl:
+        name: "Toewijzing van een deel van de inkomstenbelasting aan goede doelen"
+        short_name: "Parama 1,2%"
+        hint: "Toewijzing van een deel van de inkomstenbelasting aan organisaties met de status van steunontvanger"
   - key: "lt_parama_politinems_organizacijoms"
     name: "Pajamų mokesčio dalies skyrimas politinėms organizacijoms"
     short_name: "Politinėms"
     hint: "Pajamų mokesčio dalies skyrimas registruotai politinei partijai ar komitetui"
+    i18n:
+      en:
+        name: "Assigning part of income tax to political organisations"
+        short_name: "Political"
+        hint: "Assigning part of your income tax to a registered political party or committee"
+      nl:
+        name: "Toewijzing van een deel van de inkomstenbelasting aan politieke organisaties"
+        short_name: "Politiek"
+        hint: "Toewijzing van een deel van de inkomstenbelasting aan een geregistreerde politieke partij of comité"
   - key: "lt_parama_profsajungoms"
     name: "Pajamų mokesčio dalies skyrimas profesinėms sąjungoms"
     short_name: "Profsąjunga"
     hint: "Pajamų mokesčio dalies skyrimas paramos gavėjomis įregistruotoms profesinėms sąjungoms"
+    i18n:
+      en:
+        name: "Assigning part of income tax to trade unions"
+        short_name: "Trade unions"
+        hint: "Assigning part of your income tax to trade unions registered as charity recipients"
+      nl:
+        name: "Toewijzing van een deel van de inkomstenbelasting aan vakbonden"
+        short_name: "Vakbonden"
+        hint: "Toewijzing van een deel van de inkomstenbelasting aan vakbonden die als steunontvanger zijn geregistreerd"

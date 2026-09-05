@@ -9,45 +9,139 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "ee_maksuvaba_tulu"
     name: "Üldine maksuvaba tulu"
     short_name: "Maksuvaba"
     hint: "Residendist füüsilisele isikule kohaldatav maksuvaba tulu"
+    i18n:
+      en:
+        name: "General tax-free income"
+        short_name: "Tax-free income"
+        hint: "Tax-free income available to a resident individual"
+      nl:
+        name: "Algemene belastingvrije voet"
+        short_name: "Belastingvrij"
+        hint: "Belastingvrij inkomen voor een natuurlijk persoon die inwoner is"
   - key: "ee_pensioniea_maksuvaba_tulu"
     name: "Vanaduspensionieas isiku maksuvaba tulu"
     short_name: "Pensioni MVT"
     hint: "Vanaduspensioniikka jõudnud isiku kõrgem maksuvaba tulu"
+    i18n:
+      en:
+        name: "Tax-free income at state pension age"
+        short_name: "Pension age"
+        hint: "Higher tax-free income for someone who has reached state pension age"
+      nl:
+        name: "Belastingvrije voet bij pensioenleeftijd"
+        short_name: "Pensioenleeftijd"
+        hint: "Hogere belastingvrije voet voor wie de pensioengerechtigde leeftijd heeft bereikt"
   - key: "ee_kohustuslik_kogumispension"
     name: "Kohustusliku kogumispensioni maksed"
     short_name: "II sammas"
     hint: "Teise samba kohustusliku kogumispensioni maksed"
+    i18n:
+      en:
+        name: "Mandatory funded pension contributions"
+        short_name: "Second pillar"
+        hint: "Contributions to the mandatory second-pillar funded pension"
+      nl:
+        name: "Verplichte pensioenpremies tweede pijler"
+        short_name: "Tweede pijler"
+        hint: "Pensioenpremies voor de verplichte tweede pijler"
   - key: "ee_tootuskindlustusmakse"
     name: "Töötuskindlustusmaksed"
     short_name: "Töötuskindl."
     hint: "Töötaja töötuskindlustusmaksed"
+    i18n:
+      en:
+        name: "Unemployment insurance contributions"
+        short_name: "Unemployment ins."
+        hint: "Unemployment insurance contributions paid by the employee"
+      nl:
+        name: "Werkloosheidsverzekeringspremies"
+        short_name: "Werkloosheid"
+        hint: "Werkloosheidsverzekeringspremies betaald door de werknemer"
   - key: "ee_vabatahtlik_kogumispension"
     name: "Vabatahtliku kogumispensioni maksed"
     short_name: "III sammas"
     hint: "Kolmanda samba vabatahtliku kogumispensioni maksed"
+    i18n:
+      en:
+        name: "Voluntary funded pension contributions"
+        short_name: "Third pillar"
+        hint: "Contributions to the voluntary third-pillar funded pension"
+      nl:
+        name: "Vrijwillige pensioenpremies derde pijler"
+        short_name: "Derde pijler"
+        hint: "Pensioenpremies voor de vrijwillige derde pijler"
   - key: "ee_valisriigi_sotsiaalkindlustusmaksed"
     name: "Välisriigi kohustuslikud sotsiaalkindlustusmaksed"
     short_name: "Välisriigi"
     hint: "Välisriigis makstud kohustuslikud sotsiaalkindlustusmaksed"
+    i18n:
+      en:
+        name: "Mandatory foreign social insurance contributions"
+        short_name: "Foreign social ins."
+        hint: "Mandatory social insurance contributions paid in another country"
+      nl:
+        name: "Verplichte buitenlandse socialezekerheidspremies"
+        short_name: "Buitenlandse premie"
+        hint: "Verplichte socialezekerheidspremies betaald in het buitenland"
   - key: "ee_koolituskulud"
     name: "Koolituskulud"
     short_name: "Koolitus"
     hint: "Enda ja alla 26-aastase lapse, lapselapse, õe või venna koolituskulud"
+    i18n:
+      en:
+        name: "Study costs"
+        short_name: "Study costs"
+        hint: "Study costs for yourself and for a child, grandchild or sibling under 26"
+      nl:
+        name: "Studiekosten"
+        short_name: "Studiekosten"
+        hint: "Studiekosten voor jezelf en voor een kind, kleinkind, broer of zus onder de 26"
   - key: "ee_kingitused_annetused"
     name: "Kingitused ja annetused"
     short_name: "Annetused"
     hint: "Kingitused ja annetused tulumaksusoodustusega ühingute nimekirja kantud ühingutele"
+    i18n:
+      en:
+        name: "Gifts and donations"
+        short_name: "Donations"
+        hint: "Gifts and donations to associations on the income tax relief list"
+      nl:
+        name: "Giften en schenkingen"
+        short_name: "Giften"
+        hint: "Giften en schenkingen aan verenigingen op de lijst met belastingvoordeel"
   - key: "ee_metsamaterjali_tulu"
     name: "Täiendav maksuvaba tulu metsamaterjali ja raieõiguse võõrandamisest"
     short_name: "Metsatulu"
     hint: "Metsamaterjali ja raieõiguse võõrandamise tulu täiendav maksuvabastus"
+    i18n:
+      en:
+        name: "Extra tax-free income from timber and felling rights"
+        short_name: "Timber income"
+        hint: "Additional tax exemption on income from transferring timber and felling rights"
+      nl:
+        name: "Extra belastingvrij inkomen uit hout en kaprechten"
+        short_name: "Houtinkomsten"
+        hint: "Aanvullende belastingvrijstelling voor inkomsten uit hout en kaprechten"
   - key: "ee_eluruumi_uur"
     name: "Eluruumi üürile andmine"
     short_name: "Eluruumi üür"
     hint: "Eluruumi üürile andmisel arvatakse üüritulust maha osa eluasemekulude katteks"
+    i18n:
+      en:
+        name: "Letting out a home"
+        short_name: "Home letting"
+        hint: "Part of the rental income is deducted to cover housing costs when letting a home"
+      nl:
+        name: "Verhuur van een woning"
+        short_name: "Woningverhuur"
+        hint: "Bij verhuur van een woning wordt een deel van de huurinkomsten afgetrokken voor woonlasten"

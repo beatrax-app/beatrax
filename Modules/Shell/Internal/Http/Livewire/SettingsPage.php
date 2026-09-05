@@ -34,6 +34,7 @@ use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Support\CurrencyDisplayName;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Support\RecurringDetectionWindow;
 
@@ -445,9 +446,9 @@ final class SettingsPage extends Component
         $currencyOptions = [];
         foreach ($currencyRows as $row) {
             $code = is_string($row->code ?? null) ? $row->code : '';
-            $name = is_string($row->name ?? null) ? $row->name : '';
+            $name = is_string($row->name ?? null) ? $row->name : null;
             if ($code !== '') {
-                $currencyOptions[$code] = $name;
+                $currencyOptions[$code] = CurrencyDisplayName::forCode($code, $name);
             }
         }
 

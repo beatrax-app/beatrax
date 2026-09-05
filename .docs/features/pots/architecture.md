@@ -61,7 +61,13 @@ column update:
   it comes back empty, not re-funded. If another pot has since claimed the
   same linked goal while this one was archived (one-pot-per-goal), the
   restored pot loses its goal link rather than creating a second active pot
-  on that goal.
+  on that goal. A lingering `category_id` is cleared unconditionally: the
+  category link is retired rather than dormant, so a pot restored still
+  carrying one came back in a shape no create, no edit and no envelope
+  activation can produce — active, category-linked, refused as a goal target,
+  and with no control on the page able to remove the link. The capture names
+  only the columns the restore actually rewrote, so a peer is not handed a
+  fresh timestamp for a link it may hold a newer value of.
 
 Initial-amount pot creation (`save()` with an optional starting fund) runs
 the row creation and the initial funding check in one transaction too, so an

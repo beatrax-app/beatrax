@@ -13,6 +13,7 @@ use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Enums\TaxCategoryStatus;
 use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
+use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class TaxCategoryStore
@@ -94,6 +95,7 @@ final readonly class TaxCategoryStore
             'hint' => self::nullableStringField($entry, 'hint'),
             'corpus_key' => $key,
             'country_code' => $countryCode,
+            'name_is_default' => true,
             'status' => TaxCategoryStatus::Active->value,
             'sort_order' => $sortOrder,
             'created_at' => $now,
@@ -177,6 +179,7 @@ final readonly class TaxCategoryStore
             'hint' => $hint,
             'corpus_key' => null,
             'country_code' => null,
+            'name_is_default' => false,
             'status' => TaxCategoryStatus::Active->value,
             'sort_order' => $sortOrder,
             'created_at' => $now,
@@ -234,6 +237,7 @@ final readonly class TaxCategoryStore
             ->where('user_id', $userId)
             ->update([
                 'name' => $name,
+                'name_is_default' => false,
                 'updated_at' => Carbon::now()->toDateTimeString(),
             ]);
     }
@@ -304,6 +308,23 @@ final readonly class TaxCategoryStore
         /** @var list<\stdClass> $rows */
         $rows = $query->orderBy('sort_order')->orderBy('name')->get()->all();
 
+        // Resolved here rather than at each render: the settings list, the tag
+        // picker and the rule form read this one shape. Ordering stays on the
+        // stored columns, so the list does not reshuffle per locale and two
+        // devices agree on it.
+        foreach ($rows as $row) {
+            $country = self::textOf($row, 'country_code');
+            $key = self::textOf($row, 'corpus_key');
+            $row->name = TaxCorpusWording::name(self::textOf($row, 'name'), $country, $key, $row->name_is_default ?? false);
+            $row->short_name = TaxCorpusWording::shortName(self::textOf($row, 'short_name'), $country, $key);
+            $row->hint = TaxCorpusWording::hint(self::textOf($row, 'hint'), $country, $key);
+        }
+
         return $rows;
+    }
+
+    private static function textOf(\stdClass $row, string $column): ?string
+    {
+        return is_string($row->{$column} ?? null) ? $row->{$column} : null;
     }
 }

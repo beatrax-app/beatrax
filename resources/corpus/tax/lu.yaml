@@ -17,69 +17,217 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "lu_frais_de_deplacement"
     name: "Frais de déplacement (FD)"
     short_name: "Déplacement"
     hint: "Forfait kilométrique domicile-travail, selon unités d'éloignement"
+    i18n:
+      en:
+        name: "Commuting expenses (FD)"
+        short_name: "Commuting"
+        hint: "Flat-rate home-to-work mileage allowance, based on unités d'éloignement"
+      nl:
+        name: "Reiskosten woon-werkverkeer (FD)"
+        short_name: "Woon-werkverkeer"
+        hint: "Forfaitaire kilometervergoeding voor woon-werkverkeer, op basis van unités d'éloignement"
   - key: "lu_cotisations_professionnelles"
     name: "Cotisations professionnelles et syndicales"
     short_name: "Syndicat"
     hint: "Cotisations aux chambres, ordres et syndicats professionnels"
+    i18n:
+      en:
+        name: "Professional and union dues"
+        short_name: "Union dues"
+        hint: "Dues paid to professional chambers, orders and unions"
+      nl:
+        name: "Beroeps- en vakbondscontributie"
+        short_name: "Vakbondscontributie"
+        hint: "Contributie aan beroepskamers, beroepsorden en vakbonden"
   - key: "lu_perfectionnement_professionnel"
     name: "Dépenses de perfectionnement professionnel"
     short_name: "Formation"
     hint: "Formation continue actualisant les connaissances du métier exercé"
+    i18n:
+      en:
+        name: "Professional development costs"
+        short_name: "Training"
+        hint: "Continuing training that keeps knowledge of the job held up to date"
+      nl:
+        name: "Kosten voor bijscholing"
+        short_name: "Bijscholing"
+        hint: "Permanente vorming die de kennis van het uitgeoefende beroep actueel houdt"
   - key: "lu_instruments_de_travail"
     name: "Dépenses pour instruments de travail"
     short_name: "Outils pro"
     hint: "Matériel, cabinet de travail et vêtements typiquement professionnels"
+    i18n:
+      en:
+        name: "Work equipment costs"
+        short_name: "Work tools"
+        hint: "Equipment, a home office and clothing typical of the profession"
+      nl:
+        name: "Kosten voor werkmiddelen"
+        short_name: "Werkmiddelen"
+        hint: "Materiaal, werkruimte thuis en typisch beroepsgebonden kleding"
   - key: "lu_interets_habitation"
     name: "Intérêts débiteurs en rapport avec l'habitation personnelle"
     short_name: "Prêt immo"
     hint: "Intérêts du prêt finançant l'habitation occupée par le propriétaire"
+    i18n:
+      en:
+        name: "Interest on a loan for your own home"
+        short_name: "Mortgage interest"
+        hint: "Interest on the loan financing the home occupied by its owner"
+      nl:
+        name: "Hypotheekrente voor de eigen woning"
+        short_name: "Hypotheekrente"
+        hint: "Rente op de lening voor de woning die de eigenaar zelf bewoont"
   - key: "lu_interets_debiteurs"
     name: "Intérêts débiteurs sur crédit personnel"
     short_name: "Crédit perso"
     hint: "Intérêts d'un crédit personnel : voiture, meubles, consommation"
+    i18n:
+      en:
+        name: "Interest on a personal loan"
+        short_name: "Personal loan"
+        hint: "Interest on a personal loan for a car, furniture or consumer spending"
+      nl:
+        name: "Rente op een persoonlijke lening"
+        short_name: "Rente lening"
+        hint: "Rente op een persoonlijke lening voor auto, meubels of consumptie"
   - key: "lu_primes_assurance"
     name: "Primes d'assurance et cotisations"
     short_name: "Assurances"
     hint: "Primes vie, décès, accident, invalidité, maladie et responsabilité"
+    i18n:
+      en:
+        name: "Insurance premiums and contributions"
+        short_name: "Insurance"
+        hint: "Premiums for life, death, accident, disability, health and liability cover"
+      nl:
+        name: "Verzekeringspremies en bijdragen"
+        short_name: "Verzekeringen"
+        hint: "Premies voor leven, overlijden, ongevallen, invaliditeit, ziekte en aansprakelijkheid"
   - key: "lu_epargne_logement"
     name: "Cotisations d'épargne-logement"
     short_name: "Épargne-log."
     hint: "Versements à une caisse d'épargne-logement agréée"
+    i18n:
+      en:
+        name: "Épargne-logement home savings contributions"
+        short_name: "Home savings"
+        hint: "Payments into an approved épargne-logement scheme"
+      nl:
+        name: "Épargne-logement bouwspaarbijdragen"
+        short_name: "Bouwsparen"
+        hint: "Stortingen bij een erkende épargne-logement-instelling"
   - key: "lu_prevoyance_vieillesse"
     name: "Cotisations de prévoyance-vieillesse"
     short_name: "Prévoyance"
     hint: "Versements sur un contrat de prévoyance-vieillesse, 3e pilier"
+    i18n:
+      en:
+        name: "Prévoyance-vieillesse third-pillar pension savings"
+        short_name: "Pension savings"
+        hint: "Payments into a prévoyance-vieillesse contract, third pillar"
+      nl:
+        name: "Prévoyance-vieillesse pensioensparen in de derde pijler"
+        short_name: "Pensioensparen"
+        hint: "Stortingen op een prévoyance-vieillesse-contract, derde pijler"
   - key: "lu_cotisations_sociales"
     name: "Cotisations sociales obligatoires"
     short_name: "Cotis. soc."
     hint: "Cotisations maladie et pension obligatoires, déductibles sans limite"
+    i18n:
+      en:
+        name: "Compulsory social security contributions"
+        short_name: "Social security"
+        hint: "Compulsory health and pension contributions, deductible without limit"
+      nl:
+        name: "Verplichte sociale premies"
+        short_name: "Sociale premies"
+        hint: "Verplichte premies voor ziektekosten en pensioen, onbeperkt aftrekbaar"
   - key: "lu_cotisations_personnelles"
     name: "Cotisations payées à titre personnel"
     short_name: "Assur. cont."
     hint: "Assurance continuée ou volontaire et achat de périodes"
+    i18n:
+      en:
+        name: "Contributions paid in a personal capacity"
+        short_name: "Voluntary cover"
+        hint: "Assurance continuée or voluntary insurance and the purchase of periods"
+      nl:
+        name: "Persoonlijk betaalde premies"
+        short_name: "Vrijwillige verz."
+        hint: "Assurance continuée of vrijwillige verzekering en de inkoop van tijdvakken"
   - key: "lu_rentes_conjoint_divorce"
     name: "Rentes payées au conjoint divorcé"
     short_name: "Pension alim"
     hint: "Rente alimentaire versée à l'ex-conjoint après divorce"
+    i18n:
+      en:
+        name: "Maintenance paid to a divorced spouse"
+        short_name: "Maintenance"
+        hint: "Maintenance paid to a former spouse after divorce"
+      nl:
+        name: "Alimentatie aan de gescheiden echtgenoot"
+        short_name: "Alimentatie"
+        hint: "Alimentatie betaald aan de ex-echtgenoot na echtscheiding"
   - key: "lu_liberalites_et_dons"
     name: "Libéralités et dons"
     short_name: "Dons"
     hint: "Dons en espèces à des organismes reconnus d'utilité publique"
+    i18n:
+      en:
+        name: "Gifts and donations"
+        short_name: "Donations"
+        hint: "Cash donations to bodies recognised as serving the public interest"
+      nl:
+        name: "Giften en schenkingen"
+        short_name: "Giften"
+        hint: "Giften in geld aan instellingen die als algemeen nut zijn erkend"
   - key: "lu_charges_extraordinaires"
     name: "Charges extraordinaires"
     short_name: "Maladie"
     hint: "Frais de maladie, invalidité, procès ou divorce restant à charge"
+    i18n:
+      en:
+        name: "Extraordinary charges"
+        short_name: "Extraordinary"
+        hint: "Costs of illness, disability, litigation or divorce that remain payable by you"
+      nl:
+        name: "Buitengewone lasten"
+        short_name: "Buitengewoon"
+        hint: "Kosten van ziekte, invaliditeit, rechtszaken of echtscheiding die voor eigen rekening blijven"
   - key: "lu_domesticite_aides_garde"
     name: "Frais de domesticité, d'aides et de soins et de garde d'enfant"
     short_name: "Garde/ménage"
     hint: "Femme de ménage, aides et soins et frais de garde d'enfant"
+    i18n:
+      en:
+        name: "Domestic help, care and childcare costs"
+        short_name: "Help and childcare"
+        hint: "A cleaner, help and care services, and childcare costs"
+      nl:
+        name: "Kosten voor huishoudelijke diensten, hulp en zorg en kinderopvang"
+        short_name: "Hulp en opvang"
+        hint: "Huishoudelijke hulp, hulp en zorg en kinderopvangkosten"
   - key: "lu_enfants_hors_menage"
     name: "Charges extraordinaires pour enfants hors du ménage"
     short_name: "Enfant ext."
     hint: "Frais d'entretien d'un enfant ne faisant pas partie du ménage"
+    i18n:
+      en:
+        name: "Extraordinary charges for children outside the household"
+        short_name: "Child outside home"
+        hint: "Maintenance costs for a child who is not part of the household"
+      nl:
+        name: "Buitengewone lasten voor kinderen buiten het huishouden"
+        short_name: "Kind buitenshuis"
+        hint: "Onderhoudskosten voor een kind dat geen deel uitmaakt van het huishouden"

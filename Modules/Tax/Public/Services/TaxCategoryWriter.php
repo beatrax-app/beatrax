@@ -41,6 +41,7 @@ final readonly class TaxCategoryWriter
             'name' => $name,
             'short_name' => $shortName,
             'hint' => $hint,
+            'name_is_default' => false,
         ]);
 
         return $id;
@@ -55,7 +56,9 @@ final readonly class TaxCategoryWriter
     {
         $this->store->rename($userId, $categoryId, $name);
 
-        $this->capture($userId, $categoryId, 'edit', ['name' => $name]);
+        // The flag travels with the rename it describes. Left behind, the peer
+        // keeps resolving the corpus line and the rename is invisible there.
+        $this->capture($userId, $categoryId, 'edit', ['name' => $name, 'name_is_default' => false]);
     }
 
     /**

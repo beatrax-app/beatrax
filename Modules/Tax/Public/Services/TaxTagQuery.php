@@ -14,16 +14,24 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Support\TaggedRowScope;
+use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
 
 final readonly class TaxTagQuery
 {
-    // short_name is optional and only the corpus fills it in, so a category the
-    // reader added themselves has none; without the fall-through every badge on
-    // such a category reads as the generic tax word instead of naming it.
-    private const string CATEGORY_BADGE_LABEL = 'COALESCE(cat.short_name, cat.name) AS category_short_name';
+    // Not a SQL COALESCE any more: the wording is resolved per reader, so the
+    // choice between the short label and the name has to be made after both
+    // have been resolved, not by the database. A category the reader added has
+    // no short label, and still falls through to its name.
+    private const array CATEGORY_BADGE_COLUMNS = [
+        'cat.short_name AS category_short_name',
+        'cat.name AS category_name',
+        'cat.corpus_key AS category_corpus_key',
+        'cat.country_code AS category_country_code',
+        'cat.name_is_default AS category_name_is_default',
+    ];
 
     use CoercesScalars;
 
@@ -56,7 +64,7 @@ final readonly class TaxTagQuery
             ->get([
                 'tag.transaction_id',
                 'tag.deduction_category_id',
-                $this->db->connection()->raw(self::CATEGORY_BADGE_LABEL),
+                ...self::CATEGORY_BADGE_COLUMNS,
                 'tag.note',
                 'tag.tax_year_override',
             ]);
@@ -67,7 +75,7 @@ final readonly class TaxTagQuery
             $map[$txId] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
+                deductionCategoryShortName: self::badgeLabel($row),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
             );
@@ -95,7 +103,7 @@ final readonly class TaxTagQuery
                 'tag.transaction_id',
                 'tag.transaction_split_id',
                 'tag.deduction_category_id',
-                $this->db->connection()->raw(self::CATEGORY_BADGE_LABEL),
+                ...self::CATEGORY_BADGE_COLUMNS,
                 'tag.note',
                 'tag.tax_year_override',
             ]);
@@ -109,7 +117,7 @@ final readonly class TaxTagQuery
             $map[$key] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
+                deductionCategoryShortName: self::badgeLabel($row),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
                 transactionSplitId: $splitId,
@@ -266,6 +274,23 @@ final readonly class TaxTagQuery
             ->pluck('t.id');
 
         return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
+    }
+
+    // What the badge on a transaction row prints: the corpus's short label in
+    // the reader's language, falling through to the category's own name for a
+    // row the reader added, which has no short label and no key to resolve.
+    private static function badgeLabel(\stdClass $row): ?string
+    {
+        $country = self::toStringOrNull($row->category_country_code);
+        $key = self::toStringOrNull($row->category_corpus_key);
+
+        return TaxCorpusWording::shortName(self::toStringOrNull($row->category_short_name), $country, $key)
+            ?? TaxCorpusWording::name(
+                self::toStringOrNull($row->category_name),
+                $country,
+                $key,
+                $row->category_name_is_default,
+            );
     }
 
     private function decryptNoteOrNull(mixed $value, int $userId): ?string

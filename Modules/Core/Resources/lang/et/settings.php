@@ -40,7 +40,7 @@ return [
         'choose' => 'Vali riik…',
         'switch_note' => 'Vahetamine lisab uusi kategooriaid — olemasolevaid märgendeid ei muudeta kunagi.',
 
-        'wording_note' => 'Maksukategooriate nimed pärinevad :country riigis kasutatavalt maksudeklaratsioonilt, seega jäävad need selle riigi sõnadesse igas rakenduse keeles.',
+        'wording_note' => 'Maksukategooriate nimed kuvatakse sinu keeles; :country maksudeklaratsioon kasutab oma sõnu.',
 
         'countries' => [
             'at' => 'Austria',

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Pots\Public\Services\PotWriter;
+use Modules\Sync\Public\Events\EntityMutated;
 
 uses(RefreshDatabase::class);
 
@@ -78,4 +80,75 @@ it('refuses to edit a pot onto a category, and leaves the stored link where it w
         ->toThrow(InvalidArgumentException::class);
 
     expect(DB::table('pots')->where('id', $pot->id)->value('category_id'))->toBeNull();
+});
+
+// Every other write refuses the link outright; restore() rewrote the row without
+// looking at it, so an archived legacy pot came back active and category-linked
+// — a shape no create, no edit and no envelope activation can produce.
+function acrArchivedCategoryPot(int $userId, int $accountId, int $categoryId): int
+{
+    return DB::table('pots')->insertGetId([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'goal_id' => null,
+        'category_id' => $categoryId,
+        'name' => 'Legacy groceries pot',
+        'currency' => 'EUR',
+        'status' => 'archived',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+it('clears the retired link when it restores an archived pot', function (): void {
+    $potId = acrArchivedCategoryPot($this->user->id, $this->account->id, $this->category->id);
+
+    $this->writer->restore($this->user, $potId);
+
+    $row = DB::table('pots')->where('id', $potId)->first();
+
+    expect($row->status)->toBe('active')
+        ->and($row->category_id)->toBeNull();
+});
+
+it('writes no movement while it clears the link', function (): void {
+    $potId = acrArchivedCategoryPot($this->user->id, $this->account->id, $this->category->id);
+
+    $this->writer->restore($this->user, $potId);
+
+    expect(DB::table('pot_movements')->where('pot_id', $potId)->count())->toBe(0);
+});
+
+// A column cleared and not announced is one the peer still holds: the next
+// frame from this device carries only `status`, and the link survives there.
+it('announces the cleared link beside the status', function (): void {
+    $potId = acrArchivedCategoryPot($this->user->id, $this->account->id, $this->category->id);
+
+    Event::fake([EntityMutated::class]);
+
+    app(PotWriter::class)->restore($this->user, $potId);
+
+    Event::assertDispatched(
+        EntityMutated::class,
+        static function (EntityMutated $event): bool {
+            $fields = $event->dirtyFields;
+
+            return $event->table === 'pots'
+                && $fields === ['status' => 'active', 'category_id' => null];
+        },
+    );
+});
+
+it('announces nothing but the status for a pot that never carried a link', function (): void {
+    $pot = $this->writer->save($this->user, 'Buffer', null, $this->account->id, null, null);
+    $this->writer->archive($this->user, $pot->id);
+
+    Event::fake([EntityMutated::class]);
+
+    app(PotWriter::class)->restore($this->user, $pot->id);
+
+    Event::assertDispatched(
+        EntityMutated::class,
+        static fn (EntityMutated $event): bool => $event->dirtyFields === ['status' => 'active'],
+    );
 });

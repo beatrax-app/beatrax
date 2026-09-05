@@ -15,6 +15,7 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Support\TaggedRowScope;
+use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Modules\Tax\Public\Dto\TaxYearData;
 
 /**
@@ -96,6 +97,9 @@ final readonly class TaxYearQuery
                 'cat.id AS category_id',
                 'cat.name AS category_name',
                 'cat.short_name AS category_short_name',
+                'cat.corpus_key AS category_corpus_key',
+                'cat.country_code AS category_country_code',
+                'cat.name_is_default AS category_name_is_default',
                 'a.name AS account_name',
                 'cp.display_name AS counterparty_name',
                 'cp.metadata AS counterparty_metadata',
@@ -263,13 +267,34 @@ final readonly class TaxYearQuery
             'currency' => self::toString($row->currency),
             'transactionType' => self::toString($row->transaction_type),
             'categoryId' => $row->category_id !== null ? self::toInt($row->category_id) : null,
-            'categoryName' => self::toStringOrNull($row->category_name),
-            'categoryShortName' => self::toStringOrNull($row->category_short_name),
+            'categoryName' => self::categoryName($row),
+            'categoryShortName' => self::categoryShortName($row),
             'taxYearOverride' => $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
             'sourceFormat' => self::toString($row->source_format),
             'importRunId' => self::toInt($row->import_run_id),
             'fingerprint' => self::toString($row->fingerprint),
         ];
+    }
+
+    // The section header, the CSV column and the PDF all print what these two
+    // return, so the corpus key is read here rather than at three render sites.
+    private static function categoryName(\stdClass $row): ?string
+    {
+        return TaxCorpusWording::name(
+            self::toStringOrNull($row->category_name),
+            self::toStringOrNull($row->category_country_code),
+            self::toStringOrNull($row->category_corpus_key),
+            $row->category_name_is_default,
+        );
+    }
+
+    private static function categoryShortName(\stdClass $row): ?string
+    {
+        return TaxCorpusWording::shortName(
+            self::toStringOrNull($row->category_short_name),
+            self::toStringOrNull($row->category_country_code),
+            self::toStringOrNull($row->category_corpus_key),
+        );
     }
 
     // transaction_splits carries only the settled slice, so a leg's native
@@ -379,8 +404,8 @@ final readonly class TaxYearQuery
         if (! array_key_exists($catKey, $groups)) {
             $groups[$catKey] = [
                 'id' => self::toInt($row->category_id),
-                'name' => self::toStringOrNull($row->category_name),
-                'shortName' => self::toStringOrNull($row->category_short_name),
+                'name' => self::categoryName($row),
+                'shortName' => self::categoryShortName($row),
                 'subtotalMinor' => 0,
                 'incomeSubtotalMinor' => 0,
                 'rows' => [],

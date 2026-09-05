@@ -208,23 +208,30 @@ there is no surface on which the absent corpus can be seen.
 `seedFromCorpus()` writes `name`, `short_name` and `hint` verbatim from
 `resources/corpus/tax/<country>.yaml`, and those files are written in
 the country's own language — `nl.yaml` says `Zorgkosten`, not
-`Healthcare costs`. That is deliberate: the names are the labels on
-that country's return, and a reader filling in an *aangifte* needs the
-word that is printed on the form, whatever language they read the app
-in. So this is the one list in the app that does not follow the reader.
+`Healthcare costs`. The column a screen reads back therefore held one
+language whoever was reading, and an English reader filing in the
+Netherlands read `Zorgkosten`, `Giften` and `Eigen woning` off the tax
+page, the picker, the badge and the CSV.
 
-Because it is the one exception, the app says so where the exception
-shows: `core::settings.country.wording_note` names the country whose
-wording the list keeps, and renders under the country picker in
-Settings and above the deduction-category list. The note itself is
-translated and takes the country name as a parameter, so it reads in
-the reader's language even though the list below it does not.
+This page used to record the opposite: that the list deliberately did
+not follow the reader, because the names are the labels on that
+country's return. The spec has since ruled the other way, and it wins
+— every user-facing string is translatable, with no list exempt.
 
-The alternative — giving `tax_deduction_categories` the `slug` /
-`name_is_default` treatment that [`categories`](../ledger/category-display-names.md)
-got — was weighed and rejected: 33 corpora × 398 entries × 3 fields ×
-26 locales is 31,044 strings, and translating the two label fields
-would break the match against the form they exist to mirror.
+So the corpus now carries its own translations: every entry has an
+`i18n` block with the same three fields per locale, `en` required and
+`nl` shipped, and `tax_deduction_categories` carries the same
+`name_is_default` provenance flag [`categories`](../ledger/category-display-names.md)
+does. [Deduction category wording](deduction-category-wording.md) sets
+out where each field is resolved, why the wording lives in the corpus
+rather than a lang group, and how already-seeded rows were backfilled.
+
+`core::settings.country.wording_note` still renders under the country
+picker in Settings and above the deduction-category list, but it now
+says the opposite of what it used to: the names are in the reader's
+language, and it is the return itself that uses the country's own
+wording. The reader who needs the word printed on the form is the one
+real cost of this change, and the note is where they are told.
 
 ## Category writes
 
@@ -250,14 +257,20 @@ row, and treat absence from the result map as "untagged." [The tag
 write contract](tag-write-contract.md) explains what dropping the
 whole-transaction filter breaks, and why the breakage is silent.
 
-Both also select the badge's label as
-`COALESCE(cat.short_name, cat.name)`. `short_name` is optional and only
-the corpus fills it in, so every category a reader adds — from the
-picker's quick-add or from Settings, neither of which asks for one —
-has none, and the badge fell all the way through to the generic
-`tax::badge.default_label`. The row then said "Tax" for a tag that had
-a category, on the one surface that shows the category at all: the
-cockpit, the PDF and the CSV all print `cat.name`.
+Both also select the badge's label, short name first and the category's
+own name behind it. `short_name` is optional and only the corpus fills
+it in, so every category a reader adds — from the picker's quick-add or
+from Settings, neither of which asks for one — has none, and the badge
+fell all the way through to the generic `tax::badge.default_label`. The
+row then said "Tax" for a tag that had a category, on the one surface
+that shows the category at all: the cockpit, the PDF and the CSV all
+print the category name.
+
+That fall-through used to be a SQL `COALESCE(cat.short_name, cat.name)`.
+It cannot be: both halves are resolved per reader now, so the choice
+between them has to be made after resolving rather than by the database.
+`TaxTagQuery` selects the columns and picks in PHP — see [deduction
+category wording](deduction-category-wording.md).
 
 `TaxCategoryStore` refuses a new category for two unrelated reasons, and both
 arrive as a `RuntimeException`: `DuplicateTaxCategoryNameException` when the

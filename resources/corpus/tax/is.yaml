@@ -7,65 +7,204 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "is_okutaekjastyrkur"
     name: "Frádráttur á móti ökutækjastyrk"
     short_name: "Ökutækjast."
     hint: "Kostnaður á móti ökutækjastyrk og endurgreiddum bifreiðakostnaði"
+    i18n:
+      en:
+        name: "Deduction against a vehicle allowance"
+        short_name: "Vehicle allowance"
+        hint: "Costs set against a vehicle allowance and reimbursed car expenses"
+      nl:
+        name: "Aftrek tegenover een autovergoeding"
+        short_name: "Autovergoeding"
+        hint: "Kosten tegenover een autovergoeding en vergoede autokosten"
   - key: "is_dagpeningar"
     name: "Frádráttur á móti dagpeningum"
     short_name: "Dagpeningar"
     hint: "Kostnaður á móti dagpeningum vegna ferða á vegum launagreiðanda"
+    i18n:
+      en:
+        name: "Deduction against per diem allowances"
+        short_name: "Per diems"
+        hint: "Costs set against per diems for travel on behalf of the employer"
+      nl:
+        name: "Aftrek tegenover dagvergoedingen"
+        short_name: "Dagvergoeding"
+        hint: "Kosten tegenover dagvergoedingen voor reizen namens de werkgever"
   - key: "is_idgjald_lifeyrissjod"
     name: "Iðgjald í lífeyrissjóð"
     short_name: "Lífeyrissj."
     hint: "Iðgjald launþega í samþykktan lífeyrissjóð"
+    i18n:
+      en:
+        name: "Pension fund contributions"
+        short_name: "Pension fund"
+        hint: "Employee contribution to an approved pension fund"
+      nl:
+        name: "Pensioenpremies aan een pensioenfonds"
+        short_name: "Pensioenpremies"
+        hint: "Premie van de werknemer aan een erkend pensioenfonds"
   - key: "is_sereignarlifeyrissjodur"
     name: "Iðgjald í séreignarlífeyrissjóð"
     short_name: "Séreign"
     hint: "Viðbótarlífeyrissparnaður í séreignarsjóð"
+    i18n:
+      en:
+        name: "Séreign supplementary pension savings"
+        short_name: "Séreign"
+        hint: "Additional pension savings paid into a séreign personal fund"
+      nl:
+        name: "Séreign aanvullend pensioensparen"
+        short_name: "Séreign"
+        hint: "Aanvullend pensioensparen in een séreign-fonds"
   - key: "is_namsstyrkir_fradrattur"
     name: "Frádráttur á móti náms-, rannsóknar- og vísindastyrkjum"
     short_name: "Námsstyrkir"
     hint: "Beinn kostnaður á móti tekjufærðum náms-, rannsóknar- eða vísindastyrkjum"
+    i18n:
+      en:
+        name: "Deduction against study, research and science grants"
+        short_name: "Study grants"
+        hint: "Direct costs set against study, research or science grants declared as income"
+      nl:
+        name: "Aftrek tegenover studie-, onderzoeks- en wetenschapsbeurzen"
+        short_name: "Studiebeurzen"
+        hint: "Directe kosten tegenover als inkomen opgegeven studie-, onderzoeks- of wetenschapsbeurzen"
   - key: "is_adrir_styrkir_fradrattur"
     name: "Frádráttur á móti öðrum styrkjum og starfstengdum greiðslum"
     short_name: "Aðrir styrk."
     hint: "Kostnaður á móti styrkjum, m.a. samgöngugreiðslum og líkamsræktarstyrk"
+    i18n:
+      en:
+        name: "Deduction against other grants and work-related payments"
+        short_name: "Other grants"
+        hint: "Costs set against grants, including transport payments and a gym allowance"
+      nl:
+        name: "Aftrek tegenover andere toelagen en werkgerelateerde betalingen"
+        short_name: "Andere toelagen"
+        hint: "Kosten tegenover toelagen, o.a. vervoersvergoedingen en een sportvergoeding"
   - key: "is_gjafir_almannaheill"
     name: "Frádráttarbærar gjafir til almannaheillafélaga"
     short_name: "Gjafir"
     hint: "Gjafir og framlög til félaga sem starfa til almannaheilla"
+    i18n:
+      en:
+        name: "Deductible gifts to public-benefit organisations"
+        short_name: "Gifts"
+        hint: "Gifts and contributions to organisations working for the public benefit"
+      nl:
+        name: "Aftrekbare giften aan algemeen nut beogende instellingen"
+        short_name: "Giften"
+        hint: "Giften en bijdragen aan verenigingen die het algemeen nut dienen"
   - key: "is_personuafslattur"
     name: "Persónuafsláttur"
     short_name: "Persónuafsl."
     hint: "Almennur skattafsláttur allra heimilisfastra; ónýttur afsláttur millifærist milli hjóna"
+    i18n:
+      en:
+        name: "Persónuafsláttur personal tax credit"
+        short_name: "Personal credit"
+        hint: "General tax credit for all residents; unused credit transfers between spouses"
+      nl:
+        name: "Persónuafsláttur persoonlijke heffingskorting"
+        short_name: "Heffingskorting"
+        hint: "Algemene heffingskorting voor alle inwoners; niet-benutte korting gaat over tussen echtgenoten"
   - key: "is_vaxtabaetur"
     name: "Vaxtabætur"
     short_name: "Vaxtabætur"
     hint: "Bætur vegna greiddra vaxtagjalda af lánum til kaupa eða byggingar á íbúðarhúsnæði"
+    i18n:
+      en:
+        name: "Vaxtabætur mortgage interest benefit"
+        short_name: "Interest benefit"
+        hint: "Benefit for interest paid on loans to buy or build a home"
+      nl:
+        name: "Vaxtabætur tegemoetkoming hypotheekrente"
+        short_name: "Hypotheekrente"
+        hint: "Tegemoetkoming voor betaalde rente op leningen voor de aankoop of bouw van een woning"
   - key: "is_barnabaetur"
     name: "Barnabætur"
     short_name: "Barnabætur"
     hint: "Tekjutengdar bætur með börnum til 18 ára aldurs, ákvarðaðar samkvæmt framtali"
+    i18n:
+      en:
+        name: "Barnabætur child benefit"
+        short_name: "Child benefit"
+        hint: "Income-tested benefit for children up to age 18, set from the tax return"
+      nl:
+        name: "Barnabætur kinderbijslag"
+        short_name: "Kinderbijslag"
+        hint: "Inkomensafhankelijke bijslag voor kinderen tot 18 jaar, vastgesteld op basis van de aangifte"
   - key: "is_ivilnun_veikindi"
     name: "Ívilnun vegna veikinda, slysa eða mannsláts"
     short_name: "Ívilnun veik"
     hint: "Óbættur kostnaður, t.d. vegna lyfja, læknishjálpar eða útfarar, sem skerðir gjaldþol"
+    i18n:
+      en:
+        name: "Relief for illness, accident or bereavement"
+        short_name: "Illness relief"
+        hint: "Unreimbursed costs, e.g. for medicine, medical care or a funeral, that reduce ability to pay"
+      nl:
+        name: "Tegemoetkoming bij ziekte, ongeval of overlijden"
+        short_name: "Ziekte/ongeval"
+        hint: "Niet-vergoede kosten, bijv. voor medicijnen, medische zorg of een uitvaart, die de draagkracht verminderen"
   - key: "is_ivilnun_barn"
     name: "Ívilnun vegna veikinda eða fötlunar barns"
     short_name: "Ívilnun barn"
     hint: "Veruleg óbætt útgjöld vegna barns með langvinnan sjúkdóm eða fötlun"
+    i18n:
+      en:
+        name: "Relief for illness or disability of a child"
+        short_name: "Child illness"
+        hint: "Substantial unreimbursed expenses for a child with a chronic illness or disability"
+      nl:
+        name: "Tegemoetkoming bij ziekte of handicap van een kind"
+        short_name: "Ziek kind"
+        hint: "Aanzienlijke niet-vergoede uitgaven voor een kind met een chronische ziekte of handicap"
   - key: "is_ivilnun_framfaersla"
     name: "Ívilnun vegna framfærslu vandamanna"
     short_name: "Framfærsla"
     hint: "Framfærsla foreldra eða annarra vandamanna sem geta ekki séð um eigin framfærslu"
+    i18n:
+      en:
+        name: "Relief for supporting dependent relatives"
+        short_name: "Dependants"
+        hint: "Support of parents or other relatives who cannot provide for themselves"
+      nl:
+        name: "Tegemoetkoming voor het onderhouden van familieleden"
+        short_name: "Onderhoud familie"
+        hint: "Onderhoud van ouders of andere familieleden die niet in hun eigen levensonderhoud kunnen voorzien"
   - key: "is_ivilnun_eignatjon"
     name: "Ívilnun vegna eignatjóns"
     short_name: "Eignatjón"
     hint: "Verulegt eignatjón eða tap á útistandandi kröfum sem ekki hefur fengist bætt"
+    i18n:
+      en:
+        name: "Relief for loss of property"
+        short_name: "Property loss"
+        hint: "Substantial property damage or loss on outstanding claims that has not been compensated"
+      nl:
+        name: "Tegemoetkoming bij vermogensschade"
+        short_name: "Vermogensschade"
+        hint: "Aanzienlijke schade aan bezittingen of verlies op openstaande vorderingen die niet is vergoed"
   - key: "is_fyrsta_ibud"
     name: "Ráðstöfun séreignarsparnaðar vegna fyrstu íbúðar"
     short_name: "Fyrsta íbúð"
     hint: "Skattfrjáls ráðstöfun séreignarsparnaðar við kaup á fyrstu íbúð"
+    i18n:
+      en:
+        name: "Séreign savings used for a first home"
+        short_name: "First home"
+        hint: "Tax-free use of séreign pension savings when buying a first home"
+      nl:
+        name: "Inzet van séreign-spaargeld voor een eerste woning"
+        short_name: "Eerste woning"
+        hint: "Belastingvrije inzet van séreign-pensioenspaargeld bij de aankoop van een eerste woning"

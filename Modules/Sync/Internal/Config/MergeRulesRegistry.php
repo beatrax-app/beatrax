@@ -294,6 +294,7 @@ final class MergeRulesRegistry
                 'hint' => ['nullable' => true],
                 'corpus_key' => ['nullable' => true],
                 'country_code' => ['nullable' => true],
+                'name_is_default' => ['nullable' => false],
                 'status' => ['nullable' => false],
                 'sort_order' => ['nullable' => false],
                 '_delete_wins' => true,

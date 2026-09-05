@@ -40,7 +40,7 @@ return [
         'choose' => 'Bir ülke seç…',
         'switch_note' => 'Ülke değiştirmek yeni kategoriler ekler — mevcut etiketler hiçbir zaman değişmez.',
 
-        'wording_note' => 'Vergi kategorisi adları :country ülkesinde kullanılan vergi beyannamesinden gelir, bu yüzden uygulamanın her dilinde o ülkenin sözcüklerinde kalır.',
+        'wording_note' => 'Vergi kategorisi adları kendi dilinizde gösterilir; :country vergi beyannamesi kendi terimlerini kullanır.',
 
         'countries' => [
             'at' => 'Avusturya',

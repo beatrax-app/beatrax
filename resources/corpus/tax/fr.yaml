@@ -6,29 +6,87 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "fr_dons"
     name: "Dons aux associations"
     short_name: "Dons"
     hint: "Versements à des organismes d'intérêt général (réduction 66%)"
+    i18n:
+      en:
+        name: "Charitable donations"
+        short_name: "Donations"
+        hint: "Payments to public-interest organisations (66% tax reduction)"
+      nl:
+        name: "Giften aan goede doelen"
+        short_name: "Giften"
+        hint: "Betalingen aan instellingen van algemeen nut (66% belastingvermindering)"
   - key: "fr_charges_deductibles"
     name: "Charges déductibles"
     short_name: "Charges déd."
     hint: "Pensions alimentaires versées, frais d'accueil de personnes âgées"
+    i18n:
+      en:
+        name: "Deductible expenses"
+        short_name: "Deductible exp."
+        hint: "Maintenance payments made, costs of taking in an elderly person"
+      nl:
+        name: "Aftrekbare lasten"
+        short_name: "Aftrekbare lasten"
+        hint: "Betaalde alimentatie, kosten voor de opvang van ouderen"
   - key: "fr_frais_professionnels"
     name: "Frais professionnels réels"
     short_name: "Frais prof."
     hint: "Frais de déplacement, repas, formation professionnelle"
+    i18n:
+      en:
+        name: "Actual work-related expenses"
+        short_name: "Work expenses"
+        hint: "Travel, meals and professional training costs"
+      nl:
+        name: "Werkelijke beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Reiskosten, maaltijden en beroepsopleiding"
   - key: "fr_epargne_retraite"
     name: "Épargne retraite (PER)"
     short_name: "Retraite PER"
     hint: "Versements sur un plan d'épargne retraite"
+    i18n:
+      en:
+        name: "Retirement savings (PER)"
+        short_name: "PER pension"
+        hint: "Payments into a PER retirement savings plan"
+      nl:
+        name: "Pensioensparen (PER)"
+        short_name: "PER-pensioen"
+        hint: "Stortingen op een PER-pensioenspaarplan"
   - key: "fr_travaux_renovation"
     name: "Travaux de rénovation énergétique"
     short_name: "MaPrimeRénov"
     hint: "Dépenses éligibles à MaPrimeRénov' ou crédit d'impôt"
+    i18n:
+      en:
+        name: "Energy-saving renovation work"
+        short_name: "MaPrimeRénov"
+        hint: "Spending eligible for MaPrimeRénov' or a tax credit"
+      nl:
+        name: "Energiebesparende verbouwing"
+        short_name: "MaPrimeRénov"
+        hint: "Uitgaven die in aanmerking komen voor MaPrimeRénov' of een belastingkrediet"
   - key: "fr_emploi_domicile"
     name: "Emploi à domicile"
     short_name: "Emploi dom."
     hint: "Crédit d'impôt pour emploi d'un salarié à domicile"
+    i18n:
+      en:
+        name: "Domestic help at home"
+        short_name: "Domestic help"
+        hint: "Tax credit for employing a household worker at home"
+      nl:
+        name: "Huishoudelijke diensten aan huis"
+        short_name: "Huishoud. hulp"
+        hint: "Belastingkrediet voor het in dienst nemen van een huishoudelijke hulp"

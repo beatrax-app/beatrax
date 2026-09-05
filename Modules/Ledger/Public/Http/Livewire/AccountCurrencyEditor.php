@@ -16,6 +16,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Internal\Actions\SetAccountCurrency;
 use Modules\Ledger\Internal\Exceptions\AccountCurrencyRelabelWarning;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Support\CurrencyDisplayName;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -169,7 +170,7 @@ final class AccountCurrencyEditor extends Component
             /** @var stdClass $row */
             $code = is_string($row->code) ? $row->code : '';
             if ($code !== '') {
-                $options[$code] = is_string($row->name) ? $row->name : $code;
+                $options[$code] = CurrencyDisplayName::forCode($code, is_string($row->name) ? $row->name : null);
             }
         }
 

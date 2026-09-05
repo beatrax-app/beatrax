@@ -14,69 +14,217 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "cy_syndromi_syntechnias"
     name: "Συνδρομή σε συντεχνία"
     short_name: "Συντεχνία"
     hint: "Συνδρομές σε συντεχνία, π.χ. ΠΑΣΥΔΥ, ΣΕΚ, ΠΕΟ"
+    i18n:
+      en:
+        name: "Trade union subscription"
+        short_name: "Union dues"
+        hint: "Union subscriptions, e.g. ΠΑΣΥΔΥ, ΣΕΚ, ΠΕΟ"
+      nl:
+        name: "Vakbondscontributie"
+        short_name: "Vakbondscontr."
+        hint: "Contributies aan een vakbond, bijv. ΠΑΣΥΔΥ, ΣΕΚ, ΠΕΟ"
   - key: "cy_epaggelmatiki_syndromi"
     name: "Επαγγελματική συνδρομή"
     short_name: "Επαγγ.συνδρ"
     hint: "Συνδρομή σε επαγγελματικό σώμα, αναγκαία για την κτήση εισοδήματος"
+    i18n:
+      en:
+        name: "Professional body subscription"
+        short_name: "Prof. body"
+        hint: "Subscription to a professional body needed to earn income"
+      nl:
+        name: "Contributie beroepsorganisatie"
+        short_name: "Beroepsorg."
+        hint: "Contributie aan een beroepsorganisatie die nodig is om inkomen te verwerven"
   - key: "cy_dorees"
     name: "Δωρεές σε εγκεκριμένους φιλανθρωπικούς σκοπούς"
     short_name: "Δωρεές"
     hint: "Δωρεές με απόδειξη σε εγκεκριμένους φιλανθρωπικούς οργανισμούς"
+    i18n:
+      en:
+        name: "Donations to approved charitable causes"
+        short_name: "Donations"
+        hint: "Receipted donations to approved charitable organisations"
+      nl:
+        name: "Giften aan erkende goede doelen"
+        short_name: "Giften"
+        hint: "Giften met bewijs aan erkende liefdadigheidsorganisaties"
   - key: "cy_politika_kommata"
     name: "Εισφορές σε πολιτικά κόμματα"
     short_name: "Κόμματα"
     hint: "Εισφορές σε πολιτικά κόμματα, με απόδειξη"
+    i18n:
+      en:
+        name: "Contributions to political parties"
+        short_name: "Political parties"
+        hint: "Contributions to political parties, with a receipt"
+      nl:
+        name: "Bijdragen aan politieke partijen"
+        short_name: "Partijen"
+        hint: "Bijdragen aan politieke partijen, met bewijs"
   - key: "cy_asfalistra_zois"
     name: "Ασφάλιστρα ζωής"
     short_name: "Ασφάλ.ζωής"
     hint: "Ασφάλιστρα ζωής, μέχρι 7% του ασφαλιζόμενου ποσού"
+    i18n:
+      en:
+        name: "Life insurance premiums"
+        short_name: "Life insurance"
+        hint: "Life insurance premiums, up to 7% of the sum insured"
+      nl:
+        name: "Levensverzekeringspremies"
+        short_name: "Levensverz."
+        hint: "Levensverzekeringspremies, tot 7% van het verzekerde bedrag"
   - key: "cy_tameia_syntaxis"
     name: "Εγκεκριμένα ταμεία και σχέδια συντάξεων"
     short_name: "Ταμ.σύνταξης"
     hint: "Εισφορές σε ταμείο προνοίας και εγκεκριμένα σχέδια συντάξεων"
+    i18n:
+      en:
+        name: "Approved provident and pension schemes"
+        short_name: "Pension funds"
+        hint: "Contributions to a provident fund and approved pension schemes"
+      nl:
+        name: "Erkende voorzieningsfondsen en pensioenregelingen"
+        short_name: "Pensioenfondsen"
+        hint: "Pensioenpremies aan een voorzieningsfonds en erkende pensioenregelingen"
   - key: "cy_koinonikes_asfaliseis"
     name: "Εισφορές Κοινωνικών Ασφαλίσεων"
     short_name: "Κοιν.ασφαλ."
     hint: "Εισφορές στο Ταμείο Κοινωνικών Ασφαλίσεων"
+    i18n:
+      en:
+        name: "Social insurance contributions"
+        short_name: "Social ins."
+        hint: "Contributions to the Social Insurance Fund"
+      nl:
+        name: "Socialeverzekeringspremies"
+        short_name: "Soc. verzek."
+        hint: "Premies aan het Fonds voor Sociale Verzekeringen"
   - key: "cy_gesy"
     name: "Εισφορές ΓεΣΥ"
     short_name: "ΓεΣΥ"
     hint: "Εισφορές στο Γενικό Σύστημα Υγείας"
+    i18n:
+      en:
+        name: "ΓεΣΥ health system contributions"
+        short_name: "ΓεΣΥ"
+        hint: "Contributions to the General Healthcare System (ΓεΣΥ)"
+      nl:
+        name: "ΓεΣΥ-zorgpremies"
+        short_name: "ΓεΣΥ"
+        hint: "Premies voor het algemene zorgstelsel (ΓεΣΥ)"
   - key: "cy_tameia_ygeias"
     name: "Ταμεία υγείας και ιδιωτικές ασφάλειες υγείας"
     short_name: "Ταμ.υγείας"
     hint: "Ταμεία υγείας εκτός ΓεΣΥ και ιδιωτικές ασφάλειες υγείας"
+    i18n:
+      en:
+        name: "Health funds and private health insurance"
+        short_name: "Health cover"
+        hint: "Health funds outside ΓεΣΥ and private health insurance"
+      nl:
+        name: "Ziektekostenfondsen en particuliere zorgverzekeringen"
+        short_name: "Zorgverzek."
+        hint: "Ziektekostenfondsen buiten ΓεΣΥ en particuliere zorgverzekeringen"
   - key: "cy_asfaleia_epaggelmatikis_efthynis"
     name: "Ασφάλεια επαγγελματικής ευθύνης"
     short_name: "Επαγγ.ευθύνη"
     hint: "Ασφάλιστρα επαγγελματικής ευθύνης μισθωτών"
+    i18n:
+      en:
+        name: "Professional indemnity insurance"
+        short_name: "Indemnity ins."
+        hint: "Professional indemnity premiums for employees"
+      nl:
+        name: "Beroepsaansprakelijkheidsverzekering"
+        short_name: "Beroepsaanspr."
+        hint: "Premies voor beroepsaansprakelijkheid van werknemers"
   - key: "cy_stegasi"
     name: "Ενοίκιο ή τόκοι στεγαστικού δανείου κύριας κατοικίας"
     short_name: "Στέγαση"
     hint: "Νέα προσωπική έκπτωση στέγασης από το φορολογικό έτος 2026"
+    i18n:
+      en:
+        name: "Rent or mortgage interest on a main home"
+        short_name: "Housing"
+        hint: "New personal housing deduction from tax year 2026"
+      nl:
+        name: "Huur of hypotheekrente van de hoofdwoning"
+        short_name: "Huisvesting"
+        hint: "Nieuwe persoonlijke huisvestingsaftrek vanaf belastingjaar 2026"
   - key: "cy_prasini_metavasi"
     name: "Ενεργειακή αναβάθμιση κατοικίας και ηλεκτρικό όχημα"
     short_name: "Πράσινη μετ."
     hint: "Νέα έκπτωση πράσινης μετάβασης από το φορολογικό έτος 2026"
+    i18n:
+      en:
+        name: "Home energy upgrade and electric vehicle"
+        short_name: "Green transition"
+        hint: "New green transition deduction from tax year 2026"
+      nl:
+        name: "Energiebesparende maatregelen woning en elektrische auto"
+        short_name: "Groene transitie"
+        hint: "Nieuwe aftrek voor de groene transitie vanaf belastingjaar 2026"
   - key: "cy_asfalisi_katastrofon"
     name: "Ασφάλιση κατοικίας έναντι φυσικών καταστροφών"
     short_name: "Ασφ.κατοικ."
     hint: "Νέα έκπτωση χωρίς εισοδηματικά κριτήρια, από το φορολογικό έτος 2026"
+    i18n:
+      en:
+        name: "Home insurance against natural disasters"
+        short_name: "Disaster cover"
+        hint: "New deduction with no income conditions, from tax year 2026"
+      nl:
+        name: "Woningverzekering tegen natuurrampen"
+        short_name: "Rampverzek."
+        hint: "Nieuwe aftrek zonder inkomenscriteria, vanaf belastingjaar 2026"
   - key: "cy_asfalisi_anikanotitas"
     name: "Ασφάλιση έναντι ανικανότητας"
     short_name: "Ανικανότητα"
     hint: "Ασφάλιστρα έναντι μόνιμης ή πρόσκαιρης, ολικής ή μερικής ανικανότητας"
+    i18n:
+      en:
+        name: "Incapacity insurance"
+        short_name: "Incapacity ins."
+        hint: "Premiums against permanent or temporary, total or partial incapacity"
+      nl:
+        name: "Arbeidsongeschiktheidsverzekering"
+        short_name: "AOV"
+        hint: "Premies tegen blijvende of tijdelijke, volledige of gedeeltelijke arbeidsongeschiktheid"
   - key: "cy_tokoi_enoikiazomenou"
     name: "Τόκοι δανείου για ενοικιαζόμενο υποστατικό"
     short_name: "Τόκοι ενοικ."
     hint: "Τόκοι δανείου για αγορά ή ανέγερση ενοικιαζόμενου υποστατικού"
+    i18n:
+      en:
+        name: "Loan interest on a rented property"
+        short_name: "Rental interest"
+        hint: "Interest on a loan to buy or build a rented property"
+      nl:
+        name: "Rente op een lening voor verhuurd vastgoed"
+        short_name: "Rente verhuur"
+        hint: "Rente op een lening voor de aankoop of bouw van een verhuurd pand"
   - key: "cy_epicheirimatikes_dapanes"
     name: "Εκπιπτόμενες επιχειρηματικές δαπάνες"
     short_name: "Επαγγ.έξοδα"
     hint: "Δαπάνες εξ ολοκλήρου για την απόκτηση φορολογητέου εισοδήματος"
+    i18n:
+      en:
+        name: "Deductible business expenses"
+        short_name: "Business exp."
+        hint: "Expenses incurred wholly for earning taxable income"
+      nl:
+        name: "Aftrekbare ondernemerskosten"
+        short_name: "Ondernemerskosten"
+        hint: "Uitgaven volledig gedaan om belastbaar inkomen te verwerven"

@@ -40,7 +40,7 @@ return [
         'choose' => 'Vyber krajinu…',
         'switch_note' => 'Zmena pridá nové kategórie — existujúce značky sa nikdy nemenia.',
 
-        'wording_note' => 'Názvy daňových kategórií pochádzajú z daňového priznania používaného v :country, takže zostávajú v slovách danej krajiny vo všetkých jazykoch aplikácie.',
+        'wording_note' => 'Názvy daňových kategórií sú vo vašom jazyku; daňové priznanie v :country používa vlastné výrazy.',
 
         'countries' => [
             'at' => 'Rakúsko',
