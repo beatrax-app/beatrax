@@ -190,7 +190,7 @@ if (! str_contains($paths, $pathsAnchor)) {
 $staleRoot = '<files-path name="beatrax-internal" path="." />';
 
 if (str_contains($paths, $staleRoot)) {
-    $paths = (string) preg_replace('/^[ \t]*'.preg_quote($staleRoot, '/').'\R/m', '', $paths);
+    $paths = beatraxRewrite('nativephp_android_share_file', '/^[ \t]*'.preg_quote($staleRoot, '/').'\R/m', '', $paths);
     file_put_contents($pathsTarget, $paths);
     fwrite(STDOUT, "nativephp_android_share_file: withdrew the files-path root an earlier run added.\n");
 }
