@@ -14,13 +14,15 @@ namespace Modules\Sync\Internal\Transport;
 final readonly class WithheldHistory
 {
     /**
-     * @param  array<string, int>  $counts  author device id => entries withheld.
+     * @param  array<array-key, int>  $counts  author device id => entries withheld.
+     *                                         Keyed by a wire-supplied id, which PHP turns into
+     *                                         an int when it reads as a decimal integer.
      * @param  list<array{device_id: string, name: string, ed25519_public_key_hex: string}>  $introductions
      */
     private function __construct(public array $counts, public array $introductions) {}
 
     /**
-     * @param  array<string, int>  $counts
+     * @param  array<array-key, int>  $counts
      * @param  list<array{device_id: string, name: string, ed25519_public_key_hex: string}>  $introductions
      */
     public static function of(array $counts, array $introductions): self
@@ -43,7 +45,7 @@ final readonly class WithheldHistory
      */
     public function authors(): array
     {
-        return array_keys($this->counts);
+        return array_map(strval(...), array_keys($this->counts));
     }
 
     /**
@@ -54,6 +56,9 @@ final readonly class WithheldHistory
         $withheld = [];
 
         foreach ($this->counts as $deviceId => $count) {
+            // Cast because the key may be an int: PHP silently narrows a
+            // decimal-string array key, and this one arrives on the wire. The
+            // declared array-key type is what says the cast is not redundant.
             $withheld[] = ['device_id' => (string) $deviceId, 'count' => $count];
         }
 

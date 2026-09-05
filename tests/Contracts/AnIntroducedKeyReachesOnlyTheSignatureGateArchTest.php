@@ -110,7 +110,7 @@ it('hands the map that carries a relayed key only to an op-log signature check',
     $expected = INTRODUCED_KEY_CALL_SITES;
     sort($expected);
 
-    expect($callers)->toBe($expected, 'E2-R19: a confirmed introduction grants signature verification only. '
+    expect($callers)->toBe($expected, 'A confirmed introduction grants signature verification only. '
         .'Every call site here builds OpLogReplayer\'s author map or the list of authors this device advertises '
         .'it can verify. A new one is a new capability being granted to a device nobody paired with');
 });
@@ -129,7 +129,7 @@ it('keeps the transport and epoch anchors reading the paired-only registry', fun
         expect(str_contains($body, 'device_introductions'))->toBeFalse(
             $method.'() is what a Noise handshake and a GDK epoch wrap are judged against. Reading an '
             .'introduced key here would let one confirmed device admit another to the transport and to '
-            .'key material, which is exactly the boundary E2-R19 draws',
+            .'key material, which is exactly the boundary an introduction must not cross',
         );
     }
 });

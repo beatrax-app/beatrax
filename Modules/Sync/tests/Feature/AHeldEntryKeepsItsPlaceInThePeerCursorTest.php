@@ -95,21 +95,43 @@ function cursorSignedOp(DeviceKeySigner $signer, string $secretKeyHex, string $a
     return $make($signer->sign($make('')->signingPayload(), sodium_hex2bin($secretKeyHex)));
 }
 
+// The household first, the session second, because the trust map is a
+// CONNECT-TIME snapshot: both transports read it once and hand the same array to
+// the replayer and to receiveOps. A confirmation made mid-session is picked up
+// on the next connect, and a test that seeded one afterwards would be asking a
+// question no device asks.
 /**
- * @return array{0: SyncSession, 1: NoiseSession, 2: int, 3: string, 4: string}
+ * @return array{0: int, 1: string, 2: string, 3: string, 4: string, 5: string}
  */
-function cursorAuthenticatedSession(DatabaseManager $db, string $suffix): array
+function cursorHousehold(DatabaseManager $db, string $suffix): array
 {
     $localKx = sodium_crypto_kx_keypair();
     $localPublic = sodium_crypto_kx_publickey($localKx);
 
     [$userId, $macEdSecret, $oldPhoneEdSecret, $macKxSecret] = cursorHouseholdOf($db, $suffix, $localPublic);
 
+    return [
+        $userId,
+        $macEdSecret,
+        $oldPhoneEdSecret,
+        $macKxSecret,
+        sodium_bin2hex(sodium_crypto_kx_secretkey($localKx)),
+        sodium_bin2hex($localPublic),
+    ];
+}
+
+/**
+ * @return array{0: SyncSession, 1: NoiseSession}
+ */
+function cursorSession(DatabaseManager $db, int $userId, string $macKxSecret, string $localKxSecret, string $localPublicHex): array
+{
+    $localPublic = sodium_hex2bin($localPublicHex);
+
     $macPublic = sodium_hex2bin((string) $db->connection()->table('device_registry')
         ->where('user_id', $userId)->where('device_id', 'the-mac')->value('x25519_public_key_hex'));
 
     $initHs = NoiseHandshakeState::initIkInitiator(sodium_hex2bin($macKxSecret), $macPublic, $localPublic);
-    $respHs = NoiseHandshakeState::initIkResponder(sodium_crypto_kx_secretkey($localKx), $localPublic);
+    $respHs = NoiseHandshakeState::initIkResponder(sodium_hex2bin($localKxSecret), $localPublic);
 
     $respHs->readMessage($initHs->writeMessage(''));
     $initHs->readMessage($respHs->writeMessage(''));
@@ -136,14 +158,15 @@ function cursorAuthenticatedSession(DatabaseManager $db, string $suffix): array
     expect($session->authenticate(new NoiseSession($respSend, $respRecv, $peerStaticToResp), $userId, 'new-phone'))
         ->toBeTrue();
 
-    return [$session, new NoiseSession($initSend, $initRecv, $peerStaticToInit), $userId, $macEdSecret, $oldPhoneEdSecret];
+    return [$session, new NoiseSession($initSend, $initRecv, $peerStaticToInit)];
 }
 
 it('never advances a peer cursor over an entry whose author it cannot verify', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    [$session, $macNoise, $userId, , $oldPhoneEdSecret] = cursorAuthenticatedSession($db, 'held');
+    [$userId, , $oldPhoneEdSecret, $macKxSecret, $localKxSecret, $localPublicHex] = cursorHousehold($db, 'held');
+    [$session, $macNoise] = cursorSession($db, $userId, $macKxSecret, $localKxSecret, $localPublicHex);
 
     /** @var DeviceRegistryService $registry */
     $registry = app(DeviceRegistryService::class);
@@ -168,7 +191,8 @@ it('advances the cursor over an entry it did admit', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    [$session, $macNoise, $userId, $macEdSecret] = cursorAuthenticatedSession($db, 'admitted');
+    [$userId, $macEdSecret, , $macKxSecret, $localKxSecret, $localPublicHex] = cursorHousehold($db, 'admitted');
+    [$session, $macNoise] = cursorSession($db, $userId, $macKxSecret, $localKxSecret, $localPublicHex);
 
     /** @var DeviceRegistryService $registry */
     $registry = app(DeviceRegistryService::class);
@@ -188,7 +212,7 @@ it('delivers the held entry once the reader confirms an introduction for its aut
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    [$session, $macNoise, $userId, , $oldPhoneEdSecret] = cursorAuthenticatedSession($db, 'rescued');
+    [$userId, , $oldPhoneEdSecret, $macKxSecret, $localKxSecret, $localPublicHex] = cursorHousehold($db, 'rescued');
 
     /** @var DeviceRegistryService $registry */
     $registry = app(DeviceRegistryService::class);
@@ -215,6 +239,12 @@ it('delivers the held entry once the reader confirms an introduction for its aut
         'created_at' => '2026-09-05T10:00:00Z',
         'updated_at' => '2026-09-05T10:00:00Z',
     ]);
+
+    // Connected AFTER the confirmation, which is the only order a device sees:
+    // the map is read once per connect and handed to the replayer and to
+    // receiveOps together, so a session that predates the reader's decision
+    // carries a snapshot that predates it too.
+    [$session, $macNoise] = cursorSession($db, $userId, $macKxSecret, $localKxSecret, $localPublicHex);
 
     $entry = cursorSignedOp(app(DeviceKeySigner::class), $oldPhoneEdSecret, 'old-phone', $userId, 1_800_000_000_002);
     $frame = new TransportFramer()->encode([$entry]);

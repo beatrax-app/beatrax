@@ -29,7 +29,7 @@ final readonly class DeviceIntroductionService
     // confirmation and its identity and takes only the new count and voucher.
     /**
      * @param  list<array{device_id: string, name: string, ed25519_public_key_hex: string}>  $offered
-     * @param  array<string, int>  $withheld  author device id => entries the peer is holding back.
+     * @param  array<array-key, int>  $withheld  author device id => entries the peer is holding back.
      * @return int How many introductions were stored or refreshed.
      */
     public function record(int $userId, string $introducedBy, array $offered, array $withheld): int
@@ -66,7 +66,7 @@ final readonly class DeviceIntroductionService
 
     /**
      * @param  array{device_id: string, name: string, ed25519_public_key_hex: string}  $introduction
-     * @param  array<string, int>  $withheld
+     * @param  array<array-key, int>  $withheld
      */
     private function store(
         int $userId,
@@ -102,8 +102,8 @@ final readonly class DeviceIntroductionService
 
         if ($existing !== null) {
             // The key is left alone on purpose. Rewriting it would let a second
-            // exchange swap the identity under a confirmation the reader has
-            // already given, which is the whole of what E2-R18 is guarding.
+            // exchange swap the identity out from under a confirmation the
+            // reader has already given, which is the whole of the guard.
             $connection->table('device_introductions')
                 ->where('user_id', $userId)
                 ->where('device_id', $deviceId)

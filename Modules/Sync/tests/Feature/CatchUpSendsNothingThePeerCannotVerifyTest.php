@@ -129,7 +129,10 @@ it('sends everything to a peer that named no authors at all', function (): void 
 
     [$delta, $control] = $exchanger->answer($userId, ['cursors' => []], 'peer-on-an-older-build');
 
-    expect(array_count_values(filterAuthorsIn($delta)))->toBe(['the-mac' => 2, 'old-phone' => 5])
+    $authors = filterAuthorsIn($delta);
+    sort($authors);
+
+    expect(array_count_values($authors))->toBe(['old-phone' => 5, 'the-mac' => 2])
         ->and($control['withheld'])->toBe([])
         ->and($control['introductions'])->toBe([]);
 });

@@ -18,7 +18,7 @@ use Modules\Sync\Internal\Pairing\DeviceIntroductionService;
 // branch of the settings section, because the act it offers is a different and
 // weaker one and its copy has to say so without borrowing pairing's language.
 /**
- * @link ../../../../.docs/features/sync/introducing-a-device-nobody-can-pair-with.md
+ * @link ../../../../../.docs/features/sync/introducing-a-device-nobody-can-pair-with.md
  */
 final class IntroducedDevicesSection extends Component
 {

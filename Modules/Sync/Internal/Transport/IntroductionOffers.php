@@ -42,10 +42,10 @@ final readonly class IntroductionOffers
 
     // What the filter took out, with an introduction for each author this
     // device has itself confirmed. Nothing is offered for a device this device
-    // merely retains a key for: vouching for one nothing here confirms is not
-    // this side's to do, and E2-R18 says a CONFIRMED device may be relayed.
+    // merely retains a key for: only a confirmed device may be relayed, and
+    // vouching for one nothing here confirms is not this side's to do.
     /**
-     * @param  array<string, int>  $counts  author device id => entries withheld.
+     * @param  array<array-key, int>  $counts  author device id => entries withheld.
      * @param  string  $peerDeviceId  Named so the log line says who was refused what.
      */
     public function forWithheld(int $userId, array $counts, string $peerDeviceId): WithheldHistory
@@ -54,7 +54,12 @@ final readonly class IntroductionOffers
             return WithheldHistory::none();
         }
 
-        $withheld = WithheldHistory::of($counts, $this->introductionsFor($userId, array_keys($counts)));
+        // Through strval() because the keys are array-key: a device id that
+        // reads as a decimal integer came back off PHP's array as an int, and
+        // the lookups below compare against a string column.
+        $authors = array_map(strval(...), array_keys($counts));
+
+        $withheld = WithheldHistory::of($counts, $this->introductionsFor($userId, $authors));
 
         // Error, not warning, for the reason PeerCatchUpExchanger's unframable
         // report is one: a withholding nothing announces reads as an ordinary

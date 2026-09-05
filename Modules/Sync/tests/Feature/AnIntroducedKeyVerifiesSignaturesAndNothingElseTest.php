@@ -28,9 +28,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-// E2-R19 is the boundary the whole introduction rests on: a relayed identity,
-// once confirmed, grants signature verification and NOTHING else. These pin
-// both halves — that it does verify, and that it reaches no other gate.
+// The boundary the whole introduction rests on: a relayed identity, once
+// confirmed, grants signature verification and NOTHING else. These pin both
+// halves — that it does verify, and that it reaches no other gate.
 
 const INTRODUCED_DEVICE_ID = 'phone-that-was-replaced';
 

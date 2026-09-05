@@ -126,7 +126,8 @@ final readonly class PeerCatchUpExchanger
     // through the same two helpers so the number reported and the rows withheld
     // can never be answers to different questions.
     /**
-     * @return array<string, int>
+     * @return array<array-key, int> Keyed by author device id, which PHP narrows to an int
+     *                               when the id reads as a decimal integer.
      */
     private function countWithheldByAuthor(int $userId, PeerCatchUpCursors $cursors, VerifiableAuthors $verifiable): array
     {

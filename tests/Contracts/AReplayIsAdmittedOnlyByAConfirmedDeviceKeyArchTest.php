@@ -6,12 +6,20 @@ use Modules\Core\Public\Support\PatternScan;
 
 // The map an OpLogReplayer is constructed with is the whole admission gate for
 // a peer's entries: an entry whose signing device is absent from it is
-// quarantined and never written. DeviceRegistryService offers two maps that
-// differ by one WHERE clause -- deviceKeys() is confirmed-only, and
-// retainedDeviceKeys() also answers for devices whose trust has been revoked,
-// so that the history they wrote can still be read back. Handing the wider one
-// to a replayer would admit a revoked device's new writes as ordinary traffic,
-// and the two calls read almost identically at a glance.
+// quarantined and never written. DeviceRegistryService offers three maps that
+// read almost identically at a glance, and only one of them is dangerous.
+//
+// deviceKeys() is paired-and-confirmed only. signatureVerificationKeys() is
+// that map widened by the introductions THIS READER confirmed, which grant
+// signature verification and nothing else -- so it is an admission anchor too,
+// and the second rule below is what makes saying so safe rather than a hole:
+// it reads the widening back and refuses it if it ever becomes anything but
+// confirmed introductions.
+//
+// retainedDeviceKeys() answers for devices whose trust has been REVOKED, so
+// that the history they wrote can still be read back. Handing that one to a
+// replayer admits a revoked device's new writes as ordinary traffic, and no
+// reader ever decided that. It is the one that stays out.
 
 const CONFIRMED_KEY_REPLAY_SITES = [
     'Modules/Mobile/Internal/Sync/LanSyncClient.php',
@@ -75,7 +83,10 @@ it('builds every shipped replayer from the confirmed-only device-key map', funct
         $relative = str_replace(base_path().'/', '', $path);
         $sites[] = $relative;
 
-        if (! PatternScan::matches('/->deviceKeys\(/', $code) || PatternScan::matches('/->retainedDeviceKeys\(/', $code)) {
+        $anchored = PatternScan::matches('/->deviceKeys\(/', $code)
+            || PatternScan::matches('/->signatureVerificationKeys\(/', $code);
+
+        if (! $anchored || PatternScan::matches('/->retainedDeviceKeys\(/', $code)) {
             $wide[] = $relative;
         }
     }
@@ -87,10 +98,49 @@ it('builds every shipped replayer from the confirmed-only device-key map', funct
     ]));
 
     expect($wide)->toBe([], implode("\n  ", [
-        'DeviceRegistryService::deviceKeys() is the admission anchor because it filters on',
-        'confirmed_at; retainedDeviceKeys() answers for revoked devices too, and exists only',
-        'so a rebuild can verify the history a removed device already wrote. A replayer built',
-        'from the wider map accepts that device new entries as well. Offenders: ',
+        'A replayer is admitted on deviceKeys() or on signatureVerificationKeys(), and on nothing',
+        'else. retainedDeviceKeys() answers for revoked devices too, and exists only so a rebuild',
+        'can verify the history a removed device already wrote; a replayer built from it accepts',
+        'that device new entries as well, which no reader ever asked for. Offenders: ',
         implode(', ', $wide),
     ]));
+});
+
+// The second anchor, read back rather than taken on trust. Accepting a wider
+// map at a replay site is only safe while the widening is exactly the one the
+// reader performs by hand, on a key that verifies signatures and grants nothing
+// else. If that method ever draws from somewhere else, this is where it shows.
+it('widens the second admission anchor only by an introduction the reader confirmed', function (): void {
+    $path = base_path('Modules/Sync/Public/Services/DeviceRegistryService.php');
+    $code = PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', (string) file_get_contents($path));
+
+    $at = strpos($code, 'function signatureVerificationKeys(');
+
+    expect($at)->not->toBeFalse('the second anchor must still be here to be anchored');
+
+    $next = strpos($code, 'public function ', (int) $at + 1);
+    $body = substr($code, (int) $at, ($next === false ? strlen($code) : $next) - (int) $at);
+
+    expect(PatternScan::matches("/->table\(\s*'device_introductions'\s*\)/", $body))->toBeTrue(
+        'the widening must come from the introductions table and nowhere else',
+    );
+
+    expect(PatternScan::matches("/->whereNotNull\(\s*'verification_confirmed_at'\s*\)/", $body))->toBeTrue(
+        'an introduction the reader has not confirmed verifies nothing. Dropping this filter would '
+        .'admit a key on a peer\'s say-so alone, which is the ceremony this act replaces, not skips',
+    );
+
+    expect(PatternScan::matches("/->where\(\s*'user_id'\s*,/", $body))->toBeTrue(
+        'one household confirming an introduction says nothing about another',
+    );
+
+    expect(PatternScan::matches('/->deviceKeys\(/', $body))->toBeTrue(
+        'the paired half has to still be in it, or confirming an introduction would REPLACE the '
+        .'devices this household paired with rather than add to them',
+    );
+
+    expect(PatternScan::matches('/retainedDeviceKeys|(?<!verification_)confirmed_at/', $body))->toBeFalse(
+        'the revoked-device map and device_registry.confirmed_at are the paired half\'s business. '
+        .'Reaching for either here would fold a revoked device back in through the weaker door',
+    );
 });
