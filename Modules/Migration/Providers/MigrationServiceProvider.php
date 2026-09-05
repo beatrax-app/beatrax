@@ -7,8 +7,10 @@ namespace Modules\Migration\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Console\SweepAbandonedMigrationRunsCommand;
 use Modules\Migration\Internal\Http\Livewire\MigrationResults;
 use Modules\Migration\Internal\Http\Livewire\MigrationsIndex;
 use Modules\Migration\Internal\Http\Livewire\NewMigration;
@@ -21,6 +23,7 @@ use Modules\Migration\Internal\Services\SourceMapWriter;
 final class MigrationServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -39,6 +42,8 @@ final class MigrationServiceProvider extends ServiceProvider
     public function boot(LivewireManager $livewire): void
     {
         $this->loadModuleResources('migration');
+
+        $this->registerScheduledCommands([SweepAbandonedMigrationRunsCommand::class]);
 
         $livewire->component('migration.migrations-index', MigrationsIndex::class);
         $livewire->component('migration.new-migration', NewMigration::class);

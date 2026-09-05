@@ -311,6 +311,18 @@ Schedule::command('notifications:prune')
     ->daily()
     ->withoutOverlapping(30);
 
+// Daily sweep of migration runs abandoned before they were ever confirmed.
+//
+// The staging copy of a whole export sits behind a run nobody came back to, and
+// until this entry existed nothing reclaimed it: the wizard's discard button
+// was the only path, and an abandoned run is by definition one nobody returned
+// to press it on. The threshold, the two never-confirmed states and the
+// per-owner scope are the action's; this only says how often it runs.
+Schedule::command('migration:sweep-abandoned')
+    ->name('migration.sweep-abandoned')
+    ->daily()
+    ->withoutOverlapping(30);
+
 // Daily open-banking auto-sync, at midnight local: no hour is named, because
 // the phone runner selects from a fixed interval map and an hour could not
 // survive onto a device. It still lands ahead of the FX refresh and the 09:15
