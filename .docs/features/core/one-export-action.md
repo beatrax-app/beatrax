@@ -24,6 +24,32 @@ artefact trees stay apart inside the archive:
 `artefacts/artefacts_imports/`, `artefacts/artefacts_mail/`,
 `artefacts/artefacts_drop/`.
 
+The backup entry is written **first**, before any source document. That is what
+lets a restore find it at the head of the archive without walking one.
+
+## The boundary is a list, not a sweep
+
+`UserDataLocations` states both halves by name — `EXPORTED` for what the archive
+carries, `WITHHELD` for what it does not — and a test asserts the two together
+are exactly the inventory. A location added to `all()` and to neither list fails
+that test rather than being swept in by whichever branch reached it first.
+
+Withholding is the half that needed spelling out. `secrets/` is one directory
+from `private/imports/`, and it holds the open-banking connector credentials
+([F7-R7](https://github.com/beatrax-app/spec/blob/main/10-functional/features/f-platform/f7-data-locations.md)):
+a sweep of the storage root would put them inside a file the reader then mails
+to themselves. The same reasoning bounds the packagers' copy, and it is written
+down there because inference is what failed — a bundle once shipped `storage/app`
+whole, carrying the signing key that made it. An archive is a copy with a
+boundary, so it is bounded the same way.
+
+Backups and logs are withheld for the plainer reason: the archive carries its
+own snapshot, and a log file is not the reader's history.
+
+The proof is not that the archive is non-empty. The test plants a credential
+file, a keyring, an earlier backup and a leftover working artefact, and asserts
+the archive holds the one statement it was given and none of the four.
+
 ## Why the halves are protected differently
 
 The database goes in encrypted and the documents go in as they are, which
@@ -96,6 +122,46 @@ rather than refusing, because an export that failed over a folder the
 reader never created would be an export most readers could not take. The
 archive is then the backup entry alone, which is correct.
 
+## Taking the archive back in
+
+An export the application cannot read back is a file it hands the reader and
+then refuses. That is what shipped: every restore surface took a bare `.enc`,
+its file picker was `accept=".enc"` — so the archive could not even be chosen —
+and a reader who forced one through was told
+
+> This file is not a Beatrax encrypted backup … Pick the `.enc` file the app
+> wrote when you made the backup.
+
+about a file the app wrote, naming a file it never wrote for them. The phone is
+where that bites: `/mobile/restore` is the whole route home from a wipe, and the
+build there has no `ext-zip` to unpack the archive with either.
+
+`ExportArchiveBackup` closes it, in `RestoreEncryptedBackup` rather than in the
+two screens, so `EncryptedBackupRestore`, `MobileRestoreFromBackup` and
+`db:restore` all get it from one seam.
+
+- `isArchive()` reads four bytes. `PK\x03\x04` is an archive; anything else goes
+  to the encryptor unchanged, so the bare `.enc` path is untouched.
+- `liftBackupInto()` reads the local file header at byte zero — name, method,
+  compressed and uncompressed size — and streams that one entry into the same
+  0700 `tmp-restore` directory the decrypt already uses, unlinked in a `finally`.
+
+**Only the backup comes out.** The source documents beside it are the reader's
+own files and are already on their machine; a restore that unpacked them would
+be writing files nobody asked it to write, at paths the archive rather than this
+application chose.
+
+This is not a general ZIP reader and must not become one. It reads the head of
+an archive **this application wrote**, and it verifies rather than assumes:
+the entry name has to match `beatrax-backup-*.sqlite.enc`, a trailing data
+descriptor is refused (neither writer here emits one), and a method other than
+stored or deflated is refused by number. Somebody else's export opens here too —
+a YNAB `.zip` gets *the archive holds no Beatrax backup*, not a mis-parse
+reported as a damaged database. `Migration`'s `ArchiveReader` seam is the
+general reader, and it stays where it is: it lives behind that module's
+`Internal\` namespace, it is shaped around that module's error vocabulary, and
+40 lines that read a header this module writes is not worth moving it.
+
 ## Where it is offered
 
 On `/help/data-locations`, mounted as `core.export-everything-download`,
@@ -110,3 +176,5 @@ which is the wrong gate for it whether or not the route had shipped.
   path resolves against, and why.
 - [Sensitive columns at rest](../sync/sensitive-columns-at-rest.md#a-backup-of-the-database-alone-is-a-backup-of-ciphertext)
   — why the keyring rides inside the snapshot.
+- [F4 backup, restore and recovery](https://github.com/beatrax-app/spec/blob/main/10-functional/features/f-platform/f4-backup-restore.md)
+  — the ordering the lifted backup then goes through unchanged.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Parsers\Support;
 
+use Modules\Core\Public\Support\ZipLocalEntry;
 use Modules\Migration\Internal\Exceptions\ArchiveReaderUnavailableException;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Throwable;
@@ -34,14 +35,6 @@ final class NativeZipReader implements ArchiveReader
 
     private const int CENTRAL_FIXED_BYTES = 46;
 
-    private const string LOCAL_SIGNATURE = "PK\x03\x04";
-
-    private const int LOCAL_FIXED_BYTES = 30;
-
-    private const int METHOD_STORE = 0;
-
-    private const int METHOD_DEFLATE = 8;
-
     private const int FLAG_ENCRYPTED = 0x0001;
 
     private const int ZIP64_SENTINEL_SHORT = 0xFFFF;
@@ -53,8 +46,6 @@ final class NativeZipReader implements ArchiveReader
     private const int UNIX_MODE_FMT_MASK = 0o170000;
 
     private const int UNIX_MODE_SYMLINK = 0o120000;
-
-    private const int READ_CHUNK_BYTES = 262144;
 
     private const int DIRECTORY_MODE = 0o700;
 
@@ -253,14 +244,14 @@ final class NativeZipReader implements ArchiveReader
             ));
         }
 
-        if ($entry['method'] === self::METHOD_DEFLATE && ! function_exists('inflate_init')) {
+        if ($entry['method'] === ZipLocalEntry::METHOD_DEFLATE && ! function_exists('inflate_init')) {
             throw new ArchiveReaderUnavailableException(sprintf(
                 "archive entry '%s' is deflated and this build carries neither ext-zip nor zlib",
                 $entry['name'],
             ));
         }
 
-        if (! in_array($entry['method'], [self::METHOD_STORE, self::METHOD_DEFLATE], true)) {
+        if (! in_array($entry['method'], [ZipLocalEntry::METHOD_STORE, ZipLocalEntry::METHOD_DEFLATE], true)) {
             throw new ArchiveReaderUnavailableException(sprintf(
                 "archive entry '%s' uses compression method %d; the built-in reader reads only stored and deflated entries",
                 $entry['name'],
@@ -317,8 +308,8 @@ final class NativeZipReader implements ArchiveReader
     private function streamEntryInto(array $entry, $out): bool
     {
         $offset = $this->dataOffset($entry);
-        $inflate = $entry['method'] === self::METHOD_DEFLATE ? inflate_init(ZLIB_ENCODING_RAW) : null;
-        if ($entry['method'] === self::METHOD_DEFLATE && $inflate === false) {
+        $inflate = $entry['method'] === ZipLocalEntry::METHOD_DEFLATE ? inflate_init(ZLIB_ENCODING_RAW) : null;
+        if ($entry['method'] === ZipLocalEntry::METHOD_DEFLATE && $inflate === false) {
             throw new ArchiveReaderUnavailableException(sprintf(
                 "the zlib inflater refused to start for archive entry '%s'",
                 $entry['name'],
@@ -330,7 +321,7 @@ final class NativeZipReader implements ArchiveReader
         $written = 0;
 
         while ($remaining > 0) {
-            $chunk = $this->readAt($offset, min($remaining, self::READ_CHUNK_BYTES));
+            $chunk = $this->readAt($offset, min($remaining, ZipLocalEntry::READ_CHUNK_BYTES));
             if ($chunk === '') {
                 throw new UnrecognizedMigrationFileException(sprintf(
                     "archive entry '%s' stops before the length its header declares",
@@ -385,8 +376,8 @@ final class NativeZipReader implements ArchiveReader
      */
     private function dataOffset(array $entry): int
     {
-        $header = $this->readAt($entry['localHeaderOffset'], self::LOCAL_FIXED_BYTES);
-        if (strlen($header) < self::LOCAL_FIXED_BYTES || ! str_starts_with($header, self::LOCAL_SIGNATURE)) {
+        $header = $this->readAt($entry['localHeaderOffset'], ZipLocalEntry::FIXED_BYTES);
+        if (strlen($header) < ZipLocalEntry::FIXED_BYTES || ! str_starts_with($header, ZipLocalEntry::SIGNATURE)) {
             throw new UnrecognizedMigrationFileException(sprintf(
                 "archive entry '%s' points at no local file header",
                 $entry['name'],
@@ -397,7 +388,7 @@ final class NativeZipReader implements ArchiveReader
         // write a different extra field in each, and the payload begins after
         // the local copy.
         return $entry['localHeaderOffset']
-            + self::LOCAL_FIXED_BYTES
+            + ZipLocalEntry::FIXED_BYTES
             + $this->readShort($header, 26)
             + $this->readShort($header, 28);
     }

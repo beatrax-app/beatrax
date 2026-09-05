@@ -46,7 +46,7 @@ it('refuses without an uploaded file', function (): void {
         ->set('passphrase', 'secret')
         ->set('confirmation', 'RESTORE')
         ->call('restore')
-        ->assertSet('error', 'Choose an encrypted backup file (.enc) to restore.');
+        ->assertSet('error', 'Choose what to restore from: the .enc backup file, or the .zip the one-click export wrote.');
 });
 
 it('refuses without a passphrase', function (): void {

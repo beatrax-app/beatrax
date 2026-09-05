@@ -213,3 +213,70 @@ it('does not follow a symlink out of an artefact directory', function (): void {
 
     @unlink($zipPath);
 });
+
+// The archive is a copy with a boundary, and the failure this guards against
+// already happened once on the packagers' side: a bundle shipped `storage/app`
+// wholesale and carried the builder's signing key out with it. Connector
+// credentials sit one directory from the source documents, so "everything under
+// the storage root" is the sweep that must never be written.
+it('leaves every location withheld from the export out of the archive', function (): void {
+    plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+
+    $planted = [
+        'secrets/open-banking.json' => '{"client_secret":"a-connector-credential"}',
+        'backups/beatrax-2026-09-01-030000.sqlite' => 'SQLite format 3'."\0",
+        'tmp-backups/beatrax-export-leftover.sqlite' => 'a working artefact from an earlier run',
+        'sync/gdk/1.enc' => 'the keyring that opens the sealed columns',
+    ];
+    foreach ($planted as $relative => $contents) {
+        plantExportArtefact($relative, $contents);
+    }
+
+    /** @var ExportEverythingArchive $archive */
+    $archive = $this->app->make(ExportEverythingArchive::class);
+    $zipPath = $archive->build('a-good-passphrase', '2026-09-04-120000');
+
+    $entries = exportArchiveEntries($zipPath);
+
+    // The one entry that must be there, asserted first: every "is not in the
+    // archive" claim below is true of an archive that was never built.
+    expect($entries)->toHaveCount(2)
+        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv');
+
+    $joined = implode("\n", $entries);
+    foreach (array_keys($planted) as $relative) {
+        expect($joined)->not->toContain(basename($relative));
+    }
+
+    $zip = new ZipArchive;
+    expect($zip->open($zipPath))->toBeTrue();
+    foreach ($planted as $relative => $contents) {
+        expect($zip->locateName(basename($relative), ZipArchive::FL_NODIR))->toBeFalse();
+    }
+    $zip->close();
+
+    @unlink($zipPath);
+});
+
+// Every location the page shows is either carried or withheld, by name. A
+// location added to the inventory and to neither list would be swept in or left
+// out by whichever branch happened to reach it first.
+it('classifies every location in the inventory as carried or withheld', function (): void {
+    $all = array_keys(UserDataLocations::all());
+    $carried = array_keys(UserDataLocations::artefacts());
+    $withheld = array_keys(UserDataLocations::withheldFromExport());
+
+    sort($all);
+    $classified = array_merge($carried, $withheld);
+    sort($classified);
+
+    expect($classified)->toBe($all)
+        ->and(array_intersect($carried, $withheld))->toBe([]);
+});
+
+it('withholds the connector credentials directory by name, not by accident', function (): void {
+    expect(UserDataLocations::withheldFromExport())
+        ->toHaveKey(UserDataLocations::SECRETS)
+        ->and(UserDataLocations::artefacts())
+        ->not->toHaveKey(UserDataLocations::SECRETS);
+});
