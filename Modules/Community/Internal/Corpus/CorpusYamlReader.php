@@ -48,25 +48,32 @@ final readonly class CorpusYamlReader
      */
     public function readEntries(string $path): array
     {
-        $parsed = $this->parseFile($path);
-        if ($parsed === false) {
-            return [];
-        }
-
-        if (! is_array($parsed) || ! isset($parsed['entries']) || ! is_array($parsed['entries'])) {
+        $parsed = $this->readDocument($path);
+        if ($parsed !== [] && ! is_array($parsed['entries'] ?? null)) {
             $this->logger->warning('CorpusYamlReader: YAML root has no `entries:` list.', ['path' => $path]);
-
-            return [];
         }
 
         $entries = [];
-        foreach ($parsed['entries'] as $raw) {
+        foreach (is_array($parsed['entries'] ?? null) ? $parsed['entries'] : [] as $raw) {
             if (is_array($raw)) {
                 $entries[] = $raw;
             }
         }
 
         return $entries;
+    }
+
+    // A corpus file says things about itself as well as listing entries: the
+    // support tree declares the language its prose is written in, which is a
+    // property of the file rather than of any one row in it.
+    /**
+     * @return array<int|string, mixed> the whole document, or [] when unreadable
+     */
+    public function readDocument(string $path): array
+    {
+        $parsed = $this->parseFile($path);
+
+        return is_array($parsed) ? $parsed : [];
     }
 
     /**

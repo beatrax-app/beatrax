@@ -17,15 +17,24 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: 'regex:\bTEENUSTASU'
     name: "Teenustasu"
+    key: bank_fee
   - pattern: 'regex:\bKUUTASU'
     name: "Kuutasu"
+    key: monthly_fee
   - pattern: 'regex:\bHALDUSTASU'
     name: "Haldustasu"
+    key: account_maintenance
   - pattern: 'regex:\bAASTATASU'
     name: "Aastatasu"
+    key: annual_fee
   - pattern: 'regex:\bINTRESS'
     name: "Intress"
+    key: debit_interest

@@ -20,17 +20,27 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "ÞJÓNUSTUGJALD"
     name: "Þjónustugjald"
+    key: bank_fee
   - pattern: "FÆRSLUGJALD"
     name: "Færslugjald"
+    key: transaction_fee
   - pattern: "ÚTTEKTARGJALD"
     name: "Úttektargjald"
+    key: withdrawal_fee
   - pattern: "ÁRGJALD"
     name: "Árgjald"
+    key: annual_fee
   - pattern: "YFIRDRÁTTARVEXTIR"
     name: "Yfirdráttarvextir"
+    key: overdraft_interest
   - pattern: 'regex:VEXTIR\b'
     name: "Vextir"
+    key: debit_interest

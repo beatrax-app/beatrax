@@ -14,13 +14,19 @@
 entries:
   - pattern: 'regex:ENTGELT(E|S)?\b'
     name: "Bankgebühr"
+    key: bank_fee
   - pattern: "KONTOFÜHRUNG"
     name: "Kontoführungsgebühr"
+    key: account_maintenance
   - pattern: "KONTOFUEHRUNG"
     name: "Kontoführungsgebühr"
+    key: account_maintenance
   - pattern: "GEBÜHREN"
     name: "Bankgebühr"
+    key: bank_fee
   - pattern: "GEBUEHREN"
     name: "Bankgebühr"
+    key: bank_fee
   - pattern: "ZINSEN"
     name: "Zinsen"
+    key: debit_interest

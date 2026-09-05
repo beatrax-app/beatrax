@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankkosten',
+        'account_maintenance' => 'Beheerskosten',
+        'monthly_fee' => 'Maandkosten',
+        'quarterly_fee' => 'Kwartaalkosten',
+        'annual_fee' => 'Jaarkosten',
+        'card_fee' => 'Paskosten',
+        'transaction_fee' => 'Transactiekosten',
+        'transfer_fee' => 'Overboekingskosten',
+        'withdrawal_fee' => 'Opnamekosten',
+        'transaction_levy' => 'Transactieheffing',
+        'foreign_transaction_fee' => 'Valutakosten',
+        'commission' => 'Provisie',
+        'debit_interest' => 'Debetrente',
+        'overdraft' => 'Kosten roodstand',
+        'overdraft_interest' => 'Rente roodstand',
+        'insufficient_funds' => 'Kosten saldotekort',
+        'penalty_fee' => 'Boetekosten',
+        'loan_arrangement_fee' => 'Afsluitkosten',
     ],
 
     'cp_card' => [

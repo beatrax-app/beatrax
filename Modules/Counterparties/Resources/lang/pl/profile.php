@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Wsparcie i rezygnacja',
         'cancel_by_email' => 'Zrezygnuj e-mailem',
         'withheld' => 'link nieudostępniony',
+        'notes_language' => 'W języku :language, tak jak publikuje to dostawca.',
     ],
 ];

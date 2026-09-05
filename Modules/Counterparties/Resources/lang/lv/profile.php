@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Atbalsts un atteikšanās',
         'cancel_by_email' => 'Atteikties pa e-pastu',
         'withheld' => 'saite netiek piedāvāta',
+        'notes_language' => 'Valodā :language, kā to publicē pakalpojuma sniedzējs.',
     ],
 ];

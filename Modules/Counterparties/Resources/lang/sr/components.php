@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankarska naknada',
+        'account_maintenance' => 'Naknada za vođenje računa',
+        'monthly_fee' => 'Mesečna naknada',
+        'quarterly_fee' => 'Tromesečna naknada',
+        'annual_fee' => 'Godišnja naknada',
+        'card_fee' => 'Naknada za karticu',
+        'transaction_fee' => 'Naknada za transakciju',
+        'transfer_fee' => 'Naknada za prenos',
+        'withdrawal_fee' => 'Naknada za podizanje',
+        'transaction_levy' => 'Porez na transakcije',
+        'foreign_transaction_fee' => 'Naknada za konverziju valute',
+        'commission' => 'Provizija',
+        'debit_interest' => 'Kamata na dugovanje',
+        'overdraft' => 'Naknada za prekoračenje',
+        'overdraft_interest' => 'Kamata na prekoračenje',
+        'insufficient_funds' => 'Naknada za nedovoljna sredstva',
+        'penalty_fee' => 'Kazna',
+        'loan_arrangement_fee' => 'Naknada za odobrenje kredita',
     ],
 
     'cp_card' => [

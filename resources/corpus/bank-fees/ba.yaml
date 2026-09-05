@@ -38,21 +38,33 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: 'regex:\bNAKNAD[AEIU]\b'
     name: "Naknada"
+    key: bank_fee
   - pattern: "VOĐENJE TEKUĆEG RAČUNA"
     name: "Naknada za vođenje računa"
+    key: account_maintenance
   - pattern: "VODJENJE TEKUCEG RACUNA"
     name: "Naknada za vođenje računa"
+    key: account_maintenance
   - pattern: "DOPUŠTENO PREKORAČENJE"
     name: "Kamata na prekoračenje"
+    key: overdraft_interest
   - pattern: 'regex:\bKAMAT[AEIU]\b'
     name: "Kamata"
+    key: debit_interest
   - pattern: "ВОЂЕЊЕ РАЧУНА"
     name: "Накнада за вођење рачуна"
+    key: account_maintenance
   - pattern: "ПРОВИЗИЈА"
     name: "Провизија"
+    key: commission
   - pattern: "КАМАТА"
     name: "Камата"
+    key: debit_interest

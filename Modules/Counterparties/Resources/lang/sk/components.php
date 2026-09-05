@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankový poplatok',
+        'account_maintenance' => 'Poplatok za vedenie účtu',
+        'monthly_fee' => 'Mesačný poplatok',
+        'quarterly_fee' => 'Štvrťročný poplatok',
+        'annual_fee' => 'Ročný poplatok',
+        'card_fee' => 'Poplatok za kartu',
+        'transaction_fee' => 'Poplatok za transakciu',
+        'transfer_fee' => 'Poplatok za prevod',
+        'withdrawal_fee' => 'Poplatok za výber',
+        'transaction_levy' => 'Daň z transakcií',
+        'foreign_transaction_fee' => 'Poplatok za výmenu meny',
+        'commission' => 'Provízia',
+        'debit_interest' => 'Debetný úrok',
+        'overdraft' => 'Poplatok za prečerpanie',
+        'overdraft_interest' => 'Úrok z prečerpania',
+        'insufficient_funds' => 'Poplatok za nedostatok prostriedkov',
+        'penalty_fee' => 'Sankčný poplatok',
+        'loan_arrangement_fee' => 'Poplatok za poskytnutie úveru',
     ],
 
     'cp_card' => [

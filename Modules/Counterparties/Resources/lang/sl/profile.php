@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Podpora in odpoved',
         'cancel_by_email' => 'Odpovej po e-pošti',
         'withheld' => 'povezava zadržana',
+        'notes_language' => 'V jeziku :language, kot to objavlja ponudnik.',
     ],
 ];

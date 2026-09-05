@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Palaikymas ir nutraukimas',
         'cancel_by_email' => 'Nutraukti el. paštu',
         'withheld' => 'nuoroda neteikiama',
+        'notes_language' => ':language kalba, kaip ją skelbia paslaugų teikėjas.',
     ],
 ];

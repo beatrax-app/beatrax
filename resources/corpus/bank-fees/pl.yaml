@@ -21,15 +21,24 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "PROWADZENIE RACHUNKU"
     name: "Opłata za prowadzenie rachunku"
+    key: account_maintenance
   - pattern: "OPŁATA MIESIĘCZNA"
     name: "Opłata miesięczna"
+    key: monthly_fee
   - pattern: "OPŁATA ZA KARTĘ"
     name: "Opłata za kartę"
+    key: card_fee
   - pattern: 'regex:\bPROWIZJ'
     name: "Prowizja"
+    key: commission
   - pattern: 'regex:\bODSETKI\b'
     name: "Odsetki"
+    key: debit_interest

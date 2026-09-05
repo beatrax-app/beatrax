@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankas komisija',
+        'account_maintenance' => 'Konta apkalpošanas maksa',
+        'monthly_fee' => 'Mēneša maksa',
+        'quarterly_fee' => 'Ceturkšņa maksa',
+        'annual_fee' => 'Gada maksa',
+        'card_fee' => 'Kartes maksa',
+        'transaction_fee' => 'Darījuma maksa',
+        'transfer_fee' => 'Pārskaitījuma maksa',
+        'withdrawal_fee' => 'Izņemšanas maksa',
+        'transaction_levy' => 'Darījumu nodoklis',
+        'foreign_transaction_fee' => 'Valūtas maiņas maksa',
+        'commission' => 'Komisijas maksa',
+        'debit_interest' => 'Debeta procenti',
+        'overdraft' => 'Overdrafta maksa',
+        'overdraft_interest' => 'Overdrafta procenti',
+        'insufficient_funds' => 'Maksa par nepietiekamiem līdzekļiem',
+        'penalty_fee' => 'Soda maksa',
+        'loan_arrangement_fee' => 'Kredīta noformēšanas maksa',
     ],
 
     'cp_card' => [

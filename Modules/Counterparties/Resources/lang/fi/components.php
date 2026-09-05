@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Pankkikulu',
+        'account_maintenance' => 'Tilinhoitomaksu',
+        'monthly_fee' => 'Kuukausimaksu',
+        'quarterly_fee' => 'Neljännesvuosimaksu',
+        'annual_fee' => 'Vuosimaksu',
+        'card_fee' => 'Korttimaksu',
+        'transaction_fee' => 'Tapahtumamaksu',
+        'transfer_fee' => 'Tilisiirtomaksu',
+        'withdrawal_fee' => 'Nostomaksu',
+        'transaction_levy' => 'Transaktiovero',
+        'foreign_transaction_fee' => 'Valuutanvaihtomaksu',
+        'commission' => 'Palkkio',
+        'debit_interest' => 'Korkokulut',
+        'overdraft' => 'Tilinylitysmaksu',
+        'overdraft_interest' => 'Tilinylityskorko',
+        'insufficient_funds' => 'Katteettomuusmaksu',
+        'penalty_fee' => 'Viivästysmaksu',
+        'loan_arrangement_fee' => 'Järjestelypalkkio',
     ],
 
     'cp_card' => [

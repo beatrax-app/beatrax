@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Banka ücreti',
+        'account_maintenance' => 'Hesap işletim ücreti',
+        'monthly_fee' => 'Aylık ücret',
+        'quarterly_fee' => 'Üç aylık ücret',
+        'annual_fee' => 'Yıllık ücret',
+        'card_fee' => 'Kart ücreti',
+        'transaction_fee' => 'İşlem ücreti',
+        'transfer_fee' => 'Havale/EFT ücreti',
+        'withdrawal_fee' => 'Para çekme ücreti',
+        'transaction_levy' => 'İşlem vergisi',
+        'foreign_transaction_fee' => 'Döviz işlem ücreti',
+        'commission' => 'Komisyon',
+        'debit_interest' => 'Borç faizi',
+        'overdraft' => 'Ek hesap ücreti',
+        'overdraft_interest' => 'Ek hesap faizi',
+        'insufficient_funds' => 'Yetersiz bakiye ücreti',
+        'penalty_fee' => 'Ceza ücreti',
+        'loan_arrangement_fee' => 'Kredi tahsis ücreti',
     ],
 
     'cp_card' => [

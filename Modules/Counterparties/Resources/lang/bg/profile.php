@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Поддръжка и прекратяване',
         'cancel_by_email' => 'Прекратяване по имейл',
         'withheld' => 'връзката е задържана',
+        'notes_language' => 'На :language, както го публикува доставчикът.',
     ],
 ];

@@ -17,19 +17,30 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "MAINTENANCE FEE"
     name: "Account maintenance fee"
+    key: account_maintenance
   - pattern: "QUARTERLY FEE"
     name: "Quarterly account fee"
+    key: quarterly_fee
   - pattern: "TRANSACTION FEE"
     name: "Transaction fee"
+    key: transaction_fee
   - pattern: 'regex:\bOVERDRAFT'
     name: "Overdraft charge"
+    key: overdraft
   - pattern: "SURCHARGE INTEREST"
     name: "Surcharge interest"
+    key: overdraft_interest
   - pattern: "UNPAID ITEM"
     name: "Unpaid item fee"
+    key: insufficient_funds
   - pattern: "NON-EURO TRANSACTION"
     name: "Non-euro transaction fee"
+    key: foreign_transaction_fee

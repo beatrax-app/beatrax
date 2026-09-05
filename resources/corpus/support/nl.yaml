@@ -5,6 +5,7 @@
 # Researched 2026-06: no NL merchant below documents email cancellation — the
 # telecoms use an online form, phone, or registered letter — so cancel_email is
 # omitted and the real method lives in `notes`.
+lang: nl
 entries:
   # --- Merchants ---
   - name: HelloFresh

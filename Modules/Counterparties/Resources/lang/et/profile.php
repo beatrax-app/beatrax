@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Tugi ja lepingu ülesütlemine',
         'cancel_by_email' => 'Ütle leping üles e-postiga',
         'withheld' => 'linki ei pakuta',
+        'notes_language' => 'Keeles :language, nagu teenusepakkuja selle avaldab.',
     ],
 ];

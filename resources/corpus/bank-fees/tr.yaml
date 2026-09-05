@@ -22,19 +22,30 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "HESAP İŞLET"
     name: "Hesap işletim ücreti"
+    key: account_maintenance
   - pattern: "İŞLEM ÜCRET"
     name: "İşlem ücreti"
+    key: transaction_fee
   - pattern: "EFT ÜCRET"
     name: "EFT ücreti"
+    key: transfer_fee
   - pattern: "HAVALE ÜCRET"
     name: "Havale ücreti"
+    key: transfer_fee
   - pattern: "KART ÜCRET"
     name: "Kart ücreti"
+    key: card_fee
   - pattern: "KOMİSYON"
     name: "Komisyon"
+    key: commission
   - pattern: 'regex:\bMASRAF'
     name: "Masraf"
+    key: bank_fee

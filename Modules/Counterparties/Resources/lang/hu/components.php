@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Banki díj',
+        'account_maintenance' => 'Számlavezetési díj',
+        'monthly_fee' => 'Havi díj',
+        'quarterly_fee' => 'Negyedéves díj',
+        'annual_fee' => 'Éves díj',
+        'card_fee' => 'Kártyadíj',
+        'transaction_fee' => 'Tranzakciós díj',
+        'transfer_fee' => 'Átutalási díj',
+        'withdrawal_fee' => 'Készpénzfelvételi díj',
+        'transaction_levy' => 'Tranzakciós illeték',
+        'foreign_transaction_fee' => 'Devizaátváltási díj',
+        'commission' => 'Jutalék',
+        'debit_interest' => 'Tartozás utáni kamat',
+        'overdraft' => 'Hitelkeret díja',
+        'overdraft_interest' => 'Hitelkeret kamata',
+        'insufficient_funds' => 'Fedezethiány díja',
+        'penalty_fee' => 'Büntetődíj',
+        'loan_arrangement_fee' => 'Hitelfolyósítási díj',
     ],
 
     'cp_card' => [

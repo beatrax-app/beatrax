@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Τραπεζική χρέωση',
+        'account_maintenance' => 'Έξοδα τήρησης λογαριασμού',
+        'monthly_fee' => 'Μηνιαία χρέωση',
+        'quarterly_fee' => 'Τριμηνιαία χρέωση',
+        'annual_fee' => 'Ετήσια χρέωση',
+        'card_fee' => 'Συνδρομή κάρτας',
+        'transaction_fee' => 'Χρέωση συναλλαγής',
+        'transfer_fee' => 'Χρέωση εμβάσματος',
+        'withdrawal_fee' => 'Χρέωση ανάληψης',
+        'transaction_levy' => 'Φόρος συναλλαγών',
+        'foreign_transaction_fee' => 'Χρέωση συναλλάγματος',
+        'commission' => 'Προμήθεια',
+        'debit_interest' => 'Χρεωστικοί τόκοι',
+        'overdraft' => 'Χρέωση υπερανάληψης',
+        'overdraft_interest' => 'Τόκοι υπερανάληψης',
+        'insufficient_funds' => 'Χρέωση ανεπαρκούς υπολοίπου',
+        'penalty_fee' => 'Ποινική ρήτρα',
+        'loan_arrangement_fee' => 'Έξοδα χορήγησης δανείου',
     ],
 
     'cp_card' => [

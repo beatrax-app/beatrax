@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Tuki ja irtisanominen',
         'cancel_by_email' => 'Irtisano sähköpostitse',
         'withheld' => 'linkkiä ei tarjota',
+        'notes_language' => 'Kielellä :language, kuten palveluntarjoaja sen julkaisee.',
     ],
 ];

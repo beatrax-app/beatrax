@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bankgebyr',
+        'account_maintenance' => 'Kontogebyr',
+        'monthly_fee' => 'Månedsgebyr',
+        'quarterly_fee' => 'Kvartalsgebyr',
+        'annual_fee' => 'Årsgebyr',
+        'card_fee' => 'Kortgebyr',
+        'transaction_fee' => 'Transaktionsgebyr',
+        'transfer_fee' => 'Overførselsgebyr',
+        'withdrawal_fee' => 'Hævegebyr',
+        'transaction_levy' => 'Transaktionsafgift',
+        'foreign_transaction_fee' => 'Valutagebyr',
+        'commission' => 'Provision',
+        'debit_interest' => 'Debetrente',
+        'overdraft' => 'Overtræksgebyr',
+        'overdraft_interest' => 'Overtræksrente',
+        'insufficient_funds' => 'Gebyr for manglende dækning',
+        'penalty_fee' => 'Strafgebyr',
+        'loan_arrangement_fee' => 'Stiftelsesprovision',
     ],
 
     'cp_card' => [

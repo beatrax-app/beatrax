@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Opłata bankowa',
+        'account_maintenance' => 'Opłata za prowadzenie rachunku',
+        'monthly_fee' => 'Opłata miesięczna',
+        'quarterly_fee' => 'Opłata kwartalna',
+        'annual_fee' => 'Opłata roczna',
+        'card_fee' => 'Opłata za kartę',
+        'transaction_fee' => 'Opłata transakcyjna',
+        'transfer_fee' => 'Opłata za przelew',
+        'withdrawal_fee' => 'Opłata za wypłatę',
+        'transaction_levy' => 'Podatek od transakcji',
+        'foreign_transaction_fee' => 'Opłata za przewalutowanie',
+        'commission' => 'Prowizja',
+        'debit_interest' => 'Odsetki debetowe',
+        'overdraft' => 'Opłata za debet',
+        'overdraft_interest' => 'Odsetki od debetu',
+        'insufficient_funds' => 'Opłata za brak środków',
+        'penalty_fee' => 'Opłata karna',
+        'loan_arrangement_fee' => 'Prowizja za udzielenie kredytu',
     ],
 
     'cp_card' => [

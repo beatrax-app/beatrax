@@ -37,17 +37,27 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "FRAIS DE TENUE DE COMPTE"
     name: "Frais de tenue de compte"
+    key: account_maintenance
   - pattern: "FRAIS BANCAIRES"
     name: "Frais bancaires"
+    key: bank_fee
   - pattern: "COTISATION CARTE"
     name: "Cotisation carte bancaire"
+    key: card_fee
   - pattern: 'regex:\bCOMMISSION\b'
     name: "Commission"
+    key: commission
   - pattern: 'regex:\bAGIOS\b'
     name: "Agios"
+    key: overdraft_interest
   - pattern: 'regex:\bINTERETS\b'
     name: "Intérêts"
+    key: debit_interest

@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Support & uppsägning',
         'cancel_by_email' => 'Säg upp via e-post',
         'withheld' => 'länken erbjuds inte',
+        'notes_language' => 'På :language, som leverantören publicerar det.',
     ],
 ];

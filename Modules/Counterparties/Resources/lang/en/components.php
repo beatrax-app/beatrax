@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bank fee',
+        'account_maintenance' => 'Account maintenance fee',
+        'monthly_fee' => 'Monthly account fee',
+        'quarterly_fee' => 'Quarterly account fee',
+        'annual_fee' => 'Annual account fee',
+        'card_fee' => 'Card fee',
+        'transaction_fee' => 'Transaction fee',
+        'transfer_fee' => 'Transfer fee',
+        'withdrawal_fee' => 'Withdrawal fee',
+        'transaction_levy' => 'Transaction levy',
+        'foreign_transaction_fee' => 'Foreign transaction fee',
+        'commission' => 'Commission',
+        'debit_interest' => 'Debit interest',
+        'overdraft' => 'Overdraft fee',
+        'overdraft_interest' => 'Overdraft interest',
+        'insufficient_funds' => 'Insufficient funds fee',
+        'penalty_fee' => 'Penalty fee',
+        'loan_arrangement_fee' => 'Loan arrangement fee',
     ],
 
     'cp_card' => [

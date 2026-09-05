@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Podpora a výpověď',
         'cancel_by_email' => 'Vypovědět e-mailem',
         'withheld' => 'odkaz zadržen',
+        'notes_language' => 'V jazyce :language, jak to zveřejňuje poskytovatel.',
     ],
 ];

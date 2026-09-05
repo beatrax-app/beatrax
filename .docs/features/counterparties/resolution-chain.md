@@ -246,6 +246,15 @@ A bank-fee rule with no `name` falls back the same way, to the app's own
 `Bank fee`. Every entry in every shipped `bank-fees` file carries a name
 today, so that arm is a guard rather than a live path.
 
+The name those entries carry is the fee word in the jurisdiction's own
+language — `Bankkosten`, `Rente`, `Χρεωστικοί τόκοι`. That is a word for the
+reader who named that country and nothing at all in the other twenty-five
+languages, so each entry also carries a `key`: the KIND of charge the word
+names, from a closed vocabulary of eighteen
+(`CounterpartyDefaultName::FEE_KINDS`). The jurisdiction's word still goes in
+the column, because the slug is derived from it; the kind travels beside it as
+the provenance token, and is what every other reader sees.
+
 Both of those, and step 7's `Unknown`, are the app's words rather than the
 file's — see [the app's own words](#the-apps-own-words-for-a-row-it-had-to-name)
 for why they are marked and re-resolved per reader.
@@ -280,6 +289,11 @@ than from the reader's file or the corpus: `Unknown` in step 7, `Government`
 for a regex government rule with no name, and `Bank fee` for a bank-fee rule
 with no name.
 
+A fourth case reaches the same seam from the other direction. A bank-fee rule
+that *does* carry a name carries the jurisdiction's word for the charge, which
+is the corpus's language rather than the reader's; it re-resolves here too, by
+the kind the entry declares rather than by a word the app chose.
+
 A word like that stored in `display_name` is frozen in the language the import
 ran in. A phone set to Dutch showed "Onbekend" four times on `/counterparties`
 and "Unknown" once, on the counterparty row itself, because that one came out
@@ -290,11 +304,14 @@ of the column while the other four came from
 that fixes it, and it follows `Modules\Ledger\Public\Support\CategoryDisplayName`,
 which does the same job for `categories.name_is_default`:
 
-- The **English still goes in the column**. The slug derives from the display
-  name, so a translated name would fork the row per reader, and a reader whose
-  locale has no line for the token keeps something legible.
-- **`metadata.default_name` carries the token** — `unknown`, `government` or
-  `bank_fee`. This table already keeps its row flags in `metadata`
+- The **word the row was created with still goes in the column** — the app's
+  English for the three it names itself, the corpus's own word for a fee it
+  named. The slug derives from the display name, so a translated name would
+  fork the row per reader, and a reader whose locale has no line for the token
+  keeps something legible.
+- **`metadata.default_name` carries the token** — `unknown`, `government`, or
+  one of the eighteen bank-fee kinds, of which `bank_fee` is the generic one.
+  This table already keeps its row flags in `metadata`
   (`ignored`, `subcategory`) rather than in dedicated columns, so the mark
   needs no schema change and travels with the row the way those two do.
 - **Every read site resolves through `CounterpartyDefaultName::resolve()`**:
@@ -330,6 +347,15 @@ written before the seam existed are marked by
 which recognises them by `type='unknown'` and `slug='unknown'` — both plaintext,
 so it reads the same on an encrypted install, and neither reachable for a row the
 reader labelled themselves.
+
+Fee rows the corpus named are marked by
+`2026_09_05_000002_mark_a_seeded_bank_fee_name_as_the_apps_own`, on the same
+principle and under the same constraint: it cannot read `display_name` either,
+so it asks the slug that column is derived from and marks a row only where the
+slug is still exactly what the corpus's own word slugifies to. Twenty-five of
+the 257 corpus names are written in a non-Latin script and slugify to the
+resolver's opaque fallback, so those rows are left alone rather than guessed
+at — they take the kind from the resolver on the next import instead.
 
 ## Writing the row
 

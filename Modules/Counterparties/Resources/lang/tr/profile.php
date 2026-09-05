@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Destek ve iptal',
         'cancel_by_email' => 'E-posta ile iptal et',
         'withheld' => 'bağlantı sunulmuyor',
+        'notes_language' => ':language dilinde, sağlayıcının yayımladığı şekliyle.',
     ],
 ];

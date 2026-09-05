@@ -4,6 +4,13 @@
 # counterparty profile. Looked up by normalised counterparty name + type by
 # SupportResourceProvider; every field except name/type is optional.
 #
+# Top level:
+#   lang        string  required — BCP-47 tag of the language `notes` is written
+#                                  in. That is the PROVIDER's language, not the
+#                                  reader's: the guidance describes a flow the
+#                                  provider conducts in it. The profile card
+#                                  tags the paragraph with it and names it.
+#
 # Schema per entry:
 #   name        string  required — canonical brand name (matched by brand prefix)
 #   type        string  required — "merchant" | "government"
@@ -17,6 +24,7 @@
 #                                    online flow / phone / registered letter), so
 #                                    every entry relies on cancel_url + notes.
 #   notes       string  optional — one line on the cancellation method
+lang: en
 entries:
   - name: Spotify
     type: merchant

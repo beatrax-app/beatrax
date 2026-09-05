@@ -272,6 +272,10 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
         );
     }
 
+    // The corpus names the fee in the jurisdiction's language — "Bankkosten",
+    // "Rente" — and that wording still goes in the column, because the slug is
+    // derived from it. The kind travels beside it so that a reader of any
+    // other language gets a word they can read.
     private function resolveBankFee(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
         if (! $this->namesANationalInstitution($userId)) {
@@ -289,7 +293,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
                     CounterpartyMetadataKey::Subcategory->value => CounterpartySubcategory::Fee->value,
                     'matched_keyword' => $rule->pattern,
                 ],
-                $rule->name === null ? CounterpartyDefaultName::BANK_FEE : null,
+                $rule->key ?? CounterpartyDefaultName::BANK_FEE,
             ],
         );
     }

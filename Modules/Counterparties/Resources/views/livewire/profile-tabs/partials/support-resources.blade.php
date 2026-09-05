@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\PatternScan')
 {{--
@@ -31,6 +32,13 @@
     // will not follow is something a reader can act on, a vanished chip is not.
     $links = array_values(array_filter($rows, static fn (array $row): bool => is_string($row['href'])));
     $withheld = array_values(array_filter($rows, static fn (array $row): bool => isset($resource->withheld[$row['key']])));
+
+    // The notes are the provider's own prose, in the language the provider
+    // conducts the cancellation in. Tagging the paragraph keeps a screen reader
+    // from pronouncing Dutch with an English voice, and a reader who does not
+    // have that language is told which one it is rather than left guessing.
+    $notesLocale = Locale::tryFrom($resource->notesLang ?? '');
+    $notesLanguage = $notesLocale !== null && $notesLocale->value !== Lang::locale() ? $notesLocale->label() : null;
 
     $mailto = $resource->mailtoHref();
     $phoneHref = $resource->phone !== null ? 'tel:'.PatternScan::replace('/[^0-9+]/', '', $resource->phone) : null;
@@ -82,8 +90,14 @@
     </div>
 
     @if ($resource->notes !== null)
-        <p style="margin:var(--space-3) 0 0; font-size:var(--text-xs); color:var(--color-text-muted); line-height:1.5;">
+        <p @if ($notesLocale !== null) lang="{{ $notesLocale->value }}" @endif
+            style="margin:var(--space-3) 0 0; font-size:var(--text-xs); color:var(--color-text-muted); line-height:1.5;">
             {{ $resource->notes }}
         </p>
+        @if ($notesLanguage !== null)
+            <p style="margin:var(--space-1) 0 0; font-size:var(--text-xs); color:var(--color-text-faint); line-height:1.5;">
+                {{ Lang::get('counterparties::profile.support.notes_language', ['language' => $notesLanguage]) }}
+            </p>
+        @endif
     @endif
 </section>

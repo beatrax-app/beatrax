@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Support & cancelling',
         'cancel_by_email' => 'Cancel by email',
         'withheld' => 'link withheld',
+        'notes_language' => 'In :language, as the provider publishes it.',
     ],
 ];

@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Assistance et résiliation',
         'cancel_by_email' => 'Résilier par e-mail',
         'withheld' => 'lien non proposé',
+        'notes_language' => 'En :language, tel que le prestataire le publie.',
     ],
 ];
