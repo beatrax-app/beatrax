@@ -1,18 +1,91 @@
-# Post every workflow run's outcome to the #build-log channel.
-# workflow_run executes in the base repo with the org secret available and never
-# in fork-PR code; values reach the reusable as inputs, not shell interpolations.
+# Post to the #build-log channel. workflow_run executes in the base repo with
+# the org secret available and never in fork-PR code; values reach the reusable
+# as inputs, not shell interpolations.
+#
+# Every workflow in this repository is listed below except the three that
+# announce themselves — release-announce, triage and awaiting-maintainer each
+# hold their own webhook — and this one, which would otherwise report on its
+# own reports.
 name: discord-build
 
 on:
   workflow_run:
-    workflows: [ci, coverage, release, release-dispatch, scorecard, shared, triage, awaiting-maintainer, labels, stale]
+    workflows:
+      - ci
+      - coverage
+      - shared
+      - release
+      - release-build
+      - release-preflight
+      - mobile-bifrost-publish
+      - scorecard
+      - labels
+      - stale
     types: [completed]
 
 permissions:
   contents: read
 
 jobs:
-  notify:
+  # A pull request's gate is fifteen required contexts spread over three
+  # workflows and two apps that report from outside Actions, so the workflow
+  # that happens to finish first is not the answer. This waits for all of them
+  # and takes the required list from the ruleset rather than a copy.
+  verdict:
+    name: the commit's verdict
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      checks: read
+      statuses: read
+    # Each completion re-opens the question, and only the newest asking of it
+    # can be answered — so the earlier ones are cancelled rather than left to
+    # post a second verdict for the same commit.
+    concurrency:
+      group: discord-build-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: true
+    outputs:
+      body: ${{ steps.wait.outputs.body }}
+      color: ${{ steps.wait.outputs.color }}
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A notifier nobody has watched refuse is how the green tick arrived
+      # early in the first place, so the step below is put through the four
+      # answers that must not come out green before its verdict is trusted.
+      - name: Prove the verdict still refuses
+        run: python3 .github/scripts/required-checks-verdict-selftest.py
+
+      - name: Wait for every required check, then read the verdict
+        id: wait
+        env:
+          BRANCH: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: python3 .github/scripts/required-checks-verdict.py
+
+  announce-verdict:
+    needs: verdict
+    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
+    with:
+      title: "${{ github.event.repository.name }} · ${{ github.event.workflow_run.head_branch }}"
+      body: ${{ needs.verdict.outputs.body }}
+      url: ${{ github.event.repository.html_url }}/commit/${{ github.event.workflow_run.head_sha }}/checks
+      color: ${{ needs.verdict.outputs.color }}
+    secrets:
+      webhook: ${{ secrets.DISCORD_BUILD_WEBHOOK }}
+
+  # Everything the pull-request gate does not cover: a push to the default
+  # branch, a tagged release, the scheduled housekeeping. None of these carries
+  # a required context, so each workflow's own conclusion is the whole answer
+  # and is reported as it lands.
+  announce-run:
+    if: github.event.workflow_run.event != 'pull_request'
     uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
     with:
       title: "${{ github.event.workflow_run.name }} · ${{ github.event.workflow_run.head_branch }}"
