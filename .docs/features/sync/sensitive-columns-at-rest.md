@@ -677,6 +677,24 @@ it never collides, and a route parameter built from it resolves to nothing.
   `CounterpartySlugResolver`'s collision walk predicates on. Encrypt it and every candidate
   reads "free", every counterparty takes the base slug, and the UNIQUE index that would have
   caught it never fires.
+
+  It is therefore a **plaintext shadow of the sealed `counterparties.display_name`**, in the
+  same sense `transaction_search_docs.search_body` is one, and it is disclosed here for the
+  same reason: a shadow nobody wrote down reads as a shadow nobody noticed. What the shadow
+  may spell is bounded rather than unbounded. A name the reader would recognise is the point
+  of the column and stays. An **account number is not a name**, and one reached the slug by a
+  door nothing was watching: where a statement named nobody, `resolveUnknown()` used the IBAN
+  as the display name, and the slug follows the display name — so the number the personal
+  profile hides behind a Show-IBAN toggle was printed in the address bar of that same page,
+  and stored in the clear one column away from the sealed `iban` it copied.
+  `CounterpartySlugResolver::spellsAnAccountIdentifier()` is now asked of every base before
+  the walk begins, and a name that spells one takes `OPAQUE_BASE` instead. The walk still
+  separates two such rows by comparing the holder's decrypted name, so the matching key the
+  column exists to be is unchanged.
+
+  The bound holds forward only. `op_log_entries` keeps the historical `create` ops that
+  carried the old slug, signed and immutable, and this page's own rule applies — re-slugging
+  bounds what the ledger hands out from now on, and does not erase history.
 - **`categories.slug`** additionally has global rows with `user_id IS NULL`, and the codec
   keys on a user. There is no key to encrypt them under.
 - **`accounts.slug`** carries `unique(user_id, slug)` and `AccountSlugResolver::isTaken()`
@@ -700,8 +718,11 @@ it never collides, and a route parameter built from it resolves to nothing.
 ### The decision is recorded, not merely absent
 
 `SensitiveFieldRegistry::knowinglyPlaintext()` lists these columns with a one-line reason
-each, so "not on the encrypted list" stops reading the same as "nobody looked". The four
-`accounts`/`counterparties` identity columns are joined there by the five readable columns argued
+each, so "not on the encrypted list" stops reading the same as "nobody looked". `categories.slug`
+is the entry that proves the point: it is argued in the bullet list above and was **absent from
+the registry** until the counterparty-slug pass went looking, so the one place an engineer checks
+first read it as a column nobody had considered. The five
+`accounts`/`categories`/`counterparties` identity columns are joined there by the five readable columns argued
 at length further down this page — `merchants.name`, `recurring_series.detected_name`,
 `transaction_search_docs.search_body`, `known_counterparty_ibans.real_iban` — because the registry
 is where an engineer looks first, and a column argued only in prose read from there as one nobody
