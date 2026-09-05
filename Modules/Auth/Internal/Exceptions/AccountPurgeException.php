@@ -23,4 +23,15 @@ final class AccountPurgeException extends RuntimeException
     {
         return new self('UserScopedDataPurge: data survived the purge of user '.$userId.': '.implode(', ', $survivors).'.');
     }
+
+    // The paths named here are what a paired peer restores the account from, so
+    // this is the arm that must reach the reader as "nothing was changed".
+    /** @param list<string> $survivors */
+    public static function keyMaterialSurvived(array $survivors, int $userId): self
+    {
+        return new self(
+            'UserScopedFilePurge: the account keeps files this device syncs from, for user '
+            .$userId.': '.implode(', ', $survivors).'.',
+        );
+    }
 }

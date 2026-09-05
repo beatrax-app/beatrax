@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Account;
 
 use Illuminate\Filesystem\Filesystem;
+use Modules\Auth\Internal\Exceptions\AccountPurgeException;
 use Modules\Core\Public\Services\UserDataPathService;
-use RuntimeException;
 use Throwable;
 
 // The parts of an account that never lived in the database: the sync identity
@@ -50,7 +50,7 @@ final readonly class UserScopedFilePurge
     ) {}
 
     /**
-     * @throws RuntimeException when any of them is still on disk afterwards
+     * @throws AccountPurgeException when any of them is still on disk afterwards
      */
     public function keyedToTheAccount(int $userId): void
     {
@@ -65,9 +65,7 @@ final readonly class UserScopedFilePurge
         }
 
         if ($survivors !== []) {
-            throw new RuntimeException(
-                'The account keeps files this device syncs from: '.implode(', ', $survivors),
-            );
+            throw AccountPurgeException::keyMaterialSurvived($survivors, $userId);
         }
     }
 
