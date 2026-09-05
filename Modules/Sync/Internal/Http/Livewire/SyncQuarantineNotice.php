@@ -80,7 +80,15 @@ final class SyncQuarantineNotice extends Component
             ->selectRaw('reason, COUNT(*) AS tally, MAX(created_at) AS newest')
             ->get();
 
-        return array_map(static fn (object $row): array => get_object_vars($row), array_values($rows->all()));
+        $refusals = [];
+
+        foreach ($rows->all() as $row) {
+            /** @var array<string, mixed> $fields */
+            $fields = get_object_vars($row);
+            $refusals[] = $fields;
+        }
+
+        return $refusals;
     }
 
     /**
