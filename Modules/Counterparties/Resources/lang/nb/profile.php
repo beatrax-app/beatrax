@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Få hjelp',
         'heading_merchant' => 'Support & oppsigelse',
         'cancel_by_email' => 'Si opp via e-post',
+        'withheld' => 'lenken tilbys ikke',
     ],
 ];

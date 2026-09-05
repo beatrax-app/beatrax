@@ -18,6 +18,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
+use Modules\Core\Public\Support\ProjectLinks;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
@@ -210,16 +211,27 @@ final class SetupWizard extends Component
         OpenExternalUrlAction $opener,
         ConfigRepository $config,
     ): void {
-        $url = $config->get('community.github_issues_url');
-        if (! is_string($url) || $url === '') {
-            return;
-        }
-        $opener($url);
+        $opener(self::helpUrl($config));
     }
 
-    public function render(ViewFactory $views): View
+    // The footer renders this as a real anchor too, because wire:click.prevent
+    // is not what a middle-click or a JavaScript-less render follows. An
+    // environment override the opener would refuse falls back to the address
+    // compiled in, rather than becoming the one href nothing judged.
+    public static function helpUrl(ConfigRepository $config): string
     {
-        return $views->make('onboarding::livewire.setup-wizard');
+        $url = $config->get('community.github_issues_url');
+
+        return is_string($url) && OpenExternalUrlAction::refusalFor($url) === null
+            ? $url
+            : ProjectLinks::ISSUES_URL;
+    }
+
+    public function render(ViewFactory $views, ConfigRepository $config): View
+    {
+        return $views->make('onboarding::livewire.setup-wizard', [
+            'helpUrl' => self::helpUrl($config),
+        ]);
     }
 
     private function advance(

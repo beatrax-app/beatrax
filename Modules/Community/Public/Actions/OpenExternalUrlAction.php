@@ -6,11 +6,16 @@ namespace Modules\Community\Public\Actions;
 
 use InvalidArgumentException;
 use Modules\Community\Internal\Support\LoggableUrl;
+use Modules\Core\Public\Enums\ExternalUrlRefusal;
+use Modules\Core\Public\Support\ExternalUrl;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
 final readonly class OpenExternalUrlAction
 {
+    // The only hosts this application ever asks the operating system to open.
+    // A rendered corpus link has no finite list and passes none; it is judged
+    // by the same gate without one.
     /** @var list<string> */
     private const array ALLOWED_HOSTS = ['github.com'];
 
@@ -19,25 +24,25 @@ final readonly class OpenExternalUrlAction
         private LoggerInterface $logger,
     ) {}
 
+    // Public so a template that offers the same address as a plain anchor can
+    // ask the same question without opening anything. The anchor is what the
+    // browser follows when JavaScript is off or the reader middle-clicks, and
+    // it used to be the one path around this list.
+    public static function refusalFor(string $url): ?ExternalUrlRefusal
+    {
+        return ExternalUrl::refusalFor($url, self::ALLOWED_HOSTS);
+    }
+
     public function __invoke(string $url): void
     {
+        $refusal = self::refusalFor($url);
+
         // Scrubbed for the same reason the log line below is: this message
         // reaches a public Livewire property, and the query string carries the
         // user's own statement description.
-        if (filter_var($url, FILTER_VALIDATE_URL) === false || ! str_starts_with($url, 'https://')) {
+        if ($refusal !== null) {
             throw new InvalidArgumentException(
-                'OpenExternalUrlAction: URL must be a valid https:// URL, got: '.LoggableUrl::withoutQuery($url),
-            );
-        }
-
-        // Lower-cased before the compare: parse_url does not fold case and the
-        // list is matched strictly, so https://GITHUB.COM/... was refused as an
-        // un-allow-listed host.
-        $host = parse_url($url, PHP_URL_HOST);
-        $host = is_string($host) ? strtolower($host) : null;
-        if ($host === null || ! in_array($host, self::ALLOWED_HOSTS, true)) {
-            throw new InvalidArgumentException(
-                'OpenExternalUrlAction: host not allow-listed, got: '.($host ?? 'null'),
+                'OpenExternalUrlAction: '.$refusal->value.', got: '.LoggableUrl::withoutQuery($url),
             );
         }
 

@@ -169,7 +169,7 @@
         </span>
         <a
             class="wiz-help-link tap-link"
-            href="{{ config('community.github_issues_url') }}"
+            href="{{ $helpUrl }}"
             wire:click.prevent="openHelp"
             target="_blank"
             rel="noopener noreferrer"

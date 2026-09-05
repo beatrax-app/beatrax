@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
+use Modules\Core\Public\Enums\ExternalUrlRefusal;
 use Native\Desktop\Contracts\Shell as ShellContract;
 use Native\Desktop\Fakes\ShellFake;
 use Psr\Log\AbstractLogger;
@@ -81,4 +82,35 @@ it('logs the opened page without the query string, which carries the statement d
     expect($this->logger->records)->toHaveCount(1);
     expect($this->logger->records[0]['context']['url'])
         ->toBe('https://github.com/beatrax-app/beatrax/compare/main...suggest-abc');
+});
+
+it('refuses an allow-listed host reached on a port that is not the web', function (): void {
+    // The host check passed and the scheme check passed, and the old pair of
+    // tests had nothing left to ask: github.com:4000 was opened. Port 4000 is
+    // where this application's own desktop shell answers.
+    /** @var OpenExternalUrlAction $action */
+    $action = $this->app->make(OpenExternalUrlAction::class);
+
+    expect(fn () => $action('https://github.com:4000/beatrax-app/beatrax'))
+        ->toThrow(InvalidArgumentException::class);
+    expect($this->shell->openExternalCalls)->toBe([]);
+});
+
+it('refuses an authority that reads as the allow-listed host and resolves elsewhere', function (): void {
+    /** @var OpenExternalUrlAction $action */
+    $action = $this->app->make(OpenExternalUrlAction::class);
+
+    expect(fn () => $action('https://github.com@evil.example.com/beatrax-app'))
+        ->toThrow(InvalidArgumentException::class);
+    expect($this->shell->openExternalCalls)->toBe([]);
+});
+
+it('names the refusal it made, never one the checks before it ruled out', function (): void {
+    /** @var OpenExternalUrlAction $action */
+    $action = $this->app->make(OpenExternalUrlAction::class);
+
+    expect(fn () => $action('http://github.com/beatrax-app'))
+        ->toThrow(InvalidArgumentException::class, 'OpenExternalUrlAction: not_https, got: http://github.com/beatrax-app')
+        ->and(OpenExternalUrlAction::refusalFor('https://gitlab.com/x'))
+        ->toBe(ExternalUrlRefusal::HostNotAllowListed);
 });

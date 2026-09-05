@@ -6,7 +6,6 @@ namespace Modules\Notifications\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Core\Models\User;
@@ -44,7 +43,6 @@ final class DemoNotificationsSeeder
         private readonly DeterministicKeyDeriver $keys,
         private readonly MarkNotificationRead $markReadAction,
         private readonly DismissNotification $dismissAction,
-        private readonly UrlGenerator $urls,
         private readonly PeriodQuery $periods,
         private readonly Clock $clock,
     ) {}
@@ -218,7 +216,6 @@ final class DemoNotificationsSeeder
                     monthlyMinor: 1499,
                     currency: Currency::Eur->value,
                     messageKey: 'drift-alerts::savings.insight.cheaper_message',
-                    actionUrl: $this->urls->route('recurring.series.show', ['seriesId' => $netflixSeriesId]),
                 ));
             });
             $this->dismiss($user, NotificationTrigger::SavingsPrompt, (string) $netflixSeriesId, $insightKey);

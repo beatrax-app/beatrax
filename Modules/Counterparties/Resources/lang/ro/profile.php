@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Cum obții ajutor',
         'heading_merchant' => 'Asistență și anulare',
         'cancel_by_email' => 'Anulare prin e-mail',
+        'withheld' => 'link reținut',
     ],
 ];

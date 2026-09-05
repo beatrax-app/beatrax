@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Ako získať pomoc',
         'heading_merchant' => 'Podpora a rušenie',
         'cancel_by_email' => 'Zrušiť e-mailom',
+        'withheld' => 'odkaz zadržaný',
     ],
 ];

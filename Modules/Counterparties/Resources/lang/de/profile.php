@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Hilfe bekommen',
         'heading_merchant' => 'Support & Kündigung',
         'cancel_by_email' => 'Per E-Mail kündigen',
+        'withheld' => 'Link zurückgehalten',
     ],
 ];

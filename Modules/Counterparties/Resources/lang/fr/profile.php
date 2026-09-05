@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Obtenir de l\'aide',
         'heading_merchant' => 'Assistance et résiliation',
         'cancel_by_email' => 'Résilier par e-mail',
+        'withheld' => 'lien non proposé',
     ],
 ];

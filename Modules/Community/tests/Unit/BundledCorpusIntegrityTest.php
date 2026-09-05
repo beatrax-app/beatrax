@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Community\Internal\Corpus\MerchantContactReader;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Community\Public\Services\SupportResourceProvider;
+use Modules\Core\Public\Support\ExternalUrl;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Yaml;
@@ -266,4 +267,46 @@ it('files every support entry under a key no sibling in its country takes', func
     }
 
     expect($collisions)->toBe([], "A support entry must be the only one under its key. Collisions:\n  ".implode("\n  ", $collisions));
+});
+
+it('ships no corpus link the one external-URL gate would refuse', function (): void {
+    // A contributed entry is the one place an outside party writes a URL this
+    // application renders as a link. The gate refuses it at runtime, which
+    // ships as a link that quietly is not there; failing here makes the pull
+    // request that adds one red instead.
+    $tiers = [
+        'support' => ['cancel_url', 'support_url', 'cheaper_url', 'help_url', 'apply_url', 'rights_url'],
+        'merchants' => ['cancel_url', 'support_url', 'website'],
+    ];
+
+    $refused = [];
+    $judged = 0;
+    foreach ($tiers as $dir => $keys) {
+        $found = glob(base_path("resources/corpus/{$dir}/*.yaml"));
+        $files = $found !== false ? $found : [];
+        sort($files);
+        expect($files)->not->toBe([], "the bundled {$dir} corpus must not be empty");
+
+        foreach ($files as $file) {
+            $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+            expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+
+            foreach ($parsed['entries'] as $index => $raw) {
+                foreach ($keys as $key) {
+                    $value = is_array($raw) && is_string($raw[$key] ?? null) ? trim($raw[$key]) : '';
+                    if ($value === '') {
+                        continue;
+                    }
+                    $judged++;
+                    $refusal = ExternalUrl::refusalFor($value);
+                    if ($refusal !== null) {
+                        $refused[] = basename($file)." #{$index} {$key}: {$value} — {$refusal->value}";
+                    }
+                }
+            }
+        }
+    }
+
+    expect($judged)->toBeGreaterThan(1000)
+        ->and($refused)->toBe([], "Every corpus link must be an absolute https address on a public host. Refused:\n  ".implode("\n  ", $refused));
 });

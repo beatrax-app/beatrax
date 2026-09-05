@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Iskanje pomoči',
         'heading_merchant' => 'Podpora in odpoved',
         'cancel_by_email' => 'Odpovej po e-pošti',
+        'withheld' => 'povezava zadržana',
     ],
 ];

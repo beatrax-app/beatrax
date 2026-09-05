@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Come ottenere aiuto',
         'heading_merchant' => 'Assistenza e disdetta',
         'cancel_by_email' => 'Disdici via email',
+        'withheld' => 'collegamento non proposto',
     ],
 ];

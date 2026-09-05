@@ -124,6 +124,10 @@ pass for a clean one.
 - [A controller hands the work to an action](a-controller-hands-the-work-to-an-action.md)
   — the four things a controller is measured on, and the five kinds of code that
   look like violations, are not, and would be made worse by moving
+- [An external URL is judged once](an-external-url-is-judged-once.md) — what
+  supplies a URL this codebase did not write, why `target="_blank"` here opens
+  another window of the application rather than a browser tab, the six refusals
+  in the order they are asked, and the two sites that deliberately admit `http://`
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
+use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 // The event carries the insight's key and its figure, not its sentence — one of
@@ -36,7 +37,6 @@ function spsDispatch(User $user, string $kind, int $monthlyMinor): void
             monthlyMinor: $monthlyMinor,
             currency: 'EUR',
             messageKey: 'drift-alerts::savings.insight.'.$kind.'_message',
-            actionUrl: '/recurring',
         ));
     });
 }
@@ -78,4 +78,23 @@ it('prints the monthly figure once, not twice', function (): void {
     spsDispatch($user, 'cheaper', 999);
 
     expect(substr_count((string) spsRow($user)->body, '€9.99'))->toBe(1);
+});
+
+it('deep-links the prompt at this application, never at the merchant', function (): void {
+    $user = spsUser();
+
+    $routes = [];
+    app(Dispatcher::class)->listen(
+        NotificationDeliverable::class,
+        function (NotificationDeliverable $event) use (&$routes): void {
+            $routes[] = $event->deepLinkRoute;
+        },
+    );
+
+    spsDispatch($user, 'cheaper', 999);
+
+    // Clicking this notification on the desktop replaces the address of the
+    // application's own window. The event used to carry the corpus cancel_url
+    // here, so a contributed entry chose what that window loaded.
+    expect($routes)->toBe([route('recurring.series.show', ['seriesId' => 1])]);
 });

@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Abi saamine',
         'heading_merchant' => 'Tugi ja lepingu ülesütlemine',
         'cancel_by_email' => 'Ütle leping üles e-postiga',
+        'withheld' => 'linki ei pakuta',
     ],
 ];

@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Segítségkérés',
         'heading_merchant' => 'Támogatás és lemondás',
         'cancel_by_email' => 'Lemondás e-mailben',
+        'withheld' => 'visszatartott hivatkozás',
     ],
 ];
