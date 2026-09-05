@@ -4,23 +4,35 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 
 // Synchronous writer keeping transaction_search_docs and the FTS5
 // table in lockstep. No try/catch swallow — failures bubble so the
 // outer import-chunk transaction rolls back cleanly.
-final readonly class SearchIndexWriter implements SearchIndexWriterContract
+final class SearchIndexWriter implements SearchIndexWriterContract
 {
+    // One alarm per user per process, the shape SensitiveColumnCodec settled
+    // on for the same reason: a peer drain into a shut window refuses once per
+    // row, and a line each turned the day's log into something nobody reads.
+    /** @var array<int, true> */
+    private array $refusalsAlarmed = [];
+
     public function __construct(
-        private DatabaseManager $db,
-        private SensitiveColumnCodec $codec,
+        private readonly DatabaseManager $db,
+        private readonly SearchSourceText $source,
         // A factory, not the session itself: resolving a session builds the
         // encrypter, and this class is reachable from a console command that
         // Artisan constructs merely to list it.
-        private SessionFactory $session,
+        private readonly SessionFactory $session,
+        private readonly SearchIndexRepairQueue $repairs,
+        private readonly Clock $clock,
+        private readonly LoggerInterface $log,
     ) {}
 
     public function upsertForTransaction(int $transactionId, int $actorUserId): void
@@ -33,7 +45,12 @@ final readonly class SearchIndexWriter implements SearchIndexWriterContract
             ->where('id', $transactionId)
             ->first();
 
+        // Retired, not merely skipped: a repair coordinate whose transaction
+        // has since been deleted is spent, and leaving it would keep a drained
+        // queue reporting work forever.
         if ($tx === null) {
+            $this->repairs->retire($actorUserId, $transactionId);
+
             return;
         }
 
@@ -48,18 +65,40 @@ final readonly class SearchIndexWriter implements SearchIndexWriterContract
 
         // Resolved once per write, and only here — the decrypt calls below
         // are the sole reason this class needs a session at all.
-        $session = ($this->session)();
+        $newBody = $this->bodyFor(
+            $connection,
+            ['counterparty_name' => $tx->counterparty_name, 'description' => $tx->description],
+            $transactionId,
+            $userId,
+            ($this->session)(),
+        );
 
-        // counterparty_name/description are ciphertext at rest once
-        // encryption is enabled — decrypt via the Sync codec BEFORE
-        // building the search body so FTS5 tokenizes plaintext, never
-        // ciphertext.
-        $counterparty = is_string($tx->counterparty_name)
-            ? $this->codec->decryptValue('transactions', 'counterparty_name', $tx->counterparty_name, $userId, $session)['value']
-            : '';
-        $description = is_string($tx->description)
-            ? $this->codec->decryptValue('transactions', 'description', $tx->description, $userId, $session)['value']
-            : '';
+        if ($newBody === null) {
+            $this->deferUntilReadable($transactionId, $userId);
+
+            return;
+        }
+
+        $this->writeDoc($connection, $transactionId, $userId, $newBody);
+        $this->repairs->retire($userId, $transactionId);
+    }
+
+    // Null when a source column is ciphertext this process holds no key for.
+    // The body is the ONLY searchable copy of three sealed columns, so one
+    // built from what a keyless drain got back overwrites the words with
+    // nothing and answers "no such transaction" over a ledger that has them.
+    /**
+     * @param  array{counterparty_name: mixed, description: mixed}  $stored
+     */
+    private function bodyFor(
+        ConnectionInterface $connection,
+        array $stored,
+        int $transactionId,
+        int $userId,
+        Session $session,
+    ): ?string {
+        $counterparty = $this->source->read('transactions', 'counterparty_name', $stored['counterparty_name'], $userId, $session);
+        $description = $this->source->read('transactions', 'description', $stored['description'], $userId, $session);
 
         // The whole-transaction tag, named rather than left to scan order: a
         // split leg's tag matches the same transaction_id and carries no note,
@@ -72,16 +111,39 @@ final readonly class SearchIndexWriter implements SearchIndexWriterContract
             ->whereNull('transaction_split_id')
             ->first();
 
-        $note = ($tag !== null && is_string($tag->note))
-            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $tag->note, $userId, $session)['value']
-            : '';
+        $note = $this->source->read('tax_transaction_tags', 'note', $tag->note ?? null, $userId, $session);
 
-        $newBody = SearchDocumentBody::join($counterparty, $description, $note);
+        if ($counterparty === null || $description === null || $note === null) {
+            return null;
+        }
 
-        // Wraps read-old-body + docs-upsert + FTS delete + FTS insert
-        // in one transaction so a partial write never leaves duplicate
-        // postings; 'delete' fires whenever a docs row previously
-        // existed, not only when the old body was non-empty.
+        return SearchDocumentBody::join($counterparty, $description, $note);
+    }
+
+    // Leaves the stored doc exactly as it was — a stale body still finds the
+    // row, an emptied one finds nothing — and records the coordinate so the
+    // next process holding a key rebuilds it.
+    private function deferUntilReadable(int $transactionId, int $userId): void
+    {
+        $this->repairs->request($userId, $transactionId, $this->clock->now()->toDateTimeString());
+
+        if (isset($this->refusalsAlarmed[$userId])) {
+            return;
+        }
+
+        $this->refusalsAlarmed[$userId] = true;
+        $this->log->warning(
+            'SearchIndexWriter: refused to index a transaction whose sealed columns this process cannot read.',
+            ['userId' => $userId, 'transactionId' => $transactionId],
+        );
+    }
+
+    // Wraps read-old-body + docs-upsert + FTS delete + FTS insert
+    // in one transaction so a partial write never leaves duplicate
+    // postings; 'delete' fires whenever a docs row previously
+    // existed, not only when the old body was non-empty.
+    private function writeDoc(ConnectionInterface $connection, int $transactionId, int $userId, string $newBody): void
+    {
         $connection->transaction(function () use ($connection, $transactionId, $userId, $newBody): void {
             $existingDoc = $connection
                 ->table('transaction_search_docs')
@@ -151,5 +213,7 @@ final readonly class SearchIndexWriter implements SearchIndexWriterContract
                 ->where('transaction_id', $transactionId)
                 ->delete();
         });
+
+        $this->repairs->retire($actorUserId, $transactionId);
     }
 }
