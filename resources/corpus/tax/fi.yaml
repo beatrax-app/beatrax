@@ -9,69 +9,217 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "fi_kotitalousvahennys"
     name: "Kotitalousvähennys"
     short_name: "Kotitalous"
     hint: "Kotitalous-, hoiva- ja hoitotyö sekä asunnon kunnossapito- ja perusparannustyö"
+    i18n:
+      en:
+        name: "Household services deduction"
+        short_name: "Household"
+        hint: "Household, care and nursing work plus home maintenance and renovation work"
+      nl:
+        name: "Aftrek huishoudelijke diensten"
+        short_name: "Huishouden"
+        hint: "Huishoudelijk werk, zorg en verpleging plus onderhoud en verbouwing van de woning"
   - key: "fi_matkakulut"
     name: "Matkakulut"
     short_name: "Matkakulut"
     hint: "Asunnon ja työpaikan väliset matkat halvimman kulkuneuvon mukaan"
+    i18n:
+      en:
+        name: "Commuting costs"
+        short_name: "Commuting"
+        hint: "Journeys between home and work, based on the cheapest means of transport"
+      nl:
+        name: "Kosten woon-werkverkeer"
+        short_name: "Woon-werkverkeer"
+        hint: "Reizen tussen woning en werk, berekend met het goedkoopste vervoermiddel"
   - key: "fi_tulonhankkimismenot"
     name: "Tulonhankkimismenot"
     short_name: "Tulonhankk."
     hint: "Tulon hankkimisesta aiheutuneet menot, kuten työvälineet ja ammattikirjallisuus"
+    i18n:
+      en:
+        name: "Expenses for earning income"
+        short_name: "Income expenses"
+        hint: "Costs incurred in earning income, such as tools and professional literature"
+      nl:
+        name: "Beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Kosten voor het verwerven van inkomen, zoals gereedschap en vakliteratuur"
   - key: "fi_tyohuonevahennys"
     name: "Työhuonevähennys"
     short_name: "Työhuone"
     hint: "Kotona työskentelystä aiheutuneet työtilakulut; ei enää palkkatulosta vuodesta 2026"
+    i18n:
+      en:
+        name: "Home office deduction"
+        short_name: "Home office"
+        hint: "Workspace costs from working at home; no longer allowed against wage income from 2026"
+      nl:
+        name: "Aftrek werkruimte thuis"
+        short_name: "Werkruimte thuis"
+        hint: "Kosten voor een werkruimte thuis; vanaf 2026 niet meer aftrekbaar van loon"
   - key: "fi_tyoasuntovahennys"
     name: "Työasuntovähennys"
     short_name: "Työasunto"
     hint: "Työn takia vuokrattu toinen asunto, kun varsinainen koti on toisella paikkakunnalla"
+    i18n:
+      en:
+        name: "Deduction for a second home for work"
+        short_name: "Second home"
+        hint: "A second home rented for work when your actual home is in another town"
+      nl:
+        name: "Aftrek voor een tweede woning voor het werk"
+        short_name: "Werkwoning"
+        hint: "Een tweede woning gehuurd voor het werk terwijl je eigenlijke huis in een andere plaats staat"
   - key: "fi_vuokratulojen_vahennykset"
     name: "Vuokratuloista tehtävät vähennykset"
     short_name: "Vuokratulot"
     hint: "Vuokraustoiminnasta aiheutuneet menot, kuten vastike, remontit ja kalustehankinnat"
+    i18n:
+      en:
+        name: "Deductions from rental income"
+        short_name: "Rental income"
+        hint: "Costs of letting, such as the housing company charge, repairs and furnishings"
+      nl:
+        name: "Aftrekposten op huurinkomsten"
+        short_name: "Huurinkomsten"
+        hint: "Kosten van verhuur, zoals de servicekosten, verbouwingen en meubelaankopen"
   - key: "fi_paaomatulojen_vahennykset"
     name: "Pääomatuloista tehtävät vähennykset"
     short_name: "Pääomatulot"
     hint: "Pääomatulon hankkimisesta ja säilyttämisestä johtuneet menot"
+    i18n:
+      en:
+        name: "Deductions from capital income"
+        short_name: "Capital income"
+        hint: "Costs of acquiring and maintaining capital income"
+      nl:
+        name: "Aftrekposten op inkomsten uit vermogen"
+        short_name: "Vermogensinkomsten"
+        hint: "Kosten voor het verwerven en behouden van inkomsten uit vermogen"
   - key: "fi_veronmaksukyvyn_alentumisvahennys"
     name: "Veronmaksukyvyn alentumisvähennys"
     short_name: "Veronmaksuk."
     hint: "Harkinnanvarainen vähennys, kun veronmaksukyky on olennaisesti alentunut"
+    i18n:
+      en:
+        name: "Deduction for reduced ability to pay tax"
+        short_name: "Ability to pay"
+        hint: "A discretionary deduction when your ability to pay tax is substantially reduced"
+      nl:
+        name: "Aftrek bij verminderde draagkracht"
+        short_name: "Draagkracht"
+        hint: "Een aftrek naar redelijkheid als je draagkracht wezenlijk is verminderd"
   - key: "fi_elatusvelvollisuusvahennys"
     name: "Elatusvelvollisuusvähennys"
     short_name: "Elatusvelv."
     hint: "Alaikäisestä lapsesta maksettu elatussopimukseen tai tuomioon perustuva elatusapu"
+    i18n:
+      en:
+        name: "Maintenance obligation deduction"
+        short_name: "Maintenance"
+        hint: "Maintenance paid for a minor child under a maintenance agreement or court order"
+      nl:
+        name: "Aftrek voor alimentatieplicht"
+        short_name: "Alimentatie"
+        hint: "Alimentatie voor een minderjarig kind op grond van een alimentatieovereenkomst of rechterlijke uitspraak"
   - key: "fi_lahjoitusvahennys"
     name: "Lahjoitusvähennys"
     short_name: "Lahjoitus"
     hint: "Rahalahjoitus yliopistolle tai korkeakoululle tiedettä tai taidetta edistämään"
+    i18n:
+      en:
+        name: "Donation deduction"
+        short_name: "Donation"
+        hint: "A cash donation to a university or higher education institution to promote science or the arts"
+      nl:
+        name: "Giftenaftrek"
+        short_name: "Giften"
+        hint: "Een geldgift aan een universiteit of hogeschool ter bevordering van wetenschap of kunst"
   - key: "fi_yel_myel_maksut"
     name: "YEL- ja MYEL-maksut"
     short_name: "YEL/MYEL"
     hint: "Yrittäjän tai maatalousyrittäjän pakolliset eläkevakuutusmaksut"
+    i18n:
+      en:
+        name: "YEL and MYEL contributions"
+        short_name: "YEL/MYEL"
+        hint: "Compulsory pension insurance contributions for the self-employed or farmers"
+      nl:
+        name: "YEL- en MYEL-premies"
+        short_name: "YEL/MYEL"
+        hint: "Verplichte pensioenpremies voor zelfstandigen of agrarische ondernemers"
   - key: "fi_jasenmaksut"
     name: "Jäsenmaksut ja työttömyyskassamaksut"
     short_name: "Jäsenmaksut"
     hint: "Työmarkkinajärjestön jäsenmaksut ja työttömyyskassan maksut"
+    i18n:
+      en:
+        name: "Union dues and unemployment fund contributions"
+        short_name: "Union dues"
+        hint: "Membership fees for a labour market organisation and unemployment fund contributions"
+      nl:
+        name: "Vakbondscontributie en premies werkloosheidskas"
+        short_name: "Vakbondscontributie"
+        hint: "Contributies aan een werknemersorganisatie en premies voor de werkloosheidskas"
   - key: "fi_velan_korot"
     name: "Velan korot"
     short_name: "Velan korot"
     hint: "Tulonhankkimisvelan korot; asuntolainan korot eivät ole enää vähennyskelpoisia"
+    i18n:
+      en:
+        name: "Interest on loans"
+        short_name: "Loan interest"
+        hint: "Interest on loans taken to earn income; mortgage interest is no longer deductible"
+      nl:
+        name: "Rente op leningen"
+        short_name: "Rente"
+        hint: "Rente op leningen om inkomen te verwerven; hypotheekrente is niet meer aftrekbaar"
   - key: "fi_vapaaehtoinen_elakevakuutus"
     name: "Vapaaehtoisen eläkevakuutuksen ja PS-sopimuksen maksut"
     short_name: "Eläkevak."
     hint: "Vapaaehtoiseen eläkevakuutukseen tai pitkäaikaissäästämissopimukseen maksetut maksut"
+    i18n:
+      en:
+        name: "Voluntary pension insurance and PS agreement payments"
+        short_name: "Pension ins."
+        hint: "Payments into a voluntary pension insurance or a long-term savings agreement"
+      nl:
+        name: "Premies vrijwillige pensioenverzekering en PS-overeenkomst"
+        short_name: "Pensioenverz."
+        hint: "Betalingen aan een vrijwillige pensioenverzekering of een langetermijnspaarovereenkomst"
   - key: "fi_pakolliset_elakemaksut"
     name: "Pakolliset eläke- ja työttömyysvakuutusmaksut"
     short_name: "Pak. eläke"
     hint: "Palkasta perityt työeläke- ja työttömyysvakuutusmaksut"
+    i18n:
+      en:
+        name: "Compulsory pension and unemployment insurance contributions"
+        short_name: "Compulsory pension"
+        hint: "Earnings-related pension and unemployment insurance contributions withheld from pay"
+      nl:
+        name: "Verplichte pensioen- en werkloosheidspremies"
+        short_name: "Verplicht pensioen"
+        hint: "Op het loon ingehouden pensioenpremies en werkloosheidsverzekeringspremies"
   - key: "fi_arvopaperien_hoitomenot"
     name: "Arvopapereiden hoito- ja säilyttämismenot"
     short_name: "Arvopaperit"
     hint: "Arvopapereiden ja arvo-osuuksien hoidosta ja säilyttämisestä aiheutuneet menot"
+    i18n:
+      en:
+        name: "Securities management and custody costs"
+        short_name: "Securities"
+        hint: "Costs of managing and holding securities and book-entry shares"
+      nl:
+        name: "Beheer- en bewaarkosten van effecten"
+        short_name: "Effecten"
+        hint: "Kosten voor het beheren en bewaren van effecten en giraal geregistreerde aandelen"

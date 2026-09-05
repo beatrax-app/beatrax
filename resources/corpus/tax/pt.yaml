@@ -11,61 +11,191 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "pt_despesas_gerais_familiares"
     name: "Despesas gerais familiares"
     short_name: "Gerais famil"
     hint: "Faturas de setores sem regras próprias, comunicadas à AT"
+    i18n:
+      en:
+        name: "General family expenses"
+        short_name: "General family"
+        hint: "Invoices from sectors without their own rules, reported to the AT"
+      nl:
+        name: "Algemene gezinsuitgaven"
+        short_name: "Gezinsuitgaven"
+        hint: "Facturen uit sectoren zonder eigen regels, gemeld bij de AT"
   - key: "pt_despesas_saude"
     name: "Despesas de saúde e com seguros de saúde"
     short_name: "Saúde"
     hint: "Consultas, medicamentos, exames e prémios de seguros de saúde"
+    i18n:
+      en:
+        name: "Health expenses and health insurance"
+        short_name: "Health"
+        hint: "Consultations, medicines, tests and health insurance premiums"
+      nl:
+        name: "Zorgkosten en zorgverzekeringspremies"
+        short_name: "Zorgkosten"
+        hint: "Consulten, medicijnen, onderzoeken en premies van zorgverzekeringen"
   - key: "pt_despesas_educacao"
     name: "Despesas de educação e formação"
     short_name: "Educação"
     hint: "Creches, escolas, propinas, manuais e formação profissional"
+    i18n:
+      en:
+        name: "Education and training expenses"
+        short_name: "Education"
+        hint: "Nurseries, schools, tuition fees, textbooks and vocational training"
+      nl:
+        name: "Onderwijs- en opleidingskosten"
+        short_name: "Studiekosten"
+        hint: "Kinderdagverblijven, scholen, collegegeld, studieboeken en beroepsopleiding"
   - key: "pt_encargos_imoveis"
     name: "Encargos com rendas de habitação ou juros"
     short_name: "Habitação"
     hint: "Rendas de habitação permanente ou juros de crédito à habitação"
+    i18n:
+      en:
+        name: "Housing rent or mortgage interest"
+        short_name: "Housing"
+        hint: "Rent for a permanent home or interest on a home loan"
+      nl:
+        name: "Huur van de woning of hypotheekrente"
+        short_name: "Woonlasten"
+        hint: "Huur van de vaste woning of rente op een woningkrediet"
   - key: "pt_encargos_lares"
     name: "Encargos com lares"
     short_name: "Lares"
     hint: "Apoio domiciliário, lares e instituições de apoio à terceira idade"
+    i18n:
+      en:
+        name: "Care home costs"
+        short_name: "Care homes"
+        hint: "Home care, care homes and institutions supporting older people"
+      nl:
+        name: "Kosten voor verzorgingshuizen"
+        short_name: "Verzorgingshuis"
+        hint: "Thuiszorg, verzorgingshuizen en instellingen voor ouderenzorg"
   - key: "pt_pensoes_alimentos"
     name: "Pensões de alimentos"
     short_name: "Alimentos"
     hint: "Pensões de alimentos fixadas por sentença ou acordo homologado"
+    i18n:
+      en:
+        name: "Maintenance payments"
+        short_name: "Maintenance"
+        hint: "Maintenance set by a court ruling or an approved agreement"
+      nl:
+        name: "Alimentatie"
+        short_name: "Alimentatie"
+        hint: "Alimentatie vastgesteld bij vonnis of bij goedgekeurde overeenkomst"
   - key: "pt_iva_faturas"
     name: "IVA suportado em faturas"
     short_name: "IVA faturas"
     hint: "IVA de restauração, cabeleireiros, oficinas, veterinários e ginásios"
+    i18n:
+      en:
+        name: "VAT borne on invoices"
+        short_name: "VAT invoices"
+        hint: "VAT on restaurants, hairdressers, garages, vets and gyms"
+      nl:
+        name: "Btw betaald op facturen"
+        short_name: "Btw facturen"
+        hint: "Btw van horeca, kappers, garages, dierenartsen en sportscholen"
   - key: "pt_donativos"
     name: "Donativos em dinheiro"
     short_name: "Donativos"
     hint: "Donativos a entidades beneficiárias do regime do mecenato"
+    i18n:
+      en:
+        name: "Cash donations"
+        short_name: "Donations"
+        hint: "Donations to bodies covered by the patronage regime"
+      nl:
+        name: "Giften in geld"
+        short_name: "Giften"
+        hint: "Giften aan instellingen die onder de mecenaatsregeling vallen"
   - key: "pt_ppr"
     name: "Planos poupança-reforma (PPR)"
     short_name: "PPR"
     hint: "Entregas em planos poupança-reforma"
+    i18n:
+      en:
+        name: "Retirement savings plans (PPR)"
+        short_name: "PPR"
+        hint: "Payments into retirement savings plans"
+      nl:
+        name: "Pensioenspaarplannen (PPR)"
+        short_name: "PPR"
+        hint: "Inleg in pensioenspaarplannen"
   - key: "pt_regime_publico_capitalizacao"
     name: "Regime público de capitalização"
     short_name: "Cap. público"
     hint: "Entregas para certificados de reforma do regime público"
+    i18n:
+      en:
+        name: "Public capitalisation scheme"
+        short_name: "Public scheme"
+        hint: "Payments for retirement certificates under the public scheme"
+      nl:
+        name: "Openbaar kapitalisatiestelsel"
+        short_name: "Publiek stelsel"
+        hint: "Inleg voor pensioencertificaten van het publieke stelsel"
   - key: "pt_encargos_trabalho_domestico"
     name: "Encargos com trabalho doméstico"
     short_name: "Trab.domést."
     hint: "Contribuições para a segurança social do pessoal doméstico"
+    i18n:
+      en:
+        name: "Costs of domestic work"
+        short_name: "Domestic work"
+        hint: "Social security contributions for domestic staff"
+      nl:
+        name: "Kosten voor huishoudelijke diensten"
+        short_name: "Huishoudelijk"
+        hint: "Sociale premies voor huishoudelijk personeel"
   - key: "pt_reabilitacao_imoveis"
     name: "Encargos com recuperação e reabilitação de imóveis"
     short_name: "Reabilitação"
     hint: "Obras em imóveis situados em áreas de reabilitação urbana"
+    i18n:
+      en:
+        name: "Costs of restoring and renovating property"
+        short_name: "Renovation"
+        hint: "Works on properties located in urban renovation areas"
+      nl:
+        name: "Kosten voor herstel en renovatie van panden"
+        short_name: "Renovatie"
+        hint: "Werkzaamheden aan panden in stedelijke renovatiegebieden"
   - key: "pt_deficiencia"
     name: "Despesas de educação e reabilitação de pessoas com deficiência"
     short_name: "Deficiência"
     hint: "Despesas de educação e reabilitação por incapacidade permanente"
+    i18n:
+      en:
+        name: "Education and rehabilitation costs for people with disabilities"
+        short_name: "Disability"
+        hint: "Education and rehabilitation costs due to permanent incapacity"
+      nl:
+        name: "Onderwijs- en revalidatiekosten voor mensen met een beperking"
+        short_name: "Beperking"
+        hint: "Kosten voor onderwijs en revalidatie bij een blijvende beperking"
   - key: "pt_seguros_vida"
     name: "Prémios de seguros de vida ou contribuições para mutualistas"
     short_name: "Seguro vida"
     hint: "Prémios de seguros de vida e contribuições para mutualistas"
+    i18n:
+      en:
+        name: "Life insurance premiums or contributions to mutual associations"
+        short_name: "Life insurance"
+        hint: "Life insurance premiums and contributions to mutual associations"
+      nl:
+        name: "Levensverzekeringspremies of bijdragen aan onderlinge waarborgfondsen"
+        short_name: "Levensverzekering"
+        hint: "Premies van levensverzekeringen en bijdragen aan onderlinge waarborgfondsen"

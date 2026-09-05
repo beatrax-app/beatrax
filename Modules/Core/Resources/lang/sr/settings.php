@@ -40,7 +40,7 @@ return [
         'choose' => 'Izaberi državu…',
         'switch_note' => 'Promena dodaje nove kategorije — postojeće oznake se nikad ne menjaju.',
 
-        'wording_note' => 'Nazivi poreskih kategorija dolaze iz poreske prijave koja se koristi u :country, pa ostaju na rečima te zemlje na svim jezicima aplikacije.',
+        'wording_note' => 'Nazivi poreskih kategorija prikazani su na vašem jeziku; poreska prijava u :country koristi sopstvene izraze.',
 
         'countries' => [
             'at' => 'Austrija',

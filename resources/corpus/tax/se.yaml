@@ -8,77 +8,243 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "se_reseavdrag"
     name: "Resor till och från arbetet"
     short_name: "Resor jobb"
     hint: "Utgifter för resor mellan bostaden och arbetsplatsen"
+    i18n:
+      en:
+        name: "Travel to and from work"
+        short_name: "Commuting"
+        hint: "Costs of travelling between your home and your workplace"
+      nl:
+        name: "Reiskosten woon-werkverkeer"
+        short_name: "Woon-werk"
+        hint: "Kosten voor reizen tussen de woning en de werkplek"
   - key: "se_tjansteresor"
     name: "Tjänsteresor"
     short_name: "Tjänsteresor"
     hint: "Utgifter du har haft i samband med tjänsteresor i arbetet"
+    i18n:
+      en:
+        name: "Business travel"
+        short_name: "Business travel"
+        hint: "Costs you have incurred in connection with business trips for work"
+      nl:
+        name: "Zakelijke reizen"
+        short_name: "Zakenreizen"
+        hint: "Kosten die je hebt gemaakt bij zakenreizen voor het werk"
   - key: "se_tillfalligt_arbete"
     name: "Tillfälligt arbete på annan ort"
     short_name: "Tillf.arbete"
     hint: "Ökade levnadskostnader när du övernattar på arbetsorten och har kvar din bostad"
+    i18n:
+      en:
+        name: "Temporary work in another place"
+        short_name: "Temp. work"
+        hint: "Increased living costs when you stay overnight near the workplace and keep your own home"
+      nl:
+        name: "Tijdelijk werk in een andere plaats"
+        short_name: "Tijdelijk werk"
+        hint: "Hogere kosten van levensonderhoud als je bij de werkplek overnacht en je eigen woning aanhoudt"
   - key: "se_dubbel_bosattning"
     name: "Dubbel bosättning"
     short_name: "Dubbel bos."
     hint: "Ökade levnadskostnader när du flyttat för arbete och behållit den tidigare bostaden"
+    i18n:
+      en:
+        name: "Dual residence"
+        short_name: "Dual residence"
+        hint: "Increased living costs when you have moved for work and kept your previous home"
+      nl:
+        name: "Dubbele huisvesting"
+        short_name: "Dubbele huisv."
+        hint: "Hogere kosten van levensonderhoud als je voor werk bent verhuisd en de vorige woning hebt aangehouden"
   - key: "se_hemresor"
     name: "Hemresor"
     short_name: "Hemresor"
     hint: "Resor hem när du arbetar och bor på annan ort"
+    i18n:
+      en:
+        name: "Trips home"
+        short_name: "Trips home"
+        hint: "Journeys home when you work and live in another place"
+      nl:
+        name: "Reizen naar huis"
+        short_name: "Thuisreizen"
+        hint: "Reizen naar huis wanneer je in een andere plaats werkt en woont"
   - key: "se_ovriga_utgifter"
     name: "Övriga utgifter för ditt arbete"
     short_name: "Övriga utg."
     hint: "Nödvändiga utgifter i arbetet till den del de överstiger en fast bottengräns"
+    i18n:
+      en:
+        name: "Other work-related expenses"
+        short_name: "Other expenses"
+        hint: "Necessary expenses for your work, to the extent that they exceed a fixed floor"
+      nl:
+        name: "Overige beroepskosten"
+        short_name: "Overige kosten"
+        hint: "Noodzakelijke kosten voor het werk, voor zover die boven een vaste drempel uitkomen"
   - key: "se_arbetsrum"
     name: "Arbetsrum"
     short_name: "Arbetsrum"
     hint: "Arbetsrum i bostaden om rummet har egen ingång och används enbart för arbete"
+    i18n:
+      en:
+        name: "Home office"
+        short_name: "Home office"
+        hint: "A work room in your home if it has its own entrance and is used solely for work"
+      nl:
+        name: "Werkruimte thuis"
+        short_name: "Werkruimte"
+        hint: "Werkruimte in de woning als die een eigen ingang heeft en uitsluitend voor werk wordt gebruikt"
   - key: "se_arbetsredskap"
     name: "Arbetsredskap"
     short_name: "Arbetsredsk."
     hint: "Dator, verktyg och annan utrustning som är nödvändig för dina arbetsuppgifter"
+    i18n:
+      en:
+        name: "Work equipment"
+        short_name: "Work equipment"
+        hint: "Computers, tools and other equipment that is necessary for your job"
+      nl:
+        name: "Werkmaterialen"
+        short_name: "Werkmaterialen"
+        hint: "Computer, gereedschap en andere apparatuur die nodig is voor je werkzaamheden"
   - key: "se_pensionssparande"
     name: "Pensionssparande"
     short_name: "Pensionsspar"
     hint: "Allmänt avdrag för eget pensionssparande om du saknar pensionsrätt i anställning"
+    i18n:
+      en:
+        name: "Pension saving"
+        short_name: "Pension saving"
+        hint: "General deduction for your own pension saving if you have no pension rights through employment"
+      nl:
+        name: "Pensioensparen"
+        short_name: "Pensioensparen"
+        hint: "Algemene aftrek voor eigen pensioensparen als je via je dienstbetrekking geen pensioen opbouwt"
   - key: "se_periodiskt_understod"
     name: "Periodiskt understöd"
     short_name: "Understöd"
     hint: "Periodiskt understöd du är skyldig att betala och som mottagaren beskattas för"
+    i18n:
+      en:
+        name: "Periodic maintenance payments"
+        short_name: "Maintenance"
+        hint: "Periodic support you are obliged to pay and on which the recipient is taxed"
+      nl:
+        name: "Periodieke alimentatie"
+        short_name: "Alimentatie"
+        hint: "Periodieke uitkeringen die je verplicht bent te betalen en waarover de ontvanger belasting betaalt"
   - key: "se_rotavdrag"
     name: "Rotavdrag"
     short_name: "Rotavdrag"
     hint: "Skattereduktion för arbetskostnad vid reparation, om- och tillbyggnad av bostaden"
+    i18n:
+      en:
+        name: "ROT deduction for home renovation"
+        short_name: "ROT"
+        hint: "Tax reduction on the labour cost of repairs, conversions and extensions to your home"
+      nl:
+        name: "ROT-aftrek voor woningrenovatie"
+        short_name: "ROT-aftrek"
+        hint: "Belastingkorting op de arbeidskosten van reparatie, verbouwing en aanbouw van de woning"
   - key: "se_rutavdrag"
     name: "Rutavdrag"
     short_name: "Rutavdrag"
     hint: "Skattereduktion för hushållsnära tjänster som städning, tvätt och trädgårdsarbete"
+    i18n:
+      en:
+        name: "RUT deduction for household services"
+        short_name: "RUT"
+        hint: "Tax reduction for household services such as cleaning, laundry and gardening"
+      nl:
+        name: "RUT-aftrek voor huishoudelijke diensten"
+        short_name: "RUT-aftrek"
+        hint: "Belastingkorting voor huishoudelijke diensten zoals schoonmaak, was en tuinonderhoud"
   - key: "se_gron_teknik"
     name: "Skattereduktion för grön teknik"
     short_name: "Grön teknik"
     hint: "Installation av solceller, ellagring och laddningspunkt till elfordon"
+    i18n:
+      en:
+        name: "Tax reduction for green technology"
+        short_name: "Green tech"
+        hint: "Installation of solar panels, electricity storage and a charging point for electric vehicles"
+      nl:
+        name: "Belastingkorting voor groene technologie"
+        short_name: "Groene techniek"
+        hint: "Installatie van zonnepanelen, elektriciteitsopslag en een laadpunt voor elektrische voertuigen"
   - key: "se_gava"
     name: "Gåva till godkänd gåvomottagare"
     short_name: "Gåva"
     hint: "Skattereduktion för penninggåvor till en av Skatteverket godkänd gåvomottagare"
+    i18n:
+      en:
+        name: "Gift to an approved recipient"
+        short_name: "Gifts"
+        hint: "Tax reduction for cash gifts to a recipient approved by Skatteverket"
+      nl:
+        name: "Gift aan een erkende ontvanger"
+        short_name: "Giften"
+        hint: "Belastingkorting voor geldgiften aan een door Skatteverket erkende ontvanger"
   - key: "se_ranteutgifter"
     name: "Ränteutgifter"
     short_name: "Räntor"
     hint: "Räntor på lån, både lån med säkerhet och lån utan säkerhet"
+    i18n:
+      en:
+        name: "Interest expenses"
+        short_name: "Interest"
+        hint: "Interest on loans, both secured and unsecured"
+      nl:
+        name: "Rente op leningen"
+        short_name: "Rente"
+        hint: "Rente op leningen, zowel met als zonder onderpand"
   - key: "se_kapitalforlust"
     name: "Kapitalförlust vid försäljning"
     short_name: "Kapitalförl."
     hint: "Förlust vid försäljning av värdepapper, fondandelar eller bostad"
+    i18n:
+      en:
+        name: "Capital loss on a sale"
+        short_name: "Capital loss"
+        hint: "Loss on the sale of securities, fund units or a home"
+      nl:
+        name: "Vermogensverlies bij verkoop"
+        short_name: "Vermogensverlies"
+        hint: "Verlies bij de verkoop van effecten, beleggingsfondsen of een woning"
   - key: "se_forbattringsutgifter"
     name: "Förbättringsutgifter på bostad"
     short_name: "Förbättring"
     hint: "Vid bostadsförsäljning: ny-, till- och ombyggnad samt förbättrande reparationer"
+    i18n:
+      en:
+        name: "Home improvement costs"
+        short_name: "Improvements"
+        hint: "Claimed when you sell a home, covering new build, extensions and conversions plus improving repairs"
+      nl:
+        name: "Verbeteringskosten aan de woning"
+        short_name: "Verbeteringen"
+        hint: "Op te voeren bij verkoop van een woning, voor nieuwbouw, aanbouw en verbouwing plus verbeterende reparaties"
   - key: "se_a_kassa"
     name: "Avgift till arbetslöshetskassa"
     short_name: "A-kassa"
     hint: "Skattereduktion för medlemsavgift till arbetslöshetskassa"
+    i18n:
+      en:
+        name: "Unemployment fund fee (a-kassa)"
+        short_name: "A-kassa"
+        hint: "Tax reduction for the membership fee paid to an unemployment insurance fund"
+      nl:
+        name: "Premie werkloosheidskas (a-kassa)"
+        short_name: "A-kassa"
+        hint: "Belastingkorting voor de contributie aan een werkloosheidskas"

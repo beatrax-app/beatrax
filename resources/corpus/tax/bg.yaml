@@ -10,41 +10,126 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "bg_namalena_rabotosposobnost"
     name: "Данъчно облекчение за лица с намалена работоспособност"
     short_name: "Работоспос."
     hint: "Облекчение за лица с намалена работоспособност по решение на ТЕЛК или НЕЛК"
+    i18n:
+      en:
+        name: "Relief for reduced working capacity"
+        short_name: "Reduced capacity"
+        hint: "Relief for people with reduced working capacity certified by ТЕЛК or НЕЛК"
+      nl:
+        name: "Aftrek bij verminderde arbeidsgeschiktheid"
+        short_name: "Arbeidsgesch."
+        hint: "Aftrek voor personen met verminderde arbeidsgeschiktheid volgens ТЕЛК of НЕЛК"
   - key: "bg_dobrovolno_osiguryavane"
     name: "Данъчно облекчение за лични вноски за доброволно осигуряване и застраховане"
     short_name: "Осигуряване"
     hint: "Лични вноски за доброволно пенсионно осигуряване и застраховки живот"
+    i18n:
+      en:
+        name: "Relief for voluntary insurance contributions"
+        short_name: "Voluntary ins."
+        hint: "Personal contributions to voluntary pension insurance and life insurance"
+      nl:
+        name: "Aftrek voor vrijwillige verzekeringspremies"
+        short_name: "Vrijw. verzek."
+        hint: "Persoonlijke premies voor vrijwillige pensioenverzekering en levensverzekeringen"
   - key: "bg_osiguritelen_stazh"
     name: "Данъчно облекчение за лични вноски за осигурителен стаж при пенсиониране"
     short_name: "Стаж"
     hint: "Лични вноски, внесени за закупуване на осигурителен стаж при пенсиониране"
+    i18n:
+      en:
+        name: "Relief for buying pensionable service"
+        short_name: "Service buy-in"
+        hint: "Personal contributions paid to buy pensionable service on retirement"
+      nl:
+        name: "Aftrek voor inkoop van pensioenjaren"
+        short_name: "Inkoop jaren"
+        hint: "Persoonlijke premies betaald voor inkoop van pensioenjaren bij pensionering"
   - key: "bg_dareniya"
     name: "Данъчно облекчение за дарения"
     short_name: "Дарения"
     hint: "Дарения в полза на здравни, образователни, културни и благотворителни организации"
+    i18n:
+      en:
+        name: "Relief for donations"
+        short_name: "Donations"
+        hint: "Donations to health, educational, cultural and charitable organisations"
+      nl:
+        name: "Aftrek voor giften"
+        short_name: "Giften"
+        hint: "Giften aan zorg-, onderwijs-, culturele en liefdadigheidsorganisaties"
   - key: "bg_mladi_semeystva"
     name: "Данъчно облекчение за млади семейства"
     short_name: "Млади сем."
     hint: "Лихви по ипотечен кредит за закупуване на първо жилище"
+    i18n:
+      en:
+        name: "Relief for young families"
+        short_name: "Young families"
+        hint: "Mortgage interest on a loan to buy a first home"
+      nl:
+        name: "Aftrek voor jonge gezinnen"
+        short_name: "Jonge gezinnen"
+        hint: "Hypotheekrente op een lening voor de aankoop van een eerste woning"
   - key: "bg_deca"
     name: "Данъчно облекчение за деца"
     short_name: "Деца"
     hint: "Облекчение според броя на ненавършилите пълнолетие деца"
+    i18n:
+      en:
+        name: "Relief for children"
+        short_name: "Children"
+        hint: "Relief based on the number of children under the age of majority"
+      nl:
+        name: "Aftrek voor kinderen"
+        short_name: "Kinderen"
+        hint: "Aftrek naar het aantal minderjarige kinderen"
   - key: "bg_deca_s_uvrezhdaniya"
     name: "Данъчно облекчение за деца с увреждания"
     short_name: "Деца с увр."
     hint: "Облекчение за отглеждане на дете с определен вид и степен на увреждане"
+    i18n:
+      en:
+        name: "Relief for children with disabilities"
+        short_name: "Disabled child"
+        hint: "Relief for raising a child with a certified type and degree of disability"
+      nl:
+        name: "Aftrek voor kinderen met een beperking"
+        short_name: "Kind met bep."
+        hint: "Aftrek voor het opvoeden van een kind met een vastgestelde aard en graad van beperking"
   - key: "bg_bezkasovi_plashtaniya"
     name: "Данъчно облекчение за извършени безкасови плащания"
     short_name: "Безкасови"
     hint: "Облекчение при получаване и извършване на плащанията само по банков път"
+    i18n:
+      en:
+        name: "Relief for cashless payments"
+        short_name: "Cashless pay"
+        hint: "Relief where all payments are received and made by bank transfer only"
+      nl:
+        name: "Aftrek voor girale betalingen"
+        short_name: "Giraal betalen"
+        hint: "Aftrek wanneer alle betalingen uitsluitend via de bank worden ontvangen en gedaan"
   - key: "bg_remont_na_imot"
     name: "Данъчно облекчение за подобрения и ремонт на недвижим жилищен имот"
     short_name: "Ремонт"
     hint: "Разходи за труд по подобрения или ремонт на собствен жилищен недвижим имот"
+    i18n:
+      en:
+        name: "Relief for home improvements and repairs"
+        short_name: "Home repairs"
+        hint: "Labour costs for improving or repairing your own residential property"
+      nl:
+        name: "Aftrek voor verbetering en onderhoud van de woning"
+        short_name: "Woningonderh."
+        hint: "Arbeidskosten voor verbetering of onderhoud van een eigen woning"

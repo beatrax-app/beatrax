@@ -40,7 +40,7 @@ return [
         'choose' => 'Vælg et land…',
         'switch_note' => 'Et skift tilføjer nye kategorier — eksisterende markeringer ændres aldrig.',
 
-        'wording_note' => 'Navnene på skattekategorierne kommer fra selvangivelsen, der bruges i :country, så de bliver i det lands ord på alle appsprog.',
+        'wording_note' => 'Navnene på skattekategorierne vises på dit sprog; selvangivelsen i :country bruger sine egne ord.',
 
         'countries' => [
             'at' => 'Østrig',

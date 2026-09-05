@@ -6,29 +6,87 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "gb_gift_aid"
     name: "Gift Aid donations"
     short_name: "Gift Aid"
     hint: "Charitable donations eligible for Gift Aid relief"
+    i18n:
+      en:
+        name: "Gift Aid donations"
+        short_name: "Gift Aid"
+        hint: "Charitable donations eligible for Gift Aid relief"
+      nl:
+        name: "Gift Aid-giften"
+        short_name: "Gift Aid"
+        hint: "Giften aan goede doelen die in aanmerking komen voor Gift Aid-aftrek"
   - key: "gb_pension_contributions"
     name: "Pension contributions"
     short_name: "Pension"
     hint: "Personal pension contributions (tax relief at source)"
+    i18n:
+      en:
+        name: "Pension contributions"
+        short_name: "Pension"
+        hint: "Personal pension contributions (tax relief at source)"
+      nl:
+        name: "Pensioenpremies"
+        short_name: "Pensioen"
+        hint: "Premies voor een persoonlijk pensioen (belastingaftrek bij de bron)"
   - key: "gb_professional_subscriptions"
     name: "Professional subscriptions"
     short_name: "Prof. subs."
     hint: "Fees to HMRC-approved professional bodies and learned societies"
+    i18n:
+      en:
+        name: "Professional subscriptions"
+        short_name: "Prof. subs."
+        hint: "Fees to HMRC-approved professional bodies and learned societies"
+      nl:
+        name: "Contributies beroepsverenigingen"
+        short_name: "Beroepscontributie"
+        hint: "Contributies aan door HMRC erkende beroepsverenigingen en geleerde genootschappen"
   - key: "gb_employment_expenses"
     name: "Employment expenses"
     short_name: "Empl. exp."
     hint: "Allowable expenses wholly, exclusively, and necessarily incurred"
+    i18n:
+      en:
+        name: "Employment expenses"
+        short_name: "Empl. exp."
+        hint: "Allowable expenses wholly, exclusively, and necessarily incurred"
+      nl:
+        name: "Beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Aftrekbare kosten die volledig, uitsluitend en noodzakelijk zijn gemaakt"
   - key: "gb_property_allowable"
     name: "Rental property expenses"
     short_name: "Prop. exp."
     hint: "Allowable costs against rental income (repairs, agent fees)"
+    i18n:
+      en:
+        name: "Rental property expenses"
+        short_name: "Prop. exp."
+        hint: "Allowable costs against rental income (repairs, agent fees)"
+      nl:
+        name: "Kosten van verhuurd vastgoed"
+        short_name: "Verhuurkosten"
+        hint: "Aftrekbare kosten tegenover huurinkomsten (onderhoud, makelaarskosten)"
   - key: "gb_self_employment"
     name: "Self-employment expenses"
     short_name: "Self-empl."
     hint: "Allowable business expenses for self-employed individuals"
+    i18n:
+      en:
+        name: "Self-employment expenses"
+        short_name: "Self-empl."
+        hint: "Allowable business expenses for self-employed individuals"
+      nl:
+        name: "Ondernemerskosten"
+        short_name: "Ondernemerskosten"
+        hint: "Aftrekbare zakelijke kosten voor zelfstandigen"

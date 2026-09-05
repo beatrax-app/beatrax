@@ -40,7 +40,7 @@ return [
         'choose' => 'Välj ett land…',
         'switch_note' => 'Att byta lägger till nya kategorier — befintliga märkningar ändras aldrig.',
 
-        'wording_note' => 'Namnen på skattekategorierna kommer från deklarationen som används i :country, så de behåller det landets ord på alla appspråk.',
+        'wording_note' => 'Namnen på skattekategorierna visas på ditt språk; deklarationen i :country använder sina egna ord.',
 
         'countries' => [
             'at' => 'Österrike',

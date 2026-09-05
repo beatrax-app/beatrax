@@ -14,77 +14,243 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "it_spese_sanitarie"
     name: "Spese sanitarie"
     short_name: "Salute"
     hint: "Spese mediche, farmaci e ticket oltre la franchigia"
+    i18n:
+      en:
+        name: "Healthcare costs"
+        short_name: "Healthcare"
+        hint: "Medical costs, medicines and ticket charges above the deductible"
+      nl:
+        name: "Zorgkosten"
+        short_name: "Zorgkosten"
+        hint: "Medische kosten, medicijnen en eigen bijdragen boven het drempelbedrag"
   - key: "it_interessi_mutuo"
     name: "Interessi per mutui ipotecari sull'abitazione principale"
     short_name: "Mutuo casa"
     hint: "Interessi passivi sul mutuo per l'acquisto della prima casa"
+    i18n:
+      en:
+        name: "Mortgage interest on the main home"
+        short_name: "Mortgage"
+        hint: "Interest paid on the mortgage for buying a first home"
+      nl:
+        name: "Hypotheekrente voor de eigen woning"
+        short_name: "Hypotheekrente"
+        hint: "Betaalde rente op de hypotheek voor de aankoop van de eerste woning"
   - key: "it_spese_istruzione"
     name: "Spese di istruzione diverse da quelle universitarie"
     short_name: "Istruzione"
     hint: "Frequenza di scuole dell'infanzia, primo ciclo e secondarie"
+    i18n:
+      en:
+        name: "School costs other than university"
+        short_name: "Schooling"
+        hint: "Attendance at nursery, primary and secondary schools"
+      nl:
+        name: "Onderwijskosten anders dan universitair"
+        short_name: "Onderwijs"
+        hint: "Kosten voor kleuter-, basis- en voortgezet onderwijs"
   - key: "it_spese_universitarie"
     name: "Spese per istruzione universitaria"
     short_name: "Università"
     hint: "Tasse per corsi universitari, perfezionamento e specializzazione"
+    i18n:
+      en:
+        name: "University tuition costs"
+        short_name: "University"
+        hint: "Fees for university courses, advanced training and specialisation"
+      nl:
+        name: "Studiekosten voor universitair onderwijs"
+        short_name: "Studiekosten"
+        hint: "Collegegeld voor universitaire opleidingen, vervolgopleidingen en specialisaties"
   - key: "it_asili_nido"
     name: "Spese per asili nido"
     short_name: "Asilo nido"
     hint: "Rette per la frequenza di asili nido pubblici o privati"
+    i18n:
+      en:
+        name: "Nursery fees"
+        short_name: "Nursery"
+        hint: "Fees for attending public or private nurseries"
+      nl:
+        name: "Kinderopvangkosten voor de crèche"
+        short_name: "Kinderopvang"
+        hint: "Opvangkosten voor openbare of particuliere kinderdagverblijven"
   - key: "it_attivita_sportive_ragazzi"
     name: "Spese per attività sportive per ragazzi"
     short_name: "Sport figli"
     hint: "Palestre, piscine e altre strutture sportive per i ragazzi"
+    i18n:
+      en:
+        name: "Sports activities for children"
+        short_name: "Child sports"
+        hint: "Gyms, swimming pools and other sports facilities for children"
+      nl:
+        name: "Sportactiviteiten voor kinderen"
+        short_name: "Kindersport"
+        hint: "Sportscholen, zwembaden en andere sportvoorzieningen voor kinderen"
   - key: "it_assistenza_personale"
     name: "Spese per addetti all'assistenza personale"
     short_name: "Assistenza"
     hint: "Addetti all'assistenza di persone non autosufficienti"
+    i18n:
+      en:
+        name: "Personal care assistants"
+        short_name: "Care workers"
+        hint: "Carers assisting people who are not self-sufficient"
+      nl:
+        name: "Kosten voor persoonlijke zorgverleners"
+        short_name: "Zorgverleners"
+        hint: "Zorgverleners voor mensen die niet zelfredzaam zijn"
   - key: "it_servizi_domestici"
     name: "Contributi per gli addetti ai servizi domestici e familiari"
     short_name: "Colf/badanti"
     hint: "Contributi versati per colf, baby-sitter e badanti"
+    i18n:
+      en:
+        name: "Contributions for domestic and family staff"
+        short_name: "Domestic staff"
+        hint: "Contributions paid for cleaners, babysitters and carers"
+      nl:
+        name: "Premies voor huishoudelijke diensten en gezinshulp"
+        short_name: "Huishoudhulp"
+        hint: "Premies betaald voor huishoudelijke hulp, oppas en zorgverleners"
   - key: "it_contributi_previdenziali"
     name: "Contributi previdenziali e assistenziali"
     short_name: "Previdenza"
     hint: "Contributi previdenziali e assistenziali obbligatori e volontari"
+    i18n:
+      en:
+        name: "Social security and welfare contributions"
+        short_name: "Social security"
+        hint: "Compulsory and voluntary social security and welfare contributions"
+      nl:
+        name: "Premies voor sociale zekerheid en bijstand"
+        short_name: "Sociale premies"
+        hint: "Verplichte en vrijwillige premies voor sociale zekerheid en bijstand"
   - key: "it_previdenza_complementare"
     name: "Contributi a forme pensionistiche complementari"
     short_name: "Fondo pens."
     hint: "Versamenti a fondi pensione, forme individuali e sottoconti PEPP"
+    i18n:
+      en:
+        name: "Contributions to supplementary pension schemes"
+        short_name: "Pension fund"
+        hint: "Payments into pension funds, individual schemes and PEPP sub-accounts"
+      nl:
+        name: "Pensioenpremies voor aanvullende pensioenregelingen"
+        short_name: "Pensioenpremies"
+        hint: "Stortingen in pensioenfondsen, individuele regelingen en PEPP-subrekeningen"
   - key: "it_premi_assicurativi"
     name: "Premi per assicurazioni sulla vita e contro gli infortuni"
     short_name: "Assicuraz."
     hint: "Polizze vita, infortuni, non autosufficienza ed eventi calamitosi"
+    i18n:
+      en:
+        name: "Life and accident insurance premiums"
+        short_name: "Insurance"
+        hint: "Life, accident, long-term care and natural disaster policies"
+      nl:
+        name: "Levensverzekeringspremies en ongevallenverzekering"
+        short_name: "Verzekeringen"
+        hint: "Polissen voor leven, ongevallen, zorgafhankelijkheid en natuurrampen"
   - key: "it_spese_funebri"
     name: "Spese funebri"
     short_name: "Funerale"
     hint: "Spese sostenute in occasione del decesso di una persona"
+    i18n:
+      en:
+        name: "Funeral costs"
+        short_name: "Funeral"
+        hint: "Costs incurred on the death of a person"
+      nl:
+        name: "Uitvaartkosten"
+        short_name: "Uitvaart"
+        hint: "Kosten gemaakt bij het overlijden van een persoon"
   - key: "it_spese_veterinarie"
     name: "Spese veterinarie"
     short_name: "Veterinario"
     hint: "Spese per la cura degli animali, oltre la franchigia"
+    i18n:
+      en:
+        name: "Veterinary costs"
+        short_name: "Vet costs"
+        hint: "Costs of caring for animals, above the deductible"
+      nl:
+        name: "Dierenartskosten"
+        short_name: "Dierenarts"
+        hint: "Kosten voor de verzorging van dieren, boven het drempelbedrag"
   - key: "it_erogazioni_liberali"
     name: "Erogazioni liberali a ONLUS, APS ed enti del terzo settore"
     short_name: "Donazioni"
     hint: "Donazioni a ONLUS, APS, volontariato ed enti del terzo settore"
+    i18n:
+      en:
+        name: "Donations to ONLUS, APS and third-sector bodies"
+        short_name: "Donations"
+        hint: "Donations to ONLUS, APS, volunteering and third-sector bodies"
+      nl:
+        name: "Giften aan ONLUS, APS en organisaties in de derde sector"
+        short_name: "Giften"
+        hint: "Giften aan ONLUS, APS, vrijwilligerswerk en organisaties in de derde sector"
   - key: "it_trasporto_pubblico"
     name: "Abbonamenti ai servizi di trasporto pubblico"
     short_name: "Trasporti"
     hint: "Abbonamenti al trasporto pubblico locale, regionale e interregionale"
+    i18n:
+      en:
+        name: "Public transport season tickets"
+        short_name: "Transport"
+        hint: "Season tickets for local, regional and interregional public transport"
+      nl:
+        name: "Abonnementen op het openbaar vervoer"
+        short_name: "Ov-abonnement"
+        hint: "Abonnementen voor lokaal, regionaal en interregionaal openbaar vervoer"
   - key: "it_recupero_edilizio"
     name: "Spese per interventi di recupero del patrimonio edilizio"
     short_name: "Casa/lavori"
     hint: "Ristrutturazione, misure antisismiche e interventi agevolati"
+    i18n:
+      en:
+        name: "Building renovation work"
+        short_name: "Renovation"
+        hint: "Renovation, anti-seismic measures and other subsidised works"
+      nl:
+        name: "Renovatie van woningen"
+        short_name: "Verbouwing"
+        hint: "Verbouwing, aardbevingsbestendige maatregelen en andere gesubsidieerde werkzaamheden"
   - key: "it_risparmio_energetico"
     name: "Spese per interventi finalizzati al risparmio energetico"
     short_name: "Ecobonus"
     hint: "Riqualificazione energetica degli edifici esistenti"
+    i18n:
+      en:
+        name: "Energy-saving measures under the Ecobonus"
+        short_name: "Ecobonus"
+        hint: "Energy upgrades to existing buildings"
+      nl:
+        name: "Energiebesparende maatregelen onder de Ecobonus"
+        short_name: "Ecobonus"
+        hint: "Energetische renovatie van bestaande gebouwen"
   - key: "it_assegno_coniuge"
     name: "Assegno periodico corrisposto al coniuge"
     short_name: "Ex coniuge"
     hint: "Assegni periodici al coniuge separato, esclusi quelli per i figli"
+    i18n:
+      en:
+        name: "Maintenance paid to a spouse"
+        short_name: "Maintenance"
+        hint: "Periodic payments to a separated spouse, excluding those for children"
+      nl:
+        name: "Alimentatie aan de echtgenoot"
+        short_name: "Alimentatie"
+        hint: "Periodieke betalingen aan een gescheiden echtgenoot, met uitzondering van die voor kinderen"

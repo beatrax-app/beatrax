@@ -40,7 +40,7 @@ return [
         'choose' => 'Alege o țară…',
         'switch_note' => 'Schimbarea adaugă categorii noi — etichetele existente nu se modifică niciodată.',
 
-        'wording_note' => 'Numele categoriilor fiscale provin din declarația fiscală folosită în :country, așa că rămân în cuvintele acelei țări în orice limbă a aplicației.',
+        'wording_note' => 'Numele categoriilor fiscale apar în limba ta; declarația fiscală din :country folosește propriii termeni.',
 
         'countries' => [
             'at' => 'Austria',

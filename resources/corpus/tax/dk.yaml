@@ -9,65 +9,204 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "dk_befordringsfradrag"
     name: "Kørselsfradrag (befordringsfradrag)"
     short_name: "Kørsel"
     hint: "Transport mellem hjem og arbejde eller mellem flere arbejdspladser"
+    i18n:
+      en:
+        name: "Commuting deduction (kørselsfradrag)"
+        short_name: "Commuting"
+        hint: "Travel between home and work or between several workplaces"
+      nl:
+        name: "Aftrek woon-werkverkeer (kørselsfradrag)"
+        short_name: "Woon-werkverkeer"
+        hint: "Reizen tussen huis en werk of tussen meerdere werkplekken"
   - key: "dk_haandvaerkerfradrag"
     name: "Håndværkerfradrag"
     short_name: "Håndværker"
     hint: "Lønudgifter til håndværksarbejde som isolering og udskiftning af ruder"
+    i18n:
+      en:
+        name: "Home repair deduction (håndværkerfradrag)"
+        short_name: "Home repairs"
+        hint: "Labour costs for craft work such as insulation and replacing window panes"
+      nl:
+        name: "Aftrek voor klussen aan huis (håndværkerfradrag)"
+        short_name: "Klussen"
+        hint: "Loonkosten voor kluswerk zoals isolatie en het vervangen van ruiten"
   - key: "dk_servicefradrag"
     name: "Servicefradrag"
     short_name: "Service"
     hint: "Lønudgifter til serviceydelser i hjemmet som rengøring og havearbejde"
+    i18n:
+      en:
+        name: "Household services deduction (servicefradrag)"
+        short_name: "Home services"
+        hint: "Labour costs for services in the home such as cleaning and gardening"
+      nl:
+        name: "Aftrek huishoudelijke diensten (servicefradrag)"
+        short_name: "Huishoud. diensten"
+        hint: "Loonkosten voor huishoudelijke diensten zoals schoonmaak en tuinwerk"
   - key: "dk_renteudgifter"
     name: "Renteudgifter"
     short_name: "Renter"
     hint: "Renter af gæld til realkreditinstitutter, pengeinstitutter og anden gæld"
+    i18n:
+      en:
+        name: "Interest expenses"
+        short_name: "Interest"
+        hint: "Interest on debt to mortgage credit institutions, banks and other debt"
+      nl:
+        name: "Rente op leningen"
+        short_name: "Rente"
+        hint: "Rente op schulden bij hypotheekbanken, banken en overige schulden"
   - key: "dk_fagligt_kontingent"
     name: "Fagligt kontingent"
     short_name: "Fagforening"
     hint: "Kontingent til din fagforening"
+    i18n:
+      en:
+        name: "Union dues"
+        short_name: "Union dues"
+        hint: "Dues paid to your trade union"
+      nl:
+        name: "Vakbondscontributie"
+        short_name: "Vakbond"
+        hint: "Contributie aan je vakbond"
   - key: "dk_akassebidrag"
     name: "A-kassebidrag, efterløn og fleksydelse"
     short_name: "A-kasse"
     hint: "Bidrag til a-kasse, efterlønsordning og fleksydelse"
+    i18n:
+      en:
+        name: "A-kasse contributions, efterløn and fleksydelse"
+        short_name: "A-kasse"
+        hint: "Contributions to an unemployment fund (a-kasse), the efterløn scheme and fleksydelse"
+      nl:
+        name: "A-kassepremies, efterløn en fleksydelse"
+        short_name: "A-kasse"
+        hint: "Bijdragen aan de werkloosheidskas (a-kasse), de efterløn-regeling en fleksydelse"
   - key: "dk_kost_og_logi"
     name: "Rejseudgifter til kost og logi"
     short_name: "Kost og logi"
     hint: "Kost og logi når du arbejder på en midlertidig arbejdsplads langt fra hjemmet"
+    i18n:
+      en:
+        name: "Travel costs for meals and accommodation"
+        short_name: "Meals and lodging"
+        hint: "Meals and accommodation when working at a temporary workplace far from home"
+      nl:
+        name: "Reiskosten voor maaltijden en verblijf"
+        short_name: "Kost en verblijf"
+        hint: "Maaltijden en verblijf bij werk op een tijdelijke werkplek ver van huis"
   - key: "dk_dobbelt_husfoerelse"
     name: "Dobbelt husførelse"
     short_name: "Dobbelt hus"
     hint: "Merudgifter når midlertidigt arbejde gør, at du må opretholde to husstande"
+    i18n:
+      en:
+        name: "Double household"
+        short_name: "Double household"
+        hint: "Extra costs when temporary work means you must keep up two households"
+      nl:
+        name: "Dubbele huishouding"
+        short_name: "Dubbel huishouden"
+        hint: "Extra kosten als tijdelijk werk je dwingt twee huishoudens aan te houden"
   - key: "dk_oevrige_loenmodtagerudgifter"
     name: "Øvrige lønmodtagerudgifter"
     short_name: "Lønmod.udg."
     hint: "Nødvendige arbejdsudgifter som faglitteratur og kurser ud over bundgrænsen"
+    i18n:
+      en:
+        name: "Other employee expenses"
+        short_name: "Employee exp."
+        hint: "Necessary work expenses such as professional literature and courses above the threshold"
+      nl:
+        name: "Overige werknemerskosten"
+        short_name: "Werknemerskosten"
+        hint: "Noodzakelijke werkkosten zoals vakliteratuur en cursussen boven de drempel"
   - key: "dk_boernebidrag"
     name: "Fradrag for børnebidrag"
     short_name: "Børnebidrag"
     hint: "Børnebidrag du betaler til børn under 18 år, som du ikke bor sammen med"
+    i18n:
+      en:
+        name: "Child maintenance deduction"
+        short_name: "Child maintenance"
+        hint: "Maintenance you pay for children under 18 who do not live with you"
+      nl:
+        name: "Aftrek kinderalimentatie"
+        short_name: "Kinderalimentatie"
+        hint: "Alimentatie die je betaalt voor kinderen onder de 18 die niet bij je wonen"
   - key: "dk_aegtefaellebidrag"
     name: "Fradrag for ægtefællebidrag"
     short_name: "Ægtefællebid"
     hint: "Underholdsbidrag du betaler til din tidligere ægtefælle"
+    i18n:
+      en:
+        name: "Spousal maintenance deduction"
+        short_name: "Spousal maint."
+        hint: "Maintenance you pay to your former spouse"
+      nl:
+        name: "Aftrek partneralimentatie"
+        short_name: "Partneralimentatie"
+        hint: "Alimentatie die je aan je vorige partner betaalt"
   - key: "dk_gaver_velgoerende"
     name: "Gaver og bidrag til velgørende foreninger"
     short_name: "Gaver"
     hint: "Pengegaver til foreninger, der er godkendt af Skattestyrelsen"
+    i18n:
+      en:
+        name: "Gifts and donations to charities"
+        short_name: "Donations"
+        hint: "Cash gifts to associations approved by Skattestyrelsen"
+      nl:
+        name: "Giften aan goede doelen"
+        short_name: "Giften"
+        hint: "Geldgiften aan verenigingen die door Skattestyrelsen zijn goedgekeurd"
   - key: "dk_ratepension"
     name: "Indbetaling til ratepension og ophørende livrente"
     short_name: "Ratepension"
     hint: "Dine private indbetalinger til ratepension og ophørende livrente"
+    i18n:
+      en:
+        name: "Payments into ratepension and a fixed-term annuity"
+        short_name: "Ratepension"
+        hint: "Your own private payments into ratepension and a fixed-term annuity"
+      nl:
+        name: "Inleg in ratepension en een tijdelijke lijfrente"
+        short_name: "Ratepension"
+        hint: "Je eigen inleg in ratepension en een tijdelijke lijfrente"
   - key: "dk_livsvarig_livrente"
     name: "Indbetaling til livsvarig livrente"
     short_name: "Livrente"
     hint: "Indbetalinger til livsvarig livrente; fradraget afhænger af, hvem der indbetaler"
+    i18n:
+      en:
+        name: "Payments into a lifelong annuity"
+        short_name: "Annuity"
+        hint: "Payments into a lifelong annuity; the deduction depends on who pays in"
+      nl:
+        name: "Inleg in een levenslange lijfrente"
+        short_name: "Lijfrente"
+        hint: "Inleg in een levenslange lijfrente; de aftrek hangt af van wie inlegt"
   - key: "dk_fredede_bygninger"
     name: "Udgifter til fredede bygninger"
     short_name: "Fredet bygn."
     hint: "Vedligeholdelsesudgifter på en fredet bygning"
+    i18n:
+      en:
+        name: "Costs for listed buildings"
+        short_name: "Listed building"
+        hint: "Maintenance costs on a listed building"
+      nl:
+        name: "Kosten voor monumentenpanden"
+        short_name: "Monumentenpand"
+        hint: "Onderhoudskosten aan een monumentenpand"

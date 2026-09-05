@@ -12,77 +12,243 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "ca_rrsp_deduction"
     name: "RRSP deduction"
     short_name: "RRSP"
     hint: "Contributions to your own or a spousal registered retirement savings plan"
+    i18n:
+      en:
+        name: "RRSP deduction"
+        short_name: "RRSP"
+        hint: "Contributions to your own or a spousal registered retirement savings plan"
+      nl:
+        name: "RRSP-pensioenaftrek"
+        short_name: "RRSP"
+        hint: "Stortingen op een eigen RRSP of een RRSP op naam van de partner"
   - key: "ca_fhsa_deduction"
     name: "FHSA deduction"
     short_name: "FHSA"
     hint: "Contributions made to your first home savings account"
+    i18n:
+      en:
+        name: "FHSA deduction"
+        short_name: "FHSA"
+        hint: "Contributions made to your first home savings account"
+      nl:
+        name: "FHSA-aftrek"
+        short_name: "FHSA"
+        hint: "Stortingen op een FHSA-spaarrekening voor een eerste woning"
   - key: "ca_child_care_expenses"
     name: "Child care expenses"
     short_name: "Child care"
     hint: "Amounts paid to care for a child so you could work, run a business, or study"
+    i18n:
+      en:
+        name: "Child care expenses"
+        short_name: "Child care"
+        hint: "Amounts paid to care for a child so you could work, run a business, or study"
+      nl:
+        name: "Kinderopvangkosten"
+        short_name: "Kinderopvang"
+        hint: "Betaalde opvang van een kind zodat je kon werken, ondernemen of studeren"
   - key: "ca_union_professional_dues"
     name: "Annual union, professional, or like dues"
     short_name: "Union dues"
     hint: "Yearly union dues and mandatory professional or licensing body fees"
+    i18n:
+      en:
+        name: "Annual union, professional, or like dues"
+        short_name: "Union dues"
+        hint: "Yearly union dues and mandatory professional or licensing body fees"
+      nl:
+        name: "Jaarlijkse vakbonds- en beroepscontributie"
+        short_name: "Vakbondscontr."
+        hint: "Jaarlijkse vakbondscontributie en verplichte bijdragen aan beroeps- of registratieorganisaties"
   - key: "ca_moving_expenses"
     name: "Moving expenses"
     short_name: "Moving"
     hint: "Costs of relocating for a new job, business, or full-time study"
+    i18n:
+      en:
+        name: "Moving expenses"
+        short_name: "Moving"
+        hint: "Costs of relocating for a new job, business, or full-time study"
+      nl:
+        name: "Verhuiskosten"
+        short_name: "Verhuizing"
+        hint: "Kosten van verhuizen voor een nieuwe baan, onderneming of voltijdstudie"
   - key: "ca_support_payments_made"
     name: "Support payments made"
     short_name: "Support paid"
     hint: "Deductible spousal support paid under a court order or written agreement"
+    i18n:
+      en:
+        name: "Support payments made"
+        short_name: "Support paid"
+        hint: "Deductible spousal support paid under a court order or written agreement"
+      nl:
+        name: "Betaalde alimentatie"
+        short_name: "Alimentatie"
+        hint: "Aftrekbare partneralimentatie betaald op grond van een rechterlijk bevel of schriftelijke overeenkomst"
   - key: "ca_carrying_charges_interest"
     name: "Carrying charges, interest expenses and other expenses"
     short_name: "Carrying chg"
     hint: "Interest on money borrowed to earn investment income, plus investment management fees"
+    i18n:
+      en:
+        name: "Carrying charges, interest expenses and other expenses"
+        short_name: "Carrying chg"
+        hint: "Interest on money borrowed to earn investment income, plus investment management fees"
+      nl:
+        name: "Financieringslasten, rente en overige kosten"
+        short_name: "Financ.lasten"
+        hint: "Rente op geleend geld om beleggingsinkomsten te behalen, plus kosten van vermogensbeheer"
   - key: "ca_other_employment_expenses"
     name: "Other employment expenses"
     short_name: "Employment"
     hint: "Job-related costs your employer required you to pay and did not reimburse"
+    i18n:
+      en:
+        name: "Other employment expenses"
+        short_name: "Employment"
+        hint: "Job-related costs your employer required you to pay and did not reimburse"
+      nl:
+        name: "Overige beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Werkgerelateerde kosten die de werkgever verplicht stelde en niet vergoedde"
   - key: "ca_work_space_in_the_home"
     name: "Work-space-in-the-home expenses"
     short_name: "Home office"
     hint: "Employment-use share of home costs such as utilities, rent, and home internet access"
+    i18n:
+      en:
+        name: "Work-space-in-the-home expenses"
+        short_name: "Home office"
+        hint: "Employment-use share of home costs such as utilities, rent, and home internet access"
+      nl:
+        name: "Kosten van werkruimte thuis"
+        short_name: "Werkruimte thuis"
+        hint: "Zakelijk deel van woonlasten zoals energie, huur en internet thuis"
   - key: "ca_disability_supports_deduction"
     name: "Disability supports deduction"
     short_name: "Disab. supp"
     hint: "Costs of disability supports paid so you could work or attend school"
+    i18n:
+      en:
+        name: "Disability supports deduction"
+        short_name: "Disab. supp"
+        hint: "Costs of disability supports paid so you could work or attend school"
+      nl:
+        name: "Aftrek voor hulpmiddelen bij arbeidsongeschiktheid"
+        short_name: "Hulpmiddelen"
+        hint: "Kosten van hulpmiddelen betaald zodat je kon werken of naar school gaan"
   - key: "ca_medical_expenses"
     name: "Medical expenses"
     short_name: "Medical"
     hint: "Eligible medical, dental, and health costs paid for yourself and your family"
+    i18n:
+      en:
+        name: "Medical expenses"
+        short_name: "Medical"
+        hint: "Eligible medical, dental, and health costs paid for yourself and your family"
+      nl:
+        name: "Zorgkosten"
+        short_name: "Zorgkosten"
+        hint: "Aftrekbare medische, tandheelkundige en zorgkosten betaald voor jezelf en je gezin"
   - key: "ca_donations_and_gifts"
     name: "Donations and gifts"
     short_name: "Donations"
     hint: "Receipted gifts to registered charities and other qualified donees"
+    i18n:
+      en:
+        name: "Donations and gifts"
+        short_name: "Donations"
+        hint: "Receipted gifts to registered charities and other qualified donees"
+      nl:
+        name: "Giften"
+        short_name: "Giften"
+        hint: "Giften met kwitantie aan geregistreerde goede doelen en andere erkende begunstigden"
   - key: "ca_federal_tuition_amount"
     name: "Your federal tuition amount"
     short_name: "Tuition"
     hint: "Eligible tuition fees paid to a certified educational institution"
+    i18n:
+      en:
+        name: "Your federal tuition amount"
+        short_name: "Tuition"
+        hint: "Eligible tuition fees paid to a certified educational institution"
+      nl:
+        name: "Federaal bedrag aan collegegeld"
+        short_name: "Studiekosten"
+        hint: "Aftrekbaar collegegeld betaald aan een erkende onderwijsinstelling"
   - key: "ca_student_loan_interest"
     name: "Interest paid on your student loans"
     short_name: "Student loan"
     hint: "Interest paid on a government student loan under a federal or provincial program"
+    i18n:
+      en:
+        name: "Interest paid on your student loans"
+        short_name: "Student loan"
+        hint: "Interest paid on a government student loan under a federal or provincial program"
+      nl:
+        name: "Rente op studieleningen"
+        short_name: "Studielening"
+        hint: "Rente betaald op een studielening van de overheid via een federaal of provinciaal programma"
   - key: "ca_home_accessibility_expenses"
     name: "Home accessibility expenses"
     short_name: "Home access"
     hint: "Renovation costs making a home safer or more accessible for a qualifying individual"
+    i18n:
+      en:
+        name: "Home accessibility expenses"
+        short_name: "Home access"
+        hint: "Renovation costs making a home safer or more accessible for a qualifying individual"
+      nl:
+        name: "Kosten voor toegankelijkheid van de woning"
+        short_name: "Toegankelijkh."
+        hint: "Verbouwingskosten die een woning veiliger of toegankelijker maken voor een in aanmerking komende persoon"
   - key: "ca_disability_amount_self"
     name: "Disability amount for self"
     short_name: "Disability"
     hint: "Claim for yourself when an approved Form T2201 certifies a severe and prolonged impairment"
+    i18n:
+      en:
+        name: "Disability amount for self"
+        short_name: "Disability"
+        hint: "Claim for yourself when an approved Form T2201 certifies a severe and prolonged impairment"
+      nl:
+        name: "Eigen bedrag bij arbeidsongeschiktheid"
+        short_name: "Arbeidsongesch."
+        hint: "Aftrek voor jezelf wanneer een goedgekeurd Form T2201 een ernstige en langdurige beperking vaststelt"
   - key: "ca_canada_caregiver_amount"
     name: "Canada caregiver amount"
     short_name: "Caregiver"
     hint: "Claim for supporting a spouse, partner, or dependant with a physical or mental impairment"
+    i18n:
+      en:
+        name: "Canada caregiver amount"
+        short_name: "Caregiver"
+        hint: "Claim for supporting a spouse, partner, or dependant with a physical or mental impairment"
+      nl:
+        name: "Canada caregiver amount voor mantelzorg"
+        short_name: "Mantelzorg"
+        hint: "Aftrek voor het onderhouden van een echtgenoot, partner of afhankelijke met een lichamelijke of geestelijke beperking"
   - key: "ca_mhrtc"
     name: "Multigenerational home renovation tax credit"
     short_name: "MHRTC"
     hint: "Renovation costs to create a secondary unit so a senior or adult with a disability can live with family"
+    i18n:
+      en:
+        name: "Multigenerational home renovation tax credit"
+        short_name: "MHRTC"
+        hint: "Renovation costs to create a secondary unit so a senior or adult with a disability can live with family"
+      nl:
+        name: "Belastingkrediet meergeneratiewoning (MHRTC)"
+        short_name: "MHRTC"
+        hint: "Verbouwingskosten voor een tweede wooneenheid zodat een senior of volwassene met een beperking bij het gezin kan wonen"

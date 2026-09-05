@@ -6,29 +6,87 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "be_giften"
     name: "Giften aan erkende instellingen"
     short_name: "Giften"
     hint: "Giften aan erkende filantropische instellingen (min. €40)"
+    i18n:
+      en:
+        name: "Donations to approved institutions"
+        short_name: "Donations"
+        hint: "Gifts to approved philanthropic institutions (min. €40)"
+      nl:
+        name: "Giften aan erkende instellingen"
+        short_name: "Giften"
+        hint: "Giften aan erkende filantropische instellingen (min. €40)"
   - key: "be_eigen_woning"
     name: "Kosten eigen woning"
     short_name: "Eigen woning"
     hint: "Hypothecaire interesten en kapitaalaflossingen (woonbonus)"
+    i18n:
+      en:
+        name: "Own home costs"
+        short_name: "Own home"
+        hint: "Mortgage interest and capital repayments (woonbonus)"
+      nl:
+        name: "Kosten eigen woning"
+        short_name: "Eigen woning"
+        hint: "Hypothecaire interesten en kapitaalaflossingen (woonbonus)"
   - key: "be_beroepskosten"
     name: "Werkelijke beroepskosten"
     short_name: "Beroepsk."
     hint: "Aantoonbare kosten gemaakt voor de uitoefening van beroep"
+    i18n:
+      en:
+        name: "Actual work-related expenses"
+        short_name: "Work expenses"
+        hint: "Demonstrable costs incurred in carrying out your profession"
+      nl:
+        name: "Werkelijke beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Aantoonbare kosten gemaakt voor de uitoefening van het beroep"
   - key: "be_pensioensparen"
     name: "Pensioensparen"
     short_name: "Pensioensp."
     hint: "Stortingen op pensioenspaarrekening of -fonds"
+    i18n:
+      en:
+        name: "Pension saving"
+        short_name: "Pension saving"
+        hint: "Payments into a pension savings account or fund"
+      nl:
+        name: "Pensioensparen"
+        short_name: "Pensioensparen"
+        hint: "Stortingen op een pensioenspaarrekening of -fonds"
   - key: "be_levensverzekering"
     name: "Individuele levensverzekering"
     short_name: "Levensverz."
     hint: "Premies individuele levensverzekering (2e pijler)"
+    i18n:
+      en:
+        name: "Individual life insurance"
+        short_name: "Life insurance"
+        hint: "Premiums for individual life insurance (2nd pillar)"
+      nl:
+        name: "Individuele levensverzekering"
+        short_name: "Levensverz."
+        hint: "Premies individuele levensverzekering (2e pijler)"
   - key: "be_kinderopvang"
     name: "Kinderopvang"
     short_name: "Kinderopvang"
     hint: "Kosten voor opvang van kinderen jonger dan 14 jaar"
+    i18n:
+      en:
+        name: "Childcare"
+        short_name: "Childcare"
+        hint: "Costs of caring for children under the age of 14"
+      nl:
+        name: "Kinderopvang"
+        short_name: "Kinderopvang"
+        hint: "Kosten voor opvang van kinderen jonger dan 14 jaar"

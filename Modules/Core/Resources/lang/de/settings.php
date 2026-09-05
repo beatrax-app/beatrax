@@ -40,7 +40,7 @@ return [
         'choose' => 'Land wählen…',
         'switch_note' => 'Ein Wechsel fügt neue Kategorien hinzu — bestehende Markierungen werden nie geändert.',
 
-        'wording_note' => 'Die Namen der Steuerkategorien stammen aus der Steuererklärung, die in :country verwendet wird, und bleiben daher in jeder App-Sprache in den Worten dieses Landes.',
+        'wording_note' => 'Die Namen der Steuerkategorien erscheinen in Ihrer Sprache; die Steuererklärung in :country verwendet ihre eigenen Begriffe.',
 
         'countries' => [
             'at' => 'Österreich',

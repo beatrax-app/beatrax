@@ -11,73 +11,230 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "at_pendlerpauschale"
     name: "Pendlerpauschale und Pendlereuro"
     short_name: "Pendlerp."
     hint: "Fahrten Wohnung–Arbeitsstätte laut Pendlerrechner"
+    i18n:
+      en:
+        name: "Pendlerpauschale commuting allowance and Pendlereuro"
+        short_name: "Commuting"
+        hint: "Journeys between home and workplace as calculated by the Pendlerrechner"
+      nl:
+        name: "Pendlerpauschale woon-werkaftrek en Pendlereuro"
+        short_name: "Woon-werkverkeer"
+        hint: "Ritten tussen woning en werkplek volgens de Pendlerrechner"
   - key: "at_arbeitsmittel"
     name: "Arbeitsmittel und Werkzeuge"
     short_name: "Arbeitsm."
     hint: "Beruflich genutzte Geräte, Computer und Werkzeuge"
+    i18n:
+      en:
+        name: "Work equipment and tools"
+        short_name: "Work equipment"
+        hint: "Devices, computers and tools used for work"
+      nl:
+        name: "Werkmiddelen en gereedschap"
+        short_name: "Werkmiddelen"
+        hint: "Apparatuur, computers en gereedschap voor het werk"
   - key: "at_fortbildung"
     name: "Fortbildungs-, Ausbildungs- und Umschulungskosten"
     short_name: "Fortbildung"
     hint: "Kurse, Seminare und Umschulung mit Berufsbezug"
+    i18n:
+      en:
+        name: "Training, education and retraining costs"
+        short_name: "Training"
+        hint: "Courses, seminars and retraining related to your job"
+      nl:
+        name: "Bijscholings-, opleidings- en omscholingskosten"
+        short_name: "Studiekosten"
+        hint: "Cursussen, seminars en omscholing met een beroepsverband"
   - key: "at_fachliteratur"
     name: "Fachliteratur"
     short_name: "Fachlit."
     hint: "Berufsbezogene Fachbücher und Fachzeitschriften"
+    i18n:
+      en:
+        name: "Professional literature"
+        short_name: "Literature"
+        hint: "Job-related specialist books and journals"
+      nl:
+        name: "Vakliteratuur"
+        short_name: "Vakliteratuur"
+        hint: "Beroepsgerelateerde vakboeken en vaktijdschriften"
   - key: "at_reisekosten"
     name: "Beruflich veranlasste Reisekosten"
     short_name: "Reisekosten"
     hint: "Kilometergeld, Tagesgelder und Nächtigung bei Dienstreisen"
+    i18n:
+      en:
+        name: "Work-related travel costs"
+        short_name: "Travel costs"
+        hint: "Mileage allowance, daily allowances and overnight stays on business trips"
+      nl:
+        name: "Zakelijke reiskosten"
+        short_name: "Reiskosten"
+        hint: "Kilometervergoeding, dagvergoedingen en overnachting bij dienstreizen"
   - key: "at_doppelte_haushaltsfuehrung"
     name: "Doppelte Haushaltsführung und Familienheimfahrten"
     short_name: "Dopp. HH"
     hint: "Zweitwohnsitz am Arbeitsort und Heimfahrten zur Familie"
+    i18n:
+      en:
+        name: "Second household and family home journeys"
+        short_name: "Second home"
+        hint: "Second home at your place of work and trips back to the family"
+      nl:
+        name: "Dubbele huishouding en gezinsbezoeken"
+        short_name: "Dubbele huish."
+        hint: "Tweede woning bij de werkplek en reizen terug naar het gezin"
   - key: "at_telearbeit"
     name: "Telearbeitspauschale und ergonomisches Mobiliar"
     short_name: "Telearbeit"
     hint: "Telearbeitstage und ergonomisch geeignetes Mobiliar"
+    i18n:
+      en:
+        name: "Remote working allowance and ergonomic furniture"
+        short_name: "Remote working"
+        hint: "Days worked remotely and suitable ergonomic furniture"
+      nl:
+        name: "Thuiswerkvergoeding en ergonomisch meubilair"
+        short_name: "Thuiswerken"
+        hint: "Thuiswerkdagen en ergonomisch geschikt meubilair"
   - key: "at_gewerkschaftsbeitraege"
     name: "Gewerkschaftsbeiträge und Betriebsratsumlage"
     short_name: "Gewerksch."
     hint: "Beiträge an Berufsverbände und Betriebsratsumlage"
+    i18n:
+      en:
+        name: "Union dues and works council levy"
+        short_name: "Union dues"
+        hint: "Contributions to professional associations and the works council levy"
+      nl:
+        name: "Vakbondscontributie en ondernemingsraadheffing"
+        short_name: "Vakbondscontr."
+        hint: "Bijdragen aan beroepsverenigingen en de ondernemingsraadheffing"
   - key: "at_spenden"
     name: "Spenden an begünstigte Einrichtungen"
     short_name: "Spenden"
     hint: "Geldspenden an begünstigte Einrichtungen laut BMF-Liste"
+    i18n:
+      en:
+        name: "Donations to approved organisations"
+        short_name: "Donations"
+        hint: "Cash donations to approved organisations on the BMF list"
+      nl:
+        name: "Giften aan erkende instellingen"
+        short_name: "Giften"
+        hint: "Geldgiften aan erkende instellingen volgens de BMF-lijst"
   - key: "at_kirchenbeitrag"
     name: "Kirchenbeitrag"
     short_name: "Kirchenbeitr"
     hint: "Pflichtbeitrag an gesetzlich anerkannte Religionsgesellschaften"
+    i18n:
+      en:
+        name: "Church contribution"
+        short_name: "Church"
+        hint: "Compulsory contribution to legally recognised religious communities"
+      nl:
+        name: "Kerkbijdrage"
+        short_name: "Kerkbijdrage"
+        hint: "Verplichte bijdrage aan wettelijk erkende kerkgenootschappen"
   - key: "at_versicherungszeiten"
     name: "Weiterversicherung und Nachkauf von Versicherungszeiten"
     short_name: "Vers.zeiten"
     hint: "Freiwillige Weiterversicherung, Nachkauf von Schul- und Studienzeiten"
+    i18n:
+      en:
+        name: "Voluntary insurance and buying back insurance periods"
+        short_name: "Insurance years"
+        hint: "Voluntary continued insurance, buying back school and university years"
+      nl:
+        name: "Vrijwillige voortzetting en inkoop van verzekeringsjaren"
+        short_name: "Inkoop jaren"
+        hint: "Vrijwillige voortzetting van de verzekering, inkoop van school- en studiejaren"
   - key: "at_oeko_sanierung"
     name: "Öko-Sonderausgabenpauschale"
     short_name: "Öko-Sanierg"
     hint: "Geförderte thermisch-energetische Sanierung oder Heizkesseltausch"
+    i18n:
+      en:
+        name: "Eco renovation flat-rate deduction"
+        short_name: "Eco renovation"
+        hint: "Subsidised thermal energy renovation or boiler replacement"
+      nl:
+        name: "Forfaitaire aftrek ecologische renovatie"
+        short_name: "Ecorenovatie"
+        hint: "Gesubsidieerde thermisch-energetische renovatie of vervanging van de verwarmingsketel"
   - key: "at_steuerberatung"
     name: "Steuerberatungskosten"
     short_name: "Steuerber."
     hint: "Honorare für Steuerberatung als Sonderausgabe"
+    i18n:
+      en:
+        name: "Tax advice costs"
+        short_name: "Tax advice"
+        hint: "Fees for tax advice, deductible as a special expense"
+      nl:
+        name: "Kosten voor belastingadvies"
+        short_name: "Belastingadvies"
+        hint: "Honoraria voor belastingadvies als bijzondere uitgave"
   - key: "at_krankheitskosten"
     name: "Krankheitskosten"
     short_name: "Krankheit"
     hint: "Arzt, Medikamente, Zahnersatz und Sehbehelfe, mit Selbstbehalt"
+    i18n:
+      en:
+        name: "Healthcare costs"
+        short_name: "Healthcare"
+        hint: "Doctors, medicines, dentures and visual aids, subject to an excess"
+      nl:
+        name: "Zorgkosten"
+        short_name: "Zorgkosten"
+        hint: "Arts, medicijnen, kunstgebit en brillen, met eigen risico"
   - key: "at_behinderung"
     name: "Außergewöhnliche Belastungen bei Behinderung"
     short_name: "Behinderung"
     hint: "Freibeträge oder tatsächliche Kosten bei festgestellter Behinderung"
+    i18n:
+      en:
+        name: "Extraordinary costs relating to disability"
+        short_name: "Disability"
+        hint: "Fixed allowances or actual costs where a disability has been assessed"
+      nl:
+        name: "Buitengewone lasten bij arbeidsongeschiktheid"
+        short_name: "Arbeidsongesch."
+        hint: "Vrijstellingen of werkelijke kosten bij vastgestelde arbeidsongeschiktheid"
   - key: "at_begraebniskosten"
     name: "Begräbniskosten"
     short_name: "Begräbnis"
     hint: "Bestattung und Grabmal, soweit nicht aus dem Nachlass gedeckt"
+    i18n:
+      en:
+        name: "Funeral costs"
+        short_name: "Funeral"
+        hint: "Burial and headstone, in so far as not covered by the estate"
+      nl:
+        name: "Begrafeniskosten"
+        short_name: "Begrafenis"
+        hint: "Uitvaart en grafsteen, voor zover niet gedekt door de nalatenschap"
   - key: "at_katastrophenschaeden"
     name: "Katastrophenschäden"
     short_name: "Katastrophe"
     hint: "Beseitigung von Katastrophenschäden, ohne Selbstbehalt"
+    i18n:
+      en:
+        name: "Disaster damage"
+        short_name: "Disaster damage"
+        hint: "Clearing up damage from a natural disaster, with no excess"
+      nl:
+        name: "Rampschade"
+        short_name: "Rampschade"
+        hint: "Herstel van schade door natuurrampen, zonder eigen risico"

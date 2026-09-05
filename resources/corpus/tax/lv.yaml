@@ -8,61 +8,191 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "lv_socialas_iemaksas"
     name: "Valsts sociālās apdrošināšanas obligātās iemaksas"
     short_name: "VSAOI"
     hint: "Gada laikā veiktās sociālās iemaksas un solidaritātes nodoklis"
+    i18n:
+      en:
+        name: "State compulsory social insurance contributions (VSAOI)"
+        short_name: "VSAOI"
+        hint: "Social insurance contributions made during the year and the solidarity tax"
+      nl:
+        name: "Verplichte staatssociale verzekeringspremies (VSAOI)"
+        short_name: "VSAOI"
+        hint: "In het jaar betaalde sociale premies en de solidariteitsbelasting"
   - key: "lv_izglitiba"
     name: "Izdevumi par izglītību"
     short_name: "Izglītība"
     hint: "Maksa par augstāko un profesionālo izglītību, kvalifikācijas paaugstināšanu"
+    i18n:
+      en:
+        name: "Education costs"
+        short_name: "Education"
+        hint: "Fees for higher and vocational education and for raising qualifications"
+      nl:
+        name: "Studiekosten"
+        short_name: "Studiekosten"
+        hint: "Kosten voor hoger en beroepsonderwijs en voor bijscholing"
   - key: "lv_interesu_izglitiba_berniem"
     name: "Izdevumi par interešu izglītības programmu apgūšanu bērniem"
     short_name: "Interešu"
     hint: "Maksa par bērnu līdz 18 gadiem pulciņiem licencētā interešu izglītības programmā"
+    i18n:
+      en:
+        name: "Extracurricular programmes for children"
+        short_name: "Extracurricular"
+        hint: "Fees for clubs for children up to 18 under a licensed interest education programme"
+      nl:
+        name: "Buitenschoolse activiteiten voor kinderen"
+        short_name: "Buitenschools"
+        hint: "Kosten voor clubs voor kinderen tot 18 jaar in een erkend buitenschools programma"
   - key: "lv_arstnieciskie_pakalpojumi"
     name: "Izdevumi par medicīnas un ārstnieciskajiem pakalpojumiem"
     short_name: "Ārstniecība"
     hint: "Maksa par ārstniecības iestādē saņemtiem pakalpojumiem, zobārstniecību un protezēšanu"
+    i18n:
+      en:
+        name: "Medical and treatment costs"
+        short_name: "Medical costs"
+        hint: "Fees for services received at a medical institution, dentistry and prosthetics"
+      nl:
+        name: "Zorgkosten voor medische behandeling"
+        short_name: "Zorgkosten"
+        hint: "Kosten voor diensten van een zorginstelling, tandheelkunde en prothesen"
   - key: "lv_veselibas_apdrosinasana"
     name: "Veselības apdrošināšanas prēmiju maksājumi"
     short_name: "Ves. polise"
     hint: "Veselības apdrošināšanas polises iegādes izdevumi"
+    i18n:
+      en:
+        name: "Health insurance premiums"
+        short_name: "Health cover"
+        hint: "Costs of buying a health insurance policy"
+      nl:
+        name: "Zorgverzekeringspremies"
+        short_name: "Zorgpolis"
+        hint: "Kosten voor de aanschaf van een zorgverzekeringspolis"
   - key: "lv_ziedojumi"
     name: "Ziedojumi un dāvinājumi"
     short_name: "Ziedojumi"
     hint: "Ziedojumi budžeta iestādei vai sabiedriskā labuma organizācijai"
+    i18n:
+      en:
+        name: "Donations and gifts"
+        short_name: "Donations"
+        hint: "Donations to a public body or a public benefit organisation"
+      nl:
+        name: "Giften en schenkingen"
+        short_name: "Giften"
+        hint: "Giften aan een overheidsinstelling of een organisatie van algemeen nut"
   - key: "lv_ziedojumi_politiskajai_partijai"
     name: "Ziedojumi un dāvinājumi politiskajai partijai"
     short_name: "Partijai"
     hint: "Ziedojumi Latvijā reģistrētai politiskajai partijai vai partiju apvienībai"
+    i18n:
+      en:
+        name: "Donations and gifts to a political party"
+        short_name: "Party donations"
+        hint: "Donations to a political party or party alliance registered in Latvia"
+      nl:
+        name: "Giften en schenkingen aan een politieke partij"
+        short_name: "Partijgiften"
+        hint: "Giften aan een in Letland geregistreerde politieke partij of partijenverbond"
   - key: "lv_privatie_pensiju_fondi"
     name: "Iemaksas privātajos pensiju fondos"
     short_name: "Pensiju f."
     hint: "Iemaksas privātajā pensiju fondā jeb 3. pensiju līmenī"
+    i18n:
+      en:
+        name: "Contributions to private pension funds"
+        short_name: "Private pension"
+        hint: "Contributions to a private pension fund, the 3. pensiju līmenis or third pillar"
+      nl:
+        name: "Pensioenpremies voor particuliere pensioenfondsen"
+        short_name: "Pensioenfonds"
+        hint: "Inleg in een particulier pensioenfonds, oftewel de 3. pensiju līmenis of derde pijler"
   - key: "lv_dzivibas_apdrosinasana"
     name: "Dzīvības apdrošināšanas ar līdzekļu uzkrāšanu prēmijas"
     short_name: "Dzīv. apdr."
     hint: "Prēmijas par dzīvības apdrošināšanu ar uzkrāšanu, ja līguma termiņš ir pietiekami ilgs"
+    i18n:
+      en:
+        name: "Life insurance premiums with savings build-up"
+        short_name: "Life insurance"
+        hint: "Premiums for life insurance with savings, if the contract term is long enough"
+      nl:
+        name: "Levensverzekeringspremies met kapitaalopbouw"
+        short_name: "Levensverz."
+        hint: "Premies voor een levensverzekering met opbouw, als de looptijd lang genoeg is"
   - key: "lv_autoru_izdevumi"
     name: "Autoru nosacītie izdevumi"
     short_name: "Autoru izd."
     hint: "Nosacītie izdevumi, kas saistīti ar samaksas par intelektuālo īpašumu gūšanu"
+    i18n:
+      en:
+        name: "Deemed expenses of authors"
+        short_name: "Author expenses"
+        hint: "Notional expenses connected with earning payments for intellectual property"
+      nl:
+        name: "Forfaitaire kosten van auteurs"
+        short_name: "Auteurskosten"
+        hint: "Forfaitaire kosten die samenhangen met inkomsten uit intellectueel eigendom"
   - key: "lv_neapliekamais_minimums"
     name: "Gada neapliekamais minimums"
     short_name: "Neapl. min."
     hint: "Ar nodokli neapliekamā gada ienākuma daļa"
+    i18n:
+      en:
+        name: "Annual tax-free minimum"
+        short_name: "Tax-free min."
+        hint: "The share of annual income that is not taxed"
+      nl:
+        name: "Jaarlijks belastingvrij minimum"
+        short_name: "Belastingvrij"
+        hint: "Het deel van het jaarinkomen dat niet wordt belast"
   - key: "lv_pensionara_neapliekamais_minimums"
     name: "Pensionāra neapliekamais minimums"
     short_name: "Pens. NM"
     hint: "Neapliekamā daļa pensijas ienākumam personai, kurai piešķirta pensija"
+    i18n:
+      en:
+        name: "Pensioner tax-free minimum"
+        short_name: "Pensioner min."
+        hint: "The tax-free share of pension income for a person granted a pension"
+      nl:
+        name: "Belastingvrij minimum voor gepensioneerden"
+        short_name: "Gepensioneerden"
+        hint: "Het onbelaste deel van het pensioeninkomen van iemand met een toegekend pensioen"
   - key: "lv_atvieglojums_par_apgadajamiem"
     name: "Atvieglojums par apgādībā esošām personām"
     short_name: "Apgādājamie"
     hint: "Atvieglojums par bērniem, nestrādājošu laulāto un citām apgādībā esošām personām"
+    i18n:
+      en:
+        name: "Allowance for dependants"
+        short_name: "Dependants"
+        hint: "Allowance for children, a non-working spouse and other dependants"
+      nl:
+        name: "Aftrek voor personen ten laste"
+        short_name: "Ten laste"
+        hint: "Aftrek voor kinderen, een niet-werkende echtgenoot en andere personen ten laste"
   - key: "lv_papildu_atvieglojums"
     name: "Papildu atvieglojums personām ar invaliditāti un politiski represētajiem"
     short_name: "Papildu atv."
     hint: "Papildu atvieglojums, ja piešķirta invaliditāte vai noteikts īpašs statuss"
+    i18n:
+      en:
+        name: "Additional allowance for people with disabilities and the politically repressed"
+        short_name: "Extra allowance"
+        hint: "An additional allowance if a disability or a special status has been granted"
+      nl:
+        name: "Aanvullende aftrek voor personen met een handicap en politiek vervolgden"
+        short_name: "Extra aftrek"
+        hint: "Aanvullende aftrek als een handicap of een bijzondere status is toegekend"
