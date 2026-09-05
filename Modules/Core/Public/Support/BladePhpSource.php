@@ -127,25 +127,31 @@ final class BladePhpSource
      */
     private static function directiveAt(string $source, int $at, int $length): ?array
     {
-        $escaped = self::escapedAt($source, $at, $length);
+        $handled = self::escapedAt($source, $at, $length)
+            ?? self::verbatimAt($source, $at, $length)
+            ?? self::blockAt($source, $at, $length);
 
-        if ($escaped !== null) {
-            return $escaped;
-        }
-
-        if (strcasecmp(substr($source, $at, 9), '@verbatim') === 0) {
-            return self::blanked($source, $at, self::past($source, '@endverbatim', $at + 9, $length));
-        }
-
-        $block = self::blockAt($source, $at, $length);
-
-        if ($block !== null) {
-            return $block;
+        if ($handled !== null) {
+            return $handled;
         }
 
         $end = MarkupLexer::pastConstruct($source, $at, $length);
 
         return $end === null ? null : self::argumentsAt($source, $at, $end);
+    }
+
+    // Blanked rather than read: a @verbatim body is markup the template hands
+    // back untouched, so any PHP-looking text inside it is not code.
+    /**
+     * @return array{0: int, 1: string}|null
+     */
+    private static function verbatimAt(string $source, int $at, int $length): ?array
+    {
+        if (strcasecmp(substr($source, $at, 9), '@verbatim') !== 0) {
+            return null;
+        }
+
+        return self::blanked($source, $at, self::past($source, '@endverbatim', $at + 9, $length));
     }
 
     // `@php … @endphp` is the one directive whose body is not an argument list,
