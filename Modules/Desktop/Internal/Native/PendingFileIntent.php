@@ -4,43 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
-use Illuminate\Contracts\Session\Session;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
-use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 
 // Session-scoped so a logged-out file-open survives until that same session
-// authenticates, and is never inherited by a different user's session.
-final readonly class PendingFileIntent implements RemembersPendingFileIntent
+// authenticates, and is never inherited by a different user's session. Only the
+// reading half lives here: FileOpenHandoff takes the write, because the shell's
+// event route has no session for it to start in.
+final readonly class PendingFileIntent
 {
     public const string SESSION_KEY = 'desktop.pending_file_intent';
 
-    private const array ALLOWED_EXTENSIONS = ['csv', 'eml'];
-
     public function __construct(
         private SessionFactory $session,
-        private Clock $clock,
+        private ShellHandoff $handoff,
     ) {}
-
-    public function remember(string $path, string $extension): void
-    {
-        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            return;
-        }
-
-        ($this->session)()->put(self::SESSION_KEY, [
-            'path' => $path,
-            'extension' => $extension,
-            'remembered_at' => $this->clock->now()->getTimestamp(),
-        ]);
-    }
 
     /**
      * @return array{path: string, extension: string}|null
      */
     public function pending(): ?array
     {
-        $raw = ($this->session)()->get(self::SESSION_KEY);
+        $raw = $this->claimed() ?? ($this->session)()->get(self::SESSION_KEY);
         if (! is_array($raw)) {
             return null;
         }
@@ -53,6 +37,23 @@ final readonly class PendingFileIntent implements RemembersPendingFileIntent
         return $intent;
     }
 
+    // The one hop the shell cannot make itself. A double-click that launched
+    // the app raises OpenFile before any window exists, so nothing in the page
+    // could have heard it; this is where that fact becomes session state.
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    private function claimed(): ?array
+    {
+        $left = $this->handoff->take(ShellHandoff::FILE_INTENT);
+
+        if ($left !== null) {
+            ($this->session)()->put(self::SESSION_KEY, $left);
+        }
+
+        return $left;
+    }
+
     /**
      * @param  array<array-key, mixed>  $raw
      * @return array{path: string, extension: string}|null
@@ -61,7 +62,7 @@ final readonly class PendingFileIntent implements RemembersPendingFileIntent
     {
         $path = $raw['path'] ?? null;
         $extension = $raw['extension'] ?? null;
-        if (! is_string($path) || ! is_string($extension) || ! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+        if (! is_string($path) || ! is_string($extension) || ! in_array($extension, FileOpenIntake::SUPPORTED_EXTENSIONS, true)) {
             return null;
         }
 

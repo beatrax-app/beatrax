@@ -90,11 +90,16 @@ same collaborator, so nothing that called it had to change.
 
 The alternative shape — keep `password_wrapped_key` through the disable, and re-prime the
 session from the account password at every sign-in — is friendlier and was rejected on
-evidence. `LockOnWindowHideOrClose` withholds the key on every desktop window hide or close,
-ungated by `lock_enabled`, and with the lock off there is no unlock screen to put it back.
-The first time the user closed the window, every encrypted column would go blank until the
-next sign-in — which, on a 30-day session, can be weeks away. That trades one silent-blank
-path for another.
+evidence. A desktop window hide or close withholds the key, and with the lock off there is no
+unlock screen to put it back: the first time the user closed the window, every encrypted
+column would go blank until the next sign-in — which, on a 30-day session, can be weeks away.
+That trades one silent-blank path for another.
+
+The withhold reads `lock_enabled` before it acts, in `ClaimShellLockDemand`, precisely so the
+blank-column path above cannot be reached by an account that has no lock. Until that check
+existed the withhold was described here as ungated, and it was — but it also never ran: the
+listener that performed it wrote a session no window held
+([why](../desktop/architecture.md#a-native-event-never-holds-the-windows-session)).
 
 The permanence is inherited, not invented here. At-rest encryption is a one-way migration:
 `EncryptionMigrationService` has no decrypt-back path, and the pre-migration snapshot is

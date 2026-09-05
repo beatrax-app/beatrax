@@ -548,8 +548,11 @@ document.addEventListener('alpine:init', () => {
             // against, and starting the grace here meant clicking away for
             // half a minute locked the app regardless of a 30-minute idle
             // setting. Genuine backgrounding still locks: visibilitychange
-            // above, plus the native WindowHidden/WindowClosed listener, which
-            // locks immediately with no grace at all.
+            // above, plus the desktop shell's WindowHidden/WindowClosed
+            // hand-off, which the window's next request claims with no grace at
+            // all. That listener used to be described here as locking
+            // immediately; it could not, because the shell posts those events
+            // from a process holding no session cookie.
             window.addEventListener('blur', () => {
                 this.showVeil();
             });

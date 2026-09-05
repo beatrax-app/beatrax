@@ -38,12 +38,13 @@ Modules/Desktop/
 │   │   ├── ContinuePendingFileIntentAfterLogin.php
 │   │   ├── DispatchOsNotification.php
 │   │   ├── ForgetColdStartVaultOnKeyRotation.php
+│   │   ├── DemandLockOnWindowHideOrClose.php
 │   │   ├── HandleNativeOpenFile.php
-│   │   ├── LockOnWindowHideOrClose.php
 │   │   ├── NavigateOnNotificationDeepLink.php
 │   │   ├── RebuildAppMenuOnAuthChange.php
 │   │   ├── StartSyncListenerOnEnable.php
 │   │   ├── SurfaceWorkerCrashAlert.php
+│   │   ├── TrackWindowFocus.php
 │   │   ├── TriggerUpdateDownload.php
 │   │   ├── VerifyAndAnnounceUpdate.php
 │   │   └── VerifyAndInstallDownload.php
@@ -82,10 +83,12 @@ separate, longer-lived UI element.
     `app()->bound(OsThemeSignal::class)` check is the documented
     discoverability gate.
   - `RemembersPendingFileIntent::remember(string $path, string $extension): void`
-    — the contract's only method. Session-scoped store for the
-    OS-supplied file path the user opened before logging in. Reading it
-    back is Internal (`PendingFileIntent::pending()`, then `clear()`),
-    so across the module boundary the contract is write-only.
+    — the contract's only method, for the OS-supplied file path the
+    user opened before logging in. It is called from a shell event and
+    so binds to `FileOpenHandoff`, which writes a device-local slot
+    rather than a session. Reading it back is Internal
+    (`PendingFileIntent::pending()`, then `clear()`), so across the
+    module boundary the contract is write-only.
 - **Events/**
   - `FileOpenedFromOs` — `(string $path, string $extension)`. Raised
     by `FileOpenIntake::receive()` after validation succeeds — the
@@ -128,17 +131,24 @@ separate, longer-lived UI element.
   security boundary. Canonicalises with realpath, then checks the
   extension allow-list and the per-extension size cap; raises
   `FileOpenedFromOs` on success and returns silently otherwise.
-- `Internal/Native/PendingFileIntent` — session-scoped store. Both
-  the concrete class and the `RemembersPendingFileIntent` binding
-  resolve to it.
+- `Internal/Native/PendingFileIntent` — the session-scoped read half.
+  `pending()` claims what `FileOpenHandoff` left on `ShellHandoff` into
+  the reader's own session.
+- `Internal/Native/FileOpenHandoff` — the write half, and the
+  `RemembersPendingFileIntent` binding. It holds no session, because
+  its one caller is a shell event that has none.
+- `Internal/Native/ShellHandoff` — the slot a shell event leaves a fact
+  in for the window to claim, for the app lock and the file intent
+  alike.
 - `Internal/Listeners/ApplyCloseWindowChoice` — handles the JS-glued
   POST that follows the close-window prompt. Applies either
   `App::quit()` or `Window::current()->hide()`.
 - `Internal/Listeners/ContinuePendingFileIntentAfterLogin::handle()`
   — fires on Laravel `Login` and takes no arguments. It reads
-  `PendingFileIntent::pending()` purely for that reader's side effect:
-  an intent whose file has since gone is dropped here, so nobody is
-  sent to a staging screen with nothing on it. The redirect itself is
+  `PendingFileIntent::pending()` for both of that reader's effects: it
+  claims the shell's hand-off into this session, and it drops an intent
+  whose file has since gone so nobody is sent to a staging screen with
+  nothing on it. The redirect itself is
   the `ContinueToStagedFile` middleware's, on the next HTML GET. The
   subscription is NOT bundle-gated — the round-trip must work in local
   dev / CI / test runs.
@@ -169,8 +179,10 @@ separate, longer-lived UI element.
 
 This module owns no domain models. The `users.close_behavior`
 column it reads is owned by [`Core`'s migration](../core/code.md). The
-`PendingFileIntent` state lives in the Laravel session, not a DB
-table.
+`PendingFileIntent` state lives in the Laravel session. The hand-off
+`ShellHandoff` writes lives in the `cache` table, which
+`SyncCoverageIsDeclaredTest` lists as a framework table, so it never
+travels.
 
 If the module ships migrations in the future (e.g. a file-staging
 audit table), they will land under `Database/Migrations/`.
@@ -180,16 +192,18 @@ audit table), they will land under `Database/Migrations/`.
 `DesktopServiceProvider::register()`:
 
 - Singletons the internals whose identity matters: `AppMenuBuilder`,
-  `WindowFocusState`, `PendingFileIntent`,
+  `WindowFocusState`, `ShellHandoff`, `PendingFileIntent`,
   `ContinuePendingFileIntentAfterLogin`,
   `NavigateOnNotificationDeepLink`, `ApplyCloseWindowChoice`,
   `NativeBiometricUnlock` and `DesktopKeyCustodian`.
-  `SurfaceWorkerCrashAlert` is a singleton for a load-bearing reason:
-  the rolling crash counter lives on the listener and has to survive
-  from one `ProcessExited` to the next. The listeners not on this list
+  `SurfaceWorkerCrashAlert` is a singleton because the rolling crash
+  counter lives on the listener and is meant to survive from one
+  `ProcessExited` to the next — which it does not; see "Known risks" in
+  [architecture.md](architecture.md). The listeners not on this list
   — `DispatchOsNotification`, `HandleNativeOpenFile` — are resolved
   fresh per event on purpose; they hold no state between events.
-- Binds `RemembersPendingFileIntent` → `PendingFileIntent`.
+- Binds `RemembersPendingFileIntent` → `FileOpenHandoff`, the half
+  that holds no session.
 - Binds NativePHP's `Client` → `BoundedNativeApiClient`, globally and
   unconditionally, so no call can inherit the vendor's hour-long
   timeout.
@@ -223,10 +237,15 @@ audit table), they will land under `Database/Migrations/`.
   `AppLockUnlocked`. These have to work off-bundle, so nothing gates the
   subscriptions; whatever NativePHP each one touches is gated inside its
   own handler instead, and two of them touch none at all.
+- Subscribes `HandleNativeOpenFile` and `DemandLockOnWindowHideOrClose`
+  above the gate as well, and for a stronger reason than convenience: a
+  shell event nothing off-bundle can drive is a guarantee nothing off-bundle
+  can prove, which is how the session-writing versions of both shipped.
+  Neither reaches Electron — one validates a path, the other writes a
+  hand-off slot.
 - Returns at the gate unless `config('nativephp-internal.running')` is
   `true`. Everything after it is bundle-only: the focus-state flippers,
   `DispatchOsNotification`, `SurfaceWorkerCrashAlert`,
-  `HandleNativeOpenFile`, `LockOnWindowHideOrClose` on both
-  `WindowHidden` and `WindowClosed`, `NavigateOnNotificationDeepLink`,
-  and the three auto-update listeners. CI and test runs stop at the
-  return and never reach the NativePHP HTTP client.
+  `NavigateOnNotificationDeepLink`, and the three auto-update listeners.
+  CI and test runs stop at the return and never reach the NativePHP HTTP
+  client.

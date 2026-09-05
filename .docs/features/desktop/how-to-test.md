@@ -122,17 +122,19 @@ composer test
   a per-trigger toggle off, or a quiet-hours window, returns a
   decision that never reaches the focus gate. If it says deliver,
   confirm `WindowFocusState::isFocused()` returns the expected value —
-  the usual cause there is that the `WindowFocused` / `WindowBlurred`
-  closures never registered, because the bundle gate
-  (`config('nativephp-internal.running')`) is false and those closures
-  only register inside the bundle.
-- **A pending file intent lost across the login boundary** — the
-  intent is session-scoped. If the session cookie is regenerated on
-  login (the default Laravel behaviour), the intent must persist
-  across that regeneration. `PendingFileIntent` reads from a
-  Session contract that the framework rebinds after regeneration
-  for the same user; cross-user intent transfer is not supported by
-  design.
+  the usual cause there is that `TrackWindowFocus` never registered,
+  because the bundle gate (`config('nativephp-internal.running')`) is
+  false and that subscription only exists inside the bundle. Inside one
+  it still answers the constructed default, for the reason "Known risks"
+  in [architecture.md](architecture.md) gives.
+- **A pending file intent lost across the login boundary** — the read
+  half is session-scoped, and the write half is not: the shell has no
+  session to write one in, so `FileOpenHandoff` leaves the intent on
+  `ShellHandoff` and `PendingFileIntent::pending()` claims it into
+  whichever session first asks. An intent already claimed into a
+  session does not cross to another user; one still waiting is claimed
+  by the reader the window next serves, because nothing about it names
+  a user.
 - **`Window::current()` returning null in a deep-link handler** —
   the bundle has no focused window (e.g. the user closed it). The
   fallback is to spawn a new window via `Window::open(...)`; the
@@ -205,18 +207,25 @@ and the assertion — see
   quiet-hours or per-trigger-toggle column directly instead of going
   through `SuppressionEvaluator::shouldDeliver()`.
 - **The pending-file-intent round-trip works regardless of bundle
-  state.** The `Login` subscription for
-  `ContinuePendingFileIntentAfterLogin` is NOT gated, and neither is
-  the `ContinueToStagedFile` middleware that does the redirecting;
-  local dev / CI runs must be able to exercise the staging-page route
-  from a dropped file. (`FileOpenedFromOsTest`)
+  state.** Neither the `Login` subscription for
+  `ContinuePendingFileIntentAfterLogin`, nor the `OpenFile`
+  subscription that starts the round-trip, nor the
+  `ContinueToStagedFile` middleware that ends it is gated; local dev /
+  CI runs must be able to drive the whole path from the shell's own
+  event route. The same now holds for `WindowHidden` / `WindowClosed`,
+  and for the same reason: a guarantee only a bundle can drive is one
+  nothing here can prove.
+  (`FileOpenedFromOsTest`, `AFileOpenedFromTheOsReachesTheWindowsSessionTest`,
+  `AWindowCloseLocksTheWindowsOwnSessionTest`)
 - **The close-behavior choice persists per user.**
   `users.close_behavior` is the source of truth; the close-prompt
   modal records the choice once. (`CloseWindowPromptTest`,
   `TheCloseQuestionCouldBeDismissedWithoutAnsweringItTest`)
 - **The worker-crash watchdog only escalates on threshold-crossing.**
   `SurfaceWorkerCrashAlert` accumulates `ProcessExited` events in a
-  rolling window; a single transient crash does not raise an alert.
+  rolling window; a single transient crash does not raise an alert. The
+  suite drives the listener directly, so it accumulates there and not in
+  a bundle — see "Known risks" in [architecture.md](architecture.md).
   (`SurfaceWorkerCrashAlertTest`, `WorkerCrashAlertTest`)
 - **`NotificationDeepLink` is the only path that drives in-app
   navigation from outside the bundle's window.** Subscribers

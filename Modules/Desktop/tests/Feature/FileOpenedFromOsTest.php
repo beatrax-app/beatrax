@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Native\FileOpenIntake;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
+use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
 beforeEach(function (): void {
@@ -215,10 +216,10 @@ it('pending intent survives login: file held across login round-trip', function 
     file_put_contents($path, "date,amount\n2026-01-01,12.34");
     $realPath = (string) realpath($path);
 
+    app(RemembersPendingFileIntent::class)->remember($realPath, 'csv');
+
     /** @var PendingFileIntent $intent */
     $intent = app(PendingFileIntent::class);
-    $intent->remember($realPath, 'csv');
-
     expect($intent->pending())->not->toBeNull();
 
     /** @var Dispatcher $events */
@@ -255,7 +256,11 @@ it('pending intent does not leak across users (cross-user safety)', function ():
     $intent = app(PendingFileIntent::class);
 
     $this->actingAs($userA);
-    $intent->remember($realPath, 'csv');
+    app(RemembersPendingFileIntent::class)->remember($realPath, 'csv');
+
+    // Read once as user A, which is what moves the shell's hand-off into A's
+    // own session -- the state the rest of this case is about.
+    expect($intent->pending())->not->toBeNull();
 
     // PendingFileIntent is session-scoped, so flushing user A's session is how
     // the test models user B arriving on a session of their own.
@@ -283,9 +288,10 @@ it('stale pending intent is discarded; login proceeds normally', function (): vo
 
     // The recorded path can stop resolving between the double-click and the
     // login — an unmounted flash drive — so the listener re-validates it.
+    app(RemembersPendingFileIntent::class)->remember('/tmp/never-existed-'.bin2hex(random_bytes(4)).'.csv', 'csv');
+
     /** @var PendingFileIntent $intent */
     $intent = app(PendingFileIntent::class);
-    $intent->remember('/tmp/never-existed-'.bin2hex(random_bytes(4)).'.csv', 'csv');
 
     /** @var Dispatcher $events */
     $events = app(Dispatcher::class);
@@ -419,7 +425,7 @@ it('never sends a signed-out reader to a staging screen the auth gate bounces st
     $path = $this->fixturesDir.'/signed-out.csv';
     file_put_contents($path, "date,amount\n2026-01-01,12.34");
 
-    app(PendingFileIntent::class)->remember((string) realpath($path), 'csv');
+    app(RemembersPendingFileIntent::class)->remember((string) realpath($path), 'csv');
 
     // The staging route is behind `auth`, so a redirect here would bounce back
     // to login and be redirected again, forever.
