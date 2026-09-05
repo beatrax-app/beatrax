@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TOM',
         'badge_error' => 'MÅSTE LADDAS UPP IGEN',
         'error_body' => 'Vi kunde inte läsa alla filer för den här källan. Testa en annan fil →',
-        'partial_body' => 'En del av filen gick inte att läsa och utelämnades: :reason',
+        'partial_body' => 'En av de här filerna gick inte att läsa i sin helhet och utelämnades därför helt: :reason',
         'empty_body' => 'Det här kontoutdraget är tomt.',
         'col_date' => 'Datum',
         'col_type' => 'Typ',

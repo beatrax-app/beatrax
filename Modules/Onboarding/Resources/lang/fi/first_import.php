@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TYHJÄ',
         'badge_error' => 'VAATII UUDELLEENLÄHETYKSEN',
         'error_body' => 'Emme pystyneet lukemaan kaikkia tämän lähteen tiedostoja. Kokeile toista tiedostoa →',
-        'partial_body' => 'Osaa tästä tiedostosta ei voitu lukea, ja se jätettiin pois: :reason',
+        'partial_body' => 'Yhtä näistä tiedostoista ei voitu lukea kokonaan, joten se jätettiin kokonaan pois: :reason',
         'empty_body' => 'Tämä tiliote on tyhjä.',
         'col_date' => 'Päivä',
         'col_type' => 'Tyyppi',

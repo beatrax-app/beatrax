@@ -9,17 +9,17 @@
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 
-    // Header-action enablement. Discard is meaningful whenever a preview
-    // is still in cache; Confirm requires every naming step to be resolved
-    // AND at least one row that confirming would actually write.
+    // Header-action enablement. Discard is meaningful whenever a preview is
+    // still in cache; Confirm additionally needs the three own-account prompts
+    // answered and $confirmRefused false, which is the run's own rule about
+    // unnamed accounts, nothing importable, and a read that stopped early.
     $hasLivePreview = $preview !== null && ! $previewExpired;
     $unnamedAccountCount = $hasLivePreview ? count($preview->accountsToName) : 0;
     $canConfirmImport = $hasLivePreview
         && ! $needsIcsAccountName
         && ! $needsPaypalAccountName
         && ! $needsGooglePlayAccountName
-        && $unnamedAccountCount === 0
-        && $importableRowCount > 0;
+        && ! $confirmRefused;
 
     // A file-level failure is not a row and has no cells of its own. It says
     // where the read stopped, which is the only thing that explains the rows
@@ -288,6 +288,7 @@
                 <x-core::alert tone="warning" role="alert">
                     <p class="font-medium">{{ Lang::get('import::preview.failed.truncated_heading') }}</p>
                     <p class="mt-2">{{ Lang::get('import::preview.failed.truncated') }}</p>
+                    <p class="mt-2">{{ Lang::get('import::preview.failed.truncated_action') }}</p>
                     <p class="mt-2">
                         {{ Lang::get('import::preview.failed.rows_read_label') }}: {{ $importableRowCount }}
                     </p>

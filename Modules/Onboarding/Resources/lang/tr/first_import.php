@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'BOŞ',
         'badge_error' => 'YENİDEN YÜKLENMELİ',
         'error_body' => 'Bu kaynaktaki dosyaların tamamını okuyamadık. Başka bir dosya dene →',
-        'partial_body' => 'Bu dosyanın bir kısmı okunamadı ve dışarıda bırakıldı: :reason',
+        'partial_body' => 'Bu dosyalardan biri tamamen okunamadı, bu yüzden tamamı dışarıda bırakıldı: :reason',
         'empty_body' => 'Bu hesap ekstresi boş.',
         'col_date' => 'Tarih',
         'col_type' => 'Tür',

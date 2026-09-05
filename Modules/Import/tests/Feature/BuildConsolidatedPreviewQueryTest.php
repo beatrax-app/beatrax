@@ -393,15 +393,36 @@ it('keeps failed rows out of the sample, which stands for what committing writes
     }
 });
 
-// A file that stopped being readable part-way still yields rows before the
-// stop, so the section is ready and the reason has to travel with it.
-it('marks a part-read file ready and still carries why the rest is missing', function (): void {
+// A part-read file yields rows before the stop, and ConfirmImport refuses all
+// of them: the rows the read never reached are absent rather than failed, so
+// nothing would mark the gap. Counting them here offered a commit the wizard
+// then could not make, and the refusal took the whole batch down with it.
+it('leaves a part-read file out of the section rather than offering rows the commit refuses', function (): void {
     $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');
     seedPartiallyReadFile($runId, 'Row 3: A two digit day could not be found.');
 
     $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
 
+    expect($section->status)->toBe(PreviewSectionStatus::Error)
+        ->and($section->totalRows)->toBe(0)
+        ->and($section->importRunIds)->toBe([])
+        ->and($section->sampleRows)->toBe([])
+        ->and($section->error)->toBe('Row 3: A two digit day could not be found.');
+});
+
+// The batch is what one bad file must not take down: the reader dropped both
+// of these on the first-run screen, and the clean one still has to import.
+it('commits the clean file in a section that also holds a part-read one', function (): void {
+    $cleanRun = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreview($cleanRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
+    $partRun = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedPartiallyReadFile($partRun, 'Row 3: A two digit day could not be found.');
+
+    $section = $this->app->make(BuildConsolidatedPreviewQuery::class)
+        ->build([$cleanRun, $partRun], $this->userA)->sections[0];
+
     expect($section->status)->toBe(PreviewSectionStatus::Ready)
+        ->and($section->importRunIds)->toBe([$cleanRun])
         ->and($section->totalRows)->toBe(2)
         ->and($section->error)->toBe('Row 3: A two digit day could not be found.');
 });
@@ -432,7 +453,11 @@ function seedPartiallyReadFile(int $importRunId, string $reason): void
             importRunId: $importRunId,
             rows: $rows,
             accountsToName: [],
-            fileFailureReason: ImportFailureReason::FileUnreadable,
+            // FileStoppedShort, not FileUnreadable: every exception naming a
+            // format mismatch is raised from a header or preamble, before a
+            // row exists, so a preview carrying rows AND FileUnreadable is a
+            // shape the pipeline never produces.
+            fileFailureReason: ImportFailureReason::FileStoppedShort,
             fileFailureDetail: $reason,
         ),
         canonical: [],

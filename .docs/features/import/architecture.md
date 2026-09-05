@@ -193,16 +193,16 @@ What the module explicitly does NOT do:
   inside one further transaction. AFTER that commit:
   `CapturesImportForSync::capture($importRun, $user)` always runs,
   then — only under `$dispatchChain` —
-  `UpsertsCardStatements::upsertForImportRun($importRunId,
-  $user)` runs unconditionally, and only when the run inserted
+  `StatementDerivedRecords::promoteFor($importRunId, $user)` runs
+  unconditionally, and only when the run inserted
   or enriched something does it write the
   `ChainResolutionRun` row and call
   `DispatchesChainResolution::dispatchForUser($userId)` followed
   by `DispatchesRecurringDetection::dispatchForUser($userId)`.
-  The card-statement upsert sits outside that inner gate on purpose:
+  The promotion sits outside that inner gate on purpose:
   an all-duplicate re-import still has to recover a deleted
   `card_statements` row. `$dispatchChain = false` is the
-  fixture escape hatch that skips the upsert and both dispatches —
+  fixture escape hatch that skips the promotion and both dispatches —
   the Sync capture runs regardless, because a fixture's rows still
   belong on the paired device.
   A re-confirm of an already-`confirmed` run short-circuits: it
@@ -918,7 +918,14 @@ ceremony:
    with the same hash AND that import landed (`status='confirmed'`),
    short-circuit with an empty preview — the file-layer idempotency
    guard backed by the UNIQUE `(user_id, sha256)` index on
-   `import_runs`.
+   `import_runs`. `alreadyLanded()` is where all four short-circuit
+   sites meet (upload and remote fetch, each plus its raced branch),
+   and it skips the *parse* only: it still calls
+   `StatementDerivedRecords::promoteFor()` first, because uploading the
+   same file again is how a reader asks for a hand-deleted
+   `card_statements` row or an unanchored opening balance back, and
+   `ConfirmImport`'s own post-commit promotion is unreachable from
+   here.
 2. Copy the upload into the app-owned `storage/app/imports/` folder so
    a stable, app-owned path is persisted on the `ImportRun` row (the
    Livewire temporary upload directory is garbage-collected after 24h

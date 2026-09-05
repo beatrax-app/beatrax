@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PRAZNO',
         'badge_error' => 'TREBA PONOVNA OTPREMA',
         'error_body' => 'Nismo mogli da pročitamo sve datoteke za ovaj izvor. Probaj sa drugom datotekom →',
-        'partial_body' => 'Deo ovog fajla nije bilo moguće pročitati i izostavljen je: :reason',
+        'partial_body' => 'Jedan od ovih fajlova nije bilo moguće pročitati u celini, pa je izostavljen u celini: :reason',
         'empty_body' => 'Ovaj izvod je prazan.',
         'col_date' => 'Datum',
         'col_type' => 'Tip',

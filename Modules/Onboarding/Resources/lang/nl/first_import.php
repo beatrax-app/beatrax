@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'LEEG',
         'badge_error' => 'OPNIEUW UPLOADEN NODIG',
         'error_body' => 'We konden niet alle bestanden voor deze bron lezen. Probeer een ander bestand →',
-        'partial_body' => 'Een deel van dit bestand kon niet worden gelezen en is weggelaten: :reason',
+        'partial_body' => 'Een van deze bestanden kon niet volledig worden gelezen, dus is het helemaal weggelaten: :reason',
         'empty_body' => 'Dit afschrift is leeg.',
         'col_date' => 'Datum',
         'col_type' => 'Type',

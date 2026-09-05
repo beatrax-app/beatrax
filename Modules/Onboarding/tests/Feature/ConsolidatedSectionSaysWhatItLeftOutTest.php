@@ -8,10 +8,10 @@ use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Enums\PreviewSectionStatus;
 
-// A file that stops being readable part-way still yields rows before the stop,
-// so its section is READY. The count under the eyebrow is then simply lower
-// than the statement the reader uploaded, with nothing on screen saying why —
-// and they are about to commit it.
+// A file that stops being readable part-way is left out whole, so a section
+// holding one beside a file that read cleanly is READY on the other one's rows.
+// The count under the eyebrow is then lower than what the reader uploaded, with
+// nothing on screen saying why — and they are about to commit it.
 function consolidatedSectionHtml(?string $error): string
 {
     $row = new PreviewRowDto(
@@ -43,12 +43,12 @@ function consolidatedSectionHtml(?string $error): string
 it('says a ready section left something out when the file was only read part-way', function (): void {
     $html = consolidatedSectionHtml('Row 3: A two digit day could not be found.');
 
-    expect($html)->toContain('Some of this file could not be read and was left out')
+    expect($html)->toContain('One of these files could not be read in full, so all of it was left out')
         ->and($html)->toContain('Row 3: A two digit day could not be found.')
         ->and($html)->toContain('Albert Heijn');
 });
 
 it('adds nothing to a section that read its file whole', function (): void {
     expect(consolidatedSectionHtml(null))
-        ->not->toContain('Some of this file could not be read and was left out');
+        ->not->toContain('One of these files could not be read in full, so all of it was left out');
 });

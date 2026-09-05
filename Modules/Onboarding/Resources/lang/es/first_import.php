@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'VACÍO',
         'badge_error' => 'VUELVE A SUBIRLO',
         'error_body' => 'No hemos podido leer todos los archivos de esta fuente. Prueba con otro archivo →',
-        'partial_body' => 'Parte de este archivo no se ha podido leer y se ha omitido: :reason',
+        'partial_body' => 'Uno de estos archivos no se ha podido leer por completo, así que se ha omitido entero: :reason',
         'empty_body' => 'Este extracto está vacío.',
         'col_date' => 'Fecha',
         'col_type' => 'Tipo',

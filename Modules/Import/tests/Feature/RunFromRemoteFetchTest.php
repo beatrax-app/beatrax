@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Modules\Chains\Public\Contracts\UpsertsCardStatements;
+use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
@@ -88,4 +90,42 @@ it('caches the preview result exactly like the upload path does', function (): v
 
     $canonical = $cache->getCanonical($result->importRunId);
     expect($canonical)->not->toBeNull();
+});
+
+// The window already landed, so the fetch is skipped -- but the promotions the
+// confirm would have run are what a reader who deleted a derived record is
+// reaching for, and this path never reaches ConfirmImport to run them.
+it('recovers the derived records on a window whose key already landed', function (): void {
+    $key = hash('sha256', 'open-banking:test-institution:1:2026-08-01:2026-08-31');
+
+    $landed = $this->importer->runFromRemoteFetch(fixtureRemoteFetchRows(), 'enable-banking', $this->fixtureUser, $key);
+    ImportRun::query()->where('id', $landed->importRunId)->update(['status' => 'confirmed']);
+
+    $upserter = new class($this->app->make(UpsertsCardStatements::class)) implements UpsertsCardStatements
+    {
+        public int $forRun = 0;
+
+        public function __construct(private readonly UpsertsCardStatements $inner) {}
+
+        public function upsertForImportRun(int $importRunId, User $user): int
+        {
+            $this->forRun++;
+
+            return $this->inner->upsertForImportRun($importRunId, $user);
+        }
+
+        public function upsertForUser(User $user): int
+        {
+            return $this->inner->upsertForUser($user);
+        }
+    };
+    $this->app->instance(UpsertsCardStatements::class, $upserter);
+
+    $again = $this->app->make(RunsImports::class)
+        ->runFromRemoteFetch(fixtureRemoteFetchRows(), 'enable-banking', $this->fixtureUser, $key);
+
+    expect($again->importRunId)->toBe($landed->importRunId)
+        ->and($again->rows)->toBe([])
+        ->and($upserter->forRun)->toBe(1)
+        ->and(ImportRun::query()->where('sha256', $key)->count())->toBe(1);
 });

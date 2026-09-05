@@ -135,12 +135,14 @@ final readonly class OpenBankingSyncRunner
             ));
         }
 
-        // Nothing about the next attempt would differ: the window is still
-        // unconfirmed, so the same rows come back and are refused again.
+        // A refusal the next attempt would only repeat is not worth a retry:
+        // the window is still unconfirmed, so the same rows come back and are
+        // refused again. A fetch that stopped mid-walk is the exception it
+        // answers for, and the backoff is what a bank's bad minute needs.
         return OpenBankingSyncOutcome::failed(
             $status,
             $e,
-            retryable: ! $e instanceof ImportNotConfirmableException,
+            retryable: ! $e instanceof ImportNotConfirmableException || $e->anotherReadCouldDiffer(),
         );
     }
 

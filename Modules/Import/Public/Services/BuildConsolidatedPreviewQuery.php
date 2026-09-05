@@ -146,6 +146,8 @@ final readonly class BuildConsolidatedPreviewQuery
 
         /** @var list<PreviewRowDto> $sampleRows */
         $sampleRows = [];
+        /** @var list<int> $committableRunIds */
+        $committableRunIds = [];
         $rowCount = 0;
         $errorRowCount = 0;
         $committableRowCount = 0;
@@ -165,11 +167,18 @@ final readonly class BuildConsolidatedPreviewQuery
                 continue;
             }
             if ($summary->fileFailureReason !== null) {
+                // The whole run drops out, not just the rows past the stop:
+                // ConfirmImport refuses it, so counting its rows here would
+                // promise the reader an import the commit then cannot make --
+                // and one refusal would take the whole batch down with it.
                 $fileFailed = true;
                 $fileFailureText ??= $summary->fileFailureDetail
                     ?? $summary->fileFailureReason->label();
+
+                continue;
             }
 
+            $committableRunIds[] = $runId;
             $rowCount += $summary->rowCount;
             $errorRowCount += $summary->errorCount;
             $committableRowCount += $summary->committableCount;
@@ -187,7 +196,7 @@ final readonly class BuildConsolidatedPreviewQuery
         return [
             new ConsolidatedPreviewSection(
                 sourceFormat: $sourceFormat,
-                importRunIds: $importRunIds,
+                importRunIds: $committableRunIds,
                 totalRows: $committableRowCount,
                 sampleRows: $sampleRows,
                 status: self::resolveSectionStatus($hasCacheMiss, $rowCount, $errorRowCount, $fileFailed),

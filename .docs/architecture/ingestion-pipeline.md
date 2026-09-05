@@ -290,8 +290,21 @@ double-enrich.
 ### What may not be confirmed
 
 Ahead of both phases, `ConfirmImport` reads the preview head's
-`confirmRefusal()` and throws `ImportNotConfirmableException` when the run
-still has accounts to name, or has rows of which none can be imported.
+`confirmRefusal()` and throws `ImportNotConfirmableException`. There are
+three refusals, tested in this order:
+
+- **`FileDidNotReadInFull`** — the head carries a `fileFailureReason`.
+  The read stopped where the adapter raised, so the entries past that
+  point are neither present nor failed: they are absent. A CAMT.053
+  message that lost its 500th entry to a missing `BookgDt` still yields
+  499 importable rows, and confirming those would file a fortnight of a
+  month-long statement as though it were the whole thing. Checked first
+  because no later reading of the same run removes it.
+- **`AccountsToName`** — rows landed in accounts the reader has not
+  named yet.
+- **`NothingImportable`** — rows were read and not one of them can be
+  imported.
+
 `PreviewWizard` calls the same predicate to disable its button, but the
 rule is the action's: the wizard is not the only caller. A scheduled
 Enable Banking sync confirms without a reader present, and a window whose
@@ -299,26 +312,50 @@ rows all failed as `UnknownAccount` used to flip to `confirmed` having
 written nothing — after which `RunImport`'s idempotency key refused to
 re-fetch that window and every transaction in it was gone.
 
+Anything that *offers* a run for confirming has to read the same rule, or
+it promises an import the confirm then refuses.
+`BuildConsolidatedPreviewQuery::buildSection()` is the second such place:
+the first-run wizard commits every run of every `Ready` section inside one
+transaction, so a run carrying a file failure does not fail alone — it
+takes every statement staged beside it down with it, and the step has no
+per-run discard to escape by. Such a run is therefore left out of the
+section whole: its rows are not counted, its sample is not shown, and its
+id is not in `importRunIds`. A section holding only that file has no rows
+left and reads `Error`; one holding it beside a file that read cleanly is
+`Ready` on the clean file's rows and carries the reason in `error`.
+
 `OpenBankingSyncRunner` records the refusal as a failed attempt and does
 **not** advance `last_successful_sync_at`, so the window stays open and
-the rows land on the next run once the reader names the account. The
-failure is not handed back to the queue's retry envelope: the same fetch
-would be refused again. A window the bank returned nothing for never
-reaches the confirm at all — `OpenBankingFetchService` treats an empty
-fetch as the successful sync it is.
+the rows land on the next run once the reader names the account. Whether
+the failure goes back to the queue's retry envelope depends on the
+refusal: `ConfirmRefusal::anotherReadCouldDiffer()` is false for the two
+that would only be repeated, and true for `FileDidNotReadInFull`, where
+the walk stopped on something — a dropped connection, a page the API
+would not serve twice — that the backoff exists to ride out. A window the
+bank returned nothing for never reaches the confirm at all —
+`OpenBankingFetchService` treats an empty fetch as the successful sync it
+is.
 
 ### Post-commit dispatch ordering
 
 After the transaction above commits, `ConfirmImport` runs a two-stage
 post-commit block — skipped entirely on the re-confirm short-circuit:
 
-- **Stage A** (always, when `$dispatchChain` is true): promotes every
-  ICS-kind `statement_summaries` row written under this import run into a
-  `card_statements` row via `UpsertsCardStatements`. The upsert is
-  idempotent (`UNIQUE(user_id, account_id, period_start, period_end)`),
-  deliberately decoupled from the inserted/enriched gate so it also
-  recovers a manually-deleted `card_statements` row on a re-import where
-  every transaction is a fingerprint-duplicate.
+- **Stage A** (always, when `$dispatchChain` is true):
+  `StatementDerivedRecords::promoteFor()` promotes every ICS-kind
+  `statement_summaries` row written under this import run into a
+  `card_statements` row via `UpsertsCardStatements`, then anchors the
+  account's opening balance via
+  `AnchorsStartingBalanceFromStatements`. Both are idempotent — the
+  upsert on `UNIQUE(user_id, account_id, period_start, period_end)`, the
+  anchor on a `whereNull` guard that leaves a reader's own override
+  alone — and both are deliberately decoupled from the
+  inserted/enriched gate, so a re-import where every transaction is a
+  fingerprint-duplicate still recovers a hand-deleted `card_statements`
+  row. **`RunImport` calls the same collaborator from its
+  content-hash short-circuit**, because the ordinary way a reader asks
+  for that recovery is to upload the same bytes again — and that path
+  never reaches `ConfirmImport` at all.
 - **Stage B** (gated on `$result->inserted > 0 || $result->enriched > 0`):
   inserts a `pending` `chain_resolution_runs` row (so the results
   page the confirm redirects to has a status to display on its very

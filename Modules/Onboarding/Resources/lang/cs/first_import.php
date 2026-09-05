@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PRÁZDNÉ',
         'badge_error' => 'NUTNO NAHRÁT ZNOVU',
         'error_body' => 'Nepodařilo se přečíst všechny soubory z tohoto zdroje. Zkus jiný soubor →',
-        'partial_body' => 'Část tohoto souboru se nepodařilo načíst a byla vynechána: :reason',
+        'partial_body' => 'Jeden z těchto souborů se nepodařilo načíst celý, a byl proto vynechán celý: :reason',
         'empty_body' => 'Tenhle výpis je prázdný.',
         'col_date' => 'Datum',
         'col_type' => 'Typ',

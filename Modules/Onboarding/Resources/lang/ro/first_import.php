@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'GOL',
         'badge_error' => 'NECESITĂ REÎNCĂRCARE',
         'error_body' => 'Nu am putut citi toate fișierele acestei surse. Încearcă alt fișier →',
-        'partial_body' => 'O parte din acest fișier nu a putut fi citită și a fost omisă: :reason',
+        'partial_body' => 'Unul dintre aceste fișiere nu a putut fi citit în întregime, așa că a fost omis complet: :reason',
         'empty_body' => 'Acest extras este gol.',
         'col_date' => 'Dată',
         'col_type' => 'Tip',

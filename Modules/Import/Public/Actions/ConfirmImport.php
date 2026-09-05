@@ -9,19 +9,18 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Public\Contracts\DispatchesAnomalyDetection;
 use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
-use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
+use Modules\Import\Internal\Services\StatementDerivedRecords;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Exceptions\ImportNotConfirmableException;
 use Modules\Ledger\Models\ImportRun;
-use Modules\Ledger\Public\Contracts\AnchorsStartingBalanceFromStatements;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
@@ -43,10 +42,9 @@ final readonly class ConfirmImport implements ConfirmsImports
         private DispatchesAnomalyDetection $anomalyDispatcher,
         private DispatchesChainResolution $chainDispatcher,
         private DispatchesRecurringDetection $recurringDispatcher,
-        private UpsertsCardStatements $cardStatementUpserter,
+        private StatementDerivedRecords $derivedRecords,
         private DatabaseManager $db,
         private CapturesImportForSync $syncCapture,
-        private AnchorsStartingBalanceFromStatements $startingBalances,
     ) {}
 
     public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
@@ -86,10 +84,7 @@ final readonly class ConfirmImport implements ConfirmsImports
         $errorCount = 0;
         $previewDuplicateCount = 0;
         if ($head !== null) {
-            // A file that failed to parse is one error even though it is no
-            // row, so the summary count keeps meaning "things that went wrong"
-            // now that the failure is no longer smuggled in as a row.
-            $errorCount = ($head->fileFailureReason === null ? 0 : 1) + $head->errorCount;
+            $errorCount = $head->errorCount;
             $previewDuplicateCount = $head->duplicateCount;
         }
 
@@ -145,14 +140,10 @@ final readonly class ConfirmImport implements ConfirmsImports
 
         if ($dispatchChain) {
             // Outside the inserted/enriched gate below, so a re-import whose
-            // every row is a duplicate still recovers a deleted
-            // card_statements row.
-            $this->cardStatementUpserter->upsertForImportRun($importRunId, $user);
-
-            // Beside the card-statement upsert and outside the same gate: the
-            // statement summary this run wrote is what anchors the account, and
-            // an account left at zero measures its whole balance from there.
-            $this->startingBalances->anchorForUser($user);
+            // every row is a duplicate still recovers a card statement or a
+            // starting balance the reader deleted. RunImport reaches the same
+            // call for a re-upload it short-circuits before ever getting here.
+            $this->derivedRecords->promoteFor($importRunId, $user);
 
             if ($result->inserted > 0 || $result->enriched > 0) {
                 // Eloquent rather than a raw insert, so a cast or boot default

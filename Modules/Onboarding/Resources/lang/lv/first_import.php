@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'TUKŠS',
         'badge_error' => 'JĀAUGŠUPIELĀDĒ VĒLREIZ',
         'error_body' => 'Neizdevās nolasīt visus šī avota failus. Izmēģiniet citu failu →',
-        'partial_body' => 'Daļu no šā faila neizdevās nolasīt, un tā tika izlaista: :reason',
+        'partial_body' => 'Vienu no šiem failiem neizdevās nolasīt pilnībā, tāpēc tas tika izlaists viss: :reason',
         'empty_body' => 'Šis konta izraksts ir tukšs.',
         'col_date' => 'Datums',
         'col_type' => 'Veids',

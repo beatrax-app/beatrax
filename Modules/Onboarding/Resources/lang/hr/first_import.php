@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'PRAZNO',
         'badge_error' => 'TREBA PONOVNI PRIJENOS',
         'error_body' => 'Nismo mogli pročitati sve datoteke za ovaj izvor. Pokušaj s drugom datotekom →',
-        'partial_body' => 'Dio ove datoteke nije bilo moguće pročitati i izostavljen je: :reason',
+        'partial_body' => 'Jednu od ovih datoteka nije bilo moguće pročitati u cijelosti, pa je izostavljena u cijelosti: :reason',
         'empty_body' => 'Ovaj izvod je prazan.',
         'col_date' => 'Datum',
         'col_type' => 'Vrsta',

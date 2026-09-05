@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'VIDE',
         'badge_error' => 'À RENVOYER',
         'error_body' => 'Nous n\'avons pas pu lire tous les fichiers de cette source. Essaie un autre fichier →',
-        'partial_body' => 'Une partie de ce fichier n\'a pas pu être lue et a été laissée de côté : :reason',
+        'partial_body' => 'L\'un de ces fichiers n\'a pas pu être lu en entier, il a donc été entièrement laissé de côté : :reason',
         'empty_body' => 'Ce relevé est vide.',
         'col_date' => 'Date',
         'col_type' => 'Type',

@@ -39,7 +39,7 @@ return [
         'badge_empty' => 'VAZIO',
         'badge_error' => 'CARREGAR DE NOVO',
         'error_body' => 'Não conseguimos ler todos os ficheiros desta origem. Experimenta outro ficheiro →',
-        'partial_body' => 'Parte deste ficheiro não pôde ser lida e foi deixada de fora: :reason',
+        'partial_body' => 'Um destes ficheiros não pôde ser lido por completo, pelo que foi deixado de fora na íntegra: :reason',
         'empty_body' => 'Este extrato está vazio.',
         'col_date' => 'Data',
         'col_type' => 'Tipo',
