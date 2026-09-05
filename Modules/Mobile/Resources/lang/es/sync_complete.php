@@ -7,6 +7,8 @@ return [
     'heading' => 'Este dispositivo está sincronizado',
     'records' => 'Se ha copiado :count registro desde :peer.|Se han copiado :count registros desde :peer.',
     'records_none' => 'Ya está al día con :peer. No había nada nuevo que copiar.',
+    'withheld' => ':count cambio aún no ha llegado.|:count cambios aún no han llegado.',
+    'withheld_action' => 'Firmados por un dispositivo que este no puede comprobar. No se pierde nada — todo se queda en :peer y llegará si alguno de tus dispositivos pasa esa identidad y tú la confirmas en :section.',
     'how_it_works' => 'A partir de ahora',
     'automatic_title' => 'Tú eliges cuándo se sincroniza',
     'automatic_body' => 'Todo lo que cambies en cualquiera de los dos dispositivos aparece en el otro la próxima vez que toques :action. No puede ejecutarse en segundo plano — el bloqueo de la app guarda la única clave.',

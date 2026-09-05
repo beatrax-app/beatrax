@@ -7,6 +7,8 @@ return [
     'heading' => 'Ez az eszköz szinkronizálva van',
     'records' => ':count rekord átmásolva innen: :peer.|:count rekord átmásolva innen: :peer.',
     'records_none' => 'Naprakész ezzel: :peer. Nem volt új másolnivaló.',
+    'withheld' => ':count módosítás még nem érkezett meg.|:count módosítás még nem érkezett meg.',
+    'withheld_action' => 'Olyan eszköz írta alá őket, amelyet ez az eszköz nem tud ellenőrizni. Semmi nem vész el — minden a(z) :peer eszközön marad, és megérkezik, ha valamelyik eszközöd továbbadja azt az azonosságot, és te megerősíted a(z) :section részben.',
     'how_it_works' => 'Mostantól',
     'automatic_title' => 'Te döntöd el, mikor szinkronizál',
     'automatic_body' => 'Amit bármelyik eszközön módosítasz, megjelenik a másikon, amikor legközelebb a :action gombra koppintasz. A háttérben nem futhat — az appzár őrzi az egyetlen kulcsot.',

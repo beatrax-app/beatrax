@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\HistoryReprojector;
 use Modules\Sync\Public\Services\PeerLanAddressBook;
+use Modules\Sync\Public\Services\WithheldHistoryReport;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -30,11 +31,12 @@ final readonly class InitialSyncPuller
         private Clock $clock,
         private HistoryReprojector $reprojector,
         private PeerLanAddressBook $addresses,
+        private WithheldHistoryReport $withheld,
         private LoggerInterface $logger,
     ) {}
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
     public function pull(
         int $userId,
@@ -71,7 +73,7 @@ final readonly class InitialSyncPuller
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
 
         if ($cursor['phase'] === SyncPhase::Complete) {
-            return $this->toProgressArray($cursor);
+            return $this->toProgressArray($cursor, $this->withheld->totalFor($userId));
         }
 
         return $this->advance($userId, $session, $peerDeviceId, $cursor, $lanHost, $lanPort);
@@ -79,7 +81,7 @@ final readonly class InitialSyncPuller
 
     /**
      * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string, reproject_attempts: int}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
     private function advance(
         int $userId,
@@ -101,8 +103,13 @@ final readonly class InitialSyncPuller
 
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
+        // Written by the exchange that just ran, or left standing by the last
+        // one: what a peer is holding back for an author this device cannot
+        // verify. Read on every tick so a hold that ends is reported ended.
+        $withheldTotal = $this->withheld->totalFor($userId);
+
         if ($result === null) {
-            return [...$this->toProgressArray($cursor), 'blocked' => SyncBlockedReason::Locked];
+            return [...$this->toProgressArray($cursor, $withheldTotal), 'blocked' => SyncBlockedReason::Locked];
         }
 
         [$newlyApplied, $maxHlcL, $maxHlcC] = $this->countAppliedSince(
@@ -143,6 +150,7 @@ final readonly class InitialSyncPuller
                 'percent' => 100,
                 'phase' => SyncPhase::Rebuilding,
                 'blocked' => SyncBlockedReason::Reprojecting,
+                'withheld' => $withheldTotal,
             ];
         }
 
@@ -159,8 +167,13 @@ final readonly class InitialSyncPuller
         $isComplete = $result && $keysInstalled && $reprojectedAt !== null;
 
         $phase = $isComplete ? SyncPhase::Complete : SyncPhase::Pulling;
+
+        // A finished transfer is not a whole history while a peer is holding
+        // entries back, and an expected count equal to what landed renders
+        // that hold as 100%. The denominator is everything this device knows
+        // it is owed, which is what arrived plus what was declared held.
         $recordsExpected = $isComplete
-            ? $recordsApplied
+            ? $recordsApplied + $withheldTotal
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
 
         // An import exists because another device HAS data, so finishing with
@@ -197,6 +210,7 @@ final readonly class InitialSyncPuller
             'percent' => self::percentOf($recordsApplied, $recordsExpected),
             'phase' => $phase,
             'blocked' => $blocked,
+            'withheld' => $withheldTotal,
         ];
     }
 
@@ -271,7 +285,7 @@ final readonly class InitialSyncPuller
     // Reads the durable cursor without driving a step, so a cold-started
     // process paints the true resumed percent instead of flashing 0.
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
     public function progress(int $userId): array
     {
@@ -282,7 +296,7 @@ final readonly class InitialSyncPuller
             ->first();
 
         if ($row === null) {
-            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => SyncPhase::Pending, 'blocked' => null];
+            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => SyncPhase::Pending, 'blocked' => null, 'withheld' => 0];
         }
 
         $recordsApplied = is_numeric($row->records_applied) ? (int) $row->records_applied : 0;
@@ -295,6 +309,7 @@ final readonly class InitialSyncPuller
             'percent' => self::percentOf($recordsApplied, $recordsExpected),
             'phase' => $phase,
             'blocked' => null,
+            'withheld' => $this->withheld->totalFor($userId),
         ];
     }
 
@@ -410,9 +425,10 @@ final readonly class InitialSyncPuller
 
     /**
      * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
+     * @param  int  $withheld  Entries a peer declared it is holding back, echoed through unchanged.
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
-    private function toProgressArray(array $cursor): array
+    private function toProgressArray(array $cursor, int $withheld): array
     {
         return [
             'records_applied' => $cursor['records_applied'],
@@ -420,6 +436,7 @@ final readonly class InitialSyncPuller
             'percent' => self::percentOf($cursor['records_applied'], $cursor['records_expected']),
             'phase' => $cursor['phase'],
             'blocked' => null,
+            'withheld' => $withheld,
         ];
     }
 

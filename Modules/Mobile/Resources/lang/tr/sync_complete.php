@@ -7,6 +7,8 @@ return [
     'heading' => 'Bu cihaz senkronize edildi',
     'records' => ':peer cihazından :count kayıt kopyalandı.',
     'records_none' => ':peer ile güncelsin. Kopyalanacak yeni bir şey yoktu.',
+    'withheld' => ':count değişiklik henüz ulaşmadı.',
+    'withheld_action' => 'Bu cihazın doğrulayamadığı bir cihaz tarafından imzalandılar. Hiçbir şey kaybolmuyor — hepsi :peer cihazında kalır ve cihazlarından biri o kimliği ilettiğinde ve sen onu :section bölümünde onayladığında ulaşırlar.',
     'how_it_works' => 'Bundan sonrası',
     'automatic_title' => 'Ne zaman senkronize olacağına sen karar verirsin',
     'automatic_body' => 'İki cihazdan birinde yaptığın her değişiklik, :action düğmesine bir sonraki dokunuşunda diğerinde de görünür. Arka planda çalışamaz — uygulama kilidi tek anahtarı tutuyor.',

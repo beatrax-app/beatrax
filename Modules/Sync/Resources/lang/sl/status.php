@@ -11,6 +11,7 @@ return [
     'error' => 'Napaka sinhronizacije na eni ali več napravah',
     'syncing' => 'Sinhronizacija…',
     'offline' => 'Naprave brez povezave',
+    'withheld' => 'Spremembe še niso prejete',
     'behind' => 'Spremembe še niso poslane',
     'all_synced' => 'Vse naprave so posodobljene',
     'synced' => 'sinhronizirano',

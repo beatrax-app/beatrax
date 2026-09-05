@@ -11,6 +11,7 @@ return [
     'error' => 'Eroare de sincronizare pe unul sau mai multe dispozitive',
     'syncing' => 'Se sincronizează…',
     'offline' => 'Dispozitive offline',
+    'withheld' => 'Modificările nu au fost încă primite',
     'behind' => 'Modificările nu au fost încă trimise',
     'all_synced' => 'Toate dispozitivele sunt la zi',
     'synced' => 'sincronizat',
