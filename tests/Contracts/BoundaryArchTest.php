@@ -2288,7 +2288,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Tax/tests/Feature/TaxBadgeSurfacesTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/TaxCountryPromptPointsAtTheControlTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
-        'Modules/Tax/tests/Feature/TaxWordingComesFromTheFilingCountryTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/Tax/tests/Feature/TaxWordingFollowsTheReaderNotTheFilingCountryTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Tax/tests/Feature/ThePhoneSheetsNoteFieldCarriesItsOwnLabelTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/ThePickerCategoryListIsNotWireWritableTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
