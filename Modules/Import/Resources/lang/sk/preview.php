@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Tento súbor sa nepodarilo načítať.',
         'file_unreadable_detail' => 'Aplikácia nedokázala načítať tento súbor (:code). Úplné podrobnosti sú v protokole aplikácie; pri hlásení problému uveďte tento kód.',
         'iban_not_in_preview' => 'Tento IBAN nie je súčasťou aktuálneho náhľadu.',
+        'message_unreadable' => 'Túto správu sa nepodarilo načítať, a preto bola preskočená.',
         'not_an_email_file' => 'Tento súbor nie je ani e-mailová správa, ani archív schránky, takže v ňom nie je čo čítať ako účtenku. Vyber typ importu a formát, ktoré zodpovedajú tvojmu súboru.',
         'pdf_has_no_text_layer' => 'Tento PDF neobsahuje žiadny text — je to sken alebo fotka výpisu, takže v ňom nie je čo čítať. Stiahni si samotný výpis z banky alebo použi export CSV.',
         'pdf_password_protected' => 'Tento PDF je chránený heslom, takže ho neotvorí žiadna čítačka. Ulož si v prehliadači PDF nechránenú kópiu a naimportuj ju.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Tento riadok sa nepodarilo načítať.',
         'row_unreadable_detail' => 'Aplikácia nedokázala načítať tento riadok (:code). Úplné podrobnosti sú v protokole aplikácie; pri hlásení problému uveďte tento kód.',
         'unknown_account' => 'Tento riadok patrí k účtu, ktorému si ešte nedal názov.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Tento súbor čaká, kým pomenuješ účet, ku ktorému patria jeho riadky.',
+        'file_did_not_read_in_full' => 'Tento súbor sa nepodarilo prečítať až do konca.',
+        'nothing_importable' => 'Z tohto súboru sa nedá nič importovať.',
+        'preview_expired' => 'Náhľad tohto súboru je príliš starý na to, aby sa teraz uložil. Nahraj ho znova.',
     ],
 
     'receipts' => [

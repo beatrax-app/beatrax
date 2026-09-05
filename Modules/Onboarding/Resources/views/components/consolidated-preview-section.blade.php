@@ -19,9 +19,9 @@
       - empty    — every contributing run was empty (all rows already
                    in the ledger); section eyebrow stays muted; body
                    reads "This statement is empty.".
-      - error    — at least one contributing run's cache was missing
-                   / expired; section body shows a rose-tinted "Try a
-                   different file" prompt.
+      - error    — nothing behind this section survived: every run was
+                   left out, or its cache was missing / expired. The body
+                   shows a rose-tinted "Try a different file" prompt.
 
     Props:
       :section — the ConsolidatedPreviewSection DTO instance.
@@ -77,13 +77,20 @@
     @elseif ($section->status === PreviewSectionStatus::Empty)
         <p class="preview-section-empty">{{ Lang::get('onboarding::first_import.section.empty_body') }}</p>
     @else
-        {{-- A file that stopped being read is left out whole, so a section
+        {{-- A file the confirm would refuse is left out whole, so a section
              holding one alongside a file that read cleanly is READY on the
              other one's rows. Without this the count under the eyebrow is
              simply lower than what the reader uploaded, saying nothing. --}}
-        @if ($section->error !== null)
+        @if ($section->leftOutRunCount > 0)
             <p class="preview-section-error" role="status">
-                {{ Lang::get('onboarding::first_import.section.partial_body', ['reason' => $section->error]) }}
+                {{ Lang::choice('onboarding::first_import.section.left_out', $section->leftOutRunCount, ['reason' => $section->error ?? Lang::get('onboarding::first_import.section.error_body')]) }}
+            </p>
+        {{-- A row that failed is not a file that was left out: the file is
+             here, the rest of it commits, and saying otherwise sent the reader
+             looking for a statement that was never dropped. --}}
+        @elseif ($section->error !== null)
+            <p class="preview-section-error" role="status">
+                {{ Lang::get('onboarding::first_import.section.rows_skipped', ['reason' => $section->error]) }}
             </p>
         @endif
         <table class="preview-section-table">

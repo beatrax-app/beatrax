@@ -8,12 +8,16 @@ use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\ImportFailureReason;
 use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 final class PreviewSeedHelper
 {
+    /**
+     * @param  list<UnknownIban>  $accountsToName
+     */
     public static function seedRunWithPreview(
         int $userId,
         string $sourceFormat,
@@ -21,6 +25,8 @@ final class PreviewSeedHelper
         ?int $accountId = null,
         ?ImportFailureReason $fileFailureReason = null,
         ?string $fileFailureDetail = null,
+        array $accountsToName = [],
+        int $errorRowCount = 0,
     ): int {
         $rowAccountId = $accountId ?? 1;
 
@@ -50,6 +56,22 @@ final class PreviewSeedHelper
             );
         }
 
+        for ($i = 0; $i < $errorRowCount; $i++) {
+            $rows[] = new PreviewRowDto(
+                rowIndex: $newRowCount + $i,
+                status: PreviewRowStatus::Error,
+                accountId: $rowAccountId,
+                postedAt: null,
+                counterpartyName: null,
+                counterpartyIban: null,
+                description: null,
+                amountMinor: null,
+                currency: null,
+                error: ImportFailureReason::RowUnreadable->label(),
+                errorReason: ImportFailureReason::RowUnreadable,
+            );
+        }
+
         /** @var PreviewCache $cache */
         $cache = app(PreviewCache::class);
         $cache->put(
@@ -57,7 +79,7 @@ final class PreviewSeedHelper
             new ImportPreviewResult(
                 importRunId: $run->id,
                 rows: $rows,
-                accountsToName: [],
+                accountsToName: $accountsToName,
                 fileFailureReason: $fileFailureReason,
                 fileFailureDetail: $fileFailureDetail,
             ),

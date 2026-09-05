@@ -196,7 +196,15 @@ final readonly class ImportPipeline
         // file-failure index above is the row the read stopped on, so these are
         // counted past it and never mistaken for where it stopped.
         foreach ($this->unreadableRowIndexes($run->sourceFormat) as $unreadableIndex) {
-            $writer->addRow(self::unreadableRow($unreadableIndex));
+            $writer->addRow(self::unreadableRow($unreadableIndex, ImportFailureReason::RowUnreadable));
+        }
+
+        // A message of an archive that would not read is one document of many,
+        // so it is a failed row rather than a failed file -- counted, listed
+        // and skipped by the same machinery a bad CSV line goes through, which
+        // is what lets the rest of the archive still confirm.
+        foreach ($captures?->unreadableIndexes() ?? [] as $unreadableMessage) {
+            $writer->addRow(self::unreadableRow($unreadableMessage, ImportFailureReason::MessageUnreadable));
         }
 
         return [
@@ -282,7 +290,7 @@ final readonly class ImportPipeline
     // day, no amount and no counterparty to put beside it, and its own file is
     // where the reader goes to find it. Without a row of its own the screen
     // counts a shorter file than the one that was uploaded.
-    private static function unreadableRow(int $rowIndex): PreviewRowDto
+    private static function unreadableRow(int $rowIndex, ImportFailureReason $reason): PreviewRowDto
     {
         return new PreviewRowDto(
             rowIndex: $rowIndex,
@@ -294,8 +302,8 @@ final readonly class ImportPipeline
             description: null,
             amountMinor: null,
             currency: null,
-            error: ImportFailureReason::RowUnreadable->label(),
-            errorReason: ImportFailureReason::RowUnreadable,
+            error: $reason->label(),
+            errorReason: $reason,
         );
     }
 

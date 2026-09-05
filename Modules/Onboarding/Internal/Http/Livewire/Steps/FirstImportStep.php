@@ -23,6 +23,8 @@ use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Import\Public\Enums\PreviewSectionStatus;
+use Modules\Import\Public\Exceptions\ImportNotConfirmableException;
+use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -129,7 +131,10 @@ final class FirstImportStep extends Component
             $now = $clock->now()->toDateTimeString();
             $balanceConfirmations = $this->acceptedBalanceConfirmations($balanceRule);
 
-            $db->connection()->transaction(fn () => $this->persistCommit($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations));
+            $db->connection()->transaction(function () use ($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations, $logger): void {
+                $this->confirmEachStagedRun($confirmImport, $user, $runIdsToCommit, $logger);
+                $this->persistCommit($db, $user, $now, $balanceConfirmations);
+            });
 
             $this->dispatchPostCommit($app, $logger, $user->id);
 
@@ -189,15 +194,32 @@ final class FirstImportStep extends Component
         return $accepted;
     }
 
+    // Every run here was offered because the consolidated preview said the
+    // confirm would take it, so a refusal this late means that stopped being
+    // true in between -- a preview cache that expired mid-review. One run is
+    // then all that is lost, rather than the whole staged set behind it.
     /**
      * @param  list<int>  $runIdsToCommit
-     * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
      */
-    private function persistCommit(DatabaseManager $db, ConfirmsImports $confirmImport, User $user, string $now, array $runIdsToCommit, array $balanceConfirmations): void
+    private function confirmEachStagedRun(ConfirmsImports $confirmImport, User $user, array $runIdsToCommit, LoggerInterface $logger): void
     {
         foreach ($runIdsToCommit as $runId) {
-            ($confirmImport)($runId, $user, dispatchChain: false);
+            try {
+                ($confirmImport)($runId, $user, dispatchChain: false);
+            } catch (ImportNotConfirmableException|PreviewExpiredException $refused) {
+                $logger->warning('FirstImportStep: a staged run was refused at commit and left for a re-upload.', [
+                    'import_run_id' => $runId,
+                    ...SafeExceptionContext::describe($refused),
+                ]);
+            }
         }
+    }
+
+    /**
+     * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
+     */
+    private function persistCommit(DatabaseManager $db, User $user, string $now, array $balanceConfirmations): void
+    {
         foreach ($balanceConfirmations as $accountId => $confirmation) {
             $db->connection()
                 ->table('accounts')

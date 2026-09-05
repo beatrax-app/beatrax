@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Ce fichier n\'a pas pu être lu.',
         'file_unreadable_detail' => 'L\'application n\'a pas pu lire ce fichier (:code). Les détails complets figurent dans le journal ; citez ce code si vous signalez un problème.',
         'iban_not_in_preview' => 'Cet IBAN ne fait pas partie de l\'aperçu actuel.',
+        'message_unreadable' => "Ce message n'a pas pu être lu, il a donc été ignoré.",
         'not_an_email_file' => 'Ce fichier n\'est ni un message e-mail ni une archive de boîte aux lettres, il n\'y a donc rien à y lire comme reçu. Choisis le type d\'import et le format qui correspondent à ton fichier.',
         'pdf_has_no_text_layer' => 'Ce PDF ne contient aucun texte — c\'est un scan ou une photo d\'un relevé, il n\'y a donc rien à y lire. Télécharge le relevé lui-même auprès de ta banque, ou utilise plutôt un export CSV.',
         'pdf_password_protected' => 'Ce PDF est protégé par un mot de passe, aucun lecteur ne peut donc l\'ouvrir. Enregistre une copie non protégée depuis ta visionneuse PDF et importe celle-là.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Cette ligne n\'a pas pu être lue.',
         'row_unreadable_detail' => 'L\'application n\'a pas pu lire cette ligne (:code). Les détails complets figurent dans le journal ; citez ce code si vous signalez un problème.',
         'unknown_account' => 'Cette ligne appartient à un compte auquel tu n\'as pas encore donné de nom.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Ce fichier attend que tu donnes un nom au compte auquel ses lignes appartiennent.',
+        'file_did_not_read_in_full' => "Ce fichier n'a pas pu être lu jusqu'au bout.",
+        'nothing_importable' => 'Rien dans ce fichier ne peut être importé.',
+        'preview_expired' => "L'aperçu de ce fichier est trop ancien pour être enregistré maintenant. Téléverse-le à nouveau.",
     ],
 
     'receipts' => [

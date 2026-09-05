@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Dit bestand kon niet worden gelezen.',
         'file_unreadable_detail' => 'De app kon dit bestand niet lezen (:code). De volledige gegevens staan in het app-logboek; vermeld deze code als je een probleem meldt.',
         'iban_not_in_preview' => 'Dit IBAN maakt geen deel uit van de huidige voorvertoning.',
+        'message_unreadable' => 'Dit bericht kon niet worden gelezen, dus is het overgeslagen.',
         'not_an_email_file' => 'Dit bestand is geen e-mailbericht en geen mailbox-archief, dus er valt niets uit te lezen als bon. Kies het importtype en het formaat die bij je bestand passen.',
         'pdf_has_no_text_layer' => 'Deze pdf bevat geen tekst — het is een scan of een foto van een afschrift, dus er valt niets uit te lezen. Download het afschrift zelf bij je bank, of gebruik een CSV-export.',
         'pdf_password_protected' => 'Deze pdf is beveiligd met een wachtwoord, dus geen enkele lezer krijgt hem open. Sla vanuit je pdf-viewer een onbeveiligde kopie op en importeer die.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Deze regel kon niet worden gelezen.',
         'row_unreadable_detail' => 'De app kon deze regel niet lezen (:code). De volledige gegevens staan in het app-logboek; vermeld deze code als je een probleem meldt.',
         'unknown_account' => 'Deze regel hoort bij een rekening die je nog geen naam hebt gegeven.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Dit bestand wacht tot je de rekening een naam geeft waar de regels bij horen.',
+        'file_did_not_read_in_full' => 'Dit bestand kon niet tot het einde worden gelezen.',
+        'nothing_importable' => 'Er valt niets uit dit bestand te importeren.',
+        'preview_expired' => 'De voorvertoning van dit bestand is te oud om nu vast te leggen. Upload het opnieuw.',
     ],
 
     'receipts' => [

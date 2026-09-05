@@ -84,6 +84,7 @@ final class PreviewHead extends Data
             firstRowErrorReason: $this->firstRowErrorReason,
             fileFailureReason: $this->fileFailureReason,
             fileFailureDetail: $this->fileFailureDetail,
+            confirmRefusal: $this->confirmRefusal(),
         );
     }
 }

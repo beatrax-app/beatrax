@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Bu dosya okunamadı.',
         'file_unreadable_detail' => 'Uygulama bu dosyayı okuyamadı (:code). Ayrıntıların tamamı uygulama günlüğünde; bir sorun bildirirseniz bu kodu belirtin.',
         'iban_not_in_preview' => 'Bu IBAN geçerli önizlemenin bir parçası değil.',
+        'message_unreadable' => 'Bu ileti okunamadı, bu yüzden atlandı.',
         'not_an_email_file' => 'Bu dosya ne bir e-posta iletisi ne de bir posta kutusu arşivi, dolayısıyla içinde fiş olarak okunacak bir şey yok. Dosyana uyan içe aktarma türünü ve biçimi seç.',
         'pdf_has_no_text_layer' => 'Bu PDF hiç metin içermiyor — bir ekstrenin taraması ya da fotoğrafı, dolayısıyla içinde okunacak bir şey yok. Ekstrenin kendisini bankandan indir ya da CSV dışa aktarımı kullan.',
         'pdf_password_protected' => 'Bu PDF parolayla korunuyor, bu yüzden hiçbir okuyucu açamaz. PDF görüntüleyicinden korumasız bir kopya kaydet ve onu içe aktar.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Bu satır okunamadı.',
         'row_unreadable_detail' => 'Uygulama bu satırı okuyamadı (:code). Ayrıntıların tamamı uygulama günlüğünde; bir sorun bildirirseniz bu kodu belirtin.',
         'unknown_account' => 'Bu satır henüz ad vermediğin bir hesaba ait.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Bu dosya, satırlarının ait olduğu hesaba ad vermeni bekliyor.',
+        'file_did_not_read_in_full' => 'Bu dosya sonuna kadar okunamadı.',
+        'nothing_importable' => 'Bu dosyada içe aktarılabilecek hiçbir şey yok.',
+        'preview_expired' => 'Bu dosyanın önizlemesi şimdi kaydedilemeyecek kadar eski. Dosyayı yeniden yükle.',
     ],
 
     'receipts' => [
