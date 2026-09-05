@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'Tietoa päivityksistä',
         'body' => 'Beatrax päivittää itsensä automaattisesti asennuksen jälkeen. Kun olet asentanut aivan ensimmäisen version, tulevat versiot saapuvat sovelluksen sisäisellä ilmoituspalkilla — GitHubiin ei tarvitse palata. Jos jokin tuleva päivitys ei asennu, voit aina ladata uusimman asennusohjelman käsin julkaisusivulta.',
-        'body_phone' => 'Täällä Beatrax ei päivitä itseään. Puhelinsovelluksen uudet versiot tulevat App Storen tai Google Playn kautta, kuten muutkin sovelluksesi. Julkaisusivulla näkyy, mitä kussakin versiossa muuttui.',
+        'body_phone' => 'Täällä Beatrax ei päivitä itseään. Puhelinsovelluksen uudet versiot tulevat App Storen tai Google Playn kautta, kuten muutkin sovelluksesi.',
         'check_label' => 'Tarkista päivitykset automaattisesti',
         'check_on' => 'Beatrax kysyy julkaisusyötteeltä, onko uudempaa allekirjoitettua versiota olemassa. Mitään ei ladata, ennen kuin valitset itse asennuksen.',
         'check_off' => 'Päivityksiä ei tarkisteta eikä mitään lähde tältä laitteelta. Uudet versiot löydät avaamalla julkaisusivun itse.',

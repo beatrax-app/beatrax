@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'Om oppdateringer',
         'body' => 'Beatrax oppdaterer seg selv automatisk når appen først er installert. Etter at du har installert aller første versjon, kommer kommende versjoner via et banner i appen — du trenger ikke gå tilbake til GitHub. Skulle en framtidig oppdatering en gang mislykkes, kan du alltid laste ned det nyeste installasjonsprogrammet manuelt fra utgivelsessiden.',
-        'body_phone' => 'Her oppdaterer ikke Beatrax seg selv. Nye versjoner av telefonappen kommer via App Store eller Google Play, akkurat som de andre appene dine. Utgivelsessiden viser hva som er endret i hver enkelt.',
+        'body_phone' => 'Her oppdaterer ikke Beatrax seg selv. Nye versjoner av telefonappen kommer via App Store eller Google Play, akkurat som de andre appene dine.',
         'check_label' => 'Se etter oppdateringer automatisk',
         'check_on' => 'Beatrax spør utgivelsesstrømmen om det finnes en nyere signert versjon. Ingenting lastes ned før du selv velger å installere den.',
         'check_off' => 'Det ses ikke etter oppdateringer, og ingenting forlater denne enheten. Nye versjoner finner du ved å åpne utgivelsessiden selv.',

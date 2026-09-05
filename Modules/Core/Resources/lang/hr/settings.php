@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'O ažuriranjima',
         'body' => 'Nakon instalacije Beatrax se ažurira automatski. Kad instaliraš prvu verziju, buduće verzije stižu putem trake u aplikaciji — ne moraš se vraćati na GitHub. Ako se neko buduće ažuriranje ne uspije primijeniti, uvijek možeš ručno preuzeti najnoviji instalacijski program sa stranice izdanja.',
-        'body_phone' => 'Ovdje se Beatrax ne ažurira sam. Nove verzije mobilne aplikacije stižu preko App Storea ili Google Playa, kao i ostale tvoje aplikacije. Na stranici izdanja piše što je u svakoj promijenjeno.',
+        'body_phone' => 'Ovdje se Beatrax ne ažurira sam. Nove verzije mobilne aplikacije stižu preko App Storea ili Google Playa, kao i ostale tvoje aplikacije.',
         'check_label' => 'Automatski provjeravaj ažuriranja',
         'check_on' => 'Beatrax pita izvor izdanja postoji li novija potpisana verzija. Ništa se ne preuzima dok sam ne odabereš instalaciju.',
         'check_off' => 'Provjera ažuriranja se ne radi i ništa ne napušta ovaj uređaj. Nove verzije pronalaziš tako da sam otvoriš stranicu izdanja.',

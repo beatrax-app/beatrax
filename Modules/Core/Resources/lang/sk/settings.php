@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'O aktualizáciách',
         'body' => 'Po nainštalovaní sa Beatrax aktualizuje sám. Po inštalácii úplne prvej verzie prichádzajú ďalšie verzie cez banner priamo v aplikácii — na GitHub sa už vracať netreba. Ak by sa niektorá budúca aktualizácia nepodarila, najnovší inštalátor si vždy môžeš znova stiahnuť ručne zo stránky s vydaniami.',
-        'body_phone' => 'Tu sa Beatrax sám neaktualizuje. Nové verzie mobilnej aplikácie prichádzajú cez App Store alebo Google Play, rovnako ako ostatné tvoje aplikácie. Na stránke s vydaniami je uvedené, čo sa v ktorej zmenilo.',
+        'body_phone' => 'Tu sa Beatrax sám neaktualizuje. Nové verzie mobilnej aplikácie prichádzajú cez App Store alebo Google Play, rovnako ako ostatné tvoje aplikácie.',
         'check_label' => 'Automaticky kontrolovať aktualizácie',
         'check_on' => 'Beatrax sa zdroja vydaní spýta, či existuje novšia podpísaná verzia. Nič sa nesťahuje, kým inštaláciu sám nezvolíš.',
         'check_off' => 'Žiadna kontrola aktualizácií sa nevykonáva a nič neopúšťa toto zariadenie. Nové verzie nájdeš tak, že si sám otvoríš stránku s vydaniami.',
