@@ -18,6 +18,7 @@ use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;
 use Modules\Forecasting\Internal\Http\Livewire\ScenarioEditorSidebar;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnDriftDismissed;
+use Modules\Forecasting\Internal\Listeners\ProjectForecastOnPeerRowsApplied;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnRecurringChange;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
@@ -44,6 +45,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
+use Modules\Sync\Public\Events\PeerRowsApplied;
 
 final class ForecastingServiceProvider extends ServiceProvider
 {
@@ -55,6 +57,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectForecastOnRecurringChange::class);
         $this->app->singleton(ProjectForecastOnDriftDismissed::class);
         $this->app->singleton(ProjectForecastOnScenarioChange::class);
+        $this->app->singleton(ProjectForecastOnPeerRowsApplied::class);
 
         // ProjectForecastJob has no entry here: its constructor is positional,
         // so it is dispatched rather than container-resolved.
@@ -110,6 +113,11 @@ final class ForecastingServiceProvider extends ServiceProvider
         $events->listen(ScenarioCreated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioMutated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioDeleted::class, [ProjectForecastOnScenarioChange::class, 'handle']);
+
+        // The same eight changes arriving from a peer. The merge writes them
+        // with the query builder and raises none of the events above, so
+        // without this the projections stay a day behind a household member.
+        $events->listen(PeerRowsApplied::class, [ProjectForecastOnPeerRowsApplied::class, 'handle']);
     }
 
     // The global view() helper is forbidden in module code, so the factory is

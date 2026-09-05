@@ -8,7 +8,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
-use Modules\Sync\Internal\Merge\SearchDocumentRows;
+use Modules\Sync\Internal\Merge\ReplayedRows;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -129,7 +129,7 @@ it('applies a mutually-referencing transfer pair without a foreign-key failure',
     selfRefUnlock($userId);
     $accountId = selfRefAccount($db, $userId);
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
 
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
@@ -168,7 +168,7 @@ it('leaves a self-reference null when its target never arrives', function (): vo
     // never will be, which must cost 251 its link and nothing more.
     unset($creates['transactions'][295]);
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
 
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
@@ -197,7 +197,7 @@ it('resolves a self-reference whose target lands in a later batch', function ():
     $first = ['transactions' => [251 => $creates['transactions'][251]]];
     $second = ['transactions' => [295 => $creates['transactions'][295]]];
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
 
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
@@ -263,7 +263,7 @@ it('resolves a self-reference from the log when the partner landed in a later se
     // An import that spans several sync sessions gets a FRESH applier for each
     // one, so the in-memory carry cannot see a partner that lands after the
     // session holding it ended. Two appliers is what that looks like.
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     app()->make(OpLogEntryApplier::class)->applyCreates(
         ['transactions' => [251 => $creates['transactions'][251]]], [], $userId, '2026-06-10 12:00:00', $touched,
     );
@@ -310,7 +310,7 @@ it('leaves a link alone when the sweep finds the column already filled', functio
     selfRefUnlock($userId);
     $accountId = selfRefAccount($db, $userId);
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     app(OpLogEntryApplier::class)->applyCreates(
         selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched,
     );

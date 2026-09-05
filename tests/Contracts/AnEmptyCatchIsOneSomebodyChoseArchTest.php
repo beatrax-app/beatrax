@@ -101,6 +101,10 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'The quarantine row is the audit of a refusal; replay must continue whether or not that audit lands.',
         ],
+        'Modules/Sync/Internal/Merge/OpLogReplayer.php' => [
+            'count' => 1,
+            'why' => 'It wraps the warning that IS the report of an announcement no listener heard; the merge is already committed, so a logger failing must not turn stale derived state into a stopped catch-up.',
+        ],
         'Modules/Sync/Internal/Merge/SearchIndexRefresher.php' => [
             'count' => 1,
             'why' => 'It wraps the warning that IS the report of a stale index; a logger failing on a full disk must not take merge determinism down with it.',
