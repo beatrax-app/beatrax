@@ -42,6 +42,7 @@ return [
         'email' => 'E-Mail',
         'categorization' => 'Kategorisierung',
         'data_devices' => 'Daten & Geräte',
+        'data_locations' => 'Wo liegen meine Daten?',
         'settings' => 'Einstellungen',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Nicht kategorisierte Transaktionen prüfen',
         'community' => 'Gemeinsames Wissen über Händler',
         'data_devices' => 'Synchronisierung, Kopplung und Backups',
+        'data_locations' => 'Pfade, Export und Löschen',
         'settings' => 'App-Einstellungen',
     ],
 

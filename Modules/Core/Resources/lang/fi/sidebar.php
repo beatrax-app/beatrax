@@ -42,6 +42,7 @@ return [
         'email' => 'Sähköposti',
         'categorization' => 'Luokittelu',
         'data_devices' => 'Tiedot ja laitteet',
+        'data_locations' => 'Missä tietoni ovat?',
         'settings' => 'Asetukset',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Tarkista luokittelemattomat tapahtumat',
         'community' => 'Jaettu tieto kauppiaista',
         'data_devices' => 'Synkronointi, laiteparit ja varmuuskopiot',
+        'data_locations' => 'Polut, vienti ja poistaminen',
         'settings' => 'Sovelluksen asetukset',
     ],
 

@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Kategoryzacja',
         'data_devices' => 'Dane i urządzenia',
+        'data_locations' => 'Gdzie są moje dane?',
         'settings' => 'Ustawienia',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Przejrzyj nieskategoryzowane transakcje',
         'community' => 'Wspólna wiedza o sprzedawcach',
         'data_devices' => 'Synchronizacja, parowanie i kopie zapasowe',
+        'data_locations' => 'Ścieżki, eksport i usuwanie',
         'settings' => 'Preferencje aplikacji',
     ],
 

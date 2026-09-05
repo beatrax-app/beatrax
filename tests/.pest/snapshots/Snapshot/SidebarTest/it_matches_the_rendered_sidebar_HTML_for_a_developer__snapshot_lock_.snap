@@ -170,6 +170,10 @@
         </span>
         Data &amp; devices
     </a>
+    <a href="https://beatrax.test/help/data-locations" class="side-item ">
+        <span class="ic" aria-hidden="true">⌖</span>
+        Where is my data?
+    </a>
     <a href="https://beatrax.test/settings" class="side-item ">
         <span class="ic" aria-hidden="true">⚙️</span>
         Settings

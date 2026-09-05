@@ -42,6 +42,7 @@ return [
         'email' => 'Email',
         'categorization' => 'Categorizzazione',
         'data_devices' => 'Dati e dispositivi',
+        'data_locations' => 'Dove sono i miei dati?',
         'settings' => 'Impostazioni',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Rivedi le transazioni senza categoria',
         'community' => 'Conoscenza condivisa sugli esercenti',
         'data_devices' => 'Sincronizzazione, abbinamento e backup',
+        'data_locations' => 'Percorsi, esportazione ed eliminazione',
         'settings' => 'Preferenze dell’app',
     ],
 

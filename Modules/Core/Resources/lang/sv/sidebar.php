@@ -42,6 +42,7 @@ return [
         'email' => 'E-post',
         'categorization' => 'Kategorisering',
         'data_devices' => 'Data & enheter',
+        'data_locations' => 'Var finns mina data?',
         'settings' => 'Inställningar',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Gå igenom okategoriserade transaktioner',
         'community' => 'Delad kunskap om handlare',
         'data_devices' => 'Synkronisering, parkoppling och säkerhetskopior',
+        'data_locations' => 'Sökvägar, export och radering',
         'settings' => 'Appinställningar',
     ],
 
