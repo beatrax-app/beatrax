@@ -185,8 +185,14 @@ final readonly class BuildConsolidatedPreviewQuery
                 // promise the reader an import the commit then cannot make --
                 // and one refusal takes every run staged beside it down with it.
                 $leftOutCount++;
+                // Narrowest true answer first. A run refused because every row
+                // failed has no file-level reason, and the refusal's own label
+                // only says nothing can be imported -- which the reader can see.
+                // The first row's reason is the one that says what to do about
+                // it, so it is preferred over the vocabulary of the refusal.
                 $leftOutText ??= $summary->fileFailureDetail
                     ?? $summary->fileFailureReason?->label()
+                    ?? $summary->firstRowErrorReason?->label()
                     ?? $refusal->label();
 
                 continue;
