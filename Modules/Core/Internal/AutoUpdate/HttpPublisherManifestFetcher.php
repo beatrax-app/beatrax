@@ -50,11 +50,10 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         }
     }
 
-    // Three unrelated ways to have no manifest — the reader switched the check
-    // off, the feed is unconfigured, the OS publishes none — and only the last
-    // is worth a line in the log, which is why the two silent ones refuse
-    // together. Both listeners reach the feed through here and nothing else
-    // does, so a refusal here is the whole outbound surface.
+    // Three ways to have no manifest — the check is off, the feed is
+    // unconfigured, the OS publishes none — and only the last is worth logging,
+    // which is why the two silent ones refuse together. Both listeners reach
+    // the feed here and nowhere else, so this is the whole outbound surface.
     private function manifestUrl(string $channel): ?string
     {
         $base = $this->config->get('auto_update.manifest_feed_url');
