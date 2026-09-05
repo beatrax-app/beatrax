@@ -7,6 +7,7 @@ namespace Modules\Receipts\Public\Pipeline;
 use Generator;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Receipts\Public\Exceptions\MboxReadException;
+use Modules\Receipts\Public\Support\ReceiptCaptureLog;
 
 // Streaming mboxrd iterator: messages split on lines starting with the
 // literal "From " (stripped); an escaped body line ('>From ') is
@@ -15,11 +16,12 @@ use Modules\Receipts\Public\Exceptions\MboxReadException;
 final class MboxIterator
 {
     /**
+     * @param  ReceiptCaptureLog|null  $captures  Told the ordinal of every message this could not carve out, so a caller can report the archive it skipped part of rather than importing fewer messages than the reader handed over. A caller that passes none has nowhere to put that fact, and gets MboxReadException instead of a quietly shorter archive.
      * @return Generator<int, array{eml: string, byteOffset: int, index: int}>
      *
      * @throws MboxReadException
      */
-    public function iterate(string $mboxPath): Generator
+    public function iterate(string $mboxPath, ?ReceiptCaptureLog $captures = null): Generator
     {
         $fh = @fopen($mboxPath, 'rb');
         if ($fh === false) {
@@ -30,16 +32,25 @@ final class MboxIterator
             $index = 0;
             $offset = 0;
             $inMessage = false;
+            $overflowed = false;
             while (($line = fgets($fh)) !== false) {
                 if (str_starts_with($line, 'From ')) {
-                    if ($inMessage && $buffer !== '') {
+                    if ($overflowed) {
+                        $captures?->recordUnreadable($index);
+                        $index++;
+                    } elseif ($inMessage && $buffer !== '') {
                         yield ['eml' => $buffer, 'byteOffset' => $offset, 'index' => $index];
                         $index++;
                     }
                     $buffer = '';
                     $offset = (int) ftell($fh);
                     $inMessage = true;
+                    $overflowed = false;
 
+                    continue;
+                }
+
+                if ($overflowed) {
                     continue;
                 }
 
@@ -49,15 +60,22 @@ final class MboxIterator
 
                 $buffer .= $line;
 
-                // "From "-less input (a corrupt archive, or a single crafted
-                // message with no delimiter) would otherwise grow the buffer
-                // without bound; cap one message so the archive is quarantined
-                // rather than exhausting the worker's memory.
+                // A delimiter-less run of bytes would grow the buffer without
+                // bound, so it is dropped and the read resumes at the next
+                // delimiter. An archive is independent documents: the rest of
+                // them are not this one's to take down with it.
                 if (strlen($buffer) > UploadLimits::MAX_MESSAGE_BYTES) {
-                    throw MboxReadException::messageTooLarge($mboxPath);
+                    if ($captures === null) {
+                        throw MboxReadException::messageTooLarge($mboxPath);
+                    }
+
+                    $buffer = '';
+                    $overflowed = true;
                 }
             }
-            if ($inMessage && $buffer !== '') {
+            if ($overflowed) {
+                $captures?->recordUnreadable($index);
+            } elseif ($inMessage && $buffer !== '') {
                 yield ['eml' => $buffer, 'byteOffset' => $offset, 'index' => $index];
             }
         } finally {

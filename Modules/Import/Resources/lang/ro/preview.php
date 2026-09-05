@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Acest fișier nu a putut fi citit.',
         'file_unreadable_detail' => 'Aplicația nu a putut citi acest fișier (:code). Detaliile complete se află în jurnalul aplicației; menționați acest cod dacă raportați o problemă.',
         'iban_not_in_preview' => 'Acest IBAN nu face parte din previzualizarea curentă.',
+        'message_unreadable' => 'Acest mesaj nu a putut fi citit, așa că a fost omis.',
         'not_an_email_file' => 'Acest fișier nu este nici mesaj de e-mail, nici arhivă de căsuță poștală, deci nu are ce să fie citit în el ca bon. Alege tipul de import și formatul care se potrivesc fișierului tău.',
         'pdf_has_no_text_layer' => 'Acest PDF nu conține text — este o scanare sau o fotografie a unui extras, deci nu are ce să fie citit în el. Descarcă extrasul propriu-zis de la bancă sau folosește un export CSV.',
         'pdf_password_protected' => 'Acest PDF este protejat cu parolă, așa că niciun cititor nu îl poate deschide. Salvează o copie neprotejată din vizualizatorul tău de PDF și importă copia aceea.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Acest rând nu a putut fi citit.',
         'row_unreadable_detail' => 'Aplicația nu a putut citi acest rând (:code). Detaliile complete se află în jurnalul aplicației; menționați acest cod dacă raportați o problemă.',
         'unknown_account' => 'Acest rând aparține unui cont căruia nu i-ai dat încă un nume.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Acest fișier așteaptă să dai un nume contului căruia îi aparțin rândurile lui.',
+        'file_did_not_read_in_full' => 'Acest fișier nu a putut fi citit până la capăt.',
+        'nothing_importable' => 'Nimic din acest fișier nu poate fi importat.',
+        'preview_expired' => 'Previzualizarea acestui fișier este prea veche pentru a fi salvată acum. Încarcă-l din nou.',
     ],
 
     'receipts' => [

@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Šo failu neizdevās nolasīt.',
         'file_unreadable_detail' => 'Lietotne nevarēja nolasīt šo failu (:code). Pilnas ziņas ir lietotnes žurnālā; ziņojot par problēmu, norādiet šo kodu.',
         'iban_not_in_preview' => 'Šis IBAN nav daļa no pašreizējā priekšskatījuma.',
+        'message_unreadable' => 'Šo vēstuli neizdevās nolasīt, tāpēc tā tika izlaista.',
         'not_an_email_file' => 'Šis fails nav ne e-pasta ziņojums, ne pastkastes arhīvs, tāpēc tajā nav ko lasīt kā čeku. Izvēlies importa veidu un formātu, kas atbilst tavam failam.',
         'pdf_has_no_text_layer' => 'Šajā PDF nav teksta — tas ir izraksta skenējums vai fotoattēls, tāpēc tajā nav ko lasīt. Lejupielādē pašu izrakstu no savas bankas vai izmanto CSV eksportu.',
         'pdf_password_protected' => 'Šis PDF ir aizsargāts ar paroli, tāpēc to nevar atvērt neviens lasītājs. Saglabā PDF skatītājā neaizsargātu kopiju un importē to.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Šo rindu neizdevās nolasīt.',
         'row_unreadable_detail' => 'Lietotne nevarēja nolasīt šo rindu (:code). Pilnas ziņas ir lietotnes žurnālā; ziņojot par problēmu, norādiet šo kodu.',
         'unknown_account' => 'Šī rinda pieder kontam, kuram vēl neesi devis nosaukumu.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Šis fails gaida, līdz nosauksi kontu, kuram pieder tā rindas.',
+        'file_did_not_read_in_full' => 'Šo failu neizdevās nolasīt līdz galam.',
+        'nothing_importable' => 'No šī faila neko nevar importēt.',
+        'preview_expired' => 'Šī faila priekšskatījums ir pārāk vecs, lai to tagad saglabātu. Augšupielādē to vēlreiz.',
     ],
 
     'receipts' => [

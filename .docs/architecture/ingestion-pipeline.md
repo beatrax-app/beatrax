@@ -54,6 +54,34 @@ per-message flow for each contained message. The `User` is required only
 for these receipt arms (to scope the `file_imports` row per-user); the
 CSV/CAMT/MT940/PDF arms ignore it.
 
+**An archive fails one document at a time.** A statement is one continuous
+period, so a read that stops part-way through one is refused whole (see
+[What may not be confirmed](#what-may-not-be-confirmed)). An `.mbox` is a
+concatenation of independent documents, and message 400 failing says nothing
+about messages 1 to 399 — there is no gap it could be hiding, because there is
+no continuity to gap. So the `mbox` arm carries its own per-message guard:
+anything raised by `RecordReceipt` for one message is logged, recorded on the
+run's `ReceiptCaptureLog` as an unreadable ordinal, and the read moves to the
+next message. `MboxIterator` does the same for a message that overruns
+`UploadLimits::MAX_MESSAGE_BYTES` — the buffer is dropped, the ordinal is
+recorded, and the scan resumes at the next `From ` delimiter — but only for a
+caller that handed it a `ReceiptCaptureLog`. A caller with nowhere to record a
+skipped ordinal still gets `MboxReadException`, because a quietly shorter
+archive is the failure this is fixing: `ScanInboxDropFolderJob` has no preview
+to report on, and its answer stays a quarantined file in `failed/` the reader
+can see. `ImportPipeline` turns each recorded ordinal into an ERROR row
+carrying `ImportFailureReason::MessageUnreadable`, so a skipped message is
+counted, listed and reported through the same machinery a bad CSV line uses —
+which is what leaves the rest of the archive confirmable.
+
+The two exceptions the guard re-raises are `BlindIndexKeyUnavailableException`
+and `SensitiveColumnKeyUnavailableException`. Neither is the document's fault
+and both recur for every message, so swallowing them per-message would report
+an app-locked run as four hundred unreadable receipts.
+
+The `.eml` arm stays file-fatal, because a single message *is* the file: there
+is no other document in it to save.
+
 Before either arm reads a byte, `ReceiptFileShape::of()` (Receipts) answers
 which of the two transports the file actually is, off its own head: mboxrd puts
 a literal "From " at the start of the file and a single message never opens with
@@ -316,13 +344,34 @@ Anything that *offers* a run for confirming has to read the same rule, or
 it promises an import the confirm then refuses.
 `BuildConsolidatedPreviewQuery::buildSection()` is the second such place:
 the first-run wizard commits every run of every `Ready` section inside one
-transaction, so a run carrying a file failure does not fail alone — it
-takes every statement staged beside it down with it, and the step has no
-per-run discard to escape by. Such a run is therefore left out of the
-section whole: its rows are not counted, its sample is not shown, and its
-id is not in `importRunIds`. A section holding only that file has no rows
-left and reads `Error`; one holding it beside a file that read cleanly is
-`Ready` on the clean file's rows and carries the reason in `error`.
+transaction, so a refused run does not fail alone — it takes every statement
+staged beside it down with it, and the step has no per-run discard to escape
+by. It therefore reads the refusal itself, off
+`PreviewSectionSummary::$confirmRefusal`, rather than restating a piece of it:
+restating one of the three is how a run waiting for an account name, and a run
+whose every row failed, were both still being offered. A run the confirm would
+refuse is left out of the section whole — its rows are not counted, its sample
+is not shown, and its id is not in `importRunIds` — and so is a run whose
+preview cache has gone, which the confirm cannot read at all. The section
+counts what it left out in `leftOutRunCount` and names one reason in `error`,
+because a count that is simply lower than what the reader uploaded says
+nothing. A section with nothing left reads `Error`; one holding a refused run
+beside a file that read cleanly is `Ready` on the clean file's rows.
+
+A statement with no rows in it is the one refusal that is not a file left out:
+there was nothing in it to leave, so it is counted apart and a section of
+nothing but empty statements still reads `Empty` rather than sending the reader
+after a file that is already as complete as it will ever be.
+
+`FirstImportStep::confirmEachStagedRun()` closes the same gap at the write
+boundary.
+Every run it hands over was offered because the query said the confirm would
+take it, so a refusal arriving there means that stopped being true in between —
+a preview cache that expired mid-review. It catches
+`ImportNotConfirmableException` and `PreviewExpiredException` per run, logs the
+run id, and carries on; the run keeps its `previewed` status and the reader can
+upload it again. Anything else still rolls the batch back, because anything
+else is not a statement about one run.
 
 `OpenBankingSyncRunner` records the refusal as a failed attempt and does
 **not** advance `last_successful_sync_at`, so the window stays open and

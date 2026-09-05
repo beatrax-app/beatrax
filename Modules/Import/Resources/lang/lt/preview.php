@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Šio failo nepavyko perskaityti.',
         'file_unreadable_detail' => 'Programai nepavyko perskaityti šio failo (:code). Visa informacija yra programos žurnale; pranešdami apie problemą nurodykite šį kodą.',
         'iban_not_in_preview' => 'Šis IBAN nėra dabartinės peržiūros dalis.',
+        'message_unreadable' => 'Šio laiško nepavyko perskaityti, todėl jis buvo praleistas.',
         'not_an_email_file' => 'Šis failas nėra nei el. laiškas, nei pašto dėžutės archyvas, tad jame nėra ko skaityti kaip kvito. Pasirink importo tipą ir formatą, atitinkančius tavo failą.',
         'pdf_has_no_text_layer' => 'Šiame PDF nėra teksto — tai išrašo nuskaitymas arba nuotrauka, tad jame nėra ko skaityti. Atsisiųsk patį išrašą iš savo banko arba naudok CSV eksportą.',
         'pdf_password_protected' => 'Šis PDF apsaugotas slaptažodžiu, tad jo neatidarys nė viena skaityklė. Savo PDF peržiūros programoje išsaugok neapsaugotą kopiją ir importuok ją.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Šios eilutės nepavyko perskaityti.',
         'row_unreadable_detail' => 'Programai nepavyko perskaityti šios eilutės (:code). Visa informacija yra programos žurnale; pranešdami apie problemą nurodykite šį kodą.',
         'unknown_account' => 'Ši eilutė priklauso sąskaitai, kuriai dar nesuteikei pavadinimo.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Šis failas laukia, kol suteiksi pavadinimą sąskaitai, kuriai priklauso jo eilutės.',
+        'file_did_not_read_in_full' => 'Šio failo nepavyko perskaityti iki galo.',
+        'nothing_importable' => 'Iš šio failo nieko negalima importuoti.',
+        'preview_expired' => 'Šio failo peržiūra per sena, kad būtų galima dabar išsaugoti. Įkelk jį iš naujo.',
     ],
 
     'receipts' => [

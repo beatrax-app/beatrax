@@ -216,6 +216,7 @@ final readonly class PreviewCache
             firstRowErrorReason: $summary->firstRowErrorReason,
             fileFailureReason: $summary->fileFailureReason,
             fileFailureDetail: $summary->fileFailureDetail,
+            confirmRefusal: $summary->confirmRefusal,
         );
     }
 

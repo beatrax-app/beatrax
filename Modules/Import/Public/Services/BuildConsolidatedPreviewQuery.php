@@ -7,6 +7,8 @@ namespace Modules\Import\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
+use Modules\Import\Internal\Enums\ConfirmRefusal;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
@@ -152,28 +154,40 @@ final readonly class BuildConsolidatedPreviewQuery
         $errorRowCount = 0;
         $committableRowCount = 0;
         $duplicateRowCount = 0;
-        $hasCacheMiss = false;
-        $fileFailed = false;
-        $fileFailureText = null;
+        $leftOutCount = 0;
+        $leftOutText = null;
         // The reason, translated, rather than the exception's own words: those
         // name internal classes and the reader's user id, and this is rendered.
         $rowFailureText = null;
 
         foreach ($importRunIds as $runId) {
             $summary = $this->cache->sectionSummary($runId, $limit);
+
             if ($summary === null) {
-                $hasCacheMiss = true;
+                $leftOutCount++;
+                $leftOutText ??= Lang::get('import::preview.refused.preview_expired');
 
                 continue;
             }
-            if ($summary->fileFailureReason !== null) {
-                // The whole run drops out, not just the rows past the stop:
+
+            $refusal = $summary->confirmRefusal;
+
+            if ($refusal === ConfirmRefusal::NothingImportable && $summary->rowCount === 0) {
+                // A file with no rows in it was not left out -- there was
+                // nothing in it to leave. Counted apart from the refusals so a
+                // section of nothing but empty statements still reads 'empty'.
+                continue;
+            }
+
+            if ($refusal !== null) {
+                // The whole run drops out, not just the rows past a stop:
                 // ConfirmImport refuses it, so counting its rows here would
                 // promise the reader an import the commit then cannot make --
-                // and one refusal would take the whole batch down with it.
-                $fileFailed = true;
-                $fileFailureText ??= $summary->fileFailureDetail
-                    ?? $summary->fileFailureReason->label();
+                // and one refusal takes every run staged beside it down with it.
+                $leftOutCount++;
+                $leftOutText ??= $summary->fileFailureDetail
+                    ?? $summary->fileFailureReason?->label()
+                    ?? $refusal->label();
 
                 continue;
             }
@@ -199,22 +213,23 @@ final readonly class BuildConsolidatedPreviewQuery
                 importRunIds: $committableRunIds,
                 totalRows: $committableRowCount,
                 sampleRows: $sampleRows,
-                status: self::resolveSectionStatus($hasCacheMiss, $rowCount, $errorRowCount, $fileFailed),
-                error: $fileFailureText ?? $rowFailureText,
+                status: self::resolveSectionStatus(count($committableRunIds), $rowCount, $errorRowCount, $leftOutCount),
+                error: $leftOutText ?? $rowFailureText,
+                leftOutRunCount: $leftOutCount,
             ),
             $duplicateRowCount,
         ];
     }
 
-    private static function resolveSectionStatus(bool $hasCacheMiss, int $rowCount, int $errorRowCount, bool $fileFailed): PreviewSectionStatus
+    private static function resolveSectionStatus(int $committableRunCount, int $rowCount, int $errorRowCount, int $leftOutCount): PreviewSectionStatus
     {
-        if ($hasCacheMiss) {
-            return PreviewSectionStatus::Error;
+        if ($committableRunCount === 0) {
+            // Nothing survived. A run that was left out is a failure the reader
+            // has to act on; a section of empty statements is not.
+            return $leftOutCount === 0 ? PreviewSectionStatus::Empty : PreviewSectionStatus::Error;
         }
         if ($rowCount === 0) {
-            // A file that failed before it yielded anything is a failure, not
-            // an empty statement: 'empty' says every row was already imported.
-            return $fileFailed ? PreviewSectionStatus::Error : PreviewSectionStatus::Empty;
+            return $leftOutCount > 0 ? PreviewSectionStatus::Error : PreviewSectionStatus::Empty;
         }
 
         // A row that failed counts as neither committable nor duplicate.

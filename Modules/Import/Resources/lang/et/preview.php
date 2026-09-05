@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Seda faili ei õnnestunud lugeda.',
         'file_unreadable_detail' => 'Rakendus ei suutnud seda faili lugeda (:code). Täielikud üksikasjad on rakenduse logis; probleemist teatades viita sellele koodile.',
         'iban_not_in_preview' => 'See IBAN ei kuulu praegusesse eelvaatesse.',
+        'message_unreadable' => 'Seda sõnumit ei õnnestunud lugeda, seega jäeti see vahele.',
         'not_an_email_file' => 'See fail pole ei e-kiri ega postkasti arhiiv, nii et sealt pole midagi kviitungina lugeda. Vali impordi tüüp ja vorming, mis sinu failile vastavad.',
         'pdf_has_no_text_layer' => 'See PDF ei sisalda teksti — see on väljavõtte skann või foto, nii et sealt pole midagi lugeda. Laadi pangast alla väljavõte ise või kasuta CSV-eksporti.',
         'pdf_password_protected' => 'See PDF on parooliga kaitstud, nii et ükski lugeja ei ava seda. Salvesta oma PDF-vaaturist kaitseta koopia ja impordi see.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Seda rida ei õnnestunud lugeda.',
         'row_unreadable_detail' => 'Rakendus ei suutnud seda rida lugeda (:code). Täielikud üksikasjad on rakenduse logis; probleemist teatades viita sellele koodile.',
         'unknown_account' => 'See rida kuulub kontole, millele sa pole veel nime andnud.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'See fail ootab, et annaksid nime kontole, kuhu selle read kuuluvad.',
+        'file_did_not_read_in_full' => 'Seda faili ei õnnestunud lõpuni lugeda.',
+        'nothing_importable' => 'Selles failis pole midagi, mida importida.',
+        'preview_expired' => 'Selle faili eelvaade on liiga vana, et seda nüüd salvestada. Laadi see uuesti üles.',
     ],
 
     'receipts' => [

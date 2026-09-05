@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'No se ha podido leer este archivo.',
         'file_unreadable_detail' => 'La aplicación no ha podido leer este archivo (:code). Los detalles completos están en el registro de la aplicación; cita este código si informas de un problema.',
         'iban_not_in_preview' => 'Este IBAN no forma parte de la vista previa actual.',
+        'message_unreadable' => 'No se ha podido leer este mensaje, así que se ha omitido.',
         'not_an_email_file' => 'Este archivo no es ni un mensaje de correo ni un archivo de buzón, así que no hay nada en él que leer como recibo. Elige el tipo de importación y el formato que coincidan con tu archivo.',
         'pdf_has_no_text_layer' => 'Este PDF no contiene texto: es un escaneo o una foto de un extracto, así que no hay nada que leer en él. Descarga el extracto en sí de tu banco, o usa una exportación CSV.',
         'pdf_password_protected' => 'Este PDF está protegido con contraseña, así que ningún lector puede abrirlo. Guarda una copia sin protección desde tu visor de PDF e importa esa.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'No se ha podido leer esta fila.',
         'row_unreadable_detail' => 'La aplicación no ha podido leer esta fila (:code). Los detalles completos están en el registro de la aplicación; cita este código si informas de un problema.',
         'unknown_account' => 'Esta fila pertenece a una cuenta a la que aún no has puesto nombre.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Este archivo espera a que pongas nombre a la cuenta a la que pertenecen sus filas.',
+        'file_did_not_read_in_full' => 'Este archivo no se ha podido leer hasta el final.',
+        'nothing_importable' => 'No hay nada en este archivo que se pueda importar.',
+        'preview_expired' => 'La vista previa de este archivo es demasiado antigua para guardarla ahora. Vuelve a subirlo.',
     ],
 
     'receipts' => [

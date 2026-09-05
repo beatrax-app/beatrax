@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'This file could not be read.',
         'file_unreadable_detail' => 'The app could not read this file (:code). The full details are in the app log; quote this code if you report a problem.',
         'iban_not_in_preview' => 'This IBAN is not part of the current preview.',
+        'message_unreadable' => 'This message could not be read, so it was skipped.',
         'not_an_email_file' => 'This file is neither an email message nor a mailbox archive, so there is nothing in it to read as a receipt. Pick the import type and format that match the file you have.',
         'pdf_has_no_text_layer' => 'This PDF holds no text — it is a scan or a photo of a statement, so there is nothing in it to read. Download the statement itself from your bank, or use a CSV export instead.',
         'pdf_password_protected' => 'This PDF is password-protected, so no reader can open it. Save an unprotected copy from your PDF viewer and import that one.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'This row could not be read.',
         'row_unreadable_detail' => 'The app could not read this row (:code). The full details are in the app log; quote this code if you report a problem.',
         'unknown_account' => 'This row belongs to an account you have not named yet.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'This file is waiting for you to name the account its rows belong to.',
+        'file_did_not_read_in_full' => 'This file could not be read all the way to the end.',
+        'nothing_importable' => 'Nothing in this file can be imported.',
+        'preview_expired' => 'This file was previewed too long ago to commit now. Upload it again.',
     ],
 
     'receipts' => [

@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Tätä tiedostoa ei voitu lukea.',
         'file_unreadable_detail' => 'Sovellus ei voinut lukea tätä tiedostoa (:code). Täydet tiedot ovat sovelluslokissa; mainitse tämä koodi, jos ilmoitat ongelmasta.',
         'iban_not_in_preview' => 'Tämä IBAN ei kuulu nykyiseen esikatseluun.',
+        'message_unreadable' => 'Tätä viestiä ei voitu lukea, joten se ohitettiin.',
         'not_an_email_file' => 'Tämä tiedosto ei ole sähköpostiviesti eikä postilaatikkoarkisto, joten siinä ei ole mitään luettavaa kuittina. Valitse tuontityyppi ja muoto, jotka vastaavat tiedostoasi.',
         'pdf_has_no_text_layer' => 'Tässä PDF:ssä ei ole tekstiä — se on skannaus tai valokuva tiliotteesta, joten siitä ei ole mitään luettavaa. Lataa itse tiliote pankistasi tai käytä CSV-vientiä.',
         'pdf_password_protected' => 'Tämä PDF on salasanasuojattu, joten mikään lukija ei saa sitä auki. Tallenna PDF-katselimestasi suojaamaton kopio ja tuo se.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Tätä riviä ei voitu lukea.',
         'row_unreadable_detail' => 'Sovellus ei voinut lukea tätä riviä (:code). Täydet tiedot ovat sovelluslokissa; mainitse tämä koodi, jos ilmoitat ongelmasta.',
         'unknown_account' => 'Tämä rivi kuuluu tilille, jolle et ole vielä antanut nimeä.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Tämä tiedosto odottaa, että annat nimen tilille, jolle sen rivit kuuluvat.',
+        'file_did_not_read_in_full' => 'Tätä tiedostoa ei voitu lukea loppuun asti.',
+        'nothing_importable' => 'Tässä tiedostossa ei ole mitään tuotavaa.',
+        'preview_expired' => 'Tämän tiedoston esikatselu on liian vanha tallennettavaksi nyt. Lähetä se uudelleen.',
     ],
 
     'receipts' => [

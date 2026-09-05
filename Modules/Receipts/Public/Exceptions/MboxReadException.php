@@ -17,6 +17,10 @@ final class MboxReadException extends RuntimeException
         return new self("MboxIterator: cannot open mbox at {$path}.");
     }
 
+    // Raised only for a caller that gave the iterator nowhere to record a
+    // skipped message. One handed a ReceiptCaptureLog gets the messages it
+    // could carve out and the ordinal of the one it could not; one that cannot
+    // report a skip must not be handed a quietly shorter archive.
     public static function messageTooLarge(string $path): self
     {
         return new self("MboxIterator: a single message in {$path} exceeds the size cap.");
