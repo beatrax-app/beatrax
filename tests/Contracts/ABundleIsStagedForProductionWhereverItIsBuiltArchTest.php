@@ -146,3 +146,53 @@ it('overrides the development environment in every job that builds a bundle', fu
         'four bundle-staging steps. Copy that block rather than writing a new one.',
     ]));
 });
+
+// verify-signature refuses a macOS artefact it cannot name: an unverifiable
+// identity is treated exactly like a wrong one, so an invocation that omits
+// the input does not skip the check, it fails the job.
+it('hands the macOS signature check an identifier to check against', function (): void {
+    $files = bundlingWorkflowFiles();
+
+    expect($files)->not->toBeEmpty();
+
+    $offenders = [];
+
+    foreach ($files as $file) {
+        $lines = explode("\n", (string) file_get_contents($file));
+
+        foreach ($lines as $number => $line) {
+            if (! str_contains($line, 'uses: ./.github/actions/verify-signature')) {
+                continue;
+            }
+
+            $window = implode("\n", array_slice($lines, $number, 6));
+
+            if (! str_contains($window, 'platform: macos')) {
+                continue;
+            }
+
+            if (str_contains($window, 'expected-identifier:')) {
+                continue;
+            }
+
+            $offenders[] = basename($file).':'.($number + 1);
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These steps verify a macOS bundle without telling the action which',
+        'identifier the bundle must declare:',
+        ...$offenders,
+        '',
+        'The action fails outright on an empty expected-identifier, so this is',
+        'not a weaker check -- it is a job that cannot pass. release.yml carried',
+        'it while release-build.yml did not, which meant the publishing pipeline',
+        'was the broken one and the workflow that only produces artefacts for',
+        'inspection was the strict one.',
+        '',
+        'Resolve it from the build with `config(\'nativephp.app_id\')` rather than',
+        'writing the string twice: codesign prints an Identifier for whatever it',
+        'was handed, so a bundle notarised under the framework scaffold id is a',
+        'correctly signed lie.',
+    ]));
+});
