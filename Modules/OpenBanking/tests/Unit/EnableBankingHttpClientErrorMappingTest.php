@@ -15,42 +15,34 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 // Asserted from a real Guzzle response, not by constructing the exception: the
 // status is the only thing telling a lapsed consent from a bank having a bad
 // day, and a hand-built exception would pass even if the client stopped reading it.
 
-function ebErrSecrets(string $privateKeyPem): OpenBankingSecretsRepository
+// The client holds no credential of its own, so the DTO is built here and
+// handed to the call, rather than read back out of a secrets double.
+function ebErrCredentials(string $privateKeyPem): OpenBankingCredentials
 {
-    return new class($privateKeyPem) extends OpenBankingSecretsRepository
-    {
-        public function __construct(private readonly string $privateKeyPem) {}
-
-        public function load(): ?OpenBankingCredentials
-        {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: $this->privateKeyPem,
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: null,
-                institutionId: 'asn',
-            );
-        }
-    };
+    return new OpenBankingCredentials(
+        applicationId: 'fixture-application-id',
+        privateKeyPem: $privateKeyPem,
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: null,
+        institutionId: 'asn',
+    );
 }
 
-function ebErrClient(OpenBankingSecretsRepository $secrets, EnableBankingJwtSigner $signer, MockHandler $mock): EnableBankingHttpClient
+function ebErrClient(EnableBankingJwtSigner $signer, MockHandler $mock): EnableBankingHttpClient
 {
-    return new class($secrets, $signer, $mock) extends EnableBankingHttpClient
+    return new class($signer, $mock) extends EnableBankingHttpClient
     {
         public function __construct(
-            OpenBankingSecretsRepository $secrets,
             EnableBankingJwtSigner $jwtSigner,
             private readonly MockHandler $mock,
         ) {
-            parent::__construct($secrets, $jwtSigner);
+            parent::__construct($jwtSigner);
         }
 
         protected function makeHttpClient(): GuzzleClient
@@ -69,7 +61,7 @@ beforeEach(function (): void {
         throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
     }
     openssl_pkey_export($resource, $privateKeyPem);
-    $this->privateKeyPem = $privateKeyPem;
+    $this->credentials = ebErrCredentials($privateKeyPem);
 
     $clock = new class implements Clock
     {
@@ -84,10 +76,10 @@ beforeEach(function (): void {
 
 it('carries the response status onto the exception', function (int $status, bool $terminal): void {
     $mock = new MockHandler([new Response($status, [], 'upstream said no')]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
     try {
-        $client->aspsps('NL');
+        $client->aspsps($this->credentials, 'NL');
         expect(false)->toBeTrue('the client should not have returned a result');
     } catch (EnableBankingApiException $e) {
         expect($e->status)->toBe($status)
@@ -107,10 +99,10 @@ it('reports a transport failure with no status at all', function (): void {
     $mock = new MockHandler([
         new ConnectException('Connection refused', new Request('GET', 'https://api.enablebanking.com/aspsps')),
     ]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
     try {
-        $client->aspsps('NL');
+        $client->aspsps($this->credentials, 'NL');
         expect(false)->toBeTrue('the client should not have returned a result');
     } catch (EnableBankingApiException $e) {
         expect($e->status)->toBeNull()
@@ -121,9 +113,9 @@ it('reports a transport failure with no status at all', function (): void {
 
 it('refuses a 2xx whose body is not JSON', function (): void {
     $mock = new MockHandler([new Response(200, ['Content-Type' => 'application/json'], '{not json')]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
-    expect(fn () => $client->aspsps('NL'))
+    expect(fn () => $client->aspsps($this->credentials, 'NL'))
         ->toThrow(EnableBankingApiException::class, 'did not decode as JSON');
 });
 
@@ -131,9 +123,9 @@ it('refuses a 2xx whose body is not JSON', function (): void {
 // was empty, which every caller already handles.
 it('reads a well-formed non-object body as an empty result', function (string $body): void {
     $mock = new MockHandler([new Response(200, ['Content-Type' => 'application/json'], $body)]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
-    expect($client->aspsps('NL'))->toBe([]);
+    expect($client->aspsps($this->credentials, 'NL'))->toBe([]);
 })->with([
     'a string' => ['"just a string"'],
     'a number' => ['42'],
@@ -144,15 +136,16 @@ it('reads a well-formed non-object body as an empty result', function (string $b
 // both are driven.
 it('maps a POST failure the same way it maps a GET failure', function (): void {
     $mock = new MockHandler([new Response(401, [], 'session expired')]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
     try {
         $client->initiateAuth(
-            'ASNBNL21',
-            'NL',
-            'https://127.0.0.1:8443/open-banking/callback',
-            new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-            CarbonImmutable::parse('2026-10-19 00:00:00'),
+            credentials: $this->credentials,
+            institutionId: 'ASNBNL21',
+            country: 'NL',
+            redirectUrl: 'https://127.0.0.1:8443/open-banking/callback',
+            scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
+            validUntil: CarbonImmutable::parse('2026-10-19 00:00:00'),
         );
         expect(false)->toBeTrue('the client should not have returned a result');
     } catch (EnableBankingApiException $e) {
@@ -166,15 +159,16 @@ it('reports a POST that never reached the API as a transport failure', function 
     $mock = new MockHandler([
         new ConnectException('Connection refused', new Request('POST', 'https://api.enablebanking.com/auth')),
     ]);
-    $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
+    $client = ebErrClient($this->signer, $mock);
 
     try {
         $client->initiateAuth(
-            'ASNBNL21',
-            'NL',
-            'https://127.0.0.1:8443/open-banking/callback',
-            new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-            CarbonImmutable::parse('2026-10-19 00:00:00'),
+            credentials: $this->credentials,
+            institutionId: 'ASNBNL21',
+            country: 'NL',
+            redirectUrl: 'https://127.0.0.1:8443/open-banking/callback',
+            scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
+            validUntil: CarbonImmutable::parse('2026-10-19 00:00:00'),
         );
         expect(false)->toBeTrue('the client should not have returned a result');
     } catch (EnableBankingApiException $e) {

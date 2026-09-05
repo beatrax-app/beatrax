@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Aktivér open banking',
         'toggle_connected' => 'Tilsluttet :bank via Enable Banking.',
         'toggle_off_help' => 'Slået fra som standard. Kræver en engangsgodkendelse og en guidet opsætning.',
+        'connect_another' => 'Tilslut en anden bank',
         'credentials_unreadable' => 'Open banking-oplysningerne, der er gemt på denne enhed, kan ikke læses, så Beatrax kan ikke nå din bank.',
         'credentials_unreadable_next' => 'Kør den guidede opsætning igen for at erstatte dem. Transaktioner, der allerede er importeret, berøres ikke.',
         'reconfirm_body' => 'Din godkendelse udløb, før tilslutningen kunne gøres færdig. Bekræft igen for at gøre aktiveringen af open banking færdig.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking returnerede en usikker samtykke-URL.',
         'no_authorization_code' => 'Tilbagekaldet fra Enable Banking indeholdt ingen autorisationskode.',
         'no_session_id' => 'Enable Banking returnerede ikke noget sessions-id.',
+        'bank_not_linked' => 'Den bank er ikke tilsluttet på denne enhed. Tilslut den igen for at genoptage synkroniseringen.',
         'oauth_state_mismatch' => 'Dette forbindelseslink er udløbet eller allerede brugt. Start forbindelsen til din bank forfra.',
     ],
 ];

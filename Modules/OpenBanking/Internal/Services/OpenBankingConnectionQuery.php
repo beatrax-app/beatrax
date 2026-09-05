@@ -11,6 +11,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Internal\Dto\OpenBankingConnectionView;
 use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
 use Modules\OpenBanking\Internal\Support\ConsentWindow;
+use stdClass;
 
 final readonly class OpenBankingConnectionQuery
 {
@@ -22,42 +23,73 @@ final readonly class OpenBankingConnectionQuery
         private Clock $clock,
     ) {}
 
-    public function current(int $userId): ?OpenBankingConnectionView
+    // Every bank this reader holds session material for, not the one the store
+    // happened to hold last. A row whose institution has no stored session is
+    // a connection nothing can fetch, so it is not offered as one.
+    /**
+     * @return list<OpenBankingConnectionView>
+     */
+    public function forUser(int $userId): array
     {
-        $credentials = $this->secrets->load();
-        $institutionId = $credentials?->institutionId;
-        if ($institutionId === null || $institutionId === '') {
-            return null;
+        $institutionIds = $this->secrets->connectedInstitutions($userId);
+        if ($institutionIds === []) {
+            return [];
         }
 
-        $row = $this->db->connection()
+        $rows = $this->db->connection()
             ->table('open_banking_connections')
             ->where('user_id', $userId)
-            ->where('institution_id', $institutionId)
+            ->whereIn('institution_id', $institutionIds)
+            ->orderBy('id')
+            ->get();
+
+        $views = [];
+        foreach ($rows as $row) {
+            $views[] = $this->viewFrom($row);
+        }
+
+        return $views;
+    }
+
+    // Both predicates are load-bearing: the user id keeps one reader's screen
+    // off another's row, and the stored-session check keeps a row whose secret
+    // this reader does not hold from rendering as a connection.
+    public function forConnection(int $userId, int $connectionId): ?OpenBankingConnectionView
+    {
+        $row = $this->db->connection()
+            ->table('open_banking_connections')
+            ->where('id', $connectionId)
+            ->where('user_id', $userId)
             ->first();
 
         if ($row === null) {
             return null;
         }
 
-        $connectionId = is_numeric($row->id ?? null) ? (int) $row->id : 0;
-        $enabled = (bool) ($row->enabled ?? false);
-        $consentExpiresAt = self::toDateTime($row->consent_expires_at ?? null);
-        $lastSuccessfulSyncAt = self::toDateTime($row->last_successful_sync_at ?? null);
-        $lastAttemptAt = self::toDateTime($row->last_attempt_at ?? null);
+        $institutionId = is_string($row->institution_id ?? null) ? $row->institution_id : '';
+        if (! in_array($institutionId, $this->secrets->connectedInstitutions($userId), strict: true)) {
+            return null;
+        }
+
+        return $this->viewFrom($row);
+    }
+
+    private function viewFrom(stdClass $row): OpenBankingConnectionView
+    {
+        $institutionIdRaw = $row->institution_id ?? null;
+        $institutionId = is_string($institutionIdRaw) ? $institutionIdRaw : '';
         $lastAttemptStatusRaw = $row->last_attempt_status ?? null;
-        $lastAttemptStatus = is_string($lastAttemptStatusRaw) && $lastAttemptStatusRaw !== '' ? $lastAttemptStatusRaw : null;
 
         return new OpenBankingConnectionView(
-            connectionId: $connectionId,
-            enabled: $enabled,
+            connectionId: is_numeric($row->id ?? null) ? (int) $row->id : 0,
+            enabled: (bool) ($row->enabled ?? false),
             institutionId: $institutionId,
             bankDisplayName: self::bankDisplayNameFor($institutionId),
             consentStatus: ConsentWindow::fromStoredRow($row, $this->clock->now())->status(),
-            consentExpiresAt: $consentExpiresAt,
-            lastSuccessfulSyncAt: $lastSuccessfulSyncAt,
-            lastAttemptAt: $lastAttemptAt,
-            lastAttemptStatus: $lastAttemptStatus,
+            consentExpiresAt: self::toDateTime($row->consent_expires_at ?? null),
+            lastSuccessfulSyncAt: self::toDateTime($row->last_successful_sync_at ?? null),
+            lastAttemptAt: self::toDateTime($row->last_attempt_at ?? null),
+            lastAttemptStatus: is_string($lastAttemptStatusRaw) && $lastAttemptStatusRaw !== '' ? $lastAttemptStatusRaw : null,
             aggregator: self::AGGREGATOR,
             whatsFetched: Lang::get('openbanking::messages.transparency.whats_fetched'),
         );

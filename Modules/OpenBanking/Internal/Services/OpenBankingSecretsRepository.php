@@ -5,20 +5,10 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Encryption\DecryptException;
-use Illuminate\Contracts\Encryption\Encrypter;
-use Illuminate\Filesystem\Filesystem;
-use JsonException;
-use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeDate;
-use Modules\Core\Public\Support\SecretFileMode;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
-use Throwable;
 
 /**
  * @link ../../../../.docs/features/open-banking/secrets-at-rest.md
@@ -26,279 +16,219 @@ use Throwable;
 class OpenBankingSecretsRepository
 {
     // Relative to the storage/app root that UserDataPathService::appPath()
-    // resolves (respecting NATIVEPHP_STORAGE_PATH) — no leading `app/`.
-    private const string PATH_RELATIVE = 'secrets/open-banking.json';
+    // resolves (respecting NATIVEPHP_STORAGE_PATH) — no leading `app/`. One
+    // file per reader: there is no path here that names no user.
+    private const string DIRECTORY_RELATIVE = 'secrets/open-banking';
 
-    public function __construct(
-        private readonly Filesystem $files,
-        private readonly SecretShield $shield,
-        // Second at-rest layer: keeps the file ciphertext on the targets where
-        // SecretShield binds to the identity PassthroughSecretShield.
-        private readonly Encrypter $encrypter,
-        private readonly LoggerInterface $logger = new NullLogger,
-    ) {}
+    // The pre-keying store, global to the installation. Read once by the
+    // migration that adopts it into a reader's own file, and never again.
+    private const string LEGACY_PATH_RELATIVE = 'secrets/open-banking.json';
 
-    public function hasApplication(): bool
+    private const string CONNECTIONS_KEY = 'connections';
+
+    public function __construct(private readonly OpenBankingSecretsFile $file) {}
+
+    public function hasApplication(int $userId): bool
     {
-        $data = $this->readAll();
+        $data = $this->readAll($userId);
 
         return self::stringOrNull($data['application_id'] ?? null) !== null
             && self::stringOrNull($data['private_key_pem'] ?? null) !== null;
     }
 
-    public function save(OpenBankingCredentials $credentials): void
+    public function saveApplication(int $userId, string $applicationId, string $privateKeyPem): void
     {
-        $this->guardSingleUser();
+        $data = $this->readAll($userId);
+        $data['application_id'] = $applicationId;
+        $data['private_key_pem'] = $privateKeyPem;
 
-        $this->writeAtomic([
-            'application_id' => $credentials->applicationId,
-            'private_key_pem' => $credentials->privateKeyPem,
-            'session_id' => $credentials->sessionId,
-            'consent_expires_at' => $credentials->consentExpiresAt?->toAtomString(),
-            'bank_sca_host' => $credentials->bankScaHost,
-            'institution_id' => $credentials->institutionId,
+        $this->file->write($this->pathFor($userId), $data);
+    }
+
+    // Written before the reader ever reaches the bank, so it must not disturb
+    // a session this institution already holds: a consent that is abandoned at
+    // the bank leaves the previous one fetchable.
+    public function rememberScaHost(int $userId, string $institutionId, string $bankScaHost): void
+    {
+        $this->mergeConnection($userId, $institutionId, ['bank_sca_host' => $bankScaHost]);
+    }
+
+    public function rememberSession(
+        int $userId,
+        string $institutionId,
+        string $sessionId,
+        CarbonImmutable $consentExpiresAt,
+    ): void {
+        $this->mergeConnection($userId, $institutionId, [
+            'session_id' => $sessionId,
+            'consent_expires_at' => $consentExpiresAt->toAtomString(),
         ]);
     }
 
     // Gated on the private key alone, unlike hasApplication(): the wizard writes
     // the key first and must load() the half-written file to merge in the id.
-    public function load(): ?OpenBankingCredentials
+    // A null institution asks for the application half by itself, which is the
+    // only state the wizard has between step 1 and step 3.
+    public function load(int $userId, ?string $institutionId = null): ?OpenBankingCredentials
     {
-        $data = $this->readAll();
+        $data = $this->readAll($userId);
 
         $privateKeyPem = self::stringOrNull($data['private_key_pem'] ?? null);
         if ($privateKeyPem === null) {
             return null;
         }
 
-        $applicationId = self::stringOrNull($data['application_id'] ?? null) ?? '';
+        $connection = $institutionId === null
+            ? []
+            : self::connectionsIn($data)[$institutionId] ?? [];
 
         return new OpenBankingCredentials(
-            applicationId: $applicationId,
+            applicationId: self::stringOrNull($data['application_id'] ?? null) ?? '',
             privateKeyPem: $privateKeyPem,
-            sessionId: self::stringOrNull($data['session_id'] ?? null),
-            consentExpiresAt: self::toDateTime($data['consent_expires_at'] ?? null),
-            bankScaHost: self::stringOrNull($data['bank_sca_host'] ?? null),
-            institutionId: self::stringOrNull($data['institution_id'] ?? null),
+            sessionId: self::stringOrNull($connection['session_id'] ?? null),
+            consentExpiresAt: self::toDateTime($connection['consent_expires_at'] ?? null),
+            bankScaHost: self::stringOrNull($connection['bank_sca_host'] ?? null),
+            institutionId: $institutionId,
         );
     }
 
     // Fabricating OpenBankingCredentials only here is what lets the arch guard
     // assert a single credential source for the module.
-    public function loadOrThrow(): OpenBankingCredentials
+    public function loadOrThrow(int $userId, string $institutionId): OpenBankingCredentials
     {
-        $credentials = $this->load();
+        $credentials = $this->load($userId, $institutionId);
         if ($credentials === null) {
             throw OpenBankingCredentialsException::notConfigured();
+        }
+
+        if ($credentials->sessionId === null) {
+            throw OpenBankingCredentialsException::bankNotLinked($institutionId);
         }
 
         return $credentials;
     }
 
-    public function clear(): void
-    {
-        $absolute = $this->absolutePath();
-        if ($this->files->exists($absolute)) {
-            $this->files->delete($absolute);
-        }
-    }
-
-    // A seam, not an abstraction: tests force the rename-failure branch by
-    // overriding this rather than by breaking the real filesystem.
-    protected function performRename(string $tmp, string $final): bool
-    {
-        return @rename($tmp, $final);
-    }
-
-    protected function userCount(): ?int
-    {
-        try {
-            return User::count();
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    private function guardSingleUser(): void
-    {
-        $count = $this->userCount();
-        if ($count !== null && $count > 1) {
-            $this->logger->warning(
-                'OpenBankingSecretsRepository: writing the single global secrets file while '
-                .'more than one user account exists. This store has no per-user isolation '
-                .'yet — per-user or per-connection secret keying is required before a '
-                .'second user can safely use open banking.'
-            );
-        }
-    }
-
     /**
-     * @return array<string, mixed>
+     * @return list<string>
      */
-    private function readAll(): array
+    public function connectedInstitutions(int $userId): array
     {
-        $absolute = $this->absolutePath();
-        $raw = $this->files->exists($absolute) ? $this->files->get($absolute) : '';
-        if ($raw === '') {
-            return [];
-        }
-
-        $revealed = $this->shield->reveal($raw);
-        $json = $this->decryptAtRest($revealed);
-
-        try {
-            $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            // Logged here rather than left to the handler: the settings page
-            // answers this one on screen now, so nothing above would record
-            // that the file on disk is the part that needs repairing.
-            $this->logger->warning(
-                'OpenBankingSecretsRepository: the secrets file could not be parsed.',
-                ['path' => $absolute],
-            );
-
-            throw OpenBankingCredentialsException::unreadable($absolute, $e);
-        }
-        if (! is_array($decoded)) {
-            return [];
-        }
-
         $out = [];
-        foreach ($decoded as $key => $value) {
-            $out[(string) $key] = $value;
+        foreach (self::connectionsIn($this->readAll($userId)) as $institutionId => $connection) {
+            if (self::stringOrNull($connection['session_id'] ?? null) !== null) {
+                $out[] = $institutionId;
+            }
         }
 
         return $out;
     }
 
-    // A file written before the APP_KEY layer holds plain JSON and raises
-    // DecryptException; reading it through lets the next save() re-encrypt it.
-    private function decryptAtRest(string $revealed): string
+    public function clear(int $userId): void
     {
-        try {
-            $plaintext = $this->encrypter->decrypt($revealed, false);
-        } catch (DecryptException) {
-            return $revealed;
+        $this->file->delete($this->pathFor($userId));
+    }
+
+    // The institution the pre-keying file's one live session belonged to. The
+    // migration needs it before it can name an owner, because the row carrying
+    // that institution is what says whose session this was.
+    public function legacyInstitutionId(): ?string
+    {
+        return self::stringOrNull($this->file->read($this->legacyPath())['institution_id'] ?? null);
+    }
+
+    // Moves the pre-keying file into $userId's own, session and all, so an
+    // installed reader crosses the upgrade still connected. The legacy file is
+    // removed only once the keyed one is on disk.
+    public function adoptLegacyFile(int $userId): bool
+    {
+        $legacy = $this->file->read($this->legacyPath());
+        $privateKeyPem = self::stringOrNull($legacy['private_key_pem'] ?? null);
+        if ($privateKeyPem === null) {
+            return false;
         }
 
-        return is_string($plaintext) ? $plaintext : $revealed;
+        $this->file->write($this->pathFor($userId), self::keyedFromLegacy($legacy, $privateKeyPem));
+        $this->file->delete($this->legacyPath());
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $legacy
+     * @return array<string, mixed>
+     */
+    private static function keyedFromLegacy(array $legacy, string $privateKeyPem): array
+    {
+        $institutionId = self::stringOrNull($legacy['institution_id'] ?? null);
+
+        return [
+            'application_id' => self::stringOrNull($legacy['application_id'] ?? null) ?? '',
+            'private_key_pem' => $privateKeyPem,
+            self::CONNECTIONS_KEY => $institutionId === null ? [] : [
+                $institutionId => [
+                    'session_id' => self::stringOrNull($legacy['session_id'] ?? null),
+                    'consent_expires_at' => self::stringOrNull($legacy['consent_expires_at'] ?? null),
+                    'bank_sca_host' => self::stringOrNull($legacy['bank_sca_host'] ?? null),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, ?string>  $changes
+     */
+    private function mergeConnection(int $userId, string $institutionId, array $changes): void
+    {
+        $data = $this->readAll($userId);
+        $connections = self::connectionsIn($data);
+        $connections[$institutionId] = array_merge($connections[$institutionId] ?? [], $changes);
+        $data[self::CONNECTIONS_KEY] = $connections;
+
+        $this->file->write($this->pathFor($userId), $data);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readAll(int $userId): array
+    {
+        return $this->file->read($this->pathFor($userId));
     }
 
     /**
      * @param  array<string, mixed>  $data
+     * @return array<string, array<string, mixed>>
      */
-    private function writeAtomic(array $data): void
+    private static function connectionsIn(array $data): array
     {
-        $absolute = $this->absolutePath();
-        $this->ensureSecretsDirectory(dirname($absolute));
-
-        $ciphertext = $this->encrypter->encrypt($this->encodePayload($data, $absolute), false);
-        $bytes = $this->shield->protect($ciphertext);
-
-        $tmp = $absolute.'.tmp';
-        $this->writeTempFile($tmp, $bytes);
-
-        if (! $this->performRename($tmp, $absolute)) {
-            @unlink($tmp);
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: atomic rename failed from {$tmp} to {$absolute}."
-            );
+        $raw = $data[self::CONNECTIONS_KEY] ?? null;
+        if (! is_array($raw)) {
+            return [];
         }
+
+        $out = [];
+        foreach ($raw as $institutionId => $connection) {
+            if (! is_array($connection)) {
+                continue;
+            }
+            $fields = [];
+            foreach ($connection as $field => $value) {
+                $fields[(string) $field] = $value;
+            }
+            $out[(string) $institutionId] = $fields;
+        }
+
+        return $out;
     }
 
-    private function ensureSecretsDirectory(string $dir): void
+    private function pathFor(int $userId): string
     {
-        // 0700 on create only: re-chmodding every write would silently undo a
-        // widening an operator applied on purpose, e.g. for a backup agent.
-        if (is_dir($dir)) {
-            return;
-        }
-        if (! @mkdir($dir, SecretFileMode::DIRECTORY, recursive: true) && ! is_dir($dir)) {
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: could not create parent directory {$dir}."
-            );
-        }
-        if (! @chmod($dir, SecretFileMode::DIRECTORY)) {
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
-            );
-        }
+        return UserDataPathService::appPath(self::DIRECTORY_RELATIVE.'/'.$userId.'.json');
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function encodePayload(array $data, string $absolute): string
+    private function legacyPath(): string
     {
-        try {
-            return json_encode(
-                $data,
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-            );
-        } catch (JsonException $e) {
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: failed to encode payload for {$absolute} ({$e->getMessage()}).",
-                previous: $e,
-            );
-        }
-    }
-
-    private function writeTempFile(string $tmp, string $bytes): void
-    {
-        // Narrowed before fopen so the file is born 0600; otherwise it is
-        // world-readable for the window before the explicit chmod below.
-        $prevUmask = umask(0077);
-
-        $fp = @fopen($tmp, 'wb');
-        if ($fp === false) {
-            umask($prevUmask);
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: could not open temp file at {$tmp}."
-            );
-        }
-
-        try {
-            @flock($fp, LOCK_EX);
-            $written = @fwrite($fp, $bytes);
-            if ($written === false || $written !== strlen($bytes)) {
-                throw new SecretsWriteFailed(
-                    "OpenBankingSecretsRepository: short write to temp file at {$tmp}."
-                );
-            }
-            @fflush($fp);
-            if (function_exists('fsync')) {
-                @fsync($fp);
-            }
-            @flock($fp, LOCK_UN);
-            @fclose($fp);
-            $fp = null;
-
-            if (! @chmod($tmp, SecretFileMode::FILE)) {
-                throw new SecretsWriteFailed(
-                    "OpenBankingSecretsRepository: failed to chmod temp file at {$tmp}."
-                );
-            }
-        } catch (Throwable $e) {
-            if (is_resource($fp)) {
-                @flock($fp, LOCK_UN);
-                @fclose($fp);
-            }
-            @unlink($tmp);
-            if ($e instanceof SecretsWriteFailed) {
-                throw $e;
-            }
-            throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: unexpected failure writing {$tmp}.",
-                previous: $e,
-            );
-        } finally {
-            umask($prevUmask);
-        }
-    }
-
-    private function absolutePath(): string
-    {
-        return UserDataPathService::appPath(self::PATH_RELATIVE);
+        return UserDataPathService::appPath(self::LEGACY_PATH_RELATIVE);
     }
 
     private static function stringOrNull(mixed $value): ?string

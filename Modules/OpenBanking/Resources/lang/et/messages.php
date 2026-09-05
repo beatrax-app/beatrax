@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Luba pangaliides',
         'toggle_connected' => 'Ühendatud pangaga :bank Enable Bankingu kaudu.',
         'toggle_off_help' => 'Vaikimisi väljas. Nõuab ühekordset kinnitust ja juhendatud seadistust.',
+        'connect_another' => 'Ühenda teine pank',
         // i18n-review: et · page.credentials_unreadable — "volitusi" is this
         // file's own noun for stored credentials, taken from disconnect.body,
         // but it usually reads as a granted authority rather than a secret.
@@ -168,6 +169,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking tagastas ebaturvalise nõusoleku URL-i.',
         'no_authorization_code' => 'Enable Bankingu tagasikutse ei tagastanud autoriseerimiskoodi.',
         'no_session_id' => 'Enable Banking ei tagastanud sessiooni id-d.',
+        'bank_not_linked' => 'See pank ei ole selles seadmes ühendatud. Ühenda see uuesti, et sünkroonimine jätkuks.',
         'oauth_state_mismatch' => 'See ühenduslink on aegunud või juba kasutatud. Alusta panga ühendamist uuesti.',
     ],
 ];

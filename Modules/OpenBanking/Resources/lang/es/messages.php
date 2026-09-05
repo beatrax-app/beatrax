@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Activar el open banking',
         'toggle_connected' => 'Conectado a :bank a través de Enable Banking.',
         'toggle_off_help' => 'Desactivado por defecto. Requiere una aceptación única y una configuración guiada.',
+        'connect_another' => 'Conectar otro banco',
         'credentials_unreadable' => 'No se pueden leer las credenciales de open banking guardadas en este dispositivo, así que Beatrax no puede conectarse con tu banco.',
         'credentials_unreadable_next' => 'Vuelve a hacer la configuración guiada para reemplazarlas. Las transacciones ya importadas no se ven afectadas.',
         'reconfirm_body' => 'Tu aceptación caducó antes de que pudiéramos terminar la conexión. Vuelve a confirmarla para terminar de activar el open banking.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking ha devuelto una URL de consentimiento no segura.',
         'no_authorization_code' => 'La respuesta de Enable Banking no ha devuelto ningún código de autorización.',
         'no_session_id' => 'Enable Banking no ha devuelto ningún ID de sesión.',
+        'bank_not_linked' => 'Ese banco no está conectado en este dispositivo. Vuelve a conectarlo para reanudar la sincronización.',
         'oauth_state_mismatch' => 'Ese enlace de conexión ha caducado o ya se ha utilizado. Vuelve a iniciar la conexión con tu banco.',
     ],
 ];

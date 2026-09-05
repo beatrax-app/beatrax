@@ -22,7 +22,7 @@ final class SojaStubRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         $this->called = true;
         if ($this->throws !== null) {

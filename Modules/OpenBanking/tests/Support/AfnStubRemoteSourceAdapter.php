@@ -23,7 +23,7 @@ final class AfnStubRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         $this->fetches++;
 

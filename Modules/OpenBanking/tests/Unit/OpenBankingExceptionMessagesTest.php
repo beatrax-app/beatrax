@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectionException;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
@@ -98,17 +99,19 @@ it('says which connection could not be fetched, and why', function (): void {
         ->and(OpenBankingConnectionException::notFetchable(7)->getMessage())
         ->toContain('consent has expired')
         ->and(OpenBankingConnectionException::accountNotResolved(7)->getMessage())
-        ->toContain('account_uid')
-        ->and(OpenBankingConnectionException::institutionMismatch(7, 'ING', 'ABN')->getMessage())
-        ->toContain('ING');
+        ->toContain('account_uid');
 });
 
-it('names both institutions in a session mismatch', function (): void {
-    // Naming only one would leave a maintainer unable to tell which of the two
-    // is the stale side, which is the whole question the message has to answer.
-    $message = OpenBankingConnectionException::institutionMismatch(7, 'ING', 'ABN')->getMessage();
+// The store holds one record per bank, so "no consent for THIS bank" is a
+// refusal a reader can act on alone: reconnect that one, leave the others.
+// Naming the institution is what tells them which one to reconnect.
+it('names the bank whose consent is missing, and answers the reader in their own words', function (): void {
+    $e = OpenBankingCredentialsException::bankNotLinked('ASNBNL21');
 
-    expect($message)->toContain('ING')->and($message)->toContain('ABN');
+    expect($e->getMessage())->toContain('ASNBNL21')
+        ->and($e->readerMessage())->toBe(Lang::get('openbanking::messages.errors.bank_not_linked'))
+        ->and($e->readerMessage())->not->toBe('openbanking::messages.errors.bank_not_linked')
+        ->and($e->readerMessage())->not->toContain('ASNBNL21');
 });
 
 // The path is the only identifier this message may carry: payload and raw

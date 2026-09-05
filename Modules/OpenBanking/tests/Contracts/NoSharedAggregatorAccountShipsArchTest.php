@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
@@ -63,19 +65,51 @@ function noSharedAggregatorMintOnce(): array
 
         public function __construct() {}
 
-        public function save(OpenBankingCredentials $credentials): void
+        public function saveApplication(int $userId, string $applicationId, string $privateKeyPem): void
         {
-            $this->saved = $credentials;
+            $this->saved = new OpenBankingCredentials(
+                applicationId: $applicationId,
+                privateKeyPem: $privateKeyPem,
+                sessionId: null,
+                consentExpiresAt: null,
+                bankScaHost: null,
+                institutionId: null,
+            );
         }
 
-        public function load(): ?OpenBankingCredentials
+        public function load(int $userId, ?string $institutionId = null): ?OpenBankingCredentials
         {
             return $this->saved;
         }
     };
 
+    // Names a reader without needing one: the mint has no database behind it,
+    // and the wizard asks this collaborator for nothing but an id.
+    $currentUser = new class implements CurrentUser
+    {
+        public function id(): int
+        {
+            return 1;
+        }
+
+        public function user(): User
+        {
+            throw new RuntimeException('The keypair mint never resolves a user row.');
+        }
+
+        public function periodStartDay(): int
+        {
+            return 1;
+        }
+
+        public function isAuthenticated(): bool
+        {
+            return true;
+        }
+    };
+
     $modal = new OpenBankingWizardModal;
-    $modal->generateKeypair($store);
+    $modal->generateKeypair($store, $currentUser);
 
     $saved = $store->saved;
     expect($saved)->not->toBeNull();
