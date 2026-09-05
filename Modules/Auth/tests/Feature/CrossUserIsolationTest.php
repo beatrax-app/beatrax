@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -22,35 +23,40 @@ use Modules\Ledger\Models\Transaction;
  * @var list<string>
  */
 const ISOLATION_ROUTE_ALLOW_LIST = [
-    'logout',
     // A GET to /logout answers with the sign-in screen and reads nothing: it
     // exists because the mobile shell re-requests the URL a sign-out was posted
     // to, and met a 405 -- a stack trace with no navigation off it, on a phone.
     // It logs nobody out either, or an <img> could.
     'logout.landing',
+    // Three screens keyed on the acting session alone: the forced first change
+    // reads the signed-in user's own flag, the codes sheet reads the session
+    // key PendingRecoveryCodes holds it under, and the add-partner form is an
+    // empty form behind RequireDeveloperMiddleware.
     'auth.change-password',
     'auth.recovery-codes-display',
     'auth.users.create',
-    'auth.users.manage',
     // The acting user's own close-behaviour preference; and the session-scoped
     // file intent, whose isolation FileOpenedFromOsTest proves directly.
     'desktop.close-prompt',
     'desktop.file-staging',
-    // Every /dev/* route is EnsureDeveloperMode-gated (404, never 403) and
-    // surfaces operator-level data only — registry rosters, the calling
-    // developer's own runs — never another user's rows.
-    'dev.overview',
+    // Every /dev/* route is EnsureDeveloperMode-gated (404, never 403), and the
+    // dev_mode_audit reads behind them all carry the caller's causer_id --
+    // dev.artisan on render and on sweep, dev.artisan.stream on the run's
+    // callerUserId, dev.audit on both the read and the clear.
     'dev.artisan.stream',
-    // dev.audit reads and clears on the same causer_id predicate, so it neither
-    // shows nor destroys a row another operator wrote.
     'dev.artisan',
     'dev.audit',
-    // The log file is system-wide on a single-user-per-machine install, so the
-    // tailer, its poll and its context window carry no user rows.
+    // One install-wide log file, not a per-user one, so the tailer, its poll and
+    // its context window read no user-scoped row. Owner ids do reach the file
+    // inside logged context arrays; that is a redaction question for the writer,
+    // not an ownership predicate this reader could apply.
     'dev.logs',
     'dev.logs.poll',
     'dev.logs.context',
-    // Laravel does not user-scope the queue tables; they are system-wide here.
+    // Laravel does not user-scope the queue tables and this app does not add a
+    // column to them, so the panel is whole-instance by construction. Its rows
+    // are jobs, not domain rows, and an expanded payload names the userId the
+    // job was queued for -- an operator surface, on the C1 co-equal trust model.
     'dev.queue',
     'dev.queue.tab',
     // Registered only when dev mode is on and Horizon is installed, and then
@@ -68,8 +74,8 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     'setup',
     // Byte and line counts over the same system-wide log file as dev.logs.
     'dev.logs.stats',
-    // Install-level paths plus a CTA branched on the acting user's own
-    // is_developer flag; it queries no user-scoped rows at all.
+    // Install-level filesystem paths from UserDataLocations, plus an export CTA
+    // that takes no user argument. It queries no table at all.
     'core.help.data-locations',
     // A PIN pad keyed on the authenticated user's own lock state; the lock
     // screen never reads a transaction, account or recurring row.
@@ -90,6 +96,18 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
  */
 const ISOLATION_ROUTE_COVERED = [
     'dashboard',
+    // Reads the acting request's own session timestamp and answers a bare
+    // boolean. It is here rather than on the allow list because it is the one
+    // route wearing the `auth:web` spelling, and the probe asserts the whole
+    // body, which is what proves no row can ride along in it.
+    'password.confirmation',
+    // Was allow-listed on the claim that /dev/* shows the calling developer's
+    // own runs. Its Last command tile did not: it read dev_mode_audit with no
+    // causer_id, and named another operator's command.
+    'dev.overview',
+    // /settings/users/{username} addresses another account by name; the probe
+    // is the non-owner developer who gets a 404 for it.
+    'auth.users.manage',
     'settings',
     'transactions.index',
     'transactions.show',
@@ -144,6 +162,17 @@ const ISOLATION_ROUTE_COVERED = [
     'mobile.lock',
     'notifications.index',
     'settings.open-banking',
+];
+
+// Registered only when config('app.dev_mode') is true AND Horizon is installed,
+// a pair HorizonIframeGatingTest owns both halves of. It is absent from the
+// test router by design, so the staleness guard would otherwise read the
+// allow-list entry that keeps it declared as a dead one.
+/**
+ * @var list<string>
+ */
+const ISOLATION_ROUTE_CONDITIONAL = [
+    'dev.horizon',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -850,6 +879,45 @@ it('does not bleed the owner tagged transactions into the partner tax page', fun
         ->assertDontSee('owner-secret-note');
 });
 
+it('does not name the owner last artisan command on a second developer\'s dev overview', function (): void {
+    // 'dev_mode' is SpatieAuditWriter::LOG_NAME, which lives in DevMode's
+    // Internal namespace and so cannot be imported from here; the literal is
+    // the same one every DevMode fixture writes.
+    $seedRun = function (int $userId, string $command, string $ranAt): void {
+        $this->db->connection()->table('dev_mode_audit')->insert([
+            'log_name' => 'dev_mode',
+            'description' => 'command_executed',
+            'causer_type' => User::class,
+            'causer_id' => $userId,
+            'properties' => json_encode([
+                'command' => $command,
+                'args' => [],
+                'tier' => 'safe',
+                'exit_code' => 0,
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => $ranAt,
+            'updated_at' => $ranAt,
+        ]);
+    };
+
+    // The owner's run is the LATER one, so an unscoped "most recent row" read
+    // returns it and the tile prints it to whoever opens the page.
+    $seedRun($this->owner->id, 'owner:secret-artisan-command', '2026-05-19 11:00:00');
+
+    $devPartner = xuiUser('overview-dev-partner', developer: true);
+    $seedRun($devPartner->id, 'partner:own-artisan-command', '2026-05-19 10:00:00');
+
+    $this->actingAs($devPartner)
+        ->get('/dev')
+        ->assertOk()
+        ->assertSee('partner:own-artisan-command')
+        ->assertDontSee('owner:secret-artisan-command');
+
+    $this->actingAs($this->partner)
+        ->get('/dev')
+        ->assertNotFound();
+});
+
 it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel', function (): void {
     // The page only surfaces quarantine rows from the last seven days, so the
     // fixture is seeded off the same Clock it reads. A hardcoded date here
@@ -1284,11 +1352,53 @@ it('returns 404 when a developer who is not the account owner opens the manage-u
         ->assertNotFound();
 });
 
-it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
-    /** @var Router $router */
-    $router = $this->app->make(Router::class);
+it('answers the partner confirmed-password status with a bare boolean and no owner row', function (): void {
+    $this->withSession(['auth.password_confirmed_at' => time()]);
 
-    $uncovered = [];
+    $response = $this->actingAs($this->partner)
+        ->get('/user/confirmed-password-status');
+
+    $response->assertOk();
+
+    // Exact, not a subset: the claim being pinned is that the whole body is one
+    // session-scoped flag, so nothing this route reads can carry a row. A
+    // partial match would pass on a body that had grown a second key.
+    $response->assertExactJson(['confirmed' => true]);
+});
+
+// Asked of the router's own resolution rather than of the middleware list as
+// written: `auth` and `auth:web` are the same gate spelled two ways, and a walk
+// that matched the literal string skipped the second one — leaving
+// password.confirmation outside this enumeration for as long as it has existed.
+/**
+ * @param  array<array-key, mixed>  $resolved
+ */
+function xuiResolvesToAuthentication(array $resolved): bool
+{
+    foreach ($resolved as $middleware) {
+        if (! is_string($middleware)) {
+            continue;
+        }
+
+        $class = explode(':', $middleware)[0];
+
+        if ($class === Authenticate::class || is_subclass_of($class, Authenticate::class)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// One walk, keyed by the name the two guards below look up. An unnamed route
+// keys on its uri and so can never match a list entry, which is what makes it
+// report as uncovered rather than disappear.
+/**
+ * @return array<string, RoutingRoute>
+ */
+function xuiAuthGatedGetRoutes(Router $router): array
+{
+    $routes = [];
 
     /** @var RoutingRoute $route */
     foreach ($router->getRoutes() as $route) {
@@ -1296,30 +1406,63 @@ it('covers or allow-lists every auth-gated GET route — regression guard', func
             continue;
         }
 
-        if (! in_array('auth', $route->gatherMiddleware(), true)) {
+        if (! xuiResolvesToAuthentication($router->gatherRouteMiddleware($route))) {
             continue;
         }
 
-        $name = $route->getName();
-        if ($name === null) {
-            $uncovered[] = $route->uri().' (unnamed)';
-
-            continue;
-        }
-
-        if (
-            in_array($name, ISOLATION_ROUTE_COVERED, true)
-            || in_array($name, ISOLATION_ROUTE_ALLOW_LIST, true)
-        ) {
-            continue;
-        }
-
-        $uncovered[] = $name;
+        $routes[$route->getName() ?? $route->uri().' (unnamed)'] = $route;
     }
+
+    return $routes;
+}
+
+it('reads every spelling of the authentication gate — a walk blind to one enumerates nothing about it', function (): void {
+    /** @var Router $router */
+    $router = $this->app->make(Router::class);
+
+    expect(xuiResolvesToAuthentication($router->resolveMiddleware(['web', 'auth'])))->toBeTrue();
+    expect(xuiResolvesToAuthentication($router->resolveMiddleware(['web', 'auth:web'])))->toBeTrue();
+    expect(xuiResolvesToAuthentication($router->resolveMiddleware([Authenticate::class])))->toBeTrue();
+
+    // The negative half: a classifier answering true to everything would
+    // satisfy the three above and make both guards below vacuous.
+    expect(xuiResolvesToAuthentication($router->resolveMiddleware(['web', 'guest'])))->toBeFalse();
+
+    // And the live settlement — the one route that wears the second spelling.
+    // If Fortify stops registering it, this fails and the enumeration is
+    // re-read rather than quietly narrowing by one.
+    expect(array_keys(xuiAuthGatedGetRoutes($router)))->toContain('password.confirmation');
+});
+
+it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
+    /** @var Router $router */
+    $router = $this->app->make(Router::class);
+
+    $uncovered = array_values(array_diff(
+        array_keys(xuiAuthGatedGetRoutes($router)),
+        ISOLATION_ROUTE_COVERED,
+        ISOLATION_ROUTE_ALLOW_LIST,
+    ));
 
     expect($uncovered)->toBe(
         [],
         "Every auth-gated GET route needs a cross-user probe case or an allow-list entry. Uncovered:\n  ".implode("\n  ", $uncovered),
+    );
+});
+
+it('names no route the router does not have — a stale entry pre-clears the next route to take that name', function (): void {
+    /** @var Router $router */
+    $router = $this->app->make(Router::class);
+
+    $stale = array_values(array_diff(
+        array_merge(ISOLATION_ROUTE_COVERED, ISOLATION_ROUTE_ALLOW_LIST, array_keys(ISOLATION_PARAM_ROUTE_EXCLUSIONS)),
+        array_keys(xuiAuthGatedGetRoutes($router)),
+        ISOLATION_ROUTE_CONDITIONAL,
+    ));
+
+    expect($stale)->toBe(
+        [],
+        "An entry naming no live auth-gated GET route clears a name rather than a route, and the next route registered under it inherits that clearance. Delete it, or declare it in ISOLATION_ROUTE_CONDITIONAL with the condition. Stale:\n  ".implode("\n  ", $stale),
     );
 });
 
@@ -1487,21 +1630,10 @@ it('probes every parameterised auth-gated GET route as the wrong user, or says w
     $probed = xuiProbedRouteNames($router, xuiProbedPaths());
     $unprobed = [];
 
-    /** @var RoutingRoute $route */
-    foreach ($router->getRoutes() as $route) {
-        if (! in_array('GET', $route->methods(), true)) {
-            continue;
-        }
-
-        if (! in_array('auth', $route->gatherMiddleware(), true)) {
-            continue;
-        }
-
+    foreach (xuiAuthGatedGetRoutes($router) as $name => $route) {
         if (! str_contains($route->uri(), '{')) {
             continue;
         }
-
-        $name = $route->getName() ?? $route->uri().' (unnamed)';
 
         if (in_array($name, $probed, true)) {
             continue;

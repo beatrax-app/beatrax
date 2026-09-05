@@ -43,7 +43,7 @@ final class DevOverviewPage extends Component
         return $views->make('dev::livewire.dev-overview-page', [
             'workerHeartbeat' => $this->resolveWorkerHeartbeat($cache, $now),
             'queueCounts' => $this->resolveQueueCounts($db),
-            'lastCommand' => $this->resolveLastCommand($db),
+            'lastCommand' => $this->resolveLastCommand($db, $user),
             'recentRuns' => $this->resolveRecentRuns($db, $user),
             'openAlerts' => $alerts->active($user)->take(self::RECENT_RUNS_LIMIT),
             'recentLogEntries' => $logEntries->recent(self::RECENT_LOG_ENTRIES_LIMIT),
@@ -94,10 +94,15 @@ final class DevOverviewPage extends Component
         ];
     }
 
-    private function resolveLastCommand(DatabaseManager $db): ?string
+    // Causer-scoped like every other dev_mode_audit read. This one was not, and
+    // named the last command another operator ran on a page whose Clear all
+    // cannot reach that row -- the same read-wider-than-you-can-clear shape the
+    // audit page was already corrected for.
+    private function resolveLastCommand(DatabaseManager $db, User $user): ?string
     {
         $row = $db->connection()->table('dev_mode_audit')
             ->where('log_name', SpatieAuditWriter::LOG_NAME)
+            ->where('causer_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(1)
             ->first();

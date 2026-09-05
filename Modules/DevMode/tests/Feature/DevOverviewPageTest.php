@@ -209,8 +209,11 @@ it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs
         'causer_id' => $other->id,
         'event' => null,
         'attribute_changes' => null,
+        // Not a real command name: `cache:clear` also reaches this page as
+        // palette furniture, so the absence assertion below could not tell a
+        // leak from the command list.
         'properties' => json_encode([
-            'command' => 'cache:clear',
+            'command' => 'devov:other-operator-run',
             'args' => [],
             'tier' => 'safe',
             'exit_code' => 0,
@@ -226,9 +229,12 @@ it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs
     expect($html)->toContain('Recent runs');
     expect($html)->toContain('route:list');
 
-    // The cross-user assertion has to be scoped to the card: the other
-    // developer's run legitimately appears in the system-wide "Last command"
-    // tile elsewhere on the page.
+    // Whole page, not just the card. This assertion used to be card-scoped
+    // because the "Last command" tile read dev_mode_audit unscoped and showed
+    // the other developer's run; the tile is causer-scoped now, so the other
+    // developer's command may not appear anywhere in the response.
+    expect($html)->not->toContain('devov:other-operator-run');
+
     $cardOffset = strpos($html, 'data-testid="recent-runs-card"');
     expect($cardOffset)->not->toBeFalse('Recent runs card not rendered.');
     $cardCloseOffset = strpos($html, '</ul>', is_int($cardOffset) ? $cardOffset : 0);
@@ -236,7 +242,7 @@ it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs
         ? substr($html, is_int($cardOffset) ? $cardOffset : 0, ($cardCloseOffset - $cardOffset) + 5)
         : '';
     expect($cardBody)->toContain('route:list');
-    expect($cardBody)->not->toContain('cache:clear');
+    expect($cardBody)->not->toContain('devov:other-operator-run');
 
     expect($html)->toContain('/dev/audit?command=route%3Alist');
     $rowOccurrences = substr_count($html, 'data-testid="recent-run-row"');
