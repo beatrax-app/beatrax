@@ -24,9 +24,10 @@ It changes nothing that renders, and it is one grep:
 grep -rn 'i18n-review:' Modules/*/Resources/lang/
 ```
 
-The block is 2–4 lines because every comment in `Modules/` is, so `M1` and `M2`
-in [the comment policy](00-index.md#the-comment-policy-is-canonical-in-the-spec)
-apply here like anywhere else.
+The block is at most four lines because `M2` in
+[the comment policy](00-index.md#the-comment-policy-is-canonical-in-the-spec)
+caps every comment in `Modules/` there. There is no floor: one line is fine
+where one line carries the marker.
 
 `tests/Contracts/AnI18nReviewMarkerKeepsPointingAtSomethingArchTest.php` keeps
 every marker answerable. It reads the locale, the `·`, the key list and the `—`
