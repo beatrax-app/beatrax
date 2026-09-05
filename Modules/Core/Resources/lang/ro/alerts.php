@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Amintește-mi mai târziu',
         'mark_resolved' => 'Marchează ca rezolvată',
         'mark_resolved_aria' => 'Marchează ca rezolvată — alerta de sistem #:id',
+        'assign_in_budgets' => 'Alocă în Bugete',
+        'dismiss' => 'Închide',
+        'dismiss_aria' => 'Închide — alerta de sistem #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Criptarea în repaus este activă pentru acest cont, dar niciun înveliș al blocării aplicației nu mai deține cheia de date, așa că fiecare notă, descriere și detaliu de contraparte criptat se citește ca gol. Împerecherea cu un dispozitiv care încă deține cheia este singura cale de întoarcere.',
         'auth_lock_recovery_wrap_stale' => 'Parola contului s-a schimbat fără ca învelișul de recuperare al blocării aplicației să fie reîmpachetat, așa că acea parolă nu mai deschide blocarea. PIN-ul încă o deschide. Reasociază parola contului din setările de blocare cât timp PIN-ul este încă știut — altfel un PIN uitat nu lasă nimic în urmă.',
         'reconnect_link' => 'Reconectează →',
+        'pots_category_link_retired' => 'Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculiță arhivată este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculițe arhivate este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count de pușculițe arhivate este din nou nealocată și așteaptă să o aloci.',
     ],
 ];

@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Påmind mig senere',
         'mark_resolved' => 'Markér som løst',
         'mark_resolved_aria' => 'Markér som løst — systemadvarsel #:id',
+        'assign_in_budgets' => 'Fordel i Budgetter',
+        'dismiss' => 'Luk',
+        'dismiss_aria' => 'Luk — systemadvarsel #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Kryptering i hvile er aktiv for denne konto, men ingen applås-indpakning holder længere datanøglen, så hver krypteret note, beskrivelse og modpartsoplysning læses som tom. Parring med en enhed, der stadig har nøglen, er den eneste vej tilbage.',
         'auth_lock_recovery_wrap_stale' => 'Kontoadgangskoden blev ændret, uden at applåsens gendannelsesindpakning blev pakket om, så den adgangskode åbner ikke længere applåsen. Det gør PIN-koden stadig. Sammenkæd kontoadgangskoden igen i applåsindstillingerne, mens PIN-koden stadig kendes — ellers efterlader en glemt PIN intet.',
         'reconnect_link' => 'Tilslut igen →',
+        'pots_category_link_retired' => 'Kuvertbudgettering har afløst puljer, der var knyttet til en kategori. :amount fra :count arkiveret pulje er ufordelt igen og venter på, at du fordeler beløbet.|Kuvertbudgettering har afløst puljer, der var knyttet til en kategori. :amount fra :count arkiverede puljer er ufordelt igen og venter på, at du fordeler beløbet.',
     ],
 ];

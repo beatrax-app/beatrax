@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Lembrar-me mais tarde',
         'mark_resolved' => 'Marcar como resolvido',
         'mark_resolved_aria' => 'Marcar como resolvido — alerta do sistema n.º :id',
+        'assign_in_budgets' => 'Atribuir em Orçamentos',
+        'dismiss' => 'Dispensar',
+        'dismiss_aria' => 'Dispensar — alerta do sistema n.º :id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'A cifragem em repouso está ativa nesta conta, mas nenhum invólucro do bloqueio da aplicação retém já a chave de dados, pelo que cada nota, descrição e detalhe de contraparte cifrado é lido como vazio. Emparelhar com um dispositivo que ainda tenha a chave é o único caminho de volta.',
         'auth_lock_recovery_wrap_stale' => 'A palavra-passe da conta foi alterada sem que o invólucro de recuperação do bloqueio da aplicação fosse reempacotado, pelo que essa palavra-passe já não abre o bloqueio. O PIN ainda abre. Volte a associar a palavra-passe da conta nas definições de bloqueio enquanto o PIN ainda for conhecido — caso contrário, um PIN esquecido não deixa nada atrás de si.',
         'reconnect_link' => 'Voltar a ligar →',
+        'pots_category_link_retired' => 'O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reserva arquivada volta a estar não alocado e espera que o atribua.|O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reservas arquivadas volta a estar não alocado e espera que o atribua.',
     ],
 ];

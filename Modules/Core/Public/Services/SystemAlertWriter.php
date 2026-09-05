@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Sync\Public\Events\EntityMutated;
 
 // The write seam for the system_alerts rows that BELONG to a user, and the only
@@ -176,6 +178,52 @@ final readonly class SystemAlertWriter
         ));
 
         return $alert;
+    }
+
+    // An alert every device works out for itself from rows they all hold —
+    // what a migration found, not what one machine noticed. Its id is derived
+    // so the two peers land on one row: minted, dismissing it on one device
+    // would leave a second copy standing on the other.
+    /**
+     * @param  array<string, int|string|null>  $identity  what makes this row distinct beyond its kind and its owner
+     * @param  array<string, mixed>|null  $metadata
+     */
+    public function raiseDerivedForUser(
+        int $userId,
+        string $kind,
+        string $severity,
+        string $message,
+        array $identity,
+        ?array $metadata = null,
+    ): void {
+        $id = DerivedRowId::for('system_alerts', ['kind' => $kind, 'user_id' => $userId] + $identity);
+
+        $inserted = $this->db->connection()->table('system_alerts')->insertOrIgnore([
+            'id' => $id,
+            'user_id' => $userId,
+            'dedup_key' => null,
+            'kind' => $kind,
+            'severity' => $severity,
+            'message' => $message,
+            'metadata' => $metadata === null ? null : json_encode($metadata, JSON_THROW_ON_ERROR),
+            'created_at' => CarbonImmutable::now()->toDateTimeString(),
+            'acknowledged_at' => null,
+        ]);
+
+        // Only the device that actually wrote the row announces it. The peer
+        // that derived the same id already holds it, and a second create op
+        // would be discarded on arrival anyway.
+        if ($inserted === 0) {
+            return;
+        }
+
+        $this->events()->dispatch(new EntityMutated(
+            table: 'system_alerts',
+            pk: $id,
+            userId: $userId,
+            mutationType: 'create',
+            dirtyFields: $this->storedRow($id),
+        ));
     }
 
     // Acknowledging is the one user action on this table, and it is a SET on

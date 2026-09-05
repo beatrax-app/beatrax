@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Przypomnij później',
         'mark_resolved' => 'Oznacz jako rozwiązany',
         'mark_resolved_aria' => 'Oznacz jako rozwiązany — alert systemowy #:id',
+        'assign_in_budgets' => 'Przypisz w Budżetach',
+        'dismiss' => 'Odrzuć',
+        'dismiss_aria' => 'Odrzuć — alert systemowy #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Szyfrowanie w spoczynku jest aktywne dla tego konta, ale żadne opakowanie blokady aplikacji nie przechowuje już klucza danych, więc każda zaszyfrowana notatka, opis i dane kontrahenta odczytują się jako puste. Jedyną drogą powrotu jest sparowanie z urządzeniem, które wciąż ma klucz.',
         'auth_lock_recovery_wrap_stale' => 'Hasło konta zmieniono bez ponownego opakowania odzyskiwania blokady aplikacji, więc to hasło nie otwiera już blokady. PIN nadal ją otwiera. Ponownie powiąż hasło konta w ustawieniach blokady, póki PIN jest jeszcze znany — inaczej za zapomnianym PIN-em nie zostanie nic.',
         'reconnect_link' => 'Połącz ponownie →',
+        'pots_category_link_retired' => 'Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanej skarbonki znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.',
     ],
 ];

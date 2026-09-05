@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Ricordamelo più tardi',
         'mark_resolved' => 'Segna come risolto',
         'mark_resolved_aria' => 'Segna come risolto — avviso di sistema #:id',
+        'assign_in_budgets' => 'Assegna nei Budget',
+        'dismiss' => 'Ignora',
+        'dismiss_aria' => 'Ignora — avviso di sistema #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'La cifratura a riposo è attiva per questo account, ma nessun wrap del blocco app conserva più la chiave dei dati, quindi ogni nota, descrizione e dettaglio di controparte cifrato risulta vuoto. L’unico ritorno è l’abbinamento con un dispositivo che possiede ancora la chiave.',
         'auth_lock_recovery_wrap_stale' => 'La password dell’account è cambiata senza che il wrap di recupero del blocco app venisse re-wrappato, quindi quella password non apre più il blocco. Il PIN sì. Ricollega la password dell’account dalle impostazioni del blocco finché il PIN è ancora noto, altrimenti un PIN dimenticato non lascia nulla dietro di sé.',
         'reconnect_link' => 'Ricollega →',
+        'pots_category_link_retired' => 'Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanaio archiviato è di nuovo non assegnato e aspetta che tu lo assegni.|Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanai archiviati è di nuovo non assegnato e aspetta che tu lo assegni.',
     ],
 ];

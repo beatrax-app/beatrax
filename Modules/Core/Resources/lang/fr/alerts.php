@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Me le rappeler plus tard',
         'mark_resolved' => 'Marquer comme résolue',
         'mark_resolved_aria' => 'Marquer comme résolue — alerte système #:id',
+        'assign_in_budgets' => 'Affecter dans Budgets',
+        'dismiss' => 'Ignorer',
+        'dismiss_aria' => 'Ignorer — alerte système #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Le chiffrement au repos est actif pour ce compte, mais plus aucune enveloppe de verrouillage d’application ne détient la clé de données : chaque note, description et détail de contrepartie chiffré est donc lu comme vide. L’appairage avec un appareil qui détient encore la clé est le seul retour possible.',
         'auth_lock_recovery_wrap_stale' => 'Le mot de passe du compte a changé sans que l’enveloppe de récupération du verrouillage soit ré-emballée : ce mot de passe n’ouvre donc plus le verrouillage de l’application. Le code PIN, lui, fonctionne toujours. Reliez à nouveau le mot de passe du compte depuis les réglages de verrouillage tant que le code PIN est connu, sinon un code PIN oublié ne laisse rien derrière lui.',
         'reconnect_link' => 'Reconnecter →',
+        'pots_category_link_retired' => 'La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnotte archivée est de nouveau non affecté et attend que vous l’affectiez.|La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnottes archivées est de nouveau non affecté et attend que vous l’affectiez.',
     ],
 ];

@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Later herinneren',
         'mark_resolved' => 'Markeren als opgelost',
         'mark_resolved_aria' => 'Markeren als opgelost — systeemmelding #:id',
+        'assign_in_budgets' => 'Toewijzen in Budgetten',
+        'dismiss' => 'Sluiten',
+        'dismiss_aria' => 'Sluiten — systeemmelding #:id',
     ],
 
     'messages' => [
@@ -43,5 +46,6 @@ return [
         'auth_lock_key_material_stranded' => 'Versleuteling in rust is actief voor dit account, maar geen enkele wikkel van de appvergrendeling houdt de gegevenssleutel nog vast, dus elke versleutelde notitie, omschrijving en tegenpartijgegevens worden als leeg gelezen. Koppelen met een apparaat dat de sleutel nog heeft, is de enige weg terug.',
         'auth_lock_recovery_wrap_stale' => 'Het accountwachtwoord is gewijzigd zonder dat de herstelwikkel van de appvergrendeling opnieuw is ingepakt, dus dat wachtwoord opent de appvergrendeling niet meer. De pincode nog wel. Koppel het accountwachtwoord opnieuw via de instellingen van de appvergrendeling zolang de pincode nog bekend is — anders laat een vergeten pincode niets achter.',
         'reconnect_link' => 'Opnieuw koppelen →',
+        'pots_category_link_retired' => 'Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerd potje is weer niet-toegewezen en wacht tot je het toewijst.|Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerde potjes is weer niet-toegewezen en wacht tot je het toewijst.',
     ],
 ];

@@ -17,11 +17,19 @@
         follow-up).
       - update.critical shows Install on next launch ONLY — no skip
         option per the UI-SPEC critical contract.
+      - pots.category_link_retired shows Assign in Budgets (a link, not
+        an acknowledgement — reading the row is not doing the work it
+        asks for) followed by Dismiss. It is the only row whose primary
+        action leaves the banner without resolving it, and it takes the
+        amber pair update.stale uses: both are warning rows, and a slate
+        button on an amber card is the drift x-core::alert exists to stop.
 
     Tailwind classes are direct literal strings throughout — no
     interpolation — so Tailwind's content scanner picks them up.
 --}}
+@use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\PotAlertKind')
 @use('Modules\Core\Public\Enums\UpdateAlertKind')
 @use('Modules\Core\Public\Support\ProjectLinks')
 @php
@@ -96,6 +104,23 @@
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-700 dark:bg-rose-600"
             >{{ Lang::get('core::alerts.actions.install_next_launch') }}</button>
+        </div>
+        @break
+    @case (PotAlertKind::CategoryLinkRetired->value)
+        <div class="flex flex-wrap items-center justify-end gap-2">
+            <a
+                href="{{ Destination::Budgets->url() }}"
+                class="tap-link rounded bg-amber-600 text-white hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600 px-3 py-1.5 text-sm font-medium dark:bg-amber-500 dark:hover:bg-amber-400"
+            >{{ Lang::get('core::alerts.actions.assign_in_budgets') }}</a>
+            <button
+                type="button"
+                wire:click="acknowledge('{{ $alert->id }}')"
+                wire:loading.attr="disabled"
+                wire:target="acknowledge('{{ $alert->id }}')"
+                aria-label="{{ Lang::get('core::alerts.actions.dismiss_aria', ['id' => $alert->id]) }}"
+                data-testid="resolve-alert-{{ $alert->id }}"
+                class="rounded bg-amber-100 text-amber-900 hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600 px-3 py-1.5 text-sm font-medium dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800"
+            >{{ Lang::get('core::alerts.actions.dismiss') }}</button>
         </div>
         @break
     @default

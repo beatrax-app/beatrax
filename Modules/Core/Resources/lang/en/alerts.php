@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Remind me later',
         'mark_resolved' => 'Mark as resolved',
         'mark_resolved_aria' => 'Mark as resolved — system alert #:id',
+        'assign_in_budgets' => 'Assign in Budgets',
+        'dismiss' => 'Dismiss',
+        'dismiss_aria' => 'Dismiss — system alert #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'At-rest encryption is active for this account but no app-lock wrap still holds the data key, so every encrypted note, description and counterparty detail reads as empty. Pairing with a device that still holds the key is the only way back.',
         'auth_lock_recovery_wrap_stale' => 'The account password changed without the app-lock recovery wrap being re-wrapped, so that password no longer opens the app lock. The PIN still does. Re-link the account password from the app-lock settings while the PIN is still known, or a forgotten PIN leaves nothing behind it.',
         'reconnect_link' => 'Reconnect →',
+        'pots_category_link_retired' => 'Envelope budgeting has replaced category-linked pots. :amount from :count archived pot is unallocated again, and waiting for you to assign it.|Envelope budgeting has replaced category-linked pots. :amount from :count archived pots is unallocated again, and waiting for you to assign it.',
     ],
 ];

@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Daha sonra hatırlat',
         'mark_resolved' => 'Çözüldü olarak işaretle',
         'mark_resolved_aria' => 'Çözüldü olarak işaretle — #:id numaralı sistem uyarısı',
+        'assign_in_budgets' => 'Bütçelerde dağıt',
+        'dismiss' => 'Kapat',
+        'dismiss_aria' => 'Kapat — #:id numaralı sistem uyarısı',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Bu hesap için bekleyen veri şifrelemesi etkin, ancak veri anahtarını artık hiçbir uygulama kilidi sargısı tutmuyor; bu nedenle her şifreli not, açıklama ve karşı taraf ayrıntısı boş görünüyor. Geri dönüşün tek yolu, anahtarı hâlâ tutan bir cihazla eşleşmektir.',
         'auth_lock_recovery_wrap_stale' => 'Hesap parolası, uygulama kilidinin kurtarma sargısı yeniden sarılmadan değiştirildi; bu nedenle o parola artık uygulama kilidini açmıyor. PIN hâlâ açıyor. PIN hâlâ biliniyorken hesap parolasını uygulama kilidi ayarlarından yeniden bağlayın; aksi hâlde unutulan bir PIN’in ardında hiçbir şey kalmaz.',
         'reconnect_link' => 'Yeniden bağlan →',
+        'pots_category_link_retired' => 'Zarf bütçeleme, kategoriye bağlı kumbaraların yerini aldı. Arşivlenen :count kumbaradan gelen :amount yeniden dağıtılmamış durumda ve dağıtmanızı bekliyor.',
     ],
 ];

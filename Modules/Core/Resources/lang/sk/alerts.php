@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Pripomenúť neskôr',
         'mark_resolved' => 'Označiť ako vyriešené',
         'mark_resolved_aria' => 'Označiť ako vyriešené — systémové upozornenie #:id',
+        'assign_in_budgets' => 'Prideliť v Rozpočtoch',
+        'dismiss' => 'Zamietnuť',
+        'dismiss_aria' => 'Zamietnuť — systémové upozornenie #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,10 @@ return [
         'auth_lock_key_material_stranded' => 'Šifrovanie v pokoji je pre tento účet aktívne, ale kľúč k údajom už nedrží žiadny obal zámku aplikácie, takže každá šifrovaná poznámka, popis aj údaj o protistrane sa čítajú ako prázdne. Jedinou cestou späť je spárovanie so zariadením, ktoré kľúč stále drží.',
         'auth_lock_recovery_wrap_stale' => 'Heslo k účtu sa zmenilo bez toho, aby sa obnovovací obal zámku aplikácie znova zabalil, takže tým heslom už zámok neotvoríte. PIN áno. Znova prepojte heslo k účtu v nastaveniach zámku, kým PIN ešte poznáte — inak po zabudnutom PIN-e nezostane nič.',
         'reconnect_link' => 'Znova pripojiť →',
+        // i18n-review: sk · pots_category_link_retired — "obálka" is this app's
+        // word for a budget envelope and for a savings pot at once, so the pots are
+        // named "sporiace obálky" here to keep the two apart. A Slovak reader settles
+        // whether that reads or whether the pots want a different noun.
+        'pots_category_link_retired' => 'Rozpočtovanie po obálkach nahradilo sporiace obálky naviazané na kategóriu. Suma :amount z :count archivovanej sporiacej obálky je opäť nepriradená a čaká, kým ju prideliš.|Rozpočtovanie po obálkach nahradilo sporiace obálky naviazané na kategóriu. Suma :amount z :count archivovaných sporiacich obálok je opäť nepriradená a čaká, kým ju prideliš.|Rozpočtovanie po obálkach nahradilo sporiace obálky naviazané na kategóriu. Suma :amount z :count archivovaných sporiacich obálok je opäť nepriradená a čaká, kým ju prideliš.',
     ],
 ];

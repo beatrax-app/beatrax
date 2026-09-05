@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Tuleta hiljem meelde',
         'mark_resolved' => 'Märgi lahendatuks',
         'mark_resolved_aria' => 'Märgi lahendatuks — süsteemi hoiatus #:id',
+        'assign_in_budgets' => 'Jaga Eelarvetes',
+        'dismiss' => 'Peida',
+        'dismiss_aria' => 'Peida — süsteemi hoiatus #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Selle konto puhul on puhkeoleku krüptimine aktiivne, kuid ükski rakenduseluku ümbris ei hoia enam andmevõtit, seega loetakse iga krüpteeritud märkus, kirjeldus ja vastaspoole detail tühjaks. Ainus tee tagasi on siduda seade, mis võtit veel hoiab.',
         'auth_lock_recovery_wrap_stale' => 'Konto parool muutus ilma, et rakenduseluku taasteümbris oleks uuesti pakitud, seega see parool enam rakenduse lukku ei ava. PIN-kood avab endiselt. Seo konto parool rakenduseluku seadetes uuesti, kuni PIN-kood on veel teada — muidu ei jää unustatud PIN-koodi taha midagi.',
         'reconnect_link' => 'Ühenda uuesti →',
+        'pots_category_link_retired' => 'Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.|Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.',
     ],
 ];
