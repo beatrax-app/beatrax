@@ -55,16 +55,28 @@ it('emits a Tray construction that flags the loaded image as a macOS template im
     expect($patched)->toContain('new Tray(image)');
 });
 
-it('builds the verbatim three-row context menu — Open Beatrax / Scan email now / Quit', function (): void {
+it('builds the verbatim three-row context menu — Open Beatrax / Email inboxes… / Quit', function (): void {
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched] = injectPersistentTray($upstream);
 
     expect($patched)->toContain("label: 'Open Beatrax'");
-    expect($patched)->toContain("label: 'Scan email now'");
+    expect($patched)->toContain("label: 'Email inboxes…'");
     expect($patched)->toContain("label: 'Quit'");
     // Quit handler must call `app.quit()` directly — no HTTP roundtrip.
     expect($patched)->toContain('app.quit()');
+});
+
+it('offers no tray row naming an action the main process cannot perform', function (): void {
+    $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
+
+    [$patched] = injectPersistentTray($upstream);
+
+    // Every row here only shows or points the window: the inbox row loads
+    // /inboxes and starts no scan, so a label promising one is the defect
+    // the File menu's own 'Scan email now' was corrected for.
+    expect($patched)->not->toContain('Scan email now');
+    expect($patched)->toContain('bringMainWindowToFront({ inboxes: true })');
 });
 
 it('wires the show-or-recreate helper to the NativePHP /api/window/open endpoint with the secret header', function (): void {

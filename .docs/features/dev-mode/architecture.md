@@ -348,8 +348,6 @@ user presses ⌘K from anywhere in the app
          affordance's triple gate)
   → user picks one
        → if URL action: window.location to URL
-       → if handlerEvent: dispatch that browser event (no action
-         registers one today; two that did reached no listener)
        → if command: route to /dev/artisan with prefilled name
 ```
 
@@ -467,9 +465,10 @@ Per-page detail that doesn't fit the flow diagrams above:
   writes to it on every selection (dedup + cap), and the same key seeds
   the Recent rail on `mount()`. Navigation itself is handled entirely
   client-side by the `palette()` Alpine factory (`window.location` for
-  `url` rows, a Livewire browser event for `handlerEvent` rows,
-  `spawn-command` for `dev`-source rows) — the Livewire methods here
-  only persist state.
+  `url` rows, `spawn-command` for `dev`-source rows) — the Livewire
+  methods here only persist state. An `AppAction` carries a URL and
+  nothing else: the browser-event arm was removed once its two rows
+  were found to reach no listener.
 - **TripleGateModal** — the global triple-gate modal SFC, mounted once
   in the dev-shell layout so `triple-gate:open` can open it from
   anywhere on `/dev/*` (runner timeline rows, command palette, queue

@@ -113,8 +113,9 @@ Modules/DevMode/
   - `CommandRunAudit` — the one audit row a run writes, carrying the
     same `CommandTier`.
   - `NavigationEntry` — `(id, label, hint, icon, url, keywords)`.
-  - `AppAction` — `(id, label, hint, icon, handlerEvent, url,
-    keywords)`.
+  - `AppAction` — `(id, label, hint, icon, url, keywords)`. The URL is
+    non-nullable: a row is a destination, and the retired
+    `handlerEvent` arm named events nothing listened for.
 - **Models/**
   - `Job` — read-only model over the framework's `jobs` table.
     `failed_jobs` and `job_batches` carry no model of their own; they
