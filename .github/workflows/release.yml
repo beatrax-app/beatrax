@@ -318,6 +318,21 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build mac arm64
 
+            # The identity the verify step below checks the bundle against.
+            # It is not optional there: an absent one is treated exactly like
+            # a wrong one, because a notarised bundle carrying the framework's
+            # scaffold id is a correctly signed lie.
+            - name: Resolve the bundle identifier the build was given
+              id: app-identity
+              run: |
+                  set -euo pipefail
+                  identifier=$(php artisan tinker --execute="echo config('nativephp.app_id');" 2>/dev/null | tail -n 1 | tr -d '[:space:]')
+                  if [ -z "${identifier}" ]; then
+                      echo "::error::could not resolve config('nativephp.app_id'); refusing to verify a bundle against an unknown identity."
+                      exit 1
+                  fi
+                  echo "identifier=${identifier}" >> "$GITHUB_OUTPUT"
+
             # A green build proves nothing about the signature here: the
             # Developer ID prebuild hook's non-zero exit is swallowed by
             # NativePHP's runProcess(), electron-builder then falls back to
@@ -330,6 +345,7 @@ jobs:
               with:
                   platform: macos
                   artifact-path: nativephp/electron/dist/*.dmg
+                  expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
             - name: Emit auto-update manifest (latest-mac.yml)
               # electron-builder skips writing the publisher manifest
