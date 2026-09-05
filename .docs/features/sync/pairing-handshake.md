@@ -731,7 +731,6 @@ The copy does not claim the lock is off, because it is not. The app still locks
 on its own schedule and still demands the passphrase. What outlives the timeout
 is the pairing window, and that is what the line says.
 
-
 ### A ceremony that cannot speak says so
 
 Holding the window open is only half of it. `mobile.pair` is on
