@@ -763,7 +763,7 @@ identity
 `pairing_tokens` row from that identity before accepting (the fresh,
 separate device database otherwise has no local pending row to accept
 against), auto-configures this device's relay transport from any
-`relay`/`rtok` query params the QR carries, and sends a signed
+`relay`/`rpin` query params the QR carries, and sends a signed
 `PAIR_RESPONDER_ACCEPT` frame to the desktop's own separate database over
 the relay — best-effort, since a delivery failure never dead-ends the
 confirm step already rendered. `checkPairingState()`'s poll re-emits that

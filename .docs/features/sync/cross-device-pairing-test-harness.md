@@ -101,9 +101,9 @@ than at the local outbox that is actually absent.
 ## Teardown is not optional
 
 The relay configuration this trait writes is partly **on disk**, not in the
-in-memory databases: `sync-relay-token.json`,
-`sync-relay-drain-secret.json` and `sync-relay-drain-registry.json` under the
-secrets path, plus `sync/relay.json` under the app path. Call
+in-memory databases: `sync-relay-drain-tokens.json` and
+`sync-relay-drain-registry.json` under the secrets path, plus `sync/relay.json`
+under the app path. Call
 `crossDevicePairingTearDown()` from the consuming test file's `afterEach()`.
 Without it, a later unrelated test in the same process starts with a relay
 already configured and a drain registry already populated.

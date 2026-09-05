@@ -41,11 +41,10 @@ final readonly class LocalRelayProvisioner
         }
 
         // Unconditional, not first-run-only. A device that stored the endpoint
-        // before either of these existed spent the rest of its life dialling a
-        // relay it could not authenticate to: the drain answers 401, which on
-        // screen is pairing that simply never completes.
+        // before the pin existed spent the rest of its life dialling a relay
+        // whose certificate it could not verify, which on screen is pairing
+        // that simply never completes.
         $pin = $this->tls->ensure($address);
-        $this->ensureAuthToken();
 
         // The LAN address, not 127.0.0.1: this same value is what the QR hands
         // the phone, and loopback there would point it at itself. Re-derived
@@ -62,19 +61,6 @@ final readonly class LocalRelayProvisioner
         }
 
         return $endpoint;
-    }
-
-    // Without a shared secret the relay derives no per-device token, so
-    // isAuthorized() rejects EVERY drain with 401 — frames pile up delivered
-    // and unread, which is exactly how pairing stalled with a full mailbox.
-    // The QR carries this alongside the endpoint so the peer can drain too.
-    private function ensureAuthToken(): void
-    {
-        if ($this->config->authToken() !== null) {
-            return;
-        }
-
-        $this->config->setAuthToken(bin2hex(random_bytes(32)));
     }
 
     // Reads the address the OS would use to reach the outside world. The UDP

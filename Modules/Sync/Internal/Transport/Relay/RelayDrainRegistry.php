@@ -7,28 +7,27 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
-// Relay-side trust-on-first-use store binding each draining device_id to a
-// hash of the per-device drain secret it first presented. Replaces the old
-// shared-secret-derived token that every relay peer could recompute from the
-// QR relay token, closing the cross-tenant drain/confirm metadata hole.
+/**
+ * @link ../../../../../.docs/features/sync/relay-endpoint-authorization.md#a-drain-token-names-the-one-device-it-drains
+ */
 final class RelayDrainRegistry
 {
     private const string REGISTRY_FILE = 'sync-relay-drain-registry.json';
 
-    // TOFU: the first token seen for a did is recorded and trusted; every later
-    // drain must present one whose hash hash_equals it. Only the DRAIN path may
-    // reach this. Confirm derives the did from an autoincrement row id, so
-    // registering there let a caller sweep DELETE /relay/drain/{1..N}.
+    // Trust-on-first-use, but only for a token that already names this device
+    // id. Registering whatever bearer arrived let any past peer's copy of the
+    // relay-wide QR token claim a mailbox nobody had drained yet — which is
+    // every new device's FIRST drain, the one carrying its GDK epoch wraps.
     public function registerOrAuthorize(string $did, string $presentedToken): bool
     {
-        if ($did === '' || $presentedToken === '') {
+        if (! RelayDrainToken::namesDevice($presentedToken, $did)) {
             return false;
         }
 
         $store = $this->load();
 
         if ($this->storedHash($store, $did) === null) {
-            $store[$did] = hash('sha256', $presentedToken);
+            $store[$did] = ['v' => RelayDrainToken::VERSION, 'hash' => hash('sha256', $presentedToken)];
             $this->persist($store);
 
             return true;
@@ -39,9 +38,11 @@ final class RelayDrainRegistry
 
     // Verify only, never register: an unregistered did is refused here rather
     // than claimed, which is what keeps the TOFU decision in one place.
+    // Confirm derives its did from an autoincrement row id, so registering
+    // there let a caller sweep DELETE /relay/drain/{1..N}.
     public function authorizes(string $did, string $presentedToken): bool
     {
-        if ($did === '' || $presentedToken === '') {
+        if (! RelayDrainToken::namesDevice($presentedToken, $did)) {
             return false;
         }
 
@@ -61,11 +62,28 @@ final class RelayDrainRegistry
      */
     private function storedHash(array $store, string $did): ?string
     {
-        return isset($store[$did]) && is_string($store[$did]) ? $store[$did] : null;
+        return $this->entryHash($store[$did] ?? null);
+    }
+
+    // The verifier a binding written by THIS scheme carries, or null for
+    // anything else. The superseded install-scoped scheme wrote a bare hash
+    // string and the two are indistinguishable as hex, so the version marker
+    // is the only thing that can tell them apart on an upgraded install.
+    private function entryHash(mixed $entry): ?string
+    {
+        if (! is_array($entry) || ($entry['v'] ?? null) !== RelayDrainToken::VERSION) {
+            return null;
+        }
+
+        $hash = $entry['hash'] ?? null;
+
+        return is_string($hash) && $hash !== '' ? $hash : null;
     }
 
     // A missing, unreadable, empty or non-object file all collapse to an empty
-    // registry so the next presented token TOFU-registers cleanly.
+    // registry so the next presented token TOFU-registers cleanly. A binding
+    // from the superseded scheme is dropped for the same reason: honoured, it
+    // would 401 the upgraded owner out of its own mailbox for good.
     /**
      * @return array<array-key, mixed>
      */
@@ -73,18 +91,19 @@ final class RelayDrainRegistry
     {
         $path = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::REGISTRY_FILE;
 
-        if (! file_exists($path)) {
+        // is_file, not file_exists: a directory standing here would be read as
+        // a file, and the warning that raises becomes an exception out of a
+        // drain rather than the write failure persist() reports.
+        if (! is_file($path)) {
             return [];
         }
 
         $json = file_get_contents($path);
-        if ($json === false || $json === '') {
-            return [];
-        }
+        $data = $json === false || $json === '' ? null : json_decode($json, true);
 
-        $data = json_decode($json, true);
-
-        return is_array($data) ? $data : [];
+        return is_array($data)
+            ? array_filter($data, fn (mixed $entry): bool => $this->entryHash($entry) !== null)
+            : [];
     }
 
     // Same mkdir 0700 -> write -> chmod 0600 discipline RelayConfig uses for its
@@ -104,7 +123,10 @@ final class RelayDrainRegistry
             throw SecretFileException::couldNotCreateSecretsDirectory($dir);
         }
 
-        $json = json_encode($store, JSON_THROW_ON_ERROR);
+        // FORCE_OBJECT because a device id that is all digits decodes to an
+        // integer key: json_encode would then emit a JSON array, which reads
+        // back renumbered from zero and silently unbinds that device.
+        $json = json_encode($store, JSON_THROW_ON_ERROR | JSON_FORCE_OBJECT);
 
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.

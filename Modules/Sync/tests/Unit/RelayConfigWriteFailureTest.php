@@ -10,7 +10,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
 uses(RefreshDatabase::class);
 
-// The endpoint and the auth token decide where this device syncs and what it
+// The endpoint and the drain token decide where this device syncs and what it
 // proves itself with, so a write that silently did nothing would leave the device
 // on its old value while the caller believes it was reconfigured. The `=== false`
 // guards only decide anything because the write is suppressed.
@@ -55,7 +55,7 @@ it('refuses when the config directory cannot be created', function (): void {
     @unlink($dir);
 });
 
-// The auth token is key material, so its failures raise SecretFileException
+// A drain token is key material, so its failures raise SecretFileException
 // rather than the config type: a half-written or world-readable token is a secret
 // on disk in a state the caller has to reason about, which an endpoint never is.
 
@@ -67,24 +67,24 @@ it('refuses when the secrets directory cannot be created', function (): void {
     /** @var RelayConfig $config */
     $config = $this->app->make(RelayConfig::class);
 
-    expect(fn () => $config->setAuthToken('relay-token'))
+    expect(fn () => $config->deviceDrainToken('device-write-failure'))
         ->toThrow(SecretFileException::class, 'Cannot create secrets directory');
 
     @unlink($dir);
 });
 
-it('refuses to report a saved token it could not write', function (): void {
+it('refuses to report a saved drain token it could not write', function (): void {
     $dir = UserDataPathService::secretsPath();
     mkdir($dir, 0700, true);
-    mkdir($dir.DIRECTORY_SEPARATOR.'sync-relay-token.json');
+    mkdir($dir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json');
 
     /** @var RelayConfig $config */
     $config = $this->app->make(RelayConfig::class);
 
-    expect(fn () => $config->setAuthToken('relay-token'))
-        ->toThrow(SecretFileException::class, 'Cannot write relay token');
+    expect(fn () => $config->deviceDrainToken('device-write-failure'))
+        ->toThrow(SecretFileException::class, 'Cannot write relay drain tokens');
 
-    @rmdir($dir.DIRECTORY_SEPARATOR.'sync-relay-token.json');
+    @rmdir($dir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json');
 });
 
 // Both setters rewrite the WHOLE file, so each carries the other's field

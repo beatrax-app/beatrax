@@ -70,7 +70,6 @@ trait CrossDevicePairingHarness
 
         $this->harnessRelayConfig = new RelayConfig;
         $this->harnessRelayConfig->setEndpointUrl('https://relay.test');
-        $this->harnessRelayConfig->setAuthToken('cross-device-harness-relay-secret');
 
         $mailbox = new RelayMailbox($db, $this->app->make(Clock::class));
         // In-process over a fake HTTP factory: no socket, so the TLS material is inert.
@@ -115,12 +114,11 @@ trait CrossDevicePairingHarness
     protected function crossDevicePairingTearDown(): void
     {
         $secretsDir = UserDataPathService::secretsPath();
-        $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
-        $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+        $drainTokensPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json';
         $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
         $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-        foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
+        foreach ([$drainTokensPath, $drainRegistryPath, $relayPath] as $path) {
             if (is_file($path)) {
                 @unlink($path);
             }

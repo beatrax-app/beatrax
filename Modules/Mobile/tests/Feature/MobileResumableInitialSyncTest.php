@@ -134,7 +134,6 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     // A FRESH puller carries no in-memory state, so a cold-started process
@@ -222,7 +221,6 @@ it('counts a large peer delta without holding it — a first sync well past a ph
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     /** @var InitialSyncPuller $puller */
@@ -406,7 +404,6 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     /** @var InitialSyncPuller $puller */
@@ -549,7 +546,6 @@ it('does not report complete while the GDK keyring is empty — an import awaiti
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     /** @var InitialSyncPuller $puller */

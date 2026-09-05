@@ -130,10 +130,9 @@ to the WebSocket untouched — one route without taking on a router dependency
 for it.
 
 What it returns is **public identity only**. The pairing QR may additionally
-carry the relay endpoint, the relay token and the TLS pin, because a camera is
-an out-of-band channel that an attacker has to be physically present to
-observe. This route is on the wire the attacker is already on, so it never
-carries any of them.
+carry the relay endpoint and the TLS pin, because a camera is an out-of-band
+channel that an attacker has to be physically present to observe. This route is
+on the wire the attacker is already on, so it never carries either.
 
 Two more properties:
 

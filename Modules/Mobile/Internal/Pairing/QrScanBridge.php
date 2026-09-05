@@ -91,7 +91,7 @@ final readonly class QrScanBridge
     // Unwraps the full envelope to recover the initiator's public
     // identity alongside the token (used only by the mobile import-mode
     // branch, to seed a local pairing_tokens row on a fresh device),
-    // plus the optional relay/rtok params for relay auto-configuration.
+    // plus the optional relay endpoint and pin for auto-configuration.
     /**
      * @param  array<array-key, mixed>  $query  As parse_str() fills it, so the
      *                                          keys and values are whatever the
@@ -115,7 +115,7 @@ final readonly class QrScanBridge
     }
 
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}|null
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}|null
      */
     public function extractIdentity(string $decodedPayload): ?array
     {
@@ -148,9 +148,6 @@ final readonly class QrScanBridge
         $relay = $query['relay'] ?? null;
         $relayEndpoint = is_string($relay) && $relay !== '' ? $relay : null;
 
-        $rtok = $query['rtok'] ?? null;
-        $relayAuthToken = $relayEndpoint !== null && is_string($rtok) && $rtok !== '' ? $rtok : null;
-
         // The pinned relay key. Only meaningful alongside an endpoint, and
         // only trustworthy because the QR itself is out-of-band.
         $rpin = $query['rpin'] ?? null;
@@ -163,7 +160,6 @@ final readonly class QrScanBridge
             'x25519PubHex' => $kx,
             'deviceName' => $deviceName,
             'relayEndpoint' => $relayEndpoint,
-            'relayAuthToken' => $relayAuthToken,
             'relayPin' => $relayPin,
         ];
 

@@ -212,14 +212,14 @@ final readonly class PairingFrameCourier
             return null;
         }
 
-        // This device presents its OWN per-device drain secret (TOFU-verified
-        // by the relay), not a token every relay peer could recompute. Minting
-        // it can only fail on a secrets-file I/O error — treated as "nothing to
-        // poll" so a transient write failure never throws out of the poll.
+        // A token minted for THIS device id and no other, so a peer holding
+        // one for its own id cannot present it here. Minting can only fail on
+        // a secrets-file I/O error — treated as "nothing to poll" so a
+        // transient write failure never throws out of the poll.
         try {
-            $drainToken = $this->relayConfig->deviceDrainSecret();
+            $drainToken = $this->relayConfig->deviceDrainToken($selfDeviceId);
         } catch (Throwable $e) {
-            $this->logger?->warning('PairingFrameCourier: could not resolve device drain secret.', [
+            $this->logger?->warning('PairingFrameCourier: could not resolve device drain token.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
                 ...SafeExceptionContext::describe($e),

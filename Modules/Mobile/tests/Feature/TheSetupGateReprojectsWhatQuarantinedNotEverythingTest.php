@@ -118,7 +118,6 @@ function gateReadyToReproject(int $entries): array
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     return [$userId, $peerDeviceId, $session];

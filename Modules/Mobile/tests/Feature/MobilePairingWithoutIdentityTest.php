@@ -60,7 +60,7 @@ function mpwiDesktopQr(Closure $asDevice, Session $session): array
             $desktopIdentity->x25519PublicKeyHex,
             $token,
             'Wessel MacBook',
-            new RelayBootstrap('https://relay.test', 'cross-device-harness-relay-secret'),
+            new RelayBootstrap('https://relay.test'),
         ),
         'token' => $token,
     ];

@@ -62,7 +62,6 @@ it('showMyCode() embeds the configured relay endpoint into the QR — a differen
     // A configured relay changes the encoded URI, and therefore the QR bit
     // pattern, deterministically.
     $relayConfig->setEndpointUrl('https://relay.example.com');
-    $relayConfig->setAuthToken('shared-secret');
 
     $withRelay = Livewire::test(PairingFlowModal::class)->call('showMyCode')->get('qrSvg');
 

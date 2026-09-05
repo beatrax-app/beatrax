@@ -31,7 +31,7 @@ final readonly class PairingPeerLink
     ) {}
 
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
     {
@@ -48,7 +48,7 @@ final readonly class PairingPeerLink
         return $this->scannedAddress->forTokenHash($tokenHash, $peerDeviceId) !== null;
     }
 
-    public function configureRelayFromQr(?string $endpoint, ?string $authToken, ?string $pin): void
+    public function configureRelayFromQr(?string $endpoint, ?string $pin): void
     {
         if ($endpoint === null || $endpoint === '') {
             return;
@@ -74,13 +74,8 @@ final readonly class PairingPeerLink
 
         // Refreshed even when the endpoint is unchanged: bailing out on "already
         // configured" left a phone that scanned a first, broken QR unable to ever
-        // receive the token and pin that endpoint needs.
-        if ($authToken !== null && $authToken !== '') {
-            $this->relayConfig->setAuthToken($authToken);
-        }
-
-        // Without the pin a self-signed relay certificate cannot be verified at
-        // all, so an endpoint arriving without one stays unusable.
+        // receive the pin that endpoint needs. Without it a self-signed relay
+        // certificate cannot be verified at all, so the endpoint stays unusable.
         if ($pin !== null && $pin !== '') {
             $this->relayConfig->setPin($pin);
         }

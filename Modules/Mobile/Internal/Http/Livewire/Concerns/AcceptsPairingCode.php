@@ -23,7 +23,7 @@ use Throwable;
 // announce the acceptance. They sit here rather than on the component because
 // extracting them took it past the method ceiling, and they move as one group.
 /**
- * @phpstan-type InitiatorIdentity array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}
+ * @phpstan-type InitiatorIdentity array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayPin: ?string, lanHost?: string, lanPort?: int}
  */
 trait AcceptsPairingCode
 {
@@ -132,7 +132,7 @@ trait AcceptsPairingCode
     {
         // Before accepting, so the responder-accept that follows already has
         // somewhere to deliver rather than failing on an unconfigured relay.
-        $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken'], $identity['relayPin']);
+        $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayPin']);
 
         // Every phone holds a separate database from the desktop, so the
         // token issued over there is never present here. No trust decision:

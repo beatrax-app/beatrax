@@ -49,10 +49,6 @@ final class QrPayloadBuilder
         if ($relay !== null && $relay->isAdvertisable()) {
             $uri .= '&relay='.rawurlencode((string) $relay->endpoint);
 
-            if ($relay->authToken !== null && $relay->authToken !== '') {
-                $uri .= '&rtok='.rawurlencode($relay->authToken);
-            }
-
             // The pin is what makes a self-signed relay certificate
             // trustworthy: the QR is an out-of-band channel the network
             // cannot touch, so the key it names is the only one accepted.

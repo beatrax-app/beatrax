@@ -155,21 +155,20 @@ final readonly class MobileSyncTriggerService
             return false;
         }
 
-        $token = $this->drainSecret();
+        $token = $this->drainToken($identity->deviceId);
 
         return $token !== null && $this->drainMailbox($identity->deviceId, $token);
     }
 
-    // This device presents its OWN per-device drain secret, TOFU-verified by
-    // the relay and matching PairingFrameCourier — the shared HMAC token every
-    // relay peer could recompute is gone. Minting can only fail on a
+    // A token minted for THIS device id and no other, matching what
+    // PairingFrameCourier presents for the same id. Minting can only fail on a
     // secrets-file write error, treated here as nothing to dial.
-    private function drainSecret(): ?string
+    private function drainToken(string $deviceId): ?string
     {
         try {
-            return $this->relayConfig->deviceDrainSecret();
+            return $this->relayConfig->deviceDrainToken($deviceId);
         } catch (Throwable $e) {
-            $this->logger?->info('MobileSyncTriggerService: could not resolve device drain secret.', [
+            $this->logger?->info('MobileSyncTriggerService: could not resolve device drain token.', [
                 'exception' => $e::class,
                 'message' => $e->getMessage(),
             ]);

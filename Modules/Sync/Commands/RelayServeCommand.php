@@ -312,9 +312,9 @@ final class RelayServeCommand extends Command
     }
 
     // Authorization is bound to the specific device whose mailbox is being
-    // accessed (see class @link): the presented Bearer token is verified
-    // against this device's TOFU-registered per-device drain secret. Rejects
-    // an empty did, a missing/non-Bearer header, and any non-matching token.
+    // accessed (see class @link): the Bearer token must name that device id
+    // AND match the one trust-on-first-use bound to it. Rejects an empty did,
+    // a missing or non-Bearer header, and any token failing either half.
     private function isAuthorized(Request $request, string $did, bool $mayRegister = false): bool
     {
         if ($did === '') {
@@ -327,7 +327,7 @@ final class RelayServeCommand extends Command
             return false;
         }
 
-        // The registry runs the timing-safe compare; an empty bearer is
+        // The registry runs both checks; a bearer that names no device is
         // rejected there before it can register. Only the drain path, where the
         // caller names its own device id, may register a first token.
         $token = substr($authHeader, strlen('Bearer '));

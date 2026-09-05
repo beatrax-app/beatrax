@@ -114,11 +114,16 @@ each column earns one the day something starts sorting it. Every writer goes thr
 ## Two ways in, one shape
 
 **Camera.** The QR carries `beatrax://pair?v=1&token=…&ed=…&kx=…&device=…`, optionally the
-initiator's device name, and optionally relay bootstrap parameters. The relay endpoint,
-bearer token and certificate pin travel together in `RelayBootstrap` because the last two
-mean nothing without the first — a bearer token with no endpoint is a secret with no
-destination. The pin is what makes a self-signed relay certificate trustworthy: the QR is an
-out-of-band channel the network cannot touch, so the key it names is the only one accepted.
+initiator's device name, and optionally relay bootstrap parameters. The relay endpoint and
+certificate pin travel together in `RelayBootstrap` because the second means nothing without
+the first — a pin with no endpoint pins nothing. The pin is what makes a self-signed relay
+certificate trustworthy: the QR is an out-of-band channel the network cannot touch, so the key
+it names is the only one accepted.
+
+No credential rides along. A relay-wide bearer in a QR is a drain credential handed to every
+peer that ever paired, and one such copy drained an unclaimed mailbox; the responder mints its
+own per-device drain token instead. See
+[the relay endpoints](relay-endpoint-authorization.md#a-drain-token-names-the-one-device-it-drains).
 
 **Typed word code.** The responder has the token but not the initiator's keys.
 `LanPairingOfferFetcher` browses for devices advertising the sync service and asks each one
@@ -455,11 +460,11 @@ never a trust decision.
 ## Draining the mailbox
 
 `PairingFrameCourier::drainAndApply()` polls this device's own relay mailbox. It never throws
-out of the poll — a missing self device, an unconfigured relay, a drain secret that cannot be
+out of the poll — a missing self device, an unconfigured relay, a drain token that cannot be
 minted and a transient relay outage all collapse to "nothing to poll".
 
-Each device presents its **own** per-device drain secret, TOFU-verified by the relay, rather
-than a token every relay peer could recompute.
+Each device presents the drain token minted for **its own device id**, which the relay refuses
+against any other id and which a relay-wide bearer cannot impersonate.
 
 The rule that matters is when a mailbox row is deleted. A row is confirmed away only when it
 is **terminally** handled:

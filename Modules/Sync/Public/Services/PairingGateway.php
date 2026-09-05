@@ -102,7 +102,7 @@ final readonly class PairingGateway
     // accept against; this asks the LAN for the identity half the code cannot carry.
     // On failure it returns WHY, because the two reasons need opposite advice.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
     {
@@ -111,9 +111,9 @@ final readonly class PairingGateway
 
     // No new trust decision: a relay learned from a QR is a delivery address,
     // and the human-verified safety words remain the sole anchor.
-    public function configureRelayFromQr(?string $endpoint, ?string $authToken, ?string $pin = null): void
+    public function configureRelayFromQr(?string $endpoint, ?string $pin = null): void
     {
-        $this->peerLink->configureRelayFromQr($endpoint, $authToken, $pin);
+        $this->peerLink->configureRelayFromQr($endpoint, $pin);
     }
 
     /**
