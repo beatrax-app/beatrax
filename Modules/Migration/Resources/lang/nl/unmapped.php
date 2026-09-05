@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Deze transactie botste met een al vastgelegde transactie (identieke vingerafdruk) en is niet geïmporteerd.',
+        'reconciled_status_kept' => 'De afstemmingsstatus uit de bron kon niet worden toegepast — deze transactie is in Beatrax afgestemd, en alleen het opheffen van de afstemming verandert dat. Ongewijzigd gelaten.',
         'split_legs_without_category' => ':count splitsingsregel van :legs heeft geen categorie, en een splitsingsregel kan niet zonder categorie worden opgeslagen. De transactie is voor het volledige bedrag geïmporteerd en staat in de categorie :uncategorized.|:count splitsingsregels van :legs hebben geen categorie, en een splitsingsregel kan niet zonder categorie worden opgeslagen. De transactie is voor het volledige bedrag geïmporteerd en staat in de categorie :uncategorized.',
         'split_sum_mismatch' => 'De regels van de splitsing tellen op tot :legs, maar de transactie is :total, en een splitsing moet exact met haar transactie overeenkomen. De transactie is voor het volledige bedrag geïmporteerd, zonder de bijbehorende regels.',
         'split_unstorable' => 'Beatrax kan deze splitsing niet opslaan zoals ze nu is, dus is de transactie op zichzelf geïmporteerd, zonder de bijbehorende regels.',

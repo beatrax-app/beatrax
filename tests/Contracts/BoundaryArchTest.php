@@ -553,6 +553,120 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
     );
 });
 
+// A reconciled row is the reader's own assertion that Beatrax and a bank
+// statement agree, so every mutator on the page refuses one. That is worth
+// nothing while a second writer of the column itself exists: three did, and the
+// migration importer's re-stamp walked a reconciled row back to whatever flag
+// its export carried, with nothing on screen saying so.
+const TRANSACTION_STATUS_WRITER = 'Modules/Ledger/Public/Services/TransactionStatusWriter.php';
+
+// The applier is a second writer by construction and is deliberately not routed
+// through the seam: an arriving Set is the peer's merge result, and re-deriving
+// it here would make the two devices disagree about what the merge decided.
+// It names neither the table nor the column, so it is pinned rather than found.
+const TRANSACTION_STATUS_ARRIVING_WRITER = [
+    'file' => 'Modules/Sync/Internal/Merge/OpLogEntryApplier.php',
+    'reason' => 'an arriving op writes the column generically, under the merge registry that declares it mergeable, and a per-field Set is the peer\'s decision rather than this device\'s',
+    'proves' => '/->table\(\$table\)/',
+    'registry' => 'Modules/Sync/Internal/Config/MergeRulesRegistry.php',
+    'declares' => "/'transactions' => \\[.*?'status' => \\['nullable' => false\\]/s",
+];
+
+/** @return list<string> every production PHP file this rule reads */
+function transactionStatusScannedFiles(): array
+{
+    $files = [];
+
+    foreach ([base_path('Modules'), base_path('app')] as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
+
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
+        ) as $file) {
+            $path = $file->getPathname();
+
+            if (! $file->isFile() || ! str_ends_with($path, '.php')) {
+                continue;
+            }
+            // A migration declares the column whose later mutation this
+            // restricts, and a factory or fixture builds rows the production
+            // path would have recorded.
+            if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
+                continue;
+            }
+
+            $files[] = $path;
+        }
+    }
+
+    sort($files);
+
+    return $files;
+}
+
+// Matched anywhere in the payload rather than anchored to the opening bracket:
+// update(['updated_at' => ..., 'status' => ...]) walks straight past a guard
+// that only reads the first key. A create is deliberately out of scope — it
+// sets the column's first value, which is not a transition between two.
+function transactionStatusIsWrittenIn(string $source): bool
+{
+    $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
+
+    return preg_match("/->table\\(['\"]transactions['\"]\\)[^;]*->update\\s*\\(\\s*\\[[^;]*['\"]status['\"]\\s*=>/", $stripped) === 1
+        || preg_match('/Transaction::(?:query\(\)|where)[^;]*->update\(\s*\[[^;]*[\'"]status[\'"]\s*=>/', $stripped) === 1;
+}
+
+it('does not allow any file other than TransactionStatusWriter to mutate transactions.status (noOtherTransactionStatusMutator)', function (): void {
+    $files = transactionStatusScannedFiles();
+    $allowed = base_path(TRANSACTION_STATUS_WRITER);
+    $offenders = [];
+
+    foreach ($files as $path) {
+        if ($path !== $allowed && transactionStatusIsWrittenIn((string) file_get_contents($path))) {
+            $offenders[] = str_replace(base_path().'/', '', $path);
+        }
+    }
+
+    // A walk that stopped reading answers "nothing found" in the same words a
+    // clean tree does, so the denominator is asserted before the verdict is.
+    expect(count($files))->toBeGreaterThan(2000)
+        ->and(is_file($allowed))->toBeTrue('TransactionStatusWriter is the subject of this rule and has to exist for it to mean anything');
+
+    expect($offenders)->toBe(
+        [],
+        'Only TransactionStatusWriter may transition transactions.status. It owns the '
+        .'edit-lock refusal a reconciled row depends on and the transition graph on '
+        .'ClearedStatus, so a second writer can walk a row the reader matched against a '
+        ."bank statement back to whatever it likes. Route the write through it. Offenders:\n  "
+        .implode("\n  ", $offenders),
+    );
+});
+
+it('pins the arriving-op writer the seam deliberately does not own (noOtherTransactionStatusMutator)', function (): void {
+    $applier = (string) file_get_contents(base_path(TRANSACTION_STATUS_ARRIVING_WRITER['file']));
+    $registry = (string) file_get_contents(base_path(TRANSACTION_STATUS_ARRIVING_WRITER['registry']));
+
+    expect(transactionStatusIsWrittenIn($applier))->toBeFalse(
+        'OpLogEntryApplier is pinned as the arriving-op writer because it names neither the '
+        .'table nor the column. Naming either makes it an ordinary offender the rule above '
+        .'should catch, and this pin would then hide it.',
+    );
+
+    expect(PatternScan::matches(TRANSACTION_STATUS_ARRIVING_WRITER['proves'], $applier))->toBeTrue(
+        'The pin is granted for '.TRANSACTION_STATUS_ARRIVING_WRITER['reason'].', which is only '
+        .'true while the applier writes through a variable table.',
+    );
+
+    expect(PatternScan::matches(TRANSACTION_STATUS_ARRIVING_WRITER['declares'], $registry))->toBeTrue(
+        'transactions.status has to stay a registered mergeable column: that registration is '
+        .'what makes the arriving write a merge result rather than an unannounced second '
+        .'opinion, and it is the whole reason this pin is granted.',
+    );
+});
+
 arch('ProjectionPipeline is never imported by Modules\\Forecasting\\Internal\\Http (noSynchronousForecastingInRequestLifecycle)')
     ->expect('Modules\\Forecasting\\Internal\\Pipeline\\ProjectionPipeline')
     ->not->toBeUsedIn([
@@ -1917,7 +2031,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php recurring_series 1',
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
-        'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
         'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php inbox_messages 2',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',

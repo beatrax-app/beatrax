@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ova se transakcija sudarila s drugom već zabilježenom transakcijom (isti otisak) i nije uvezena.',
+        'reconciled_status_kept' => 'Status usklađenosti iz izvora nije se mogao primijeniti — ova je transakcija usklađena u Beatraxu i to mijenja samo poništenje usklađivanja. Ostavljeno nepromijenjeno.',
 
         // i18n-review: hr · reason.split_legs_without_category — the waiting
         // bucket reads „u kategoriji Bez kategorije”, repeating this locale's

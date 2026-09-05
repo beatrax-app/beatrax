@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
+        'reconciled_status_kept' => "The source's cleared status could not be applied — this transaction is reconciled in Beatrax, and only un-reconciling it changes that. Left unchanged.",
         'split_legs_without_category' => ':count split leg of :legs carries no category, and a split leg cannot be stored without one. The transaction was imported at its full amount and is waiting in :uncategorized.|:count split legs of :legs carry no category, and a split leg cannot be stored without one. The transaction was imported at its full amount and is waiting in :uncategorized.',
         'split_sum_mismatch' => 'The split legs add up to :legs but the transaction is :total, and a split has to match its transaction exactly. The transaction was imported at its full amount, without its legs.',
         'split_unstorable' => 'Beatrax cannot store this split as it stands, so the transaction was imported on its own, without its legs.',

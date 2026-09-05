@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Tämä tapahtuma törmäsi toiseen jo kirjattuun tapahtumaan (sama sormenjälki), eikä sitä tuotu.',
+        'reconciled_status_kept' => 'Lähteen täsmäytystilaa ei voitu soveltaa — tämä tapahtuma on täsmäytetty Beatraxissa, ja vain täsmäytyksen purkaminen muuttaa sen. Jätettiin ennalleen.',
 
         // i18n-review: fi · reason.split_legs_without_category — the count is
         // moved behind the elative phrase because Finnish counts that way, and

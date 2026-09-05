@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Šis darījums sakrita ar jau reģistrētu darījumu (identisks pirksta nospiedums) un netika importēts.',
+        'reconciled_status_kept' => 'Avota saskaņojuma statusu nevarēja piemērot — šis darījums Beatrax ir saskaņots, un to maina tikai saskaņojuma atcelšana. Atstāts nemainīts.',
 
         // i18n-review: lv · reason.split_legs_without_category — Latvian selects
         // arm 0 for zero, and this line renders only above zero, so the genitive

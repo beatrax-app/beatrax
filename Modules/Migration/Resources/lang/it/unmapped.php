@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => "Questa transazione è andata in collisione con un'altra transazione già registrata (impronta identica) e non è stata importata.",
+        'reconciled_status_kept' => 'Lo stato di riconciliazione della fonte non è stato applicato — questa transazione è riconciliata in Beatrax e solo annullare la riconciliazione lo cambia. Lasciata invariata.',
 
         // i18n-review: it · reason.split_legs_without_category — the waiting
         // bucket reads «nella categoria Senza categoria», repeating this

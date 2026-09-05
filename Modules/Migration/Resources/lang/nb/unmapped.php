@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Denne transaksjonen kolliderte med en allerede registrert transaksjon (identisk fingeravtrykk) og ble ikke importert.',
+        'reconciled_status_kept' => 'Kildens avstemmingsstatus kunne ikke brukes — denne transaksjonen er avstemt i Beatrax, og bare oppheving av avstemmingen endrer det. Latt uendret.',
         'split_legs_without_category' => ':count delpost av :legs mangler kategori, og en delpost kan ikke lagres uten. Transaksjonen ble importert med hele beløpet og ligger i kategorien :uncategorized.|:count delposter av :legs mangler kategori, og en delpost kan ikke lagres uten. Transaksjonen ble importert med hele beløpet og ligger i kategorien :uncategorized.',
         'split_sum_mismatch' => 'Delpostene summerer seg til :legs, mens transaksjonen er :total, og en oppdeling må stemme nøyaktig med transaksjonen sin. Transaksjonen ble importert med hele beløpet, uten delpostene.',
         'split_unstorable' => 'Beatrax kan ikke lagre denne oppdelingen slik den står, så transaksjonen ble importert alene, uten delpostene.',

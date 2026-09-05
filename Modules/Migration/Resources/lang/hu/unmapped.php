@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ez a tranzakció ütközött egy már rögzített tranzakcióval (azonos ujjlenyomat), ezért nem lett importálva.',
+        'reconciled_status_kept' => 'A forrás egyeztetési állapotát nem lehetett alkalmazni — ez a tranzakció egyeztetve van a Beatraxban, és ezen csak az egyeztetés megszüntetése változtat. Változatlanul hagyva.',
 
         // i18n-review: hu · reason.split_legs_without_category — the article
         // before :uncategorized is written "a" because ledger::common.uncategorized

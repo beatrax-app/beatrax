@@ -165,7 +165,7 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 2,
         'why' => 'Both read the legs of the one transaction being saved or un-split, for the identity-preserving diff.',
     ],
-    'Modules/Ledger/Public/Services/ReconciliationWriter.php::transactions' => [
+    'Modules/Ledger/Public/Services/TransactionStatusWriter.php::transactions' => [
         'reads' => 1,
         'why' => 'KNOWN UNBOUNDED. The cleared-rows predicate has no lower bound, so a first Complete-reconcile plucks every cleared row the account ever held and dispatches one sync op per id.',
     ],

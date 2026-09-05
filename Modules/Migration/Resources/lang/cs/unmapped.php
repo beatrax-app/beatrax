@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Tato transakce se střetla s jinou už zaznamenanou transakcí (shodný otisk) a nebyla naimportována.',
+        'reconciled_status_kept' => 'Stav zúčtování ze zdroje nešlo použít — tato transakce je v Beatraxu odsouhlasená a změní to jen zrušení odsouhlasení. Ponecháno beze změny.',
 
         // i18n-review: cs · reason.split_legs_without_category — the waiting
         // bucket reads "v kategorii Bez kategorie", repeating this locale's own

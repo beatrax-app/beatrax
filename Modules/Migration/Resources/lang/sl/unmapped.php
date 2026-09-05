@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ta transakcija se je prekrivala z drugo, že zabeleženo transakcijo (enak prstni odtis) in ni bila uvožena.',
+        'reconciled_status_kept' => 'Stanja uskladitve iz vira ni bilo mogoče uporabiti — ta transakcija je v Beatraxu usklajena in to spremeni le razveljavitev uskladitve. Ostalo nespremenjeno.',
 
         // i18n-review: sl · reason.split_legs_without_category — the verb moves
         // with the noun across all four arms, so the dual reads "postavki ...

@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Esta transação colidiu com outra transação já registada (impressão digital idêntica) e não foi importada.',
+        'reconciled_status_kept' => 'O estado de reconciliação da origem não pôde ser aplicado — esta transação está reconciliada no Beatrax e só anular a reconciliação o altera. Deixada inalterada.',
         'split_legs_without_category' => ':count parcela de :legs não tem categoria, e uma parcela não pode ser guardada sem uma. A transação foi importada pelo montante total e está à espera na categoria :uncategorized.|:count parcelas de :legs não têm categoria, e uma parcela não pode ser guardada sem uma. A transação foi importada pelo montante total e está à espera na categoria :uncategorized.',
         'split_sum_mismatch' => 'As parcelas somam :legs mas a transação é :total, e uma divisão tem de corresponder exatamente à sua transação. A transação foi importada pelo montante total, sem as parcelas.',
         'split_unstorable' => 'O Beatrax não consegue guardar esta divisão tal como está, por isso a transação foi importada sozinha, sem as parcelas.',

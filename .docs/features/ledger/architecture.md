@@ -470,8 +470,9 @@ already holds the row. The check used to be spelled out at every call site;
 the Tax tag/untag actions did not spell it out at all, so the rule engine and a
 replay wrote a tax tag onto a reconciled row. `unreconcile()` is the escape
 hatch every warn-toast points to, delegating to
-`ReconciliationWriter::unreconcile()` — the sole mutator that reverts
-a `reconciled` row back to `cleared`. It is reached from the **Reconciled
+`ReconciliationWriter::unreconcile()`, which hands the column to
+`TransactionStatusWriter` — the sole mutator that reverts a
+`reconciled` row back to `cleared`. It is reached from the **Reconciled
 and locked** panel described above; before that panel existed it was reachable
 from nothing at all, so the toast named an escape hatch the page did not draw.
 
@@ -1125,19 +1126,63 @@ algorithm" — re-derive existing rows via the
 
 ## `ReconciliationWriter` — the terminal reconcile write path
 
-`Public/Services/ReconciliationWriter` mirrors `EnvelopeWriter`'s
-shape: one DB transaction per operation, events dispatched only after
-commit, every client-supplied id re-validated as user-owned before any
-write. `completeReconcile()` bulk-transitions an account's `cleared`
+`Public/Services/ReconciliationWriter` is the reconcile flow's own
+vocabulary: an account, and the balance date the statement was printed
+for. It vouches for the account — every client-supplied id is
+re-validated as user-owned before any write — and hands the column
+itself to
+[`TransactionStatusWriter`](#transactionstatuswriter--the-one-writer-of-transactionsstatus).
+`completeReconcile()` bulk-transitions an account's `cleared`
 transactions posted on or before the statement date to `reconciled`;
 `unreconcile()` reverts a single row back to `cleared`.
+
+## `TransactionStatusWriter` — the one writer of `transactions.status`
+
+`Public/Services/TransactionStatusWriter` mirrors `EnvelopeWriter`'s
+shape: one DB transaction per operation, events dispatched only after
+commit. It is the only thing in the tree that transitions the column,
+and the arch invariant `noOtherTransactionStatusMutator` is what
+keeps that true.
+
+**Why one writer.** A `reconciled` row is the reader's own assertion
+that Beatrax and a bank statement agree, so every mutator on the page
+refuses one. That refusal was worth nothing while three places wrote
+the column and none delegated: the migration importer re-stamped the
+staged flag straight onto a row the reader had reconciled by hand, and
+nothing on screen said so. The lock is only as strong as the narrowest
+door into the column.
+
+**The graph lives on the enum.** `ClearedStatus::allowedNext()` draws
+the edges — `uncleared ↔ cleared`, `cleared → reconciled`, and
+`reconciled → cleared` as the only exit — and `canTransitionTo()`
+reads off it rather than restating it. Nothing reaches `reconciled`
+from `uncleared`: a row nobody confirmed against a statement cannot be
+asserted as checked against one. The writer's private `write()` asks
+the graph before it asks the database, so a caller cannot name an edge
+nobody drew.
+
+**Four callers, four vocabularies.** `reconcileClearedUpTo()` is the
+bulk lock behind `completeReconcile()`. `unreconcile()` is the escape
+hatch every locked-row refusal points at. `toggleCleared()` is the
+badge's tap, and it refuses a `reconciled` row rather than taking the
+un-reconcile edge the graph allows — leaving that state is a decision
+made on the detail page, never a side effect of a tap.
+`restateFromSource()` is an importer adopting the flag its source
+carries; a `reconciled` row refuses, and the run reports the refusal as
+an unmapped item rather than swallowing it.
+
+**The applier is deliberately not routed here.** An arriving sync op
+writes the column generically, under the merge registry that declares
+it mergeable. Re-deriving that decision on this side would make the two
+devices disagree about what the merge decided, so
+`OpLogEntryApplier` is pinned as the one admitted second writer.
 
 **CRDT correctness**: a bulk status transition is never represented as
 a single synthetic sync event — every transitioned row gets its own
 `TransactionMutated('edit', ['status' => 'reconciled'])`, dispatched in
 a loop after the transaction commits.
 
-**Race safety in `completeReconcile()`.** The transitioned id set is
+**Race safety in `reconcileClearedUpTo()`.** The transitioned id set is
 captured as an explicit SELECT before the UPDATE, inside the same
 transaction — never re-derived afterwards by matching
 `updated_at = $reconciledAt`, since two calls landing in the same

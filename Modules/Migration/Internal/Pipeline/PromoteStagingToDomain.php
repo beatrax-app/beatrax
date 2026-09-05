@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Container\Container;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
@@ -27,11 +25,14 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Ledger\Public\Services\TransactionStatusWriter;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
@@ -40,7 +41,6 @@ use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Support\MigrationSourceFormat;
-use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
@@ -54,7 +54,6 @@ final class PromoteStagingToDomain
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly Container $container,
         private readonly Clock $clock,
         private readonly SourceMapWriter $sourceMapWriter,
         private readonly UnmappedItemReporter $unmappedItems,
@@ -67,6 +66,8 @@ final class PromoteStagingToDomain
         private readonly FingerprintComposer $fingerprints,
         private readonly CounterpartyKey $counterpartyKey,
         private readonly AccountSlugResolver $accountSlugs,
+        private readonly TransactionStatusQuery $statusQuery,
+        private readonly TransactionStatusWriter $statusWriter,
     ) {}
 
     /**
@@ -267,13 +268,15 @@ final class PromoteStagingToDomain
         array $categoryIdMap,
         array $accountIdMap,
     ): array {
-        $payeeNameMap = $this->loadPayeeNameMap($runId, $user);
+        $maps = PromotionMaps::forRun($this->db, $runId, $user, $categoryIdMap, $accountIdMap);
 
         $inserted = 0;
         $skipped = 0;
         $splitsCreated = 0;
         /** @var array<string, true> $resolvedPayees */
         $resolvedPayees = [];
+        // Carried across chunks the way $resolvedPayees is.
+        $ordinals = new SameFingerprintOrdinals;
 
         $this->db->connection()->table('migration_staging_transactions')
             ->where('user_id', $user->id)
@@ -283,35 +286,30 @@ final class PromoteStagingToDomain
                 $runId,
                 $user,
                 $sourceProduct,
-                $categoryIdMap,
-                $accountIdMap,
-                $payeeNameMap,
+                $maps,
+                $ordinals,
                 &$inserted,
                 &$skipped,
                 &$splitsCreated,
                 &$resolvedPayees,
             ): void {
-                $prepared = $this->prepareCanonicalRows($runId, $user, $sourceProduct, $rows, $categoryIdMap, $accountIdMap, $payeeNameMap);
+                $prepared = $this->prepareCanonicalRows($runId, $user, $sourceProduct, $rows, $maps, $ordinals);
                 $skipped += $prepared['skipped'];
 
                 if ($prepared['canonicals'] === []) {
                     return;
                 }
 
-                // The RecordResult is discarded on purpose: the per-row fingerprint
-                // lookup below names the exact staged row a collision dropped.
-                ($this->recordTransactions)($prepared['canonicals'], $user);
-
                 $counts = $this->persistPromotedRows(
                     $runId,
                     $user,
                     $sourceProduct,
                     new PreparedTransactionBatch($prepared['rows'], $prepared['canonicals']),
-                    $categoryIdMap,
-                    $payeeNameMap,
+                    $maps,
                     $resolvedPayees,
                 );
                 $inserted += $counts['inserted'];
+                $skipped += $counts['carried'];
                 $splitsCreated += $counts['splits'];
             });
 
@@ -325,9 +323,6 @@ final class PromoteStagingToDomain
 
     /**
      * @param  iterable<int, stdClass>  $rows
-     * @param  array<string, int>  $categoryIdMap
-     * @param  array<string, int>  $accountIdMap
-     * @param  array<string, string>  $payeeNameMap
      * @return array{rows: list<stdClass>, canonicals: list<CanonicalTransaction>, skipped: int}
      */
     private function prepareCanonicalRows(
@@ -335,9 +330,8 @@ final class PromoteStagingToDomain
         User $user,
         string $sourceProduct,
         iterable $rows,
-        array $categoryIdMap,
-        array $accountIdMap,
-        array $payeeNameMap,
+        PromotionMaps $maps,
+        SameFingerprintOrdinals $ordinals,
     ): array {
         /** @var list<stdClass> $newRows */
         $newRows = [];
@@ -347,6 +341,8 @@ final class PromoteStagingToDomain
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
+            $ordinal = $ordinals->next($row);
+
             $externalId = self::toString($row->source_external_id);
             $alreadyMapped = $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'transaction', $externalId));
 
@@ -356,7 +352,7 @@ final class PromoteStagingToDomain
                 continue;
             }
 
-            $canonical = $this->buildCanonicalTransaction($runId, $user, $sourceProduct, $row, $categoryIdMap, $accountIdMap, $payeeNameMap);
+            $canonical = $this->buildCanonicalTransaction($runId, $user, $sourceProduct, $row, $maps, $ordinal);
 
             $canonical = $this->resolvesCounterparties->run($canonical, $user);
 
@@ -368,18 +364,15 @@ final class PromoteStagingToDomain
     }
 
     /**
-     * @param  array<string, int>  $categoryIdMap
-     * @param  array<string, string>  $payeeNameMap
      * @param  array<string, true>  $resolvedPayees
-     * @return array{inserted: int, splits: int}
+     * @return array{inserted: int, carried: int, splits: int}
      */
     private function persistPromotedRows(
         int $runId,
         User $user,
         string $sourceProduct,
         PreparedTransactionBatch $batch,
-        array $categoryIdMap,
-        array $payeeNameMap,
+        PromotionMaps $maps,
         array &$resolvedPayees,
     ): array {
         $newRows = $batch->rows;
@@ -390,13 +383,35 @@ final class PromoteStagingToDomain
             $fingerprintsByIndex[$idx] = $this->fingerprints->compose($canonical);
         }
 
+        // Asked before the batch is recorded, because afterwards nothing tells
+        // the row this run created from the one the reader has held for a year.
+        // The RecordResult is discarded on purpose: the per-row fingerprint
+        // lookup below names the exact staged row a collision dropped.
+        /** @var Collection<string, int> $idsHeldBefore */
+        $idsHeldBefore = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereIn('fingerprint', array_values($fingerprintsByIndex))
+            ->pluck('id', 'fingerprint');
+
+        ($this->recordTransactions)($batch->canonicals, $user);
+
         /** @var Collection<string, int> $idsByFingerprint */
         $idsByFingerprint = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereIn('fingerprint', array_values($fingerprintsByIndex))
             ->pluck('id', 'fingerprint');
 
+        // Asked once per chunk rather than once per row, and only of the rows
+        // that predate this run: a fingerprint match can name a row this device
+        // already reconciled by hand, and the source's own cleared flag is not
+        // allowed to take that back.
+        $lockedIds = array_flip($this->statusQuery->reconciledIdsAmong(
+            $user->id,
+            array_map(static fn (mixed $id): int => self::toInt($id), array_values($idsHeldBefore->all())),
+        ));
+
         $inserted = 0;
+        $carried = 0;
         $splitsCreated = 0;
 
         foreach ($newRows as $idx => $row) {
@@ -411,29 +426,21 @@ final class PromoteStagingToDomain
                     $runId,
                     $user,
                     $row,
-                    $payeeNameMap,
+                    $maps->payeeNames,
                     CopyLine::of('migration::unmapped.reason.fingerprint_collision'),
                 );
 
                 continue;
             }
 
-            // CanonicalTransaction::toAttributes() hard-stamps 'cleared' for any
-            // non-'manual' sourceFormat, so the staged status is re-applied
-            // here — and announced, because the create op RecordTransactions
-            // captured a moment ago already carries the stamped value.
-            $stagedStatus = self::toString($row->cleared_status);
-            $this->db->connection()->table('transactions')
-                ->where('id', $transactionId)
-                ->where('user_id', $user->id)
-                ->update(['status' => $stagedStatus]);
-
-            $this->container->make(Dispatcher::class)->dispatch(new TransactionMutated(
-                transactionId: $transactionId,
-                userId: $user->id,
-                mutationType: 'edit',
-                dirtyFields: ['status' => $stagedStatus],
-            ));
+            $this->carryStatusAcross(
+                $runId,
+                $user,
+                $row,
+                $maps,
+                $transactionId,
+                locked: isset($lockedIds[$transactionId]),
+            );
 
             $this->sourceMapWriter->record(
                 $user,
@@ -446,20 +453,56 @@ final class PromoteStagingToDomain
                 ],
             );
 
-            $inserted++;
+            // A row whose fingerprint was already on the books was mapped, not
+            // imported, and the results screen prints this number as "imported".
+            if ($idsHeldBefore->has($fingerprint)) {
+                $carried++;
+            } else {
+                $inserted++;
+            }
 
-            if ((bool) $row->is_split_parent && $this->createSplitLegs($runId, $user, $row, $transactionId, $categoryIdMap, $payeeNameMap)) {
+            if ((bool) $row->is_split_parent && $this->createSplitLegs($runId, $user, $row, $transactionId, $maps)) {
                 $splitsCreated++;
             }
 
-            $this->mapPayeeToCounterparty($runId, $user, $sourceProduct, $row, $newCanonicals[$idx], $payeeNameMap, $resolvedPayees);
+            $this->mapPayeeToCounterparty($runId, $user, $sourceProduct, $row, $newCanonicals[$idx], $maps, $resolvedPayees);
         }
 
-        return ['inserted' => $inserted, 'splits' => $splitsCreated];
+        return ['inserted' => $inserted, 'carried' => $carried, 'splits' => $splitsCreated];
+    }
+
+    // CanonicalTransaction::toAttributes() hard-stamps 'cleared' for any
+    // non-'manual' sourceFormat, so the staged flag is re-applied here — and
+    // announced by the writer, because the create op RecordTransactions
+    // captured a moment ago already carries the stamped value.
+    private function carryStatusAcross(
+        int $runId,
+        User $user,
+        stdClass $row,
+        PromotionMaps $maps,
+        int $transactionId,
+        bool $locked,
+    ): void {
+        if ($locked) {
+            $this->unmappedItems->transactionNotCarried(
+                $runId,
+                $user,
+                $row,
+                $maps->payeeNames,
+                CopyLine::of('migration::unmapped.reason.reconciled_status_kept'),
+            );
+
+            return;
+        }
+
+        $staged = ClearedStatus::tryFrom(self::toString($row->cleared_status));
+
+        if ($staged !== null) {
+            $this->statusWriter->restateFromSource($user, $transactionId, $staged);
+        }
     }
 
     /**
-     * @param  array<string, string>  $payeeNameMap
      * @param  array<string, true>  $resolvedPayees
      */
     private function mapPayeeToCounterparty(
@@ -468,7 +511,7 @@ final class PromoteStagingToDomain
         string $sourceProduct,
         stdClass $row,
         CanonicalTransaction $canonical,
-        array $payeeNameMap,
+        PromotionMaps $maps,
         array &$resolvedPayees,
     ): void {
         $payeeExternalId = $row->payee_source_external_id;
@@ -488,7 +531,7 @@ final class PromoteStagingToDomain
             new SourceMapKey($sourceProduct, 'payee', $payeeExternalId),
             'counterparty',
             $canonical->counterpartyId,
-            ['name' => $payeeNameMap[$payeeExternalId] ?? ''],
+            ['name' => $maps->payeeName($payeeExternalId) ?? ''],
         );
 
         $this->db->connection()->table('migration_staging_payees')
@@ -501,11 +544,7 @@ final class PromoteStagingToDomain
             ]);
     }
 
-    /**
-     * @param  array<string, int>  $categoryIdMap
-     * @param  array<string, string>  $payeeNameMap
-     */
-    private function createSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $categoryIdMap, array $payeeNameMap): bool
+    private function createSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, PromotionMaps $maps): bool
     {
         $legRows = $this->db->connection()->table('migration_staging_transactions')
             ->where('user_id', $user->id)
@@ -521,7 +560,7 @@ final class PromoteStagingToDomain
         /** @var stdClass $legRow */
         foreach ($legRows as $legRow) {
             $legCategoryExternalId = $legRow->category_source_external_id;
-            $legCategoryId = is_string($legCategoryExternalId) ? ($categoryIdMap[$legCategoryExternalId] ?? null) : null;
+            $legCategoryId = is_string($legCategoryExternalId) ? ($maps->categoryIds[$legCategoryExternalId] ?? null) : null;
 
             if ($legCategoryId === null) {
                 $withoutCategory++;
@@ -541,7 +580,7 @@ final class PromoteStagingToDomain
         // cannot be carried at all. Keeping the rest would leave them short of
         // the parent, which throws only after the parent row is already in.
         if ($withoutCategory > 0) {
-            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $payeeNameMap, CopyLine::plural(
+            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $maps->payeeNames, CopyLine::plural(
                 'migration::unmapped.reason.split_legs_without_category',
                 $withoutCategory,
                 [
@@ -557,14 +596,13 @@ final class PromoteStagingToDomain
             return false;
         }
 
-        return $this->saveSplitLegs($runId, $user, $parentRow, $transactionId, $legs, $payeeNameMap);
+        return $this->saveSplitLegs($runId, $user, $parentRow, $transactionId, $legs, $maps);
     }
 
     /**
      * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
-     * @param  array<string, string>  $payeeNameMap
      */
-    private function saveSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $legs, array $payeeNameMap): bool
+    private function saveSplitLegs(int $runId, User $user, stdClass $parentRow, int $transactionId, array $legs, PromotionMaps $maps): bool
     {
         try {
             $this->splitSaver->save($user, $transactionId, $legs);
@@ -573,7 +611,7 @@ final class PromoteStagingToDomain
             // survives — but the parent is already in, so this cannot surface
             // as a failed run.
             $settledCurrency = self::toString($parentRow->settled_currency);
-            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $payeeNameMap, CopyLine::of(
+            $this->unmappedItems->transactionNotCarried($runId, $user, $parentRow, $maps->payeeNames, CopyLine::of(
                 'migration::unmapped.reason.split_sum_mismatch',
                 [
                     'legs' => CopyParam::money(array_sum(array_column($legs, 'settled_amount_minor')), $settledCurrency),
@@ -590,7 +628,7 @@ final class PromoteStagingToDomain
                 $runId,
                 $user,
                 $parentRow,
-                $payeeNameMap,
+                $maps->payeeNames,
                 CopyLine::of('migration::unmapped.reason.split_unstorable'),
             );
 
@@ -601,21 +639,18 @@ final class PromoteStagingToDomain
     }
 
     /**
-     * @param  array<string, int>  $categoryIdMap
-     * @param  array<string, int>  $accountIdMap
-     * @param  array<string, string>  $payeeNameMap
+     * @param  int  $sameFingerprintOrdinal  this row's position among the run's rows that would otherwise fingerprint identically
      */
     private function buildCanonicalTransaction(
         int $runId,
         User $user,
         string $sourceProduct,
         stdClass $row,
-        array $categoryIdMap,
-        array $accountIdMap,
-        array $payeeNameMap,
+        PromotionMaps $maps,
+        int $sameFingerprintOrdinal,
     ): CanonicalTransaction {
         $accountExternalId = self::toString($row->account_source_external_id);
-        $accountId = $accountIdMap[$accountExternalId] ?? null;
+        $accountId = $maps->accountIds[$accountExternalId] ?? null;
         if ($accountId === null) {
             throw new UnresolvedStagedAccountException($accountExternalId);
         }
@@ -625,7 +660,7 @@ final class PromoteStagingToDomain
         $isTransfer = is_string($transferCounterpartExternalId) && $transferCounterpartExternalId !== '';
 
         $counterpartyIban = $isTransfer
-            ? $this->resolveTransferCounterpartyIban($runId, $user, $transferCounterpartExternalId, $accountIdMap)
+            ? $this->resolveTransferCounterpartyIban($runId, $user, $transferCounterpartExternalId, $maps)
             : null;
 
         $type = match (true) {
@@ -636,17 +671,19 @@ final class PromoteStagingToDomain
         };
 
         $payeeExternalId = $row->payee_source_external_id;
-        $counterpartyName = is_string($payeeExternalId) ? ($payeeNameMap[$payeeExternalId] ?? null) : null;
+        $counterpartyName = $maps->payeeName($payeeExternalId);
         $counterpartyNormalized = $this->counterpartyKey->forName($counterpartyName, $user->id);
 
         $categoryExternalId = $row->category_source_external_id;
-        $categoryId = is_string($categoryExternalId) ? ($categoryIdMap[$categoryExternalId] ?? null) : null;
+        $categoryId = is_string($categoryExternalId) ? ($maps->categoryIds[$categoryExternalId] ?? null) : null;
 
         $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
 
         // Every postedAt is midnight (no source carries a time-of-day); the
-        // per-row offset keeps two same-day rows off one fingerprint.
-        $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % Duration::Day->seconds());
+        // offset keeps two same-day rows off one fingerprint. It counts within
+        // the fingerprint's own tuple, never the staging row's database id: that
+        // id is minted per run, so a re-export arrived as a second copy.
+        $bookedAt = $postedAt->addSeconds($sameFingerprintOrdinal % Duration::Day->seconds());
 
         return new CanonicalTransaction(
             userId: $user->id,
@@ -672,10 +709,7 @@ final class PromoteStagingToDomain
         );
     }
 
-    /**
-     * @param  array<string, int>  $accountIdMap
-     */
-    private function resolveTransferCounterpartyIban(int $runId, User $user, string $counterpartExternalId, array $accountIdMap): ?string
+    private function resolveTransferCounterpartyIban(int $runId, User $user, string $counterpartExternalId, PromotionMaps $maps): ?string
     {
         $partnerRow = $this->db->connection()->table('migration_staging_transactions')
             ->where('user_id', $user->id)
@@ -688,7 +722,7 @@ final class PromoteStagingToDomain
         }
 
         $partnerAccountExternalId = self::toString($partnerRow->account_source_external_id);
-        $partnerAccountId = $accountIdMap[$partnerAccountExternalId] ?? null;
+        $partnerAccountId = $maps->accountIds[$partnerAccountExternalId] ?? null;
         if ($partnerAccountId === null) {
             return null;
         }
@@ -699,29 +733,6 @@ final class PromoteStagingToDomain
             ->value('iban');
 
         return is_string($iban) ? $iban : null;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function loadPayeeNameMap(int $runId, User $user): array
-    {
-        $rows = $this->db->connection()->table('migration_staging_payees')
-            ->where('user_id', $user->id)
-            ->where('migration_run_id', $runId)
-            ->get(['source_external_id', 'normalized_name']);
-
-        /** @var array<string, string> $map */
-        $map = [];
-
-        /** @var stdClass $row */
-        foreach ($rows as $row) {
-            if (is_string($row->source_external_id) && $row->source_external_id !== '') {
-                $map[$row->source_external_id] = self::toString($row->normalized_name);
-            }
-        }
-
-        return $map;
     }
 
     // Held for the length of ONE promote() and cleared at its head. Every
@@ -749,6 +760,9 @@ final class PromoteStagingToDomain
 
         $now = $this->clock->now();
 
+        // No create event is dispatched beside this insert, and none is owed:
+        // the row travels as the parent of the transactions it carries, written
+        // out column by column by OpLogBackfiller off the live foreign key.
         $connection->table('import_runs')->insert([
             ...$match,
             'raw_file_path' => 'migration',
