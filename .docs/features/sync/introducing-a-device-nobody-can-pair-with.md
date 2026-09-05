@@ -27,6 +27,50 @@ The answering side (`opsAfterWatermark()`) restricts the delta to those authors.
 out, per author, over the same two helpers so the two can never be answers to
 different questions.
 
+## Who a device relays for is not who it may vouch for
+
+Both filters above are about the *asking* device. There is a second one about
+the answering device, and it is the set of authors it will carry at all:
+`keyedAuthorOps()`, over
+`DeviceRegistryService::authorIdsWithAKeyOnFile()` — every `device_registry`
+row in any state, **plus** every introduction this reader has confirmed.
+
+It was the registry alone. A device that had confirmed an introduction for an
+author could verify and hold that author's ops and would never serve them to a
+third device that could read them too — and because the withheld count is the
+mirror of the same set, it did not report that it was holding them either. The
+household's only voucher is not necessarily its only holder: two phones that
+each paired with the Mac and never with each other both confirm the Mac's
+introduction, and then one of them holds history the other cannot be sent.
+
+**Relaying signed data onward grants nobody anything.** The receiver checks each
+op against a key *it* confirmed, and an op it cannot verify is held exactly as
+before. The relay is a courier. **Relaying the identity onward would grant
+something**, which is why it does not happen: `IntroductionOffers` composes an
+offer from `deviceKeys()`, the paired-only map, so an author reachable here only
+through an introduction is counted in the withheld report and named by no
+identity beside it. A vouch made on the strength of a vouch is a chain, and a
+chain launders the two-party ceremony R19's boundary rests on.
+
+Three things hold the two sets apart, so a later edit cannot merge them by
+reading the wrong method:
+
+- **The courier set carries no key material.** `authorIdsWithAKeyOnFile()`
+  returns device ids. An offer needs a name and an Ed25519 key, so the set that
+  spans both doors cannot be composed into one — swapping it in fails type
+  analysis before it fails review.
+- **Two independent paired-only reads compose an offer**, the key map and the
+  name lookup. Widening one leaves the other refusing.
+- **Both are pinned.** `AnIntroducedKeyReachesOnlyTheSignatureGateArchTest` pins
+  the single call site of the courier set, that its body selects no key, and
+  that `introductionsFor()` reads `deviceKeys()` and neither wider map.
+
+What the withheld count means moved with the filter. It was "ops by an author
+this device has a registry row for that you cannot verify"; it is now "ops I
+could have served you and did not, because you told me you cannot verify their
+author". An author known here only by introduction now appears in it, which is
+the case that used to be silent on both sides at once.
+
 **A peer that names no authors at all filters nothing.** An older build does not
 send the field, and silence is not a claim to be able to verify none of them —
 reading it as one would withhold the whole history from every device in the

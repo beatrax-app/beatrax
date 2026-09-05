@@ -114,7 +114,7 @@ final readonly class PeerCatchUpExchanger
     ): CatchUpDelta {
         $verifiable ??= VerifiableAuthors::unstated();
 
-        $owed = $this->registeredAuthorOps($userId)
+        $owed = $this->keyedAuthorOps($userId)
             ->where(fn (Builder $q): Builder => $this->aboveEachCursor($q, $cursors));
 
         return $this->deltaFor(
@@ -122,9 +122,10 @@ final readonly class PeerCatchUpExchanger
         );
     }
 
-    // The mirror of the filter above: the rows it took out, per author. Read
+    // The mirror of the filter above: the rows it took out, per author, read
     // through the same two helpers so the number reported and the rows withheld
-    // can never be answers to different questions.
+    // can never be answers to different questions. Both widened together — an
+    // author known only by introduction is now sent, or counted here instead.
     /**
      * @return array<array-key, int> Keyed by author device id, which PHP narrows to an int
      *                               when the id reads as a decimal integer.
@@ -135,7 +136,7 @@ final readonly class PeerCatchUpExchanger
             return [];
         }
 
-        $rows = $this->registeredAuthorOps($userId)
+        $rows = $this->keyedAuthorOps($userId)
             ->where(fn (Builder $q): Builder => $this->aboveEachCursor($q, $cursors))
             ->whereNotIn('device_id', $verifiable->deviceIds ?? [])
             // The same op types framesFor() would have packed, so the number
@@ -203,25 +204,21 @@ final readonly class PeerCatchUpExchanger
 
     private function authorOpsAfter(int $userId, string $authorDeviceId, int $hlcL, int $hlcC): Builder
     {
-        return $this->registeredAuthorOps($userId)
+        return $this->keyedAuthorOps($userId)
             ->where('device_id', $authorDeviceId)
             ->where(fn (Builder $q): Builder => $this->aheadOf($q, $hlcL, $hlcC));
     }
 
-    // An entry signed by a device the registry has NO row for is verifiable by
+    // An entry signed by a device this install holds NO key for is verifiable by
     // nobody: one import shipped 12,948 entries and the phone refused 12,476.
-    // A REMOVED device still HAS its row, and filtering on confirmed_at
-    // withheld its whole history instead.
-    private function registeredAuthorOps(int $userId): Builder
+    // Both doors count, and a REMOVED device keeps its registry row — narrowing
+    // to confirmed_at withheld its whole history from a peer that still reads it.
+    private function keyedAuthorOps(int $userId): Builder
     {
         return $this->db->connection()
             ->table('op_log_entries')
             ->where('user_id', $userId)
-            ->whereIn('device_id', function (Builder $authors) use ($userId): void {
-                $authors->select('device_id')
-                    ->from('device_registry')
-                    ->where('user_id', $userId);
-            });
+            ->whereIn('device_id', $this->offers->carriedAuthorsFor($userId));
     }
 
     // Counted, then streamed. The count pass packs the same batches without
