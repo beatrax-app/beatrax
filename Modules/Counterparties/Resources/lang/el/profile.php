@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Υποστήριξη και ακύρωση',
         'cancel_by_email' => 'Ακύρωση μέσω email',
         'withheld' => 'ο σύνδεσμος δεν προσφέρεται',
+        'notes_language' => 'Στα :language, όπως το δημοσιεύει ο πάροχος.',
     ],
 ];

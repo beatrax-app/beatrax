@@ -4,6 +4,7 @@
 # help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
 # Where a service has no online cancellation flow the method — registered letter,
 # phone, in branch — is recorded in `notes` instead of linking a generic page.
+lang: nl
 entries:
   # --- Merchants ---
   - name: Proximus

@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Commissione bancaria',
+        'account_maintenance' => 'Spese di tenuta conto',
+        'monthly_fee' => 'Canone mensile',
+        'quarterly_fee' => 'Spese trimestrali',
+        'annual_fee' => 'Canone annuo',
+        'card_fee' => 'Canone carta',
+        'transaction_fee' => 'Spese per operazione',
+        'transfer_fee' => 'Spese di bonifico',
+        'withdrawal_fee' => 'Spese di prelievo',
+        'transaction_levy' => 'Imposta sulle transazioni',
+        'foreign_transaction_fee' => 'Commissione di cambio',
+        'commission' => 'Commissioni',
+        'debit_interest' => 'Interessi debitori',
+        'overdraft' => 'Spese di scoperto',
+        'overdraft_interest' => 'Interessi di scoperto',
+        'insufficient_funds' => 'Spese per insoluto',
+        'penalty_fee' => 'Penale',
+        'loan_arrangement_fee' => 'Spese di istruttoria',
     ],
 
     'cp_card' => [

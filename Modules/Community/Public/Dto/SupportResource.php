@@ -11,6 +11,7 @@ use Spatie\LaravelData\Data;
 final class SupportResource extends Data
 {
     /**
+     * @param  string|null  $notesLang  BCP-47 tag of the language $notes is written in — the provider's, not the reader's
      * @param  array<string, ExternalUrlRefusal>  $withheld  corpus field key => the refusal that stopped it becoming a link
      */
     public function __construct(
@@ -27,6 +28,7 @@ final class SupportResource extends Data
         public readonly ?string $cancelEmailSubject = null,
         public readonly ?string $cancelEmailBody = null,
         public readonly ?string $notes = null,
+        public readonly ?string $notesLang = null,
         public readonly array $withheld = [],
     ) {}
 

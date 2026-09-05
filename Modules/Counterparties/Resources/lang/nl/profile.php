@@ -84,5 +84,6 @@ return [
         'heading_merchant' => 'Ondersteuning & opzeggen',
         'cancel_by_email' => 'Per e-mail opzeggen',
         'withheld' => 'link achtergehouden',
+        'notes_language' => 'In :language, zoals de aanbieder het publiceert.',
     ],
 ];

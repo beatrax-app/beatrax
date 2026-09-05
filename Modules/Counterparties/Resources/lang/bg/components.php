@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Банкова такса',
+        'account_maintenance' => 'Такса за обслужване',
+        'monthly_fee' => 'Месечна такса',
+        'quarterly_fee' => 'Тримесечна такса',
+        'annual_fee' => 'Годишна такса',
+        'card_fee' => 'Такса за карта',
+        'transaction_fee' => 'Такса за транзакция',
+        'transfer_fee' => 'Такса за превод',
+        'withdrawal_fee' => 'Такса за теглене',
+        'transaction_levy' => 'Данък върху транзакциите',
+        'foreign_transaction_fee' => 'Такса за валутна обмяна',
+        'commission' => 'Комисиона',
+        'debit_interest' => 'Дебитна лихва',
+        'overdraft' => 'Такса за овърдрафт',
+        'overdraft_interest' => 'Лихва по овърдрафт',
+        'insufficient_funds' => 'Такса за недостатъчна наличност',
+        'penalty_fee' => 'Наказателна такса',
+        'loan_arrangement_fee' => 'Такса за отпускане на кредит',
     ],
 
     'cp_card' => [

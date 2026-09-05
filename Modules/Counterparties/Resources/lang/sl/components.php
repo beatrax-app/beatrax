@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Bančna provizija',
+        'account_maintenance' => 'Nadomestilo za vodenje računa',
+        'monthly_fee' => 'Mesečno nadomestilo',
+        'quarterly_fee' => 'Četrtletno nadomestilo',
+        'annual_fee' => 'Letno nadomestilo',
+        'card_fee' => 'Nadomestilo za kartico',
+        'transaction_fee' => 'Nadomestilo za transakcijo',
+        'transfer_fee' => 'Nadomestilo za prenos',
+        'withdrawal_fee' => 'Nadomestilo za dvig',
+        'transaction_levy' => 'Davek na transakcije',
+        'foreign_transaction_fee' => 'Nadomestilo za menjavo valute',
+        'commission' => 'Provizija',
+        'debit_interest' => 'Obresti na dolg',
+        'overdraft' => 'Nadomestilo za prekoračitev',
+        'overdraft_interest' => 'Obresti za prekoračitev',
+        'insufficient_funds' => 'Nadomestilo za nezadostna sredstva',
+        'penalty_fee' => 'Kazen',
+        'loan_arrangement_fee' => 'Nadomestilo za odobritev kredita',
     ],
 
     'cp_card' => [

@@ -85,5 +85,6 @@ return [
         'heading_merchant' => 'Támogatás és lemondás',
         'cancel_by_email' => 'Lemondás e-mailben',
         'withheld' => 'visszatartott hivatkozás',
+        'notes_language' => ':language nyelven, ahogy a szolgáltató közzéteszi.',
     ],
 ];

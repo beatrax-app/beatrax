@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Comision bancar',
+        'account_maintenance' => 'Comision administrare cont',
+        'monthly_fee' => 'Comision lunar',
+        'quarterly_fee' => 'Comision trimestrial',
+        'annual_fee' => 'Comision anual',
+        'card_fee' => 'Comision card',
+        'transaction_fee' => 'Comision tranzacție',
+        'transfer_fee' => 'Comision transfer',
+        'withdrawal_fee' => 'Comision retragere',
+        'transaction_levy' => 'Taxă pe tranzacții',
+        'foreign_transaction_fee' => 'Comision schimb valutar',
+        'commission' => 'Comision',
+        'debit_interest' => 'Dobândă debitoare',
+        'overdraft' => 'Comision descoperit de cont',
+        'overdraft_interest' => 'Dobândă descoperit de cont',
+        'insufficient_funds' => 'Comision fonduri insuficiente',
+        'penalty_fee' => 'Penalitate',
+        'loan_arrangement_fee' => 'Comision de acordare credit',
     ],
 
     'cp_card' => [

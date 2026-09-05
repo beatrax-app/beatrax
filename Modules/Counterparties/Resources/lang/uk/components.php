@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Банківська комісія',
+        'account_maintenance' => 'Плата за обслуговування',
+        'monthly_fee' => 'Щомісячна плата',
+        'quarterly_fee' => 'Щоквартальна плата',
+        'annual_fee' => 'Річна плата',
+        'card_fee' => 'Плата за картку',
+        'transaction_fee' => 'Комісія за транзакцію',
+        'transfer_fee' => 'Комісія за переказ',
+        'withdrawal_fee' => 'Комісія за зняття',
+        'transaction_levy' => 'Податок на транзакції',
+        'foreign_transaction_fee' => 'Комісія за конвертацію валюти',
+        'commission' => 'Комісія',
+        'debit_interest' => 'Дебетові відсотки',
+        'overdraft' => 'Комісія за овердрафт',
+        'overdraft_interest' => 'Відсотки за овердрафтом',
+        'insufficient_funds' => 'Комісія за недостатність коштів',
+        'penalty_fee' => 'Штрафна комісія',
+        'loan_arrangement_fee' => 'Комісія за надання кредиту',
     ],
 
     'cp_card' => [

@@ -33,19 +33,30 @@
 #
 # Schema per entry:
 #   pattern  string  required — case-insensitive substring or `regex:` body.
-#   name     string  optional — canonical display name for the fee row.
+#   name     string  optional — canonical display name for the fee row, in
+#                               the jurisdiction's own language. Stored as
+#                               written; the reader sees `key` resolved.
+#   key      string  required with a name — the fee kind, resolved through
+#                               counterparties::components.default_name.
 entries:
   - pattern: "МЕСЕЧЕН НАДОМЕСТОК"
     name: "Месечен надоместок"
+    key: monthly_fee
   - pattern: "НАДОМЕСТОК ЗА ОДРЖУВАЊЕ"
     name: "Надоместок за одржување на сметка"
+    key: account_maintenance
   - pattern: "ОДРЖУВАЊЕ НА ПЛАТЕЖНА СМЕТКА"
     name: "Надоместок за одржување на сметка"
+    key: account_maintenance
   - pattern: "ОДРЖУВАЊЕ ПЛАТЕЖНА СМЕТКА"
     name: "Надоместок за одржување на сметка"
+    key: account_maintenance
   - pattern: "ПРОВИЗИЈА"
     name: "Провизија"
+    key: commission
   - pattern: "ДОЗВОЛЕНО ПРЕЧЕКОРУВАЊЕ"
     name: "Камата на пречекорување"
+    key: overdraft_interest
   - pattern: "КАМАТА"
     name: "Камата"
+    key: debit_interest

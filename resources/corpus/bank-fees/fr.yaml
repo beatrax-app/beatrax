@@ -2,9 +2,13 @@
 entries:
   - pattern: "COTISATION"
     name: "Frais bancaires"
+    key: bank_fee
   - pattern: "FRAIS BANCAIRES"
     name: "Frais bancaires"
+    key: bank_fee
   - pattern: "FRAIS DE TENUE DE COMPTE"
     name: "Frais de tenue de compte"
+    key: account_maintenance
   - pattern: "INTERETS"
     name: "Intérêts"
+    key: debit_interest

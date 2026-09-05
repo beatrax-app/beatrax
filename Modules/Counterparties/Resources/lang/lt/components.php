@@ -26,6 +26,23 @@ return [
 
     'default_name' => [
         'bank_fee' => 'Banko mokestis',
+        'account_maintenance' => 'Sąskaitos tvarkymo mokestis',
+        'monthly_fee' => 'Mėnesinis mokestis',
+        'quarterly_fee' => 'Ketvirtinis mokestis',
+        'annual_fee' => 'Metinis mokestis',
+        'card_fee' => 'Kortelės mokestis',
+        'transaction_fee' => 'Operacijos mokestis',
+        'transfer_fee' => 'Pervedimo mokestis',
+        'withdrawal_fee' => 'Grynųjų išėmimo mokestis',
+        'transaction_levy' => 'Sandorių mokestis',
+        'foreign_transaction_fee' => 'Valiutos keitimo mokestis',
+        'commission' => 'Komisinis mokestis',
+        'debit_interest' => 'Debeto palūkanos',
+        'overdraft' => 'Kredito limito mokestis',
+        'overdraft_interest' => 'Kredito limito palūkanos',
+        'insufficient_funds' => 'Mokestis už nepakankamas lėšas',
+        'penalty_fee' => 'Delspinigiai',
+        'loan_arrangement_fee' => 'Kredito suteikimo mokestis',
     ],
 
     'cp_card' => [

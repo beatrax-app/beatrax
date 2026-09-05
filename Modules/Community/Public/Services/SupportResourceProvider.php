@@ -151,22 +151,39 @@ final class SupportResourceProvider
 
         $map = [];
         foreach ($files as $file) {
-            $code = mb_strtolower(basename($file, '.yaml'));
-            foreach ($this->reader->readEntries($file) as $raw) {
-                $this->addResource($map, $code, $raw);
-            }
+            $this->addFile($map, mb_strtolower(basename($file, '.yaml')), $file);
         }
 
         return $map;
+    }
+
+    // The file says one thing about itself that every entry in it inherits:
+    // the language its prose is written in. Read once here rather than per
+    // entry, and absent rather than guessed when the file does not say.
+    /**
+     * @param  array<string, array<string, list<SupportResource>>>  $map
+     */
+    private function addFile(array &$map, string $country, string $file): void
+    {
+        $document = $this->reader->readDocument($file);
+        $declared = $document['lang'] ?? null;
+        $lang = is_string($declared) && trim($declared) !== '' ? trim($declared) : null;
+        $entries = is_array($document['entries'] ?? null) ? $document['entries'] : [];
+
+        foreach ($entries as $raw) {
+            if (is_array($raw)) {
+                $this->addResource($map, $country, $raw, $lang);
+            }
+        }
     }
 
     /**
      * @param  array<string, array<string, list<SupportResource>>>  $map
      * @param  array<int|string, mixed>  $raw
      */
-    private function addResource(array &$map, string $country, array $raw): void
+    private function addResource(array &$map, string $country, array $raw, ?string $lang): void
     {
-        $resource = $this->build($raw);
+        $resource = $this->build($raw, $lang);
         if ($resource === null) {
             return;
         }
@@ -183,7 +200,7 @@ final class SupportResourceProvider
     /**
      * @param  array<int|string, mixed>  $raw
      */
-    private function build(array $raw): ?SupportResource
+    private function build(array $raw, ?string $lang): ?SupportResource
     {
         $name = self::str($raw, 'name');
         $type = self::str($raw, 'type');
@@ -216,6 +233,7 @@ final class SupportResourceProvider
             cancelEmailSubject: $to === null ? null : self::str($email, 'subject'),
             cancelEmailBody: $to === null ? null : self::str($email, 'body'),
             notes: self::str($raw, 'notes'),
+            notesLang: $lang,
             withheld: $withheld,
         );
     }
