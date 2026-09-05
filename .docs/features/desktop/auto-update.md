@@ -46,8 +46,74 @@ The `preview` channel uses `beta*.yml` instead of `latest*.yml`.
 workflow sets it from the GitHub context, so moving the repository
 re-points the feed rather than stranding a hardcoded owner. **Left unset
 — self-hosted builds, the web app, the mobile runtime — the fetch yields
-`null` and no update is ever surfaced or applied.** That is the intended
-off switch, not a failure.
+`null` and no update is ever surfaced or applied.** That is a build
+having no feed, not a failure; it is not the reader's off switch, which
+is the next section and reaches inside a bundle that does have one.
+
+## The off switch
+
+The check is an outbound call, and the privacy stance says it must be
+possible to stop it. There are **two** callers, on opposite sides of the
+process boundary, and switching the feature off has to reach both:
+
+1. **electron-updater's own poll**, in the Electron main process.
+   NativePHP's `startAutoUpdater()` runs `checkForUpdatesAndNotify()` at
+   bootstrap if `config('nativephp')`'s `updater.enabled` is `true`. It
+   reads that config once, out of the JSON the `native:config` artisan
+   command prints — a separate PHP process Electron runs before the app
+   is served.
+2. **Beatrax's own manifest fetch**, in PHP.
+   `HttpPublisherManifestFetcher` GETs the signed manifest and its `.sig`
+   from `auto_update.manifest_feed_url`, on `UpdateAvailable` and again
+   on `UpdateDownloaded`.
+
+The reader's answer lives in `users.auto_update_check_enabled`, defaulting
+to **on** — the signed manifest is the only binary-integrity signal a
+bundle without a paid signing identity has, so being on is the shipped
+posture and the switch exists to leave it. It is **device-local**
+(`MergeRulesRegistry::DEVICE_LOCAL_COLUMNS`) beside `close_behavior` and
+`theme`: an update check is a property of an installed binary. A phone is
+updated by its store — all three listeners return early on a mobile
+runtime — so a phone's answer arriving on a desktop would switch off that
+desktop's only integrity signal, from a screen where the switch governs
+nothing. `UpdateCheckSettingsSection` renders it, and offers no switch at
+all on a phone.
+
+`UpdateCheckPreference::enabled()` is the single reader of the column, and
+it answers **for the device, not for one account**: the banner is recorded
+at `user_id => null` so every account sees the one notification, and the
+call is one call from one machine. It is false as soon as any account has
+switched it off. An unreadable row — first launch, before the table
+exists — logs and answers `true`, so the shipped posture is never lost to
+a missing answer.
+
+The two callers are stopped in two places:
+
+- `HttpPublisherManifestFetcher::manifestUrl()` returns `null` before it
+  builds a URL. That method is the only place this feature composes a
+  feed URL, so both listeners are covered by the one refusal, and every
+  downstream check fails closed rather than proceeding unverified.
+- `ApplyUpdateCheckChoiceToStartupConfig` listens for `CommandStarting`
+  and narrows `nativephp.updater.enabled` when the command is
+  `native:config`. It can only ever turn the value off: a build that
+  ships without a feed stays without one whatever the row says.
+
+### `NATIVEPHP_UPDATER_ENABLED` is read on both sides of the build
+
+One name, two readers, and while it was unset they disagreed in silence.
+`electron-builder.mjs` compares it to the **string** `'true'`, so unset
+meant no `publish` block — and with no publish provider electron-builder
+writes no `app-update.yml` into the bundle, leaving electron-updater with
+no feed to poll. `config/nativephp.php` defaulted the same name to `true`,
+so the boot hook called `checkForUpdatesAndNotify()` regardless. The
+release workflow now sets it explicitly at build time **and** writes it
+into the bundled `.env`, so neither side rests on a default;
+`.env.example` leaves it commented out because a local `native:build` has
+no `GITHUB_OWNER`/`GITHUB_REPO` to publish against.
+
+That flag says only whether the bundle *has* a feed. Whether a launch
+polls it is the reader's switch, narrowing the same value at
+`native:config` time.
 
 ## Holding electron-updater at the door
 
@@ -111,17 +177,19 @@ click, no download.
 — on `UpdateDownloaded`.
 
 The binary is now on disk but has not run. This listener re-fetches the
-manifest and fails closed on **every** unverifiable branch, in one
-condition:
+manifest and fails closed on **every** unverifiable branch, in two
+conditions rather than one, so neither log line names the other's cause:
 
-- the feed is unreachable or the manifest unparseable (`null`),
-- the Ed25519 signature does not verify against the pinned key,
-- the signed manifest's version is not the version that was downloaded,
-- the downloaded file's SHA-512 is not the digest that manifest names.
+- **No manifest at all** (`null`) — the feed is unreachable, the manifest
+  unparseable, or the reader switched the check off between consenting and
+  this event. None of those is a tampering signal, so it logs at `warning`.
+- **A manifest that does not check out** — the Ed25519 signature does not
+  verify against the pinned key, the signed version is not the version that
+  was downloaded, or the file's SHA-512 is not the digest that manifest
+  names. That is the tampering signal, and it logs at `critical`.
 
-Any of those logs at `critical` and returns, leaving the file on disk
-uninstalled. `AutoUpdater::quitAndInstall()` is reached only when all
-four pass.
+Either returns, leaving the file on disk uninstalled.
+`AutoUpdater::quitAndInstall()` is reached only when all four pass.
 
 ## Details that matter
 
@@ -156,6 +224,9 @@ four pass.
 - Feed fetch + manifest parse:
   `Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher`
 - Configuration: `config/auto_update.php`, `config/nativephp.php`
+- The off switch: `Modules\Core\Public\Services\UpdateCheckPreference`,
+  `Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection`,
+  `Modules\Desktop\Internal\Listeners\ApplyUpdateCheckChoiceToStartupConfig`
 - Tests: `Modules/Desktop/tests/Feature/AutoUpdate/ExplicitConsentUpdateGateTest.php`
   (listeners against an in-memory manifest) and
   `UpdateFeedSmokeTest.php` (the same chain driven through the real

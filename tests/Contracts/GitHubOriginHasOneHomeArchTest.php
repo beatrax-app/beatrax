@@ -103,7 +103,7 @@ it('keeps every site that had its own copy reading it from ProjectLinks', functi
 
     $consumers = [
         'Modules/Desktop/Internal/Native/AppMenuBuilder.php',
-        'Modules/Shell/Internal/Http/Livewire/SettingsPage.php',
+        'Modules/Core/Public/Http/Livewire/UpdateCheckSettingsSection.php',
         'Modules/Core/Resources/views/livewire/partials/system-alert-actions.blade.php',
         'Modules/Community/Internal/Services/GitHubCompareUrlBuilder.php',
         'config/community.php',

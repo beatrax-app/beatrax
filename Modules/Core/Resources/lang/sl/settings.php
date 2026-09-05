@@ -173,6 +173,9 @@ return [
         'heading' => 'O posodobitvah',
         'body' => 'Ko je Beatrax nameščen, se posodablja samodejno. Po namestitvi prve različice prihajajo nove prek pasice v aplikaciji — na GitHub se ti ni treba vračati. Če se katera od prihodnjih posodobitev ne bi namestila, lahko najnovejši namestitveni program vedno ročno preneseš s strani izdaj.',
         'body_phone' => 'Tu se Beatrax ne posodablja sam. Nove različice mobilne aplikacije prihajajo prek App Storea ali Googla Play, tako kot druge tvoje aplikacije. Stran izdaj navaja, kaj se je v vsaki spremenilo.',
+        'check_label' => 'Samodejno preverjaj posodobitve',
+        'check_on' => 'Beatrax vpraša vir izdaj, ali obstaja novejša podpisana različica. Nič se ne prenese, dokler sam ne izbereš namestitve.',
+        'check_off' => 'Posodobitve se ne preverjajo in nič ne zapusti te naprave. Nove različice najdeš tako, da sam odpreš stran izdaj.',
         'open_releases' => 'Odpri stran izdaj →',
     ],
 

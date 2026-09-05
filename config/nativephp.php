@@ -117,6 +117,13 @@ return [
     ],
 
     'updater' => [
+        // Two readers, and they used to disagree in silence: electron-builder.mjs
+        // compares the same variable to the STRING 'true', so unset meant no
+        // `publish` block and no feed in the bundle, while this default meant the
+        // Electron boot hook polled anyway. release.yml now sets it on both sides.
+        /**
+         * @link ../.docs/features/desktop/auto-update.md#the-off-switch
+         */
         'enabled' => env('NATIVEPHP_UPDATER_ENABLED', true),
 
         // "github", "s3" or "spaces"; "s3" also covers S3-compatible services

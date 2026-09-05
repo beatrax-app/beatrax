@@ -15,8 +15,9 @@ return [
     // `preview` resolves `beta*.yml` (for `v*-rc.*`). No in-app switch yet.
     'update_channel' => env('AUTO_UPDATE_CHANNEL', 'stable'),
 
-    // Unset, the fetch yields null and nothing is surfaced: that is the off
-    // switch, not a failure. The release workflow sets it from the GitHub
-    // context, so moving the repository re-points the feed.
+    // Unset, the fetch yields null and nothing is surfaced — a build with no
+    // feed, not a failure, and not the reader's switch, which narrows a build
+    // that has one. The release workflow sets it from the GitHub context, so
+    // moving the repository re-points the feed.
     'manifest_feed_url' => env('AUTO_UPDATE_FEED_URL'),
 ];

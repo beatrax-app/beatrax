@@ -173,6 +173,9 @@ return [
         'heading' => 'Sobre as atualizações',
         'body' => 'O Beatrax atualiza-se sozinho depois de instalado. Depois de instalares a primeira versão, as versões seguintes chegam através de um aviso na app — não precisas de voltar ao GitHub. Se alguma atualização futura falhar, podes sempre transferir manualmente o instalador mais recente na página de lançamentos.',
         'body_phone' => 'Aqui o Beatrax não se atualiza sozinho. As novas versões da app para telemóvel chegam pela App Store ou pelo Google Play, tal como as tuas outras apps. A página de lançamentos indica o que mudou em cada uma.',
+        'check_label' => 'Procurar atualizações automaticamente',
+        'check_on' => 'O Beatrax pergunta ao canal de lançamentos se existe uma versão assinada mais recente. Nada é transferido até escolheres instalá-la.',
+        'check_off' => 'Não é feita qualquer procura de atualizações e nada sai deste dispositivo. As novas versões encontram-se abrindo tu mesmo a página de lançamentos.',
         'open_releases' => 'Abrir a página de lançamentos →',
     ],
 

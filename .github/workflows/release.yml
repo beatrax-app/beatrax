@@ -68,6 +68,15 @@ env:
     # hardcoded, so an organisation move cannot silently point the
     # updater feed at the previous owner.
     NATIVEPHP_UPDATER_PROVIDER: github
+    # Read twice from one name, and the two readers disagreed while it was
+    # unset: electron-builder.mjs compares it to the STRING 'true' and so
+    # dropped the `publish` block entirely — no `app-update.yml` in the bundle,
+    # nothing for electron-updater to poll — while config/nativephp.php
+    # defaulted it to true and had the Electron boot hook poll anyway. It is
+    # set explicitly here and written into the bundled .env below so neither
+    # side is left on a default. The reader's own switch narrows the runtime
+    # half at `native:config` time; this only ever says the bundle HAS a feed.
+    NATIVEPHP_UPDATER_ENABLED: 'true'
     GITHUB_OWNER: ${{ github.repository_owner }}
     GITHUB_REPO: ${{ github.event.repository.name }}
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -276,6 +285,10 @@ jobs:
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
                   printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
+                  # The runtime half of the same variable electron-builder read
+                  # at build time: unwritten, the bundle would carry a feed the
+                  # boot hook was told nothing about.
+                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -421,6 +434,10 @@ jobs:
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
                   printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
+                  # The runtime half of the same variable electron-builder read
+                  # at build time: unwritten, the bundle would carry a feed the
+                  # boot hook was told nothing about.
+                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -544,6 +561,10 @@ jobs:
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
                   printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
+                  # The runtime half of the same variable electron-builder read
+                  # at build time: unwritten, the bundle would carry a feed the
+                  # boot hook was told nothing about.
+                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 

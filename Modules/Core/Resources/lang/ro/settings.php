@@ -173,6 +173,9 @@ return [
         'heading' => 'Despre actualizări',
         'body' => 'Beatrax se actualizează singur odată instalat. După ce instalezi prima versiune, versiunile viitoare ajung printr-un banner în aplicație — nu mai trebuie să revii pe GitHub. Dacă vreodată o actualizare nu se aplică, poți oricând să descarci manual cel mai recent installer de pe pagina de versiuni.',
         'body_phone' => 'Aici Beatrax nu se actualizează singur. Versiunile noi ale aplicației de telefon ajung prin App Store sau Google Play, la fel ca celelalte aplicații ale tale. Pagina de versiuni arată ce s-a schimbat în fiecare.',
+        'check_label' => 'Verifică automat actualizările',
+        'check_on' => 'Beatrax întreabă fluxul de versiuni dacă există o versiune semnată mai nouă. Nu se descarcă nimic până când nu alegi tu să o instalezi.',
+        'check_off' => 'Nu se face nicio verificare a actualizărilor și nimic nu părăsește acest dispozitiv. Versiunile noi le găsești deschizând singur pagina de versiuni.',
         'open_releases' => 'Deschide pagina de versiuni →',
     ],
 

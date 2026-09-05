@@ -31,10 +31,21 @@ final readonly class VerifyAndInstallDownload
 
         $manifest = $this->fetcher->fetch($this->channel->channel());
 
+        // Split from the verification branch below so neither line names the
+        // other's cause. Having no manifest is offline, an unconfigured feed, or
+        // a reader who switched the check off between consenting and this event
+        // — none of them a tampering signal, and none of them critical.
+        if ($manifest === null) {
+            $this->logger->warning('VerifyAndInstallDownload: no publisher manifest to check the download against; nothing was installed.', [
+                'version' => $event->version,
+            ]);
+
+            return;
+        }
+
         // Fail closed on every unverifiable branch, leaving the downloaded file on
         // disk uninstalled rather than trusting an unproven update.
-        if ($manifest === null
-            || ! $this->channel->verifyManifest($manifest['body'], $manifest['signature'])
+        if (! $this->channel->verifyManifest($manifest['body'], $manifest['signature'])
             || $manifest['latest_version'] !== $event->version
             || ! $this->channel->verifyBinary($event->downloadedFile, $manifest['sha512_hex'])) {
             $this->logger->critical('VerifyAndInstallDownload: refused an update that failed publisher verification.', [

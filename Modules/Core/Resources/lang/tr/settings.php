@@ -173,6 +173,9 @@ return [
         'heading' => 'Güncellemeler hakkında',
         'body' => "Beatrax kurulduktan sonra kendini otomatik olarak günceller. İlk sürümü kurduktan sonra yeni sürümler uygulama içi bir bant aracılığıyla gelir — GitHub'a yeniden uğraman gerekmez. İleride bir güncelleme uygulanamazsa, en son yükleyiciyi sürümler sayfasından her zaman elle indirebilirsin.",
         'body_phone' => 'Burada Beatrax kendini güncellemez. Telefon uygulamasının yeni sürümleri, diğer uygulamalarında olduğu gibi App Store ya da Google Play üzerinden gelir. Sürümler sayfasında her sürümde neyin değiştiği yazar.',
+        'check_label' => 'Güncellemeleri otomatik denetle',
+        'check_on' => 'Beatrax, daha yeni imzalı bir sürüm olup olmadığını sürüm akışına sorar. Sen kurmayı seçene kadar hiçbir şey indirilmez.',
+        'check_off' => 'Güncelleme denetimi yapılmaz ve bu cihazdan hiçbir şey çıkmaz. Yeni sürümleri, sürümler sayfasını kendin açarak bulursun.',
         'open_releases' => 'Sürümler sayfasını aç →',
     ],
 

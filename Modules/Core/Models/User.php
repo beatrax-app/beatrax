@@ -33,6 +33,7 @@ use Modules\Ledger\Public\Enums\CurrencyView;
  * @property string $theme
  * @property string|null $locale
  * @property string|null $close_behavior
+ * @property bool $auto_update_check_enabled
  * @property array<string, mixed>|null $community_settings
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -71,6 +72,7 @@ final class User extends Authenticatable
         'theme',
         'locale',
         'close_behavior',
+        'auto_update_check_enabled',
         'community_settings',
     ];
 
@@ -87,6 +89,7 @@ final class User extends Authenticatable
         'anomaly_sensitivity_percent' => 50,
         'anomaly_min_amount_minor' => 1000,
         'theme' => 'system',
+        'auto_update_check_enabled' => true,
         'base_currency' => Currency::Eur->value,
         // create() does not read the row back, so without this a just-created
         // model carries null where the column's DB default is BaseOnly, and
@@ -115,6 +118,7 @@ final class User extends Authenticatable
             'theme' => 'string',
             'locale' => 'string',
             'close_behavior' => 'string',
+            'auto_update_check_enabled' => 'boolean',
             'community_settings' => 'array',
         ];
     }

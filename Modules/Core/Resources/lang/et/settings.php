@@ -173,6 +173,9 @@ return [
         'heading' => 'Uuendustest',
         'body' => 'Pärast paigaldamist uuendab Beatrax end automaatselt. Kui oled kõige esimese versiooni paigaldanud, saabuvad edaspidised versioonid rakendusesisese ribana — GitHubi pole vaja uuesti külastada. Kui mõni tulevane uuendus peaks rakendumata jääma, saad uusima paigaldusfaili alati väljalasete lehelt käsitsi uuesti alla laadida.',
         'body_phone' => 'Siin Beatrax end ise ei uuenda. Telefonirakenduse uued versioonid saabuvad App Store’i või Google Play kaudu, nagu su teisedki rakendused. Väljalasete leht näitab, mis igas versioonis muutus.',
+        'check_label' => 'Kontrolli uuendusi automaatselt',
+        'check_on' => 'Beatrax küsib väljalasete voolt, kas on olemas uuem allkirjastatud versioon. Midagi ei laadita alla enne, kui valid ise paigaldamise.',
+        'check_off' => 'Uuenduste kontrolli ei tehta ja miski ei lahku sellest seadmest. Uued versioonid leiad, avades väljalasete lehe ise.',
         'open_releases' => 'Ava väljalasete leht →',
     ],
 

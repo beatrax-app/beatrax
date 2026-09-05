@@ -7,6 +7,7 @@ use Illuminate\Http\Client\Factory as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Internal\Enums\OsFamily;
+use Modules\Core\Public\Services\UpdateCheckPreference;
 use Psr\Log\NullLogger;
 
 // The manifest carries the expectation verifyBinary() checks a downloaded
@@ -20,7 +21,13 @@ function makeManifestFetcher(?string $feedUrl, string $platformFamily = 'Windows
 
     // Platform is injected so the manifest-name assertions do not depend on the
     // OS the suite runs on; the default keeps the base-case fakes on latest.yml.
-    return new HttpPublisherManifestFetcher(app(HttpClient::class), $config, new NullLogger, $platformFamily);
+    return new HttpPublisherManifestFetcher(
+        app(HttpClient::class),
+        $config,
+        new NullLogger,
+        app(UpdateCheckPreference::class),
+        $platformFamily,
+    );
 }
 
 function manifestYaml(string $version, string $sha512Base64): string

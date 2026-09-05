@@ -6,6 +6,7 @@ namespace Modules\Desktop\Providers;
 
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Queue\QueueManager;
@@ -26,6 +27,7 @@ use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 use Modules\Desktop\Internal\Http\Middleware\ContinueToStagedFile;
 use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
+use Modules\Desktop\Internal\Listeners\ApplyUpdateCheckChoiceToStartupConfig;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Listeners\ForgetColdStartVaultOnKeyRotation;
@@ -171,6 +173,12 @@ final class DesktopServiceProvider extends ServiceProvider
             AppLockPassphraseChanged::class,
             [ForgetColdStartVaultOnKeyRotation::class, 'handle'],
         );
+
+        // NOT bundle-gated: `native:config` is a separate artisan process the
+        // Electron main process runs at bootstrap, and nothing sets the running
+        // flag for it — gating this would leave the reader's answer unread in
+        // the one process whose reply decides whether the feed is polled.
+        $events->listen(CommandStarting::class, [ApplyUpdateCheckChoiceToStartupConfig::class, 'handle']);
 
         $events->listen(DeviceSyncEnabled::class, [StartSyncListenerOnEnable::class, 'handle']);
         $events->listen(

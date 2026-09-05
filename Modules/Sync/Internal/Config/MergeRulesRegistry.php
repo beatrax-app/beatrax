@@ -27,6 +27,11 @@ final class MergeRulesRegistry
             'theme',
             'locale',
             'close_behavior',
+            // The update check is a property of an installed binary, not of the
+            // reader: a phone is updated by its store and all three listeners
+            // already refuse there, so a phone's answer arriving on a desktop
+            // would switch off that desktop's only binary-integrity signal.
+            'auto_update_check_enabled',
             'auto_import_drop_folder',
             'anomaly_backfilled_at',
             'created_at',

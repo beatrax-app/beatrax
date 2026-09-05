@@ -10,11 +10,9 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Budgets\Public\Services\EnvelopePeriodRekeyer;
-use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -24,10 +22,8 @@ use Modules\Core\Public\Enums\Theme;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
-use Modules\Core\Public\Support\ProjectLinks;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\FX\Public\Services\FxRefreshStatus;
 use Modules\Ledger\Public\Enums\Currency;
@@ -97,12 +93,6 @@ final class SettingsPage extends Component
 
     public ?string $fxLastUpdated = null;
 
-    // The desktop's electron-updater chain is inert on a device: all three
-    // AutoUpdater listeners return early on a mobile runtime, so the About
-    // section names the store that does the updating instead.
-    #[Locked]
-    public bool $onPhone = false;
-
     public function mount(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -121,7 +111,6 @@ final class SettingsPage extends Component
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $baseCurrency->forUser($user);
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
-        $this->onPhone = UserDataPathService::platform() !== null;
 
         $this->loadFxLastUpdated($db);
     }
@@ -203,11 +192,6 @@ final class SettingsPage extends Component
 
         $user = $currentUser->user();
         $user->fill(['is_developer' => $value])->save();
-    }
-
-    public function openReleasesPage(OpenExternalUrlAction $opener): void
-    {
-        $opener(ProjectLinks::LATEST_RELEASE_URL);
     }
 
     public function toggleFxOnline(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
