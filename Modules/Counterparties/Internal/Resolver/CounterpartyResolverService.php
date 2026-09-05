@@ -164,9 +164,12 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
             displayName: $displayName,
             iban: $iban,
             merchantName: null,
+            // `institution_iban` used to sit beside the kind. `metadata` is on
+            // no encryption list, so it was the row's own sealed `iban` in the
+            // clear one column over, and nothing ever read it back — the same
+            // IBAN reaches every consumer through the column that is sealed.
             metadata: [
                 'bridge_account_kind' => $account->kind,
-                'institution_iban' => $iban,
             ],
         );
     }
