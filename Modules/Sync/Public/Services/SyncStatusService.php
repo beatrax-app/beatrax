@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\DeferredOpCaptures;
 use Modules\Sync\Internal\Status\PeerSessionTally;
@@ -16,6 +17,7 @@ final readonly class SyncStatusService
 {
     public function __construct(
         private DatabaseManager $db,
+        private Clock $clock,
         private DeferredOpCaptures $deferred,
         private BackfillProgress $backfill,
         private WithheldHistoryReport $withheld,
@@ -80,7 +82,7 @@ final readonly class SyncStatusService
             return SyncOverallStatus::Unknown;
         }
 
-        $seen = PeerSessionTally::over($rows);
+        $seen = PeerSessionTally::over($rows, $this->clock->now());
 
         return match (true) {
             $seen->error => SyncOverallStatus::Error,

@@ -12,7 +12,9 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Status\PeerFailure;
+use Modules\Sync\Internal\Status\SessionLiveness;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
@@ -20,10 +22,10 @@ use Modules\Sync\Public\SyncEvents;
 
 final class SyncStatusSection extends Component
 {
-    // Each element: peer_device_id (string), status
-    // (connecting|handshaking|active|closed|failed), error_message
-    // (string|null), last_seen_at (ISO8601|null), last_seen_human (e.g. "2m
-    // ago"), error_label (human-readable error copy for UI).
+    // Each element: peer_device_id (string), error_message (string|null),
+    // last_seen_at (ISO8601|null), last_seen_human (e.g. "2m ago"), error_label
+    // (human-readable error copy for UI), and the two decided flags is_live and
+    // is_failed — the view is handed answers rather than a status to re-read.
     /**
      * @var list<array<string, mixed>>
      */
@@ -121,7 +123,7 @@ final class SyncStatusSection extends Component
             $vars = get_object_vars($row);
 
             $peerDeviceId = is_string($vars['peer_device_id'] ?? null) ? $vars['peer_device_id'] : '';
-            $status = is_string($vars['status'] ?? null) ? $vars['status'] : '';
+            $status = SyncSessionStatus::tryFrom(is_string($vars['status'] ?? null) ? $vars['status'] : '');
             $errorMessage = is_string($vars['error_message'] ?? null) && $vars['error_message'] !== '' ? $vars['error_message'] : null;
             $lastSeenAt = is_string($vars['last_seen_at'] ?? null) && $vars['last_seen_at'] !== '' ? $vars['last_seen_at'] : null;
 
@@ -137,7 +139,13 @@ final class SyncStatusSection extends Component
                 'display_name' => $deviceNames[$peerDeviceId]
                     ?? Lang::get('sync::status.unknown_device'),
                 'is_known' => isset($deviceNames[$peerDeviceId]),
-                'status' => $status,
+                // Decided here rather than in the template: a row still claiming
+                // to be live long after anything stamped it is a session whose
+                // process is gone, and the pulsing dot is a statement about now.
+                'is_live' => $status !== null
+                    && $status->isLiveClaim()
+                    && SessionLiveness::isStampRecent($lastSeenAt, $now),
+                'is_failed' => $status === SyncSessionStatus::Failed,
                 'error_message' => $errorMessage,
                 'last_seen_at' => $lastSeenAt,
                 'last_seen_human' => $lastSeenHuman,
@@ -151,8 +159,8 @@ final class SyncStatusSection extends Component
     // Empty string when the row did not fail, so the view renders no label
     // rather than an empty one. The reading itself lives in PeerFailure, which
     // is also what decides whether the aggregate above calls this peer an error.
-    private function deriveErrorLabel(string $status, ?string $errorMessage): string
+    private function deriveErrorLabel(?SyncSessionStatus $status, ?string $errorMessage): string
     {
-        return $status === 'failed' ? Lang::get(PeerFailure::labelKey($errorMessage)) : '';
+        return $status === SyncSessionStatus::Failed ? Lang::get(PeerFailure::labelKey($errorMessage)) : '';
     }
 }

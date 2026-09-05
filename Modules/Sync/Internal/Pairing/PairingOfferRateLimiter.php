@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Transport\FixedWindowThrottle;
+use Modules\Sync\Internal\Transport\BoundedSourceWindows;
 
 // Per-source-IP fixed-window throttle, so a pairing route cannot be used as a
 // cheap probe for whether a pairing is in flight. Each route holds its OWN
@@ -17,17 +17,20 @@ final class PairingOfferRateLimiter
     // Anything past a handful inside a minute is not that.
     public const int MAX_PER_WINDOW = 10;
 
-    // Cap on distinct source keys held at once: the prune sweep runs only
-    // when the map grows past this, so ordinary traffic never pays for it.
+    // How many distinct source keys may be held at once. The map enforces this
+    // by evicting its oldest window, rather than only sweeping expired ones —
+    // a burst of keys inside a single window expires nothing, and a limiter
+    // that grows for each of them is the exhaustion vector it guards against.
     private const int MAX_TRACKED_SOURCES = 1024;
 
-    /** @var array<string, array{start: int, count: int}> */
-    private array $windows = [];
+    private readonly BoundedSourceWindows $windows;
 
     public function __construct(
         private readonly Clock $clock,
-        private readonly int $maxPerWindow = self::MAX_PER_WINDOW,
-    ) {}
+        int $maxPerWindow = self::MAX_PER_WINDOW,
+    ) {
+        $this->windows = new BoundedSourceWindows(self::MAX_TRACKED_SOURCES, $maxPerWindow);
+    }
 
     // A sibling limiter on the same clock with its own window map, for a route
     // whose legitimate caller is not a human hand.
@@ -38,37 +41,6 @@ final class PairingOfferRateLimiter
 
     public function allow(string $sourceKey): bool
     {
-        $now = $this->clock->now()->getTimestamp();
-        $window = $this->windows[$sourceKey] ?? null;
-
-        if ($window === null || $now - $window['start'] >= FixedWindowThrottle::windowSeconds()) {
-            if ($window === null && count($this->windows) >= self::MAX_TRACKED_SOURCES) {
-                $this->pruneExpired($now);
-            }
-
-            $this->windows[$sourceKey] = ['start' => $now, 'count' => 1];
-
-            return true;
-        }
-
-        if ($window['count'] >= $this->maxPerWindow) {
-            return false;
-        }
-
-        $this->windows[$sourceKey]['count'] = $window['count'] + 1;
-
-        return true;
-    }
-
-    // Drops every window whose full duration has elapsed, so the map cannot
-    // grow one permanent entry per source ever seen — a limiter must not
-    // become the exhaustion vector it guards against.
-    private function pruneExpired(int $now): void
-    {
-        foreach ($this->windows as $key => $window) {
-            if ($now - $window['start'] >= FixedWindowThrottle::windowSeconds()) {
-                unset($this->windows[$key]);
-            }
-        }
+        return $this->windows->admits($sourceKey, $this->clock->now()->getTimestamp());
     }
 }
