@@ -63,12 +63,13 @@ An IMAP library is not a shortcut here; it is a specification violation.
   package's requirements disappears the day that package drops it, so an
   undeclared import is a break scheduled for an unrelated `composer update`.
 - Comments explain *why*, never *what*, and the bar is high: if the code says it,
-  the comment does not need to. An inline `//` block is **2 to 4 lines**: a lone
-  one-line `//` comment is refused outright (M1), because a thought that fits on
-  one line is one the code should carry itself — delete it, or let a rename, an
-  extracted method or a named constant say it. **Never pad a one-liner to two
-  lines to clear M1** — that manufactures the noise the rule exists to stop.
-  No prose in a docblock: tag-only (M4), and no `/* */` blocks (M3).
+  the comment does not need to. An inline `//` block has a **ceiling and no
+  floor** — at most four lines (M2), and one line is a valid comment where one
+  line is what the thought is worth (ADR-0023 deleted M1's floor; its number
+  stays vacant). The first question is still whether a rename, an extracted
+  method or a named constant carries it better. Anything needing more than four
+  lines belongs in `.docs`, linked. No prose in a docblock: tag-only (M4), and
+  no `/* */` blocks (M3).
 - These four rules are enforced twice: `tests/Contracts/CommentPolicyArchTest.php`
   is the authority, and `.claude/hooks/comment-policy.php` runs the same checks on
   every edit so a violation is reported the moment it is written rather than at
