@@ -83,6 +83,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # Kept in lockstep with release.yml, which carries the same
+                  # rewrite: a bundle built to be inspected has to be the bundle
+                  # that ships, and .env.example carries APP_ENV=local, which
+                  # opens the developer console with no key.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -173,6 +179,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # Kept in lockstep with release.yml, which carries the same
+                  # rewrite: a bundle built to be inspected has to be the bundle
+                  # that ships, and .env.example carries APP_ENV=local, which
+                  # opens the developer console with no key.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -253,6 +265,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # Kept in lockstep with release.yml, which carries the same
+                  # rewrite: a bundle built to be inspected has to be the bundle
+                  # that ships, and .env.example carries APP_ENV=local, which
+                  # opens the developer console with no key.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -312,6 +330,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # Same rewrite as release.yml's mobile job, and for a sharper
+                  # reason here: DevConsoleBuildGate reads app.debug on a mobile
+                  # runtime, so a bundle carrying APP_DEBUG=true hands the
+                  # artisan runner and the query panel to the only account.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
