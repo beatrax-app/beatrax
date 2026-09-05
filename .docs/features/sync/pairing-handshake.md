@@ -42,6 +42,40 @@ actually calls for it: a complete code no live pairing row answers.
 can never lose trust state. It runs before each mint so stale initiator key material does not
 accumulate.
 
+### A refused accept has three endings, and one of them may say "expired"
+
+`invalid_code` is kept for "a complete code no live pairing row answers", and for a while it
+was reached on two branches where a live pairing row had just answered.
+
+`PairingTokenService::accept()` returns a bare `false` for every refusal it makes, and the
+refusal it makes most often in the field is not an unknown code at all: it is a row that has
+already moved past `pending`. Both surfaces read that `false` as proof the code was dead.
+
+Two paths reach it with a code that demonstrably is not:
+
+- **The submit that follows an offer lookup.** A typed code carries the token and nothing
+  else, so both clients ask the issuing device for the identity half
+  ([Both clients have to ask](#both-clients-have-to-ask)). Getting an identity back *is* that
+  device answering for that token, and `PairingOfferService` refuses an expired or unknown one
+  identically. Reaching `accept()` therefore proves the code is live over there.
+- **The second submit of a code this device already took up.** `seedFromInitiator()` is
+  idempotent for a row still in flight, and `PairingOfferService::OFFERABLE_STATES` includes
+  `awaiting_confirm` on purpose, both so a retry can ask again. The lock screen even stashes
+  the typed code so the reader does not retype 26 characters. Every one of those roads led to
+  *"This code is invalid or has expired. Ask the other device to generate a new one"* — and
+  following that advice abandons a ceremony that was still running.
+
+The three endings are now a `PairingAcceptRefusal`, classified by
+`PairingGateway::classifyAcceptRefusal()` from one local fact (does this device hold a live
+`awaiting_confirm` row for the code?) and one the caller states (did the minting device answer
+for it on this submit?). `AlreadyUnderWay` and `VouchedByIssuer` get their own line;
+`NotLiveHere` keeps `invalid_code`. The camera arm passes `issuerServedItsOffer: false`,
+because a QR is read off a screen and nobody was asked.
+
+`tests/Contracts/ACodeIsNeverCalledExpiredWithoutClassifyingTheRefusalArchTest.php` holds that
+shape: the unknown-or-expired line may appear in production code only as a `match` arm keyed on
+`PairingAcceptRefusal`, so a new emitter cannot name the cause without first having asked.
+
 ### Expiry is compared as text
 
 `expires_at` is a TEXT column compared **lexically** in SQL, by several writers and more

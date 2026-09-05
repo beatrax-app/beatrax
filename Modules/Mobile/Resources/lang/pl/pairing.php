@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Nie można połączyć się z drugim urządzeniem. Upewnij się, że oba są w tej samej sieci, a synchronizacja na komputerze jest włączona.',
         'no_road_home' => 'To urządzenie nie może przeszukać sieci, a zeskanowany kod nie zawiera adresu drugiego urządzenia. Poproś o nowy kod i zeskanuj go.',
         'invalid_code' => 'Ten kod jest nieprawidłowy lub wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
+        'already_under_way' => 'To urządzenie już przyjęło ten kod i czeka na potwierdzenie z drugiego urządzenia. Jeśli nie nadejdzie, poproś o nowy kod i użyj go.',
+        'vouched_but_refused' => 'Drugie urządzenie nadal ma ten kod, ale to urządzenie nie mogło go przyjąć. Poproś o nowy kod i użyj go.',
         'code_incomplete' => 'Ten kod nie jest kompletny. Porównaj go z drugim urządzeniem i wpisz go w całości.',
         'code_not_accepted' => 'Żadne urządzenie w tej sieci nie przyjęło tego kodu. Sprawdź kod i czy drugie urządzenie nadal go pokazuje.',
         'no_peer_answered' => 'Nic w tej sieci nie odpowiedziało na ten kod. Sprawdź, czy na drugim urządzeniu działa synchronizacja, albo zeskanuj jego kod aparatem — aparat nie musi niczego szukać w sieci.',

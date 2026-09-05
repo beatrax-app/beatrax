@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Impossible de joindre l\'autre appareil. Vérifie que les deux sont sur le même réseau et que la synchronisation est activée sur l\'ordinateur.',
         'no_road_home' => 'Cet appareil ne peut pas parcourir le réseau, et le code scanné ne contient aucune adresse pour joindre l\'autre appareil. Demande-lui d\'afficher un nouveau code, puis scanne celui-là.',
         'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
+        'already_under_way' => 'Cet appareil a déjà accepté ce code et attend la confirmation de l\'autre appareil. Si elle ne vient pas, demande un nouveau code et utilise celui-là.',
+        'vouched_but_refused' => 'L\'autre appareil a toujours ce code, mais cet appareil n\'a pas pu l\'accepter. Demande-lui un nouveau code et utilise celui-là.',
         'code_incomplete' => 'Ce code n\'est pas complet. Compare-le avec l\'autre appareil et saisis-le en entier.',
         'code_not_accepted' => 'Aucun appareil de ce réseau n’a accepté ce code. Vérifie le code et que l’autre appareil l’affiche toujours.',
         'no_peer_answered' => 'Rien sur ce réseau n’a répondu à ce code. Vérifie que la synchronisation tourne sur l’autre appareil, ou scanne son code avec l’appareil photo — celui-ci n’a pas besoin de chercher sur le réseau.',

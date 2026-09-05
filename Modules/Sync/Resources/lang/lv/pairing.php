@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Ierīces identitāte ir bloķēta. Atbloķējiet lietotni un mēģiniet vēlreiz.',
     'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
+    'already_under_way' => 'Šī ierīce šo kodu jau ir pieņēmusi un gaida otras ierīces apstiprinājumu. Ja tas nepienāk, palūdziet jaunu kodu un izmantojiet to.',
+    'vouched_but_refused' => 'Otrai ierīcei šis kods joprojām ir, bet šī ierīce to nevarēja pieņemt. Palūdziet tai jaunu kodu un izmantojiet to.',
     'code_incomplete' => 'Šis kods nav pilnīgs. Salīdziniet to ar otru ierīci un ievadiet to pilnībā.',
     'code_not_accepted' => 'Neviena šī tīkla ierīce nepieņēma šo kodu. Pārbaudiet kodu un vai otra ierīce to joprojām rāda.',
     'no_peer_answered' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Pārbaudiet, vai otrā ierīcē darbojas sinhronizācija.',

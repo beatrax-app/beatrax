@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => "Impossibile raggiungere l'altro dispositivo. Assicurati che siano entrambi sulla stessa rete e che la sincronizzazione sia attiva sul desktop.",
         'no_road_home' => "Questo dispositivo non può cercare sulla rete e il codice che hai scansionato non contiene alcun indirizzo per raggiungere l'altro dispositivo. Chiedigli di mostrare un nuovo codice e scansiona quello.",
         'invalid_code' => "Questo codice non è valido o è scaduto. Chiedi all'altro dispositivo di generarne uno nuovo.",
+        'already_under_way' => 'Questo dispositivo ha già accettato quel codice e attende la conferma dell\'altro. Se non arriva, chiedi un codice nuovo e usa quello.',
+        'vouched_but_refused' => 'L\'altro dispositivo ha ancora quel codice, ma questo non è riuscito ad accettarlo. Chiedigli un codice nuovo e usa quello.',
         'code_incomplete' => 'Questo codice non è completo. Confrontalo con l\'altro dispositivo e inseriscilo per intero.',
         'code_not_accepted' => 'Nessun dispositivo su questa rete ha accettato il codice. Controlla il codice e che l’altro dispositivo lo stia ancora mostrando.',
         'no_peer_answered' => 'Niente su questa rete ha risposto a quel codice. Controlla che la sincronizzazione sia attiva sull’altro dispositivo, oppure scansiona il suo codice con la fotocamera — la fotocamera non deve cercare sulla rete.',
