@@ -158,9 +158,15 @@ item. A mismatch means it was signed by something else — do not distribute it.
 
 ## Expiry
 
-The iOS distribution certificate expires **2027-07-03**. The Android keystore
-does not expire, and must never be replaced: a new key means users cannot
-upgrade over an existing install.
+Every date is in the [signing identity register](signing-identities.md),
+including the iOS distribution certificate's and the keystore certificate's
+own validity window — the keystore *does* have one, decades out, and the
+`keytool` invocation that reads it is on that page.
+
+What matters here is the rule that outlives any of them: the Android release
+key must never be replaced. A new key means users cannot upgrade over an
+existing install, and on a local-first product an uninstall takes the ledger
+with it.
 
 ## The patch scripts in a Bifrost tree
 

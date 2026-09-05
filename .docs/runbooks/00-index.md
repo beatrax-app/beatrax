@@ -14,4 +14,5 @@ and what to do when something fails.
 | [store-submission.md](store-submission.md) | What a store submission has to declare, where each answer is derived from, the review notes, and what the two desktop stores would cost |
 | [force-password-reset.md](force-password-reset.md) | Resetting a user's password from the CLI when recovery codes are exhausted |
 | [repo-security-setup.md](repo-security-setup.md) | Reproducing the GitHub repo security posture from scratch on a fork or fresh clone |
+| [signing-identities.md](signing-identities.md) | Every identity the release pipeline signs with, when each expires, and the command that reads that date |
 | [operator-recovery.md](operator-recovery.md) | Backup, restore, corrupt-backup remediation, stuck-lock recovery, failed-jobs maintenance |
