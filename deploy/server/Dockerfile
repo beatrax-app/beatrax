@@ -5,8 +5,9 @@
 # binary that serves the app over HTTP/HTTPS with no separate nginx/php-fpm to
 # wire together — so the application code is baked into the image and there is
 # no shared-code volume to keep in sync. Multi-stage: build the front-end
-# assets with Node, then assemble the FrankenPHP (PHP 8.5) runtime with the
-# database drivers a server needs (pdo_pgsql + pdo_mysql alongside pdo_sqlite).
+# assets with Node, then assemble the FrankenPHP (PHP 8.5) runtime. SQLite is
+# the only database this schema supports, in every deployment shape, so
+# pdo_sqlite is the only driver installed (ADR-0022).
 
 # --- stage 1: build front-end assets (Vite / Tailwind) ---
 FROM node:22-bookworm-slim AS assets
@@ -21,9 +22,13 @@ RUN npm run build
 FROM dunglas/frankenphp:php8.5 AS runtime
 # install-php-extensions ships in the FrankenPHP image.
 RUN install-php-extensions \
-        intl pcntl posix pdo_sqlite pdo_pgsql pdo_mysql zip bcmath @composer
+        intl pcntl posix pdo_sqlite zip bcmath @composer
+# curl backs the compose healthcheck. sqlite3 is needed by `migrate` itself: a
+# first run against an empty database loads database/schema/sqlite-schema.sql,
+# and Laravel loads a file-backed dump by shelling out to that binary rather
+# than through PDO, so without it the very first boot cannot migrate.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip poppler-utils \
+    && apt-get install -y --no-install-recommends git unzip poppler-utils curl sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

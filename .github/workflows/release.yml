@@ -760,9 +760,20 @@ jobs:
                   path: ${{ env.APK_PATH }}
                   if-no-files-found: error
 
+    smoke-server:
+        # The shipped self-host recipe, launched and asked for its health
+        # endpoint before anything is uploaded. The four desktop and mobile
+        # legs above cannot be launched this way on a hosted runner — an
+        # Electron bundle needs a session and a display, and the Android APK
+        # needs a device — so this covers the one shape CI can actually run,
+        # which is also the shape that shipped answering 404 to everything.
+        name: smoke (self-host server)
+        needs: [gate, spec-gate]
+        uses: ./.github/workflows/deploy-smoke.yml
+
     publish:
         name: publish
-        needs: [build-macos, build-windows, build-linux, build-android]
+        needs: [build-macos, build-windows, build-linux, build-android, smoke-server]
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:

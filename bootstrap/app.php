@@ -32,7 +32,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
     )
     // Only for commands spanning several modules and so owned by none —
     // a module's own commands register in its ServiceProvider.
@@ -52,7 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // interface, this gates the Host — the half DNS rebinding defeats.
         $middleware->prepend(TrustedHostGuard::class);
         // Global, not group-scoped, so the header also covers non-web
-        // responses such as /up.
+        // responses such as the /health probe.
         $middleware->append(NoStoreFinancialData::class);
         // `web`, not global: both read StartSession and the auth guard.
         // SetLocale goes first because EnsureDatabaseReady redirects a device

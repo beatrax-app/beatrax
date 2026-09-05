@@ -170,6 +170,14 @@ and the assertion — see
 - **`/health` is auth-free.** A non-loopback request still hits
   `LoopbackOnly` and gets 404; an unauthenticated loopback request
   passes through.
+- **`/health` is the only health endpoint this application serves.**
+  Laravel's `health:` route is not registered at either bootstrap root.
+  The page it renders is the framework's own, which preconnects to
+  `fonts.bunny.net`, pulls a stylesheet from it and a script from
+  `cdn.jsdelivr.net`, and prints a render time no probe can
+  equality-check — two third parties and a non-deterministic body, on a
+  route that is auth-free by design.
+  (`tests/Contracts/NothingShippedFetchesFromAThirdPartyHostArchTest.php`)
 - **Every non-loopback request raises 404 unless the install recorded
   that interface.** `LoopbackOnly` middleware inspects `SERVER_ADDR`;
   an address that is neither loopback nor recorded throws
