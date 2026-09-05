@@ -100,8 +100,10 @@ final readonly class DidYouMeanSuggester
         return $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
+            // No `!= ''` beside it: sealed values are never the empty string,
+            // so that half of the filter admitted every row once the column
+            // was encrypted. buildCorpus() refuses a blank of either kind.
             ->whereNotNull('counterparty_name')
-            ->where('counterparty_name', '!=', '')
             ->orderByDesc('posted_at')
             ->orderByDesc('id')
             ->limit(self::CANDIDATE_ROW_CAP)
