@@ -47,7 +47,7 @@ final readonly class ExportEverythingArchive
         $zipPath = $staging.DIRECTORY_SEPARATOR.'beatrax-export-'.$suffix.'.zip';
 
         try {
-            $this->pack($zipPath, $encrypted, 'beatrax-backup-'.$stamp.'.sqlite.enc');
+            $this->pack($zipPath, $encrypted, ExportArchiveBackup::ENTRY_PREFIX.$stamp.ExportArchiveBackup::ENTRY_SUFFIX);
         } catch (Throwable $e) {
             @unlink($zipPath);
 
@@ -100,6 +100,8 @@ final readonly class ExportEverythingArchive
         return $encrypted;
     }
 
+    // The backup goes in first, before any source document, so it is the entry
+    // a restore finds at the head of the archive without walking it.
     /**
      * @throws BackupIoException
      */

@@ -38,7 +38,6 @@ Route::post('/locale', static function (
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
     // "Where is my data?" — the user-facing privacy page surfacing on-disk
-    // paths via UserDataPathService, gated on is_developer for the export-
-    // everything CTA.
+    // paths via UserDataPathService, and the one-click export beside them.
     Route::view('/help/data-locations', 'core::help.data-locations')->name('core.help.data-locations');
 });
