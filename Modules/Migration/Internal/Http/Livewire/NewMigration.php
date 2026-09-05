@@ -152,6 +152,11 @@ final class NewMigration extends Component
                 'reconcile_of' => $this->reconcileOf,
                 'filename' => $originalFilename,
                 ...SafeExceptionContext::describe($e),
+                // The banner below says only that the export could not be read,
+                // for every one of these. Where the parser refused one cell, the
+                // file, column and value it refused are the whole of what a
+                // reader can act on, and this is the only place they are said.
+                ...SafeExceptionContext::refusedCell($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = $this->messageFor($e);

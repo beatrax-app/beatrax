@@ -53,13 +53,13 @@ it('reads a blank and a written zero as zero, and refuses a figure it cannot rea
     $parser = new AmountStringParser;
 
     if ($expected === null) {
-        expect(fn () => $parser->requireMinor($cell, 'Register.csv Outflow'))
+        expect(fn () => $parser->requireMinor($cell, 'Register.csv', 'Outflow'))
             ->toThrow(UnrecognizedMigrationFileException::class);
 
         return;
     }
 
-    expect($parser->requireMinor($cell, 'Register.csv Outflow'))->toBe($expected);
+    expect($parser->requireMinor($cell, 'Register.csv', 'Outflow'))->toBe($expected);
 })->with([
     'the column this row did not use' => ['', 0],
     'a zero the file states' => ['0.00', 0],
@@ -71,9 +71,9 @@ it('reads a blank and a written zero as zero, and refuses a figure it cannot rea
 it('names the column and the cell, so the row can be found in the file', function (): void {
     $parser = new AmountStringParser;
 
-    expect(fn () => $parser->requireMinor('twelve pounds', 'Register.csv Inflow'))
+    expect(fn () => $parser->requireMinor('twelve pounds', 'Register.csv', 'Inflow'))
         ->toThrow(
             UnrecognizedMigrationFileException::class,
-            "could not parse Register.csv Inflow value 'twelve pounds'",
+            "could not parse Register.csv Inflow value 'twelve pounds' (expected an amount)",
         );
 });
