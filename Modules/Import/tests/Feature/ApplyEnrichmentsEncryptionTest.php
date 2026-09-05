@@ -203,6 +203,6 @@ it('holdConflicts persists + dispatches PLAINTEXT stored/incoming values for an 
     expect(json_decode((string) $pending->incoming_value, true))->toBe('Albert Heijn');
 
     Event::assertDispatched(ReceiptConflictDetected::class, function (ReceiptConflictDetected $event): bool {
-        return $event->csvValue === 'Stored Merchant' && $event->receiptValue === 'Albert Heijn';
+        return $event->storedValue === 'Stored Merchant' && $event->incomingValue === 'Albert Heijn';
     });
 })->group('ReceiptConflictEncryption');

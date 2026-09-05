@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Public\Events;
 
-// Dispatched when ApplyEnrichments detects a true field-value conflict
-// while the user's receipt_conflict_resolution setting is still
-// 'unset'; the toast listener surfaces the one-time choice and
-// persists the policy for future conflicts.
+// Dispatched whenever ApplyEnrichments detects a true field-value conflict,
+// under every receipt_conflict_resolution policy. Named for the two sides of
+// the wire rather than for receipt-versus-statement: a statement enriching a
+// receipt-written row disagrees in the other direction and is the same event.
 final readonly class ReceiptConflictDetected
 {
     public function __construct(
         public int $transactionId,
         public int $userId,
         public string $field,
-        public ?string $receiptValue,
-        public ?string $csvValue,
+        public ?string $incomingValue,
+        public ?string $storedValue,
         public ?int $importRunId,
     ) {}
 }
