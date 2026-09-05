@@ -23,6 +23,9 @@ function privateLogMode(string $path): int
     return (int) fileperms($path) & 0o777;
 }
 
+// The env var moves UserDataPathService's whole storage root, databaseFile()
+// included, so this suite lives in Unit where no RefreshDatabase connection is
+// open against the path being swapped out from under it.
 beforeEach(function (): void {
     $this->previousStorage = getenv('NATIVEPHP_STORAGE_PATH');
     $this->scratch = privateLogScratch();
