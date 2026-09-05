@@ -98,13 +98,19 @@ function outboundMailSpellingsIn(string $source, array $spellings): array
 }
 
 /**
- * @param  list<string>  $mailers
- * @return list<string> every named transport that could put a message on a network
+ * The two values that SELECT a transport, not the ones that merely describe
+ * them. `mail.mailers` is deliberately not read: the framework's own defaults
+ * define smtp, ses, postmark, resend, sendmail, failover and roundrobin on
+ * every install, this repository publishes no config/mail.php to remove them,
+ * and a definition nothing selects opens no socket. Reading that list makes
+ * the rule impossible to satisfy while saying nothing about what would be sent.
+ *
+ * @return list<string> every transport a send would actually reach for
  */
-function outboundMailDeliverableTransports(?string $default, array $mailers, ?string $shipped): array
+function outboundMailDeliverableTransports(?string $default, ?string $shipped): array
 {
     $named = array_filter(
-        [...$mailers, $default, $shipped],
+        [$default, $shipped],
         static fn (?string $transport): bool => $transport !== null && $transport !== '',
     );
 
@@ -193,19 +199,17 @@ it('recognises every door to a transport and leaves the parser alone', function 
 ]);
 
 // The requirement has two halves, and this is the second: what the bundle
-// configures. Nothing publishes config/mail.php today, so `mail.default` is null and
-// the transport a send would reach comes from the environment the packager
-// copies. Both are read, because either one alone can be made deliverable.
+// selects. Nothing publishes config/mail.php today, so mail.default falls to
+// the framework's own value and the transport a send would reach comes from the
+// environment the packager copies. Both are read, because either one alone can
+// be made deliverable.
 it('configures no transport that could deliver a message', function (): void {
     $default = config('mail.default');
-    $mailers = array_keys((array) config('mail.mailers', []));
 
     expect($default === null || is_string($default))->toBeTrue('mail.default is not a transport name.');
 
-    /** @var list<string> $mailers */
     $deliverable = outboundMailDeliverableTransports(
         is_string($default) ? $default : null,
-        $mailers,
         outboundMailShippedMailer(),
     );
 
@@ -213,9 +217,14 @@ it('configures no transport that could deliver a message', function (): void {
         'These transports would put a reader\'s financial detail on a network:',
         '  '.implode(', ', $deliverable),
         '',
-        'The bundle configures no deliverable mail transport. Only log, array and',
-        'null answer a send without a socket; a driver this list does not name',
-        'reads as deliverable, including one Laravel adds after this was written.',
+        'Nothing the bundle selects may reach a network. Only log, array and null',
+        'answer a send without a socket; a driver this list does not name reads',
+        'as deliverable, including one Laravel adds after this was written.',
+        '',
+        'This reads mail.default and the MAIL_MAILER the packager ships, because',
+        'those are what a send resolves through. It does not read mail.mailers:',
+        'the framework defines every transport on every install, and a definition',
+        'nothing selects opens nothing.',
     ]));
 
     // The shipped environment names one rather than leaving the key out: an
@@ -223,14 +232,14 @@ it('configures no transport that could deliver a message', function (): void {
     expect(outboundMailShippedMailer())->toBeIn(OUTBOUND_MAIL_UNREACHABLE_TRANSPORTS);
 });
 
-it('tells a transport that could deliver from one that could not', function (?string $default, array $mailers, ?string $shipped, array $deliverable): void {
-    /** @var list<string> $mailers */
-    expect(outboundMailDeliverableTransports($default, $mailers, $shipped))->toBe($deliverable);
+it('tells a transport that could deliver from one that could not', function (?string $default, ?string $shipped, array $deliverable): void {
+    expect(outboundMailDeliverableTransports($default, $shipped))->toBe($deliverable);
 })->with([
-    'nothing published, log in the shipped environment' => [null, [], 'log', []],
-    'the array transport everywhere' => ['array', ['array'], 'array', []],
-    'a published smtp default' => ['smtp', ['smtp', 'log'], 'log', ['smtp']],
-    'a transport nobody has named before' => [null, ['sendgrid'], 'log', ['sendgrid']],
-    'a shipped environment that names smtp' => [null, [], 'smtp', ['smtp']],
-    'nothing configured and nothing shipped' => [null, [], null, []],
+    'nothing selected, log in the shipped environment' => [null, 'log', []],
+    'the array transport everywhere' => ['array', 'array', []],
+    'a selected smtp default' => ['smtp', 'log', ['smtp']],
+    'a transport nobody has named before' => ['sendgrid', 'log', ['sendgrid']],
+    'a shipped environment that names smtp' => [null, 'smtp', ['smtp']],
+    'a shipped environment naming one the default does not' => ['log', 'ses', ['ses']],
+    'nothing selected and nothing shipped' => [null, null, []],
 ]);
