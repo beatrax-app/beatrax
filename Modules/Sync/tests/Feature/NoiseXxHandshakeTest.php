@@ -7,8 +7,9 @@ use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 
 // XX is the fallback for a first connect, where the responder's static key is
 // not known yet; IK carries every reconnect. All three message ciphertexts are
-// asserted against the vendored cacophony vectors, because cipher-suite drift
-// otherwise stays invisible until a peer on the old build cannot connect.
+// asserted against a vendored anchor this implementation generated, because
+// cipher-suite drift otherwise stays invisible until a peer on the old build
+// cannot connect. It is a drift check, not an interoperability proof.
 
 /**
  * @return array<string, mixed>
@@ -98,7 +99,7 @@ it('XX split keys are directional (c1 !== c2)', function (): void {
     expect($ct1)->not->toBe($ct2, 'XX split must produce two distinct directional cipher keys');
 });
 
-it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaPoly_BLAKE2b test vector', function (): void {
+it('XX handshake reproduces all 3 vendored Noise_XX_25519_ChaChaPoly_BLAKE2b determinism anchors', function (): void {
     $xxVector = loadXxVector();
 
     /** @var array<int, array<string, string>> $messages */
@@ -144,7 +145,7 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     $msg1 = $initHs->writeMessage($payload1);
 
     expect(sodium_bin2hex($msg1))->toBe($messages[0]['ciphertext'],
-        'XX message 1 ciphertext must match official Noise_XX_25519_ChaChaPoly_BLAKE2b test vector'
+        'XX message 1 ciphertext must match the vendored determinism anchor'
     );
 
     $decodedPayload1 = $respHs->readMessage($msg1);
@@ -154,7 +155,7 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     $msg2 = $respHs->writeMessage($payload2);
 
     expect(sodium_bin2hex($msg2))->toBe($messages[1]['ciphertext'],
-        'XX message 2 ciphertext must match official Noise_XX_25519_ChaChaPoly_BLAKE2b test vector'
+        'XX message 2 ciphertext must match the vendored determinism anchor'
     );
 
     $decodedPayload2 = $initHs->readMessage($msg2);
@@ -164,7 +165,7 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     $msg3 = $initHs->writeMessage($payload3);
 
     expect(sodium_bin2hex($msg3))->toBe($messages[2]['ciphertext'],
-        'XX message 3 ciphertext must match official Noise_XX_25519_ChaChaPoly_BLAKE2b test vector'
+        'XX message 3 ciphertext must match the vendored determinism anchor'
     );
 
     $decodedPayload3 = $respHs->readMessage($msg3);
