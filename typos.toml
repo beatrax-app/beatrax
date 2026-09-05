@@ -147,6 +147,12 @@ extend-exclude = [
   "*.min.css",
   "**/tests/fixtures/",
   "resources/corpus/",
+  # gitleaks' own default ruleset, vendored byte-identical at the version the
+  # shared security workflow downloads. Its `generic-api-key` stopword list is
+  # deliberately misspelled — "acces", "statu", "wordpres" are the truncated
+  # stems the rule matches on — so correcting one would change what the guard
+  # detects and stop it agreeing with the gate it stands in for.
+  "tests/Contracts/Fixtures/gitleaks/",
   # Translated UI copy is legitimately not English; the English-only typo
   # checker flags "Adresse" as "Address" and "Alle" as "All". Every locale
   # tree except `en` is excluded — `en` is the source language and the one
