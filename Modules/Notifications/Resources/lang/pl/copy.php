@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Nic nie wymaga Twojej uwagi.',
         'flow' => 'Przych. :in, wych. :out, netto :net.',
+        'net_worth' => 'Wartość netto :amount.',
         'over_budget' => 'Dotychczas ponad budżet: :amount.',
         'payments_due' => ':count płatność w tym okresie.|:count płatności w tym okresie.|:count płatności w tym okresie.',
         'shortfall' => 'Zbliża się niedobór środków.',
+        'forecast_not_run' => 'Prognoza przepływów pieniężnych jeszcze nie została wykonana.',
     ],
 ];

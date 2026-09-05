@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Nič nevyžaduje tvoju pozornosť.',
         'flow' => 'Príjmy :in, výdavky :out, netto :net.',
+        'net_worth' => 'Čisté imanie :amount.',
         'over_budget' => 'Doteraz nad rozpočet: :amount.',
         'payments_due' => ':count platba splatná v tomto období.|:count platby splatné v tomto období.|:count platieb splatných v tomto období.',
         'shortfall' => 'Blíži sa nedostatok hotovosti.',
+        'forecast_not_run' => 'Predpoveď peňažných tokov zatiaľ neprebehla.',
     ],
 ];

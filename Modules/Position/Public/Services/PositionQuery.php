@@ -7,6 +7,7 @@ namespace Modules\Position\Public\Services;
 use Modules\Budgets\Public\Services\EnvelopeProgressQuery;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
+use Modules\Forecasting\Public\Services\NetWorthQuery;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\CurrencyView;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
@@ -22,6 +23,7 @@ final readonly class PositionQuery
         private EnvelopeProgressQuery $budgets,
         private RecurringSeriesQuery $recurringSeries,
         private ForecastHighlightsQuery $forecastHighlights,
+        private NetWorthQuery $netWorth,
     ) {}
 
     public function forUser(User $user, Period $period): PositionSummaryDto
@@ -42,7 +44,11 @@ final readonly class PositionQuery
             emailScanHealth: $emailScanHealth,
             upcoming: $this->upcomingRecurringCharges($user, $period),
             budgets: $this->budgets->forPeriod($user, $period),
-            shortfallAhead: $this->forecastHighlights->activeShortfallCountForUser($user) > 0,
+            shortfallRisk: $this->forecastHighlights->shortfallRiskForUser($user),
+            // Today's holdings, not the period's: the roll-up answers "what do
+            // you hold now", and paging the dashboard back a month must not
+            // restate it as what you held then.
+            netWorth: $this->netWorth->forUser($user),
         );
     }
 

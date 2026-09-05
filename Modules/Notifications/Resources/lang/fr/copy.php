@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Rien ne demande ton attention.',
         'flow' => 'Entrées :in, sorties :out, net :net.',
+        'net_worth' => 'Valeur nette :amount.',
         'over_budget' => ':amount de dépassement de budget jusqu\'ici.',
         'payments_due' => ':count paiement dû sur cette période.|:count paiements dus sur cette période.',
         'shortfall' => 'Un déficit de trésorerie approche.',
+        'forecast_not_run' => 'Aucune prévision de trésorerie n\'a encore été calculée.',
     ],
 ];

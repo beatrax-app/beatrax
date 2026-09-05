@@ -260,15 +260,18 @@ Two strings on a notification row do not come from the spec at all — the type
 chip and the dead-link line — and both were frozen in English until a Dutch
 phone showed them beside correctly translated titles.
 
-`NotificationCopy::TYPE_CHIPS` maps a trigger to a **glyph and a lang key**,
-never a word. `typeChip()` resolves the key through `Lang::get()` on every
+`NotificationTrigger::chip()` maps a trigger to a **glyph and a lang key**,
+never a word, and its `match` has no default arm — so a twelfth trigger is a
+static-analysis failure rather than a row under the placeholder glyph.
+`NotificationCopy::typeChip()` resolves the key through `Lang::get()` on every
 call, so the chip follows whoever is reading rather than whoever read first.
 The chip is `aria-hidden` because it repeats what the title already says — that
 hides it from a screen reader and not from eyes, so it is user-facing text like
-any other. A trigger this build cannot name, and the empty string
-`SensitiveColumnCodec` leaves behind for a column it could not open, both fall
-to `TYPE_CHIP_UNNAMED`, whose key ships in all twenty-six locales like the rest;
-the fallback degrades to a neutral word, never to a raw key.
+any other. A stored `trigger_type` no case can represent — a kind a newer release writes,
+or the empty string `SensitiveColumnCodec` leaves behind for a column it could
+not open — reaches `typeChip()` as `null` and falls to `TYPE_CHIP_UNNAMED`,
+whose key ships in all twenty-six locales like the rest; the fallback degrades
+to a neutral word, never to a raw key.
 
 `notifications::row.dead_link` is **five whole sentences keyed by target kind**,
 not one sentence with a `:kind` placeholder. A noun dropped into a sentence has

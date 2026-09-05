@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Nekas neprasa jūsu uzmanību.',
         'flow' => 'Ieņēmumi :in, izdevumi :out, neto :net.',
+        'net_worth' => 'Neto vērtība :amount.',
         'over_budget' => 'Pārsniegts budžets: :amount.',
         'payments_due' => 'Šajā periodā :count maksājumu.|Šajā periodā :count maksājums.|Šajā periodā :count maksājumi.',
         'shortfall' => 'Priekšā naudas plūsmas iztrūkums.',
+        'forecast_not_run' => 'Naudas plūsmas prognoze vēl nav veikta.',
     ],
 ];

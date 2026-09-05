@@ -13,6 +13,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\DigestCadence;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
+use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\Period;
@@ -227,7 +229,7 @@ final class DemoNotificationsSeeder
                 userId: $user->id,
                 cadence: DigestCadence::Weekly,
                 occurrence: $weeklyOccurrence,
-                position: $this->buildPosition($realToday, 320000, 265000, 55000),
+                position: $this->buildPosition($realToday, 320000, 265000, 55000, 1845000),
             ));
         });
         $this->markRead($user, NotificationTrigger::PositionDigest, 'position', $weeklyOccurrence);
@@ -335,7 +337,7 @@ final class DemoNotificationsSeeder
                     userId: $user->id,
                     cadence: DigestCadence::Daily,
                     occurrence: $occurrence,
-                    position: $this->buildPosition($realToday, 0, 0, 0),
+                    position: $this->buildPosition($realToday, 0, 0, 0, 1845000),
                 ));
             });
             $this->markRead($user, NotificationTrigger::PositionDigest, 'position', $occurrence);
@@ -367,10 +369,17 @@ final class DemoNotificationsSeeder
         return $at->format('Y-m-d H:i:s').':'.$insertedCount;
     }
 
-    // The digest body only reads summary + budgets + upcoming +
-    // shortfallAhead, so the list fields stay empty.
-    private function buildPosition(CarbonImmutable $realToday, int $inflowMinor, int $outflowMinor, int $netMinor): PositionSummaryDto
-    {
+    // The digest body only reads summary + net worth + budgets + upcoming +
+    // shortfall risk, so the list fields stay empty. The net-worth roll-up is
+    // synthetic like the flow figures beside it: the demo inbox is seeded
+    // before the accounts a real roll-up would read.
+    private function buildPosition(
+        CarbonImmutable $realToday,
+        int $inflowMinor,
+        int $outflowMinor,
+        int $netMinor,
+        int $netWorthMinor,
+    ): PositionSummaryDto {
         $period = new Period(
             start: $realToday->startOfMonth(),
             endExclusive: $realToday->startOfMonth()->addMonthNoOverflow(),
@@ -394,7 +403,13 @@ final class DemoNotificationsSeeder
             emailScanHealth: null,
             upcoming: [],
             budgets: [],
-            shortfallAhead: false,
+            shortfallRisk: ShortfallRisk::None,
+            netWorth: new NetWorth(
+                totalMinor: $netWorthMinor,
+                currency: Currency::Eur->value,
+                accounts: [],
+                hasExcludedAccounts: false,
+            ),
         );
     }
 

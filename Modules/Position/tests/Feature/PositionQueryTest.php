@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Position\Public\Dto\PositionSummaryDto;
@@ -121,7 +122,7 @@ it('returns a fully-populated DTO for a user with zero data (nothing notable is 
     expect($position->emailScanHealth)->toBeNull();
     expect($position->upcoming)->toBe([]);
     expect($position->budgets)->toBe([]);
-    expect($position->shortfallAhead)->toBeFalse();
+    expect($position->shortfallRisk)->toBe(ShortfallRisk::NotYetComputed);
 });
 
 it('summary is value-identical to ThisPeriodAtAGlanceQuery::for() for the same (user, period)', function (): void {
@@ -285,7 +286,7 @@ it('reports the budgets of the period it was asked for, not of the current one',
     expect($position->budgets[0]->budgetMinor)->toBe(5000);
 });
 
-it('composes shortfallAhead from ForecastHighlightsQuery::activeShortfallCountForUser', function (): void {
+it('composes shortfallRisk from ForecastHighlightsQuery::shortfallRiskForUser', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pqUser('pq-shortfall');
@@ -313,5 +314,5 @@ it('composes shortfallAhead from ForecastHighlightsQuery::activeShortfallCountFo
 
     $position = $query->forUser($user, $periods->current());
 
-    expect($position->shortfallAhead)->toBeTrue();
+    expect($position->shortfallRisk)->toBe(ShortfallRisk::Ahead);
 });

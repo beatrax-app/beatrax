@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Intet kræver din opmærksomhed.',
         'flow' => 'Ind :in, ud :out, netto :net.',
+        'net_worth' => 'Nettoformue :amount.',
         'over_budget' => ':amount over budget indtil videre.',
         'payments_due' => ':count betaling forfalder i denne periode.|:count betalinger forfalder i denne periode.',
         'shortfall' => 'Der venter et underskud i pengestrømmen.',
+        'forecast_not_run' => 'Der er endnu ikke kørt en likviditetsprognose.',
     ],
 ];

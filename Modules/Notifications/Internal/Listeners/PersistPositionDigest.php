@@ -13,6 +13,9 @@ use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Forecasting\Public\Dto\AccountBalanceLine;
+use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
@@ -81,7 +84,7 @@ final readonly class PersistPositionDigest
         $nothingNotable = $summary->isFirstRun
             && $position->budgets === []
             && $position->upcoming === []
-            && ! $position->shortfallAhead;
+            && $position->shortfallRisk !== ShortfallRisk::Ahead;
 
         if ($nothingNotable) {
             return [CopyLine::of('notifications::copy.digest.nothing_notable')];
@@ -93,6 +96,10 @@ final readonly class PersistPositionDigest
             'net' => CopyParam::money($summary->net->toMinor(), $summary->net->currency()),
         ])];
 
+        foreach (self::netWorthLines($position->netWorth) as $line) {
+            $parts[] = $line;
+        }
+
         foreach ($this->overBudgetLines($position->budgets, $userId) as $line) {
             $parts[] = $line;
         }
@@ -101,11 +108,59 @@ final readonly class PersistPositionDigest
             $parts[] = CopyLine::plural('notifications::copy.digest.payments_due', count($position->upcoming));
         }
 
-        if ($position->shortfallAhead) {
-            $parts[] = CopyLine::of('notifications::copy.digest.shortfall');
+        $shortfall = self::shortfallLine($position->shortfallRisk);
+        if ($shortfall !== null) {
+            $parts[] = $shortfall;
         }
 
         return $parts;
+    }
+
+    // Silence is what the boolean gave a horizon nothing had looked at, and a
+    // digest that omits the shortfall line reads the same whether the forecast
+    // found nothing or never ran.
+    private static function shortfallLine(ShortfallRisk $risk): ?CopyLine
+    {
+        return match ($risk) {
+            ShortfallRisk::Ahead => CopyLine::of('notifications::copy.digest.shortfall'),
+            ShortfallRisk::NotYetComputed => CopyLine::of('notifications::copy.digest.forecast_not_run'),
+            ShortfallRisk::None => null,
+        };
+    }
+
+    // The same shape the over-budget roll-up uses: a total with balances left
+    // out of it is a smaller net worth unless something says which are missing.
+    /**
+     * @return list<CopyLine>
+     */
+    private static function netWorthLines(NetWorth $netWorth): array
+    {
+        $lines = [CopyLine::of('notifications::copy.digest.net_worth', [
+            'amount' => CopyParam::money($netWorth->totalMinor, $netWorth->currency),
+        ])];
+
+        $unconverted = self::unconvertedCurrencies($netWorth);
+        if ($unconverted !== []) {
+            $lines[] = CopyLine::of('core::money.not_converted', ['list' => implode(', ', $unconverted)]);
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function unconvertedCurrencies(NetWorth $netWorth): array
+    {
+        $currencies = [];
+        foreach ($netWorth->accounts as $line) {
+            /** @var AccountBalanceLine $line */
+            if ($line->baseEquivalentMinor === null && $line->currency !== $netWorth->currency) {
+                $currencies[$line->currency] = true;
+            }
+        }
+
+        return array_keys($currencies);
     }
 
     // Envelopes carry the currency they were typed in, so one period can hold a

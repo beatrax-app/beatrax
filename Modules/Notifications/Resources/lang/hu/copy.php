@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Semmi nem igényel figyelmet.',
         'flow' => 'Be: :in, ki: :out, nettó: :net.',
+        'net_worth' => 'Nettó vagyon :amount.',
         'over_budget' => 'Eddig :amount túllépés a költségvetésen.',
         'payments_due' => 'Ebben az időszakban :count fizetés esedékes.|Ebben az időszakban :count fizetés esedékes.',
         'shortfall' => 'Pénzforgalmi hiány várható.',
+        'forecast_not_run' => 'Még nem futott pénzforgalmi előrejelzés.',
     ],
 ];
