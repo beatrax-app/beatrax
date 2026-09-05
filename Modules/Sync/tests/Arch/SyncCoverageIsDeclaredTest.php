@@ -47,6 +47,7 @@ function syncMachineryTables(): array
         'sync_sessions' => 'One live connection, known only to the device holding it.',
         'sync_peer_catch_up_state' => 'How far THIS device has caught a peer up; replayed onto that peer it is a cursor into a log it does not have.',
         'device_registry' => 'Who this device has paired with. Trust is established by the ceremony, not by an op that arrives claiming it.',
+        'device_introductions' => 'Keys a peer vouched for and this reader confirmed. Syncing the confirmation would make one reader\'s decision every reader\'s, which is the ceremony this act deliberately replaces.',
         'pairing_tokens' => 'A short-lived secret for one ceremony; a copy on a second device widens the window it exists to narrow.',
         'mobile_sync_progress' => 'The phone\'s own progress through its first sync.',
         'mobile_import_intent' => 'A handoff between two screens of this install.',

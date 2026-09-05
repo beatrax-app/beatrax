@@ -239,4 +239,7 @@ proves that before calling; see
   wrap is authenticated and adopted on the receiving side.
 - [Sensitive columns at rest](sensitive-columns-at-rest.md) — what the epoch key actually
   encrypts.
+- [Introducing a device nobody can pair with](introducing-a-device-nobody-can-pair-with.md)
+  — the retained key read back the other way, when the device that could vouch
+  for it is the only one left.
 - [Sync architecture](architecture.md).

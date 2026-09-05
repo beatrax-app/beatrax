@@ -91,4 +91,17 @@ return [
     'backlog_heading' => 'Ootab lisamist',
     'backlog_deferred' => 'See seade on saanud andmeid teiselt seadmelt ega ole neid veel arvestusse lisanud. Midagi ei lähe kaduma — need lisatakse automaatselt, tavaliselt hetkega.',
     'backlog_awaiting_key' => 'See seade on saanud andmeid, mille võtit tal veel ei ole. Midagi ei lähe kaduma. Ava rakendus seotud seadmes, kui see seade on avatud, et need saaksid ühenduda ja võti edastada.',
+    // i18n-review: et · introduced_heading — "vouched for" has no settled Estonian
+    // noun phrase; the idiom "seisab selle eest hea" is used over the shorter
+    // "teise seadme soovitatud", which reads closer to a recommendation.
+    'introduced_heading' => 'Teine seade seisab selle eest hea',
+    'introduced_trust' => 'Mõni teine sinu seade on edastanud sellise seadme identiteedi, millega see seade pole kunagi seotud olnud. Kinnitamine lubab sel seadmel kontrollida, mida too seade on allkirjastanud, ja ei midagi muud — siia ta ühenduda ei saa ja võtit talle kunagi ei saadeta. Teist ekraani, millega võrrelda, ei ole, nii et sa usaldad seadet, kes selle edastas.',
+    'introduced_by' => 'Tutvustas :name',
+    'introduced_confirmed' => 'Allkirjade jaoks kinnitatud',
+    'introduced_unconfirmed' => 'Kinnitamata',
+    'introduced_fingerprint' => 'Saabunud võtme sõrmejälg:',
+    'introduced_withheld' => ':count muudatus jääb lugemata, kuni sa kinnitad|:count muudatust jääb lugemata, kuni sa kinnitad',
+    'introduced_confirm' => 'Kinnita see seade',
+    'introduced_dismiss' => 'Eira',
+    'introduced_dismiss_aria' => 'Eira :name',
 ];

@@ -113,11 +113,11 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             return;
         }
 
-        // The confirmed-device key map is read ONCE and reused as a
-        // connect-time snapshot for the whole session — revocation only
-        // takes effect on the peer's NEXT reconnect. Callers needing
-        // immediate revocation must drop the connection.
-        $deviceKeys = $this->registryService->deviceKeys($this->userId);
+        // Read ONCE as a connect-time snapshot, so revocation takes effect on
+        // the peer's NEXT reconnect. NOT the map authenticate() admits this
+        // peer on — that one is deviceX25519Keys(), which a confirmed
+        // introduction is deliberately absent from and can never widen.
+        $deviceKeys = $this->registryService->signatureVerificationKeys($this->userId);
 
         // Built with the same MergeRulesRegistry and SearchIndexWriterContract
         // the container injects elsewhere, so ops replayed via the live sync
@@ -314,8 +314,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $decryptedReq = $session->decrypt($reqMsg->buffer());
         $req = $this->catchUp->parseControlMessage($decryptedReq);
 
-        $delta = $this->catchUp->opsAfterWatermark($this->userId, $this->catchUp->cursorsFrom($req));
-        $respControl = $this->catchUp->buildResponse($delta);
+        [$delta, $respControl] = $this->catchUp->answer($this->userId, $req, $session->peerDeviceId() ?? '');
         $client->sendBinary($session->encrypt(
             json_encode($respControl, JSON_THROW_ON_ERROR)
         ));
@@ -338,6 +337,11 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
 
         $decryptedPeerResp = $session->decrypt($peerRespMsg->buffer());
         $peerResp = $this->catchUp->parseControlMessage($decryptedPeerResp);
+
+        // Before the frames, not after: the frames can end early on a timeout,
+        // and the one thing that says WHY this exchange came back thin is the
+        // list the peer sent with the count.
+        $this->catchUp->recordIntroductions($this->userId, $peerResp, $session->peerDeviceId() ?? '');
 
         $declaredFrameCount = isset($peerResp['frame_count']) && is_int($peerResp['frame_count'])
             ? $peerResp['frame_count']

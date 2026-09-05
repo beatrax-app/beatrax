@@ -172,7 +172,7 @@ final class SyncSession
      * @param  string  $ciphertext  Received Noise ciphertext from the wire.
      * @param  int  $userId  Owner user — passed to replayer for scope guard.
      * @param  array<string, string>  $deviceKeys  device_id => hex Ed25519 public key
-     *                                             (from DeviceRegistryService::deviceKeys()).
+     *                                             (DeviceRegistryService::signatureVerificationKeys()).
      */
     public function receiveOps(string $ciphertext, int $userId, array $deviceKeys): void
     {
@@ -183,24 +183,22 @@ final class SyncSession
         $frame = $this->noiseSession->decrypt($ciphertext);
         $entries = $this->framer->decode($frame);
 
-        // The caller's map admits peers; this one reads history. A device the
-        // user removed keeps its registry row and its public key, so the ops
-        // it wrote while trusted still verify — dropping them here is what
-        // made a replacement phone arrive without the old phone's ledger.
-        $deviceKeys = [...$this->registryService->retainedDeviceKeys($userId), ...$deviceKeys];
-
+        // The caller's map is the whole gate. A key the registry merely RETAINS
+        // belongs to a device nothing confirms, so the replayer refuses its new
+        // work anyway — and admitting it here spent this peer's cursor on an
+        // entry no later confirmation could bring back.
         $verified = [];
 
         // Counted per author and reported once. A line per entry is why this
         // went unread: a peer whose history was signed by a retired identity
         // wrote the same warning six thousand times, and the run still looked
         // like an ordinary sync from every surface above it.
-        $unknownAuthors = [];
+        $unverifiableAuthors = [];
 
         foreach ($entries as $entry) {
             $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
             if ($pubKeyHex === null) {
-                $unknownAuthors[$entry->deviceId] = ($unknownAuthors[$entry->deviceId] ?? 0) + 1;
+                $unverifiableAuthors[$entry->deviceId] = ($unverifiableAuthors[$entry->deviceId] ?? 0) + 1;
 
                 continue;
             }
@@ -218,15 +216,24 @@ final class SyncSession
             $verified[] = $entry;
         }
 
-        if ($unknownAuthors !== []) {
+        if ($unverifiableAuthors !== []) {
             // Error, not warning: nothing downstream reports this, so an
             // exchange that delivered thousands of entries and applied none
-            // of them otherwise reads as a clean sync.
-            $this->logger?->error('SyncSession: dropped entries no device key can verify.', [
-                'reason' => 'missing_device_key',
-                'dropped' => array_sum($unknownAuthors),
+            // of them otherwise reads as a clean sync. HELD, not dropped —
+            // the cursor below never sees them, so a peer offers them again.
+            $this->logger?->error('SyncSession: held entries no key here verifies the author of.', [
+                'reason' => 'author_not_verifiable',
+                'held' => array_sum($unverifiableAuthors),
                 'received' => count($entries),
-                'device_ids' => array_keys($unknownAuthors),
+                'device_ids' => array_keys($unverifiableAuthors),
+                // The two states a reader acts on differently: an author this
+                // install once trusted is one an introduction can restore; one
+                // it has never heard of is not, and saying so would be a guess.
+                // Read HERE, so the common frame costs no query for it.
+                'known_to_registry' => array_values(array_intersect(
+                    array_keys($unverifiableAuthors),
+                    array_keys($this->registryService->retainedDeviceKeys($userId)),
+                )),
             ]);
         }
 
@@ -240,9 +247,10 @@ final class SyncSession
         // or grow the op_log unboundedly via this call.
         $this->replayer->replay($verified, $userId);
 
-        // After the replay, never before: a cursor advanced over ops that
-        // failed to apply would ask the peer to skip them next time, and
-        // nothing else would ever send them again.
+        // After the replay, never before, and only over $verified: a cursor
+        // advanced past an entry this device refused asks the peer to skip it
+        // next time, and nothing else ever sends it again — which would make
+        // confirming an introduction afterwards rescue nothing.
         $this->watermarks()->advance(
             $userId,
             $this->peerDeviceId ?? '',

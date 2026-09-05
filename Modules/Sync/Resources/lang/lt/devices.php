@@ -91,4 +91,17 @@ return [
     'backlog_heading' => 'Laukiama pridėjimo',
     'backlog_deferred' => 'Šis įrenginys gavo duomenų iš kito įrenginio ir dar nepridėjo jų prie tavo apskaitos. Niekas neprarandama — jie pritaikomi automatiškai, paprastai per akimirką.',
     'backlog_awaiting_key' => 'Šis įrenginys gavo duomenų, kuriems dar neturi rakto. Niekas neprarandama. Atidaryk programėlę susietame įrenginyje, kol šis yra atidarytas, kad abu galėtų susijungti ir raktas būtų išsiųstas.',
+    'introduced_heading' => 'Už jį laiduoja kitas įrenginys',
+    'introduced_trust' => 'Kitas tavo įrenginys perdavė įrenginio, su kuriuo šis niekada nebuvo susietas, tapatybę. Patvirtinus šis įrenginys galės patikrinti, ką tas įrenginys pasirašė, ir nieko daugiau — prisijungti čia jis negali ir raktas jam niekada nesiunčiamas. Nėra antro ekrano, su kuriuo būtų galima palyginti, tad pasitiki tuo įrenginiu, kuris tapatybę perdavė.',
+    'introduced_by' => 'Pristatė :name',
+    'introduced_confirmed' => 'Patvirtinta parašams',
+    'introduced_unconfirmed' => 'Nepatvirtinta',
+    'introduced_fingerprint' => 'Gauto rakto atspaudas:',
+    // i18n-review: lt · introduced_withheld — the many arm takes the neuter
+    // predicate a genitive-plural count governs ("liks neperskaityta"); a native
+    // reader settles that against the agreeing "liks neperskaitytų".
+    'introduced_withheld' => ':count pakeitimas liks neperskaitytas, kol nepatvirtinsi|:count pakeitimai liks neperskaityti, kol nepatvirtinsi|:count pakeitimų liks neperskaityta, kol nepatvirtinsi',
+    'introduced_confirm' => 'Patvirtinti šį įrenginį',
+    'introduced_dismiss' => 'Atmesti',
+    'introduced_dismiss_aria' => 'Atmesti :name',
 ];

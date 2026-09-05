@@ -21,11 +21,16 @@ final readonly class PeerCatchUpExchanger
 
     public const string MSG_CATCH_UP_COMPLETE = 'CATCH_UP_COMPLETE';
 
+    private IntroductionOffers $offers;
+
     public function __construct(
         private DatabaseManager $db,
         private TransportFramer $framer,
         private LoggerInterface $log,
-    ) {}
+        ?IntroductionOffers $offers = null,
+    ) {
+        $this->offers = $offers ?? IntroductionOffers::forDatabase($db, $log);
+    }
 
     // How far THIS PEER's stream has been consumed of EACH author, not how far
     // this device's own clock has run: reading hlc_clock_state asked for ops
@@ -34,16 +39,52 @@ final readonly class PeerCatchUpExchanger
     /**
      * @param  string  $localDeviceId  This device's own id, echoed to the peer.
      * @param  string  $peerDeviceId  The peer being asked; '' means "no cursor".
-     * @return array{type: string, cursors: list<array{device_id: string, hlc_l: int, hlc_c: int}>, device_id: string, user_id: int}
+     * @return array{type: string, cursors: list<array{device_id: string, hlc_l: int, hlc_c: int}>, verifiable: list<string>|null, device_id: string, user_id: int}
      */
     public function buildRequest(int $userId, string $localDeviceId, string $peerDeviceId = ''): array
     {
         return [
             'type' => self::MSG_CATCH_UP_REQUEST,
             'cursors' => new PeerCatchUpWatermarks($this->db)->for($userId, $peerDeviceId)->toWire(),
+            // Said out loud, because the peer cannot infer it. Every author
+            // missing from this list is one whose ops would arrive here, refuse
+            // to verify, and take the cursor with them.
+            'verifiable' => $this->offers->verifiableAuthorsFor($userId)->toWire(),
             'device_id' => $localDeviceId,
             'user_id' => $userId,
         ];
+    }
+
+    // The whole answer to one CATCH_UP_REQUEST: the frames owed and the control
+    // message that declares them. One method because the delta and the withheld
+    // report are two halves of one filter — computed apart, in two transports,
+    // they would drift into a response that under-declares what it left out.
+    /**
+     * @param  array<string, mixed>  $request  A parsed CATCH_UP_REQUEST.
+     * @return array{0: CatchUpDelta, 1: array<string, mixed>}
+     */
+    public function answer(int $userId, array $request, string $peerDeviceId): array
+    {
+        $cursors = $this->cursorsFrom($request);
+        $verifiable = VerifiableAuthors::fromWire($request['verifiable'] ?? null);
+
+        $delta = $this->opsAfterWatermark($userId, $cursors, $verifiable);
+        $withheld = $this->offers->forWithheld(
+            $userId,
+            $this->countWithheldByAuthor($userId, $cursors, $verifiable),
+            $peerDeviceId,
+        );
+
+        return [$delta, $this->buildResponse($delta, $withheld)];
+    }
+
+    /**
+     * @param  array<string, mixed>  $response  A parsed CATCH_UP_RESPONSE.
+     * @return int How many introductions were stored or refreshed.
+     */
+    public function recordIntroductions(int $userId, array $response, string $peerDeviceId): int
+    {
+        return $this->offers->record($userId, $response, $peerDeviceId);
     }
 
     // The cursors a received CATCH_UP_REQUEST is asking from. Both halves of
@@ -56,17 +97,70 @@ final readonly class PeerCatchUpExchanger
         return PeerCatchUpCursors::fromWire($request['cursors'] ?? null);
     }
 
+    // Applied AFTER the cursor group, never inside it: folded into that nested
+    // OR the author filter would have been one more disjunct and withheld
+    // nothing. A peer that named no authors at all — an older build — filters
+    // nothing either, because silence is not a claim to verify none of them.
     /**
      * @param  int  $userId  Scope guard — only ops for this user are returned.
      * @param  PeerCatchUpCursors  $cursors  Per-author watermarks the peer declared.
+     * @param  VerifiableAuthors|null  $verifiable  Authors the peer can verify; null filters nothing.
      * @return CatchUpDelta Countable frame total, iterable as TransportFramer-encoded binary frames.
      */
-    public function opsAfterWatermark(int $userId, PeerCatchUpCursors $cursors): CatchUpDelta
-    {
+    public function opsAfterWatermark(
+        int $userId,
+        PeerCatchUpCursors $cursors,
+        ?VerifiableAuthors $verifiable = null,
+    ): CatchUpDelta {
+        $verifiable ??= VerifiableAuthors::unstated();
+
+        $owed = $this->registeredAuthorOps($userId)
+            ->where(fn (Builder $q): Builder => $this->aboveEachCursor($q, $cursors));
+
         return $this->deltaFor(
-            $this->registeredAuthorOps($userId)
-                ->where(fn (Builder $q): Builder => $this->aboveEachCursor($q, $cursors)),
+            $verifiable->isStated() ? $owed->whereIn('device_id', $verifiable->deviceIds ?? []) : $owed,
         );
+    }
+
+    // The mirror of the filter above: the rows it took out, per author. Read
+    // through the same two helpers so the number reported and the rows withheld
+    // can never be answers to different questions.
+    /**
+     * @return array<string, int>
+     */
+    private function countWithheldByAuthor(int $userId, PeerCatchUpCursors $cursors, VerifiableAuthors $verifiable): array
+    {
+        if (! $verifiable->isStated()) {
+            return [];
+        }
+
+        $rows = $this->registeredAuthorOps($userId)
+            ->where(fn (Builder $q): Builder => $this->aboveEachCursor($q, $cursors))
+            ->whereNotIn('device_id', $verifiable->deviceIds ?? [])
+            // The same op types framesFor() would have packed, so the number
+            // reported is the number a confirmation actually delivers rather
+            // than one that counts rows the wire never carries.
+            ->whereIn('op_type', array_column(OpType::cases(), 'value'))
+            ->groupBy('device_id')
+            // Ordered so the report a peer reads back is stable between two
+            // exchanges that withheld the same thing; SQLite's group output
+            // order is not a promise anything may be compared against.
+            ->orderBy('device_id')
+            ->selectRaw('device_id, count(*) as entry_count')
+            ->get();
+
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $deviceId = $row->device_id ?? null;
+            $count = $row->entry_count ?? null;
+
+            if (is_string($deviceId) && $deviceId !== '' && is_numeric($count)) {
+                $counts[$deviceId] = (int) $count;
+            }
+        }
+
+        return $counts;
     }
 
     // The same delta measured rather than carried. A progress counter wants a
@@ -262,13 +356,15 @@ final readonly class PeerCatchUpExchanger
 
     /**
      * @param  CatchUpDelta  $delta  The delta from opsAfterWatermark(), counted but not yet streamed.
-     * @return array{type: string, frame_count: int}
+     * @param  WithheldHistory|null  $withheld  What the filter took out; null sends nothing extra.
+     * @return array{type: string, frame_count: int, withheld: list<array{device_id: string, count: int}>, introductions: list<array{device_id: string, name: string, ed25519_public_key_hex: string}>}
      */
-    public function buildResponse(CatchUpDelta $delta): array
+    public function buildResponse(CatchUpDelta $delta, ?WithheldHistory $withheld = null): array
     {
         return [
             'type' => self::MSG_CATCH_UP_RESPONSE,
             'frame_count' => count($delta),
+            ...($withheld ?? WithheldHistory::none())->toWire(),
         ];
     }
 
