@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Denne fil kunne ikke læses.',
         'file_unreadable_detail' => 'Appen kunne ikke læse denne fil (:code). De fulde oplysninger står i appens log; angiv denne kode, hvis du rapporterer et problem.',
         'iban_not_in_preview' => 'Dette IBAN indgår ikke i den aktuelle forhåndsvisning.',
+        'message_unreadable' => 'Denne meddelelse kunne ikke læses, så den blev sprunget over.',
         'not_an_email_file' => 'Denne fil er hverken en e-mail eller et postkassearkiv, så der er intet i den at læse som kvittering. Vælg den importtype og det format, der passer til din fil.',
         'pdf_has_no_text_layer' => 'Denne PDF indeholder ingen tekst — det er en scanning eller et foto af et kontoudtog, så der er intet at læse i den. Hent selve kontoudtoget hos din bank, eller brug en CSV-eksport i stedet.',
         'pdf_password_protected' => 'Denne PDF er beskyttet med adgangskode, så ingen læser kan åbne den. Gem en ubeskyttet kopi fra din PDF-fremviser, og importér den.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Denne række kunne ikke læses.',
         'row_unreadable_detail' => 'Appen kunne ikke læse denne række (:code). De fulde oplysninger står i appens log; angiv denne kode, hvis du rapporterer et problem.',
         'unknown_account' => 'Denne række hører til en konto, du endnu ikke har navngivet.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Denne fil venter på, at du navngiver den konto, dens rækker hører til.',
+        'file_did_not_read_in_full' => 'Denne fil kunne ikke læses helt til ende.',
+        'nothing_importable' => 'Der er intet i denne fil, der kan importeres.',
+        'preview_expired' => 'Denne fils forhåndsvisning er for gammel til at gemme nu. Upload den igen.',
     ],
 
     'receipts' => [

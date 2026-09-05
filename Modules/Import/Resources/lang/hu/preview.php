@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Ezt a fájlt nem sikerült beolvasni.',
         'file_unreadable_detail' => 'Az alkalmazás nem tudta beolvasni ezt a fájlt (:code). A teljes részletek az alkalmazásnaplóban vannak; hibabejelentéskor adja meg ezt a kódot.',
         'iban_not_in_preview' => 'Ez az IBAN nem része az aktuális előnézetnek.',
+        'message_unreadable' => 'Ezt az üzenetet nem sikerült beolvasni, ezért kimaradt.',
         'not_an_email_file' => 'Ez a fájl sem e-mail-üzenet, sem postafiók-archívum, így nincs benne mit bizonylatként kiolvasni. Válaszd azt az importtípust és formátumot, amely illik a fájlodhoz.',
         'pdf_has_no_text_layer' => 'Ez a PDF nem tartalmaz szöveget — egy kivonat beolvasott képe vagy fényképe, így nincs benne mit kiolvasni. Töltsd le magát a kivonatot a bankodtól, vagy használj CSV-exportot.',
         'pdf_password_protected' => 'Ez a PDF jelszóval védett, így egyetlen olvasó sem tudja megnyitni. Mentsd el a PDF-nézegetődből védelem nélküli másolatként, és azt importáld.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Ezt a sort nem sikerült beolvasni.',
         'row_unreadable_detail' => 'Az alkalmazás nem tudta beolvasni ezt a sort (:code). A teljes részletek az alkalmazásnaplóban vannak; hibabejelentéskor adja meg ezt a kódot.',
         'unknown_account' => 'Ez a sor olyan számlához tartozik, amelynek még nem adtál nevet.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Ez a fájl arra vár, hogy nevet adj a számlának, amelyhez a sorai tartoznak.',
+        'file_did_not_read_in_full' => 'Ezt a fájlt nem sikerült a végéig beolvasni.',
+        'nothing_importable' => 'Ebből a fájlból semmi sem importálható.',
+        'preview_expired' => 'Ennek a fájlnak az előnézete túl régi ahhoz, hogy most mentsük. Töltsd fel újra.',
     ],
 
     'receipts' => [

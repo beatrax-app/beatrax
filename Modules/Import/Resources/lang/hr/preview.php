@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Ovu datoteku nije bilo moguće pročitati.',
         'file_unreadable_detail' => 'Aplikacija nije mogla pročitati ovu datoteku (:code). Potpuni podaci nalaze se u zapisniku aplikacije; navedite ovaj kôd ako prijavljujete problem.',
         'iban_not_in_preview' => 'Ovaj IBAN nije dio trenutnog pregleda.',
+        'message_unreadable' => 'Ovu poruku nije bilo moguće pročitati, pa je preskočena.',
         'not_an_email_file' => 'Ova datoteka nije ni poruka e-pošte ni arhiva pretinca e-pošte, pa se u njoj nema što pročitati kao potvrda. Odaberi vrstu uvoza i format koji odgovaraju tvojoj datoteci.',
         'pdf_has_no_text_layer' => 'Ovaj PDF ne sadrži tekst — to je skenirani izvod ili njegova fotografija, pa se u njemu nema što pročitati. Preuzmi sam izvod iz svoje banke ili upotrijebi CSV izvoz.',
         'pdf_password_protected' => 'Ovaj PDF zaštićen je lozinkom, pa ga nijedan čitač ne može otvoriti. U svojem PDF pregledniku spremi nezaštićenu kopiju i uvezi nju.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Ovaj redak nije bilo moguće pročitati.',
         'row_unreadable_detail' => 'Aplikacija nije mogla pročitati ovaj redak (:code). Potpuni podaci nalaze se u zapisniku aplikacije; navedite ovaj kôd ako prijavljujete problem.',
         'unknown_account' => 'Ovaj redak pripada računu kojem još nisi dao naziv.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Ova datoteka čeka da imenuješ račun kojem pripadaju njezini retci.',
+        'file_did_not_read_in_full' => 'Ovu datoteku nije bilo moguće pročitati do kraja.',
+        'nothing_importable' => 'Iz ove datoteke ništa se ne može uvesti.',
+        'preview_expired' => 'Pregled ove datoteke prestar je da bi se sada spremio. Ponovno je učitaj.',
     ],
 
     'receipts' => [

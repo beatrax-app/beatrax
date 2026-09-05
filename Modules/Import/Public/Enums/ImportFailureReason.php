@@ -20,6 +20,8 @@ enum ImportFailureReason: string
 
     case RowBelongsToAnotherStatement = 'row_belongs_to_another_statement';
 
+    case MessageUnreadable = 'message_unreadable';
+
     case FileUnreadable = 'file_unreadable';
 
     case FileStoppedShort = 'file_stopped_short';

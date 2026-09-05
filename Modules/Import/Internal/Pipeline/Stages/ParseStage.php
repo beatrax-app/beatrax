@@ -8,6 +8,7 @@ use Generator;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Internal\Exceptions\ReceiptFormatMismatchException;
 use Modules\Import\Internal\Exceptions\ReceiptParseException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -15,11 +16,16 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Receipts\Public\Actions\RecordReceipt;
+use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Pipeline\ReceiptFileShape;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 use Modules\Receipts\Public\Support\ReceiptCaptureLog;
+use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
+use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#1-parse-parsestage
@@ -32,6 +38,7 @@ final readonly class ParseStage
         private MboxIterator $mbox,
         private ReceiptSourceAdapter $receiptAdapter,
         private Filesystem $files,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -92,12 +99,34 @@ final readonly class ParseStage
         }
 
         $rowIndex = 0;
-        foreach ($this->mbox->iterate($localPath) as $entry) {
-            $outcome = ($this->recordReceipt)($entry['eml'], $user, $sourceFilename, $captures);
-            if ($outcome->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
+        foreach ($this->mbox->iterate($localPath, $captures) as $entry) {
+            $outcome = $this->recordOrSkip($entry['eml'], $user, $sourceFilename, $captures, $rowIndex);
+            if ($outcome?->kind === MatchOutcomeKind::Parsed && $outcome->parsed !== null) {
                 yield $this->receiptAdapter->toSourceDto($outcome->parsed, sourceRowIndex: $rowIndex);
             }
             $rowIndex++;
+        }
+    }
+
+    // An archive is independent documents, so message 400 failing says nothing
+    // about messages 1 to 399 and is skipped rather than ending the read. A
+    // statement is one continuous period and stays fatal; the app-lock pair is
+    // no document's fault and would recur for every one, so it goes on up.
+    private function recordOrSkip(string $eml, User $user, string $sourceFilename, ?ReceiptCaptureLog $captures, int $messageIndex): ?MatchOutcomeDto
+    {
+        try {
+            return ($this->recordReceipt)($eml, $user, $sourceFilename, $captures);
+        } catch (BlindIndexKeyUnavailableException|SensitiveColumnKeyUnavailableException $locked) {
+            throw $locked;
+        } catch (Throwable $e) {
+            $this->logger->warning('ParseStage: a message in the archive could not be read and was skipped.', [
+                'source_filename' => $sourceFilename,
+                'message_index' => $messageIndex,
+                ...SafeExceptionContext::describe($e),
+            ]);
+            $captures?->recordUnreadable($messageIndex);
+
+            return null;
         }
     }
 }

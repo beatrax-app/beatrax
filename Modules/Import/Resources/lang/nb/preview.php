@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Denne filen kunne ikke leses.',
         'file_unreadable_detail' => 'Appen kunne ikke lese denne filen (:code). De fullstendige detaljene ligger i apploggen; oppgi denne koden hvis du melder fra om et problem.',
         'iban_not_in_preview' => 'Dette IBAN-nummeret er ikke en del av den gjeldende forhåndsvisningen.',
+        'message_unreadable' => 'Denne meldingen kunne ikke leses, så den ble hoppet over.',
         'not_an_email_file' => 'Denne filen er verken en e-postmelding eller et postkassearkiv, så det er ingenting i den å lese som kvittering. Velg importtypen og formatet som passer filen din.',
         'pdf_has_no_text_layer' => 'Denne PDF-en inneholder ingen tekst — det er en skanning eller et bilde av en kontoutskrift, så det er ingenting å lese i den. Last ned selve kontoutskriften fra banken din, eller bruk en CSV-eksport i stedet.',
         'pdf_password_protected' => 'Denne PDF-en er passordbeskyttet, så ingen leser får åpnet den. Lagre en ubeskyttet kopi fra PDF-viseren din, og importer den.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Denne raden kunne ikke leses.',
         'row_unreadable_detail' => 'Appen kunne ikke lese denne raden (:code). De fullstendige detaljene ligger i apploggen; oppgi denne koden hvis du melder fra om et problem.',
         'unknown_account' => 'Denne raden hører til en konto du ikke har gitt navn ennå.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Denne filen venter på at du gir navn til kontoen radene hører til.',
+        'file_did_not_read_in_full' => 'Denne filen kunne ikke leses helt til slutten.',
+        'nothing_importable' => 'Ingenting i denne filen kan importeres.',
+        'preview_expired' => 'Forhåndsvisningen av denne filen er for gammel til å lagres nå. Last den opp på nytt.',
     ],
 
     'receipts' => [

@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Filen gick inte att läsa.',
         'file_unreadable_detail' => 'Appen kunde inte läsa den här filen (:code). De fullständiga uppgifterna finns i apploggen; ange den här koden om du rapporterar ett problem.',
         'iban_not_in_preview' => 'Det här IBAN-numret ingår inte i den aktuella förhandsgranskningen.',
+        'message_unreadable' => 'Meddelandet gick inte att läsa, så det hoppades över.',
         'not_an_email_file' => 'Den här filen är varken ett e-postmeddelande eller ett brevlådearkiv, så det finns inget i den att läsa som kvitto. Välj den importtyp och det format som passar din fil.',
         'pdf_has_no_text_layer' => 'Den här PDF:en innehåller ingen text — det är en skanning eller ett foto av ett kontoutdrag, så det finns inget att läsa i den. Hämta själva kontoutdraget från din bank, eller använd en CSV-export i stället.',
         'pdf_password_protected' => 'Den här PDF:en är lösenordsskyddad, så ingen läsare kan öppna den. Spara en oskyddad kopia från din PDF-visare och importera den i stället.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Raden gick inte att läsa.',
         'row_unreadable_detail' => 'Appen kunde inte läsa den här raden (:code). De fullständiga uppgifterna finns i apploggen; ange den här koden om du rapporterar ett problem.',
         'unknown_account' => 'Raden hör till ett konto som du ännu inte har namngett.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Den här filen väntar på att du namnger kontot som raderna hör till.',
+        'file_did_not_read_in_full' => 'Den här filen gick inte att läsa hela vägen till slutet.',
+        'nothing_importable' => 'Det finns inget i den här filen som går att importera.',
+        'preview_expired' => 'Förhandsgranskningen av den här filen är för gammal för att sparas nu. Ladda upp den igen.',
     ],
 
     'receipts' => [

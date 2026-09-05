@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Non è stato possibile leggere questo file.',
         'file_unreadable_detail' => 'L\'app non è riuscita a leggere questo file (:code). I dettagli completi sono nel registro dell\'app; cita questo codice se segnali un problema.',
         'iban_not_in_preview' => "Questo IBAN non fa parte dell'anteprima attuale.",
+        'message_unreadable' => 'Non è stato possibile leggere questo messaggio, quindi è stato saltato.',
         'not_an_email_file' => 'Questo file non è né un messaggio email né un archivio di casella, quindi non c\'è nulla da leggere come ricevuta. Scegli il tipo di importazione e il formato che corrispondono al tuo file.',
         'pdf_has_no_text_layer' => 'Questo PDF non contiene testo: è la scansione o la foto di un estratto conto, quindi non c\'è nulla da leggere. Scarica l\'estratto conto vero e proprio dalla tua banca, oppure usa un export CSV.',
         'pdf_password_protected' => 'Questo PDF è protetto da password, quindi nessun lettore riesce ad aprirlo. Salva una copia senza protezione dal tuo visualizzatore PDF e importa quella.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Non è stato possibile leggere questa riga.',
         'row_unreadable_detail' => 'L\'app non è riuscita a leggere questa riga (:code). I dettagli completi sono nel registro dell\'app; cita questo codice se segnali un problema.',
         'unknown_account' => 'Questa riga appartiene a un conto a cui non hai ancora dato un nome.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Questo file attende che tu dia un nome al conto a cui appartengono le sue righe.',
+        'file_did_not_read_in_full' => 'Non è stato possibile leggere questo file fino alla fine.',
+        'nothing_importable' => "In questo file non c'è nulla da importare.",
+        'preview_expired' => "L'anteprima di questo file è troppo vecchia per essere salvata ora. Ricaricalo.",
     ],
 
     'receipts' => [

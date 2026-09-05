@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Diese Datei konnte nicht gelesen werden.',
         'file_unreadable_detail' => 'Die App konnte diese Datei nicht lesen (:code). Die vollständigen Angaben stehen im App-Protokoll; nennen Sie diesen Code, wenn Sie ein Problem melden.',
         'iban_not_in_preview' => 'Diese IBAN gehört nicht zur aktuellen Vorschau.',
+        'message_unreadable' => 'Diese Nachricht konnte nicht gelesen werden und wurde deshalb übersprungen.',
         'not_an_email_file' => 'Diese Datei ist weder eine E-Mail-Nachricht noch ein Postfach-Archiv, darin ist also nichts als Beleg zu lesen. Wählen Sie den Importtyp und das Format, die zu Ihrer Datei passen.',
         'pdf_has_no_text_layer' => 'Dieses PDF enthält keinen Text — es ist ein Scan oder ein Foto eines Kontoauszugs, darin ist also nichts zu lesen. Laden Sie den Auszug selbst bei Ihrer Bank herunter oder nutzen Sie stattdessen einen CSV-Export.',
         'pdf_password_protected' => 'Dieses PDF ist mit einem Passwort geschützt, kein Leseprogramm kann es also öffnen. Speichern Sie in Ihrem PDF-Betrachter eine ungeschützte Kopie und importieren Sie diese.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Diese Zeile konnte nicht gelesen werden.',
         'row_unreadable_detail' => 'Die App konnte diese Zeile nicht lesen (:code). Die vollständigen Angaben stehen im App-Protokoll; nennen Sie diesen Code, wenn Sie ein Problem melden.',
         'unknown_account' => 'Diese Zeile gehört zu einem Konto, das du noch nicht benannt hast.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Diese Datei wartet darauf, dass du das Konto benennst, zu dem ihre Zeilen gehören.',
+        'file_did_not_read_in_full' => 'Diese Datei konnte nicht bis zum Ende gelesen werden.',
+        'nothing_importable' => 'Aus dieser Datei lässt sich nichts importieren.',
+        'preview_expired' => 'Die Vorschau dieser Datei ist zu alt, um sie jetzt zu übernehmen. Lade sie erneut hoch.',
     ],
 
     'receipts' => [

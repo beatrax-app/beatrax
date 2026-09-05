@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Nie udało się odczytać tego pliku.',
         'file_unreadable_detail' => 'Aplikacja nie mogła odczytać tego pliku (:code). Pełne szczegóły znajdują się w dzienniku aplikacji; podaj ten kod, zgłaszając problem.',
         'iban_not_in_preview' => 'Ten IBAN nie należy do bieżącego podglądu.',
+        'message_unreadable' => 'Nie udało się odczytać tej wiadomości, więc została pominięta.',
         'not_an_email_file' => 'Ten plik nie jest ani wiadomością e-mail, ani archiwum skrzynki, więc nie ma w nim czego odczytać jako paragon. Wybierz typ importu i format pasujące do twojego pliku.',
         'pdf_has_no_text_layer' => 'Ten PDF nie zawiera tekstu — to skan albo zdjęcie wyciągu, więc nie ma w nim czego odczytać. Pobierz sam wyciąg ze swojego banku albo użyj eksportu CSV.',
         'pdf_password_protected' => 'Ten PDF jest chroniony hasłem, więc żaden czytnik go nie otworzy. Zapisz w swojej przeglądarce PDF kopię bez zabezpieczenia i zaimportuj ją.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Nie udało się odczytać tego wiersza.',
         'row_unreadable_detail' => 'Aplikacja nie mogła odczytać tego wiersza (:code). Pełne szczegóły znajdują się w dzienniku aplikacji; podaj ten kod, zgłaszając problem.',
         'unknown_account' => 'Ten wiersz należy do konta, któremu nie nadano jeszcze nazwy.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Ten plik czeka, aż nadasz nazwę kontu, do którego należą jego wiersze.',
+        'file_did_not_read_in_full' => 'Nie udało się odczytać tego pliku do końca.',
+        'nothing_importable' => 'Z tego pliku nie da się nic zaimportować.',
+        'preview_expired' => 'Podgląd tego pliku jest zbyt stary, aby go teraz zapisać. Wgraj go ponownie.',
     ],
 
     'receipts' => [

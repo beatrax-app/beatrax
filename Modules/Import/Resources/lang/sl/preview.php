@@ -75,6 +75,7 @@ return [
         'file_unreadable' => 'Te datoteke ni bilo mogoče prebrati.',
         'file_unreadable_detail' => 'Aplikacija te datoteke ni mogla prebrati (:code). Vse podrobnosti so v dnevniku aplikacije; pri prijavi težave navedite to kodo.',
         'iban_not_in_preview' => 'Ta IBAN ni del trenutnega predogleda.',
+        'message_unreadable' => 'Tega sporočila ni bilo mogoče prebrati, zato je bilo izpuščeno.',
         'not_an_email_file' => 'Ta datoteka ni ne e-poštno sporočilo ne arhiv nabiralnika, zato v njej ni ničesar za branje kot potrdilo. Izberi vrsto uvoza in obliko, ki se ujemata s tvojo datoteko.',
         'pdf_has_no_text_layer' => 'Ta PDF ne vsebuje besedila — gre za skeniran izpisek ali njegovo fotografijo, zato v njem ni ničesar za branje. Prenesi sam izpisek pri svoji banki ali pa uporabi izvoz CSV.',
         'pdf_password_protected' => 'Ta PDF je zaščiten z geslom, zato ga ne odpre noben bralnik. V pregledovalniku PDF shrani nezaščiteno kopijo in uvozi njo.',
@@ -83,6 +84,13 @@ return [
         'row_unreadable' => 'Te vrstice ni bilo mogoče prebrati.',
         'row_unreadable_detail' => 'Aplikacija te vrstice ni mogla prebrati (:code). Vse podrobnosti so v dnevniku aplikacije; pri prijavi težave navedite to kodo.',
         'unknown_account' => 'Ta vrstica pripada računu, ki ga še nisi poimenoval.',
+    ],
+
+    'refused' => [
+        'accounts_to_name' => 'Ta datoteka čaka, da poimenuješ račun, ki mu pripadajo njene vrstice.',
+        'file_did_not_read_in_full' => 'Te datoteke ni bilo mogoče prebrati do konca.',
+        'nothing_importable' => 'Iz te datoteke ni mogoče uvoziti ničesar.',
+        'preview_expired' => 'Predogled te datoteke je prestar, da bi ga zdaj shranili. Znova jo naloži.',
     ],
 
     'receipts' => [

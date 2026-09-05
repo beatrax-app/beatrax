@@ -22,6 +22,9 @@ final class ReceiptCaptureLog
 
     private int $total = 0;
 
+    /** @var list<int> */
+    private array $unreadable = [];
+
     public function record(CapturedReceipt $capture): void
     {
         $this->total++;
@@ -42,5 +45,22 @@ final class ReceiptCaptureLog
     public function total(): int
     {
         return $this->total;
+    }
+
+    // A message that would not read at all files no audit row and so leaves no
+    // other trace of having been in the archive. Uncapped where the captures
+    // above are capped: this is only ever a list of ordinals, and its consumer
+    // turns each one into a preview row the cache chunks like any other.
+    public function recordUnreadable(int $index): void
+    {
+        $this->unreadable[] = $index;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function unreadableIndexes(): array
+    {
+        return $this->unreadable;
     }
 }
