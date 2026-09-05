@@ -85,6 +85,33 @@ it('reports on every workflow that does not already hold its own webhook', funct
     ));
 });
 
+// The rule above reads a name with `\S+`, and `workflow_run` matches the whole
+// name. A two-word name therefore satisfies that rule as its first word and then
+// matches no workflow at all, which is an announce list that looks complete and
+// a trigger that never fires. Every name here is one token; this keeps it so.
+it('gives every workflow a one-token name, so the announce list names it exactly', function (): void {
+    $directory = workflowDirectory();
+
+    expect($directory)->not->toBe('', '.github/workflows was not found from either composer root');
+
+    $offenders = [];
+
+    foreach ((array) glob($directory.'/*.yml') as $file) {
+        $declared = PatternScan::first('/^name:[ \t]*(.+?)[ \t]*$/m', (string) file_get_contents((string) $file));
+
+        if ($declared !== [] && PatternScan::matches('/\s/', $declared[1])) {
+            $offenders[] = basename((string) $file).' → '.$declared[1];
+        }
+    }
+
+    expect($offenders)->toBe(
+        [],
+        "A workflow name with a space in it is truncated to its first word by the\n".
+        "rule above, so the announce list can be complete while the webhook never\n".
+        "fires. Hyphenate it. Offenders:\n  ".implode("\n  ", $offenders),
+    );
+});
+
 it('never decides a commit is green from a list of checks written down here', function (): void {
     $directory = workflowDirectory();
 
