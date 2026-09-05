@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Er vraagt niets om je aandacht.',
         'flow' => 'In :in, uit :out, netto :net.',
+        'net_worth' => 'Nettovermogen :amount.',
         'over_budget' => ':amount over budget tot nu toe.',
         'payments_due' => ':count betaling deze periode.|:count betalingen deze periode.',
         'shortfall' => 'Er komt een kastekort aan.',
+        'forecast_not_run' => 'Er is nog geen kasstroomprognose gedraaid.',
     ],
 ];

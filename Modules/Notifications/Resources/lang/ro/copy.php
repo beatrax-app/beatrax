@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Nimic nu îți cere atenția.',
         'flow' => 'Intrări :in, ieșiri :out, net :net.',
+        'net_worth' => 'Valoare netă :amount.',
         'over_budget' => ':amount peste buget până acum.',
         'payments_due' => ':count plată scadentă în această perioadă.|:count plăți scadente în această perioadă.|:count de plăți scadente în această perioadă.',
         'shortfall' => 'Urmează un deficit de lichiditate.',
+        'forecast_not_run' => 'Nu a rulat încă nicio prognoză de flux de numerar.',
     ],
 ];

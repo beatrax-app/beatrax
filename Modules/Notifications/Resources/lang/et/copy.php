@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Miski ei vaja sinu tähelepanu.',
         'flow' => 'Sisse :in, välja :out, neto :net.',
+        'net_worth' => 'Netoväärtus :amount.',
         'over_budget' => 'Seni :amount üle eelarve.',
         'payments_due' => 'Sel perioodil tuleb tasuda :count makse.|Sel perioodil tuleb tasuda :count makset.',
         'shortfall' => 'Ees ootab rahavoo puudujääk.',
+        'forecast_not_run' => 'Rahavoo prognoosi ei ole veel tehtud.',
     ],
 ];

@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Niente richiede la tua attenzione.',
         'flow' => 'Entrate :in, uscite :out, netto :net.',
+        'net_worth' => 'Patrimonio netto :amount.',
         'over_budget' => ':amount oltre il budget finora.',
         'payments_due' => ':count pagamento in scadenza in questo periodo.|:count pagamenti in scadenza in questo periodo.',
         'shortfall' => 'Si prospetta uno scoperto di cassa.',
+        'forecast_not_run' => 'Non è ancora stata calcolata una previsione di cassa.',
     ],
 ];

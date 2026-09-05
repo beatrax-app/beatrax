@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Dto\PositionSummaryDto;
@@ -70,7 +71,18 @@ it('answers a ledger with nothing in it with a zero of its own currency, never a
 
     expect($position->upcoming)->toBe([]);
     expect($position->budgets)->toBe([]);
-    expect($position->shortfallAhead)->toBeFalse();
+
+    // Zero of the reader's own currency, for the same reason the flow figures
+    // are: a roll-up denominated in nothing formats without complaint and
+    // reads as a figure.
+    expect($position->netWorth->totalMinor)->toBe(0);
+    expect($position->netWorth->currency)->toBe($currency);
+    expect($position->netWorth->accounts)->toBe([]);
+
+    // The one member that is deliberately not zero on an empty install: no
+    // forecast has run, and reporting that as "no shortfall" is a safety claim
+    // nothing has established.
+    expect($position->shortfallRisk)->toBe(ShortfallRisk::NotYetComputed);
 });
 
 it('leaves nothing unanswered on an empty ledger beyond the cards that draw nothing', function (): void {
