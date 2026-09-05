@@ -126,6 +126,13 @@ final readonly class CommandSpawner
             $parts[] = $token;
         }
 
+        // The child's stdin is /dev/null, so a command that would otherwise ask
+        // a question here never gets an answer and exits non-zero. These say the
+        // answer up front, and they are escaped like every other token.
+        foreach ($spec->fixedFlags as $flag) {
+            $parts[] = escapeshellarg($flag);
+        }
+
         return DetachedRunScript::for(implode(' ', $parts), $outPath);
     }
 

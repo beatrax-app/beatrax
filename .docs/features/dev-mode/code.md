@@ -123,9 +123,12 @@ Modules/DevMode/
 ## Internal services
 
 - `Internal/CommandRegistry` — concrete `DevCommandRegistry`. The
-  hard-coded SAFE + DESTRUCTIVE allow-list (~14 commands).
-  NEVER-EXPOSED commands (`migrate`, `migrate:rollback`,
-  `db:seed`) are deliberately absent.
+  hard-coded SAFE + DESTRUCTIVE allow-list (13 commands: 9 SAFE,
+  4 DESTRUCTIVE). NEVER-EXPOSED commands (`migrate`, `migrate:fresh`,
+  `migrate:rollback`, `db:wipe`, `db:seed`) are deliberately absent,
+  and `beatrax:reset-password` with them — it refuses a
+  non-interactive run by design, which is the shell-access gate
+  ADR-0010 relies on.
 - `Internal/Process/CommandSpawner::start(string $command, array
   $args, int $callerUserId, CommandTier $tier): string` — the single
   sanctioned Symfony-`Process` constructor. Throws

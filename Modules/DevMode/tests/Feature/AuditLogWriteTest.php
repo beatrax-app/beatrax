@@ -103,7 +103,7 @@ it('SpatieAuditWriter writes a row into dev_mode_audit with log_name + descripti
 
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:backup',
-        args: ['destination' => '/tmp/x.db'],
+        args: [],
         tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),

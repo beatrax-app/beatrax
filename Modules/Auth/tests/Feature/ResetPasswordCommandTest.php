@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Lock\AppLockKeyState;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Core\Models\User;
 
 it('updates the password and flags a forced change on a valid interactive run', function (): void {
@@ -122,4 +124,11 @@ it('stamps the app-lock recovery wrap it can no longer carry over', function ():
         ->value('password_wrap_stale_at');
 
     expect($stale)->not->toBeNull();
+
+    // The column is the record; this is what a screen actually reads. Held is
+    // the answer that made the defect silent, because it is also the answer a
+    // wrap that still opens gives.
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = $this->app->make(AppLockProvisioner::class);
+    expect($provisioner->keyState($user->id))->toBe(AppLockKeyState::RecoveryUnreadable);
 });

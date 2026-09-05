@@ -53,7 +53,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Varnostno kopiraj zbirko podatkov', 'description' => 'Zapiše kopijo SQLite s časovnim žigom v mapo z varnostnimi kopijami (ali na navedeno pot).'],
+        'db_backup' => ['label' => 'Varnostno kopiraj zbirko podatkov', 'description' => 'Zapiše kopijo SQLite s časovnim žigom v mapo z varnostnimi kopijami.'],
         'doctor' => ['label' => 'Zaženi doctor', 'description' => 'Sporoči nameščene različice PHP / Composer / SQLite in preveri najnižje zahteve.'],
         'failed_jobs' => ['label' => 'Počisti neuspela opravila', 'description' => 'Odstrani razrešene vnose iz tabele failed_jobs, ki jo upravlja Laravel.'],
         'cache_clear' => ['label' => 'Počisti predpomnilnik', 'description' => 'Izprazni predpomnilnik aplikacije.'],
@@ -69,20 +69,17 @@ return [
         'queue_retry' => ['label' => 'Znova poskusi neuspela opravila', 'description' => 'Znova poskusi eno opravilo (po id) ali vsako neuspelo opravilo (prazen id).'],
         'rederive_fingerprints' => ['label' => 'Znova izpelji prstne odtise', 'description' => 'Znova izračuna prstni odtis vsake transakcije z veljavno različico normalizacije.'],
         'db_restore' => ['label' => 'Obnovi zbirko podatkov', 'description' => 'Trenutno zbirko podatkov zamenja z navedeno datoteko varnostne kopije.'],
-        'migrate_fresh' => ['label' => 'Izbriši tabele in znova migriraj', 'description' => 'Izbriše vsako tabelo in nato znova zažene vsako migracijo.'],
-        'reset_password' => ['label' => 'Nastavi novo geslo', 'description' => 'Interaktivno nastavi novo geslo uporabnika (neinteraktivno uporabo zavrne).'],
         'regenerate_recovery_codes' => ['label' => 'Znova ustvari kode za obnovitev', 'description' => 'Znova ustvari 10 enkratnih kod za obnovitev za uporabnika.'],
         'grant_dev' => ['label' => 'Dodeli razvijalski dostop', 'description' => 'Za navedenega uporabnika nastavi is_developer=true.'],
         'install' => ['label' => 'Zaženi namestitev', 'description' => 'Idempotentna prva nastavitev. Ponovni zagon na že nastavljeni namestitvi je uničujoč.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Ciljna datoteka', 'help' => 'Pusti prazno za privzeto mapo z varnostnimi kopijami.', 'placeholder' => '/pot/do/backup.sqlite (izbirno)'],
         'action' => ['label' => 'Dejanje'],
         'config' => ['label' => 'Konfiguracijski ključ', 'help' => 'Konfiguracijska datoteka ali ključ s pikami za izpis, npr. `app` ali `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id opravila', 'help' => 'Pusti prazno, da znova poskusiš vsako neuspelo opravilo; z navedenim id-jem znova poskusiš en sam vnos.', 'placeholder' => 'vse (ali določen id)'],
         'queue' => ['label' => 'Ime čakalne vrste', 'help' => 'Izbirni filter čakalne vrste; privzeto vse vrste.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Pot do datoteke varnostne kopije', 'help' => 'Trenutno zbirko podatkov zamenja z datoteko na navedeni poti.', 'placeholder' => '/pot/do/backup.sqlite'],
+        'path' => ['label' => 'Pot do datoteke varnostne kopije', 'help' => 'Trenutno zbirko podatkov zamenja z datoteko na navedeni poti.', 'placeholder' => '/pot/do/backup.sqlite'],
         'username' => ['label' => 'Uporabniško ime', 'placeholder' => 'alice'],
     ],
 ];

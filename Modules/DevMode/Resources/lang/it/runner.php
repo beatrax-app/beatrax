@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Esegui il backup del database', 'description' => 'Scrive una copia SQLite con marca temporale nella cartella dei backup (o nel percorso indicato).'],
+        'db_backup' => ['label' => 'Esegui il backup del database', 'description' => 'Scrive una copia SQLite con marca temporale nella cartella dei backup.'],
         'doctor' => ['label' => 'Esegui doctor', 'description' => 'Riporta le versioni installate di PHP / Composer / SQLite e verifica i minimi richiesti.'],
         'failed_jobs' => ['label' => 'Elimina i job falliti', 'description' => 'Elimina le voci già risolte dalla tabella failed_jobs gestita da Laravel.'],
         'cache_clear' => ['label' => 'Svuota la cache', 'description' => "Svuota lo store di cache dell'applicazione."],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Riprova i job falliti', 'description' => 'Riprova un job (per id) oppure tutti i job falliti (id vuoto).'],
         'rederive_fingerprints' => ['label' => 'Ricalcola le impronte', 'description' => "Ricalcola l'impronta di ogni transazione con l'attuale versione di normalizzazione."],
         'db_restore' => ['label' => 'Ripristina il database', 'description' => 'Sostituisce il database attuale con il file di backup indicato.'],
-        'migrate_fresh' => ['label' => 'Elimina le tabelle e rimigra', 'description' => 'Elimina tutte le tabelle, poi riesegue tutte le migrazioni.'],
-        'reset_password' => ['label' => 'Reimposta la password', 'description' => "Reimposta la password di un utente in modo interattivo (rifiuta l'uso non interattivo)."],
         'regenerate_recovery_codes' => ['label' => 'Rigenera i codici di recupero', 'description' => 'Rigenera i 10 codici di recupero monouso di un utente.'],
         'grant_dev' => ['label' => "Concedi l'accesso sviluppatore", 'description' => "Imposta is_developer=true per l'utente indicato."],
         'install' => ['label' => "Esegui l'installazione", 'description' => "Configurazione iniziale idempotente. Rieseguirla su un'installazione già configurata è distruttivo."],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'File di destinazione', 'help' => 'Lascia vuoto per usare la cartella dei backup predefinita.', 'placeholder' => '/percorso/di/backup.sqlite (facoltativo)'],
         'action' => ['label' => 'Azione'],
         'config' => ['label' => 'Chiave di configurazione', 'help' => 'Il file di configurazione o la chiave puntata da stampare, ad esempio `app` o `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id del job', 'help' => 'Lascia vuoto per riprovare tutti i job falliti; indica un id per riprovarne uno solo.', 'placeholder' => 'tutti (o un id specifico)'],
         'queue' => ['label' => 'Nome della coda', 'help' => 'Filtro sulla coda facoltativo; per impostazione predefinita tutte le code.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Percorso del file di backup', 'help' => 'Sostituisce il database attuale con il file che si trova nel percorso indicato.', 'placeholder' => '/percorso/di/backup.sqlite'],
+        'path' => ['label' => 'Percorso del file di backup', 'help' => 'Sostituisce il database attuale con il file che si trova nel percorso indicato.', 'placeholder' => '/percorso/di/backup.sqlite'],
         'username' => ['label' => 'Nome utente', 'placeholder' => 'alice'],
     ],
 ];

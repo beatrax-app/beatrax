@@ -87,7 +87,7 @@ it('rejects an injection-attempt path via escapeshellarg discipline', function (
 
     // db:restore failing on a nonexistent backup is the correct outcome: the
     // arg must arrive as inert path data, not as something the shell ran.
-    $runId = $spawner->start('db:restore', ['from' => $maliciousArg], 99, CommandTier::Destructive);
+    $runId = $spawner->start('db:restore', ['path' => $maliciousArg], 99, CommandTier::Destructive);
 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();

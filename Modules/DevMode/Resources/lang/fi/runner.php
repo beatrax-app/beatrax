@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Varmuuskopioi tietokanta', 'description' => 'Kirjoittaa aikaleimatun SQLite-kopion varmuuskopiohakemistoon (tai annettuun polkuun).'],
+        'db_backup' => ['label' => 'Varmuuskopioi tietokanta', 'description' => 'Kirjoittaa aikaleimatun SQLite-kopion varmuuskopiohakemistoon.'],
         'doctor' => ['label' => 'Suorita doctor', 'description' => 'Ilmoittaa asennetut PHP-, Composer- ja SQLite-versiot ja tarkistaa vähimmäisvaatimukset.'],
         'failed_jobs' => ['label' => 'Siivoa epäonnistuneet työt', 'description' => 'Siivoaa käsitellyt rivit Laravelin hallitsemasta failed_jobs-taulusta.'],
         'cache_clear' => ['label' => 'Tyhjennä välimuisti', 'description' => 'Tyhjentää sovelluksen välimuistin.'],
@@ -60,8 +60,6 @@ return [
         'queue_retry' => ['label' => 'Yritä epäonnistuneita töitä uudelleen', 'description' => 'Yrittää yhtä työtä (tunnisteella) tai kaikkia epäonnistuneita töitä (tyhjä tunniste) uudelleen.'],
         'rederive_fingerprints' => ['label' => 'Laske sormenjäljet uudelleen', 'description' => 'Laskee jokaisen tapahtuman sormenjäljen uudelleen nykyisellä normalisointiversiolla.'],
         'db_restore' => ['label' => 'Palauta tietokanta', 'description' => 'Korvaa nykyisen tietokannan annetulla varmuuskopiotiedostolla.'],
-        'migrate_fresh' => ['label' => 'Pudota taulut ja aja migraatiot uudelleen', 'description' => 'Pudottaa kaikki taulut ja ajaa sitten kaikki migraatiot uudelleen.'],
-        'reset_password' => ['label' => 'Nollaa salasana', 'description' => 'Nollaa käyttäjän salasanan vuorovaikutteisesti (ei salli ei-vuorovaikutteista käyttöä).'],
         'regenerate_recovery_codes' => ['label' => 'Luo palautuskoodit uudelleen', 'description' => 'Luo käyttäjän 10 kertakäyttöistä palautuskoodia uudelleen.'],
         'grant_dev' => ['label' => 'Myönnä kehittäjäoikeudet', 'description' => 'Asettaa annetulle käyttäjälle is_developer=true.'],
         // i18n-review: fi · command.install.description — Idempotentti is a loanword
@@ -71,12 +69,11 @@ return [
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Kohdetiedosto', 'help' => 'Jätä tyhjäksi, niin käytetään oletusarvoista varmuuskopiohakemistoa.', 'placeholder' => '/polku/tiedostoon/backup.sqlite (valinnainen)'],
         'action' => ['label' => 'Toiminto'],
         'config' => ['label' => 'Asetusavain', 'help' => 'Tulostettava asetustiedosto tai pisteillä eroteltu avain, esimerkiksi `app` tai `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Työn tunniste', 'help' => 'Jätä tyhjäksi, niin kaikkia epäonnistuneita töitä yritetään uudelleen; anna tunniste, niin vain yhtä.', 'placeholder' => 'kaikki (tai tietty tunniste)'],
         'queue' => ['label' => 'Jonon nimi', 'help' => 'Valinnainen jonosuodatin; oletuksena kaikki jonot.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Varmuuskopiotiedoston polku', 'help' => 'Korvaa nykyisen tietokannan annetussa polussa olevalla tiedostolla.', 'placeholder' => '/polku/tiedostoon/backup.sqlite'],
+        'path' => ['label' => 'Varmuuskopiotiedoston polku', 'help' => 'Korvaa nykyisen tietokannan annetussa polussa olevalla tiedostolla.', 'placeholder' => '/polku/tiedostoon/backup.sqlite'],
         'username' => ['label' => 'Käyttäjätunnus', 'placeholder' => 'alice'],
     ],
 ];

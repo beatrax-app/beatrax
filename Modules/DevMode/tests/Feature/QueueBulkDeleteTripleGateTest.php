@@ -127,7 +127,7 @@ it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delet
             // An artisan-tier confirm arriving while the inspector happens to
             // be mounted with rows selected.
             command: 'db:restore',
-            args: ['from' => '/tmp/backup.sqlite'],
+            args: ['path' => '/tmp/backup.sqlite'],
             confirmed_typed: 'Beatrax',
         );
 

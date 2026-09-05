@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Sukurti duomenų bazės atsarginę kopiją', 'description' => 'Įrašo SQLite kopiją su laiko žyma į atsarginių kopijų katalogą (arba nurodytu keliu).'],
+        'db_backup' => ['label' => 'Sukurti duomenų bazės atsarginę kopiją', 'description' => 'Įrašo SQLite kopiją su laiko žyma į atsarginių kopijų katalogą.'],
         'doctor' => ['label' => 'Paleisti doctor', 'description' => 'Praneša įdiegtas PHP / Composer / SQLite versijas ir patikrina minimalius reikalavimus.'],
         'failed_jobs' => ['label' => 'Išvalyti nepavykusias užduotis', 'description' => 'Pašalina išspręstus įrašus iš Laravel tvarkomos lentelės failed_jobs.'],
         'cache_clear' => ['label' => 'Išvalyti podėlį', 'description' => 'Ištuština programos podėlį.'],
@@ -60,23 +60,17 @@ return [
         'queue_retry' => ['label' => 'Pakartoti nepavykusias užduotis', 'description' => 'Pakartoja vieną užduotį (pagal id) arba kiekvieną nepavykusią užduotį (tuščias id).'],
         'rederive_fingerprints' => ['label' => 'Iš naujo išvesti atspaudus', 'description' => 'Perskaičiuoja kiekvienos operacijos atspaudą pagal dabartinę normalizavimo versiją.'],
         'db_restore' => ['label' => 'Atkurti duomenų bazę', 'description' => 'Pakeičia dabartinę duomenų bazę nurodytu atsarginės kopijos failu.'],
-        // i18n-review: lt · command.migrate_fresh — migracija is the schema sense,
-        // while migration::index calls the app's own YNAB import perkėlimas. The
-        // split keeps them apart; a native reader says whether it reads.
-        'migrate_fresh' => ['label' => 'Pašalinti lenteles ir migruoti iš naujo', 'description' => 'Pašalina kiekvieną lentelę, tada iš naujo įvykdo kiekvieną migraciją.'],
-        'reset_password' => ['label' => 'Atstatyti slaptažodį', 'description' => 'Interaktyviai atstato naudotojo slaptažodį (neinteraktyvaus naudojimo atsisako).'],
         'regenerate_recovery_codes' => ['label' => 'Sukurti naujus atkūrimo kodus', 'description' => 'Iš naujo sukuria 10 vienkartinių naudotojo atkūrimo kodų.'],
         'grant_dev' => ['label' => 'Suteikti kūrėjo prieigą', 'description' => 'Nurodytam naudotojui nustato is_developer=true.'],
         'install' => ['label' => 'Vykdyti diegimą', 'description' => 'Idempotentinė pirmoji sąranka. Pakartotinis vykdymas jau sukonfigūruotoje sistemoje yra ardomasis.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Paskirties failas', 'help' => 'Palik tuščią, kad būtų naudojamas numatytasis atsarginių kopijų katalogas.', 'placeholder' => '/kelias/iki/backup.sqlite (nebūtina)'],
         'action' => ['label' => 'Veiksmas'],
         'config' => ['label' => 'Konfigūracijos raktas', 'help' => 'Konfigūracijos failas arba taškais atskirtas raktas, kurį išvesti, pvz., `app` arba `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Užduoties id', 'help' => 'Palik tuščią, kad būtų pakartota kiekviena nepavykusi užduotis; nurodyk id, kad būtų pakartotas vienas įrašas.', 'placeholder' => 'visos (arba konkretus id)'],
         'queue' => ['label' => 'Eilės pavadinimas', 'help' => 'Nebūtinas eilės filtras; pagal numatymą visos eilės.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Kelias iki atsarginės kopijos failo', 'help' => 'Pakeičia dabartinę duomenų bazę failu nurodytu keliu.', 'placeholder' => '/kelias/iki/backup.sqlite'],
+        'path' => ['label' => 'Kelias iki atsarginės kopijos failo', 'help' => 'Pakeičia dabartinę duomenų bazę failu nurodytu keliu.', 'placeholder' => '/kelias/iki/backup.sqlite'],
         'username' => ['label' => 'Naudotojo vardas', 'placeholder' => 'alice'],
     ],
 ];

@@ -92,8 +92,10 @@ final class DevModeServiceProvider extends ServiceProvider
         ));
     }
 
-    // migrate, migrate:rollback and db:seed are deliberately absent: the
-    // spawner whitelists against find(), so spawning one throws.
+    // migrate, migrate:fresh, migrate:rollback, db:wipe and db:seed are
+    // deliberately absent: the spawner whitelists against find(), so spawning
+    // one throws. The absence is a test, not a review habit — review carried
+    // migrate:fresh here for the whole life of the destructive tier.
     private function registerCommandRegistry(): void
     {
         $this->app->singleton(DevCommandRegistry::class, static fn (): CommandRegistry => new CommandRegistry([
@@ -108,20 +110,15 @@ final class DevModeServiceProvider extends ServiceProvider
     private static function safeCommands(): array
     {
         return [
+            // No destination: db:backup names its own file inside the backups
+            // directory, because retention pruning, duplicate detection and the
+            // sidecar all key off that directory. A path offered here reached
+            // artisan as a second positional and came back "Too many arguments".
             new CommandSpec(
                 name: 'db:backup',
                 labelKey: 'dev::runner.command.db_backup.label',
                 tier: CommandTier::Safe,
-                argsSchema: [
-                    new ArgSpec(
-                        name: 'destination',
-                        labelKey: 'dev::runner.arg.destination.label',
-                        type: ArgType::FilePath,
-                        rules: ['nullable', 'string', 'max:1024'],
-                        placeholderKey: 'dev::runner.arg.destination.placeholder',
-                        helpTextKey: 'dev::runner.arg.destination.help',
-                    ),
-                ],
+                argsSchema: [],
                 descriptionKey: 'dev::runner.command.db_backup.description',
             ),
             new CommandSpec(
@@ -225,43 +222,26 @@ final class DevModeServiceProvider extends ServiceProvider
     private static function destructiveCommands(): array
     {
         return [
+            // The two flags are fixed rather than prompted because neither is a
+            // decision this operator can make: the console cannot run `down`
+            // beforehand, and the y/N the flag skips is the consent the triple
+            // gate already took by typed application name.
             new CommandSpec(
                 name: 'db:restore',
                 labelKey: 'dev::runner.command.db_restore.label',
                 tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
-                        name: 'from',
-                        labelKey: 'dev::runner.arg.from.label',
+                        name: 'path',
+                        labelKey: 'dev::runner.arg.path.label',
                         type: ArgType::FilePath,
                         rules: ['required', 'string', 'max:1024'],
-                        placeholderKey: 'dev::runner.arg.from.placeholder',
-                        helpTextKey: 'dev::runner.arg.from.help',
+                        placeholderKey: 'dev::runner.arg.path.placeholder',
+                        helpTextKey: 'dev::runner.arg.path.help',
                     ),
                 ],
                 descriptionKey: 'dev::runner.command.db_restore.description',
-            ),
-            new CommandSpec(
-                name: 'migrate:fresh',
-                labelKey: 'dev::runner.command.migrate_fresh.label',
-                tier: CommandTier::Destructive,
-                argsSchema: [],
-                descriptionKey: 'dev::runner.command.migrate_fresh.description',
-            ),
-            new CommandSpec(
-                name: 'beatrax:reset-password',
-                labelKey: 'dev::runner.command.reset_password.label',
-                tier: CommandTier::Destructive,
-                argsSchema: [
-                    new ArgSpec(
-                        name: 'username',
-                        labelKey: 'dev::runner.arg.username.label',
-                        type: ArgType::Text,
-                        rules: ['required', 'string', 'max:64'],
-                        placeholderKey: 'dev::runner.arg.username.placeholder',
-                    ),
-                ],
-                descriptionKey: 'dev::runner.command.reset_password.description',
+                fixedFlags: ['--confirm', '--force-maintenance'],
             ),
             new CommandSpec(
                 name: 'beatrax:regenerate-recovery-codes',

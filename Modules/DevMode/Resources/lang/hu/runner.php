@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Adatbázis mentése', 'description' => 'Időbélyeggel ellátott SQLite-másolatot ír a mentések könyvtárába (vagy a megadott útvonalra).'],
+        'db_backup' => ['label' => 'Adatbázis mentése', 'description' => 'Időbélyeggel ellátott SQLite-másolatot ír a mentések könyvtárába.'],
         'doctor' => ['label' => 'Doctor futtatása', 'description' => 'Jelenti a telepített PHP-, Composer- és SQLite-verziókat, és ellenőrzi a minimumokat.'],
         'failed_jobs' => ['label' => 'Sikertelen feladatok tisztítása', 'description' => 'Kitisztítja a lezárt bejegyzéseket a Laravel kezelte failed_jobs táblából.'],
         'cache_clear' => ['label' => 'Gyorsítótár ürítése', 'description' => 'Kiüríti az alkalmazás gyorsítótárát.'],
@@ -60,20 +60,17 @@ return [
         'queue_retry' => ['label' => 'Sikertelen feladatok újrapróbálása', 'description' => 'Újrapróbál egy feladatot (azonosító alapján) vagy az összes sikertelent (üres azonosító).'],
         'rederive_fingerprints' => ['label' => 'Ujjlenyomatok újraszámítása', 'description' => 'Újraszámítja minden tranzakció ujjlenyomatát a jelenlegi normalizálási verzióval.'],
         'db_restore' => ['label' => 'Adatbázis visszaállítása', 'description' => 'Lecseréli a jelenlegi adatbázist a megadott mentésfájlra.'],
-        'migrate_fresh' => ['label' => 'Táblák eldobása és újramigrálás', 'description' => 'Eldob minden táblát, majd újra lefuttat minden migrációt.'],
-        'reset_password' => ['label' => 'Jelszó visszaállítása', 'description' => 'Interaktívan visszaállítja egy felhasználó jelszavát (nem interaktív használat esetén megtagadja).'],
         'regenerate_recovery_codes' => ['label' => 'Helyreállítási kódok újragenerálása', 'description' => 'Újragenerálja egy felhasználó 10 egyszer használható helyreállítási kódját.'],
         'grant_dev' => ['label' => 'Fejlesztői hozzáférés megadása', 'description' => 'Az is_developer értékét true-ra állítja a megadott felhasználónál.'],
         'install' => ['label' => 'Telepítés futtatása', 'description' => 'Idempotens első beállítás. Beállított telepítésen újrafuttatva destruktív.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Célfájl', 'help' => 'Hagyd üresen az alapértelmezett mentési könyvtár használatához.', 'placeholder' => '/eleresi/ut/backup.sqlite (nem kötelező)'],
         'action' => ['label' => 'Művelet'],
         'config' => ['label' => 'Konfigurációs kulcs', 'help' => 'A kiírandó konfigurációs fájl vagy pontokkal tagolt kulcs, például `app` vagy `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Feladatazonosító', 'help' => 'Hagyd üresen az összes sikertelen feladat újrapróbálásához; adj meg azonosítót egyetlen bejegyzéshez.', 'placeholder' => 'mind (vagy egy adott azonosító)'],
         'queue' => ['label' => 'Várólista neve', 'help' => 'Nem kötelező várólista-szűrő; alapértelmezetten minden várólista.', 'placeholder' => 'default'],
-        'from' => ['label' => 'A mentésfájl elérési útja', 'help' => 'Lecseréli a jelenlegi adatbázist a megadott útvonalon lévő fájlra.', 'placeholder' => '/eleresi/ut/backup.sqlite'],
+        'path' => ['label' => 'A mentésfájl elérési útja', 'help' => 'Lecseréli a jelenlegi adatbázist a megadott útvonalon lévő fájlra.', 'placeholder' => '/eleresi/ut/backup.sqlite'],
         'username' => ['label' => 'Felhasználónév', 'placeholder' => 'alice'],
     ],
 ];

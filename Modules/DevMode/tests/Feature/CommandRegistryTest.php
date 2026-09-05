@@ -34,18 +34,16 @@ it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): voi
     }
 });
 
-it('binds the concrete CommandRegistry returning 6 DESTRUCTIVE specs', function (): void {
+it('binds the concrete CommandRegistry returning 4 DESTRUCTIVE specs', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
     $destructive = $registry->destructive();
-    expect($destructive)->toHaveCount(6);
+    expect($destructive)->toHaveCount(4);
 
     $names = array_map(static fn (CommandSpec $spec): string => $spec->name, $destructive);
     expect($names)->toEqual([
         'db:restore',
-        'migrate:fresh',
-        'beatrax:reset-password',
         'beatrax:regenerate-recovery-codes',
         'beatrax:grant-dev',
         'beatrax:install',
@@ -60,7 +58,7 @@ it('throws InvalidArgumentException when find() resolves a NEVER-EXPOSED command
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
-    foreach (['migrate', 'migrate:rollback', 'db:seed'] as $name) {
+    foreach (['migrate', 'migrate:fresh', 'migrate:rollback', 'db:wipe', 'db:seed', 'beatrax:reset-password'] as $name) {
         try {
             $registry->find($name);
             $this->fail("Expected InvalidArgumentException for NEVER-EXPOSED command `{$name}`, none thrown.");
@@ -95,7 +93,7 @@ it('exposes ArgSpec entries with non-empty name + Laravel-compatible rules array
     $registry = app(DevCommandRegistry::class);
 
     $allSpecs = array_merge($registry->safe(), $registry->destructive());
-    expect($allSpecs)->toHaveCount(15);
+    expect($allSpecs)->toHaveCount(13);
 
     foreach ($allSpecs as $spec) {
         foreach ($spec->argsSchema as $arg) {

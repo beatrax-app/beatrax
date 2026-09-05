@@ -9,7 +9,7 @@ use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
 // The modal is mounted by the app layout on every authenticated page, so the
 // /dev route gate never sees it. Without its own check, a reader who was
 // deliberately left non-developer can spawn an artisan command from any screen
-// — including db:backup, whose destination is a free path.
+// — including db:restore, whose source is a free path.
 
 function nonDeveloperReader(string $username): User
 {

@@ -50,7 +50,7 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Zálohovať databázu', 'description' => 'Zapíše kópiu SQLite s časovou pečiatkou do priečinka so zálohami (alebo na zadanú cestu).'],
+        'db_backup' => ['label' => 'Zálohovať databázu', 'description' => 'Zapíše kópiu SQLite s časovou pečiatkou do priečinka so zálohami.'],
         'doctor' => ['label' => 'Spustiť doctor', 'description' => 'Nahlási nainštalované verzie PHP / Composer / SQLite a overí minimálne požiadavky.'],
         'failed_jobs' => ['label' => 'Vyčistiť zlyhané úlohy', 'description' => 'Odstráni vyriešené záznamy z tabuľky failed_jobs spravovanej Laravelom.'],
         'cache_clear' => ['label' => 'Vymazať vyrovnávaciu pamäť', 'description' => 'Vyprázdni úložisko vyrovnávacej pamäte aplikácie.'],
@@ -66,20 +66,17 @@ return [
         'queue_retry' => ['label' => 'Zopakovať zlyhané úlohy', 'description' => 'Zopakuje jednu úlohu (podľa id) alebo každú zlyhanú úlohu (prázdne id).'],
         'rederive_fingerprints' => ['label' => 'Znova odvodiť odtlačky', 'description' => 'Prepočíta odtlačok každej transakcie s aktuálnou verziou normalizácie.'],
         'db_restore' => ['label' => 'Obnoviť databázu', 'description' => 'Nahradí aktuálnu databázu zadaným súborom zálohy.'],
-        'migrate_fresh' => ['label' => 'Odstrániť tabuľky a znova migrovať', 'description' => 'Odstráni každú tabuľku a potom znova spustí každú migráciu.'],
-        'reset_password' => ['label' => 'Nastaviť nové heslo', 'description' => 'Interaktívne nastaví nové heslo používateľa (neinteraktívne použitie odmietne).'],
         'regenerate_recovery_codes' => ['label' => 'Znova vygenerovať záložné kódy', 'description' => 'Znova vygeneruje 10 jednorazových záložných kódov používateľa.'],
         'grant_dev' => ['label' => 'Udeliť vývojársky prístup', 'description' => 'Nastaví is_developer=true pre zadaného používateľa.'],
         'install' => ['label' => 'Spustiť inštaláciu', 'description' => 'Idempotentné prvé nastavenie. Opätovné spustenie na nakonfigurovanej inštalácii je deštruktívne.'],
     ],
 
     'arg' => [
-        'destination' => ['label' => 'Cieľový súbor', 'help' => 'Nechaj prázdne a použije sa predvolený priečinok so zálohami.', 'placeholder' => '/cesta/k/backup.sqlite (voliteľné)'],
         'action' => ['label' => 'Akcia'],
         'config' => ['label' => 'Konfiguračný kľúč', 'help' => 'Konfiguračný súbor alebo kľúč s bodkami, ktorý sa má vypísať, napr. `app` alebo `database.connections.sqlite`.', 'placeholder' => 'app.name'],
         'id' => ['label' => 'Id úlohy', 'help' => 'Nechaj prázdne, aby sa zopakovala každá zlyhaná úloha; zadaním id zopakuješ jediný záznam.', 'placeholder' => 'všetky (alebo konkrétne id)'],
         'queue' => ['label' => 'Názov frontu', 'help' => 'Voliteľný filter podľa frontu; predvolene všetky fronty.', 'placeholder' => 'default'],
-        'from' => ['label' => 'Cesta k súboru zálohy', 'help' => 'Nahradí aktuálnu databázu súborom na zadanej ceste.', 'placeholder' => '/cesta/k/backup.sqlite'],
+        'path' => ['label' => 'Cesta k súboru zálohy', 'help' => 'Nahradí aktuálnu databázu súborom na zadanej ceste.', 'placeholder' => '/cesta/k/backup.sqlite'],
         'username' => ['label' => 'Používateľské meno', 'placeholder' => 'alice'],
     ],
 ];

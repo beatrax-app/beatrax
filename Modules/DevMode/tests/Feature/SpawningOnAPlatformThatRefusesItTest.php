@@ -90,8 +90,8 @@ it('answers POST /dev/artisan/destructive-spawn with 501 and the platform messag
     $response = $this->actingAs($user)
         ->withSession(['dev_mode.advanced' => true])
         ->postJson('/dev/artisan/destructive-spawn', [
-            'command' => 'migrate:fresh',
-            'args' => [],
+            'command' => 'beatrax:grant-dev',
+            'args' => ['username' => 'someone'],
             'confirmed_typed' => 'Beatrax',
         ]);
 
