@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 // Without this libxml_get_errors() is always empty, and the per-line
 // detail below never printed — the failure was loud but unreadable.
 libxml_use_internal_errors(true);
@@ -173,13 +175,15 @@ if (! str_contains($source, $anchor)) {
 // The leading \r?\n is the separator line the insertion below writes. Without
 // it in the pattern the file grows one blank line per build, which is not
 // wrong but means no two runs ever produce the same bytes.
-$rewritten = (string) preg_replace(
+$rewritten = beatraxRewrite(
+    'nativephp_strip_unused_permissions',
     '#\r?\n[ \t]*<!-- Unused permissions removed by '.preg_quote(MARKER, '#').'.*?-->[ \t]*\r?\n#s',
     '',
     $source,
 );
 
-$rewritten = (string) preg_replace(
+$rewritten = beatraxRewrite(
+    'nativephp_strip_unused_permissions',
     '#[ \t]*<uses-permission\s+android:name="[^"]+"\s+tools:node="remove"\s*/>[ \t]*\r?\n?#',
     '',
     $rewritten,
@@ -187,7 +191,8 @@ $rewritten = (string) preg_replace(
 
 // The commented decoys go with them, or a second run keeps the old ones and
 // adds a fresh set, and no two builds produce the same bytes.
-$rewritten = (string) preg_replace(
+$rewritten = beatraxRewrite(
+    'nativephp_strip_unused_permissions',
     '#[ \t]*<!-- <uses-permission\s+android:name="[^"]+"\s*/> kept here only[^>]*-->[ \t]*\r?\n?#',
     '',
     $rewritten,
@@ -197,7 +202,8 @@ $rewritten = (string) preg_replace(
 // FLASHLIGHT and USE_BIOMETRIC on the SAME line, so dropping the line that
 // carries one silently drops biometric unlock with it.
 foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
-    $rewritten = (string) preg_replace(
+    $rewritten = beatraxRewrite(
+        'nativephp_strip_unused_permissions',
         '#[ \t]*<uses-permission\s+android:name="'.preg_quote($permission, '#').'"\s*/>[ \t]*\r?\n?#',
         '',
         $rewritten,
@@ -253,7 +259,7 @@ $verified = (string) file_get_contents($manifest);
 // Comments first: the merger ignores them, and one of them deliberately holds
 // a plain declaration to satisfy the plugin compiler's substring check. Asking
 // "what will the merger see" of the raw text answered yes to that comment.
-$verified = (string) preg_replace('/<!--.*?-->/s', '', $verified);
+$verified = beatraxRewrite('nativephp_strip_unused_permissions', '/<!--.*?-->/s', '', $verified);
 
 foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
     $pattern = '#<uses-permission\s+android:name="'.preg_quote($permission, '#').'"(?![^>]*tools:node="remove")#';

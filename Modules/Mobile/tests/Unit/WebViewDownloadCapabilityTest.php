@@ -120,10 +120,13 @@ it('backs the Android container route with a patch that registers Share.File', f
 
     // nativephp/ is generated and this script only ever appends to it, so a
     // root an earlier version added outlives the version that added it. The
-    // literal may appear only as the thing being taken back out.
+    // literal may appear only as the thing being taken back out, and it is
+    // taken out through beatraxRewrite rather than preg_replace: a give-up
+    // here returns null, the cast writes '', and the verification pass reads
+    // an empty permission set as one with nothing left to object to.
     expect(substr_count($source, 'files-path name='))->toBe(1)
         ->and($source)->toContain("\$staleRoot = '<files-path name=\"beatrax-internal\" path=\".\" />';")
-        ->and($source)->toMatch('/preg_replace\(.*\$staleRoot.*\$paths\)/');
+        ->and($source)->toMatch('/beatraxRewrite\(.*\$staleRoot.*\$paths\)/');
 
     $generatedPaths = base_path('mobile-app/nativephp/android/app/src/main/res/xml/file_paths.xml');
 

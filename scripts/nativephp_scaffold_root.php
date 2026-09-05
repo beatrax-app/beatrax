@@ -66,3 +66,27 @@ if (! function_exists('beatraxMobileVendorPath')) {
         return null;
     }
 }
+
+if (! function_exists('beatraxRewrite')) {
+    /**
+     * A rewrite that stopped part-way is not a rewrite that matched nothing.
+     * `(string) preg_replace(...)` spells a PCRE give-up as an empty subject,
+     * and these scripts write their subject straight back to disk: the manifest
+     * blanks, and the verification pass that would have caught it reads the
+     * blank and finds nothing left to object to.
+     *
+     * @param  string  $label  the script name, for whoever reads stderr
+     */
+    function beatraxRewrite(string $label, string $pattern, string $replacement, string $subject): string
+    {
+        $rewritten = preg_replace($pattern, $replacement, $subject);
+
+        if ($rewritten === null || preg_last_error() !== PREG_NO_ERROR) {
+            fwrite(STDERR, "{$label}: the pattern {$pattern} stopped part-way (".preg_last_error_msg().'). '
+                ."Its subject would have been written back blank.\n");
+            exit(1);
+        }
+
+        return $rewritten;
+    }
+}

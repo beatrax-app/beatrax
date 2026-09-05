@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Contracts\Support;
 
 use Modules\Core\Public\Support\PatternScan;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 
 // Every place a background and a text colour are declared in the same breath.
 // Declared together is what makes a pair measurable without a browser: an
@@ -210,27 +208,17 @@ final class ColourPairs
     }
 
     /**
-     * @return list<array{path: string, source: string}> every template under Modules/ and resources/
+     * @return list<array{path: string, source: string}> every Blade view a reader is shown
      */
     public static function templates(): array
     {
         $found = [];
 
-        foreach (['Modules', 'resources'] as $root) {
-            $walk = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($root)));
-
-            foreach ($walk as $file) {
-                $path = $file->getPathname();
-
-                if (! str_ends_with($path, '.blade.php') || str_contains($path, '/tests/')) {
-                    continue;
-                }
-
-                $found[] = [
-                    'path' => str_replace(base_path().'/', '', $path),
-                    'source' => (string) file_get_contents($path),
-                ];
-            }
+        foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
+            $found[] = [
+                'path' => str_replace(RepoTree::root().'/', '', $path),
+                'source' => (string) file_get_contents($path),
+            ];
         }
 
         usort($found, static fn (array $a, array $b): int => strcmp($a['path'], $b['path']));
