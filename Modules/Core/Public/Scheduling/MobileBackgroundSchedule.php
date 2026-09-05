@@ -54,6 +54,11 @@ final class MobileBackgroundSchedule
             // the switch". Auto-import can be turned off on a device, and a
             // promise a screen makes there has to be one that device keeps.
             'receipts.scan-drop-folder' => 'receipts:scan-drop-folder',
+            // The wizard runs on a phone, and a run and its staging are
+            // registered in no merge rule: they never leave the device that
+            // staged them, so no desktop sweep can reach what a phone
+            // abandoned.
+            'migration.sweep-abandoned' => 'migration:sweep-abandoned',
         ];
     }
 

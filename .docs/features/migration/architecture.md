@@ -52,6 +52,9 @@ identically to data imported any other way.
 - **Internal/Http/Livewire** — the four wizard pages: `MigrationsIndex`,
   `NewMigration` (upload), `PreviewMigration` (confirm/discard/resolve
   conflicts), `MigrationResults`.
+- **Internal/Console** — `SweepAbandonedMigrationRunsCommand`
+  (`migration:sweep-abandoned`), the daily per-user walk that gives
+  `DiscardMigrationRun`'s abandoned-run sweep a caller.
 
 ## The parse → stage → preview → confirm pipeline
 
@@ -740,11 +743,23 @@ counts) — the two exceptions guard symmetric ends of the same state machine.
 older than a fixed threshold for one user — BOTH never-confirmed statuses,
 `'parsed'` and `'needs_attention'`, since a reconciliation abandoned at its
 preview holds a whole export's staging rows and wrote no domain row that
-deleting it could orphan. Nothing in production calls it yet; it is reachable
-only from its own test until a scheduled hook exists, cascade-wiping their staging via
-the FK; every delete is scoped by both `id` AND `user_id` explicitly — never
-a bulk unscoped truncate — so it can never touch another user's rows even
-from a future scheduled hook that iterates every user.
+deleting it could orphan. Its production caller is
+`Internal/Console/SweepAbandonedMigrationRunsCommand` (`migration:sweep-abandoned`),
+registered from `MigrationServiceProvider` through `RegistersScheduledCommands`
+and scheduled daily in `routes/console.php`; it walks `users` and asks the
+action once per reader, so the loop that reaches every account never widens the
+scope the action holds. The staging rows go through
+`Sync\Public\Services\DependentRowCascade`, not a database cascade, and every
+delete is scoped by both `id` AND `user_id` explicitly — never a bulk unscoped
+truncate — so one reader's sweep can never reach another's rows, and a run
+owned by nobody is reached by neither.
+
+The sweep is in `MobileBackgroundSchedule::requiredOnDevice()` rather than
+`desktopOnly()`. The wizard runs on a phone — `NativeZipReader` exists so an
+export opens where `ext-zip` does not, and nothing gates `/migrations` by
+platform — and `migration_runs` and its staging tables are registered in no
+merge rule, so an abandoned run never leaves the device that staged it and no
+other device's sweep can reclaim it.
 
 ## Encryption interaction
 
