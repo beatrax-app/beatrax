@@ -325,11 +325,27 @@ jobs:
             # three with a warning and a zero exit code. Interrogate the
             # artifact instead. Kept in lockstep with release-build.yml,
             # which carries the same step in the same position.
+            # The identifier is read back from the build's own config rather
+            # than written twice: codesign prints an Identifier for whatever it
+            # was handed, so a bundle notarised under the framework's scaffold
+            # id is a correctly signed lie.
+            - name: Resolve the bundle identifier the build was given
+              id: app-identity
+              run: |
+                  set -euo pipefail
+                  identifier=$(php artisan tinker --execute="echo config('nativephp.app_id');" 2>/dev/null | tail -n 1 | tr -d '[:space:]')
+                  if [ -z "${identifier}" ]; then
+                      echo "::error::could not resolve config('nativephp.app_id'); refusing to verify a bundle against an unknown identity."
+                      exit 1
+                  fi
+                  echo "identifier=${identifier}" >> "$GITHUB_OUTPUT"
+
             - name: Verify the macOS bundle is genuinely signed
               uses: ./.github/actions/verify-signature
               with:
                   platform: macos
                   artifact-path: nativephp/electron/dist/*.dmg
+                  expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
             - name: Emit auto-update manifest (latest-mac.yml)
               # electron-builder skips writing the publisher manifest
