@@ -422,6 +422,21 @@ sanctioned reader — going through the custodian's `read()` rather than
 reading the session key directly, which would yield the opaque handle
 instead of the key on non-web bundles.
 
+`custody()` is the fourth method on the contract, and it exists because
+`store()` cannot tell a caller anything: it returns a handle whether the store
+protected the key or handed it straight back. It answers `KeyCustody::Session`
+where no platform store applies, `KeyCustody::OperatingSystem` where one holds
+the key, and `KeyCustody::PlatformStoreDoesNotProtect` for the one platform with
+a store that answers without protecting — a Linux desktop with no keyring, where
+[safeStorage encrypts under a published password](../desktop/architecture.md#what-safestorage-is-worth-on-linux).
+Custody never fails closed on an absent store: a bundle that cannot reach one
+falls back to session custody and *reports that it has*, because refusing would
+lock a reader out of their own ledger over a layer that was never the thing
+their passphrase protects. A caller about to persist key material asks
+`KeyCustody::protectsAtRest()` first — that is what `SecretShield` does — and
+the two shells' bindings are held in place by
+`tests/Contracts/KeyCustodianIsWiredOnBothShellsArchTest.php`.
+
 Every path that drops the handle goes through one private
 `releaseHandle()`, which calls `custodian->forget()` before the session
 forgets it. Both `lock()` and `clearStaleLock()` use it: dropping the

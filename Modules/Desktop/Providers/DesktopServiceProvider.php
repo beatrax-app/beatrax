@@ -47,6 +47,7 @@ use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
+use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
@@ -87,6 +88,10 @@ final class DesktopServiceProvider extends ServiceProvider
 
         $this->app->singleton(NativeBiometricUnlock::class);
 
+        // One probe for the whole process: it asks the shell which safeStorage
+        // backend Chromium settled on, and that answer cannot change while the
+        // shell is up.
+        $this->app->singleton(SafeStorageBackendProbe::class);
         $this->app->singleton(DesktopKeyCustodian::class);
 
         // Every NativePHP API call goes through this one client, and its own

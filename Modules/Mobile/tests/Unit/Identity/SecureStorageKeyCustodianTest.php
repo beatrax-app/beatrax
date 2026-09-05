@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Auth\Public\Enums\KeyCustody;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
@@ -102,4 +103,52 @@ it('forget() deletes the native slot', function (): void {
 
     expect($custodian->slots)->not->toHaveKey($handle)
         ->and($custodian->read($handle))->toBeNull();
+});
+
+// A store that answers on a phone is a real one -- the iOS entry is
+// kSecAttrAccessibleWhenUnlockedThisDeviceOnly and the Android one an
+// EncryptedSharedPreferences value under a Keystore master key -- so the report
+// has no third case to make, unlike a Linux desktop with no keyring.
+
+it('reports session custody where the mobile runtime is unavailable', function (): void {
+    $custody = (new SecureStorageKeyCustodian(secureStorageCurrentUser(1)))->custody();
+
+    expect($custody)->toBe(KeyCustody::Session)
+        ->and($custody->protectsAtRest())->toBeFalse();
+});
+
+it('reports operating-system custody on device', function (): void {
+    $custody = (new FakeSecureStorageCustodian(secureStorageCurrentUser(7)))->custody();
+
+    expect($custody)->toBe(KeyCustody::OperatingSystem)
+        ->and($custody->protectsAtRest())->toBeTrue();
+});
+
+// The handle in the session is the slot name, and the report says the key
+// behind it is the operating system's. Both halves matter: a report of
+// operating-system custody over a session that still held the raw key would be
+// the same false claim in the other direction.
+it('keeps the raw key out of the handle it reports operating-system custody for', function (): void {
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $raw = random_bytes(32);
+
+    $handle = $custodian->store($raw);
+
+    expect($custodian->custody())->toBe(KeyCustody::OperatingSystem)
+        ->and($handle)->toBe('beatrax.session.data_key.7')
+        ->and($handle)->not->toBe($raw)
+        ->and($custodian->slots[$handle])->not->toBe($raw);
+});
+
+// The upgrade path. A phone whose session predates custody holds the raw key
+// under no slot prefix, and the prefix is what says whether a handle names a
+// Keychain entry. Unprefixed means the handle IS the key, so the reader is not
+// sent back to the PIN screen by the upgrade itself; the next lock/unlock moves
+// it into the store.
+it('carries a pre-custody session through unchanged rather than asking for the PIN again', function (): void {
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $raw = random_bytes(32);
+
+    expect($custodian->read($raw))->toBe($raw)
+        ->and($custodian->slots)->toBe([]);
 });
