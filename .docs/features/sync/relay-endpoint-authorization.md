@@ -64,12 +64,10 @@ so it cannot become the exhaustion vector it exists to prevent.
 ## `GET /relay/drain` and `DELETE /relay/drain/{id}` — bound to one device
 
 Retrieval is what needs gating, and it is gated per device rather than per
-relay. The credential is the draining device's **own** per-instance drain
-secret: 32 random bytes, minted on first use by
-`RelayConfig::deviceDrainSecret()` and persisted at
-`secretsPath()/sync-relay-drain-secret.json` with the same
+relay or per install. The credential is a drain token minted for **one device
+id**, persisted at `secretsPath()/sync-relay-drain-tokens.json` with the same
 `mkdir 0700 → write → chmod 0600` discipline as every other secret in the
-module. It is presented as an ordinary `Authorization: Bearer` header.
+module, and presented as an ordinary `Authorization: Bearer` header.
 
 `RelayDrainRegistry` is the relay-side half. It is a trust-on-first-use store:
 the first token ever seen for a device id is recorded as
@@ -77,17 +75,6 @@ the first token ever seen for a device id is recorded as
 must present a token whose digest `hash_equals` the stored one. The compare is
 timing-safe against a fixed-length hex digest, so it cannot leak how many
 leading characters matched.
-
-> **Supersedes the earlier scheme.** The relay once derived each device's drain
-> token as `HMAC(relay auth token, did)`. The relay auth token travels in the
-> pairing QR, so every peer that had ever paired could recompute *any* device's
-> drain token and pull or delete that device's blobs. The registry above is
-> what replaced it.
-
-The residual weakness of trust-on-first-use is worth naming: an attacker who
-registers a victim's device id **before** the victim ever drains wins the slot.
-That is a much narrower window than a token every paired peer could derive, but
-it is not nothing.
 
 ### An unknown row id answers `401`, not `404`
 
@@ -101,6 +88,87 @@ The same reasoning shapes the ordering in `drainRejection()`: a missing `did`
 is reported as a malformed request and only a *valid* did that fails the token
 check is reported as unauthorized, so a caller who simply forgot a parameter is
 not told they have a credentials problem.
+
+## A drain token names the one device it drains
+
+Trust-on-first-use answers "is this the same caller as last time". It cannot
+answer "is this credential even *about* this device", and on its own it
+registered whatever bearer arrived for a device id nobody had drained yet.
+Two things followed, both demonstrated against the real route:
+
+- A token registered for `device-a` drained `device-b`'s mailbox, because
+  `device-b` had not claimed its slot.
+- The relay-wide token that used to travel in the pairing QR — a copy of which
+  every peer that ever paired is still holding — drained an unclaimed mailbox.
+
+A device's *first* drain was therefore effectively unauthenticated, and that is
+precisely the window in which its GDK epoch wraps are sitting in
+`relay_mailbox`. `RelayDrainToken` closes it by making the credential name its
+device:
+
+```text
+bdt1.<sha256(device_id)>.<32 random bytes, hex>
+```
+
+`RelayDrainRegistry` refuses anything that does not parse as that shape with
+the tag for the device id in the request, **before** it consults the store at
+all. A relay-wide bearer names no device and is refused everywhere; a token
+minted for another device names that one and is refused here. Trust-on-first-use
+still decides which of two callers holding correctly-shaped tokens for the same
+id wins the slot — the digest binding is what it always was — but a caller now
+has to be holding a token minted for that exact id to be in the race.
+
+The device tag is a digest rather than the id itself only so the token is not a
+second place the id is written in the clear. It tells the relay nothing new:
+the relay is handed the device id in the very request the token authorizes.
+
+The residual weakness of trust-on-first-use is worth naming and is unchanged:
+an attacker who knows a victim's device id and registers it **before** the
+victim ever drains wins the slot. What is gone is the escalation — that the
+attacker did not need to mint anything, because a working token had already
+been handed to them.
+
+### Two local users, two tokens
+
+Device ids are per user: each user on an install has their own identity
+key-file and their own `device_registry` self-row. The secret this scheme
+replaced was per *install*, so all of an install's users presented the same
+bearer. Binding that one secret to a single device id would have bound the
+relay to whichever local user drained first and answered `401` to the second
+one forever, which is why the token is minted per device id rather than per
+install.
+
+That also *removes* a metadata leak rather than adding one. Under the install-
+scoped secret, two device ids on one install presented byte-identical bearers,
+so the relay could link them as one household without decrypting anything. Two
+independently minted tokens cannot be correlated that way.
+
+### Upgrading an install that has already paired
+
+Nothing about pairing, identity or `relay_mailbox` changes, so no re-pairing is
+needed and no blob is lost. Two files migrate themselves:
+
+- The install's drain secret is replaced by the per-device token file on the
+  first drain after the upgrade. The superseded
+  `sync-relay-drain-secret.json` and `sync-relay-token.json` are deleted once
+  the replacement is safely written — an inert secret still reads like a live
+  one to whoever finds it next.
+- The relay's registry entries gain a version marker
+  (`{"v": "bdt1", "hash": …}`). A binding written by the old scheme is a bare
+  hash string, indistinguishable from a new one as hex, so entries without the
+  marker are **dropped** on read. Honoured instead, they would `401` the
+  upgraded owner out of its own mailbox permanently; dropped, the device
+  re-registers on its next drain. They are worth nothing as security anyway —
+  any bearer could have written them, which is the defect.
+
+Both ends must be on the new build for a relayed drain to succeed. In the
+out-of-box path they are the same bundle: the desktop runs `relay:serve` and
+its own client. Where they are not — a phone that auto-updated ahead of the
+desktop that hosts its relay, or the reverse — drain and confirm answer `401`
+until the lagging side upgrades. Nothing is lost while that lasts: undelivered
+blobs keep their 30-day window, LAN-direct sync is unaffected, and the drain
+succeeds once both ends match. An old client cannot be accepted by a new relay
+by definition — its credential is the install-wide one this exists to refuse.
 
 ## Confirm marks delivered; it does not delete
 

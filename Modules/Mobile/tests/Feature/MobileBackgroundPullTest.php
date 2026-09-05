@@ -53,7 +53,6 @@ it('runs exactly one bounded background sync burst per user and never loops', fu
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     $exitCode = Artisan::call('sync:mobile-pull');
@@ -82,7 +81,6 @@ it('reports a locked identity when the tick builds its own session, however unlo
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     // Exactly what an OS-scheduled firing constructs: a session nobody has
@@ -106,7 +104,6 @@ it('skips cleanly with zero network calls and zero data writes when the app-lock
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
-    $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
     $exitCode = Artisan::call('sync:mobile-pull');

@@ -8,10 +8,10 @@ use Modules\Sync\Public\Services\LocalRelayProvisioner;
 
 uses(RefreshDatabase::class);
 
-// Endpoint, drain token and certificate pin travel together in the QR, and a
-// device missing any one looks from the phone exactly like pairing that never
-// completes. The provisioner established all three on its first run only, so a
-// device that stored an endpoint early short-circuited into a permanent 401.
+// Endpoint and certificate pin travel together in the QR, and a device missing
+// either looks from the phone exactly like pairing that never completes. The
+// provisioner established both on its first run only, so a device that stored
+// an endpoint early short-circuited into a relay it could never verify.
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-provisioner-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
@@ -34,7 +34,7 @@ function provisionedEndpointOrSkip(LocalRelayProvisioner $provisioner, int $port
     return $endpoint;
 }
 
-it('establishes the endpoint, the token and the pin together', function (): void {
+it('establishes the endpoint and the pin together', function (): void {
     /** @var LocalRelayProvisioner $provisioner */
     $provisioner = $this->app->make(LocalRelayProvisioner::class);
     /** @var RelayConfig $config */
@@ -44,29 +44,25 @@ it('establishes the endpoint, the token and the pin together', function (): void
 
     expect($endpoint)->toStartWith('https://')
         ->and($config->endpointUrl())->toBe($endpoint)
-        ->and($config->authToken())->not->toBeNull()
         ->and($config->pin())->toStartWith('sha256//');
 });
 
-it('fills in a token and pin a device stored an endpoint without', function (): void {
+it('fills in a pin a device stored an endpoint without', function (): void {
     /** @var LocalRelayProvisioner $provisioner */
     $provisioner = $this->app->make(LocalRelayProvisioner::class);
     /** @var RelayConfig $config */
     $config = $this->app->make(RelayConfig::class);
 
-    // The state a device reached by storing its endpoint before tokens or
-    // TLS material existed. Every drain from here answers 401.
+    // The state a device reached by storing its endpoint before TLS material
+    // existed. Every connection from here is unverifiable.
     $endpoint = provisionedEndpointOrSkip($provisioner);
-    $config->setAuthToken(null);
     $config->setPin(null);
 
-    expect($config->authToken())->toBeNull()
-        ->and($config->pin())->toBeNull();
+    expect($config->pin())->toBeNull();
 
     $provisioner->ensureConfigured(51338);
 
     expect($config->endpointUrl())->toBe($endpoint)
-        ->and($config->authToken())->not->toBeNull()
         ->and($config->pin())->toStartWith('sha256//');
 });
 
@@ -87,17 +83,17 @@ it('re-points a LAN endpoint whose address no longer belongs to this machine', f
         ->and($config->endpointUrl())->toBe($current);
 });
 
-it('never re-points or re-credentials an operator-hosted relay', function (): void {
+it('never re-points or re-pins an operator-hosted relay', function (): void {
     /** @var LocalRelayProvisioner $provisioner */
     $provisioner = $this->app->make(LocalRelayProvisioner::class);
     /** @var RelayConfig $config */
     $config = $this->app->make(RelayConfig::class);
 
     // Somebody's own relay on a public host. It is configuration this device
-    // does not own: not its address to change, not its secret to mint.
+    // does not own: not its address to change, not its key to pin.
     $config->setEndpointUrl('https://relay.example.com');
 
     expect($provisioner->ensureConfigured(51338))->toBe('https://relay.example.com')
         ->and($config->endpointUrl())->toBe('https://relay.example.com')
-        ->and($config->authToken())->toBeNull();
+        ->and($config->pin())->toBeNull();
 });

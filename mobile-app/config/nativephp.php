@@ -45,8 +45,8 @@ return [
 
     // Null, not env(): a scheme here generates a BROWSABLE, host-unrestricted
     // intent filter, so any web page could hand the app a pairing URI. The QR
-    // payload carries the initiator's relay endpoint and auth token, adopted
-    // before the safety-number gate — pointing a camera is the trust act.
+    // payload carries the initiator's relay endpoint and pin, adopted before
+    // the safety-number gate — pointing a camera is the trust act.
     // `deeplink_host` is absent for the same reason; nothing merges it back.
     'deeplink_scheme' => null,
 

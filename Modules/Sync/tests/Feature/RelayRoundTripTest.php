@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainToken;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
@@ -26,12 +27,11 @@ uses(RefreshDatabase::class);
 // throughout; nothing here decrypts it.
 
 beforeEach(function (): void {
-    // HTTPS because RelayClient refuses anything else. The relay-wide authToken
-    // is not a drain credential: draining authenticates with the client's own
-    // deviceDrainSecret(), TOFU-verified server-side.
+    // HTTPS because RelayClient refuses anything else. Draining authenticates
+    // with a token minted for the draining device id and refused against any
+    // other, so nothing relay-wide is a drain credential.
     $this->relayConfig = new RelayConfig;
     $this->relayConfig->setEndpointUrl('https://relay.test');
-    $this->relayConfig->setAuthToken('relay-shared-secret');
 
     $mailbox = new RelayMailbox(
         app(DatabaseManager::class),
@@ -51,12 +51,11 @@ afterEach(function (): void {
     // Delete the files outright rather than clearing the values, so nothing is
     // left behind in storage/app/secrets for a later test to find.
     $secretsDir = UserDataPathService::secretsPath();
-    $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
-    $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+    $drainTokensPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json';
     $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-    foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
+    foreach ([$drainTokensPath, $drainRegistryPath, $relayPath] as $path) {
         if (is_file($path)) {
             @unlink($path);
         }
@@ -78,10 +77,9 @@ it('round-trips deliver -> drain -> confirm against the real relay handler', fun
     expect($row->blob)->toBe($blob, 'blob must be stored verbatim (ZK invariant)');
     expect($row->delivered_at)->toBeNull('freshly delivered blob is pending');
 
-    // The owning device presents its OWN drain secret; the relay TOFU-registers
-    // it on this first drain.
-    $deviceToken = $this->relayConfig->deviceDrainSecret();
-    expect($deviceToken)->not->toBeNull();
+    // The owning device presents the token minted for THIS device id; the relay
+    // TOFU-registers it on this first drain.
+    $deviceToken = $this->relayConfig->deviceDrainToken($recipientDid);
 
     $rows = $this->relayClient->drain($recipientDid, $deviceToken);
 
@@ -103,18 +101,18 @@ it('rejects a drain from a different device once the owner has TOFU-registered i
     $recipientDid = 'device-victim';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 
-    // The owning device drains first with its OWN drain secret — the relay
-    // TOFU-binds this did to that secret's hash.
-    $ownerSecret = $this->relayConfig->deviceDrainSecret();
+    // The owning device drains first with its OWN drain token — the relay
+    // TOFU-binds this did to that token's hash.
+    $ownerSecret = $this->relayConfig->deviceDrainToken($recipientDid);
     expect($this->relayClient->drain($recipientDid, $ownerSecret))->toHaveCount(1);
 
-    // A different device holding the same relay-wide authToken but a different
-    // drain secret is refused: the old drain token every peer could recompute
-    // from the shared secret is gone.
-    expect(fn () => $this->relayClient->drain($recipientDid, 'another-device-drain-secret'))
+    // Another device's token names another device, so it is refused here before
+    // the stored hash is even consulted.
+    expect(fn () => $this->relayClient->drain($recipientDid, RelayDrainToken::mint('device-somebody-else')))
         ->toThrow(RuntimeException::class);
 
-    // The relay-wide authToken carried by the QR is not a drain credential either.
+    // And a bearer that names no device at all — which is what a relay-wide
+    // token is — drains nothing.
     expect(fn () => $this->relayClient->drain($recipientDid, 'relay-shared-secret'))
         ->toThrow(RuntimeException::class);
 });
@@ -123,12 +121,12 @@ it('confirm honours the same per-device auth — a different device is rejected,
     $recipientDid = 'device-victim-2';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 
-    // Owner drains first, TOFU-registering its own drain secret for this did.
-    $ownerSecret = $this->relayConfig->deviceDrainSecret();
+    // Owner drains first, TOFU-registering its own drain token for this did.
+    $ownerSecret = $this->relayConfig->deviceDrainToken($recipientDid);
     $rows = $this->relayClient->drain($recipientDid, $ownerSecret);
     $id = (int) $rows[0]['id'];
 
-    expect(fn () => $this->relayClient->confirm($id, 'another-device-drain-secret'))
+    expect(fn () => $this->relayClient->confirm($id, RelayDrainToken::mint('device-somebody-else')))
         ->toThrow(RuntimeException::class);
     $row = DB::table('relay_mailbox')->where('id', $id)->first();
     expect($row->delivered_at)->toBeNull('unauthorized confirm must not mark the row delivered');

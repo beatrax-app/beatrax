@@ -44,7 +44,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * @phpstan-type TypedCodeInitiator array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost?: string, lanPort?: int}
+ * @phpstan-type TypedCodeInitiator array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost?: string, lanPort?: int}
  */
 final class PairingFlowModal extends Component
 {
@@ -244,10 +244,10 @@ final class PairingFlowModal extends Component
             $identity->x25519PublicKeyHex,
         );
 
-        // Carries this device's own relay endpoint (+ optional bearer token)
-        // in the QR so a fresh phone can auto-configure its own transport
-        // before the cross-device confirm handshake needs one. Null/absent
-        // when no relay is configured on this device.
+        // Carries this device's relay endpoint and pinned key so a fresh phone
+        // can configure its transport before the confirm handshake needs one.
+        // No credential travels with them: the scanner mints its own drain
+        // token, and a relay-wide one here reached every peer that ever paired.
         $this->qrSvg = $qrBuilder->buildSvg(
             $identity->deviceId,
             $identity->ed25519PublicKeyHex,
@@ -258,7 +258,6 @@ final class PairingFlowModal extends Component
             $registry->localDeviceName($userId),
             new RelayBootstrap(
                 $relayConfig->endpointUrl(),
-                $relayConfig->authToken(),
                 $relayConfig->pin(),
             ),
             // The road a phone can take without browsing for it. iOS grants no

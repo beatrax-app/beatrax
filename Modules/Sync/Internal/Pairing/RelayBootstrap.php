@@ -7,15 +7,14 @@ namespace Modules\Sync\Internal\Pairing;
 // The relay details a QR carries so a fresh responder can configure its own
 // transport before the confirm handshake needs one.
 
-// The three travel together because the last two mean nothing without the
-// first: a bearer token with no endpoint is a secret with no destination, and
-// a pin with no endpoint pins nothing. Keeping them in one object is what lets
-// that rule live next to the values rather than in each caller.
+// The two travel together because the second means nothing without the first:
+// a pin with no endpoint pins nothing. No credential rides along — a relay-wide
+// bearer in a QR is a drain credential handed to every peer that ever paired,
+// and the responder mints its own per-device drain token instead.
 final readonly class RelayBootstrap
 {
     public function __construct(
         public ?string $endpoint = null,
-        public ?string $authToken = null,
         public ?string $pin = null,
     ) {}
 

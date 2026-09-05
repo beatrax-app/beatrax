@@ -46,7 +46,6 @@ final readonly class RelayClient
 
         $response = $this->http
             ->createPendingRequest()
-            ->withHeaders($this->authHeaders())
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->post("{$endpoint}/relay/deliver", [
@@ -62,21 +61,21 @@ final readonly class RelayClient
 
     /**
      * @param  string  $deviceId  Authenticated device draining its mailbox
-     * @param  string  $authToken  The draining device's own drain secret
-     *                             (RelayConfig::deviceDrainSecret()), which the
-     *                             relay verifies per-device via trust-on-first-use.
+     * @param  string  $drainToken  This device's own drain token for THAT
+     *                              device id (RelayConfig::deviceDrainToken()),
+     *                              which names it and no other.
      * @return list<array<string, mixed>>
      *
      * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
      * @throws RelayUnavailableException when the relay answers with a non-2xx
      */
-    public function drain(string $deviceId, string $authToken): array
+    public function drain(string $deviceId, string $drainToken): array
     {
         $endpoint = $this->resolvedEndpoint();
 
         $response = $this->http
             ->createPendingRequest()
-            ->withToken($authToken)
+            ->withToken($drainToken)
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->get("{$endpoint}/relay/drain", ['did' => $deviceId]);
@@ -98,20 +97,20 @@ final readonly class RelayClient
 
     /**
      * @param  int  $id  relay_mailbox.id from a drain() response row
-     * @param  string  $authToken  The owning device's own drain secret
-     *                             (RelayConfig::deviceDrainSecret()), which the
-     *                             relay verifies per-device via trust-on-first-use.
+     * @param  string  $drainToken  The owning device's own drain token for the
+     *                              recipient of that row
+     *                              (RelayConfig::deviceDrainToken()).
      *
      * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
      * @throws RelayUnavailableException when the relay answers with a non-2xx
      */
-    public function confirm(int $id, string $authToken): void
+    public function confirm(int $id, string $drainToken): void
     {
         $endpoint = $this->resolvedEndpoint();
 
         $response = $this->http
             ->createPendingRequest()
-            ->withToken($authToken)
+            ->withToken($drainToken)
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->delete("{$endpoint}/relay/drain/{$id}");
@@ -219,20 +218,5 @@ final readonly class RelayClient
     public static function backendHonorsPinning(string $sslVersion): bool
     {
         return preg_match('/openssl|libressl|boringssl|gnutls/i', $sslVersion) === 1;
-    }
-
-    // Empty array when no token is configured — some relay deployments may
-    // be token-optional (e.g. on a private LAN).
-    /**
-     * @return array<string, string>
-     */
-    private function authHeaders(): array
-    {
-        $token = $this->config->authToken();
-        if ($token === null) {
-            return [];
-        }
-
-        return ['Authorization' => "Bearer {$token}"];
     }
 }

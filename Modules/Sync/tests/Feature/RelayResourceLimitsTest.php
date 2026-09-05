@@ -62,7 +62,6 @@ function dispatchRelayLimitsRequest(RelayServeCommand $command, AmpRequest $requ
 beforeEach(function (): void {
     $this->relayConfig = new RelayConfig;
     $this->relayConfig->setEndpointUrl('https://relay.test');
-    $this->relayConfig->setAuthToken('relay-shared-secret');
 
     $this->mailbox = new RelayMailbox(
         app(DatabaseManager::class),
@@ -81,12 +80,11 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     $secretsDir = UserDataPathService::secretsPath();
-    $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
-    $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+    $drainTokensPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json';
     $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-    foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
+    foreach ([$drainTokensPath, $drainRegistryPath, $relayPath] as $path) {
         if (is_file($path)) {
             @unlink($path);
         }
@@ -242,8 +240,7 @@ it('drain caps at the page size and a subsequent drain returns the remainder', f
     }
     DB::table('relay_mailbox')->insert($rows);
 
-    $token = $this->relayConfig->deviceDrainSecret();
-    expect($token)->not->toBeNull();
+    $token = $this->relayConfig->deviceDrainToken($recipientDid);
 
     $firstPage = dispatchRelayLimitsRequest(
         $this->command,
@@ -291,7 +288,7 @@ it('happy path: a normal blob with valid dids still delivers and drains', functi
 
     expect($deliverResult['status'])->toBe(202);
 
-    $token = $this->relayConfig->deviceDrainSecret();
+    $token = $this->relayConfig->deviceDrainToken($recipientDid);
     $drainResult = dispatchRelayLimitsRequest(
         $this->command,
         buildRelayLimitsRequest('GET', "/relay/drain?did={$recipientDid}", '', ['authorization' => "Bearer {$token}"]),

@@ -145,7 +145,6 @@ function relayZeroKnowledgeLegibleBlob(): string
 beforeEach(function (): void {
     $this->relayConfig = new RelayConfig;
     $this->relayConfig->setEndpointUrl('https://relay.test');
-    $this->relayConfig->setAuthToken('relay-shared-secret');
 
     $this->mailbox = new RelayMailbox(app(DatabaseManager::class), app(Clock::class));
 
@@ -169,8 +168,7 @@ afterEach(function (): void {
     $secrets = UserDataPathService::secretsPath();
 
     foreach ([
-        $secrets.DIRECTORY_SEPARATOR.'sync-relay-token.json',
-        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json',
+        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json',
         $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json',
         UserDataPathService::appPath('sync/relay.json'),
     ] as $path) {
@@ -192,7 +190,7 @@ it('carries a legible blob through deliver, store and drain without altering one
         'the relay stored something other than the bytes it was handed — it parsed, decoded or re-encoded the blob',
     );
 
-    $drained = $this->relayClient->drain('device-recipient', $this->relayConfig->deviceDrainSecret());
+    $drained = $this->relayClient->drain('device-recipient', $this->relayConfig->deviceDrainToken('device-recipient'));
     expect($drained)->toHaveCount(1);
     expect(base64_decode((string) $drained[0]['blob'], true))->toBe(
         $blob,
