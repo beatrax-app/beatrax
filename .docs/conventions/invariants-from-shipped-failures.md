@@ -887,6 +887,19 @@ Three things fell out of writing the rule that were not visible before it:
   and watching it go green. That step is cheap and it is the only thing that
   separates a rule from a comment about a rule.
 
+**M1 has since been deleted, and this entry is why it should not have been
+written.** [ADR-0023](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0023-comment-ceiling-no-floor-earned-links.md)
+retired the single-line floor on 2026-08-20 — fifteen days before this rule was
+implemented. The tell is in the paragraph above: M2's failure message argued
+against the floor, and that was read as the message being wrong rather than the
+rule. The canonical page had already said *"M1 is gone, not renumbered"*.
+
+The lesson is not about comments. **A convention page in this repository is a
+record, not an authority** — the specification is. A rule reconstructed from an
+inconsistency between two local files, without reading the canonical text, can
+reintroduce exactly what a decision record removed, and the local inconsistency
+is evidence a decision was taken rather than evidence of a defect.
+
 ## A `.docs` page linking a file that was never written
 
 `tests/Contracts/CommentPolicyArchTest.php`

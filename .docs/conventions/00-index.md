@@ -6,7 +6,8 @@ any file in it.
 
 ## The comment policy is canonical in the spec
 
-The rule text — the mechanical rules `M1`–`M6`, the judgment rules `J1`–`J5`, the
+The rule text — the mechanical rules `M2`–`M6` (`M1` was deleted by ADR-0023
+and its number stays vacant), the judgment rules `J1`–`J5`, the
 directive allow-list, and the enforcement model — lives in the specification and
 is the single source of truth:
 

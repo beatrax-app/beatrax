@@ -903,33 +903,9 @@ it('has no informative /* */ block comments (M3)', function (): void {
     expect($hits)->toBe([], "Use /** */ PHPDoc, never informative /* */ blocks. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-it('has no lone single-line // comment (M1)', function (): void {
-    $hits = [];
-    foreach (commentPolicyBackendFiles() as $path) {
-        foreach (commentPolicyLineCommentBlocks($path) as $block) {
-            if (count($block) === 1) {
-                $hits[] = $path.':'.$block[0];
-            }
-        }
-    }
-    expect($hits)->toBe([], implode("\n", [
-        'These are single // lines standing on their own:',
-        ...$hits,
-        '',
-        'A one-line note is the code failing to say something itself. Delete it,',
-        'or let a rename, an extracted method or a named constant carry it — that',
-        'is the fix, and it is the right one for nearly all of these. Rewrite it',
-        'as a 2-to-4 line block ONLY where the why is genuinely non-obvious: a',
-        'constraint, an ordering trap, an edge case being defended against.',
-        '',
-        'Never pad a one-line note to two lines to clear this rule. Padding',
-        'manufactures exactly the noise the policy exists to prevent, and the',
-        'ceiling below caps the same block at four either way.',
-        '',
-        'Machine directives are exempt and are frequently one line — they go',
-        'through commentPolicyIsDirective(), which is the only allow-list.',
-    ]));
-});
+// M1 is deleted, and its number stays vacant on purpose: this file names its
+// cases by those numbers, so a vacated number that acquires new text would
+// resolve silently to a rule it was never written against (ADR-0023).
 
 it('has no // block over 4 lines (M2)', function (): void {
     $hits = [];

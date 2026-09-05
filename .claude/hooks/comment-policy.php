@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Mirrors tests/Contracts/CommentPolicyArchTest.php (M1-M4) for ONE file, with
+// Mirrors tests/Contracts/CommentPolicyArchTest.php (M2-M4) for ONE file, with
 // no framework boot, so an edit is judged the moment it lands instead of at
 // the gate. Keep the four rules below in step with that test: it stays the
 // authority, this is only the fast path to it.
@@ -132,10 +132,6 @@ if ($block !== []) {
 
 foreach ($blocks as $lines) {
     $n = count($lines);
-
-    if ($n === 1) {
-        $hits[] = "{$path}:{$lines[0]} M1: lone one-line // comment. DELETE it, or let a rename / extracted method / named constant carry it. NEVER pad it to two lines.";
-    }
 
     if ($n > 4) {
         $hits[] = "{$path}:{$lines[0]} M2: {$n}-line // block, max is 4. Cut it to 4 lines or fewer.";
