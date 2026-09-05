@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\OAuthAlertKind;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
@@ -58,7 +59,7 @@ function unreadableColumnScrubSet(): array
     /** @var SecretShield $shield */
     $shield = app(SecretShield::class);
 
-    return (new OAuthScrubSet($shield))->all();
+    return (new OAuthScrubSet($shield, app(SystemAlertWriter::class)))->all();
 }
 
 it('still collects the live tokens of a row whose client_secret will not decrypt', function (): void {
@@ -96,7 +97,7 @@ it('names the keyless credential once instead of skipping it in silence', functi
 
     /** @var SecretShield $shield */
     $shield = app(SecretShield::class);
-    $scrubSet = new OAuthScrubSet($shield);
+    $scrubSet = new OAuthScrubSet($shield, app(SystemAlertWriter::class));
 
     $scrubSet->all();
     $scrubSet->bust();
@@ -105,7 +106,7 @@ it('names the keyless credential once instead of skipping it in silence', functi
     // A second instance is the next request: the phone and the desktop both
     // rebuild the container per request, so an in-process flag cannot be what
     // keeps a standing keyless credential from filing an alert every time.
-    (new OAuthScrubSet($shield))->all();
+    (new OAuthScrubSet($shield, app(SystemAlertWriter::class)))->all();
 
     $alerts = DB::table('system_alerts')
         ->where('kind', OAuthAlertKind::ScrubSetFailed->value)

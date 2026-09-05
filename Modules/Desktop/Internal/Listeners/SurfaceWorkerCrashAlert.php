@@ -6,10 +6,10 @@ namespace Modules\Desktop\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\StoredCopy;
@@ -45,6 +45,7 @@ final class SurfaceWorkerCrashAlert
         private readonly DatabaseManager $db,
         private readonly WindowFocusState $focus,
         private readonly UrlGenerator $urls,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function handle(ProcessExited $event): void
@@ -99,13 +100,15 @@ final class SurfaceWorkerCrashAlert
             // open, so it carries the line and keeps the sentence beside it.
             $line = CopyLine::of('core::alerts.messages.worker_crashed');
 
-            SystemAlert::query()->create([
-                'user_id' => null,
-                'kind' => self::ALERT_KIND,
-                'severity' => SystemAlertSeverity::Critical->value,
-                'message' => $line->sentence(),
-                'metadata' => StoredCopy::inParams($line),
-            ]);
+            // Null means a second process won the same race, and it decides the
+            // notification too: without it both supervisors pushed, so one crash
+            // knocked twice on a household that already knew.
+            $alreadyAlerted = $this->alerts->raiseOnceSystemWide(
+                kind: self::ALERT_KIND,
+                severity: SystemAlertSeverity::Critical->value,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line),
+            ) === null;
         }
 
         // The in-app banner already shows the row when focused, and an unacknowledged

@@ -8,9 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -25,6 +25,7 @@ final readonly class HealthCheckListener
         private Clock $clock,
         private LoggerInterface $logger,
         private DatabaseManager $db,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function __invoke(ConnectionEstablished $event): void
@@ -62,6 +63,8 @@ final readonly class HealthCheckListener
         // built in that same frame.
         $cutoff = Instant::appLocal($this->clock->now()->subHour());
 
+        $hour = SystemAlertWriter::hourWindow($this->clock->now());
+
         if ($journalMode !== 'wal') {
             $this->recordDriftAlert(
                 kind: 'wal_mode_missing',
@@ -69,6 +72,7 @@ final readonly class HealthCheckListener
                 logMessage: sprintf("SQLite is not in WAL mode (currently '%s').", $journalMode),
                 metadata: ['current_mode' => $journalMode],
                 cutoff: $cutoff,
+                hour: $hour,
             );
         }
 
@@ -79,6 +83,7 @@ final readonly class HealthCheckListener
                 logMessage: sprintf('SQLite synchronous level is %d (expected NORMAL/1).', $synchronousLevel),
                 metadata: ['current_level' => $synchronousLevel],
                 cutoff: $cutoff,
+                hour: $hour,
             );
         }
 
@@ -97,6 +102,7 @@ final readonly class HealthCheckListener
         string $logMessage,
         array $metadata,
         string $cutoff,
+        int $hour,
     ): void {
         try {
             $recentExists = $this->db->connection()->table('system_alerts')
@@ -111,13 +117,17 @@ final readonly class HealthCheckListener
                 return;
             }
 
-            SystemAlert::create([
-                'user_id' => null,
-                'kind' => $kind,
-                'severity' => SystemAlertSeverity::Warning->value,
-                'message' => $line->sentence(),
-                'metadata' => StoredCopy::inParams($line) + $metadata,
-            ]);
+            $raised = $this->alerts->raiseOnceSystemWide(
+                kind: $kind,
+                severity: SystemAlertSeverity::Warning->value,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line) + $metadata,
+                window: $hour,
+            );
+
+            if ($raised === null) {
+                return;
+            }
 
             $this->logger->warning('HealthCheckListener: '.$logMessage, $metadata);
         } catch (Throwable $e) {

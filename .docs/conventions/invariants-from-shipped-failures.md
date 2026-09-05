@@ -6391,6 +6391,99 @@ Both halves of the boundary now read a single `NetworkBoundary`. Two rules about
 one boundary, held in two classes, will disagree; the only question is how long
 before anyone notices.
 
+## A guard that reads before the write it guards
+
+`Modules/Core/tests/Feature/OneOpenAlertCannotBeWrittenTwiceTest.php`
+
+Two `oauth_scrub_set_failed` rows, byte-identical down to the metadata, written
+at the same second on a desktop that had just restarted. `OAuthScrubSet` has a
+guard for exactly this — `alertAlreadyOpen()` asks whether a row of the kind is
+already open and returns without writing if one is. It held on every pass it was
+ever tested on, because a test runs one process.
+
+A desktop boot is not one process. NativePHP spawns the sync listener and the
+relay listener as `ChildProcess::artisan` children and supervises a `queue:work`
+alongside the server, and each of them boots the whole application, installs the
+Monolog tap, and loads the redaction set from the same SQLite file. Two of them
+ran the SELECT before either ran the INSERT, and a SELECT cannot see an INSERT
+that has not happened yet.
+
+The evidence names the process count without anyone having to watch it. The
+install held two `oauth_secrets` rows, gmail and microsoft, both encrypted under
+a superseded key. Both duplicate alerts carry `"provider":"gmail"` — the SAME
+row — and `OAuthScrubSet` keeps a per-row in-process flag that lets one process
+report one row exactly once. Two alerts for one row is therefore two processes,
+not one process going round twice. The microsoft row raised nothing at all in
+either process, which is what the guard looks like when it works: by the time it
+was reached, the gmail row's alert was committed and visible.
+
+Nothing about that is specific to redaction. Every "raise this one only once"
+in the tree was a read followed by a write with no constraint between them:
+
+| Writer | Kind | Rule it wanted |
+|---|---|---|
+| `OAuthScrubSet` | `oauth_scrub_set_failed` | one open row |
+| `SurfaceWorkerCrashAlert` | `worker.crashed` | one open row |
+| `HealthCheckListener` | `wal_mode_missing`, `synchronous_misconfigured` | one an hour |
+| `BackupFreshnessProbe` | `backup_overdue` | one an hour |
+| `SystemAlertWriter::raiseOnceForUser` | 4 owned kinds | one open row per reader |
+| `AcknowledgeSystemAlert` | the acknowledgement row | one per (alert, reader) |
+
+The last one is the same shape with the opposite ending: it HAD a unique index,
+and the second write threw. Two taps on a phone are two requests, both pass the
+"has this reader dismissed it?" read, and the second answered 500 on a button
+whose entire job is to make a warning go away.
+
+**The read is the policy; only a constraint is the guarantee.** `system_alerts`
+now carries a nullable `dedup_key` under a UNIQUE index, and a writer that means
+"once" names one. NULL is the other half of the rule and not an oversight —
+SQLite counts NULLs as distinct, so leaving the key unset is how a writer says
+this row is meant to repeat. Each failed recovery attempt and each corrupt
+backup is its own row, and none of them is keyed.
+
+Two things the constraint is deliberately not allowed to do. It must not
+**throw**: `OAuthScrubSet` writes from inside a Monolog processor, so an
+exception there would crash every request that emits a log line — a worse
+outcome than the duplicate. `SystemAlertWriter` catches
+`UniqueConstraintViolationException` and answers `null`, the same answer its
+pre-check already gives. And the key must not **travel**: an owned alert reaches
+the peer through the op log, and a key both devices computed the same way would
+be a collision the receiver could only quarantine, so `storedRow()` strips it
+beside the `id`. `RecordUpdateAvailableAlert` had already found the shape of the
+answer from the other end — a derived id plus `insertOrIgnore` — for the one
+kind where the release version made a natural key.
+
+A key that names the OPEN row has to be released when the row closes, and that
+release cannot live in the acknowledge action. Four writers stamp
+`acknowledged_at`: the action, both reconnect paths in `ConnectInboxFromGrant`,
+and the applier — where a peer's dismissal arrives as a raw UPDATE and reaches
+no PHP of ours at all. Miss that one and the local row stays keyed after a
+remote acknowledgement, and the device silently never raises that kind again.
+It is a trigger on the column instead, beside the severity rails the table
+already carries.
+
+Adding the index moved a neighbouring guard without touching it.
+`ATableTakingIdsFromTheSequenceIsNeverCapturedTest` treats a non-pk UNIQUE index
+as proof that a travelling table has a natural key both devices compute the
+same, so its pk need not come from the sequence — and `system_alerts` silently
+dropped out of the at-risk list the moment it carried one. It is exactly as
+at-risk as before: this key is NULL on most rows and never crosses. **A UNIQUE
+index is not automatically a cross-device identity**, and the ones that are not
+are now named in that guard with the reason, so the table stays under it.
+
+Three test fixtures hand-write `system_alerts` rather than migrate it, and all
+three went on describing the table as it was. The write then failed on `no
+column named dedup_key` inside the very `catch (Throwable)` that exists to keep
+an alert-write from taking down the thing it reports on — so seven tests read
+"no alert was raised" and none of them said why. A fixture that spells out a
+production table owes it every column the production writer sends.
+
+The reader is the last stop. Rows written before the key existed are still in
+the field, so the banner drops a row that is indistinguishable from one above it
+— same kind, same severity, same stored sentence, same copy line, same minute.
+A duplicate that reaches a reader costs more than its own row: a critical
+sentence said twice is one nobody believes the third time.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
