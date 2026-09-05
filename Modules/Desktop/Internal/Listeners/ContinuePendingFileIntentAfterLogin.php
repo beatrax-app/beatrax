@@ -14,10 +14,10 @@ final readonly class ContinuePendingFileIntentAfterLogin
 
     public function handle(): void
     {
-        // Read purely for pending()'s realpath()/is_file() side effect: an
-        // intent whose file went with an unmounted drive is dropped here, so
-        // ContinueToStagedFile does not send the reader to a staging screen
-        // with nothing on it.
+        // Read for both of pending()'s effects. It claims the hand-off the
+        // shell left, which is the whole delivery for a document double-clicked
+        // before any window existed; and its realpath()/is_file() drops an
+        // intent whose file went with an unmounted drive.
         $this->intent->pending();
     }
 }
