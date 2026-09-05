@@ -449,7 +449,7 @@ the notification store's ingestion contract for free; the per-candidate
 loop deliberately never opens one either.
 
 Concurrency contract mirrors `SafetyNetAnomalySweepJob` /
-`CounterpartyGarbageCollectorJob`: `ShouldBeUniqueUntilProcessing` keyed
+`PruneNotificationsJob`: `ShouldBeUniqueUntilProcessing` keyed
 on `uniqueId() = (string) userId` collapses a same-window duplicate
 dispatch (two independent schedulers, desktop + mobile) into a single
 queued run per user; `tries = 3` + `backoff = [60, 300, 900]` tolerates a

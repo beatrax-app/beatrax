@@ -40,10 +40,10 @@ final readonly class DeactivateRulesOnReferentDelete
         );
     }
 
-    // The garbage collector is the only thing in production that deletes a
-    // counterparty, and it deletes through the query builder, which fires no
-    // model event: the arm above never ran on a real install. This reads the
-    // row-level announcement that same write already makes.
+    // Nothing deletes a counterparty today, so neither arm runs on a real
+    // install. A writer that ever does has to announce it — the arch test makes
+    // that mandatory for a travelling table — and a query-builder delete fires
+    // no model event, so this arm is what the announcement reaches.
     /**
      * @link ../../../../.docs/features/categorization/architecture.md#app-level-referential-integrity
      */

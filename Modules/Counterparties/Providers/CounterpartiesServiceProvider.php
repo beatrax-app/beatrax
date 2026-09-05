@@ -8,8 +8,6 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
-use Modules\Core\Public\Support\RegistersScheduledCommands;
-use Modules\Counterparties\Internal\Console\CollectCounterpartyGarbageCommand;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
@@ -21,7 +19,6 @@ use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 final class CounterpartiesServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
-    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -32,8 +29,6 @@ final class CounterpartiesServiceProvider extends ServiceProvider
     public function boot(BladeCompiler $blade, LivewireManager $livewire): void
     {
         $this->loadModuleResources('counterparties');
-
-        $this->registerScheduledCommands([CollectCounterpartyGarbageCommand::class]);
 
         $blade->componentNamespace('Modules\\Counterparties\\Resources\\views\\components', 'counterparties');
 

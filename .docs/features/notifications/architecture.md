@@ -234,26 +234,29 @@ sentence from the same key.
 ## Retention
 
 `PruneNotificationsJob` runs a per-user daily sweep deleting rows older
-than a fixed 365-day window, matching `CounterpartyGarbageCollectorJob`'s
-retention precedent exactly (a single grep-able number, not a
-`config()`-driven tunable). This is deliberately *not* a "history
-retained forever" violation — that project rule governs transactions,
-not the notification inbox, which is explicitly carved out. The sweep
-keys solely on the plaintext `created_at` column and touches none of the
-four encrypted columns, so — unlike the counterparty GC job, whose
-predicate does compare an encrypted column — this job needs no
-encryption key to run correctly: on a locked or headless device the
-sweep still runs and the inbox still stays bounded. Optional
-key-service/session parameters exist purely as a forward-compatible
-safety net (logged, never gating today's delete) in case a future change
-ever extends the predicate onto an encrypted column.
+than 365 days. The number and the clock it is measured on live in
+`Modules\Core\Public\Support\RetentionWindow` — one grep-able
+expression, not a `config()`-driven tunable. This is deliberately *not*
+a "history retained forever" violation: retention is indefinite for
+everything the reader authored, and the inbox is not that — it is a
+rendering the emitters can produce again, and it is explicitly carved
+out. `tests/Contracts/NoScheduledTaskPrunesUserDataArchTest.php` holds
+that line for every other scheduled task, and `notifications` is the one
+table it declares an exception for, named against the requirement that
+states the window.
+
+The sweep keys solely on the plaintext `created_at` column and touches
+none of the four encrypted columns, so this job needs no encryption key
+to run correctly: on a locked or headless device the sweep still runs
+and the inbox still stays bounded. Optional key-service/session
+parameters exist purely as a forward-compatible safety net (logged,
+never gating today's delete) in case a future change ever extends the
+predicate onto an encrypted column.
 
 The sweep **announces** every id it removes, dispatching
 `NotificationMutated` with mutationType `delete` so the capture listener
-writes a tombstone. This matches `CounterpartyGarbageCollectorJob` in the
-second respect as well as the first, and for the reason that job's own
-comment gives: a retention run on one device otherwise leaves the peer
-holding rows this device deleted. Running the sweep on both devices does
+writes a tombstone. A retention run on one device otherwise leaves the
+peer holding rows this device deleted. Running the sweep on both devices does
 not substitute for it — `notifications` carries `_delete_wins` in the
 merge registry, which only settles a tombstone against a create, so
 without one the peer's own history of the row is the last word on whether

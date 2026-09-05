@@ -5,11 +5,11 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// Deliberately not `constrained('counterparties')`: pruning an orphaned
-// counterparty must not cascade its transaction history away. The garbage
-// collector NULLs this column itself before deleting.
+// Deliberately not `constrained('counterparties')`: a counterparty leaving
+// must not cascade its transaction history away. Nothing deletes one on a
+// timer any more, and this column is why that would have been survivable.
 /**
- * @link ../../../../.docs/features/counterparties/garbage-collection.md#the-prune
+ * @link ../../../../.docs/features/counterparties/retention.md
  */
 return new class extends ModuleMigration
 {

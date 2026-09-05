@@ -123,14 +123,6 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 2,
         'why' => 'One names a single recurring series, so it is that series\' occurrence count; the other is KNOWN UNBOUNDED - hintsForReview has neither the limit nor the keyset cursor its sibling candidatesForReview carries.',
     ],
-    'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php::counterparties' => [
-        'reads' => 3,
-        'why' => 'Self-draining prune: the same transaction deletes every id these pluck, so steady state is one retention window of new orphans rather than the table.',
-    ],
-    'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php::merchant_aliases' => [
-        'reads' => 1,
-        'why' => 'Aliases enter only when the reader renames a merchant or uploads a YAML, so the ceiling is the alias file they maintain, not the ledger.',
-    ],
     'Modules/DriftAlerts/Internal/Jobs/RevivedExpiredDriftSnoozesJob.php::drift_alerts' => [
         'reads' => 1,
         'why' => 'Self-draining: only alerts whose snooze has elapsed, and the loop transitions each one to open, so the set is the reader\'s snoozed series count.',

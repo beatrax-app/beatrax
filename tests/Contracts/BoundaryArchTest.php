@@ -1906,7 +1906,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // PreMigrationSnapshot, so no table literal reaches this scan. The five
         // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
-        'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php transactions 1',
         'Modules/DevMode/Internal/Queue/QueueActions.php jobs 2',
         'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php accounts 1',
         'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',

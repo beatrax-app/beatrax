@@ -1075,14 +1075,15 @@ and stays.
 
 ### A wall-clock hour the runner cannot express moves into the command
 
-Five entries named an hour. Four did not need one. `db:backup` ran at 03:00 so
+Four entries named an hour. Three did not need one. `db:backup` ran at 03:00 so
 that an interactive session had stopped writing, but `VACUUM INTO` only reads
-and a WAL reader never blocks a writer; `counterparties.gc` ran an hour after it
-so a pruned set landed in the next snapshot, which still holds when both are
-`->daily()` and the backup is defined first; `open-banking.daily-sync` ran ahead
-of the FX refresh and the notification pass, which it still is. Those four
-became `->daily()`, and the ordering they depended on is now carried by the
-order they are defined in.
+and a WAL reader never blocks a writer; `fx.daily-refresh` ran at 09:00 so the
+day's first dashboard load saw fresh rates, but ECB publishes at ~16:00 CET, so
+a midnight fetch reads the very publication 09:00 would have read;
+`open-banking.daily-sync` ran at 06:00 to sit ahead of the FX refresh and the
+notification pass. Those three became `->daily()`, and what is left of the
+ordering — the rate refresh and the open-banking sync both landing before the
+09:15 notification pass — is carried by the order they are defined in.
 
 The daily notification pass is the exception. Payment reminders, the position
 digest and savings prompts are pushes, and 09:15 is part of what they are: at

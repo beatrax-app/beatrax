@@ -40,8 +40,6 @@ Modules/Counterparties/
 │   │   └── CounterpartySlugResolver.php
 │   ├── Pipeline/
 │   │   └── ResolveCounterpartyStage.php
-│   ├── Jobs/
-│   │   └── CounterpartyGarbageCollectorJob.php
 │   └── Http/Livewire/
 │       ├── CounterpartyIndex.php
 │       ├── CounterpartyProfile.php
@@ -179,11 +177,6 @@ Modules/Counterparties/
 - `Internal/Pipeline/ResolveCounterpartyStage` — pipeline glue. Calls
   the resolver, stamps `counterpartyId` via `withCounterpartyId()`,
   no-ops on `null` or `self_account` DTOs. Emits no events of its own.
-- `Internal/Jobs/CounterpartyGarbageCollectorJob` — daily per-user
-  prune. `ShouldQueue` + `ShouldBeUniqueUntilProcessing` keyed on
-  `userId`. Three tries, exponential backoff `[60, 300, 900]`. Lock
-  store: `LockStore::forUniqueJobs()` (same as `Chains` and
-  `EmailScan`).
 - `Internal/Http/Livewire/CounterpartyIndex` — `/counterparties`.
   Per-type chip filter + search; persists view preference via
   `user_preferences.counterparty_index_view`.
@@ -218,9 +211,9 @@ Migrations:
 - `2026_05_27_020002_add_counterparty_id_to_transactions.php` — adds
   the nullable `transactions.counterparty_id` column. Deliberate
   omission: no `constrained('counterparties')` — the FK is from the
-  user side only. The GC job is responsible for NULLing the column
-  before deleting orphans. Index `(user_id, counterparty_id)` is the
-  profile-page hot-path.
+  user side only, so nothing a `counterparties` row does reaches the
+  ledger. Index `(user_id, counterparty_id)` is the profile-page
+  hot-path.
 
 ## Provider wiring
 

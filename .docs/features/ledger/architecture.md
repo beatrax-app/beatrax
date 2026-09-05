@@ -1583,9 +1583,8 @@ show](../../conventions/invariants-from-shipped-failures.md#a-list-sorted-by-a-c
 **Counterparty slug.** An empty (not null) slug is treated as "no
 slug" so the Blade falls back to plain text instead of generating a
 dead-end `/counterparties/` URL — self-account rows are the only
-documented producer of an empty slug today (the resolver intentionally
-writes no counterparties row for them), but a future GC-orphan edge
-could also surface one.
+documented producer of an empty slug (the resolver intentionally writes
+no counterparties row for them).
 
 ## Guarded write actions
 
