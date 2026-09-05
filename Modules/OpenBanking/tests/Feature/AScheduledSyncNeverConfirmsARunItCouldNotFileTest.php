@@ -3,21 +3,17 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 use Modules\OpenBanking\Tests\Support\SncrStubRemoteSourceAdapter;
 
 uses(RefreshDatabase::class);
@@ -54,26 +50,12 @@ function sncrSeedConnection(User $user): int
     ]);
 }
 
-function sncrSeedCredentials(): void
+function sncrSeedCredentials(int $userId): void
 {
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        $userId,
         consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    );
 }
 
 function sncrConnectionRow(int $connectionId): stdClass
@@ -88,24 +70,19 @@ function sncrConnectionRow(int $connectionId): stdClass
 }
 
 beforeEach(function (): void {
-    $this->secretsPath = storage_path('app/secrets/open-banking.json');
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
 
     $this->seedFixtureUserAndAccount();
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     $this->connectionId = sncrSeedConnection($this->fixtureUser);
-    sncrSeedCredentials();
+    sncrSeedCredentials((int) $this->fixtureUser->id);
 
     $this->adapter = new SncrStubRemoteSourceAdapter;
     app()->instance(RemoteSourceAdapter::class, $this->adapter);
 });
 
 afterEach(function (): void {
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     CarbonImmutable::setTestNow();
 });
 

@@ -7,7 +7,6 @@ namespace Modules\OpenBanking\Internal\Actions;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCallbackException;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
@@ -25,18 +24,22 @@ final readonly class CompleteBankConsent
         private Clock $clock,
     ) {}
 
-    public function __invoke(int $userId, string $code): int
+    // The institution comes from the OAuth state the callback just consumed,
+    // never from the secrets file: which bank this consent finishes is a fact
+    // about this one round trip, and a store cannot be asked to remember it
+    // for a reader who has two banks in flight.
+    public function __invoke(int $userId, string $institutionId, string $code): int
     {
         if ($code === '') {
             throw OpenBankingCallbackException::noAuthorizationCode();
         }
 
-        $credentials = $this->secrets->load();
-        if ($credentials === null || $credentials->institutionId === null) {
+        $application = $this->secrets->load($userId);
+        if ($application === null || $application->applicationId === '') {
             throw OpenBankingCallbackException::wizardIncomplete();
         }
 
-        $session = $this->client->createSession($code);
+        $session = $this->client->createSession($application, $code);
 
         $sessionId = $this->client->sessionIdFrom($session);
         if ($sessionId === null) {
@@ -47,7 +50,6 @@ final readonly class CompleteBankConsent
         // invalidate a completed consent, and a later fetch reports it itself.
         $accountUid = $this->client->accountUidFrom($session);
 
-        $institutionId = $credentials->institutionId;
         $now = $this->clock->now();
         $nowString = $now->toDateTimeString();
         $consentExpiresAt = ConsentWindow::expiresAfter($now);
@@ -57,14 +59,7 @@ final readonly class CompleteBankConsent
         // The secrets write happens after the DB commit, so a failure here needs
         // a compensating rollback or the row points at no session material.
         try {
-            $this->secrets->save(new OpenBankingCredentials(
-                applicationId: $credentials->applicationId,
-                privateKeyPem: $credentials->privateKeyPem,
-                sessionId: $sessionId,
-                consentExpiresAt: $consentExpiresAt,
-                bankScaHost: $credentials->bankScaHost,
-                institutionId: $institutionId,
-            ));
+            $this->secrets->rememberSession($userId, $institutionId, $sessionId, $consentExpiresAt);
         } catch (SecretsWriteFailed $e) {
             $this->rollbackConnectionRow($upsert, $userId, $nowString);
 

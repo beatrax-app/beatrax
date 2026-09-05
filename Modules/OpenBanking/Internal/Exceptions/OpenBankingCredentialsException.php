@@ -27,6 +27,16 @@ final class OpenBankingCredentialsException extends RuntimeException
         );
     }
 
+    // The reader holds an application but no consent for THIS bank: the row
+    // outlived its session material, or a peer's row arrived without one.
+    public static function bankNotLinked(string $institutionId): self
+    {
+        return new self(
+            "No Enable Banking consent is stored for institution {$institutionId}.",
+            'openbanking::messages.errors.bank_not_linked',
+        );
+    }
+
     // Only the path: the decoded or raw payload would leak credential material
     // into every logging surface above this. The path is a developer's detail
     // too -- it reached the settings screen verbatim, in English.

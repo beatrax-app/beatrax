@@ -17,24 +17,15 @@ use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
-use Modules\Import\Public\Dto\ImportPreviewResult;
-use Modules\Import\Public\Dto\PreviewRowDto;
-use Modules\Import\Public\Enums\PreviewRowStatus;
-use Modules\OpenBanking\Internal\Dto\OpenBankingSyncOutcome;
-use Modules\OpenBanking\Internal\Enums\BankChoice;
-use Modules\OpenBanking\Internal\Enums\ConsentStatus;
-use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
+use Modules\OpenBanking\Internal\Dto\OpenBankingConnectionView;
 use Modules\OpenBanking\Internal\Enums\WizardStep;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\ManagesGuidedIcsImport;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Internal\Services\OpenBankingSyncRunner;
 
 final class OpenBankingSettingsPage extends Component
 {
-    use FormatsConnectionTimestamps;
     use HoldsFlashMessage;
     use ManagesGuidedIcsImport;
     use WithFileUploads;
@@ -50,35 +41,14 @@ final class OpenBankingSettingsPage extends Component
     #[Locked]
     public bool $enabled = false;
 
+    // The connection ids this reader holds session material for, in row order.
+    // One card is mounted per id, so nothing on this page has to pick which of
+    // two connected banks it speaks for.
+    /** @var list<int> */
     #[Locked]
-    public int $connectionId = 0;
+    public array $connectionIds = [];
 
-    #[Locked]
-    public string $institutionId = '';
-
-    public string $bankDisplayName = '';
-
-    #[Locked]
-    public string $consentStatus = ConsentStatus::Off->value;
-
-    // The four neighbours of the consent status, written only by
-    // refreshState() from the connection row and read by the transparency
-    // panel through a date parser. Locked for the same reason it is.
-    #[Locked]
-    public ?string $consentExpiresAtIso = null;
-
-    #[Locked]
-    public ?string $lastSuccessfulSyncAtIso = null;
-
-    #[Locked]
-    public ?string $lastAttemptAtIso = null;
-
-    #[Locked]
-    public ?string $lastAttemptStatus = null;
-
-    public string $aggregator = 'Enable Banking';
-
-    public string $whatsFetched = '';
+    public string $connectedBanks = '';
 
     public bool $showWarningModal = false;
 
@@ -97,13 +67,6 @@ final class OpenBankingSettingsPage extends Component
 
     /** @var ''|'success'|'error' */
     public string $flashTone = '';
-
-    public string $syncFlashMessage = '';
-
-    /** @var ''|'success'|'zero'|'busy'|'error' */
-    public string $syncFlashTone = '';
-
-    public ?int $syncReviewImportRunId = null;
 
     // The credentials live in one file this screen neither writes nor owns, so
     // an unreadable one is a state the page reports rather than a fault it
@@ -192,29 +155,17 @@ final class OpenBankingSettingsPage extends Component
 
         $userId = $currentUser->user()->id;
         $now = $clock->now()->toDateTimeString();
-        $pendingConnectionId = $this->pendingConnectionId;
 
-        // One transaction, because the two halves are one invariant. Standing
-        // the stand-down half alone leaves every row disabled with its consent
-        // blanked -- single-live-connection satisfied by having none live.
-        $db->connection()->transaction(function () use ($db, $userId, $pendingConnectionId, $now): void {
-            $db->connection()->table('open_banking_connections')
-                ->where('user_id', $userId)
-                ->where('id', '!=', $pendingConnectionId)
-                ->update([
-                    'enabled' => false,
-                    'consent_expires_at' => null,
-                    'updated_at' => $now,
-                ]);
-
-            $db->connection()->table('open_banking_connections')
-                ->where('id', $pendingConnectionId)
-                ->where('user_id', $userId)
-                ->update([
-                    'enabled' => true,
-                    'updated_at' => $now,
-                ]);
-        });
+        // Only the row the reader just consented to. The banks already
+        // connected keep their own consent and their own schedule: each holds
+        // its own secret, so enabling one says nothing about the others.
+        $db->connection()->table('open_banking_connections')
+            ->where('id', $this->pendingConnectionId)
+            ->where('user_id', $userId)
+            ->update([
+                'enabled' => true,
+                'updated_at' => $now,
+            ]);
 
         $session->forget('open_banking_acknowledged');
         $this->pendingConnectionId = null;
@@ -260,7 +211,7 @@ final class OpenBankingSettingsPage extends Component
         CurrentUser $currentUser,
         OpenBankingConnectionQuery $query,
     ): void {
-        $secrets->clear();
+        $secrets->clear($currentUser->user()->id);
 
         // Every row, not just the displayed one: an orphaned row from a previous
         // institution would keep syncing after the user believes they are off.
@@ -276,97 +227,11 @@ final class OpenBankingSettingsPage extends Component
         $this->refreshState($currentUser, $query);
     }
 
-    public function reconnect(): void
+    // Straight to the bank picker: the application is already registered, and
+    // the third-party warning was acknowledged when the first bank was linked.
+    public function connectAnotherBank(): void
     {
-        if ($this->connectionId <= 0 || $this->institutionId === '') {
-            return;
-        }
-
-        [$bankChoice, $otherInstitutionId] = self::wizardChoiceFor($this->institutionId);
-
-        $this->dispatch(
-            'open-banking-wizard:open',
-            startStep: WizardStep::Bank->value,
-            bankChoice: $bankChoice,
-            otherInstitutionId: $otherInstitutionId,
-        );
-    }
-
-    // A curated bank selects its own radio; anything else is the free-text
-    // path, which carries the id the reader originally typed.
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private static function wizardChoiceFor(string $institutionId): array
-    {
-        $curated = CuratedInstitution::tryFrom($institutionId);
-
-        return $curated === null
-            ? [BankChoice::Other->value, $institutionId]
-            : [$curated->choice()->value, ''];
-    }
-
-    public function syncNow(
-        OpenBankingSyncRunner $runner,
-        CurrentUser $currentUser,
-        OpenBankingConnectionQuery $query,
-    ): void {
-        $this->syncFlashMessage = '';
-        $this->syncFlashTone = '';
-        $this->syncReviewImportRunId = null;
-
-        if (! $this->enabled || ConsentStatus::from($this->consentStatus)->needsReconnect()) {
-            return;
-        }
-
-        $outcome = $runner->runPreview($this->connectionId, $currentUser->user());
-
-        if ($outcome->status === null) {
-            $this->syncFlashTone = 'busy';
-            $this->syncFlashMessage = Lang::get('openbanking::messages.sync.in_progress');
-
-            return;
-        }
-
-        $this->refreshState($currentUser, $query);
-
-        if ($outcome->failure !== null) {
-            $this->syncFlashTone = 'error';
-            $this->syncFlashMessage = $outcome->isConsentFailure()
-                ? Lang::get('openbanking::messages.sync.consent_expired')
-                : Lang::get('openbanking::messages.sync.unavailable');
-        }
-
-        $preview = $outcome->preview;
-
-        if ($outcome->failure !== null || $preview === null) {
-            return;
-        }
-
-        $this->flashPreviewOutcome($outcome, $preview);
-    }
-
-    // Ahead of every count, because a press that filed nothing is not a quiet
-    // week and the sentence for a quiet week is what it used to get. The review
-    // link is the only place each row says which stage refused it.
-    private function flashPreviewOutcome(OpenBankingSyncOutcome $outcome, ImportPreviewResult $preview): void
-    {
-        $newCount = count(array_filter(
-            $preview->rows,
-            static fn (PreviewRowDto $row): bool => $row->status === PreviewRowStatus::NewRow,
-        ));
-
-        // Truncation is said before the count too, and in the error tone: rows
-        // did arrive, but the reader is looking at part of a window and nothing
-        // has been recorded as read.
-        [$this->syncFlashTone, $this->syncFlashMessage, $linked] = match (true) {
-            $outcome->filedNothing() => ['error', Lang::get('openbanking::messages.sync.none_importable'), true],
-            $outcome->isTruncated() => ['error', Lang::get('openbanking::messages.sync.truncated'), $newCount > 0],
-            $newCount > 0 => ['success', Lang::choice('openbanking::messages.sync.new_found', $newCount), true],
-            default => ['zero', Lang::get('openbanking::messages.sync.none'), false],
-        };
-
-        $this->syncReviewImportRunId = $linked ? $preview->importRunId : null;
+        $this->dispatch('open-banking-wizard:open', startStep: WizardStep::Bank->value);
     }
 
     public function render(ViewFactory $views): View
@@ -383,38 +248,21 @@ final class OpenBankingSettingsPage extends Component
     private function refreshState(CurrentUser $currentUser, OpenBankingConnectionQuery $query): void
     {
         try {
-            $view = $query->current($currentUser->user()->id);
+            $views = $query->forUser($currentUser->user()->id);
         } catch (OpenBankingCredentialsException) {
             $this->credentialsUnreadable = true;
-            $view = null;
+            $views = [];
         }
 
-        if ($view === null) {
-            $this->enabled = false;
-            $this->connectionId = 0;
-            $this->institutionId = '';
-            $this->bankDisplayName = '';
-            $this->consentStatus = ConsentStatus::Off->value;
-            $this->consentExpiresAtIso = null;
-            $this->lastSuccessfulSyncAtIso = null;
-            $this->lastAttemptAtIso = null;
-            $this->lastAttemptStatus = null;
-            $this->whatsFetched = '';
-
-            return;
-        }
-
-        $this->enabled = $view->enabled;
-        $this->connectionId = $view->connectionId;
-        $this->institutionId = $view->institutionId;
-        $this->bankDisplayName = $view->bankDisplayName;
-        $this->consentStatus = ($view->enabled ? $view->consentStatus : ConsentStatus::Off)->value;
-        $this->consentExpiresAtIso = $view->consentExpiresAt?->toIso8601String();
-        $this->lastSuccessfulSyncAtIso = $view->lastSuccessfulSyncAt?->toIso8601String();
-        $this->lastAttemptAtIso = $view->lastAttemptAt?->toIso8601String();
-        $this->lastAttemptStatus = $view->lastAttemptStatus;
-        $this->aggregator = $view->aggregator;
-        $this->whatsFetched = $view->whatsFetched;
+        $this->connectionIds = array_map(
+            static fn (OpenBankingConnectionView $view): int => $view->connectionId,
+            $views,
+        );
+        $this->connectedBanks = implode(', ', array_map(
+            static fn (OpenBankingConnectionView $view): string => $view->bankDisplayName,
+            $views,
+        ));
+        $this->enabled = array_any($views, static fn (OpenBankingConnectionView $view): bool => $view->enabled);
     }
 
     private function hasFreshAcknowledgement(Session $session, Clock $clock): bool

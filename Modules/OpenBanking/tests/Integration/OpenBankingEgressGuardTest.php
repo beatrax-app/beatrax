@@ -14,7 +14,6 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
 function egressGuardRealSigner(): EnableBankingJwtSigner
@@ -44,59 +43,42 @@ function egressGuardValidPrivateKeyPem(): string
     return $pem;
 }
 
-// The rejection fixtures carry a deliberately malformed private-key PEM: if
+// The rejection credentials carry a deliberately malformed private-key PEM: if
 // assertAllowedUrl() stopped running before the signer, signing would throw a
 // different type first and these assertions would fail rather than pass emptily.
-function egressGuardRejectionSecrets(): OpenBankingSecretsRepository
+function egressGuardRejectionCredentials(?string $bankScaHost = null): OpenBankingCredentials
 {
-    return new class extends OpenBankingSecretsRepository
-    {
-        public function __construct() {}
-
-        public function load(): ?OpenBankingCredentials
-        {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: 'THIS IS NOT A VALID PEM BLOCK',
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: null,
-                institutionId: 'asn',
-            );
-        }
-    };
+    return new OpenBankingCredentials(
+        applicationId: 'fixture-application-id',
+        privateKeyPem: 'THIS IS NOT A VALID PEM BLOCK',
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: $bankScaHost,
+        institutionId: 'asn',
+    );
 }
 
-function egressGuardAcceptedSecrets(string $privateKeyPem): OpenBankingSecretsRepository
+function egressGuardAcceptedCredentials(string $privateKeyPem): OpenBankingCredentials
 {
-    return new class($privateKeyPem) extends OpenBankingSecretsRepository
-    {
-        public function __construct(private readonly string $privateKeyPem) {}
-
-        public function load(): ?OpenBankingCredentials
-        {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: $this->privateKeyPem,
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: 'sca.asnbank.example',
-                institutionId: 'asn',
-            );
-        }
-    };
+    return new OpenBankingCredentials(
+        applicationId: 'fixture-application-id',
+        privateKeyPem: $privateKeyPem,
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: 'sca.asnbank.example',
+        institutionId: 'asn',
+    );
 }
 
 function egressGuardRejectionClient(string $attackerBaseUri): EnableBankingHttpClient
 {
-    return new class(egressGuardRejectionSecrets(), egressGuardRealSigner(), $attackerBaseUri) extends EnableBankingHttpClient
+    return new class(egressGuardRealSigner(), $attackerBaseUri) extends EnableBankingHttpClient
     {
         public function __construct(
-            OpenBankingSecretsRepository $secrets,
             EnableBankingJwtSigner $jwtSigner,
             private readonly string $attackerBaseUri,
         ) {
-            parent::__construct($secrets, $jwtSigner);
+            parent::__construct($jwtSigner);
         }
 
         protected function baseUri(): string
@@ -108,17 +90,14 @@ function egressGuardRejectionClient(string $attackerBaseUri): EnableBankingHttpC
 
 function egressGuardAcceptedClient(string $baseUri, MockHandler $mock): EnableBankingHttpClient
 {
-    $secrets = egressGuardAcceptedSecrets(egressGuardValidPrivateKeyPem());
-
-    return new class($secrets, egressGuardRealSigner(), $baseUri, $mock) extends EnableBankingHttpClient
+    return new class(egressGuardRealSigner(), $baseUri, $mock) extends EnableBankingHttpClient
     {
         public function __construct(
-            OpenBankingSecretsRepository $secrets,
             EnableBankingJwtSigner $jwtSigner,
             private readonly string $baseUri,
             private readonly MockHandler $mock,
         ) {
-            parent::__construct($secrets, $jwtSigner);
+            parent::__construct($jwtSigner);
         }
 
         protected function baseUri(): string
@@ -134,13 +113,14 @@ function egressGuardAcceptedClient(string $baseUri, MockHandler $mock): EnableBa
 }
 
 /**
- * @return array<string, array{invoke: Closure(EnableBankingHttpClient): mixed, mockBody: array<string, mixed>}>
+ * @return array<string, array{invoke: Closure(EnableBankingHttpClient, OpenBankingCredentials): mixed, mockBody: array<string, mixed>}>
  */
 function egressGuardDocumentedCallPaths(): array
 {
     return [
         'initiateAuth' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->initiateAuth(
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->initiateAuth(
+                credentials: $credentials,
                 institutionId: 'asn',
                 country: 'NL',
                 redirectUrl: 'http://127.0.0.1:9999/oauth/callback/open-banking',
@@ -150,26 +130,27 @@ function egressGuardDocumentedCallPaths(): array
             'mockBody' => ['url' => 'https://sca.example/consent', 'authorization_id' => 'auth-fixture-id'],
         ],
         'createSession' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->createSession('fixture-code'),
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->createSession($credentials, 'fixture-code'),
             'mockBody' => ['session_id' => 'session-fixture-id', 'accounts' => [['uid' => 'account-fixture-uid']]],
         ],
         'aspsps' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->aspsps('NL'),
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->aspsps($credentials, 'NL'),
             'mockBody' => ['aspsps' => [['name' => 'ASN Bank', 'country' => 'NL']]],
         ],
         'accountDetails' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->accountDetails('fixture-uid'),
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->accountDetails($credentials, 'fixture-uid'),
             'mockBody' => ['uid' => 'fixture-uid', 'iban' => 'NL91ABNA0417164300'],
         ],
         'transactions' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->transactions(
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->transactions(
+                $credentials,
                 'fixture-uid',
                 new FetchWindow(dateFrom: CarbonImmutable::now()->subDays(30), dateTo: CarbonImmutable::now()),
             ),
             'mockBody' => EnableBankingFixtures::transactions(),
         ],
         'balances' => [
-            'invoke' => static fn (EnableBankingHttpClient $client): array => $client->balances('fixture-uid'),
+            'invoke' => static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->balances($credentials, 'fixture-uid'),
             'mockBody' => EnableBankingFixtures::balances(),
         ],
     ];
@@ -182,7 +163,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
     it("{$name}() refuses an attacker-controlled host before any bearer token is attached", function () use ($invoke): void {
         $client = egressGuardRejectionClient('https://attacker.example.com/');
 
-        expect(fn () => $invoke($client))->toThrow(
+        expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
             UnsafeOpenBankingRequestException::class,
             'non-allow-listed host: attacker.example.com',
         );
@@ -191,7 +172,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
     it("{$name}() refuses a look-alike host before any bearer token is attached", function () use ($invoke): void {
         $client = egressGuardRejectionClient('https://api.enablebanking.com.evil.example/');
 
-        expect(fn () => $invoke($client))->toThrow(
+        expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
             UnsafeOpenBankingRequestException::class,
             'non-allow-listed host: api.enablebanking.com.evil.example',
         );
@@ -200,7 +181,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
     it("{$name}() refuses a non-HTTPS scheme even against the real Enable Banking host", function () use ($invoke): void {
         $client = egressGuardRejectionClient('http://api.enablebanking.com/');
 
-        expect(fn () => $invoke($client))->toThrow(
+        expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
             UnsafeOpenBankingRequestException::class,
             'non-HTTPS scheme',
         );
@@ -212,69 +193,27 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         ]);
         $client = egressGuardAcceptedClient('https://api.enablebanking.com/', $mock);
 
-        $result = $invoke($client);
+        $result = $invoke($client, egressGuardAcceptedCredentials(egressGuardValidPrivateKeyPem()));
 
         expect($result)->toBe($mockBody);
     });
 }
 
 // The SCA host is reached by the READER's browser, through Redirector::away()
-// in the connect controller. No URL this client builds ever lands on it, so a
-// persisted SCA host must not widen the list a bearer token is checked against.
-it('refuses the persisted bank SCA host, and still refuses an attacker host beside it', function (): void {
-    $scaClient = egressGuardRejectionClientWithScaHost('https://sca.asnbank.example/');
+// in the connect controller. No URL this client builds ever lands on it, so an
+// SCA host on the credentials must not widen the list a token is checked against.
+it('refuses the bank SCA host carried on the credentials, and still refuses an attacker host beside it', function (): void {
+    $credentials = egressGuardRejectionCredentials(bankScaHost: 'sca.asnbank.example');
 
-    expect(fn () => $scaClient->aspsps('NL'))->toThrow(
+    $scaClient = egressGuardRejectionClient('https://sca.asnbank.example/');
+    expect(fn () => $scaClient->aspsps($credentials, 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: sca.asnbank.example',
     );
 
-    $attackerClient = egressGuardRejectionClientWithScaHost('https://attacker.example.com/');
-
-    expect(fn () => $attackerClient->aspsps('NL'))->toThrow(
+    $attackerClient = egressGuardRejectionClient('https://attacker.example.com/');
+    expect(fn () => $attackerClient->aspsps($credentials, 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: attacker.example.com',
     );
 });
-
-function egressGuardRejectionClientWithScaHost(string $baseUri): EnableBankingHttpClient
-{
-    return new class(egressGuardRejectionSecretsWithScaHost('sca.asnbank.example'), egressGuardRealSigner(), $baseUri) extends EnableBankingHttpClient
-    {
-        public function __construct(
-            OpenBankingSecretsRepository $secrets,
-            EnableBankingJwtSigner $jwtSigner,
-            private readonly string $baseUri,
-        ) {
-            parent::__construct($secrets, $jwtSigner);
-        }
-
-        protected function baseUri(): string
-        {
-            return $this->baseUri;
-        }
-    };
-}
-
-function egressGuardRejectionSecretsWithScaHost(string $bankScaHost): OpenBankingSecretsRepository
-{
-    return new class($bankScaHost) extends OpenBankingSecretsRepository
-    {
-        public function __construct(private readonly string $bankScaHost)
-        {
-            // No parent::__construct(): this fixture never touches the filesystem.
-        }
-
-        public function load(): ?OpenBankingCredentials
-        {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: 'THIS IS NOT A VALID PEM BLOCK',
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: $this->bankScaHost,
-                institutionId: 'asn',
-            );
-        }
-    };
-}

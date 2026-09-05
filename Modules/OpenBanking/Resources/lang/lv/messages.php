@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Ieslēgt atvērto banku saskarni',
         'toggle_connected' => 'Savienots ar :bank, izmantojot Enable Banking.',
         'toggle_off_help' => 'Pēc noklusējuma izslēgts. Nepieciešams vienreizējs apstiprinājums un vadīta iestatīšana.',
+        'connect_another' => 'Pievienot citu banku',
         // i18n-review: lv · page.credentials_unreadable — three genitives stack
         // before the noun: "atvērtās banku saskarnes piekļuves datus". Whether
         // the full term belongs here, or the screen already supplies it, is open.
@@ -168,6 +169,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking atgrieza nedrošu piekrišanas URL.',
         'no_authorization_code' => 'Enable Banking atzvana atbildē nebija autorizācijas koda.',
         'no_session_id' => 'Enable Banking neatgrieza sesijas id.',
+        'bank_not_linked' => 'Šī banka šajā ierīcē nav pievienota. Pievieno to no jauna, lai sinhronizācija atsāktos.',
         'oauth_state_mismatch' => 'Šī savienojuma saite ir beigusies vai jau izmantota. Sāciet bankas savienošanu no jauna.',
     ],
 ];

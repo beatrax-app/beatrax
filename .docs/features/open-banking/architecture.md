@@ -56,8 +56,8 @@ credential exists on disk, until the user completes the consent wizard.
 
 `OpenBankingSecretsRepository` is the one class in the module allowed to
 touch the filesystem secrets path (enforced by an arch test) — a chmod-600
-JSON file at `storage/app/secrets/open-banking.json`, never a DB column,
-since any secret in SQLite would leak into DB backups. Writes are atomic
+JSON file at `storage/app/secrets/open-banking/<userId>.json`, never a DB
+column, since any secret in SQLite would leak into DB backups. Writes are atomic
 (`.tmp` file, `fwrite`, `fflush`/`fsync`, chmod 0600, then rename) so a crash
 mid-write never leaves a half-written file; the write's brief-open umask is
 narrowed to 0077 so the temp file is born non-world-readable before the
@@ -67,12 +67,19 @@ the desktop bundle. Every failure raises a typed `SecretsWriteFailed` whose
 message never carries the JSON payload, only the path, so credential
 material can never leak into a log line.
 
-**Single-user v1 caveat**: this is one global secrets file with no per-user
-or per-connection keying — a second user's `save()` would silently overwrite
-the first user's credentials. `guardSingleUser()` logs a loud warning (not a
-hard throw, to avoid breaking DB-less unit tests) whenever a write happens
-while more than one user account exists. Per-user keying is required before
-a second user can safely use this connector.
+**Keyed on two axes.** One file per reader, and inside it one record per
+bank: the application half (`application_id`, `private_key_pem`) that the
+reader registered once, and a `connections` map from institution id to that
+bank's own `session_id`, `consent_expires_at` and `bank_sca_host`. Every
+public method on the repository takes an `int $userId` first — there is no
+address in this store that does not name a reader, so reading another
+reader's connector secret is unrepresentable rather than discouraged.
+
+The pre-keying store was one file for the whole installation holding one
+live session. A dated migration adopts it into the keyed store, deriving the
+owner from the connection row carrying the stored institution rather than
+guessing, so an installed reader crosses the upgrade still connected. See
+[`secrets-at-rest.md`](secrets-at-rest.md#the-migration-out-of-the-installation-wide-store).
 
 ## Consent / OAuth dance
 
@@ -82,9 +89,13 @@ shape, adapted for Enable Banking's two-step `/auth` → `/sessions` exchange
 `access.valid_until` requested at `/auth` time).
 
 - **CSRF state** (`OpenBankingStateRepository`) is a 64-char random hex
-  token stored in the session, bound to the initiating user id, single-use
-  (pulled on consume regardless of outcome), compared with `hash_equals`
-  (constant-time), and rejected once older than 10 minutes. Issuing and
+  token stored in the session, bound to the initiating user id **and to the
+  institution the consent was begun for**, single-use (pulled on consume
+  regardless of outcome), compared with `hash_equals` (constant-time), and
+  rejected once older than 10 minutes. `consumeState()` returns that
+  institution, which is how the callback knows which bank it is finishing —
+  a store asked to remember that for the reader could only hold one answer,
+  which is what made a second bank unusable. Issuing and
   consuming it stay in the two controllers — the state exists only to be read
   back by the callback request — while the work either end of it is
   `StartBankConsent` and `CompleteBankConsent`
@@ -97,21 +108,15 @@ shape, adapted for Enable Banking's two-step `/auth` → `/sessions` exchange
   existing row (re-link) is rolled back to its pre-update
   `consent_expires_at`/`account_uid` snapshot rather than left advertising a
   fresh consent the secrets file cannot actually back.
-- **Single-live-session model.** `OpenBankingSecretsRepository` holds
-  exactly one Enable Banking session at a time. `OpenBankingConnectionQuery`
-  resolves "the" connection only via the secrets file's currently-active
-  `institutionId` — never by picking "the most recent row" — so a stale row
-  from a previously-linked, since-superseded institution is never surfaced
-  as a second simultaneously-live connection. `OpenBankingSettingsPage::
-  enableOpenBanking()` enforces the same invariant on write: enabling one
-  connection row disables every other row for the user (and blanks their
-  consent), so a stale prior-institution row can never keep being picked up
-  by the daily-sync scheduler. `OpenBankingFetchService::buildFetch()`
-  additionally refuses to fetch when the connection row's institution
-  doesn't match the secrets file's currently active session's institution —
-  pairing one bank's session with another bank's account uid would be at
-  best a confusing misreported failure, at worst a cross-account exposure
-  risk if the aggregator's API were ever lenient about the mismatch.
+- **One session per bank, addressed by both.** `StartBankConsent` merges
+  the resolved SCA host into that institution's own record, so a consent
+  begun at a second bank and abandoned at its login leaves the first bank's
+  live session exactly where it was. `CompleteBankConsent` writes the new
+  session under the institution the OAuth state named.
+  `OpenBankingFetchService::buildFetch()` loads by `(user, institution)`,
+  so a connection can neither reach another bank's session nor overwrite
+  it — pairing one bank's session with another bank's account uid is not a
+  refusal any more, it is unaddressable.
 
 ## Settings page: server-authoritative enable gate
 
@@ -147,12 +152,17 @@ session.
   fresh-acknowledgement flag on every call and scopes every write to the
   current user's own `user_id`; `$pendingConnectionId` is attacker-settable
   as a Livewire property, so the `user_id` predicate, not the property
-  itself, is what actually prevents a cross-user enable. Its two UPDATEs —
-  stand every other row down, then stand this one up — run in **one
-  transaction**, because they are one invariant. Half of that pair leaves
-  every row disabled with its consent blanked and none enabled:
-  single-live-connection satisfied by having no live connection.
-- `disconnect()` clears the on-disk secrets entry and blanks `enabled`/
+  itself, is what actually prevents a cross-user enable. It stands up only
+  the row the reader just consented to: the banks already connected keep
+  their own consent and their own place in the schedule, because each holds
+  its own secret and enabling one says nothing about the others.
+- The screen renders one `OpenBankingConnectionCard` per connected bank —
+  its own consent pill, its own freshness line, its own **Sync now** — so
+  nothing on the page has to choose which of two connected banks it speaks
+  for. `connectAnotherBank()` opens the wizard straight at the bank picker,
+  since the application is already registered and the third-party warning
+  was answered when the first bank was linked.
+- `disconnect()` clears the reader's on-disk secrets file and blanks `enabled`/
   `consent_expires_at` on **every** row belonging to the user, not just the
   one connection currently displayed — otherwise an orphaned row from a
   different, previously-linked institution would keep being picked up by

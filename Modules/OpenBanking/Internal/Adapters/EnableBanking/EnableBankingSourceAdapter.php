@@ -45,9 +45,9 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
     /**
      * @return Generator<int, SourceTransactionDto, mixed, FetchWalk>
      */
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
-        $ownIban = $this->resolveOwnIban($institutionId);
+        $ownIban = $this->resolveOwnIban($credentials, $accountUid);
 
         $rowIndex = 0;
         $scanned = 0;
@@ -57,7 +57,7 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
         $seenKeys = [];
 
         while (true) {
-            $response = $this->client->transactions($institutionId, $window, $continuationKey);
+            $response = $this->client->transactions($credentials, $accountUid, $window, $continuationKey);
             $pages++;
             $rows = EnableBankingTransactionData::collectionFromArray($this->transactionRows($response));
 
@@ -113,9 +113,9 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
         };
     }
 
-    private function resolveOwnIban(string $institutionId): string
+    private function resolveOwnIban(OpenBankingCredentials $credentials, string $accountUid): string
     {
-        $details = $this->client->accountDetails($institutionId);
+        $details = $this->client->accountDetails($credentials, $accountUid);
 
         $accountId = $details['account_id'] ?? null;
         if (is_array($accountId)) {

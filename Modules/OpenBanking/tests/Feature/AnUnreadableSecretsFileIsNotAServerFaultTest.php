@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 
 function unreadableSecretsReader(): User
 {
@@ -15,39 +17,52 @@ function unreadableSecretsReader(): User
     ]);
 }
 
-function unreadableSecretsPath(): string
+// The store is keyed by reader, so the file a half-written write leaves behind
+// is this reader's own — not one global file the whole installation shares.
+function unreadableSecretsGarbage(User $user): string
 {
-    return UserDataPathService::appPath('secrets/open-banking.json');
+    $path = OpenBankingSecretsFixture::path((int) $user->id);
+    @mkdir(dirname($path), 0700, true);
+    file_put_contents($path, 'not json at all');
+
+    return $path;
 }
 
-afterEach(function (): void {
-    $path = unreadableSecretsPath();
-    if (is_file($path)) {
-        unlink($path);
-    }
+beforeEach(function (): void {
+    $this->reader = unreadableSecretsReader();
 });
 
-// The credentials live in one file this screen neither writes nor owns, and a
+afterEach(function (): void {
+    OpenBankingSecretsFixture::forget((int) $this->reader->id);
+});
+
+// The credentials live in a file this screen neither writes nor owns, and a
 // half-written or hand-edited one is an ordinary way for it to become
 // unreadable. The settings page raised through it and answered 500, so the one
 // screen that could have said which file to repair was the screen that crashed.
 it('says the credentials cannot be read rather than answering a server fault', function (): void {
-    $user = unreadableSecretsReader();
-    $path = unreadableSecretsPath();
-    @mkdir(dirname($path), 0700, true);
-    file_put_contents($path, 'not json at all');
+    unreadableSecretsGarbage($this->reader);
 
-    $this->actingAs($user)
+    $this->actingAs($this->reader)
         ->get('/settings/open-banking')
         ->assertOk()
         ->assertSee(Lang::get('openbanking::messages.page.credentials_unreadable'))
         ->assertSee(Lang::get('openbanking::messages.page.credentials_unreadable_next'));
 });
 
-it('says nothing about the credentials when there is no file to read', function (): void {
-    $user = unreadableSecretsReader();
+it('reports it on the page state rather than only in the rendered copy', function (): void {
+    unreadableSecretsGarbage($this->reader);
 
-    $this->actingAs($user)
+    $this->actingAs($this->reader);
+
+    Livewire::test(OpenBankingSettingsPage::class)
+        ->assertSet('credentialsUnreadable', true)
+        ->assertSet('connectionIds', [])
+        ->assertSet('enabled', false);
+});
+
+it('says nothing about the credentials when there is no file to read', function (): void {
+    $this->actingAs($this->reader)
         ->get('/settings/open-banking')
         ->assertOk()
         ->assertDontSee(Lang::get('openbanking::messages.page.credentials_unreadable'));
@@ -57,12 +72,9 @@ it('says nothing about the credentials when there is no file to read', function 
 // the parser's own sentence, in English, naming the secrets file by absolute
 // path -- onto the settings screen, in an app that ships twenty-six languages.
 it('flashes a translated line rather than the parser sentence and the file path', function (): void {
-    $user = unreadableSecretsReader();
-    $path = unreadableSecretsPath();
-    @mkdir(dirname($path), 0700, true);
-    file_put_contents($path, 'not json at all');
+    $path = unreadableSecretsGarbage($this->reader);
 
-    $this->actingAs($user)
+    $this->actingAs($this->reader)
         ->get('/oauth/connect/open-banking?institution_id=ASN_NL')
         ->assertRedirect(route('settings.open-banking'))
         ->assertSessionHas(
@@ -71,4 +83,20 @@ it('flashes a translated line rather than the parser sentence and the file path'
         );
 
     expect(session('open_banking_failed'))->not->toContain(dirname($path));
+});
+
+// One reader's damaged file is not another's problem: the path names an owner,
+// so a second reader's screen has nothing to report and nothing to refuse.
+it('leaves a second reader unaffected by the first reader\'s damaged file', function (): void {
+    unreadableSecretsGarbage($this->reader);
+    $other = unreadableSecretsReader();
+
+    try {
+        $this->actingAs($other)
+            ->get('/settings/open-banking')
+            ->assertOk()
+            ->assertDontSee(Lang::get('openbanking::messages.page.credentials_unreadable'));
+    } finally {
+        OpenBankingSecretsFixture::forget((int) $other->id);
+    }
 });

@@ -10,9 +10,9 @@ use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 class EnableBankingHttpClient
 {
@@ -20,10 +20,10 @@ class EnableBankingHttpClient
 
     private const string EB_API_HOST = 'api.enablebanking.com';
 
-    public function __construct(
-        private readonly OpenBankingSecretsRepository $secrets,
-        private readonly EnableBankingJwtSigner $jwtSigner,
-    ) {}
+    // Holds no credential of its own: every request is signed with the one
+    // its caller loaded for a named reader and a named bank, so this client
+    // cannot reach for a session that belongs to somebody else.
+    public function __construct(private readonly EnableBankingJwtSigner $jwtSigner) {}
 
     // Not named auth(): BoundaryArchTest's Auth-facade guard bans the literal
     // `auth(` and would flag this method and its call site.
@@ -31,6 +31,7 @@ class EnableBankingHttpClient
      * @return array<string, mixed>
      */
     public function initiateAuth(
+        OpenBankingCredentials $credentials,
         string $institutionId,
         string $country,
         string $redirectUrl,
@@ -49,15 +50,15 @@ class EnableBankingHttpClient
             'psu_type' => 'personal',
         ];
 
-        return $this->postJson('auth', $body);
+        return $this->postJson($credentials, 'auth', $body);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function createSession(string $code): array
+    public function createSession(OpenBankingCredentials $credentials, string $code): array
     {
-        return $this->postJson('sessions', ['code' => $code]);
+        return $this->postJson($credentials, 'sessions', ['code' => $code]);
     }
 
     // Callers index the response through this: a guard test bans naming a raw
@@ -97,9 +98,9 @@ class EnableBankingHttpClient
     /**
      * @return array<string, mixed>
      */
-    public function aspsps(string $country): array
+    public function aspsps(OpenBankingCredentials $credentials, string $country): array
     {
-        return $this->getJson('aspsps', ['country' => $country]);
+        return $this->getJson($credentials, 'aspsps', ['country' => $country]);
     }
 
     // The extra round-trip resolves the own-account IBAN, which the /sessions
@@ -107,16 +108,20 @@ class EnableBankingHttpClient
     /**
      * @return array<string, mixed>
      */
-    public function accountDetails(string $uid): array
+    public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
     {
-        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid));
+        return $this->getJson($credentials, self::ACCOUNTS_PATH.rawurlencode($uid));
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-    {
+    public function transactions(
+        OpenBankingCredentials $credentials,
+        string $uid,
+        FetchWindow $window,
+        ?string $continuationKey = null,
+    ): array {
         $query = [
             'date_from' => $window->dateFrom->toDateString(),
             'date_to' => $window->dateTo->toDateString(),
@@ -125,15 +130,15 @@ class EnableBankingHttpClient
             $query['continuation_key'] = $continuationKey;
         }
 
-        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/transactions', $query);
+        return $this->getJson($credentials, self::ACCOUNTS_PATH.rawurlencode($uid).'/transactions', $query);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function balances(string $uid): array
+    public function balances(OpenBankingCredentials $credentials, string $uid): array
     {
-        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
+        return $this->getJson($credentials, self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
     }
 
     protected function baseUri(): string
@@ -156,9 +161,8 @@ class EnableBankingHttpClient
      * @param  array<string, mixed>  $body
      * @return array<string, mixed>
      */
-    private function postJson(string $path, array $body): array
+    private function postJson(OpenBankingCredentials $credentials, string $path, array $body): array
     {
-        $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
         $this->assertAllowedUrl($url);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
@@ -185,9 +189,8 @@ class EnableBankingHttpClient
      * @param  array<string, string>  $query
      * @return array<string, mixed>
      */
-    private function getJson(string $path, array $query = []): array
+    private function getJson(OpenBankingCredentials $credentials, string $path, array $query = []): array
     {
-        $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
         $this->assertAllowedUrl($url);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
