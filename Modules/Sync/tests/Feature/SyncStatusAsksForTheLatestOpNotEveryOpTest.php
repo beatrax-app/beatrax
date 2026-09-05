@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
@@ -107,7 +108,7 @@ it('asks the database for the newest local op rather than reading all of them', 
 
     // 20,000 rows cost roughly 12 MB as plucked strings before a single
     // Carbon is built from them; an aggregate costs nothing that scales.
-    expect($status)->toBe('syncing')
+    expect($status)->toBe(SyncOverallStatus::Behind)
         ->and(memory_get_usage(true) - $before)->toBeLessThan(6 * 1024 * 1024)
         ->and($opLogQueries)->toHaveCount(1)
         ->and($opLogQueries[0])->toContain('max("recorded_at")');
@@ -124,6 +125,6 @@ it('still compares the two timestamp formats as instants rather than as strings'
     sloClosedSession($userId, '2026-08-19T00:36:58+02:00');
     sloOps($userId, 1, '2026-08-18 20:00:00');
 
-    expect(app(SyncStatusService::class)->overallStatus($userId))->toBe('all_synced')
+    expect(app(SyncStatusService::class)->overallStatus($userId))->toBe(SyncOverallStatus::AllSynced)
         ->and($db->connection()->table('op_log_entries')->count())->toBe(1);
 });

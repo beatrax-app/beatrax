@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
@@ -79,7 +80,7 @@ it('reports up to date when nothing has changed since the last session', functio
     $user = sspUser();
     sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
 
-    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe('all_synced');
+    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });
 
 it('does not report up to date while this device holds a change made since', function (): void {
@@ -89,7 +90,7 @@ it('does not report up to date while this device holds a change made since', fun
     sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
     sspOp($db, (int) $user->id, SSP_SELF, '2026-08-19 00:42:56');
 
-    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe('syncing');
+    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::Behind);
 });
 
 it('ignores ops that arrived FROM a peer — those are not ours to deliver', function (): void {
@@ -99,7 +100,7 @@ it('ignores ops that arrived FROM a peer — those are not ours to deliver', fun
     sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
     sspOp($db, (int) $user->id, 'peer-device-id', '2026-08-19 00:42:56');
 
-    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe('all_synced');
+    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });
 
 it('ignores our own ops that predate the last session, since they went with it', function (): void {
@@ -109,5 +110,5 @@ it('ignores our own ops that predate the last session, since they went with it',
     sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
     sspOp($db, (int) $user->id, SSP_SELF, '2026-08-19 00:10:00');
 
-    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe('all_synced');
+    expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });

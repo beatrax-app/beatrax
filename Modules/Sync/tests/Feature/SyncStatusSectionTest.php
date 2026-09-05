@@ -119,6 +119,9 @@ it('shows error status and error label when a session is failed with an error me
     $component->assertSee('Handshake / verify failed');
 });
 
+// An unreachable relay is the ordinary case and reads as offline. The row's own
+// label already said "Relay unreachable" while the banner over it said an error
+// needed attention, which is two answers to one question.
 it('surfaces the relay unreachable error label when the error mentions relay', function (): void {
     $user = statusUser('status-relay-error');
     $this->actingAs($user);
@@ -132,7 +135,7 @@ it('surfaces the relay unreachable error label when the error mentions relay', f
     ]);
 
     $component = Livewire::test(SyncStatusSection::class)
-        ->assertSet('overallStatus', 'error');
+        ->assertSet('overallStatus', 'offline');
 
     $component->assertSee('Relay unreachable');
 });
@@ -150,7 +153,7 @@ it('surfaces the cant reach peer error label when error mentions connection time
     ]);
 
     $component = Livewire::test(SyncStatusSection::class)
-        ->assertSet('overallStatus', 'error');
+        ->assertSet('overallStatus', 'offline');
 
     $component->assertSee("Can't reach peer");
 });

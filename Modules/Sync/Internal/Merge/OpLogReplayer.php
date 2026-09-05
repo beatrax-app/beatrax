@@ -139,7 +139,10 @@ final readonly class OpLogReplayer
             new SplitOverfillGate($db),
             $this->resolveFromContainer(LoggerInterface::class),
         );
-        $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
+        $this->searchRefresher = new SearchIndexRefresher(
+            $searchWriter,
+            $this->resolveFromContainer(LoggerInterface::class),
+        );
         $this->remoteClock = new RemoteClockAdvance($db);
         $this->rowHistory = new RowHistoryRehydration(new PersistedOpLogEntries($db), $this->verifier);
     }
@@ -317,6 +320,6 @@ final readonly class OpLogReplayer
         );
 
         $this->pairCascade->apply($pairCascades, $userId, $now, $documents);
-        $this->searchRefresher->refresh($documents, $userId, $now);
+        $this->searchRefresher->refresh($documents, $userId);
     }
 }

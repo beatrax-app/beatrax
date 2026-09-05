@@ -11,6 +11,7 @@ return [
     'error' => 'Sync error on one or more devices',
     'syncing' => 'Syncing…',
     'offline' => 'Devices offline',
+    'behind' => 'Changes not yet sent',
     'all_synced' => 'All devices up to date',
     'synced' => 'synced',
 

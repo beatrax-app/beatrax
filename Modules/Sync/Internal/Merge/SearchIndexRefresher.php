@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Merge;
 
-use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
-use Modules\Sync\Internal\OpLog\QuarantineReason;
+use Psr\Log\LoggerInterface;
 
 // Brings the full-text index back in line with the rows a replay changed —
 // which rows those are, and which document each belongs to, is SearchDocumentRows'
@@ -14,14 +14,20 @@ use Modules\Sync\Internal\OpLog\QuarantineReason;
 // write, a half-applied replay does not.
 final readonly class SearchIndexRefresher
 {
-    private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';
+    // The op was applied and the row is here; only the derived index missed it.
+    // This used to be filed as a quarantined operation under a device id no
+    // registry holds, which named a refusal that never happened.
+    /**
+     * @link ../../../../.docs/features/sync/an-index-that-missed-a-row-refused-nothing.md
+     */
+    private const string STALE = 'SearchIndexRefresher: the search index could not be brought in line with a row the replay applied; the row is stored but will not be found by search until search:reindex runs.';
 
     public function __construct(
-        private DatabaseManager $db,
         private ?SearchIndexWriterContract $searchWriter = null,
+        private ?LoggerInterface $log = null,
     ) {}
 
-    public function refresh(SearchDocumentRows $documents, int $userId, string $now): void
+    public function refresh(SearchDocumentRows $documents, int $userId): void
     {
         if ($this->searchWriter === null) {
             return;
@@ -30,8 +36,8 @@ final readonly class SearchIndexRefresher
         foreach ($documents->touched() as $txId) {
             try {
                 $this->searchWriter->upsertForTransaction($txId, $userId);
-            } catch (\Throwable) {
-                $this->quarantineSearchError($txId, 'upsert', $userId, $now);
+            } catch (\Throwable $e) {
+                $this->reportStaleIndex($txId, 'upsert', $userId, $e);
             }
         }
 
@@ -40,8 +46,8 @@ final readonly class SearchIndexRefresher
         foreach ($documents->tombstoned() as $txId) {
             try {
                 $this->searchWriter->deleteForTransaction($txId, $userId);
-            } catch (\Throwable) {
-                $this->quarantineSearchError($txId, 'delete', $userId, $now);
+            } catch (\Throwable $e) {
+                $this->reportStaleIndex($txId, 'delete', $userId, $e);
             }
         }
     }
@@ -49,23 +55,21 @@ final readonly class SearchIndexRefresher
     /**
      * @param  string  $operation  'upsert'|'delete'
      */
-    private function quarantineSearchError(int $transactionId, string $operation, int $userId, string $now): void
+    private function reportStaleIndex(int $transactionId, string $operation, int $userId, \Throwable $e): void
     {
         try {
-            $this->db->connection()->table('op_log_quarantine')->insert([
-                'user_id' => $userId,
-                'table_name' => 'transactions',
+            $this->log?->warning(self::STALE, [
+                'table' => 'transactions',
                 'pk' => (string) $transactionId,
-                'device_id' => self::SYSTEM_FTS_DEVICE_ID,
-                'reason' => QuarantineReason::StrategyError->value,
-                'hlc_l' => 0,
-                'hlc_c' => 0,
-                'raw_value' => json_encode(['fts_operation' => $operation], JSON_THROW_ON_ERROR),
-                'created_at' => $now,
+                'ftsOperation' => $operation,
+                'userId' => $userId,
+                'recoverWith' => 'search:reindex',
+                ...SafeExceptionContext::describe($e),
             ]);
         } catch (\Throwable) {
-            // Never propagate — an FTS-freshness quarantine failure must
-            // not break replay.
+            // The report is the second channel and a full disk is where it
+            // fails; taking replay down with it would turn a row missing from
+            // search into a merge that stopped.
         }
     }
 }

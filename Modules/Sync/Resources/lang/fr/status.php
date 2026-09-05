@@ -11,6 +11,7 @@ return [
     'error' => 'Erreur de synchronisation sur un ou plusieurs appareils',
     'syncing' => 'Synchronisation…',
     'offline' => 'Appareils hors ligne',
+    'behind' => 'Modifications pas encore envoyées',
     'all_synced' => 'Tous les appareils sont à jour',
     'synced' => 'synchronisé',
 

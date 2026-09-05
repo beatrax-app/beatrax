@@ -7,7 +7,8 @@
       - Overall "all devices up to date · synced Nm ago" summary line.
       - Per-peer list: online/offline dot + last-seen relative time.
       - Explicit error states: Relay unreachable / Can't reach peer / Handshake-verify failed.
-      - Offline state when peers exist but none are active.
+      - Offline state when a peer cannot be reached.
+      - Behind state when this device holds changes no session has carried.
 
     Aesthetic: calm slate per sketch-findings-beatrax — emerald-600 = OK,
     amber-700 = warn, rose-700 = fail, slate-500 = muted / offline.
@@ -16,18 +17,22 @@
 
 @use('Illuminate\Support\Js')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Sync\Public\Enums\SyncOverallStatus')
 <div class="space-y-4" data-testid="sync-status-section">
 
-    {{-- ===== Overall status line ===== --}}
-    @if ($overallStatus === 'unknown')
+    {{-- ===== Overall status line =====
+         One branch per case and no @else: a case that fell through used to be
+         drawn as "All devices up to date", so the state the vocabulary could
+         not name was reported under the one sentence it must never borrow. --}}
+    @if ($overall === SyncOverallStatus::Unknown)
         {{-- No sync_sessions rows yet. Not the same as having no device: the
              list below this line may well name two paired ones. --}}
         <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400" data-testid="sync-status-overall">
             <span class="inline-block h-2 w-2 rounded-full bg-slate-500 dark:bg-slate-400" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.not_synced_yet') }}
+            {{ Lang::get($overall->labelKey()) }}
         </div>
 
-    @elseif ($overallStatus === 'error')
+    @elseif ($overall === SyncOverallStatus::Error)
         <x-core::alert
             tone="danger"
             class="flex items-center gap-2"
@@ -35,38 +40,53 @@
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-600 dark:bg-rose-500" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.error') }}
+            {{ Lang::get($overall->labelKey()) }}
         </x-core::alert>
 
-    @elseif ($overallStatus === 'syncing')
+    @elseif ($overall === SyncOverallStatus::Syncing)
         <div
             class="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700
                    dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.syncing') }}
+            {{ Lang::get($overall->labelKey()) }}
         </div>
 
-    @elseif ($overallStatus === 'offline')
+    @elseif ($overall === SyncOverallStatus::Offline)
         <x-core::alert
             tone="warning"
             class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.offline') }}
+            {{ Lang::get($overall->labelKey()) }}
         </x-core::alert>
 
-    @else
-        {{-- all_synced --}}
+    @elseif ($overall === SyncOverallStatus::Behind)
+        {{-- Info, not warning: nothing has failed and no peer is unreachable.
+             What is true is that this device holds changes no peer has, which
+             is the one thing "all devices up to date" must not be said over. --}}
+        <x-core::alert
+            tone="info"
+            class="flex items-center gap-2"
+            data-testid="sync-status-overall"
+        >
+            <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true"></span>
+            {{ Lang::get($overall->labelKey()) }}
+            @if ($lastSyncedHuman !== null)
+                <span>&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
+            @endif
+        </x-core::alert>
+
+    @elseif ($overall === SyncOverallStatus::AllSynced)
         <x-core::alert
             tone="positive"
             class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true"></span>
-            {{ Lang::get('sync::status.all_synced') }}
+            {{ Lang::get($overall->labelKey()) }}
             @if ($lastSyncedHuman !== null)
                 <span class="text-emerald-700 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif

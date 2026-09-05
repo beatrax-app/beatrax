@@ -478,7 +478,11 @@ it('refreshes the search index for edited rows and drops it for deleted ones', f
         ->and($writer->upserted)->toContain($inId);
 });
 
-it('quarantines a search-index failure instead of failing the merge', function (): void {
+// The merge standing is the half that was always right. The other half filed the
+// failure as a quarantined operation under a device id no registry holds, naming
+// a refusal that never happened: the op was applied and the row is right there,
+// two assertions above. Nothing is refused here, so nothing is quarantined.
+it('leaves the merge standing on a search-index failure, and quarantines nothing', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $device = olrDevice($db, 'olr-search-throws');
@@ -515,5 +519,5 @@ it('quarantines a search-index failure instead of failing the merge', function (
         ->pluck('reason')
         ->all();
 
-    expect($reasons)->not->toBeEmpty();
+    expect($reasons)->toBe([], 'an applied op that only missed the derived index refused nothing');
 });

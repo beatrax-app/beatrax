@@ -11,6 +11,7 @@ return [
     'error' => 'Błąd synchronizacji na co najmniej jednym urządzeniu',
     'syncing' => 'Synchronizowanie…',
     'offline' => 'Urządzenia offline',
+    'behind' => 'Zmiany jeszcze nie wysłane',
     'all_synced' => 'Wszystkie urządzenia są aktualne',
     'synced' => 'zsynchronizowano',
 

@@ -11,6 +11,7 @@ return [
     'error' => 'Sync-Fehler auf einem oder mehreren Geräten',
     'syncing' => 'Wird synchronisiert…',
     'offline' => 'Geräte offline',
+    'behind' => 'Änderungen noch nicht gesendet',
     'all_synced' => 'Alle Geräte aktuell',
     'synced' => 'synchronisiert',
 
