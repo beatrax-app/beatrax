@@ -6,10 +6,10 @@ namespace Modules\DevMode\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Exactly one of `handlerEvent` or `url` is non-null — the palette dispatches
-// the one it finds. `id` doubles as the per-user Recent-shortcuts cache key.
-// The two visible strings ride as KEYS: the registry is a container singleton,
-// so a resolved word would be whichever language first built it.
+// A row is a destination and nothing else: two rows once named a browser event
+// instead, nothing in the tree listened, and the pick was filed under Recent
+// while nothing ran. `id` doubles as the Recent cache key. The visible strings
+// ride as KEYS — the singleton would otherwise freeze the first reader's words.
 final class AppAction extends Data
 {
     /**
@@ -20,8 +20,7 @@ final class AppAction extends Data
         public readonly string $labelKey,
         public readonly string $hintKey,
         public readonly string $icon,
-        public readonly ?string $handlerEvent,
-        public readonly ?string $url,
+        public readonly string $url,
         public readonly array $keywords = [],
     ) {}
 }

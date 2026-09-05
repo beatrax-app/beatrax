@@ -88,8 +88,16 @@ Modules/Receipts/
     ?string $sourceFilename = null): MatchOutcomeDto` — sole
     entry point.
   - `ApplyReceiptConflictResolution::__invoke(User $user,
-    ReceiptConflictChoice $choice): int` — returns how many
-    conflicts the chosen policy resolved. The parameter is the
+    ReceiptConflictChoice $choice, int $conflictId): int` — one
+    conflict per call, returning 1 where the reader owned a pending row
+    by that id and 0 where they did not. A locked transaction still
+    answers 1: the ledger write is refused and logged, and the pending
+    row clears regardless, because a conflict no policy can resolve
+    would otherwise raise the toast on every render with nothing the
+    reader could press to be rid of it. The toast names one conflict and
+    quotes its two values, so a reader consenting to that change must
+    not get every other outstanding change with it.
+    The choice parameter is the
     enum, not its value: every producer already held one, and the
     string signature made each of them unwrap it so the receiver
     could re-parse it and throw on a value none of them could have

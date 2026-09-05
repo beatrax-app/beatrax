@@ -2,8 +2,8 @@
 @use('Modules\Search\Public\Enums\SearchEntityKind')
 @php
     /**
-     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}> $registry
-     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}> $recent
+     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string, keywords: list<string>}> $registry
+     * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, name: ?string, tier: ?string}> $recent
      * @var bool $searchAvailable  True when Search module is wired (SearchResultsProvider bound).
      *
      * Global command-palette modal mounted in both base layouts

@@ -19,7 +19,7 @@ declare(strict_types=1);
  *      Electron `Tray` with the bundled `tray-icon.png` flagged as a
  *      template image so macOS auto-tints it for the active menu bar
  *      appearance. The Tray has a three-row context menu (Open Beatrax /
- *      Scan email now / Quit) whose handlers either:
+ *      Email inboxes… / Quit) whose handlers either:
  *        - show + focus the existing main BrowserWindow if it lives in
  *          `state.windows.main`, OR
  *        - if the main window has been closed via the X button (its
@@ -262,10 +262,15 @@ function findExpressionEnd(string $source, int $start): ?int
  *     flagged as a template image so macOS auto-tints it; the 2x sibling
  *     (`tray-icon@2x.png`) is loaded by Electron automatically when present.
  *
- *   - Builds the verbatim three-row context menu (UI-SPEC labels:
- *     "Open Beatrax", "Scan email now", "Quit"). The first two items show
- *     or re-open the main window and (for "Scan email now") navigate it to
- *     the inboxes page. "Quit" calls `app.quit()`.
+ *   - Builds the verbatim three-row context menu: "Open Beatrax",
+ *     "Email inboxes…", "Quit". Both of the first two only show or
+ *     re-open the main window, the second pointing it at the inboxes
+ *     page, so neither label may name an action past that — this row
+ *     said "Scan email now" and started no scan. "Quit" calls
+ *     `app.quit()`. The wording tracks the File menu's
+ *     `desktop::native.menu.file_scan_email`, which reaches the same
+ *     page; the main process cannot resolve a translation at click
+ *     time, so the tray restates the English and stays English.
  *
  *   - Wires a tray click handler that mirrors "Open Beatrax" so a single
  *     left-click on the icon also brings the main window back.
@@ -395,7 +400,7 @@ function traySetupBlock(): string
                     click: () => { bringMainWindowToFront(); },
                 },
                 {
-                    label: 'Scan email now',
+                    label: 'Email inboxes…',
                     click: () => { bringMainWindowToFront({ inboxes: true }); },
                 },
                 { type: 'separator' },
