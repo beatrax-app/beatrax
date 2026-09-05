@@ -23,8 +23,12 @@ FROM dunglas/frankenphp:php8.5 AS runtime
 # install-php-extensions ships in the FrankenPHP image.
 RUN install-php-extensions \
         intl pcntl posix pdo_sqlite zip bcmath @composer
+# curl backs the compose healthcheck. sqlite3 is needed by `migrate` itself: a
+# first run against an empty database loads database/schema/sqlite-schema.sql,
+# and Laravel loads a file-backed dump by shelling out to that binary rather
+# than through PDO, so without it the very first boot cannot migrate.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip poppler-utils curl \
+    && apt-get install -y --no-install-recommends git unzip poppler-utils curl sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

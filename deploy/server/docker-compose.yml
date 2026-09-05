@@ -31,13 +31,20 @@ x-app: &app
 
 services:
   # One-shot, and everything else waits on it. Previously the workers started
-  # alongside the app and crash-looped on `relation "cache" does not exist`
-  # until a human ran step 4, because the documented order brings the stack up
-  # before migrating.
+  # alongside the app and crash-looped on a missing cache table until a human
+  # ran step 4, because the documented order brings the stack up before
+  # migrating.
+  #
+  # Not `--isolated`. That takes its lock through the cache store, the cache
+  # store here is the database, and the `cache_locks` table it locks in is one
+  # this very command creates. On a first boot against an empty volume it died
+  # on `no such table: cache_locks` and took the whole stack down with it,
+  # because the other three services wait on this one completing. Being the
+  # only migrator is what `depends_on` already guarantees.
   migrate:
     <<: *app
     restart: "no"
-    command: php artisan migrate --force --isolated
+    command: php artisan migrate --force
 
   app:
     <<: *app

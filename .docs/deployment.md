@@ -30,6 +30,10 @@ writes `.env`, configures the database, and runs the install.
 - `poppler-utils` (`pdftotext`) is **optional**. It is preferred for PDF
   statement ingestion where it is installed; without it the app falls back
   to a pure-PHP reader, which is what every phone build uses.
+- The **`sqlite3` command-line binary** is *not* optional. A first `migrate`
+  against an empty database loads `database/schema/sqlite-schema.sql`, and
+  Laravel loads a file-backed dump by shelling out to `sqlite3` rather than
+  through PDO — so without it the very first migration cannot run.
 - Composer 2, and Node 22+ only if you build front-end assets yourself.
 - **SQLite.** It is the only supported database, in every deployment shape.
 
