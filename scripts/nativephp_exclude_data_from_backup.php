@@ -301,10 +301,14 @@ $patches = [
     'preparePhpEnvironment' => [$storeSentinel, $storeAnchor, $storePatched],
 ];
 
+$applied = 0;
+
 foreach ($patches as $where => [$sentinel, $anchor, $patched]) {
     if (str_contains($swift, $sentinel)) {
         continue;
     }
+
+    $applied++;
 
     if (! str_contains($swift, $anchor)) {
         fwrite(STDERR, "nativephp_exclude_data_from_backup: {$where} anchor not found in {$app}.\n");
@@ -333,6 +337,9 @@ $freshNote = <<<SWIFT
             // store PHP writes is under Documents; prepareDurableStore() has it.
 SWIFT;
 
+$carriedTheSilentForm = str_contains($original, 'values.isExcludedFromBackup = true')
+    && ! str_contains($original, '.isExcludedFromBackupKey');
+
 $swift = str_replace($staleNote, $freshNote, $swift);
 
 if ($swift !== $original && file_put_contents($app, $swift) === false) {
@@ -354,6 +361,21 @@ foreach ([$supportSentinel, $storeSentinel, $derivesFromBundleParent, '"'.$direc
 
     fwrite(STDERR, "nativephp_exclude_data_from_backup: {$app} does not carry '{$needle}' after patching.\n");
     exit(1);
+}
+
+// Symmetry with the Android half, and not cosmetic: without it a build log
+// reads the same whether the iOS patch ran or was skipped, which is the
+// distinction this script exists to make legible.
+if ($applied === 0 && ! $carriedTheSilentForm) {
+    fwrite(STDOUT, "nativephp_exclude_data_from_backup: iOS already patched.\n");
+    exit(0);
+}
+
+// An upgrade is the case an operator most needs in the build log: it says an
+// earlier build shipped the form that set the flag and never read it back, so
+// what that build actually excluded was never established.
+if ($carriedTheSilentForm) {
+    fwrite(STDOUT, "nativephp_exclude_data_from_backup: upgraded a shell that set the flag without reading it back.\n");
 }
 
 fwrite(STDOUT, "nativephp_exclude_data_from_backup: iOS Documents/{$directory} is out of iCloud backup.\n");
