@@ -23,6 +23,7 @@ use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\GdkWrapOutcome;
 use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
@@ -501,6 +502,57 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
 
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
     expect($loaded->keyFor($selfMinted->epochId))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
+});
+
+it('warns when a wrap redelivers an epoch key the keyring already holds', function (): void {
+    $user = deliveryUser('delivery-duplicate-epoch');
+
+    // A reused rowid can inherit an earlier test's keyring file; start empty.
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
+    $wrap = $rotation->buildGdkEpochWrap(9_001, $rawGdkKey, new GdkWrapRecipient($deviceB->deviceId, $recipientPub), $senderId, $senderSecretHex);
+    $json = json_encode($wrap, JSON_THROW_ON_ERROR);
+
+    /** @var MockInterface $logSpy */
+    $logSpy = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $logSpy);
+    app()->forgetInstance(GdkEpochControlHandler::class);
+
+    /** @var GdkEpochControlHandler $handler */
+    $handler = app(GdkEpochControlHandler::class);
+
+    // Pushed on connect, then again out of the drained mailbox — the second
+    // delivery is the one that appends nothing and has to say so.
+    expect($handler->handle($json, (int) $user->id, $session))->toBe(GdkWrapOutcome::Applied)
+        ->and($handler->handle($json, (int) $user->id, $session))->toBe(GdkWrapOutcome::Applied);
+
+    $logSpy->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $ctx): bool => str_starts_with($message, 'GdkEpochControlHandler:')
+            && str_contains($message, 'already held under this id')
+            && ! str_contains($message, sodium_bin2hex($rawGdkKey))
+            && $ctx === ['epoch_id' => 9_001, 'recipient_device_id' => $deviceB->deviceId])
+        ->once();
+
+    expect($keyring->loadKeyring((int) $user->id, $session)->keyFor(9_001))
+        ->toBe(sodium_bin2hex($rawGdkKey), 'a duplicate must leave the key already held exactly as it was');
 });
 
 it('keeps a colliding local GDK epoch that local rows are already encrypted under', function (): void {

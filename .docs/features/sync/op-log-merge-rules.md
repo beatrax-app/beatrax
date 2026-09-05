@@ -179,12 +179,16 @@ JSON-encodes any non-scalar, non-null result before it reaches a column.
 
 1. Is the table registered in the merge rules? (`unknown_table`)
 2. Is this a system op? (See [System ops](#system-ops-bypass-the-signature-gate).)
-3. Is there a key for the device id — in the confirmed map, or failing that in
-   `DeviceRegistryService::retainedDeviceKeys()`, which also covers a device the user has
-   REMOVED? If not, is this exact entry (identity **and** signature) already in
-   `op_log_entries`? Only then is it `missing_device_key`.
-4. Does the Ed25519 signature verify? (`forged_signature`)
-5. Is the field a real column of that table? (`unknown_column`)
+3. Is there a key for the device id in the **confirmed** map? If so, step 4 decides it.
+4. Otherwise: is this exact entry (identity **and** signature) already in `op_log_entries`?
+   Only an entry the durable log already holds may be verified against the key
+   `DeviceRegistryService::retainedDeviceKeys()` keeps for a device the user has REMOVED, and
+   only such an entry is accepted when no key remains at all. An entry the log does not hold
+   is `unconfirmed_device` when the registry still has the author's key and
+   `missing_device_key` when it does not.
+5. Does the Ed25519 signature verify, against whichever of those two keys applied?
+   (`forged_signature`)
+6. Is the field a real column of that table? (`unknown_column`)
 
 Only entries that pass are written to `op_log_entries` — and they are written **before** any
 decryption, so the durable log keeps the ciphertext exactly as the peer sent it. Everything

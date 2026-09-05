@@ -428,6 +428,12 @@ final readonly class GdkEpochControlHandler
         Session $session,
     ): GdkWrapOutcome {
         if (hash_equals($localKeyHex, $incomingKeyHex)) {
+            // The index key is re-sent on the same two roads an epoch is, and
+            // agreeing was the one outcome here that said nothing at all.
+            $this->logger->warning('GdkEpochControlHandler: blind-index key already held — duplicate wrap dropped, keyring unchanged.', [
+                'user_id' => $userId,
+            ]);
+
             return GdkWrapOutcome::Applied;
         }
 
@@ -490,6 +496,14 @@ final readonly class GdkEpochControlHandler
         Session $session,
     ): GdkWrapOutcome {
         if (hash_equals($localKeyHex, $epoch->keyHex)) {
+            // The same wrap arrives twice by design — pushed on connect, then
+            // again out of the drained mailbox — so a delivery that appended
+            // nothing read exactly like one that did, from every surface.
+            $this->logger->warning('GdkEpochControlHandler: GDK epoch already held under this id — duplicate wrap dropped, keyring unchanged.', [
+                'epoch_id' => $epoch->epochId,
+                'recipient_device_id' => $recipientDeviceId,
+            ]);
+
             return GdkWrapOutcome::Applied;
         }
 
