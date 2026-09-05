@@ -92,6 +92,18 @@ enum QuarantineReason: string
         return [self::IncompleteCreateRow->value, self::MissingReference->value];
     }
 
+    // The refusal that happens while DELETING a row. Spent by the row being
+    // gone, which is the mirror of createRefusals() above, and recoverable for
+    // the same reason MissingReference is: what blocked it is a row the log
+    // may still carry a tombstone for.
+    /**
+     * @return list<string>
+     */
+    public static function deleteRefusals(): array
+    {
+        return [self::DeleteBlockedByReference->value];
+    }
+
     // Every verdict a later state can undo. MissingReference is not a verdict
     // on the entry the way a forged signature is: the parent had not landed
     // HERE yet and routinely lands afterwards — two charges went missing from a
@@ -101,6 +113,11 @@ enum QuarantineReason: string
      */
     public static function recoverable(): array
     {
-        return [...self::keyRecoverable(), self::MissingReference->value, self::SplitSumUnreadable->value];
+        return [
+            ...self::keyRecoverable(),
+            ...self::deleteRefusals(),
+            self::MissingReference->value,
+            self::SplitSumUnreadable->value,
+        ];
     }
 }

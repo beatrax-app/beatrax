@@ -124,10 +124,20 @@ either: the two passes ran one after the other, so a parent decided in the first
 in the second were still parent-first.
 
 A delete the database still refuses after the whole pass is retried once — a cycle the
-topological order had to break can leave a child the first attempt had not reached. Refused
-again, it is recorded as `delete_blocked_by_reference` and logged, because the only rows that
-reach that point are ones this device holds and no op deletes: the two devices now disagree
-about a row, and that has to be visible on the sync-health screen rather than swallowed.
+topological order had to break can leave a child the first attempt had not reached. Before that
+retry the parent's device-local children are cleared:
+`DependentRowCascade::clearDeviceLocalChildren()` takes the rows this device derived behind the
+parent, which no other device has ever heard of, so no operation could name them and nothing
+arriving later could unblock the delete. It descends only through tables that do not travel — a
+travelling child is removed by its own tombstone or left alone, because deleting one here writes
+no operation and the peer's history of the row would then be the only account of it left.
+
+Refused after that, the tombstone is recorded as `delete_blocked_by_reference` and logged,
+because the only rows that reach that point are ones this device holds, that travel, and that no
+op deletes: the two devices now disagree about a row, and that has to be visible on the
+sync-health screen rather than swallowed. It is a hold rather than a verdict — the reason sits in
+`QuarantineReason::recoverable()`, because the blocker's own tombstone can still arrive, and
+`HistoryReprojector` retires it once the row it names is gone.
 
 ## Delete wins ties
 
@@ -286,7 +296,9 @@ Every failure mode is deliberately scoped to a single op:
 - A delete refused by an `ON DELETE NO ACTION` foreign key (`import_runs`, `categories`) is
   isolated rather than fatal, but never silent: it quarantines as
   `delete_blocked_by_reference`. For as long as the catch block was empty, a parent survived a
-  delete both devices had agreed on and nothing anywhere said so.
+  delete both devices had agreed on and nothing anywhere said so. The rows this device derived
+  for itself are cleared before that verdict is reached, so a hold names a disagreement rather
+  than a projection the origin could not have known to announce.
 
 ## What runs inside the transaction, and what cannot
 
