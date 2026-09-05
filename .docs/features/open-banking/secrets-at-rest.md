@@ -84,7 +84,7 @@ pre-keying file, which by construction names no reader, and returns an
 institution id rather than any credential material.
 
 The single exemption is pinned by reflection in
-`OneReadersConnectorSecretIsUnreachableFromAnothersTest`, so a reader-less
+`AReadersConnectorSecretIsUnreachableFromAnotherAccountTest`, so a reader-less
 accessor added later fails the build rather than passing review.
 
 The runtime used to log a warning when a second account existed and carry on
