@@ -158,6 +158,36 @@ it('clears a write by the codec call it makes, not by the file it sits in', func
     ],
 ]);
 
+it('reads a comment as a comment, not as an open string literal', function (): void {
+    $source = <<<'PHP'
+        <?php
+
+        final class ScratchProbe
+        {
+            public function ownAccount(string $iban): void
+            {
+                DB::table('accounts')->insert([
+                    // the row's own iban, written where a person can read it
+                    'iban' => $iban,
+                ]);
+            }
+
+            public function sealedCounterparty(string $plain): void
+            {
+                DB::table('counterparties')->insert(['iban' => $plain]);
+            }
+        }
+        PHP;
+
+    expect(sensitiveColumnGuardProbe($source))->toBe(['Probe.php::iban::write']);
+});
+
+it('clears a spliced write only for the half that was sealed', function (): void {
+    $call = "DB::table('transactions')->update(\$codec->encryptAttrs('transactions', ['note' => \$n], \$u, \$s) + ['description' => \$plain]);";
+
+    expect(sensitiveColumnGuardProbe("<?php\n".$call))->toBe(['Probe.php::description::write']);
+});
+
 it('follows one hop to a helper that seals the value', function (): void {
     $sealed = <<<'PHP'
         <?php
