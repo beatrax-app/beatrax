@@ -222,7 +222,8 @@ consent-failure detection.
 `OpenBankingSyncRunner` owns the two-timestamp rule, and both entry points
 — `SyncOpenBankingAccountJob` (dispatched by the `open-banking:sync-due`
 schedule entry, which is registered `->daily()` and so fires at midnight)
-and `OpenBankingSettingsPage::syncNow()` (the button) — go through it.
+and `OpenBankingConnectionCard::syncNow()` (the button on one bank's own
+card) — go through it.
 `last_successful_sync_at` is written **only** in the success branch, never
 in a `finally` — a failed attempt must never advance the freshness signal a
 user reads as "how current is my data." Every attempt (success or failure)
