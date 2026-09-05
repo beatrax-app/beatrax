@@ -25,15 +25,23 @@ const SERVER_ONLY_DB_KEYS = [
 
 const WITHDRAWN_ENGINES = ['pgsql', 'mysql', 'mariadb'];
 
-it('configures no database engine other than SQLite', function (): void {
+it('leaves no database engine configured but SQLite', function (): void {
     /** @var Repository $config */
     $config = app(Repository::class);
 
-    /** @var array<string, array<string, mixed>> $connections */
+    /** @var array<string, array<string, mixed>|null> $connections */
     $connections = $config->get('database.connections');
 
     $engines = [];
+    $withdrawn = [];
+
     foreach ($connections as $name => $connection) {
+        if ($connection === null) {
+            $withdrawn[] = $name;
+
+            continue;
+        }
+
         $driver = $connection['driver'] ?? null;
         $engines[$name] = is_string($driver) ? $driver : '(none)';
     }
@@ -45,6 +53,18 @@ it('configures no database engine other than SQLite', function (): void {
         "fails on the first substantive table. A connection that cannot be migrated\n".
         'is not an option, however selectable it looks. Found: '.
         json_encode($engines, JSON_THROW_ON_ERROR),
+    );
+
+    // Laravel merges its own config/database.php over ours key by key, so
+    // deleting a connection from our file leaves it selectable — the framework
+    // hands it straight back. Null is what removes one. Pinned by name so a
+    // framework upgrade adding a sixth engine goes red here rather than quietly
+    // reopening the option.
+    expect($withdrawn)->toEqualCanonicalizing(
+        ['mysql', 'mariadb', 'pgsql', 'sqlsrv'],
+        'Every engine the framework ships a default for must be explicitly '.
+        'withdrawn, or DB_CONNECTION can still select it. Withdrawn: '.
+        json_encode($withdrawn, JSON_THROW_ON_ERROR),
     );
 });
 

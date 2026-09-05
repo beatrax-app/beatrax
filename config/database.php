@@ -61,6 +61,19 @@ return [
                 // behind every writer to read a table.
                 'transaction_mode' => 'DEFERRED',
             ]),
+
+            // Laravel merges its own config/database.php over this file key by
+            // key, so deleting these did not remove them: all four came
+            // straight back from the framework's defaults and DB_CONNECTION
+            // could still select one. Null is what removes a connection —
+            // DatabaseManager reads it as "not configured" and says so, rather
+            // than letting a migration run thirty-two tables into a trigger the
+            // engine cannot parse. SQLite is the only supported engine, in
+            // every deployment shape (ADR-0022).
+            'mysql' => null,
+            'mariadb' => null,
+            'pgsql' => null,
+            'sqlsrv' => null,
         ];
     })(),
 
