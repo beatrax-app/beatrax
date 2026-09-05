@@ -518,6 +518,11 @@ recorded as a coordinate and replayed from the live row on the next request that
 can sign: [A mutation a keyless process cannot
 sign](a-mutation-a-keyless-process-cannot-sign.md).
 
+What a refused operation tells the reader — the four outcomes the eleven
+terminal quarantine reasons are grouped into, and why the recoverable four keep
+the state they already had: [What the quarantine tells the
+reader](what-the-quarantine-tells-the-reader.md).
+
 ### When two devices name one row (`Internal\Merge\AlreadyPresentCreate`)
 
 A `create_row` whose insert the database refuses as already present is one of

@@ -35,6 +35,7 @@ use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\IntroducedDevicesSection;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
+use Modules\Sync\Internal\Http\Livewire\SyncQuarantineNotice;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Listeners\BackfillOpLogOnSyncEnabled;
@@ -429,6 +430,7 @@ final class SyncServiceProvider extends ServiceProvider
         $livewire->component('sync.introduced-devices-section', IntroducedDevicesSection::class);
         $livewire->component('sync.pairing-flow-modal', PairingFlowModal::class);
         $livewire->component('sync.sync-status-section', SyncStatusSection::class);
+        $livewire->component('sync.sync-quarantine-notice', SyncQuarantineNotice::class);
     }
 
     // The sync:serve and relay:serve daemons register from boot() rather than

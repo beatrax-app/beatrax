@@ -20,12 +20,6 @@ use Tests\Contracts\Support\WireCallableMethods;
 // the new one tells a reader.
 const QUARANTINE_READER_REASON_COUNT = 15;
 
-// The four the devices screen already speaks for, through SyncBacklogState.
-// Pinned as a number because it is the measurement this surface was built on
-// top of, and moving a reason across the recoverable line silently would move
-// it out of copy that asks the reader to act and into copy that says to wait.
-const QUARANTINE_READER_RECOVERABLE_COUNT = 4;
-
 // A reason that deliberately reaches no reader, keyed by its backing value and
 // carrying the argument for it. Empty: every reason a device can refuse an
 // operation for is something the reader can be told. An entry here is a
@@ -264,7 +258,7 @@ it('scans a reader surface that actually exists', function (): void {
     expect($files)->not->toBe([], 'the ungated components named no file at all, so every reason would read as unreached');
 });
 
-it('still finds the recoverable set on the devices screen', function (): void {
+it('lets the recoverable set, and only that set, reach the reader as a wait', function (): void {
     $coverage = quarantineReaderCoverage();
 
     $viaBacklog = array_keys(array_filter(
@@ -276,12 +270,15 @@ it('still finds the recoverable set on the devices screen', function (): void {
     $recoverable = QuarantineReason::recoverable();
     sort($recoverable);
 
+    // Read off recoverable() rather than pinned as a number: membership of that
+    // set moves — a reason becoming retried-and-retired is a real change — and
+    // what must not move is which reasons the wait copy is allowed to cover.
     expect($viaBacklog)->toBe(
         $recoverable,
-        "SyncBacklogState is how the recoverable reasons reach a reader, and this is the measurement the rest of\n".
-        "the quarantine surface was built beside: four of fifteen. If that set moved, the copy moved with it —\n".
-        'a reason held for a reason no pass retries must never be shown as "behind, catching up".',
-    )->and($viaBacklog)->toHaveCount(QUARANTINE_READER_RECOVERABLE_COUNT);
+        "SyncBacklogState says \"behind, catching up\", and recoverable() is the whole of what may be said that\n".
+        "about. A reason on this list that no pass retries is a reader told to wait for something that will\n".
+        'never arrive; one missing from it is a self-healing hold dressed as damage.',
+    );
 });
 
 it('tells a reader with no developer flag about every reason an operation can be refused for', function (): void {
