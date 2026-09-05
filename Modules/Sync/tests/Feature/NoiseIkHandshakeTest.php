@@ -5,10 +5,12 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Transport\Noise\NoiseCipherState;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 
-// Asserted against the official vendored cacophony vectors, because the cipher
-// suite can diverge without anything failing: this is ChaChaPoly with the
-// 12-byte IETF nonce, not XChaCha, and a handshake built on the wrong variant
-// still completes happily against itself.
+// Asserted against a vendored anchor this implementation generated, so what it
+// catches is drift and not interoperability: the cipher suite can change
+// without anything failing, since a handshake built on the wrong variant still
+// completes happily against itself. What the anchor does not establish, and
+// which published vectors would have, is measured in the sibling file named
+// for it.
 
 /**
  * @return array<string, mixed>
@@ -94,7 +96,7 @@ it('IK split keys are directional (c1 !== c2)', function (): void {
     expect($ct1)->not->toBe($ct2, 'IK split must produce two distinct directional cipher keys');
 });
 
-it('IK handshake message 1 ciphertext matches official Noise_IK_25519_ChaChaPoly_BLAKE2b test vector', function (): void {
+it('IK handshake reproduces the vendored Noise_IK_25519_ChaChaPoly_BLAKE2b determinism anchor', function (): void {
     $ikVector = loadIkVector();
 
     /** @var array<int, array<string, string>> $messages */
@@ -144,7 +146,7 @@ it('IK handshake message 1 ciphertext matches official Noise_IK_25519_ChaChaPoly
     $expectedMsg1 = sodium_hex2bin($messages[0]['ciphertext']);
 
     expect(sodium_bin2hex($msg1))->toBe($messages[0]['ciphertext'],
-        'IK message 1 ciphertext must match official Noise_IK_25519_ChaChaPoly_BLAKE2b test vector'
+        'IK message 1 ciphertext must match the vendored determinism anchor'
     );
 
     $decodedPayload1 = $respHs->readMessage($msg1);
@@ -154,7 +156,7 @@ it('IK handshake message 1 ciphertext matches official Noise_IK_25519_ChaChaPoly
     $msg2 = $respHs->writeMessage($payload2);
 
     expect(sodium_bin2hex($msg2))->toBe($messages[1]['ciphertext'],
-        'IK message 2 ciphertext must match official Noise_IK_25519_ChaChaPoly_BLAKE2b test vector'
+        'IK message 2 ciphertext must match the vendored determinism anchor'
     );
 
     $decodedPayload2 = $initHs->readMessage($msg2);

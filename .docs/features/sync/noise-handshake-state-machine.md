@@ -108,6 +108,40 @@ is authenticated — and then the very first transport message fails its
 authentication tag. The symptom reads like a corrupt or truncated frame, and
 the bug is nowhere near the frame.
 
+## The suite name on the tin is not the suite in the tin
+
+`NoiseSymmetricState` is seeded with the string
+`Noise_IK_25519_ChaChaPoly_BLAKE2b`, and that string is the first thing mixed
+into the handshake hash. It names a suite this class does not implement, in two
+places:
+
+| The framework says | This class does |
+| --- | --- |
+| `HASHLEN` is 64 for BLAKE2b — the chaining key, the handshake hash and each HKDF half are all 64 bytes | `HASH_BYTES = 32`, so BLAKE2b is truncated and the protocol name is zero-padded to 32 rather than 64 |
+| `HKDF(ck, ikm)` is three chained `HMAC-HASH` calls | One `sodium_crypto_generichash(ikm, key: ck, 64)`, split in half |
+
+Neither is a weakness on its own: BLAKE2b is designed to be used keyed and is
+not length-extendable, and a 32-byte chaining key still carries 256 bits. What
+they cost is the property the suite name promises. **No conforming Noise
+implementation can complete a handshake with this one**, and no published
+vector for the named suite can be reproduced by it — which is why
+`noise_test_vectors.json` holds anchors this implementation generated rather
+than the reference suite's.
+
+The published vectors are checked in anyway, as
+`noise_published_vectors.json`, and
+`TheNoiseVectorsAreOurOwnAndNotThePublishedOnesTest` re-derives one of them
+from `ext-sodium` alone before running the same input through this class. That
+positive control is the point: without it, "our handshake does not reproduce
+the published vectors" and "the published vectors are wrong" look identical
+from here. They are not — the vectors reproduce exactly, and the divergence is
+this class's.
+
+Correcting it is a wire-format change of the same kind as the nonce byte order
+below, and a larger one: it moves every byte of every handshake, so two devices
+that have already paired could no longer speak. It is therefore recorded here
+rather than done in passing.
+
 ## Turn taking and terminal state
 
 The initiator writes even-indexed messages (0, 2, …) and the responder writes
