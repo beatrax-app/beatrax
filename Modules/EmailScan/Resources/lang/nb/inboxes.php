@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Koble til på nytt',
     'disconnect' => 'Koble fra',
+    'disconnect_confirm' => 'Vil du koble fra :email? Dette fjerner de lagrede opplysningene for denne postkassen, skannehistorikken og avsenderne du har lagt til eller lukket. Kvitteringer som allerede er ført inn i Beatrax, påvirkes ikke. Kobler du til på nytt, starter en ny skanning fra bunnen.',
     'scan_now' => 'Skann nå',
     'scan_in_progress_title' => 'Skanning pågår allerede',
 

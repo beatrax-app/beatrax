@@ -6,7 +6,7 @@ return [
     'heading' => 'Dispozitive și sincronizare',
 
     'enable_sync' => 'Activează sincronizarea',
-    'enable_sync_help' => 'Partajează-ți datele în siguranță între dispozitivele de încredere. Necesită o blocare a aplicației. Odată activată, datele tale sunt criptate, iar blocarea aplicației nu mai poate fi dezactivată.',
+    'enable_sync_help' => 'Partajează-ți datele în siguranță între dispozitivele de încredere. Necesită o blocare a aplicației. Activarea nu poate fi anulată: de atunci datele tale sunt criptate, iar nici sincronizarea, nici blocarea aplicației nu mai pot fi dezactivate.',
 
     'app_lock_notice' => 'Setează mai întâi o blocare a aplicației pentru a activa sincronizarea.',
     'go_to_app_lock' => 'Mergi la blocarea aplicației',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Deblocarea redeschide această împerechere în loc să o lase să expire, deci durează mai mult decât timpul de blocare a aplicației pe care l-ai setat. Se încheie când o finalizezi sau o anulezi.',
 
     'relay_endpoint' => 'Punctul final al releului',
-    'relay_endpoint_help' => 'Opțional. Când este setat, dispozitivele offline se sincronizează prin acest releu. Lasă gol pentru doar LAN&#8209;direct.',
-    'relay_endpoint_help_phone' => 'Opțional. Când este setat, modificările călătoresc prin acest releu chiar și când dispozitivele tale nu sunt în aceeași rețea. Acest dispozitiv le preia când sincronizezi din acest ecran — niciodată în fundal, fiindcă blocarea aplicației păstrează singura cheie. Lasă gol pentru doar LAN&#8209;direct.',
+    'relay_endpoint_help' => 'Opțional. Un releu permite ca două dispozitive să încheie împerecherea și să facă schimb de chei de criptare atunci când nu se pot contacta direct. Tranzacțiile în sine se sincronizează în continuare doar când ambele dispozitive sunt în aceeași rețea. Lasă gol pentru doar LAN&#8209;direct.',
+    'relay_endpoint_help_phone' => 'Opțional. Un releu permite ca două dispozitive să încheie împerecherea și să facă schimb de chei de criptare atunci când nu se pot contacta direct. Tranzacțiile în sine se sincronizează în continuare doar când ambele dispozitive sunt în aceeași rețea. Acest dispozitiv preia ce îl așteaptă când sincronizezi din acest ecran — niciodată în fundal, fiindcă blocarea aplicației păstrează singura cheie. Lasă gol pentru doar LAN&#8209;direct.',
     'relay_endpoint_aria' => 'URL-ul punctului final al releului',
     'relay_insecure_warning' => 'Acest punct final al releului folosește HTTP simplu. Deși releul nu îți decriptează niciodată datele, o conexiune nesecurizată expune dimensiunile criptate și momentele transferurilor celor care observă rețeaua. Folosește un punct final <strong>https://</strong> pentru cea mai bună confidențialitate.',
 

@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Pristup samo za čitanje',
         'reads_label' => 'Beatrax čita',
         'reads_sub' => 'Samo potvrde',
-        'token_label' => 'Token ostaje lokalno',
-        'token_sub' => 'Šifrovana datoteka',
+        'token_label' => 'Token je šifrovan',
+        'token_sub' => 'U lokalnoj bazi podataka',
     ],
 
     'authorize_gmail' => 'Autorizuj preko Gmaila',

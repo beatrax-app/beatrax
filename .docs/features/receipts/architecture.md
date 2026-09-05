@@ -30,7 +30,10 @@ unifying surface.
 What the module explicitly does NOT do:
 
 - It never connects an inbox. `EmailScan` owns the OAuth + the
-  `.eml` blob persistence; this module consumes the blobs.
+  `.eml` blob persistence; this module consumes the blobs. The way in
+  is `InboxMessageQuery` and the file on disk, never a provider client
+  or an OAuth surface, and `noEmailFetchFromReceipts` fails the build
+  on any file under `Modules/Receipts/` that imports one.
 - It never persists transactions. Enrichments flow through
   `Import::ApplyEnrichments`; statement summaries flow through
   `Ledger::RecordsStatementSummary`.

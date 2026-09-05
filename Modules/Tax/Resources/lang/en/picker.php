@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Also tag :count more from',
     'batch_after' => '?',
-    'batch_confirm' => 'Tag every remaining transaction from :name as tax-relevant? Each one is given this category and this note. Taking a tag off again is one transaction at a time.',
+    'batch_confirm' => 'Tag the other :count transaction from :name in :year as tax-relevant? Each one is given this category and this note. Rows on a completed reconcile are left alone, and taking a tag off again is one transaction at a time.|Tag the other :count transactions from :name in :year as tax-relevant? Each one is given this category and this note. Rows on a completed reconcile are left alone, and taking a tag off again is one transaction at a time.',
     'batch_tag_all' => 'Tag all',
     'batch_dismiss' => 'Dismiss',
 ];

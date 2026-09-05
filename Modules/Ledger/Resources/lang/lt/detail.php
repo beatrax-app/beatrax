@@ -97,7 +97,7 @@ return [
         'heading' => 'Ištrinti operaciją',
         'help' => 'Visam laikui pašalina šią operaciją. Šio veiksmo atšaukti negalima.',
         'button' => 'Ištrinti',
-        'confirm_prompt' => 'Ištrinti šią operaciją? Kartu dings pastaba, skaidymas ir mokesčių žymos.',
+        'confirm_prompt' => 'Ištrinti šią operaciją? Kartu dings pastaba, skaidymas, mokesčių žymos ir bet koks įskaitymas į taupymo tikslą. Jei tai viena pavedimo pusė, kita pusė perklasifikuojama.',
         'confirm' => 'Taip, ištrinti',
         'cancel' => 'Atšaukti',
     ],

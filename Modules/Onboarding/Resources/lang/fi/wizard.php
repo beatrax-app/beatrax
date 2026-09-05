@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Ohjattu toiminto ei pystynyt tunnistamaan aktiivista vaihetta. Poistu kohdasta Jatka myöhemmin →, niin seuraava avaus korjaa tilanteen.',
 
     'privacy' => 'Tietosi pysyvät tällä laitteella',
+    'privacy_connector' => 'Tietosi pysyvät tällä laitteella. Tämä vaihe yhdistää postilaatikkosi Googleen tai Microsoftiin.',
     'need_help' => 'Tarvitsetko apua?',
     'need_help_aria' => 'Tarvitsetko apua? Avaa Beatraxin issues-sivun GitHubissa',
 ];

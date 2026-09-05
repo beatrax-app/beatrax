@@ -68,8 +68,9 @@ layout to render the ⌘K palette and the sidebar nav-list:
     caller as a value.
   - `NavigationRegistry::all()` — the canonical nav list both
     the sidebar and the palette consume.
-  - `AppActionRegistry::all()` — the named palette actions
-    (`Run import`, `Scan email now`, `Open profile`, `Toggle theme`).
+  - `AppActionRegistry::all()` — the named palette actions, every one
+    of which navigates: `Run import`, `Open inboxes`, `Open profile`,
+    and `Open appearance settings`.
     Both contracts name the accessor `all()` and both have a Null
     implementation for the non-dev build, so the layout can resolve
     them unconditionally.
@@ -233,8 +234,11 @@ layout to render the ⌘K palette and the sidebar nav-list:
   rendering data).
 - **Internal/Console/PruneDevAuditCommand** — `beatrax:prune-dev-audit`.
 
-The repo-wide arch invariants `noHorizonImportsInShippedBuildCode`
-and `noUnsanctionedAuditWriter` are anchored here.
+The repo-wide arch invariant `noHorizonImportsInShippedBuildCode` is
+anchored here. The companion convention — that a `dev_mode_audit` row
+is only ever inserted through `AuditWriter` — has no test behind it;
+`SpatieAuditWriter` is the sole implementation and the sole inserter by
+inspection.
 
 ## Key services + events
 
@@ -257,9 +261,9 @@ and `noUnsanctionedAuditWriter` are anchored here.
   failure mode — missing, rotated, truncated, caught up, unreadable —
   hands back the caller's offset unchanged, which is what makes a
   re-poll idempotent.
-- `WriteWorkerHeartbeat::__invoke()` — bumps the
-  `queue.worker_heartbeat` cache key with the current
-  `Clock::now()`. The boot-health probe reads it.
+- `WriteWorkerHeartbeat::__invoke()` — bumps the cache key
+  `WriteWorkerHeartbeat::CACHE_KEY` with the current `Clock::now()`.
+  The boot-health probe reads it.
 - `RedactSecretsProcessor::__invoke($record)` — Monolog tap.
   Replaces Bearer tokens, JWT shapes, and every OAuth secret literal
   with `[REDACTED]`. Reads the literals from `OAuthScrubSet` lazily;
@@ -344,7 +348,8 @@ user presses ⌘K from anywhere in the app
          affordance's triple gate)
   → user picks one
        → if URL action: window.location to URL
-       → if handlerEvent: dispatch browser event ('email-scan.run' etc.)
+       → if handlerEvent: dispatch that browser event (no action
+         registers one today; two that did reached no listener)
        → if command: route to /dev/artisan with prefilled name
 ```
 
@@ -571,12 +576,14 @@ Per-page detail that doesn't fit the flow diagrams above:
 - **LogTailerPage** (`/dev/logs`) — live tail of the daily-rotated
   Laravel log file with severity multi-select, channel filter,
   contains-filter, pause/resume, a 10k-line client-side ring buffer,
-  and click-to-expand ±10 lines of context. Server state is minimal —
-  every filter is `#[Url]` so the page is deep-linkable; the 10k-line
-  scrollback lives entirely in a client-side Alpine ring buffer (the
-  server never holds it), and pause/resume is purely client-side too
-  (the SSE controller has no notion of pause — the Alpine handler just
-  closes and re-opens the EventSource).
+  and click-to-expand ±10 lines of context. The tail is a one-second
+  Alpine `fetch` loop against `/dev/logs/poll`, not a stream. Server
+  state is minimal — every filter is `#[Url]` so the page is
+  deep-linkable; the 10k-line scrollback lives entirely in a
+  client-side Alpine ring buffer (the server never holds it), and
+  pause/resume is purely client-side too (`LogStreamController` has no
+  notion of pause — the Alpine handler stops scheduling the next poll
+  and aborts the one in flight).
 - **DoctorPanelPage** (`/dev/doctor`) — a thin wrapper that triggers
   `beatrax:doctor` through the same Process+SSE pipeline as the
   artisan runner; the page itself does not own the SSE consumer (Alpine

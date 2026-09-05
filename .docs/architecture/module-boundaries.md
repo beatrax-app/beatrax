@@ -197,18 +197,29 @@ module-boundary contract. Selected examples:
 - **`noFacadeCallsFromCoreConsoleCommands`** /
   **`noLaravelGlobalHelpersInCoreConsoleCommands`** — even the
   Console-bootstrap layer respects the DI-only rule.
-- **`noHorizonImportsInShippedBuildCode`** — Horizon imports are restricted
-  to one allow-listed provider that guards itself with the
-  `BEATRAX_RUNTIME=local` runtime check (see
+- **`noHorizonImportsInShippedBuildCode`** — no file under `app/`, `Modules/`,
+  `bootstrap/` or `routes/` may name a `Laravel\Horizon\` symbol except the
+  one allow-listed provider, `app/Providers/HorizonServiceProvider.php`.
+  `DevMode`'s provider registers that provider only where
+  `config('app.dev_mode')` is true (`BEATRAX_DEV_MODE`) and the require-dev
+  package is actually installed, so a `--no-dev` bundle neither serves the
+  dashboard nor fatals looking for it (see
   [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md)).
 - **`noNativePhpImportsOutsideDesktopModule`** — `Native\Laravel\*` and
   `Native\Desktop\*` symbols are forbidden outside `Modules/Desktop/`.
 - **`noShellContractOutsideAllowList`** — the narrower
-  `Native\Desktop\Contracts\Shell` import is restricted to one allow-listed
-  action plus a single fallback.
-- **`noStoragePathHardCodedOutsideUserDataPathService`** — raw `storage_path()`
-  / `database_path()` literals are forbidden outside `UserDataPathService`,
-  which is what makes the per-OS user-data-directory paths
+  `Native\Desktop\Contracts\Shell` import is restricted to three files:
+  `OpenExternalUrlAction`, which validates https and an allow-listed host
+  before opening anything; the `NoOpShell` fallback; and
+  `CommunityServiceProvider`, which names the FQCN only to ask whether the
+  desktop binding exists before installing that fallback.
+- **`noStoragePathHardCodedOutsideUserDataPathService`** — `base_path()`,
+  `storage_path()` and `database_path()`, and the hard-coded
+  `database.sqlite` / `storage/app/` literals, are all forbidden under
+  `Modules/`, `app/` and `config/` outside `UserDataPathService` — the helpers
+  everywhere, the literals everywhere but a Blade view, which may legitimately
+  print a path to the reader. That single reader is what makes the per-OS
+  user-data-directory paths
   (see [ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)) work.
 - **`paymentTypeHinterContract`** — every `*Hinter` class under
   `Modules/Import/Internal/Parsers/` must implement the `PaymentTypeHinter`

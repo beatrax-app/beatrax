@@ -59,6 +59,7 @@ return [
 
     'reconnect' => 'Yeniden bağlan',
     'disconnect' => 'Bağlantıyı kes',
+    'disconnect_confirm' => ':email bağlantısı kesilsin mi? Bu işlem, bu posta kutusunun kayıtlı kimlik bilgilerini, tarama geçmişini ve eklediğin ya da yoksaydığın adresleri kaldırır. Beatrax\'a önceden işlenmiş fişler bundan etkilenmez. Yeniden bağlandığında tarama sıfırdan başlar.',
     'scan_now' => 'Şimdi tara',
     'scan_in_progress_title' => 'Tarama zaten sürüyor',
 

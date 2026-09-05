@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Anslut på nytt',
     'disconnect' => 'Koppla från',
+    'disconnect_confirm' => 'Vill du koppla från :email? Detta tar bort de sparade uppgifterna för den här brevlådan, dess skanningshistorik och de avsändare du har lagt till eller stängt. Kvitton som redan är införda i Beatrax påverkas inte. Ansluter du på nytt startar en ny skanning från början.',
     'scan_now' => 'Skanna nu',
     'scan_in_progress_title' => 'Skanning pågår redan',
 

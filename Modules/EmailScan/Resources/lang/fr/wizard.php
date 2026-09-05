@@ -11,7 +11,7 @@ return [
     'cancel' => 'Annuler',
     'save_connect' => 'Enregistrer et connecter',
 
-    'secret_help' => 'Ils sont stockés dans un fichier de configuration local, hors de la base de données, avec des permissions restrictives, et ne quittent jamais cet appareil.',
+    'secret_help' => 'Stocké chiffré dans la base de données de cet appareil. Beatrax ne l\'envoie qu\'à Google ou Microsoft, pour obtenir et renouveler ton jeton d\'accès — nulle part ailleurs.',
 
     'gmail' => [
         'step1_title' => 'Ouvre la Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Saisis un client ID OAuth Google se terminant par .apps.googleusercontent.com.',
         'google_secret' => 'Saisis un client secret OAuth Google commençant par GOCSPX-.',
         'google_published' => 'Confirme que tu as passé ton écran de consentement OAuth en \'In production\'.',
-        'write_failed' => 'Impossible d\'enregistrer ton client OAuth sur le disque — vérifie les permissions de ton dossier de secrets et réessaie.',
+        'write_failed' => 'Impossible d\'enregistrer ton client OAuth — l\'écriture dans la base de données de cet appareil a échoué. Réessaie.',
     ],
 ];

@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Summas attēlojums',
-        'label' => 'Noklusējuma skats darījumu sarakstā',
+        'label' => 'Summu noklusējuma skats',
         'eur_only' => 'Norēķina summa',
         'original' => 'Sākotnējā summa',
-        'help' => 'Katrā lapā to joprojām varat pārslēgt darījumu sarakstā.',
+        'help' => 'Attiecas uz darījumu sarakstu un Pārskata kopsummām. Katrā lapā to joprojām varat pārslēgt, bet tikai darījumu sarakstā.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Valūtas kursi',
         'fetch_online' => 'Iegūt aktuālos kursus tiešsaistē',
-        'online_on' => 'Kursi katru dienu tiek iegūti no ECB. Tikai valūtu pāru pieprasījumi — nekādu personas datu.',
+        'online_on' => 'Kursi katru dienu tiek iegūti no ECB vai no Frankfurter, ja ECB nav sasniedzams. Tikai valūtu pāru pieprasījumi — nekādu personas datu.',
         'last_updated' => 'Pēdējoreiz atjaunināts: :date.',
-        'online_off' => 'Tiek izmantoti komplektā iekļautie kursi. Nekādi dati šo ierīci nepamet.',
+        'online_off' => 'Joprojām tiek izmantoti jau esošie kursi, bet komplektā iekļautais momentuzņēmums kalpo kā rezerve. Nekādi dati šo ierīci nepamet.',
         'fetch_aria' => 'Iegūt aktuālos valūtas kursus tiešsaistē',
         'refreshing' => 'Atsvaidzina…',
         'next_refresh' => 'Automātiskā atsvaidzināšana: reizi dienā',

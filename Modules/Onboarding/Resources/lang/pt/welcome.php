@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Bem-vindo',
     'h1' => 'Vamos dar a conhecer o teu dinheiro ao Beatrax.',
-    'lede' => 'Cerca de 5 minutos. Nada sai deste dispositivo — tudo o que ligares fica num ficheiro nele.',
+    'lede' => 'Cerca de 5 minutos. O Beatrax guarda o teu histórico num ficheiro neste dispositivo — o único passo que sai daqui é ligar uma caixa de entrada, e podes saltá-lo.',
     'tagline' => 'Eis o que vamos configurar:',
 
     'bank_title' => 'O teu banco',

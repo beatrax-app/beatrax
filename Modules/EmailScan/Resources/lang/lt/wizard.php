@@ -11,7 +11,7 @@ return [
     'cancel' => 'Atšaukti',
     'save_connect' => 'Išsaugoti ir prijungti',
 
-    'secret_help' => 'Jie saugomi vietiniame konfigūracijos faile už duomenų bazės ribų su griežtomis teisėmis ir niekada neišeina iš šio įrenginio.',
+    'secret_help' => 'Saugomas užšifruotas šio įrenginio duomenų bazėje. Beatrax jį siunčia tik Google arba Microsoft, kad gautų ir atnaujintų tavo prieigos raktą — niekur kitur.',
 
     'gmail' => [
         'step1_title' => 'Atverk Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Įvesk Google OAuth kliento ID, kuris baigiasi .apps.googleusercontent.com.',
         'google_secret' => 'Įvesk Google OAuth kliento paslaptį, kuri prasideda GOCSPX-.',
         'google_published' => 'Patvirtink, kad perkėlei OAuth sutikimo langą į būseną „In production“.',
-        'write_failed' => 'Nepavyko įrašyti tavo OAuth kliento į diską — patikrink paslapčių katalogo teises ir bandyk dar kartą.',
+        'write_failed' => 'Nepavyko išsaugoti tavo OAuth kliento — įrašyti į šio įrenginio duomenų bazę nepavyko. Bandyk dar kartą.',
     ],
 ];

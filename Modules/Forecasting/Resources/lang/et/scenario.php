@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Nihuta seeria kuupäeva',
-            'desc' => 'Nihuta järgmine või kõik järgnevad korrad edasi.',
+            'desc' => 'Nihuta järgmine või kõik järgnevad korrad teisele kuupäevale.',
         ],
     ],
 

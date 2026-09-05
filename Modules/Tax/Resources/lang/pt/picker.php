@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Etiquetar também mais :count de',
     'batch_after' => '?',
-    'batch_confirm' => 'Etiquetar como dedutíveis nos impostos todas as transações restantes de :name? Cada uma recebe esta categoria e esta nota. Retirar a etiqueta depois faz-se transação a transação.',
+    'batch_confirm' => 'Etiquetar como dedutível mais :count transação de :name do ano fiscal :year? Recebe esta categoria e esta nota. As transações de uma reconciliação concluída ficam como estão e retirar a etiqueta depois faz-se transação a transação.|Etiquetar como dedutíveis mais :count transações de :name do ano fiscal :year? Cada uma recebe esta categoria e esta nota. As transações de uma reconciliação concluída ficam como estão e retirar a etiqueta depois faz-se transação a transação.',
     'batch_tag_all' => 'Etiquetar todas',
     'batch_dismiss' => 'Dispensar',
 ];

@@ -37,9 +37,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Запустити імпорт', 'hint' => 'Відкрити майстер імпорту'],
-        'scan_email' => ['label' => 'Сканувати пошту зараз', 'hint' => 'Негайно запустити синхронізацію поштової скриньки'],
+        'scan_email' => ['label' => 'Відкрити поштові скриньки', 'hint' => 'Твої підключені поштові скриньки'],
         'open_profile' => ['label' => 'Відкрити профіль', 'hint' => 'Налаштування — обліковий запис і параметри'],
-        'toggle_theme' => ['label' => 'Змінити тему', 'hint' => 'Перемикання між світлою та темною темою'],
+        'toggle_theme' => ['label' => 'Відкрити налаштування оформлення', 'hint' => 'Світла, темна або системна'],
     ],
 
     'run_command' => 'Виконати :command',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Dev-огляд', 'hint' => 'Системні плитки + останні запуски'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'Запуск команд зі списку дозволених'],
-        'audit' => ['label' => 'Dev-журнал аудиту', 'hint' => 'Кожна дія в режимі розробника'],
+        'audit' => ['label' => 'Dev-журнал аудиту', 'hint' => 'Твої дії в режимі розробника'],
         // i18n-review: uk · nav.logs — uk has no settled noun for a log tailer, so the
         // label names the act of watching the file and the hint carries «живий» from
         // logs.php, so the pair reads as one feature.

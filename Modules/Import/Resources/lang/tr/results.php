@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Başka bir hesap ekstresi yükle',
 
     'chain' => [
-        'heading' => 'Zincirler çözümleniyor…',
-        'pending' => 'Kuyruğa alındı. Zincir çözümleyici birazdan başlayacak.',
+        'heading' => 'Zincir çözümleme',
+        'pending' => 'Zincir çözümlemesi başlamadı, bu yüzden finansman zincirleri bağlanmadı.',
         'running' => 'Finansman zincirleri bağlanıyor ve ekstre tahsilatları ayrıştırılıyor.',
     ],
 

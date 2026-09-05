@@ -6,14 +6,14 @@ return [
     'menu' => [
         'file' => 'Soubor',
         'file_import' => 'Importovat soubor…',
-        'file_scan_email' => 'Naskenovat e-maily',
+        'file_scan_email' => 'E-mailové schránky…',
         'help' => 'Nápověda',
         'help_github_repo' => 'Repozitář GitHub',
         'help_report_issue' => 'Nahlásit problém',
         'help_about' => 'O Beatraxu',
         'developer_submenu' => 'Vývojář',
         'dev_open_console' => 'Otevřít vývojářskou konzoli',
-        'dev_run_command' => '⌘K Spustit příkaz',
+        'dev_run_command' => 'Spustit příkaz…',
     ],
 
     'worker_alert' => [

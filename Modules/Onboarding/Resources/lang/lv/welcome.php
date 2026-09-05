@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Laipni lūdzam',
     'h1' => 'Iepazīstināsim Beatrax ar jūsu naudu.',
-    'lede' => 'Apmēram 5 minūtes. Nekas šo ierīci nepamet — viss, ko pievienojat, paliek failā uz tās.',
+    'lede' => 'Apmēram 5 minūtes. Beatrax glabā jūsu vēsturi failā šajā ierīcē — vienīgais solis, kas sniedzas ārpus tās, ir pastkastes pievienošana, un to varat izlaist.',
     'tagline' => 'Lūk, ko iestatīsim:',
 
     'bank_title' => 'Jūsu banka',

@@ -37,6 +37,11 @@ return [
     'keep_biometric' => 'Säilytä biometrinen avaus',
 
     'auto_lock' => 'Lukitse automaattisesti, kun on kulunut',
+    // i18n-review: fi · auto_lock_note — ":window" is core::durations.seconds and
+    // reads "30 sekuntia"; "30 sekunnin kuluessa" needs a genitive the shared key
+    // cannot supply, so the window moved into its own "siihen kuluu" clause.
+    // Whether a Finnish reader wants it back inside the frame is the call.
+    'auto_lock_note' => 'Beatrax lukittuu, kun tämä aika on kulunut ilman toimintaa — ja aiemmin, jos poistut siitä: toiseen sovellukseen siirtyminen tai ikkunan piilottaminen tai sulkeminen lukitsee Beatraxin tästä asetuksesta riippumatta, ja siihen kuluu korkeintaan :window.',
     'idle_1' => '1 minuutti',
     'idle_5' => '5 minuuttia',
     'idle_15' => '15 minuuttia',

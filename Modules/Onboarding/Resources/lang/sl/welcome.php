@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Dobrodošel',
     'h1' => 'Naj Beatrax spozna tvoj denar.',
-    'lede' => 'Približno 5 minut. Nič ne zapusti te naprave — vse, kar povežeš, ostane v datoteki na njej.',
+    'lede' => 'Približno 5 minut. Beatrax hrani tvojo zgodovino v datoteki na tej napravi — edini korak, ki seže ven, je povezava nabiralnika, in tega lahko preskočiš.',
     'tagline' => 'Tole bomo nastavili:',
 
     'bank_title' => 'Tvoja banka',

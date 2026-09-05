@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Lähetä toinen tiliote',
 
     'chain' => [
-        'heading' => 'Ratkaistaan ketjuja…',
-        'pending' => 'Jonossa. Ketjujen ratkaisu alkaa pian.',
+        'heading' => 'Ketjujen ratkaisu',
+        'pending' => 'Ketjujen ratkaisu ei käynnistynyt, joten rahoitusketjuja ei yhdistetty.',
         'running' => 'Yhdistetään rahoitusketjuja ja puretaan tiliotteen tilityksiä.',
     ],
 

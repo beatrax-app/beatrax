@@ -11,7 +11,7 @@ return [
     'cancel' => 'İptal',
     'save_connect' => 'Kaydet ve bağlan',
 
-    'secret_help' => 'Bunlar, veritabanının dışında kısıtlı izinlere sahip yerel bir yapılandırma dosyasında saklanır ve bu cihazdan asla çıkmaz.',
+    'secret_help' => 'Bu cihazdaki veritabanında şifrelenmiş olarak saklanır. Beatrax bunu yalnızca erişim belirtecini almak ve yenilemek için Google veya Microsoft\'a gönderir — başka hiçbir yere.',
 
     'gmail' => [
         'step1_title' => "Google Cloud Console'u aç",
@@ -55,6 +55,6 @@ return [
         'google_client_id' => '.apps.googleusercontent.com ile biten bir Google OAuth client ID gir.',
         'google_secret' => 'GOCSPX- ile başlayan bir Google OAuth client secret gir.',
         'google_published' => "OAuth izin ekranını 'In production' durumuna geçirdiğini onayla.",
-        'write_failed' => 'OAuth istemcin diske kaydedilemedi — secrets dizininin izinlerini kontrol edip yeniden dene.',
+        'write_failed' => 'OAuth istemcin kaydedilemedi — bu cihazdaki veritabanına yazma başarısız oldu. Yeniden dene.',
     ],
 ];

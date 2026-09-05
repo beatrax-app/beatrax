@@ -5,7 +5,10 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Üdvözlünk',
     'h1' => 'Hadd ismerje meg a Beatrax a pénzed.',
-    'lede' => 'Körülbelül 5 perc. Semmi nem hagyja el ezt az eszközt — minden, amit összekötsz, egy itteni fájlban marad.',
+    // i18n-review: hu · lede — "reaches out" became "kifelé is kapcsolatot
+    // nyit", which is a construction rather than an idiom. A native should say
+    // whether Hungarian would sooner name the network here than the direction.
+    'lede' => 'Körülbelül 5 perc. A Beatrax egy ezen az eszközön lévő fájlban tartja az előzményeidet — az egyetlen lépés, amely kifelé is kapcsolatot nyit, egy postafiók összekötése, és azt át is ugorhatod.',
     'tagline' => 'Ezt fogjuk beállítani:',
 
     'bank_title' => 'A bankod',

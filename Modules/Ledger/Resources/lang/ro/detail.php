@@ -97,7 +97,7 @@ return [
         'heading' => 'Șterge tranzacția',
         'help' => 'Elimină definitiv această tranzacție. Acțiunea nu poate fi anulată.',
         'button' => 'Șterge',
-        'confirm_prompt' => 'Ștergi această tranzacție? Nota, împărțirea și etichetele fiscale dispar odată cu ea.',
+        'confirm_prompt' => 'Ștergi această tranzacție? Nota, împărțirea, etichetele fiscale și orice contribuție la un obiectiv de economii dispar odată cu ea. Dacă este una dintre laturile unui transfer, cealaltă latură este reclasificată.',
         'confirm' => 'Da, șterge',
         'cancel' => 'Anulează',
     ],

@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Füge deine Anwendungs-ID ein',
         'application_id_label' => 'Anwendungs-ID',
-        'step3_help' => 'Sie wird in einer lokalen Datei außerhalb der Datenbank mit restriktiven Rechten gespeichert und verlässt dieses Gerät nie.',
+        'step3_help' => 'Wird in einer lokalen Datei außerhalb der Datenbank gespeichert, die nur du lesen kannst. Sie weist deine Anwendung gegenüber Enable Banking aus und geht deshalb bei jeder Anfrage mit — dein privater Schlüssel nie.',
 
         'step4_title' => 'Wähle deine Bank',
         'via_enable_banking' => 'über Enable Banking',

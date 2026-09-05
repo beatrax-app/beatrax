@@ -42,16 +42,24 @@ function i18nReviewMarkers(): array
         }
 
         foreach ($lines as $index => $line) {
-            if (preg_match('/i18n-review:\s*([a-z]{2})\s*·\s*([^—]+)—/u', $line, $match) !== 1) {
+            if (! str_contains($line, 'i18n-review:')) {
                 continue;
             }
 
-            $markers[] = [
-                'file' => $path,
-                'line' => $index + 1,
-                'locale' => $match[1],
-                'keys' => trim($match[2]),
-            ];
+            $match = PatternScan::first('/i18n-review:\s*([a-z]{2})\s*·\s*([^—]+)—/u', $line);
+
+            // A marker whose address runs past the first line used to be no
+            // marker at all: the address is read one line at a time, so an em
+            // dash that wrapped meant the whole thing was skipped and its keys
+            // were never checked against the file. It is reported instead.
+            $markers[] = $match === []
+                ? ['file' => $path, 'line' => $index + 1, 'locale' => null, 'keys' => '']
+                : [
+                    'file' => $path,
+                    'line' => $index + 1,
+                    'locale' => $match[1],
+                    'keys' => trim($match[2]),
+                ];
         }
     }
 
@@ -95,6 +103,13 @@ it('leaves every review marker naming the locale it sits in and a key that is st
     foreach ($markers as $marker) {
         $relative = str_replace(base_path().'/', '', $marker['file']);
         $at = $relative.':'.$marker['line'];
+
+        if ($marker['locale'] === null) {
+            $offenders[] = $at.' — opens a marker whose locale and keys do not fit on the line, so nothing '
+                .'checked them. Keep "i18n-review: <locale> · <keys> —" on the first line and let the question wrap';
+
+            continue;
+        }
 
         if (preg_match('#/lang/([a-z]+)/#', $marker['file'], $dir) === 1 && $dir[1] !== $marker['locale']) {
             $offenders[] = $at.' — marked "'.$marker['locale'].'" but sits in '.$dir[1];

@@ -50,28 +50,28 @@ return [
     ],
 
     'command' => [
-        'db_backup' => ['label' => 'Varunda andmebaas', 'description' => 'Kirjutab ajatempliga SQLite-koopia varukoopiate kausta.'],
-        'doctor' => ['label' => 'Käivita doctor', 'description' => "Teatab paigaldatud PHP, Composeri ja SQLite'i versioonid ning kontrollib miinimumnõudeid."],
-        'failed_jobs' => ['label' => 'Puhasta ebaõnnestunud tööd', 'description' => 'Puhastab lahendatud kirjed Laraveli hallatavast tabelist failed_jobs.'],
+        'db_backup' => ['label' => 'Varunda andmebaas', 'description' => 'Kirjutab ajatempliga SQLite-koopia varukoopiate kausta, välja arvatud siis, kui andmebaas pole pärast eelmist koopiat muutunud. Alles jäetud koopia kustutab ka vanemad varukoopiad säilituspoliitika järgi.'],
+        'doctor' => ['label' => 'Käivita doctor', 'description' => 'Käivitab operatiivsete kontrollide komplekti ja teatab iga rea kohta pass / warn / fail. Warn- või fail-rida annab nullist erineva väljumiskoodi.'],
+        'failed_jobs' => ['label' => 'Puhasta ebaõnnestunud tööd', 'description' => 'Kustutab Laraveli hallatavast tabelist failed_jobs iga kirje, mis on vanem kui 30 päeva, olenemata sellest, kas tööd kunagi uuesti prooviti.'],
         'cache_clear' => ['label' => 'Tühjenda vahemälu', 'description' => 'Tühjendab rakenduse vahemälu.'],
         'route_list' => ['label' => 'Loetle marsruudid', 'description' => 'Väljastab iga registreeritud HTTP-marsruudi standardväljundisse.'],
-        'config_show' => ['label' => 'Näita konfiguratsiooni', 'description' => 'Väljastab antud konfiguratsioonivõtme väärtuse.'],
+        'config_show' => ['label' => 'Näita konfiguratsiooni', 'description' => 'Väljastab terve konfiguratsioonifaili või selles oleva punktidega võtme väärtuse.'],
         'view_clear' => ['label' => 'Tühjenda vaadete vahemälu', 'description' => 'Tühjendab kompileeritud Blade-vaadete vahemälu.'],
-        'queue_retry' => ['label' => 'Proovi ebaõnnestunud töid uuesti', 'description' => 'Proovib uuesti ühte tööd (ID järgi) või kõiki ebaõnnestunud töid (tühi ID).'],
-        'rederive_fingerprints' => ['label' => 'Arvuta sõrmejäljed uuesti', 'description' => 'Arvutab iga tehingu sõrmejälje praeguse normaliseerimisversiooniga uuesti.'],
+        'queue_retry' => ['label' => 'Proovi ebaõnnestunud töid uuesti', 'description' => 'Proovib ID järgi uuesti ühte ebaõnnestunud tööd või kõiki, kui sisestad `all`.'],
+        'rederive_fingerprints' => ['label' => 'Arvuta sõrmejäljed uuesti', 'description' => 'Arvutab uuesti sõrmejälje igale tehingule, mille normaliseerimisversioon on veel praegusest väiksem. Siit käivitatud jooks teatab arvu ega kirjuta midagi.'],
         'db_restore' => ['label' => 'Taasta andmebaas', 'description' => 'Asendab praeguse andmebaasi antud varukoopiafailiga.'],
         'regenerate_recovery_codes' => ['label' => 'Loo taastekoodid uuesti', 'description' => 'Loob kasutaja 10 ühekordset taastekoodi uuesti.'],
         'grant_dev' => ['label' => 'Anna arendaja õigused', 'description' => 'Määrab antud kasutajale is_developer=true.'],
         // i18n-review: et · command.install.description — Idempotentne is a loanword
         // with no settled native form. The sentence relies on the reader knowing
         // the property rather than the word, which a native eye should confirm.
-        'install' => ['label' => 'Käivita paigaldus', 'description' => 'Idempotentne esmane seadistus. Selle kordamine seadistatud paigalduses on hävitav.'],
+        'install' => ['label' => 'Käivita paigaldus', 'description' => 'Idempotentne esmane seadistus: andmebaasi skeem, viiteandmed ja ainus kasutajakonto. Kordamine seadistatud paigalduses kinnitab olemasoleva konto uuesti ja jätab parooli muutmata.'],
     ],
 
     'arg' => [
         'action' => ['label' => 'Toiming'],
         'config' => ['label' => 'Konfiguratsioonivõti', 'help' => 'Väljastatav konfiguratsioonifail või punktidega võti, näiteks `app` või `database.connections.sqlite`.', 'placeholder' => 'app.name'],
-        'id' => ['label' => 'Töö ID', 'help' => 'Jäta tühjaks, et proovida uuesti kõiki ebaõnnestunud töid; sisesta ID, et proovida ainult ühte.', 'placeholder' => 'kõik (või kindel ID)'],
+        'id' => ['label' => 'Töö ID', 'help' => 'Kirjuta `all`, et proovida uuesti kõiki ebaõnnestunud töid, või töö ID, et proovida ainult ühte. Tühi väli ei proovi midagi uuesti.', 'placeholder' => 'all (või kindel ID)'],
         'queue' => ['label' => 'Järjekorra nimi', 'help' => 'Valikuline järjekorra filter; vaikimisi kõik järjekorrad.', 'placeholder' => 'default'],
         'path' => ['label' => 'Varukoopiafaili asukoht', 'help' => 'Asendab praeguse andmebaasi antud asukohas oleva failiga.', 'placeholder' => '/tee/failini/backup.sqlite'],
         'username' => ['label' => 'Kasutajanimi', 'placeholder' => 'alice'],

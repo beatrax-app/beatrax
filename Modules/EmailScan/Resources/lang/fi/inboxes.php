@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Yhdistä uudelleen',
     'disconnect' => 'Katkaise yhteys',
+    'disconnect_confirm' => 'Katkaistaanko yhteys osoitteeseen :email? Tämä poistaa tämän postilaatikon tallennetut tunnukset, sen skannaushistorian ja lähettäjät, jotka olet lisännyt tai ohittanut. Beatraxiin jo kirjatut kuitit säilyvät ennallaan. Uusi yhdistäminen aloittaa skannauksen alusta.',
     'scan_now' => 'Skannaa nyt',
     'scan_in_progress_title' => 'Skannaus on jo käynnissä',
 

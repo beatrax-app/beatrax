@@ -7,15 +7,15 @@ The file-level map for the module.
 ```
 Modules/Auth/
 ├── Public/
-│   └── Actions/
-│       ├── SignupAction.php
-│       ├── LoginAction.php
-│       ├── LogoutAction.php
-│       ├── AddUserAction.php
-│       ├── ResetPasswordAction.php
-│       ├── RegenerateRecoveryCodesAction.php
-│       ├── DeleteAccountAction.php
-│       └── PurgeUserDataAction.php
+│   ├── Actions/
+│   │   ├── SignupAction.php
+│   │   ├── LoginAction.php
+│   │   ├── LogoutAction.php
+│   │   ├── AddUserAction.php
+│   │   ├── ResetPasswordAction.php
+│   │   ├── RegenerateRecoveryCodesAction.php
+│   │   ├── DeleteAccountAction.php
+│   │   └── PurgeUserDataAction.php
 │   └── Recovery/
 │       ├── PendingRecoveryCodes.php
 │       └── RecoveryCodeFormatter.php
@@ -108,6 +108,17 @@ domain model uses.
     9,765 rows on a reseeded device. See
     [the user-scoped purge](user-scoped-purge.md).
 
+- **Recovery/**
+  - `RecoveryCodeFormatter` — the inverse of the normaliser: turns a stored
+    or freshly generated code back into the hyphenated shape a human reads,
+    and names the file a sheet is downloaded as. It is `Public/` because
+    `Mobile` formats the same sheet — `MobileImportBootstrap` and
+    `ExportRecoveryCodes` both inject it.
+  - `PendingRecoveryCodes` — the one home for the session key holding the
+    plaintext sheet between minting it and showing it, and for how long that
+    copy stays readable. See [the pending recovery codes live one request at
+    a time](pending-recovery-codes-lifetime.md).
+
 - **Contracts/**
   - `PasswordPolicy` — `MINIMUM_LENGTH`, the one passphrase length every
     gate measures against. `SignupAction`, `AddUserAction`,
@@ -116,8 +127,12 @@ domain model uses.
     `x-core::password-requirements` renders it into the live checklist so
     the browser cannot tick a rule the server does not enforce.
 
-There are no DTOs in `Public/` — the action surface plus `PasswordPolicy`
-is the contract. The `UserInstalled` event the module raises lives in
+There are no DTOs in `Public/`. Beside the actions, the recovery pair and
+`PasswordPolicy`, `Public/` also carries the app-lock seam — the
+`ColdStartVault` and `KeyCustodian` contracts, the services under
+`Public/Services/`, and the app-lock Livewire sections — which
+[the architecture page](architecture.md) describes rather than this one.
+The `UserInstalled` event the module raises lives in
 [`Modules/Core/Public/Events`](../core/code.md) because it is part of
 the cross-module "a user just appeared" surface.
 
@@ -141,8 +156,6 @@ the cross-module "a user just appeared" surface.
 - `Internal/Recovery/RecoveryCodeNormalizer` — strips whitespace, hyphens,
   and case from user input so the same code typed in any common shape
   hashes identically.
-- `Internal/Recovery/RecoveryCodeFormatter` — the inverse of the
-  normaliser, used when displaying stored or generated codes to humans.
 - `Internal/Recovery/RecoveryCodeAuthenticator` — the sole sanctioned
   reader of `user_recovery_codes`. Normalises, hashes, finds the unused
   row, stamps `used_at` in one update, returns the user. Returns `null`
@@ -216,9 +229,10 @@ Migrations:
 
 - Registers `Internal/Fortify/FortifyServiceProvider` so Fortify's
   pipeline is in place before any route resolves.
-- Singletons every Public action and every recovery-code class so the
-  same instance services every request (they are stateless aside from
-  injected collaborators).
+- Singletons the four recovery-code classes and
+  `RegenerateRecoveryCodesAction`, so the same instance services every
+  request (they are stateless aside from injected collaborators). The other
+  Public actions are resolved fresh; nothing in them holds state either way.
 
 `AuthServiceProvider::boot()`:
 
@@ -229,4 +243,4 @@ Migrations:
   group, then prepends Laravel's `Authenticate` middleware onto the same
   group so the group still rejects guests before the forced-change guard
   runs.
-- Registers the seven Livewire components under the `auth.*` namespace.
+- Registers the module's Livewire components under the `auth.*` namespace.

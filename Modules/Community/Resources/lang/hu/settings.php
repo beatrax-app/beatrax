@@ -25,6 +25,6 @@ return [
         'title' => 'A megosztott lista frissítése az alkalmazás frissítésekor',
         'help' => 'Frissítse a beépített listát minden alkalommal, amikor a Beatrax frissíti magát.',
         'help_phone' => 'Frissítse a beépített listát minden alkalommal, amikor a Beatrax új verziója az App Store-ból vagy a Google Play-ből települ.',
-        'note' => 'Egy későbbi alkalmazásfrissítéssel lép életbe — az aktuális verziót lásd: Beállítások → Névjegy.',
+        'note' => 'Egy későbbi alkalmazásfrissítéssel lép életbe — a futó verzió az oldalsáv tetején látható.',
     ],
 ];

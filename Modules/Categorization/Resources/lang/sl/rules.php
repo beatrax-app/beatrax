@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Pravila ostanejo v tej napravi. Ne delijo se z vašimi drugimi napravami.',
 
     'reapply' => 'Znova uporabi pravila na zgodovini',
-    'reapply_confirm' => 'Znova uporabim vsa pravila na celotni tvoji zgodovini? Vsaka kategorija, nasprotna stranka, opomba in davčna oznaka, ki jo je vpisalo pravilo, se prepiše. Kar je nastavljeno ročno, ostane, prav tako vse na usklajenem izpisku. Starih vrednosti nič ne vrne.',
+    'reapply_confirm' => 'Znova uporabim vsa pravila na celotni tvoji zgodovini? Vsaka kategorija, nasprotna stranka, opomba in davčna oznaka, ki jo je vpisalo pravilo, se prepiše. Kar je nastavljeno ročno, ostane, prav tako vse na usklajenem izpisku ali na transakciji, ki si jo razdelil. Starih vrednosti nič ne vrne.',
     'reapplying' => 'Ponovna uporaba…',
     'new_rule' => 'Novo pravilo',
 

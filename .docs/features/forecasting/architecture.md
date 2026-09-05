@@ -1,11 +1,11 @@
 # `Forecasting` — architecture
 
-The `Forecasting` module projects the user's near-term cash-flow
-across 30 / 60 / 90 days, surfaces shortfall windows when a projected
-balance crosses the per-account buffer threshold, and lets the user
-model what-if scenarios (cancel a subscription, change an amount,
-add a one-off, shift a date) without ever mutating the underlying
-ledger.
+The `Forecasting` module projects the user's near-term cash-flow at
+every horizon `ForecastHorizon` declares, surfaces shortfall windows
+when a projected balance crosses the per-account buffer threshold,
+and lets the user model what-if scenarios (cancel a subscription,
+change an amount, add a one-off, shift a date) without ever mutating
+the underlying ledger.
 
 ## What this module is for
 
@@ -89,10 +89,18 @@ What the module explicitly does NOT do:
     raised by the scenario CRUD actions; consumed by the
     `ProjectForecastOnScenarioChange` listener to re-run the
     projection.
-- **Exceptions/**
-  - `OpeningBalanceDivergenceWarning` — raised by
-    `SetAccountOpeningBalance` when the manual override diverges
-    from the statement anchor by more than the documented threshold.
+
+`OpeningBalanceDivergenceWarning` — raised by
+`SetAccountOpeningBalance` when the manual override diverges from the
+statement anchor by more than the documented threshold — is the one
+piece of the Public surface that does not live under `Public/`. It sits
+in `Internal/Exceptions/` beside the module's other three, and a Public
+action throws it. That is a real tension rather than an oversight: the
+warning is a soft one, caught and rendered as a confirm banner by
+`OpeningBalanceEditor` inside this module, so nothing outside has had
+to name it yet. A neighbour calling `SetAccountOpeningBalance` would
+have to, and could not — which is the point at which the class has to
+move rather than the caller reach.
 
 `Internal/` houses the projection pipeline:
 
@@ -128,10 +136,20 @@ What the module explicitly does NOT do:
 - **Internal/Mapping/ForecastDtoMapper** — `forecast_runs` row →
   `ForecastDto`, against a `ForecastWindow` (horizon, scenario, `asOf`)
   the query and the mapper both read from.
-- **Internal/Http/Livewire/** — six SFCs (ForecastPage,
-  AccountBufferEditor, ForecastHighlightsTile,
-  ScenarioEditorSidebar, ModelWhatIfDropdown,
-  OpeningBalanceEditor).
+- **Internal/Http/Livewire/** — `ForecastPage`,
+  `AccountBufferEditor` and `ScenarioEditorSidebar`, the three
+  components only this module's own views mount.
+
+The other three single-file components — `ForecastHighlightsTile`,
+`ModelWhatIfDropdown` and `OpeningBalanceEditor` — are in
+`Public/Http/Livewire/`, because a neighbour's Blade mounts each:
+`Shell`'s dashboard renders the highlights tile, `Shell`'s settings
+page renders the opening-balance editor, and `Recurring`'s series
+detail page renders the what-if dropdown. A module's
+`Internal\Http\Livewire` may only be used inside that module, so a
+component another module reaches for has to be on the Public side;
+`pinnedCrossModuleLivewireMounts` pins the three mounts themselves,
+since an alias mount is a dependency no import declares.
 
 ## Key services + events
 
@@ -207,7 +225,7 @@ The user-facing surface:
 ```
 /forecast
   → ForecastPage Livewire SFC
-       → per-account tab + 30/60/90 horizon control
+       → per-account tab + ForecastHorizon control
        → ForecastQuery::forUser($accountId, $horizon, null, $user)
        → the same call with a $scenarioId when the reader picked one
        → render rangeArea chart with P10/P50/P90 + shortfall band
@@ -733,9 +751,10 @@ per horizon for the baseline, and the Recurring/DriftAlerts-triggered
 listeners additionally fan out per saved scenario the user owns (since the
 whole projection surface is invalidated when the recurring-series substrate
 changes); `ProjectForecastOnScenarioChange` only re-projects baseline + the
-affected scenario (6 dispatches per event: 3 baseline + 3 affected-scenario
-horizons), because a scenario mutation does not change what any OTHER saved
-scenario should show. For `ScenarioDeleted` only the baseline horizons
+affected scenario (one `ProjectForecastJob` per `ForecastHorizon` case for
+the baseline, and one more per case for the affected scenario), because a
+scenario mutation does not change what any OTHER saved scenario should
+show. For `ScenarioDeleted` only the baseline horizons
 dispatch — the deleted scenario's runs were already wiped by the
 cascade-on-delete FK. `ProjectForecastOnRecurringChange`/
 `ProjectForecastOnDriftDismissed` import only `Modules\Recurring\Public\Events`

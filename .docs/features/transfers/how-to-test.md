@@ -80,7 +80,8 @@ composer test
 
 - **A self-transfer not pairing at import time** — walk the
   match rules in order: same user, equal-and-opposite
-  amount, same currency, ±WINDOW_DAYS, both legs typed
+  amount, same currency, both `booked_at` inside
+  `CounterLegWindow::DEFAULT_DAYS` either side, both legs typed
   `transfer_in` / `transfer_out`, neither already paired.
   The most common cause is a currency mismatch (one leg
   carries EUR, the other carries the same EUR amount but
@@ -128,7 +129,7 @@ and the assertion — see
 - **`TransferPairer` is deterministic.** Same inputs produce
   the same pairing decision; the matcher has no per-instance
   state and no time-of-day dependence beyond the
-  `±WINDOW_DAYS` calendar comparison.
+  `CounterLegWindow` calendar comparison.
 - **The matcher is the SOLE sanctioned writer of
   `transactions.pair_transaction_id`.** Every write to the
   column flows through `TransferPairer::pairOne`. There is no
@@ -154,7 +155,8 @@ and the assertion — see
   - same user;
   - two DIFFERENT accounts;
   - amount equal-and-opposite, same currency;
-  - `booked_at` within ±WINDOW_DAYS calendar days;
+  - `booked_at` within `CounterLegWindow::DEFAULT_DAYS`
+    calendar days either side;
   - both legs typed `transfer_in` / `transfer_out`;
   - neither leg already paired.
 - **The IBAN reconciliation walks both directions.** A pair
@@ -216,7 +218,7 @@ and the assertion — see
   sees both legs as independent (acceptable trade-off; FX
   swings would otherwise produce noisy pairings).
 - **A self-transfer where the booked_at dates differ by
-  more than WINDOW_DAYS** — no pair forms; the user can
+  more than the window** — no pair forms; the user can
   manually intervene if needed (currently a CLI / dev-mode
   escape hatch).
 - **A user with three legs of the same amount in the
@@ -257,8 +259,9 @@ and the assertion — see
 
 ## Configuration + feature flags
 
-- `WINDOW_DAYS` (the per-side calendar-day window) is fixed
-  in the `TransferPairer` source. Widening it would
+- `CounterLegWindow::DEFAULT_DAYS` (the per-side calendar-day
+  window) is fixed in `Modules/Transfers/Public/Support/`, not
+  in `TransferPairer`, which reads it. Widening it would
   introduce false positives.
 - No env flag changes the matcher's behaviour; it's a pure
   function over the user's transaction set.

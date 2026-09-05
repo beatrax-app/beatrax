@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Połącz ponownie',
     'disconnect' => 'Rozłącz',
+    'disconnect_confirm' => 'Rozłączyć :email? Usuwa to zapisane dane logowania tej skrzynki, jej historię skanowania oraz nadawców, których dodano lub odrzucono. Paragony już wprowadzone do Beatrax pozostaną bez zmian. Ponowne połączenie zaczyna skanowanie od nowa.',
     'scan_now' => 'Skanuj teraz',
     'scan_in_progress_title' => 'Skanowanie już trwa',
 

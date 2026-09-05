@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Conserver la biométrie',
 
     'auto_lock' => 'Verrouillage auto après',
+    'auto_lock_note' => 'Beatrax se verrouille après ce délai sans activité — et plus tôt si tu le quittes : passer à une autre app, ou masquer ou fermer la fenêtre, verrouille Beatrax en moins de :window, quel que soit ce paramètre.',
     'idle_1' => '1 minute',
     'idle_5' => '5 minutes',
     'idle_15' => '15 minutes',

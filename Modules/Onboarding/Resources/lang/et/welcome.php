@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Tere tulemast',
     'h1' => 'Teeme nii, et Beatrax tunneks sinu raha.',
-    'lede' => 'Umbes 5 minutit. Miski ei lahku sellest seadmest — kõik, mille ühendad, jääb siinsesse faili.',
+    'lede' => 'Umbes 5 minutit. Beatrax hoiab sinu ajalugu selle seadme failis — ainus samm, mis läheb välja, on postkasti ühendamine, ja selle võid vahele jätta.',
     'tagline' => 'Siin on, mida seadistame:',
 
     'bank_title' => 'Sinu pank',

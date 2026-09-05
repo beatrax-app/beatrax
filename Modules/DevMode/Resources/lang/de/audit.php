@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Audit-Log',
-    'subtitle' => 'Jeder Befehl, jede Queue-Aktion und jede SQL-Abfrage, die über die Dev-Konsole ausgeführt wurde.',
+    'subtitle' => 'Die Befehle, Queue-Aktionen und SQL-Abfragen, die du über die Dev-Konsole ausgeführt hast.',
     'clear_all' => 'Alles löschen',
-    'clear_all_confirm' => 'Jeden Eintrag im Audit-Log löschen? Das lässt sich nicht rückgängig machen.',
+    'clear_all_confirm' => 'Jeden Audit-Log-Eintrag löschen, den du erzeugt hast? Das lässt sich nicht rückgängig machen.',
     'filter_tier' => 'Stufe',
     'filter_all' => 'Alle',
     'filter_command' => 'Befehl',

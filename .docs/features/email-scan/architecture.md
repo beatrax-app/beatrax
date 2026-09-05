@@ -43,8 +43,8 @@ What the module explicitly does NOT do:
 
 - **Services/**
   - `OAuthSecretsRepository` — single sanctioned read/write path for
-    `oauth_secrets`. Handles encryption-at-rest and the safe-write
-    sequence (write `.bak`, write `.new`, atomic rename).
+    `oauth_secrets`. Handles encryption-at-rest and the transactional
+    Eloquent save that replaces the encrypted blob in one statement.
   - `EmlBlobStore` — per-message `.eml` blob persistence under the
     user-data path.
   - `InboxQuery`, `InboxMessageQuery`, `KnownSenderQuery`,
@@ -124,14 +124,13 @@ What the module explicitly does NOT do:
   reader through `CurrentUser`, so a caller cannot ask for someone
   else's row by passing an id.
 
-  This used to be a chmod-0600 JSON file written through a
-  `.bak` / `.new` / atomic-rename sequence. It is not any more — it
-  is an Eloquent `OAuthSecret` row in the per-user SQLite database,
-  with the client secret and the refresh tokens passed through
-  `SecretShield` (the OS keychain on desktop, identity elsewhere).
-  `SecretsWriteFailed` survived the move and is still what a failed
-  write raises, but it now wraps a DB save, not a rename; its message
-  never carries the credential payload.
+  The store is an Eloquent `OAuthSecret` row in the per-user SQLite
+  database, not a file on disk: the client secret and the refresh
+  tokens pass through `SecretShield` (the OS keychain on desktop,
+  identity elsewhere) and then through the model's own `encrypted`
+  cast. `SecretsWriteFailed` is what a failed write raises; it wraps
+  the Eloquent save, and its message never carries the credential
+  payload.
 - `EmlBlobStore::put($messageId, $bytes)` / `pathFor($messageId)` /
   `exists(...)` / `delete(...)` — per-message `.eml` blob persistence
   under the user-data path. Files are written `chmod 0600` so only
@@ -194,10 +193,10 @@ The incremental scan cycle:
 
 ```
 scheduler tick (every ~15 min)
-  → IncrementalScanJob (per inbox, ShouldBeUniqueUntilProcessing)
+  → IncrementalScanJob (per inbox, ShouldBeUnique)
        → state machine: idle → scanning
-       → OAuthSecretsRepository::retrieveFor (decrypted)
-       → GmailApiClient::messagesSince($cursor)
+       → OAuthSecretsRepository::loadInbox (decrypted grant)
+       → GmailApiClient::listHistory($cursor)
             (refresh token if needed; ReconsentRequiredException
              on failure)
        → for each new message:
@@ -263,10 +262,10 @@ at the consent screen itself (e.g. user canceled) arrive via the
 
 `ConnectInboxFromGrant` exchanges the authorization code for tokens via
 the matched provider wrapper, then persists the inbox row(s) and the
-chmod-600 credentials in two sequential steps: a DB transaction first
-(update the existing inbox row on reconnect, or insert a new
-`inboxes` + `inbox_scan_state` row pair on first connect), then the
-credential write second. A new inbox without a refresh token is rejected before
+credentials in two sequential steps: a DB transaction first (update
+the existing inbox row on reconnect, or insert a new `inboxes` +
+`inbox_scan_state` row pair on first connect), then the credential
+write second. A new inbox without a refresh token is rejected before
 either write — Google returns no refresh token when the OAuth consent
 screen is still in "Testing" status, and persisting such an inbox would
 leave it permanently `needs_reauth` on the very first scan. Because the
@@ -501,13 +500,19 @@ Reconnect succeeds must not throw); `error` permits every non-terminal
 state so a transient infrastructure blip recovers on the next
 scheduler tick without manual intervention.
 
-Every write path opens a transaction, sets `PRAGMA busy_timeout =
-5000`, and reads the row via `lockForUpdate()`. SQLite's `FOR UPDATE`
-clause is a no-op (the engine has only one writer); the `busy_timeout`
-pragma is the load-bearing fence — it tells SQLite to wait up to five
-seconds for a competing writer before raising `SQLITE_BUSY`, so two
-concurrent `IncrementalScanJob` runs that briefly contend on the row
-serialise rather than fail.
+Every write path opens a transaction and reads the row via
+`lockForUpdate()`. SQLite's `FOR UPDATE` clause is a no-op (the engine
+has only one writer); the load-bearing fence is `PRAGMA busy_timeout`,
+which tells SQLite to wait for a competing writer before raising
+`SQLITE_BUSY`, so two concurrent `IncrementalScanJob` runs that briefly
+contend on the row serialise rather than fail. No write path here sets
+that pragma, and none may: it is connection-scoped, so a value written
+inside a transaction outlives the transaction and shortens the wait for
+everything the same request or worker runs afterwards.
+`config/database.php` holds the single value (30 seconds) and
+`SqliteOptimizationsProvider` applies it as each connection opens;
+`OneConnectionHoldsOneBusyTimeoutArchTest` pins the two files allowed to
+issue the pragma at all, and neither of them is here.
 
 ## `BackfillInboxJob`
 
@@ -729,13 +734,17 @@ upsert and silently double-count `occurrence_count`. `uniqueFor=600`
 (10 minutes) matches `IncrementalScanJob` — discovery completes in
 seconds-to-minutes per inbox, so the lock shouldn't linger past a
 worker crash. `tries=3` + `backoff=[60,300,900]` matches the
-project-wide retry envelope. The connection sets `PRAGMA busy_timeout
-= 5000` once at the top of `handle()`, inheriting across every
-subsequent query for its duration — the daily discovery scan runs
+project-wide retry envelope. `handle()` sets no `PRAGMA busy_timeout`
+of its own; the wait it leans on is the 30 seconds
+`config/database.php` configures and `SqliteOptimizationsProvider`
+applies as the connection opens. The daily discovery scan runs
 concurrently with the hourly incremental scan (different
-`ShouldBeUnique` keys: per-user vs per-inbox), and without the pragma
+`ShouldBeUnique` keys: per-user vs per-inbox), and without that wait
 a single contended write would throw mid-loop and silently abort the
-per-user pass halfway through.
+per-user pass halfway through. Setting the pragma here instead would
+fail `OneConnectionHoldsOneBusyTimeoutArchTest`, which exists because
+a value set on a shared connection stays set for everything that runs
+after it.
 
 **Error envelope:** `RateLimitedException` on the discovery query
 retires the *provider*, not the pass. The walk marks that provider spent
@@ -934,39 +943,37 @@ serves every fetcher worker without contention.
 ## OAuth providers, state, and typed exceptions
 
 `GoogleOAuthProvider` (thin wrapper over
-`League\OAuth2\Client\Provider\Google`) and `MicrosoftOAuthProvider`
-(thin wrapper over `TheNetworg\OAuth2\Client\Provider\Azure`) each own
-three concerns: reading the per-install OAuth client id + secret out of
-the chmod-600 JSON repository on every call (so the controller never
-holds credentials in memory across requests); mapping the underlying
-library's `IdentityProviderException` to the module's two typed
-sentinels (`InvalidGrantException` for the `needs_reauth` transition,
-`OAuthExchangeFailed` for everything else) without ever including the
-raw token or request body in the message; and always requesting the
-right scopes + consent prompt so the provider issues a refresh token on
-every consent (Google: `access_type=offline` + `prompt=consent`;
-Microsoft: `Mail.Read` + `offline_access` + `User.Read` against
-`tenant=common`, `defaultEndPointVersion=2.0`, `prompt=consent` —
-required for the always-on background scanner). Microsoft Graph refresh
-tokens are single-use (every refresh rotates the token; the caller
-persists the new one via `OAuthSecretsRepository::rotateRefreshToken`).
-Both providers are instantiated per call rather than cached as a
-constructor property, since the redirect URI is computed by the caller
-and may differ across reconnect flows, and the chmod-600 read is cheap
-enough (~1KB) that per-call cost isn't worth memoising. Both classes
-are non-final so feature tests can substitute a stub subclass via
-`$this->app->instance(...)` — the contract is enforced by the
-singleton binding + constructor signature, not the `final` modifier,
-the same pattern `OAuthSecretsRepository` uses for its
-`performRename()` failure-injection hook. Both providers persist the scope the token response
+`League\OAuth2\Client\Provider\Google`) and `MicrosoftOAuthProvider` (thin
+wrapper over `TheNetworg\OAuth2\Client\Provider\Azure`) each own three
+concerns: reading the per-install OAuth client id + secret out of
+`OAuthSecretsRepository` on every call (so the controller never holds
+credentials in memory across requests); mapping the underlying library's
+`IdentityProviderException` to the module's two typed sentinels
+(`InvalidGrantException` for the `needs_reauth` transition,
+`OAuthExchangeFailed` for everything else) without ever including the raw
+token or request body in the message; and always requesting the right
+scopes + consent prompt so the provider issues a refresh token on every
+consent (Google: `access_type=offline` + `prompt=consent`; Microsoft:
+`Mail.Read` + `offline_access` + `User.Read` against `tenant=common`,
+`defaultEndPointVersion=2.0`, `prompt=consent` — required for the
+always-on background scanner). Microsoft Graph refresh tokens are
+single-use (every refresh rotates the token; the caller persists the new
+one via `OAuthSecretsRepository::rotateRefreshToken`). Both providers are
+instantiated per call rather than cached as a constructor property, since
+the redirect URI is computed by the caller and may differ across reconnect
+flows, and the single indexed row read is cheap enough that per-call cost
+isn't worth memoising. Both classes are non-final so feature tests can
+substitute a stub subclass via `$this->app->instance(...)` — the contract
+is enforced by the singleton binding + constructor signature, not the
+`final` modifier. Both providers persist the scope the token response
 *granted*, falling back to the full requested string only when the
 response omits one. The consent screen lets a user untick a scope; a
-recorded "requested" scope then leaves an inbox the app believes can
-read mail, and the first scan 403s into a generic `error` rather than
-the actionable `needs_reauth`. The requested fallback is the full
-`gmail.readonly + userinfo.email` pair rather than just
-`gmail.readonly`, so a later out-of-band revoke of `userinfo` also
-surfaces as `needs_reauth`.
+recorded "requested" scope then leaves an inbox the app believes can read
+mail, and the first scan 403s into a generic `error` rather than the
+actionable `needs_reauth`. The requested fallback is the full
+`gmail.readonly + userinfo.email` pair rather than just `gmail.readonly`,
+so a later out-of-band revoke of `userinfo` also surfaces as
+`needs_reauth`.
 
 `MicrosoftOAuthProvider::mapIdentityProviderException` reads the error
 body through the PSR-7 stream the league Azure provider actually
@@ -1224,6 +1231,15 @@ call (never cached) so a guard swap is honoured immediately. Writes go
 through Eloquent saves, which are transactional and replace the
 encrypted blob in a single statement.
 
+Living in the database rather than in a file beside it means the row
+goes wherever the database goes. `EncryptedBackupDownload` snapshots
+with `VACUUM INTO`, so every archive carries the `oauth_secrets` rows;
+what it does not carry is `APP_KEY` or the desktop keychain entry, so
+the two sealed columns land in the archive as ciphertext nothing inside
+it can open. Sync goes the other way: `oauth_secrets` is declared as a
+table that does not travel, on the grounds that mailbox tokens issued
+to this device are of no use to a peer holding a copy.
+
 `saveProviderClient` and `encodeInboxes` additionally pass the secret
 through `SecretShield::protect()` before the model's own `APP_KEY`
 column encryption — a keychain-style shield layer that is identity on
@@ -1400,17 +1416,17 @@ files inflated the shipped bundle (and the Windows installer's
 antivirus-scan time). Its entry point
 (`Microsoft\Graph\GraphServiceClient`) expects a Kiota authentication
 provider wrapping a `TokenRequestContext`, a two-layer abstraction
-designed for delegated MSAL flows where the SDK refreshes tokens
-itself. This project's OAuth surface already owns the refresh cycle
-via `MicrosoftOAuthProvider::refreshAccessToken` and the chmod-600 JSON
-repository, so reusing it keeps token storage in one place and avoids
-the SDK's request-builder hierarchy entirely for the four read-only
-endpoints `GraphApiClient` needs. Direct Guzzle gives: one HTTP
-boundary to audit for `Authorization: Bearer` header leaks (catch
-blocks strip the header before re-throwing), explicit control over the
-OData `$filter` string and the `@odata.nextLink` walk semantics, and
-explicit control over the `Retry-After` header read on 429 (the SDK
-swallows it into a generic exception object).
+designed for delegated MSAL flows where the SDK refreshes tokens itself.
+This project's OAuth surface already owns the refresh cycle via
+`MicrosoftOAuthProvider::refreshAccessToken` and `OAuthSecretsRepository`,
+so reusing it keeps token storage in one place and avoids the SDK's
+request-builder hierarchy entirely for the four read-only endpoints
+`GraphApiClient` needs. Direct Guzzle gives: one HTTP boundary to audit
+for `Authorization: Bearer` header leaks (catch blocks strip the header
+before re-throwing), explicit control over the OData `$filter` string and
+the `@odata.nextLink` walk semantics, and explicit control over the
+`Retry-After` header read on 429 (the SDK swallows it into a generic
+exception object).
 
 `GraphApiClient::buildSenderFilter` doubles single quotes inside each
 sender pattern per OData string-literal escaping (`o'brien` →

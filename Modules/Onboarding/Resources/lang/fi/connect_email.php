@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Vain luku -oikeus',
         'reads_label' => 'Beatrax lukee',
         'reads_sub' => 'Vain kuitit',
-        'token_label' => 'Tunniste pysyy paikallisena',
-        'token_sub' => 'Salattu tiedosto',
+        'token_label' => 'Tunniste tallennetaan salattuna',
+        'token_sub' => 'Paikallisessa tietokannassa',
     ],
 
     'authorize_gmail' => 'Valtuuta Gmaililla',

@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Nalepi ID svoje aplikacije',
         'application_id_label' => 'ID aplikacije',
-        'step3_help' => 'Ovo se čuva u lokalnoj datoteci izvan baze podataka, sa ograničenim dozvolama, i nikad ne napušta ovaj uređaj.',
+        'step3_help' => 'Čuva se u lokalnoj datoteci izvan baze podataka, koju možeš da čitaš samo ti. Identifikuje tvoju aplikaciju kod Enable Bankinga, pa putuje uz svaki zahtev — tvoj privatni ključ nikad.',
 
         'step4_title' => 'Izaberi svoju banku',
         'via_enable_banking' => 'preko Enable Bankinga',

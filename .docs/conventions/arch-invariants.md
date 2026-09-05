@@ -1,8 +1,10 @@
 # Writing an arch invariant
 
 An arch invariant is a test that fails when the *shape* of the codebase drifts,
-rather than when a behaviour is wrong. They live in `tests/Contracts/`, and the
-largest collection is `tests/Contracts/BoundaryArchTest.php`, which holds the
+rather than when a behaviour is wrong. A repo-wide one lives in
+`tests/Contracts/`; a rule that only ever reads one module's own tree may live
+beside it, in that module's `tests/Contracts/` or `tests/Arch/`. The largest
+collection is `tests/Contracts/BoundaryArchTest.php`, which holds the
 module-boundary rules described in
 [Module boundaries](../architecture/module-boundaries.md).
 
@@ -123,17 +125,16 @@ being edited in the same commit.
 
 ## Prefer an exhaustive scan to a per-module list
 
-`BoundaryArchTest.php` used to carry one boundary rule per module plus a
-meta-test, `everyInternalNamespaceHasABoundaryRule`, that read the file's own
-source and failed when a module with a populated `Internal/` had no rule. The
-meta-test existed because the hand-maintained list had already drifted once:
-eleven modules shipped an `Internal/` namespace with no rule at all.
+Do not write one boundary rule per module. A hand-maintained list of modules
+drifts: a module added tomorrow either appears in it or does not, and the
+version of that list this repository once carried had already let eleven
+modules ship an `Internal/` namespace with no rule covering it. A guard that
+needs a second guard to check its own coverage is a guard that was enumerated
+one module at a time, and the enumeration is the defect.
 
-Both are gone. A guard that needs a second guard to check it has been enumerated
-one module at a time, and enumeration is the defect — a module added tomorrow
-either appears in the list or does not. `pinnedCrossModuleInternalImports` walks
-the tree instead, so a new module is in scope the moment its first file exists,
-and there is nothing for a meta-test to police.
+`pinnedCrossModuleInternalImports` walks the tree instead, so a new module is
+in scope the moment its first file exists and there is no coverage list for
+anything to police.
 
 What *is* pinned is the far smaller set of accepted crossings, and that list is
 compared with `toBe()` in both directions: a crossing that disappears fails the
@@ -159,10 +160,12 @@ When the file stops matching, the exemption has outlived what earned it and the
 guard fails there, naming the reason it no longer reads as, rather than waving
 the site on for another year.
 
-Three rules pin this way today: `TheFourAmountColumnsMoveAsASetArchTest`,
+This is the house style for a new pinned exemption, and many of the guards in
+`tests/Contracts/` already pin this way — `TheFourAmountColumnsMoveAsASetArchTest`,
 `AColumnAScreenReadsBackHoldsNoSentenceArchTest` and
-`ABladeNeverSpeaksEnglishOfItsOwnArchTest`. Each pairs it with the
-disappearing-pin test above, so a pin fails in both directions.
+`ABladeNeverSpeaksEnglishOfItsOwnArchTest` among them. Each pairs it with a
+companion case, *still holds each pinned exemption to the reason it was granted
+for*, so a pin fails in both directions.
 
 ### A walk that stops reading must say so
 
@@ -261,6 +264,42 @@ fixture naming its own directory would not be a subject of the rule at all — a
 an autoloadable class in that `Internal\Examples` namespace would be real code
 inside a module's private namespace, which every boundary reader would then
 judge as shipped. Being unreachable is the point.
+
+## The name is part of the interface
+
+A named invariant carries its name in the `it(...)` description, in parentheses
+at the end: a verdict word — `no`, `pinned`, `every`, `only`, `one`, `cross` —
+then what it forbids or pins, in camel case. `noOtherCardStatementStateMutator`,
+`pinnedCrossModuleInternalImports`, `everyDevModeRouteAppliesEnsureDeveloperModeMiddleware`.
+The name is how a page, a failure message and a commit refer to a rule without
+quoting it, so it is an interface and renaming it is a rename everywhere.
+
+That matters because a page saying "the `noXxx` invariant forbids this" makes a
+promise about the build. A reviewer reads the sentence, trusts the suite, and
+approves — and nothing fails, because the name was never in the tree or was
+renamed out from under the page. Both directions cost something: a name that
+never existed is a protection somebody believes is there, and a name that was
+renamed reads as a guard someone deleted, which is how a second copy of it comes
+to be written.
+
+`ADocNamesOnlySymbolsThatExistArchTest` reads both shapes out of every page this
+repository hands a reader. A backticked identifier ending in `Test` has to name
+a file under `tests/` or `Modules/*/tests/`; a backticked invariant name has to
+appear somewhere in that same suite. It holds the citations, not the sentences
+around them — the prose is not checkable and the guard does not pretend
+otherwise. Renaming a rule is therefore a change to the test and to every page
+that cites it, in one commit.
+
+Which identifiers count as invariant names is read off the suite rather than
+written down. The first version matched `no…`, `pinned…` and `every…`, and could
+not see `crossModuleRawTableWrites` — the most-cited rule in the tree — or
+`onlyOneSuppressionEvaluator`, or `oneWindowDefinition`. A guard keyed on a list
+of prefixes cannot see a rival answering to a different one, so the prefixes come
+from the names the suite declares, and a case asserts the derived set still
+covers every one of them.
+
+When nothing enforces a claim, a page saying so plainly costs a reader nothing.
+A page claiming a gate that is not there costs them the review.
 
 ## Where a rule's rationale lives
 

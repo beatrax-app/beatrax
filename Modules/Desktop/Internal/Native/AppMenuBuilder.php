@@ -55,12 +55,14 @@ final readonly class AppMenuBuilder
         ];
 
         if ($this->isDeveloper()) {
-            // No accelerator on "Run a command": one would let the OS menu swallow ⌘K
-            // before the body-level keybind handler dispatches palette:open.
+            // The second entry goes to the runner rather than the console root:
+            // both pointed at dev.overview, and one route under two labels means
+            // one of the labels is wrong. Still no accelerator here — an OS ⌘K
+            // would swallow the keystroke the body handler opens the palette on.
             $items[] = new SubmenuItem(
                 Lang::get('desktop::native.menu.developer_submenu'),
                 Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_open_console'))->accelerator('Cmd+.'),
-                Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_run_command')),
+                Menu::route('dev.artisan', Lang::get('desktop::native.menu.dev_run_command')),
             );
         }
 

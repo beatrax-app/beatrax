@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Les règles restent sur cet appareil. Elles ne sont pas partagées avec vos autres appareils.',
 
     'reapply' => 'Réappliquer les règles à l\'historique',
-    'reapply_confirm' => 'Réappliquer toutes les règles à tout ton historique ? Chaque catégorie, tiers, note et marquage fiscal posé par une règle est réécrit. Ce que tu as saisi à la main reste, tout comme ce qui figure sur un relevé rapproché. Rien ne remet les anciennes valeurs.',
+    'reapply_confirm' => 'Réappliquer toutes les règles à tout ton historique ? Chaque catégorie, tiers, note et marquage fiscal posé par une règle est réécrit. Ce que tu as saisi à la main reste, tout comme ce qui figure sur un relevé rapproché ou sur une transaction que tu as ventilée. Rien ne remet les anciennes valeurs.',
     'reapplying' => 'Réapplication…',
     'new_rule' => 'Nouvelle règle',
 

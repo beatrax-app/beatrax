@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Újracsatlakozás',
     'disconnect' => 'Leválasztás',
+    'disconnect_confirm' => 'Leválasztod ezt: :email? Ezzel törlődnek a postafiók tárolt hitelesítő adatai, a vizsgálati előzményei és azok a feladók, amelyeket hozzáadtál vagy elvetettél. A Beatraxba már beiktatott bizonylatokat ez nem érinti. Az újracsatlakozás tiszta lappal indítja a vizsgálatot.',
     'scan_now' => 'Vizsgálat most',
     'scan_in_progress_title' => 'Már fut egy vizsgálat',
 

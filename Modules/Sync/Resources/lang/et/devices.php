@@ -6,7 +6,7 @@ return [
     'heading' => 'Seadmed ja sünkroonimine',
 
     'enable_sync' => 'Luba sünkroonimine',
-    'enable_sync_help' => 'Jaga oma andmeid turvaliselt usaldusväärsete seadmete vahel. Nõuab rakenduse lukku. Kui see on sees, krüpteeritakse su andmed ja rakenduse lukku ei saa enam välja lülitada.',
+    'enable_sync_help' => 'Jaga oma andmeid turvaliselt usaldusväärsete seadmete vahel. Nõuab rakenduse lukku. Sisselülitamist ei saa tagasi võtta: sellest hetkest on su andmed krüpteeritud ning enam ei saa välja lülitada ei sünkroonimist ega rakenduse lukku.',
 
     'app_lock_notice' => 'Sünkroonimise lubamiseks määra kõigepealt rakenduse lukk.',
     'go_to_app_lock' => 'Ava rakenduse lukk',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Avamine avab selle sidumise uuesti, selle asemel et lasta sel aeguda, nii et see kestab kauem kui seatud rakenduse lukustusaeg. See lõpeb, kui selle lõpetate või tühistate.',
 
     'relay_endpoint' => 'Relee aadress',
-    'relay_endpoint_help' => 'Valikuline. Kui see on määratud, sünkroonivad võrguühenduseta seadmed selle relee kaudu. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
-    'relay_endpoint_help_phone' => 'Valikuline. Kui see on määratud, liiguvad muudatused selle relee kaudu ka siis, kui su seadmed pole samas võrgus. See seade võtab need vastu, kui sünkroonid sellelt ekraanilt — mitte kunagi taustal, sest rakenduse lukk hoiab ainsat võtit. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
+    'relay_endpoint_help' => 'Valikuline. Relee laseb kahel seadmel sidumise lõpule viia ja krüpteerimisvõtmeid vahetada siis, kui nad teineteiseni otse ei jõua. Tehingud ise sünkroonivad endiselt ainult siis, kui mõlemad seadmed on samas võrgus. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
+    'relay_endpoint_help_phone' => 'Valikuline. Relee laseb kahel seadmel sidumise lõpule viia ja krüpteerimisvõtmeid vahetada siis, kui nad teineteiseni otse ei jõua. Tehingud ise sünkroonivad endiselt ainult siis, kui mõlemad seadmed on samas võrgus. See seade võtab vastu selle, mis teda ootab, kui sünkroonid sellelt ekraanilt — mitte kunagi taustal, sest rakenduse lukk hoiab ainsat võtit. Jäta tühjaks, et sünkroonida ainult otse kohtvõrgus.',
     'relay_endpoint_aria' => 'Relee aadressi URL',
     'relay_insecure_warning' => 'See relee aadress kasutab tavalist HTTP-d. Kuigi relee ei dekrüpteeri kunagi sinu andmeid, paljastab ebaturvaline ühendus krüpteeritud andmete mahud ja ajastuse võrgu jälgijatele. Parima privaatsuse jaoks kasuta <strong>https://</strong> aadressi.',
 

@@ -11,7 +11,7 @@ return [
     'cancel' => 'Annuleren',
     'save_connect' => 'Opslaan en verbinden',
 
-    'secret_help' => 'Deze worden opgeslagen in een lokaal configuratiebestand buiten de database met beperkte rechten en verlaten je apparaat nooit.',
+    'secret_help' => 'Wordt versleuteld opgeslagen in de database op dit apparaat. Beatrax stuurt hem alleen naar Google of Microsoft, om je toegangstoken op te halen en te vernieuwen — nergens anders heen.',
 
     'gmail' => [
         'step1_title' => 'Open Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Vul een Google-OAuth-client-ID in die eindigt op .apps.googleusercontent.com.',
         'google_secret' => 'Vul een Google-OAuth-client-secret in die begint met GOCSPX-.',
         'google_published' => 'Bevestig dat je je OAuth-toestemmingsscherm op \'In production\' hebt gezet.',
-        'write_failed' => 'Kon je OAuth-client niet naar schijf opslaan — controleer de rechten van je secrets-map en probeer het opnieuw.',
+        'write_failed' => 'Kon je OAuth-client niet opslaan — het schrijven naar de database op dit apparaat is mislukt. Probeer het opnieuw.',
     ],
 ];

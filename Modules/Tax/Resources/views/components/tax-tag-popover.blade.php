@@ -118,6 +118,9 @@
         && ! ($batchSuggestionDismissed ?? false)
         && $taxPickerTxId === null
     )
+        @php
+            $batchTaxYear = (string) ($batchSuggestion['taxYear'] ?? $pickerTaxYear ?? null);
+        @endphp
         <div
             class="batch-tag-banner"
             aria-atomic="true"
@@ -132,7 +135,7 @@
                 <button
                     type="button"
                     wire:click="applyBatchTag"
-                    wire:confirm="{{ Lang::get('tax::picker.batch_confirm', ['name' => $batchSuggestion['counterpartyName']]) }}"
+                    wire:confirm="{{ Lang::choice('tax::picker.batch_confirm', $batchSuggestion['untaggedCount'], ['name' => $batchSuggestion['counterpartyName'], 'year' => $batchTaxYear]) }}"
                     style="background: var(--color-blue, #3b82f6); color: var(--color-text-inverse, #fff); border: 0; border-radius: 9999px; padding: 4px 12px; font-size: var(--text-xs, 12px); font-weight: 600; cursor: pointer; min-height: 32px;"
                     data-testid="batch-tag-apply"
                 >{{ Lang::get('tax::picker.batch_tag_all') }}</button>

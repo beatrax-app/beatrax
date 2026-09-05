@@ -248,8 +248,9 @@
                 Public AppLockClientConfig service (module-boundary rule: the
                 layout never queries user_app_lock_configs directly).
             --}}
+            @php($beatraxAppLock = $container->make(\Modules\Auth\Public\Services\AppLockClientConfig::class))
             @php($beatraxIdleMs = $currentUser->isAuthenticated()
-                ? $container->make(\Modules\Auth\Public\Services\AppLockClientConfig::class)->idleTimeoutMs($currentUser->user()->id)
+                ? $beatraxAppLock->idleTimeoutMs($currentUser->user()->id)
                 : null)
             @if ($beatraxIdleMs !== null)
                 {{-- The lock URL travels with the timeout: lock.js used to
@@ -261,8 +262,14 @@
                     && $container->make(\Illuminate\Routing\Router::class)->has('mobile.lock')
                         ? route('mobile.lock')
                         : route('auth.lock'))
+                {{-- The grace window leaving the foreground locks on travels
+                     the same way, and for the same reason the lock URL does:
+                     the server owns it. It is the window the app-lock settings
+                     copy discloses, so a second spelling in lock.js would be a
+                     number the screen could start lying about. --}}
                 <script nonce="{{ Vite::cspNonce() }}">
                     window.beatraxIdleMs = {{ $beatraxIdleMs }};
+                    window.beatraxGraceMs = {{ $beatraxAppLock->backgroundGraceMs() }};
                     window.beatraxLockUrl = @js($beatraxLockUrl);
                 </script>
             @endif

@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Run import', 'hint' => 'Open the import wizard'],
-        'scan_email' => ['label' => 'Scan email now', 'hint' => 'Run the inbox sync immediately'],
+        'scan_email' => ['label' => 'Open inboxes', 'hint' => 'Your connected mailboxes'],
         'open_profile' => ['label' => 'Open profile', 'hint' => 'Settings — account and preferences'],
-        'toggle_theme' => ['label' => 'Toggle theme', 'hint' => 'Switch between light and dark'],
+        'toggle_theme' => ['label' => 'Open appearance settings', 'hint' => 'Light, dark or system'],
     ],
 
     'run_command' => 'Run :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Dev overview', 'hint' => 'System tiles + recent runs'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'Run whitelisted commands'],
-        'audit' => ['label' => 'Dev audit log', 'hint' => 'Every dev-mode action'],
+        'audit' => ['label' => 'Dev audit log', 'hint' => 'Your dev-mode actions'],
         'logs' => ['label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream'],
         'queue' => ['label' => 'Queue inspector', 'hint' => 'Pending / failed / batches'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'System probes'],

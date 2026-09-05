@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Alleen-lezen toegang',
         'reads_label' => 'Beatrax leest',
         'reads_sub' => 'Alleen bonnen',
-        'token_label' => 'Token blijft lokaal',
-        'token_sub' => 'Versleuteld bestand',
+        'token_label' => 'Token versleuteld opgeslagen',
+        'token_sub' => 'In de lokale database',
     ],
 
     'authorize_gmail' => 'Autoriseren met Gmail',

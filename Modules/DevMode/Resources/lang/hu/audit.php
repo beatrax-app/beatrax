@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Auditnapló',
-    'subtitle' => 'Minden parancs, várólista-művelet és SQL-lekérdezés, amely a Dev Console-on keresztül futott.',
+    'subtitle' => 'A parancsok, várólista-műveletek és SQL-lekérdezések, amelyeket a Dev Console-on keresztül futtattál.',
     'clear_all' => 'Összes törlése',
-    'clear_all_confirm' => 'Törlöd az összes auditnapló-bejegyzést? Ez nem vonható vissza.',
+    'clear_all_confirm' => 'Törlöd az összes általad rögzített auditnapló-bejegyzést? Ez nem vonható vissza.',
     'filter_tier' => 'Szint',
     'filter_all' => 'Összes',
     'filter_command' => 'Parancs',

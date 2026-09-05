@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Označim še :count iz',
     'batch_after' => '?',
-    'batch_confirm' => 'Označim vse preostale transakcije od :name kot davčno olajšavo? Vsaka dobi to kategorijo in to opombo. Oznako je pozneje mogoče odstraniti le po eno transakcijo naenkrat.',
+    'batch_confirm' => 'Označim še :count transakcijo od :name za davčno leto :year kot davčno olajšavo? Dobi to kategorijo in to opombo. Transakcije na dokončani uskladitvi ostanejo nedotaknjene, oznako pa je pozneje mogoče odstraniti le po eno transakcijo naenkrat.|Označim še :count transakciji od :name za davčno leto :year kot davčno olajšavo? Vsaka dobi to kategorijo in to opombo. Transakcije na dokončani uskladitvi ostanejo nedotaknjene, oznako pa je pozneje mogoče odstraniti le po eno transakcijo naenkrat.|Označim še :count transakcije od :name za davčno leto :year kot davčno olajšavo? Vsaka dobi to kategorijo in to opombo. Transakcije na dokončani uskladitvi ostanejo nedotaknjene, oznako pa je pozneje mogoče odstraniti le po eno transakcijo naenkrat.|Označim še :count transakcij od :name za davčno leto :year kot davčno olajšavo? Vsaka dobi to kategorijo in to opombo. Transakcije na dokončani uskladitvi ostanejo nedotaknjene, oznako pa je pozneje mogoče odstraniti le po eno transakcijo naenkrat.',
     'batch_tag_all' => 'Označi vse',
     'batch_dismiss' => 'Opusti',
 ];

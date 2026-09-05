@@ -52,7 +52,7 @@ final class BackupDatabaseCommand extends Command
     protected $signature = 'db:backup {--force : Keep the copy even when it is identical to the last backup}';
 
     /** @var string */
-    protected $description = 'Produce a consistent SQLite backup via VACUUM INTO with verification and retention pruning.';
+    protected $description = 'Produce a verified SQLite backup via VACUUM INTO. Without --force a run whose contents match the last backup writes nothing, and retention pruning — which deletes every backup the policy does not keep — happens only when a copy is kept.';
 
     public function __construct(
         private readonly Repository $config,

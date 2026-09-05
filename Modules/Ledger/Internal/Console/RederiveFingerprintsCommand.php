@@ -14,11 +14,11 @@ final class RederiveFingerprintsCommand extends Command
 {
     /** @var string */
     protected $signature = 'beatrax:rederive-fingerprints
-        {--confirm : Apply the update inside a single DB transaction.}
-        {--dry-run : Compute the new fingerprints in memory and report without writing.}';
+        {--confirm : Write the new fingerprints inside a single DB transaction. Without it the run only reports.}
+        {--dry-run : Report what would change even when --confirm is passed.}';
 
     /** @var string */
-    protected $description = 'Re-compute the SHA-256 fingerprint of every transactions row using the current FingerprintComposer NORMALIZATION_VERSION. Aborts cleanly if the new tuple would collide on existing data.';
+    protected $description = 'Re-compute the SHA-256 fingerprint of every transactions row still below the current FingerprintComposer NORMALIZATION_VERSION. Reports only unless --confirm is passed, and aborts cleanly if the new tuple would collide on existing data.';
 
     public function __construct(
         private readonly FingerprintRederiveService $service,

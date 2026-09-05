@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Nog een afschrift uploaden',
 
     'chain' => [
-        'heading' => 'Ketens oplossen…',
-        'pending' => 'In wachtrij. De keten-oplosser start zo dadelijk.',
+        'heading' => 'Ketens oplossen',
+        'pending' => 'Het oplossen van ketens is niet gestart, dus financieringsketens zijn niet gekoppeld.',
         'running' => 'Financieringsketens koppelen en afschriftverrekeningen ontleden.',
     ],
 

@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Vlož identifikátor aplikace',
         'application_id_label' => 'Identifikátor aplikace',
-        'step3_help' => 'Ukládá se do lokálního souboru mimo databázi s omezenými oprávněními a nikdy neopustí toto zařízení.',
+        'step3_help' => 'Ukládá se do lokálního souboru mimo databázi, čitelného jen pro tebe. Identifikuje tvou aplikaci vůči Enable Banking, takže putuje s každým požadavkem — tvůj soukromý klíč nikdy.',
 
         'step4_title' => 'Vyber svou banku',
         'via_enable_banking' => 'přes Enable Banking',

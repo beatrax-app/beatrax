@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Prístup len na čítanie',
         'reads_label' => 'Beatrax číta',
         'reads_sub' => 'Len účtenky',
-        'token_label' => 'Token zostáva lokálne',
-        'token_sub' => 'Šifrovaný súbor',
+        'token_label' => 'Token je zašifrovaný',
+        'token_sub' => 'V lokálnej databáze',
     ],
 
     'authorize_gmail' => 'Autorizovať cez Gmail',

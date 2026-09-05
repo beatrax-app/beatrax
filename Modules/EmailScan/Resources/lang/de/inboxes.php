@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Erneut verbinden',
     'disconnect' => 'Trennen',
+    'disconnect_confirm' => 'Verbindung zu :email trennen? Damit werden die gespeicherten Zugangsdaten dieses Postfachs, sein Scanverlauf und die Absender, die du hinzugefügt oder verworfen hast, entfernt. Bereits in Beatrax abgelegte Belege bleiben unberührt. Eine erneute Verbindung beginnt mit einem frischen Scan.',
     'scan_now' => 'Jetzt scannen',
     'scan_in_progress_title' => 'Es läuft bereits ein Scan',
 

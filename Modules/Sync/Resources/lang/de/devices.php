@@ -6,7 +6,7 @@ return [
     'heading' => 'Geräte & Synchronisierung',
 
     'enable_sync' => 'Synchronisierung aktivieren',
-    'enable_sync_help' => 'Teile deine Daten sicher zwischen vertrauenswürdigen Geräten. Erfordert eine App-Sperre. Sobald sie an ist, sind deine Daten verschlüsselt und die App-Sperre lässt sich nicht mehr ausschalten.',
+    'enable_sync_help' => 'Teile deine Daten sicher zwischen vertrauenswürdigen Geräten. Erfordert eine App-Sperre. Das Einschalten lässt sich nicht rückgängig machen: deine Daten sind ab dann verschlüsselt, und weder die Synchronisierung noch die App-Sperre lassen sich wieder ausschalten.',
 
     'app_lock_notice' => 'Richte zuerst eine App-Sperre ein, um die Synchronisierung zu aktivieren.',
     'go_to_app_lock' => 'Zur App-Sperre',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Das Entsperren öffnet diese Kopplung erneut, statt sie ablaufen zu lassen — sie überdauert also die von dir eingestellte App-Sperrzeit. Sie endet, sobald du sie abschließt oder abbrichst.',
 
     'relay_endpoint' => 'Relay-Endpunkt',
-    'relay_endpoint_help' => 'Optional. Wenn gesetzt, synchronisieren Offline-Geräte über dieses Relay. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
-    'relay_endpoint_help_phone' => 'Optional. Wenn gesetzt, reisen Änderungen über dieses Relay, auch wenn deine Geräte nicht im selben Netz sind. Dieses Gerät holt sie ab, wenn du von diesem Bildschirm aus synchronisierst — nie im Hintergrund, denn die App-Sperre hält den einzigen Schlüssel. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
+    'relay_endpoint_help' => 'Optional. Ein Relay lässt zwei Geräte die Kopplung abschließen und Verschlüsselungsschlüssel austauschen, wenn sie einander nicht direkt erreichen. Die Buchungen selbst werden weiterhin nur synchronisiert, wenn beide Geräte im selben Netz sind. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
+    'relay_endpoint_help_phone' => 'Optional. Ein Relay lässt zwei Geräte die Kopplung abschließen und Verschlüsselungsschlüssel austauschen, wenn sie einander nicht direkt erreichen. Die Buchungen selbst werden weiterhin nur synchronisiert, wenn beide Geräte im selben Netz sind. Dieses Gerät holt ab, was dort auf es wartet, wenn du von diesem Bildschirm aus synchronisierst — nie im Hintergrund, denn die App-Sperre hält den einzigen Schlüssel. Leer lassen, wenn nur LAN&#8209;direkt genutzt werden soll.',
     'relay_endpoint_aria' => 'Relay-Endpunkt-URL',
     'relay_insecure_warning' => 'Dieser Relay-Endpunkt nutzt einfaches HTTP. Das Relay entschlüsselt deine Daten zwar nie, aber eine unsichere Verbindung gibt verschlüsselte Größen und Zeitpunkte gegenüber Beobachtern im Netzwerk preis. Nutze für beste Privatsphäre einen <strong>https://</strong>-Endpunkt.',
 

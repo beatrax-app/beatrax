@@ -6,7 +6,7 @@ return [
     'heading' => 'Cihazlar ve senkronizasyon',
 
     'enable_sync' => 'Senkronizasyonu etkinleştir',
-    'enable_sync_help' => 'Verilerini güvendiğin cihazlar arasında güvenle paylaş. Uygulama kilidi gerekir. Bir kez açıldığında verilerin şifrelenir ve uygulama kilidi artık kapatılamaz.',
+    'enable_sync_help' => 'Verilerini güvendiğin cihazlar arasında güvenle paylaş. Uygulama kilidi gerekir. Bunu açmak geri alınamaz: verilerin o andan itibaren şifrelenir, ne senkronizasyon ne de uygulama kilidi bir daha kapatılabilir.',
 
     'app_lock_notice' => 'Senkronizasyonu etkinleştirmek için önce bir uygulama kilidi belirle.',
     'go_to_app_lock' => 'Uygulama kilidine git',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Kilidi açmak bu eşleştirmenin süresi dolmak yerine yeniden açılmasını sağlar; bu yüzden belirlediğiniz uygulama kilidi süresinden daha uzun sürer. Eşleştirmeyi tamamladığınızda veya iptal ettiğinizde sona erer.',
 
     'relay_endpoint' => 'Relay uç noktası',
-    'relay_endpoint_help' => 'İsteğe bağlı. Ayarlandığında çevrimdışı cihazlar bu relay üzerinden senkronize olur. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
-    'relay_endpoint_help_phone' => 'İsteğe bağlı. Ayarlandığında değişiklikler, cihazların aynı ağda olmadığı zamanlarda da bu relay üzerinden gider. Bu cihaz, bu ekrandan senkronize ettiğinde onları alır — asla arka planda değil, çünkü uygulama kilidi tek anahtarı tutuyor. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
+    'relay_endpoint_help' => 'İsteğe bağlı. Relay, iki cihaz birbirine doğrudan ulaşamadığında eşleştirmeyi tamamlamalarını ve şifreleme anahtarlarını değiş tokuş etmelerini sağlar. İşlemlerin kendisi yine yalnızca iki cihaz aynı ağdayken senkronize olur. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
+    'relay_endpoint_help_phone' => 'İsteğe bağlı. Relay, iki cihaz birbirine doğrudan ulaşamadığında eşleştirmeyi tamamlamalarını ve şifreleme anahtarlarını değiş tokuş etmelerini sağlar. İşlemlerin kendisi yine yalnızca iki cihaz aynı ağdayken senkronize olur. Bu cihaz, bu ekrandan senkronize ettiğinde kendisini bekleyenleri alır — asla arka planda değil, çünkü uygulama kilidi tek anahtarı tutuyor. Yalnızca LAN&#8209;doğrudan bağlantı için boş bırak.',
     'relay_endpoint_aria' => 'Relay uç noktası URL adresi',
     'relay_insecure_warning' => 'Bu relay uç noktası düz HTTP kullanıyor. Relay verilerinin şifresini hiçbir zaman çözmese de güvenli olmayan bir bağlantı, şifreli veri boyutlarını ve zamanlamayı ağı izleyenlere açık eder. En iyi gizlilik için <strong>https://</strong> uç noktası kullan.',
 

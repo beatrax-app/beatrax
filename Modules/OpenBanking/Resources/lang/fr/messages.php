@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Colle ton identifiant d\'application',
         'application_id_label' => 'Identifiant d\'application',
-        'step3_help' => 'Il est stocké dans un fichier local en dehors de la base de données, avec des permissions restrictives, et ne quitte jamais cet appareil.',
+        'step3_help' => 'Stocké dans un fichier local en dehors de la base de données, lisible par toi seul. Il identifie ton application auprès d\'Enable Banking, il voyage donc avec chaque requête — ta clé privée, jamais.',
 
         'step4_title' => 'Choisis ta banque',
         'via_enable_banking' => 'via Enable Banking',

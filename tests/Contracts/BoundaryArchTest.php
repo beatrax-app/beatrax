@@ -2317,6 +2317,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // the literal a second time in the test would break exactly that link.
         'tests/Contracts/ATuningNumberIsNamedOnceAndAnswersToTheRealStatementArchTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfExtractionMap',
         'tests/Contracts/AUniqueJobTakesItsLockWhereTheAppKeepsLocksArchTest.php -> Modules\\Categorization\\Internal\\Jobs\\ReapplyRulesJob',
+        // The guard that holds a window a reader is told about to one
+        // definition has to read that definition. Auth::backgroundGraceMs() is
+        // the Public spelling the layout uses; this needs the constant itself,
+        // because the whole claim is that no second copy of it exists.
+        'tests/Contracts/AWindowAReaderIsToldAboutHasOneDefinitionArchTest.php -> Modules\\Auth\\Internal\\Lock\\IdleTimeoutOptions',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',

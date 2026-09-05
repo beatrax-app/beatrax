@@ -85,7 +85,8 @@ What the module explicitly does NOT do:
     already on, which the alias bridge does whenever that leg
     sits on the lowest-id account of the aliased kind;
   - amount equal-and-opposite, same currency;
-  - `booked_at` within ±WINDOW_DAYS calendar days;
+  - `booked_at` within `CounterLegWindow::DEFAULT_DAYS` calendar
+    days either side;
   - both legs typed `transfer_in` / `transfer_out`;
   - neither leg already paired.
   IBAN reconciliation walks both directions (forward = firing
@@ -115,7 +116,8 @@ plaintext candidate. Both matcher arms decrypt before comparing:
   firing leg's IBAN once into a plaintext local, then compares it against
   plaintext `accounts.iban` / hands it to `ResolvesKnownCounterpartyIban`.
 - **Reverse arm** (firing leg has none): keeps its existing narrow SQL
-  predicates (amount equal-and-opposite, currency, ±WINDOW_DAYS window,
+  predicates (amount equal-and-opposite, currency, the
+  `CounterLegWindow::DEFAULT_DAYS` window either side,
   unpaired, type — already a small candidate set), then decrypts each
   surviving candidate's `counterparty_iban` and matches it against the
   plaintext candidate-IBAN set in PHP.
@@ -181,7 +183,8 @@ Import::ConfirmImport persists transaction
                           -$amountMinor, [TransferOut, TransferIn],
                           $currency, unpairedOnly: true,
                           excludeTransactionId: $tx->id),
-                        new CounterLegWindow($bookedAt, WINDOW_DAYS,
+                        new CounterLegWindow($bookedAt,
+                          CounterLegWindow::DEFAULT_DAYS,
                           EarliestBooked),
                         $user)
                  → reverse arm: SELECT the narrow candidate set,

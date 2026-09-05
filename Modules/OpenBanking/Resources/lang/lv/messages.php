@@ -129,7 +129,7 @@ return [
 
         'step3_title' => 'Ielīmējiet savu lietotnes ID',
         'application_id_label' => 'Lietotnes ID',
-        'step3_help' => 'Tas tiek glabāts vietējā failā ārpus datubāzes ar ierobežotām atļaujām un nekad nepamet šo ierīci.',
+        'step3_help' => 'Tiek glabāts vietējā failā ārpus datubāzes, un to varat lasīt tikai jūs. Tas identificē jūsu lietotni pakalpojumā Enable Banking, tāpēc ceļo līdzi katram pieprasījumam — jūsu privātā atslēga nekad.',
 
         'step4_title' => 'Izvēlieties savu banku',
         'via_enable_banking' => 'caur Enable Banking',

@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Siirrä sarjan päivämäärää',
-            'desc' => 'Siirrä seuraavaa tai kaikkia myöhempiä esiintymiä eteenpäin.',
+            'desc' => 'Siirrä seuraava tai kaikki myöhemmät esiintymät toiseen päivämäärään.',
         ],
     ],
 

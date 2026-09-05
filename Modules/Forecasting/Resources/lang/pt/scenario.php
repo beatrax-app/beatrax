@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Deslocar a data de uma série',
-            'desc' => 'Adia a próxima ocorrência ou todas as seguintes.',
+            'desc' => 'Move a próxima ocorrência, ou todas as seguintes, para outra data.',
         ],
     ],
 

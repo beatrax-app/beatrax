@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Journal d\'audit',
-    'subtitle' => 'Chaque commande, action de file et requête SQL lancée depuis la Dev Console.',
+    'subtitle' => 'Les commandes, actions de file et requêtes SQL que tu as lancées depuis la Dev Console.',
     'clear_all' => 'Tout effacer',
-    'clear_all_confirm' => 'Effacer toutes les entrées du journal d\'audit ? C\'est irréversible.',
+    'clear_all_confirm' => "Effacer toutes les entrées du journal d'audit que tu as produites ? C'est irréversible.",
     'filter_tier' => 'Niveau',
     'filter_all' => 'Tous',
     'filter_command' => 'Commande',

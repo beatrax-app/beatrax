@@ -87,7 +87,7 @@ it('keeps the transaction note findable whichever tag was written first', functi
 it('still finds it after a full reindex', function (bool $legFirst) use ($legTagFixture): void {
     $userId = $legTagFixture->call($this, $legFirst);
 
-    Artisan::call('search:reindex', ['--force' => true]);
+    Artisan::call('search:reindex');
 
     expect(legTagSearchCount($userId, 'bureaustoel'))->toBe(1);
 })->with([

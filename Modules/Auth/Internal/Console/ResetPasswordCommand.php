@@ -21,7 +21,7 @@ class ResetPasswordCommand extends Command
     protected $signature = 'beatrax:reset-password {username : Username of the account to reset}';
 
     /** @var string */
-    protected $description = 'Interactively reset a user password. Refuses non-interactive use.';
+    protected $description = 'Interactively reset a user password. Also forces a password change at next sign-in, revokes every session, and invalidates the app-lock recovery wrap. Refuses non-interactive use.';
 
     public function __construct(
         private readonly DatabaseManager $db,

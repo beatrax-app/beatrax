@@ -37,6 +37,7 @@ return [
     'keep_biometric' => 'Keep biometric',
 
     'auto_lock' => 'Auto-lock after',
+    'auto_lock_note' => 'Beatrax locks after this long without activity, and sooner if you leave it: switching to another app, or hiding or closing the window, locks Beatrax within :window whatever this setting says.',
     'idle_1' => '1 minute',
     'idle_5' => '5 minutes',
     'idle_15' => '15 minutes',

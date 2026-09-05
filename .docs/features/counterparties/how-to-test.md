@@ -25,7 +25,7 @@ isolation.
   - The pipeline stage end-to-end against a real DB
     (`ResolveCounterpartyStageTest`).
   - A rule left pointing at a counterparty a peer deleted
-    (`ARulePointingAtACounterpartyDeletedOnAPeerTest`).
+    (`ARulePointingAtADeletedCounterpartyTest`).
   - The three Livewire pages (`CounterpartyIndexTest`,
     `CounterpartyProfileTest`, `CounterpartyTriageTest`).
   - What a triage decision owes the rest of the app — the op-log
@@ -41,16 +41,40 @@ isolation.
 
 ## Contract / arch invariants
 
-- `tests/Arch/CounterpartiesBoundaryTest.php` — the module-local
-  invariants:
-  - no class under `Modules\Counterparties\` may import from another
-    module's `Internal\` namespace;
-  - the resolver runs without `Cache::*` / `Auth::*` facade calls;
-  - the personal-IBAN privacy default's source string composition is
-    intact.
-- The repo-wide `noReachIntoCounterpartiesInternal` invariant —
-  forbids any class outside `Modules\Counterparties\` from importing
-  `Modules\Counterparties\Internal\*`.
+`Modules/Counterparties/tests/` holds `Feature/` and `Unit/` and
+nothing else. A module that wants arch tests of its own keeps them
+under its own `tests/Contracts/` or `tests/Arch/`, and this one has
+neither, so every invariant that touches it is repo-wide and lives in
+`tests/Contracts/BoundaryArchTest.php`.
+
+- `pinnedCrossModuleInternalImports` holds the import half of the
+  boundary in both directions. It scans `Modules/`, `tests/` and
+  `app/` textually for a `use` of another module's `Internal\` and
+  asserts the result equals two pinned lists — a production list
+  holding only the `Mobile` → `Sync` protocol crossings, and a test
+  list holding every crossing the suite makes today. No production
+  file under `Modules\Counterparties\` names a neighbour's
+  `Internal\`; two of this module's tests do
+  (`CounterpartyEncryptionTest` reaching into `Sync`,
+  `ResolveCounterpartyStageTest` into `Import`), and three files
+  elsewhere reach into `Modules\Counterparties\Internal\*`
+  (`SearchEncryptionFallbackTest`, `TaxBadgeSurfacesTest` and
+  `APairOfWindowsThatMustAgreeHasOneDefinitionArchTest`). A new
+  crossing in either direction fails the build until somebody writes
+  it on the list. `App\PhpStan\Rules\BoundaryRule` refuses the
+  production ones outright.
+- `noAuthFacadeOrHelper` is what keeps the resolver off the `Auth`
+  facade. It bans `Auth::`, `auth()`, `session()` and
+  `request()->user()` across every non-test file under `Modules/`
+  outside an eight-file allow-list this module is not on, because
+  current-user identity travels through the injected `CurrentUser`
+  contract instead.
+- Nothing forbids a `Cache::*` call here. The resolver makes none
+  today; that is a review convention, not a gate.
+- Nothing pins the personal-IBAN privacy default at the arch level
+  either. Its source-string composition is covered by the module's own
+  unit test (`PrivacyDefaultsTest`), which is the thing to run when
+  changing how a `personal` counterparty's slug is built.
 
 ## How to run the suite for just this module
 
@@ -62,7 +86,7 @@ vendor/bin/pest Modules/Counterparties/tests
 vendor/bin/pest Modules/Counterparties/tests/Unit/CounterpartyResolverTest.php
 
 # Just the peer-delete deactivation
-vendor/bin/pest Modules/Counterparties/tests/Feature/ARulePointingAtACounterpartyDeletedOnAPeerTest.php
+vendor/bin/pest Modules/Counterparties/tests/Feature/ARulePointingAtADeletedCounterpartyTest.php
 
 # Stop on first failure for a focused debug session
 vendor/bin/pest Modules/Counterparties/tests --stop-on-failure
@@ -237,7 +261,7 @@ and the assertion — see
   deactivation is scoped to the announced id and the owning user:
   another reader's rule, and a
   rule naming a counterparty nobody deleted, both stay active.
-  (`tests/Feature/ARulePointingAtACounterpartyDeletedOnAPeerTest.php`)
+  (`tests/Feature/ARulePointingAtADeletedCounterpartyTest.php`)
 - **The `counterparty_index_view` user preference persists per user.**
   Switching the index view mode writes
   `user_preferences.counterparty_index_view`; a fresh login restores

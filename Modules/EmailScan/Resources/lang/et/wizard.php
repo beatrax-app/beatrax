@@ -11,7 +11,7 @@ return [
     'cancel' => 'Tühista',
     'save_connect' => 'Salvesta ja ühenda',
 
-    'secret_help' => 'Need salvestatakse andmebaasist väljapoole kohalikku konfiguratsioonifaili piiratud õigustega ega lahku kunagi sellest seadmest.',
+    'secret_help' => 'Salvestatakse krüpteeritult selle seadme andmebaasi. Beatrax saadab selle ainult Google\'ile või Microsoftile, et sinu juurdepääsuluba hankida ja uuendada — mitte kuhugi mujale.',
 
     'gmail' => [
         'step1_title' => 'Ava Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Sisesta Google’i OAuthi kliendi ID, mis lõpeb .apps.googleusercontent.com.',
         'google_secret' => 'Sisesta Google’i OAuthi kliendi saladus, mis algab GOCSPX-.',
         'google_published' => 'Kinnita, et oled viinud oma OAuthi nõusolekuekraani olekusse „In production“.',
-        'write_failed' => 'Sinu OAuthi klienti ei õnnestunud kettale salvestada — kontrolli saladuste kausta õigusi ja proovi uuesti.',
+        'write_failed' => 'Sinu OAuthi klienti ei õnnestunud salvestada — kirjutamine selle seadme andmebaasi ebaõnnestus. Proovi uuesti.',
     ],
 ];

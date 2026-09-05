@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Průvodce nedokázal určit aktivní krok. Odejdi přes „Pokračovat později →“ a při dalším spuštění se stav obnoví.',
 
     'privacy' => 'Tvoje data zůstávají na tomto zařízení',
+    'privacy_connector' => 'Tvoje data zůstávají na tomto zařízení. Tenhle krok propojí tvou poštovní schránku s Googlem nebo Microsoftem.',
     'need_help' => 'Potřebuješ pomoc?',
     'need_help_aria' => 'Potřebuješ pomoc? Otevře stránku s hlášeními Beatrax na GitHubu',
 ];

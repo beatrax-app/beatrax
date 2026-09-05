@@ -7,7 +7,7 @@ isolation.
 
 - **Location:** `Modules/DriftAlerts/tests/Unit/`
 - **What they test:**
-  - The evaluator math against the 24-fixture `drift-corpus/`
+  - The evaluator math against the `drift-corpus/` fixtures
     (`DriftEvaluatorTest`, `DriftEvaluatorEdgeCasesTest`,
     `DriftEvaluatorEffectiveThresholdTest`,
     `DriftEvaluatorFxInvariantTest`,
@@ -19,9 +19,11 @@ isolation.
   - The listener path (`EvaluateDriftListenerTest`).
   - The DTO mapper (`DriftAlertDtoMapperTest`,
     `DriftAlertDtoTest`).
-  - The two migrations (`DriftAlertsMigrationTest`,
+  - The schema (`DriftAlertsMigrationTest`,
     `DriftAlertTransitionsMigrationTest`,
-    `DriftThresholdMigrationsTest`).
+    `DriftThresholdMigrationsTest` — the last covers the two
+    threshold columns `Recurring`'s own migrations add, to
+    `recurring_series` and to `users`).
   - The `CancellationImpactQuery` (`CancellationImpactQueryTest`).
 
 ## Feature tests
@@ -52,10 +54,14 @@ isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noDriftAlertStateWritesOutsideMachine` invariant —
-  forbids any class outside
+- The repo-wide `noOtherDriftAlertStateMutator` invariant — forbids
+  any file outside
   `Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine`
-  from writing `drift_alerts.state`.
+  from writing `drift_alerts.state` **or** `snoozed_until`. The
+  snooze deadline is on the list because the Open tab decides whether
+  an alert is open by reading it, so a raw update of it moved a row
+  between tabs while taking no row lock, running no edge guard and
+  leaving no audit row.
 - The repo-wide module-boundary invariant — forbids any class under
   `Modules\DriftAlerts\` from importing from
   `Modules\Recurring\Internal` / `Modules\Recurring\Models`. Every
@@ -102,19 +108,28 @@ composer test
   evaluator returned a fresh insert (not a unique-constraint
   no-op). The event dispatch is gated on the insert returning a
   non-zero affected count.
-- **Snooze never reviving** — confirm
-  `RevivedExpiredDriftSnoozesJob` is scheduled (every minute under
-  `schedule:work`); confirm the snooze's `snoozed_until` is in the
-  past. The state machine's `snoozed → open` transition is the
-  path; check `drift_alert_transitions` for the audit trail.
+- **Snooze never reviving** — confirm `drift-alerts:revive-snoozes`
+  is scheduled (hourly under `schedule:work`; it dispatches
+  `RevivedExpiredDriftSnoozesJob`), and confirm the snooze's
+  `snoozed_until` is in the past. The state machine's
+  `snoozed → open` transition is the path; check
+  `drift_alert_transitions` for the audit trail. An expired snooze is
+  back on the Open tab before that sweep runs, because the open-tab
+  projection reads `snoozed_until` itself — so up to an hour's wait
+  shows in the audit row, never on the screen.
 - **Sidebar badge showing a stale count after acknowledging** — the
-  count comes from `NavCountsService`, whose payload is cached for
-  five minutes per user. Nothing invalidates it on a drift transition,
-  so a badge that lags an Acknowledge by up to five minutes is the
-  cache, not a render bug. Call `NavCountsService::forget($userId)` to
-  confirm — if the badge stays stale after that, the Livewire render
-  did not re-mount the nav — confirm the layout's nav is the same
-  Livewire component instance the action invalidated.
+  count comes from `NavCountsService`, whose five-minute payload is
+  keyed on a generation `ForgetNavCountsOnWrite` bumps on any
+  statement that writes one of the counted tables, and `drift_alerts`
+  is one of them. A transition through the state machine therefore
+  retires the cached entry on its own, and a lagging badge is not
+  expected behaviour. Check the three things that break that chain:
+  that the acknowledge wrote at all (`drift_alert_transitions` has
+  the row), that it did not run while the migration window was open,
+  which is the one case the listener skips, and that the badge and
+  the page still agree on the predicate — the badge counts `open`
+  plus a `snoozed` row whose `snoozed_until` has passed, which is
+  exactly what `/drift`'s Open tab lists.
 
 ## Behavioural contracts, and the tests that hold them
 
@@ -194,10 +209,10 @@ and the assertion — see
   is unstable (deviation beyond the cadence tolerance) is not
   compared; the comparison would not be meaningful.
   (`tests/fixtures/drift-corpus/irregular-cadence-ignored.php`)
-- **The state machine is the sole mutator of
-  `drift_alerts.state`.** The arch invariant
-  `noDriftAlertStateWritesOutsideMachine` blocks any other write
-  path. (`tests/Unit/DriftAlertStateMachineTest.php`)
+- **The state machine is the sole mutator of `drift_alerts.state`
+  and `snoozed_until`.** The arch invariant
+  `noOtherDriftAlertStateMutator` blocks any other write path to
+  either column. (`tests/Unit/DriftAlertStateMachineTest.php`)
 - **Allowed transitions:**
   `open → acknowledged | snoozed | dismissed_cancelled`;
   `snoozed → open | acknowledged | dismissed_cancelled`.
@@ -280,5 +295,5 @@ and the assertion — see
 - The 5% default is fixed in the evaluator source — no config knob.
   It is what applies when neither setting is present, not a bound on
   either.
-- The snooze-revival job runs via the scheduler tick (every
-  minute under `schedule:work`); no per-user opt-out.
+- The snooze-revival sweep runs hourly, as the
+  `drift-alerts:revive-snoozes` scheduler entry; no per-user opt-out.

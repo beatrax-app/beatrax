@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Πρόσβαση μόνο για ανάγνωση',
         'reads_label' => 'Το Beatrax διαβάζει',
         'reads_sub' => 'Μόνο αποδείξεις',
-        'token_label' => 'Το token μένει τοπικά',
-        'token_sub' => 'Κρυπτογραφημένο αρχείο',
+        'token_label' => 'Το token αποθηκεύεται κρυπτογραφημένο',
+        'token_sub' => 'Στην τοπική βάση δεδομένων',
     ],
 
     'authorize_gmail' => 'Εξουσιοδότηση με Gmail',

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Dobro došao',
     'h1' => 'Upoznajmo Beatrax s tvojim novcem.',
-    'lede' => 'Otprilike 5 minuta. Ništa ne napušta ovaj uređaj — sve što povežeš ostaje u datoteci na njemu.',
+    'lede' => 'Otprilike 5 minuta. Beatrax drži tvoju povijest u datoteci na ovom uređaju — jedini korak koji seže van jest povezivanje pristigle pošte, a njega možeš preskočiti.',
     'tagline' => 'Evo što ćemo postaviti:',
 
     'bank_title' => 'Tvoja banka',

@@ -11,7 +11,7 @@ return [
     'cancel' => 'Zrušit',
     'save_connect' => 'Uložit a připojit',
 
-    'secret_help' => 'Ukládají se s omezenými oprávněními do lokálního konfiguračního souboru mimo databázi a nikdy neopustí toto zařízení.',
+    'secret_help' => 'Ukládá se zašifrovaný do databáze na tomto zařízení. Beatrax ho posílá jen Googlu nebo Microsoftu, aby získal a obnovoval tvůj přístupový token — nikam jinam.',
 
     'gmail' => [
         'step1_title' => 'Otevři Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Zadej Google OAuth client ID končící na .apps.googleusercontent.com.',
         'google_secret' => 'Zadej Google OAuth client secret začínající na GOCSPX-.',
         'google_published' => 'Potvrď, že máš obrazovku souhlasu OAuth publikovanou v „In production“.',
-        'write_failed' => 'OAuth klienta se nepodařilo uložit na disk — zkontroluj oprávnění adresáře se secrety a zkus to znovu.',
+        'write_failed' => 'OAuth klienta se nepodařilo uložit — zápis do databáze na tomto zařízení selhal. Zkus to znovu.',
     ],
 ];

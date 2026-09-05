@@ -405,10 +405,12 @@ it('the enable-encryption confirm step says the app lock becomes permanent, befo
 });
 
 // Sync auto-activates encryption with no confirm step at all, so the toggle's
-// own description is the only place its reader is told.
+// own description is the only place its reader is told. It names both halves:
+// the line used to name the app lock alone, which read as though sync were the
+// reversible thing being toggled, and there is no disableSync() at all.
 it('states the same permanence in the sync toggle description, which has no confirm step of its own', function (): void {
     $this->actingAs(encryptionUiUser('encryption-ui-permanent-sync'));
 
     Livewire::test(DevicesAndSyncSettingsSection::class)
-        ->assertSee('the app lock can no longer be turned off');
+        ->assertSee('neither sync nor the app lock can be turned off again');
 });

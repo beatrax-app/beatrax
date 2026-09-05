@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Taip pat pažymėti dar :count iš',
     'batch_after' => '?',
-    'batch_confirm' => 'Pažymėti visas likusias operacijas iš :name kaip atskaitomas iš mokesčių? Kiekviena jų gauna šią kategoriją ir šią pastabą. Vėliau žymą pašalinti galima tik po vieną operaciją.',
+    'batch_confirm' => 'Pažymėti dar :count operaciją iš :name :year mokestiniais metais kaip atskaitomą iš mokesčių? Ji gauna šią kategoriją ir šią pastabą. Užbaigto suderinimo operacijos paliekamos nepaliestos, o vėliau žymą pašalinti galima tik po vieną operaciją.|Pažymėti dar :count operacijas iš :name :year mokestiniais metais kaip atskaitomas iš mokesčių? Kiekviena jų gauna šią kategoriją ir šią pastabą. Užbaigto suderinimo operacijos paliekamos nepaliestos, o vėliau žymą pašalinti galima tik po vieną operaciją.|Pažymėti dar :count operacijų iš :name :year mokestiniais metais kaip atskaitomas iš mokesčių? Kiekviena jų gauna šią kategoriją ir šią pastabą. Užbaigto suderinimo operacijos paliekamos nepaliestos, o vėliau žymą pašalinti galima tik po vieną operaciją.',
     'batch_tag_all' => 'Žymėti visas',
     'batch_dismiss' => 'Slėpti',
 ];

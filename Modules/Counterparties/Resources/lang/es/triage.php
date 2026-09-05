@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Omitir por ahora',
     'mark_ignored' => 'No volver a preguntar por esta',
-    'not_now_note' => 'Ninguna de las dos cambia la contraparte: aún puedes etiquetarla más tarde desde la página Contrapartes.',
+    'skip_note' => 'Omitir no escribe nada: solo pasa a la siguiente desconocida.',
+    'mark_ignored_note' => 'Esto marca la contraparte como ignorada para que se quede fuera de esta cola. Su nombre, su tipo y su historial quedan intactos, y aún puedes etiquetarla más tarde desde la página Contrapartes.',
     'previous' => 'Desconocida anterior',
 
     'kbd_yes' => 'sí',

@@ -6,7 +6,7 @@ return [
     'heading' => 'Eszközök és szinkronizálás',
 
     'enable_sync' => 'Szinkronizálás bekapcsolása',
-    'enable_sync_help' => 'Oszd meg az adataidat biztonságosan a megbízható eszközeid között. Alkalmazászár szükséges hozzá. Ha egyszer bekapcsoltad, az adataid titkosítva lesznek, és az alkalmazászár többé nem kapcsolható ki.',
+    'enable_sync_help' => 'Oszd meg az adataidat biztonságosan a megbízható eszközeid között. Alkalmazászár szükséges hozzá. A bekapcsolás nem vonható vissza: az adataid ettől kezdve titkosítva vannak, és sem a szinkronizálás, sem az alkalmazászár nem kapcsolható ki többé.',
 
     'app_lock_notice' => 'A szinkronizálás bekapcsolásához előbb állíts be alkalmazászárat.',
     'go_to_app_lock' => 'Ugrás az alkalmazászárhoz',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'A feloldás újranyitja ezt a párosítást, ahelyett hogy hagyná lejárni, így tovább tart a beállított alkalmazászár-időkorlátnál. Akkor ér véget, amikor befejezi vagy megszakítja.',
 
     'relay_endpoint' => 'Relé végpont',
-    'relay_endpoint_help' => 'Opcionális. Ha meg van adva, az offline eszközök ezen a relén keresztül szinkronizálnak. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
-    'relay_endpoint_help_phone' => 'Opcionális. Ha meg van adva, a módosítások ezen a relén át utaznak akkor is, ha az eszközeid nem egy hálózaton vannak. Ez az eszköz akkor veszi át őket, amikor erről a képernyőről szinkronizálsz — soha a háttérben, mert az appzár őrzi az egyetlen kulcsot. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
+    'relay_endpoint_help' => 'Opcionális. A relé lehetővé teszi, hogy két eszköz befejezze a párosítást és titkosítási kulcsokat cseréljen, amikor nem érik el közvetlenül egymást. Maguk a tranzakciók továbbra is csak akkor szinkronizálódnak, ha mindkét eszköz ugyanazon a hálózaton van. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
+    'relay_endpoint_help_phone' => 'Opcionális. A relé lehetővé teszi, hogy két eszköz befejezze a párosítást és titkosítási kulcsokat cseréljen, amikor nem érik el közvetlenül egymást. Maguk a tranzakciók továbbra is csak akkor szinkronizálódnak, ha mindkét eszköz ugyanazon a hálózaton van. Ez az eszköz akkor veszi át a rá váró adatokat, amikor erről a képernyőről szinkronizálsz — soha a háttérben, mert az appzár őrzi az egyetlen kulcsot. Hagyd üresen a csak LAN&#8209;közvetlen módhoz.',
     'relay_endpoint_aria' => 'A relé végpont URL-je',
     'relay_insecure_warning' => 'Ez a relé végpont sima HTTP-t használ. Bár a relé soha nem fejti vissza az adataidat, a nem biztonságos kapcsolat felfedi a titkosított adatok méretét és időzítését a hálózatot figyelők előtt. A legjobb adatvédelemhez használj <strong>https://</strong> végpontot.',
 

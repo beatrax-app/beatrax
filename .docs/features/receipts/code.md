@@ -254,8 +254,8 @@ reads + writes it through `ReceiptConflictQuery` /
 
 - Loads migrations, web/console routes, views (all
   file-/dir-existence guarded).
-- Registers two Livewire components under the `receipts.*`
-  namespace.
+- Registers the `receipts.receipt-conflict-toast` Livewire
+  component.
 - Subscribes `DispatchChainHintsFromReceipt` to
   `Import::TransactionImported`.
 - Subscribes `HandleFileOpenedFromOs` to

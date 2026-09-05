@@ -6,7 +6,7 @@ return [
     'heading' => 'Devices & sync',
 
     'enable_sync' => 'Enable sync',
-    'enable_sync_help' => 'Share your data securely across trusted devices. Requires an app lock. Once on, your data is encrypted and the app lock can no longer be turned off.',
+    'enable_sync_help' => 'Share your data securely across trusted devices. Requires an app lock. Turning this on cannot be undone: your data is encrypted from then on, and neither sync nor the app lock can be turned off again.',
 
     'app_lock_notice' => 'Set an app lock first to enable sync.',
     'go_to_app_lock' => 'Go to App lock',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Unlocking reopens this pairing instead of letting it expire, so it outlives the app-lock timeout you set. It ends when you finish or cancel it.',
 
     'relay_endpoint' => 'Relay endpoint',
-    'relay_endpoint_help' => 'Optional. When set, offline devices sync via this relay. Leave empty for LAN&#8209;direct only.',
-    'relay_endpoint_help_phone' => 'Optional. When set, changes travel through this relay even when your devices are not on the same network. This device picks them up when you sync from this screen — never in the background, because the app lock holds the only key. Leave empty for LAN&#8209;direct only.',
+    'relay_endpoint_help' => 'Optional. A relay lets two devices complete pairing and exchange encryption keys when they cannot reach each other directly. Transactions themselves still sync only when both devices are on the same network. Leave empty for LAN&#8209;direct only.',
+    'relay_endpoint_help_phone' => 'Optional. A relay lets two devices complete pairing and exchange encryption keys when they cannot reach each other directly. Transactions themselves still sync only when both devices are on the same network. This device collects what is waiting for it when you sync from this screen — never in the background, because the app lock holds the only key. Leave empty for LAN&#8209;direct only.',
     'relay_endpoint_aria' => 'Relay endpoint URL',
     'relay_insecure_warning' => 'This relay endpoint uses plain HTTP. While the relay never decrypts your data, an insecure connection exposes encrypted sizes and timing to network observers. Use an <strong>https://</strong> endpoint for best privacy.',
 

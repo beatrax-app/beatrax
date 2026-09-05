@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'The wizard could not resolve the active step. Use Resume later → to exit and the next mount will recover.',
 
     'privacy' => 'Your data stays on this device',
+    'privacy_connector' => 'Your data stays on this device. This step connects your mailbox to Google or Microsoft.',
     'need_help' => 'Need help?',
     'need_help_aria' => 'Need help? Opens the Beatrax issues page on GitHub',
 ];

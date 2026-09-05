@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Palaist importu', 'hint' => 'Atvērt importēšanas vedni'],
-        'scan_email' => ['label' => 'Skenēt e-pastu tagad', 'hint' => 'Nekavējoties palaist pastkastes sinhronizāciju'],
+        'scan_email' => ['label' => 'Atvērt pastkastes', 'hint' => 'Jūsu pievienotās pastkastes'],
         'open_profile' => ['label' => 'Atvērt profilu', 'hint' => 'Iestatījumi — konts un preferences'],
-        'toggle_theme' => ['label' => 'Mainīt motīvu', 'hint' => 'Pārslēgt starp gaišo un tumšo motīvu'],
+        'toggle_theme' => ['label' => 'Atvērt izskata iestatījumus', 'hint' => 'Gaišs, tumšs vai sistēmas'],
     ],
 
     'run_command' => 'Izpildīt :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Izstrādes pārskats', 'hint' => 'Sistēmas elementi + nesenās izpildes'],
         'artisan' => ['label' => 'Artisan izpildītājs', 'hint' => 'Atļauto komandu izpilde'],
-        'audit' => ['label' => 'Izstrādes audita žurnāls', 'hint' => 'Katra darbība izstrādes režīmā'],
+        'audit' => ['label' => 'Izstrādes audita žurnāls', 'hint' => 'Jūsu darbības izstrādes režīmā'],
         'logs' => ['label' => 'Žurnālu sekotājs', 'hint' => 'laravel-*.log tiešraides plūsma'],
         'queue' => ['label' => 'Rindas inspektors', 'hint' => 'Gaidošie / neizdevušies / partijas'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sistēmas pārbaudes'],

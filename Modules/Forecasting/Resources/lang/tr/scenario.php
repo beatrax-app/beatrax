@@ -42,7 +42,7 @@ return [
         ],
         'shift_series_date' => [
             'title' => 'Seri tarihini kaydır',
-            'desc' => 'Bir sonraki veya sonraki tüm tekrarları ileri taşır.',
+            'desc' => 'Bir sonraki veya sonraki tüm tekrarları başka bir tarihe taşır.',
         ],
     ],
 

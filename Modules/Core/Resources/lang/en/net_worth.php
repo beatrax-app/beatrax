@@ -23,9 +23,11 @@ return [
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'rates as of :date from :source',
 
-    'stale_bundled' => 'Using a bundled snapshot rate. Enable online refresh in Settings for current rates.',
-    'stale_old' => 'This rate is more than 3 days old. The next online refresh will update it.',
+    'stale_bundled' => 'Using a bundled snapshot rate more than :count day old. Enable online refresh in Settings for current rates.|Using a bundled snapshot rate more than :count days old. Enable online refresh in Settings for current rates.',
+    'stale_old' => 'This rate is more than :count day old. The next online refresh will update it.|This rate is more than :count days old. The next online refresh will update it.',
+    'stale_offline' => 'This rate is more than :count day old, and online refresh is off. Turn it on in Settings to update it.|This rate is more than :count days old, and online refresh is off. Turn it on in Settings to update it.',
 
+    'source_ecb' => 'ECB',
     'source_bundled' => 'Bundled snapshot',
     'source_transaction' => 'Recorded rate',
     'source_fallback' => 'rates',

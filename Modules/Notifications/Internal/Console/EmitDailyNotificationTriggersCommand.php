@@ -34,7 +34,7 @@ final class EmitDailyNotificationTriggersCommand extends Command
     protected $signature = 'notifications:daily-triggers';
 
     /** @var string */
-    protected $description = 'Emit the daily payment reminders, position digest and savings prompts.';
+    protected $description = 'Emit the daily payment reminders, position digest and savings prompts. Runs once per local day, at or after '.self::LOCAL_TIME.'; any other run exits without emitting.';
 
     public function __construct(
         private readonly NotificationPreferenceQuery $preferences,
@@ -51,6 +51,11 @@ final class EmitDailyNotificationTriggersCommand extends Command
     public function handle(): int
     {
         if (! $this->window->claim(self::WINDOW_KEY, self::LOCAL_TIME)) {
+            // A hand-run before the window, or a second one the same day, is
+            // otherwise silence indistinguishable from a pass that emitted
+            // nothing because there was nothing to send.
+            $this->info(sprintf('Nothing emitted: this pass runs once per local day, at or after %s.', self::LOCAL_TIME));
+
             return self::SUCCESS;
         }
 

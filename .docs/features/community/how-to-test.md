@@ -49,7 +49,7 @@ Practical recipes for exercising the `Community` module in isolation.
     made (`TheCorrectedSuggestionRestampedItsOwnDateTest`).
   - The end-to-end suggest submit
     (`SuggestMappingModalSubmitTest`).
-  - The `/triage` "Help others" CTA visibility gate
+  - The `/uncategorized` "Help others" CTA visibility gate
     (`TriageHelpOthersCtaTest`).
   - That a corpus scan resolves every description exactly as a
     row-by-row `containsToken()` walk over the same rows would
@@ -63,11 +63,20 @@ Practical recipes for exercising the `Community` module in isolation.
 
 ## Contract / arch invariants
 
-- The repo-wide `noUnsanctionedShellOpenExternal` arch invariant —
-  forbids any class outside `Modules\Community\Public\Actions\OpenExternalUrlAction`
-  from calling `Shell::openExternal`. The action is the single
-  sanctioned wrapper; routing every browser-launch through it keeps
-  the host allow-list a one-line audit.
+- `tests/Contracts/OneGateJudgesAnExternalUrlArchTest.php` — its
+  "hands a URL to the operating system from one place only" case is
+  what holds `openExternal()` to a single caller,
+  `Modules\Community\Public\Actions\OpenExternalUrlAction`. Routing
+  every browser launch through the one action keeps the host
+  allow-list a one-line audit. The same file holds three more: no
+  Blade template tests a URL scheme for itself,
+  `Window::get(...)->url()` has one call site, and both corpus readers
+  ask the gate. See
+  [An external URL is judged once](../../conventions/an-external-url-is-judged-once.md).
+- The repo-wide `noShellContractOutsideAllowList` invariant holds the
+  import half: only `OpenExternalUrlAction`,
+  `Internal\Shell\NoOpShell` and `Providers\CommunityServiceProvider`
+  may import `Native\Desktop\Contracts\Shell`.
 - The repo-wide `noNativePhpImportsOutsideDesktopModule` invariant —
   forbids `use Native\…\*` outside `Modules\Desktop\` and (by
   carve-out) the `Shell` contract that `OpenExternalUrlAction`
@@ -176,8 +185,8 @@ and the assertion — see
 - **The YAML body in the Compare URL is double-quote-escaped per YAML
   1.2.** A name containing `"`, `\`, or a stray newline round-trips
   cleanly through GitHub's PR composer.
-- **The `/triage` "Help others" CTA is only rendered when the user
-  has left "Offer to contribute" on.** With it off the button is
+- **The `/uncategorized` "Help others" CTA is only rendered when the
+  user has left "Offer to contribute" on.** With it off the button is
   structurally absent from the DOM, not CSS-hidden.
   (`tests/Feature/TriageHelpOthersCtaTest.php`)
 - **"Use the shared merchant list" is readable by the consumer that

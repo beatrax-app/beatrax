@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Etichetta anche altre :count da',
     'batch_after' => '?',
-    'batch_confirm' => "Etichettare come detraibili tutte le transazioni rimanenti di :name? Ognuna riceve questa categoria e questa nota. Togliere l'etichetta in seguito si fa una transazione alla volta.",
+    'batch_confirm' => "Etichettare come detraibile :count altra transazione di :name per l'anno fiscale :year? Riceve questa categoria e questa nota. Le transazioni di una riconciliazione completata restano come sono e togliere l'etichetta in seguito si fa una transazione alla volta.|Etichettare come detraibili :count altre transazioni di :name per l'anno fiscale :year? Ognuna riceve questa categoria e questa nota. Le transazioni di una riconciliazione completata restano come sono e togliere l'etichetta in seguito si fa una transazione alla volta.",
     'batch_tag_all' => 'Etichetta tutte',
     'batch_dismiss' => 'Ignora',
 ];

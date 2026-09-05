@@ -20,6 +20,12 @@ final class IdleTimeoutOptions
 
     public const int DEFAULT_MINUTES = 5;
 
+    // Leaving the foreground is a second lock condition on its own fixed
+    // window, which no setting above changes. Three places need the same
+    // number -- the copy that discloses it, this marker, and lock.js's timer
+    // -- and the marker is the only one an Android WebView cannot suspend.
+    public const int BACKGROUND_GRACE_SECONDS = 30;
+
     /**
      * @return list<int>
      */

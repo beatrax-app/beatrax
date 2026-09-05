@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Sveikas',
     'h1' => 'Supažindinkime Beatrax su tavo pinigais.',
-    'lede' => 'Užtruks apie 5 minutes. Niekas neišeina iš šio įrenginio — viskas, ką prijungi, lieka jame esančiame faile.',
+    'lede' => 'Užtruks apie 5 minutes. Beatrax laiko tavo istoriją faile šiame įrenginyje — vienintelis žingsnis, kuris siekia į išorę, yra pašto dėžutės prijungimas, ir jį gali praleisti.',
     'tagline' => 'Štai ką paruošime:',
 
     'bank_title' => 'Tavo bankas',

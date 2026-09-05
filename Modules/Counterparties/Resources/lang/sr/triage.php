@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Preskoči zasad',
     'mark_ignored' => 'Više ne pitaj za ovu',
-    'not_now_note' => 'Nijedno ne menja drugu stranu — još uvek možeš da je označiš kasnije na stranici Druge strane.',
+    'skip_note' => 'Preskakanje ne upisuje ništa — samo prelazi na sledeću nepoznatu.',
+    'mark_ignored_note' => 'Ovo označava drugu stranu kao zanemarenu pa ostaje izvan ovog reda. Njen naziv, tip i istorija ostaju netaknuti, a i dalje možeš da je označiš kasnije na stranici Druge strane.',
     'previous' => 'Prethodna nepoznata',
 
     'kbd_yes' => 'da',

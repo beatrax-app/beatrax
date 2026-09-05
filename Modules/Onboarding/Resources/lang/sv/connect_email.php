@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Endast läsbehörighet',
         'reads_label' => 'Beatrax läser',
         'reads_sub' => 'Bara kvitton',
-        'token_label' => 'Token stannar lokalt',
-        'token_sub' => 'Krypterad fil',
+        'token_label' => 'Token lagras krypterad',
+        'token_sub' => 'I den lokala databasen',
     ],
 
     'authorize_gmail' => 'Auktorisera med Gmail',

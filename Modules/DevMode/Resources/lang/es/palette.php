@@ -34,9 +34,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Ejecutar una importación', 'hint' => 'Abrir el asistente de importación'],
-        'scan_email' => ['label' => 'Analizar el correo ahora', 'hint' => 'Ejecutar ahora mismo la sincronización de la bandeja de entrada'],
+        'scan_email' => ['label' => 'Abrir las bandejas de entrada', 'hint' => 'Tus buzones conectados'],
         'open_profile' => ['label' => 'Abrir el perfil', 'hint' => 'Ajustes — cuenta y preferencias'],
-        'toggle_theme' => ['label' => 'Cambiar el tema', 'hint' => 'Alternar entre el tema claro y el oscuro'],
+        'toggle_theme' => ['label' => 'Abrir los ajustes de apariencia', 'hint' => 'Claro, oscuro o del sistema'],
     ],
 
     'run_command' => 'Ejecutar :command',
@@ -44,7 +44,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Resumen de desarrollo', 'hint' => 'Paneles del sistema + ejecuciones recientes'],
         'artisan' => ['label' => 'Runner de Artisan', 'hint' => 'Ejecutar comandos autorizados'],
-        'audit' => ['label' => 'Registro de auditoría de desarrollo', 'hint' => 'Cada acción del modo desarrollador'],
+        'audit' => ['label' => 'Registro de auditoría de desarrollo', 'hint' => 'Tus acciones del modo desarrollador'],
         'logs' => ['label' => 'Visor de registros', 'hint' => 'Flujo en directo de laravel-*.log'],
         'queue' => ['label' => 'Inspector de colas', 'hint' => 'Pendientes / fallidos / lotes'],
         'doctor' => ['label' => 'Doctor', 'hint' => 'Sondas del sistema'],

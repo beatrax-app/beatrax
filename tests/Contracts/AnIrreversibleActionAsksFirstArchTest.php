@@ -40,8 +40,10 @@ it('puts a question in front of every action that cannot be taken back', functio
             // The two attributes have to sit on the SAME element, so the match
             // runs from the wire:click to the end of its tag rather than over
             // the whole file — a confirm three controls away is not a gate.
+            // choice() reads the same line as get(); a question naming a count
+            // has to be read with it or the reader is shown both its arms.
             $found = preg_match(
-                '~wire:click="'.preg_quote($method, '~').'"[^<>]*wire:confirm="\{\{ Lang::get\(\''.preg_quote($key, '~').'\'~s',
+                '~wire:click="'.preg_quote($method, '~').'"[^<>]*wire:confirm="\{\{ Lang::(?:get|choice)\(\''.preg_quote($key, '~').'\'~s',
                 $source
             ) === 1;
 

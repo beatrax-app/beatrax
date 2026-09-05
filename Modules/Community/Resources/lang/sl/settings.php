@@ -28,6 +28,6 @@ return [
         'title' => 'Posodobi skupni seznam ob posodobitvah aplikacije',
         'help' => 'Priloženi seznam osveži vsakič, ko se Beatrax posodobi.',
         'help_phone' => 'Priloženi seznam osveži vsakič, ko se iz App Storea ali Googla Play namesti nova različica Beatraxa.',
-        'note' => 'Se vklopi s prihodnjo posodobitvijo aplikacije — trenutno različico najdeš v Nastavitve → O aplikaciji.',
+        'note' => 'Se vklopi s prihodnjo posodobitvijo aplikacije — različica, ki jo uporabljaš, je prikazana na vrhu stranske vrstice.',
     ],
 ];

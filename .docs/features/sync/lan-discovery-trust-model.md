@@ -148,17 +148,24 @@ Two more properties:
   cheapest path and never reaches the database. As on the relay, the bucket key
   drops the ephemeral port so one host is one bucket.
 
-### The three answers a client can get, and the three things it may say
+### The answers a client can get, and the things it may say
 
 The single `404` body is a *server* decision and must stay one. The **client**
-still has three distinguishable outcomes without the server telling it anything
-more, and `PairingOfferLookup` is the enum that keeps them apart:
+still tells its outcomes apart without the server telling it anything more, and
+`PairingOfferLookup` is the enum that keeps them apart — one case per answer:
 
 | What happened | Case | What the screen says |
 |---|---|---|
+| The typed words do not decode to a token — truncated or over-long | `CodeMalformed` | "That is not a complete code. Check it against the other device and type all of it." |
 | No HTTP response at all — connect refused, mDNS miss, timeout | `NoPeerReached` | "Cannot reach the other device…" — the only outcome for which a network question is the right question |
 | A peer answered and refused, or answered something unusable | `CodeNotAccepted` | "No device on this network accepted that code." |
 | A peer answered `429` | `RateLimited` | "Too many attempts. Wait a minute and try again." |
+
+`CodeMalformed` is decided first and on its own, in `fetchForWordCode()`, before
+a single peer is asked: `WordCodeEncoder::decode()` throws and the method
+returns. So it is not part of the ordering below and cannot be outranked by it —
+nothing was asked of the network, so no answer that mentions the network can be
+true of it.
 
 `RateLimited` is not cosmetic. Folded into `CodeNotAccepted` it produced *"This
 code is invalid or has expired. Ask the other device to generate a new one"* —
@@ -166,13 +173,16 @@ advice that cannot work, and that sends the reader to mint a fresh code straight
 into the same bucket. The responder screen re-emits every three seconds, so a
 phone that has hit the limiter is exactly the phone most likely to be told this.
 
-Across several peers the precedence is **RateLimited > CodeNotAccepted >
-NoPeerReached**: a typed code names no device, so any peer may be the one holding
-it, and "wait" is true whichever of them that is while "regenerate" is false for
-the limited one. A peer that answers with a real offer still wins over all three
-— being limited by the wrong desktop must not discard the right one's reply.
+Once the code does decode, `askEveryPeer()` asks all of them and the precedence
+across their replies is **a real offer > RateLimited > CodeNotAccepted >
+NoPeerReached**. An offer ends the sweep where it is found — being limited by
+the wrong desktop must not discard the right one's reply — and the rest is
+decided only after every peer has answered, off two flags carried past the loop.
+A typed code names no device, so any peer may be the one holding it: "wait" is
+true whichever of them that is, while "regenerate" is false for the limited one.
 
-`LanPairingOfferFetcher` reads `HttpStatus::TOO_MANY_REQUESTS`, the same constant
+`LanPairingOfferFetcher` reads `PairingHttpStatus::TOO_MANY_REQUESTS`, which is
+declared as `Amp\Http\HttpStatus::TOO_MANY_REQUESTS` — the same constant
 `PairingOfferRequestHandler` answers with, so the two sides cannot drift.
 
 ## What actually proves identity

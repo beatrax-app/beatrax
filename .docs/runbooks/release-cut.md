@@ -4,39 +4,45 @@ The operational procedure for shipping a new Beatrax release. Everything happens
 pushing a git tag — the release pipeline is the only path that produces a published
 build.
 
-For the underlying mechanics of what the workflow does after you push the tag, see
-[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md). For the version policy
-and channel semantics, see [`../cicd/release-cadence.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
+For the underlying mechanics of what the workflow does after you push the tag, and for
+the version policy and channel semantics, see
+[`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Before pushing the tag
 
-1. Confirm `main` is green. The PR-gate workflow (`ci.yml`) on the latest commit must
-   be passing for both PHP 8.4 and PHP 8.5. If it is not, the release workflow's gate
+1. Confirm `main` is green. The PR-gate workflow (`ci.yml`) runs on PHP 8.5 only —
+   three test shards plus a static-analysis job, collapsed into the single
+   `quality (PHP 8.5)` check — and that check must be passing on the latest commit.
+   There is no 8.4 axis to wait for. If it is not green, the release workflow's gate
    job will fail in the same way — fix it on `main` first rather than chasing it
    through the release.
 2. Confirm the change set is what you mean to ship. `git log --oneline <last-tag>..HEAD`
-   reads as the changelog GitHub will auto-generate; if any commit looks unfinished,
-   land the fix before tagging.
-3. Pick the version. The version follows semver inside the `v0.x` series — bug fixes
-   bump the patch, feature additions bump the minor. The series stays on `0` until the
-   explicit graduation moment described in
-   [`../cicd/release-cadence.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
+   is the raw material; if any commit looks unfinished, land the fix before tagging.
+   The published notes are narrower than that log — git-cliff builds them from
+   `cliff.toml`, which skips `docs`, `ci`, `build`, `test`, `style` and `chore` commits
+   and groups the rest by conventional-commit type.
+3. Pick the version. The version follows semver — bug fixes bump the patch, feature
+   additions bump the minor, and a breaking change bumps the major. The spec owns the
+   policy behind that; see
+   [`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Push the tag
 
 ```sh
 # Stable release on the stable channel — produces a DRAFT GitHub Release
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.4.0
+git push origin v1.4.0
 
 # Release candidate on the preview channel — published immediately as a prerelease
-git tag v0.1.0-rc.1
-git push origin v0.1.0-rc.1
+git tag v1.4.0-rc.1
+git push origin v1.4.0-rc.1
 ```
 
-The tag itself is the trigger. There is no `workflow_dispatch` button, no second-step
-"start build" action. As soon as the push completes, GitHub Actions runs the gate job
-within seconds.
+The tag itself is the trigger — `push: tags: ['v*']` and nothing else. There is no
+`workflow_dispatch` button, no second-step "start build" action. As soon as the push
+completes, GitHub Actions runs the spec gate and the quality gate within seconds; the
+spec gate fails the run outright if the canonical spec does not consider the tagged
+version releasable.
 
 ## Watching the build
 
@@ -46,13 +52,20 @@ Follow the run live:
 gh run watch
 ```
 
-Or browse to the Actions tab on GitHub. Three things to confirm during the run:
+Or browse to the Actions tab on GitHub. Four things to confirm during the run:
 
-- The gate job (both 8.4 and 8.5 axes) completes green. About five minutes.
-- All three platform build jobs complete green. About fifteen to twenty minutes
-  wall-clock once they kick off — they run in parallel.
-- The publish job runs and uploads every binary plus the signed manifest. About two
-  minutes.
+- The spec gate and the quality gate (a single PHP 8.5 axis) complete green. About
+  five minutes.
+- All four build jobs — macOS, Windows, Linux, Android — complete green. About fifteen
+  to twenty minutes wall-clock once they kick off; they run in parallel. The macOS and
+  Windows jobs refuse to build at all when a signing credential is missing, and then
+  interrogate the artifact they produced rather than trusting the build's exit code.
+- The publish job runs, signs each auto-update manifest with Ed25519, and uploads every
+  artifact plus the detached signatures. About two minutes.
+- The `verify published` job re-downloads the manifests from the release page and
+  re-verifies every signature against the publisher key committed in
+  `config/auto_update.php`. If it fails, the assets on the page are not what the
+  pipeline signed.
 
 If any platform job fails, the workflow stops and the publish job is skipped. Fix the
 underlying cause on `main`, then either delete and re-push the same tag (acceptable for
@@ -74,12 +87,13 @@ repo write, but no end user can see or download the release. To promote:
 
 1. Open the release in the GitHub UI under Releases.
 2. Verify the auto-generated release notes read correctly. Edit if needed.
-3. Confirm the asset list contains:
-   - `beatrax-{version}-mac.dmg`
-   - `beatrax-{version}-win.exe` (and `.msi`)
-   - `beatrax-{version}.AppImage` and `beatrax-{version}.deb`
-   - `latest.yml`, `latest-mac.yml`, `latest-linux.yml` (each Ed25519-signed)
-   - `beatrax-{version}-checksums.txt`
+3. Confirm the asset list. There is no checksum file to look for — the hashes live
+   inside the manifests — so what to check is that each of `latest.yml`,
+   `latest-mac.yml` and `latest-linux.yml` is present, that each has a `.sig` sibling,
+   and that the installer each one names in its `path:` field is on the page too. The
+   Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the Android `.apk` are
+   the artifacts the four build jobs upload; `.msi` and `.deb` appear when
+   `electron-builder` produced them.
 4. Click Publish release.
 
 Once published, the stable channel sees the new version on its next auto-update poll.
@@ -103,7 +117,7 @@ turns out to be broken gets superseded by a new patch release, not retracted. Th
 correct procedure:
 
 1. Fix the issue on `main`.
-2. Tag a new patch version (e.g., `v0.1.1` after a broken `v0.1.0`).
+2. Tag a new patch version (e.g., `v1.4.1` after a broken `v1.4.0`).
 3. Let the new release publish as DRAFT, promote it, and let auto-update pull it down
    on subscribed installs.
 

@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Pomiń na razie',
     'mark_ignored' => 'Nie pytaj już o tego',
-    'not_now_note' => 'Żadne z nich nie zmienia kontrahenta — nadal możesz go opisać później na stronie Kontrahenci.',
+    'skip_note' => 'Pominięcie nic nie zapisuje — po prostu przechodzi do następnego nieznanego.',
+    'mark_ignored_note' => 'To oznacza kontrahenta jako pominiętego, więc znika z tej kolejki. Jego nazwa, typ i historia pozostają nietknięte, a nadal możesz go opisać później na stronie Kontrahenci.',
     'previous' => 'Poprzedni nieznany',
 
     'kbd_yes' => 'tak',

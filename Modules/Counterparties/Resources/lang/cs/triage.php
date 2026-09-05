@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Zatím přeskočit',
     'mark_ignored' => 'Už se na tuto neptat',
-    'not_now_note' => 'Ani jedno protistranu nezmění — pořád ji můžeš označit později na stránce Protistrany.',
+    'skip_note' => 'Přeskočení nic nezapisuje — jen se posune na další neznámou.',
+    'mark_ignored_note' => 'Tímto se protistrana označí jako ignorovaná, takže z této fronty zmizí. Její název, typ i historie zůstanou beze změny a pořád ji můžeš označit později na stránce Protistrany.',
     'previous' => 'Předchozí neznámá',
 
     'kbd_yes' => 'ano',

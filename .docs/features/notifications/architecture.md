@@ -42,6 +42,16 @@ app-lock to be unlocked at delivery time. The event is dispatched and
 consumed inside one Laravel event-bus tick, locally; it never crosses a
 process or network boundary.
 
+`onlyOneNotificationKeyDeriverAndStateMutator` holds both halves of
+that. A second deriver would not fail a test — it would surface months
+later as duplicate rows appearing on merge — so the invariant pins the
+call sites of `DeterministicKeyDeriver::derive()` to `NotificationWriter`
+plus the two that re-derive an *existing* row's id to look it up rather
+than to mint one, `ResolveSettledReminder` and `DemoNotificationsSeeder`.
+It also pins `notifications.state` to `NotificationStateMachine`, naming
+`OpLogReplayer` as the one legitimate outside mutator of `read_at` and
+`dismissed_at`.
+
 `id`/`user_id`/`state`/`read_at`/`dismissed_at` are deliberately *not*
 part of the encrypted-field registry: the primary key is matched in
 `WHERE` dedup clauses, and the timestamps drive KEK-less unread counts
@@ -277,13 +287,12 @@ fires a real OS/mobile notification. Every dispatch runs under
 derives byte-identical occurrence keys, collapsing via the writer's
 idempotent insert like any other repeated trigger.
 
-`NotificationQuery` clones `DriftAlertQuery`'s shape (`PAGE_SIZE` rows
-plus one lookahead row, read and then WITHHELD) with one mandatory
-deviation: `drift_alerts.id` is an
-autoincrement surrogate, so `ORDER BY id DESC` + `WHERE id < cursor`
-stays monotone with insertion order, but `notifications.id` is a sha256
-hex digest and is not insertion-ordered. This query instead sorts on
-`created_at DESC, id DESC` and pages on a compound cursor —
+Every page read asks for one row more than
+`NotificationQuery::PAGE_SIZE` and then withholds it: that lookahead is
+what tells the page there is another, without paying for a second COUNT.
+`notifications.id` is a sha256 hex digest rather than an insertion-ordered
+surrogate, so `ORDER BY id DESC` alone would page in hash order. The query
+sorts on `created_at DESC, id DESC` and pages on a compound cursor —
 `(created_at < ?) OR (created_at = ? AND id < ?)` — backed by a
 `(user_id, created_at, id)` index. A malformed cursor is treated as null
 (first page) rather than thrown. The three page reads return a

@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Sumos rodymas',
-        'label' => 'Numatytasis rodinys operacijų sąraše',
+        'label' => 'Numatytasis sumų rodinys',
         'eur_only' => 'Atsiskaityta suma',
         'original' => 'Originali suma',
-        'help' => 'Kiekviename puslapyje vis tiek gali persijungti iš operacijų sąrašo.',
+        'help' => 'Taikoma operacijų sąrašui ir Apžvalgos sumoms. Kiekviename puslapyje vis tiek gali persijungti, bet tik operacijų sąraše.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Valiutų kursai',
         'fetch_online' => 'Gauti dabartinius kursus internetu',
-        'online_on' => 'Kursai kasdien gaunami iš ECB. Užklausiamos tik valiutų poros — jokių asmens duomenų.',
+        'online_on' => 'Kursai kasdien gaunami iš ECB arba iš Frankfurter, jei ECB nepasiekiamas. Užklausiamos tik valiutų poros — jokių asmens duomenų.',
         'last_updated' => 'Paskutinį kartą atnaujinta: :date.',
-        'online_off' => 'Naudojami kartu pateikti kursai. Jokie duomenys neišeina iš šio įrenginio.',
+        'online_off' => 'Toliau naudojami jau esantys kursai, o kartu pateiktas momentinis vaizdas lieka atsargai. Jokie duomenys neišeina iš šio įrenginio.',
         'fetch_aria' => 'Gauti dabartinius valiutų kursus internetu',
         'refreshing' => 'Atnaujinama…',
         'next_refresh' => 'Automatinis atnaujinimas: kartą per dieną',

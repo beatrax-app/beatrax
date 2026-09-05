@@ -6,7 +6,7 @@ return [
     'heading' => 'Zařízení a synchronizace',
 
     'enable_sync' => 'Zapnout synchronizaci',
-    'enable_sync_help' => 'Sdílej svá data bezpečně mezi důvěryhodnými zařízeními. Vyžaduje zámek aplikace. Jakmile je zapnutý, data se zašifrují a zámek už nelze vypnout.',
+    'enable_sync_help' => 'Sdílej svá data bezpečně mezi důvěryhodnými zařízeními. Vyžaduje zámek aplikace. Zapnutí nelze vzít zpět: data jsou od té chvíle zašifrovaná a vypnout už nejde ani synchronizace, ani zámek aplikace.',
 
     'app_lock_notice' => 'Nejdřív nastav zámek aplikace, pak půjde synchronizaci zapnout.',
     'go_to_app_lock' => 'Přejít na Zámek aplikace',
@@ -47,8 +47,8 @@ return [
     'pairing_waiting_lock_override' => 'Odemknutí toto párování znovu otevře, místo aby ho nechalo vypršet, takže přetrvá déle než nastavený časový limit zámku aplikace. Skončí, jakmile ho dokončíte nebo zrušíte.',
 
     'relay_endpoint' => 'Adresa relay serveru',
-    'relay_endpoint_help' => 'Volitelné. Když je nastavená, zařízení offline se synchronizují přes tento relay server. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
-    'relay_endpoint_help_phone' => 'Volitelné. Když je nastavená, změny putují přes tento relay server i tehdy, když tvá zařízení nejsou ve stejné síti. Toto zařízení si je vyzvedne, když synchronizuješ z této obrazovky — nikdy na pozadí, protože zámek aplikace drží jediný klíč. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
+    'relay_endpoint_help' => 'Volitelné. Relay server umožní dvěma zařízením dokončit párování a vyměnit si šifrovací klíče, když se nemohou spojit přímo. Samotné transakce se i nadále synchronizují jen tehdy, když jsou obě zařízení ve stejné síti. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
+    'relay_endpoint_help_phone' => 'Volitelné. Relay server umožní dvěma zařízením dokončit párování a vyměnit si šifrovací klíče, když se nemohou spojit přímo. Samotné transakce se i nadále synchronizují jen tehdy, když jsou obě zařízení ve stejné síti. Toto zařízení si vyzvedne, co na něj čeká, když synchronizuješ z této obrazovky — nikdy na pozadí, protože zámek aplikace drží jediný klíč. Nech prázdné, pokud chceš jen spojení LAN&#8209;přímo.',
     'relay_endpoint_aria' => 'URL relay serveru',
     'relay_insecure_warning' => 'Tato adresa relay serveru používá prosté HTTP. Relay server tvá data nikdy nedešifruje, ale nezabezpečené spojení odhalí pozorovatelům v síti velikosti a časování zašifrovaných přenosů. Pro nejlepší soukromí použij adresu <strong>https://</strong>.',
 

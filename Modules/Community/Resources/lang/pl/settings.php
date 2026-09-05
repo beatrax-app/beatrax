@@ -25,6 +25,6 @@ return [
         'title' => 'Aktualizuj wspólną listę przy aktualizacjach aplikacji',
         'help' => 'Odświeżaj dołączoną listę przy każdej aktualizacji aplikacji Beatrax.',
         'help_phone' => 'Odświeżaj dołączoną listę za każdym razem, gdy z App Store lub Google Play zostanie zainstalowana nowa wersja Beatraxa.',
-        'note' => 'Zadziała po przyszłej aktualizacji aplikacji — obecną wersję znajdziesz w Ustawienia → O aplikacji.',
+        'note' => 'Zadziała po przyszłej aktualizacji aplikacji — używana wersja jest widoczna na górze paska bocznego.',
     ],
 ];

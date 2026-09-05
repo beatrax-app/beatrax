@@ -14,7 +14,7 @@ show nothing when the rows are months outside its window:
 | `ExpenseSeriesDetector`, `IncomeSeriesDetector` | two months, or `users.recurring_detection_window_months` |
 | The transactions list, before "Show full history" | ninety days |
 | `CounterpartyIndexQuery` | eleven months of sparkline, one year of activity |
-| `CalendarQuery` | `HISTORY_MONTHS` |
+| `CalendarMonthWindow` | ten years back (`HISTORY_MONTHS`), one year forward (`PROJECTION`) |
 | The dashboard's period roll-ups | the reader's own period |
 
 `fixture:rebase` writes a date-shifted **copy** so those windows have something

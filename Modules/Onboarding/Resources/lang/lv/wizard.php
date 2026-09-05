@@ -22,6 +22,7 @@ return [
     'unknown_lede' => 'Vednis nevarēja noteikt aktīvo soli. Izmantojiet Turpināt vēlāk →, lai izietu, un nākamajā reizē tas atkopsies.',
 
     'privacy' => 'Jūsu dati paliek šajā ierīcē',
+    'privacy_connector' => 'Jūsu dati paliek šajā ierīcē. Šis solis savieno jūsu iesūtni ar Google vai Microsoft.',
     'need_help' => 'Vajadzīga palīdzība?',
     'need_help_aria' => 'Vajadzīga palīdzība? Atver Beatrax problēmu lapu GitHub',
 ];

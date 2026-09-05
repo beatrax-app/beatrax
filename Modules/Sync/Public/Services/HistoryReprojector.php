@@ -95,9 +95,9 @@ final readonly class HistoryReprojector
     }
 
     // A hold naming an epoch this device now holds has had its answer: the pass
-    // above replayed it with the key in hand. clearSettled() knows only the two
-    // create-refusals, so nothing deleted one, and a phone just handed its key
-    // kept reporting 385 rows "waiting to be added" through every later pass.
+    // above replayed it with the key in hand. Nothing used to delete one, so a
+    // phone just handed its key kept reporting 385 rows "waiting to be added"
+    // through every later pass. clearSettled() now sweeps these too.
     /**
      * @return list<int>
      */

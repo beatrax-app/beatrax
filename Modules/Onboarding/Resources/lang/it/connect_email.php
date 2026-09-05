@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Accesso in sola lettura',
         'reads_label' => 'Beatrax legge',
         'reads_sub' => 'Solo le ricevute',
-        'token_label' => 'Il token resta locale',
-        'token_sub' => 'File crittografato',
+        'token_label' => 'Il token è salvato cifrato',
+        'token_sub' => 'Nel database locale',
     ],
 
     'authorize_gmail' => 'Autorizza con Gmail',

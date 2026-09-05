@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Summan näyttö',
-        'label' => 'Oletusnäkymä tapahtumalistalla',
+        'label' => 'Summien oletusnäkymä',
         'eur_only' => 'Tilitetty summa',
         'original' => 'Alkuperäinen summa',
-        'help' => 'Voit silti vaihtaa näkymää sivukohtaisesti tapahtumalistalla.',
+        'help' => 'Koskee tapahtumalistaa ja Yleisnäkymän summia. Voit silti vaihtaa näkymää sivukohtaisesti, mutta vain tapahtumalistalla.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Valuuttakurssit',
         'fetch_online' => 'Hae ajantasaiset kurssit verkosta',
-        'online_on' => 'Kurssit haetaan päivittäin lähteestä ECB. Vain valuuttaparien haut — ei henkilötietoja.',
+        'online_on' => 'Kurssit haetaan päivittäin lähteestä ECB tai lähteestä Frankfurter, jos ECB ei vastaa. Vain valuuttaparien haut — ei henkilötietoja.',
         'last_updated' => 'Päivitetty viimeksi: :date.',
-        'online_off' => 'Käytössä ovat mukana toimitetut kurssit. Mitään tietoja ei poistu tältä laitteelta.',
+        'online_off' => 'Jo tallessa olevat kurssit ovat yhä käytössä, ja mukana toimitettu tilannevedos toimii varana. Mitään tietoja ei poistu tältä laitteelta.',
         'fetch_aria' => 'Hae ajantasaiset valuuttakurssit verkosta',
         'refreshing' => 'Päivitetään…',
         'next_refresh' => 'Automaattinen päivitys: kerran päivässä',

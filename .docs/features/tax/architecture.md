@@ -324,7 +324,7 @@ previous year and May-December to the current year (matching the
 Dutch `aangifte` filing season) when no `?year=` query param is
 present; the `#[Url]` attribute makes the resolved year deep-linkable
 and back-button-safe. A year that *is* given is clamped to
-`Public\Support\TaxYearBounds` — the same current-year ±10 window
+`Internal\Support\TaxYearBounds` — the same current-year ±10 window
 `TagTransaction` bounds `tax_year_override` to, because `?year=` is the
 same figure arriving by a different door. `Tax -1` and `Tax 100000` both
 rendered a heading, a year switcher and an empty cockpit for a year no tag
@@ -402,20 +402,29 @@ a Livewire property.
 
 ## Module boundary
 
-`Public/Services/TaxYearQuery` is a thin facade over
-`Internal/Services/TaxYearQuery`, which carries the full query logic
-and is only reachable from inside the module. The same
-facade-over-internal shape is used for `TaxCategoryWriter`,
-`TaxCsvExporter`, and `TaxPdfRenderer` — each Public class is the
-singleton `TaxServiceProvider` binds and constructs a fresh internal
-instance per call, so external consumers (TaxPage, exporters, the
-year-switcher, other modules' tax-tagging surfaces) never reach into
-`Modules\Tax\Internal\*`.
+`Public/` carries the whole cross-module surface: the two write actions
+(`TagTransaction`, `UntagTransaction`), the four DTOs they and the queries
+return, the two events, the two Livewire components other layouts mount
+(`TaxSettingsSection`, `TaxSummaryCard`), the `HandlesTaxTagging` trait, and
+two services — `TaxCategoryWriter` and `TaxTagQuery`. Only one of those two is
+a facade over the module's internals, and they are the only services here.
+
+`TaxCategoryWriter` is the facade: it holds no persistence logic of its
+own, delegates every row write to `Internal/Actions/TaxCategoryStore`, and adds
+the sync capture around it, so a caller outside the module never names the
+store. `TaxTagQuery` is the opposite shape — it carries its own SQL and reaches
+`Internal/Support/TaggedRowScope` directly, which is legal because that is the
+same module.
 
 `Internal/Support/TaggedRowScope` sits behind both: it is the module's
 only definition of the effective-year expression, the leg-aware settled
-amount, and the supersession filter, and `Public/Services/TaxTagQuery`
-reaches into it directly (same module, so `Internal` is not crossed).
+amount, and the supersession filter.
+
+The cockpit's own machinery has no Public spelling, and needs none.
+`Internal/Services/TaxYearQuery`, `Internal/Services/TaxCsvExporter` and
+`Internal/Services/TaxPdfRenderer` are named by `TaxPage` and by this module's
+own tests, and nowhere else: nothing outside `Tax` composes a tax year or
+renders an export, so nothing outside `Tax` needs a door to them.
 
 `Public/Http/Livewire/Concerns/HandlesTaxTagging` is the shared trait
 any Livewire component embeds to get tax-tag state + the tag/untag

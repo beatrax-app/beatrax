@@ -37,9 +37,9 @@ return [
 
     'action' => [
         'run_import' => ['label' => 'Spustiť import', 'hint' => 'Otvoriť sprievodcu importom'],
-        'scan_email' => ['label' => 'Prehľadať e-mail teraz', 'hint' => 'Spustiť synchronizáciu schránky ihneď'],
+        'scan_email' => ['label' => 'Otvoriť schránky', 'hint' => 'Tvoje pripojené schránky'],
         'open_profile' => ['label' => 'Otvoriť profil', 'hint' => 'Nastavenia — účet a predvoľby'],
-        'toggle_theme' => ['label' => 'Prepnúť motív', 'hint' => 'Prepínanie medzi svetlým a tmavým motívom'],
+        'toggle_theme' => ['label' => 'Otvoriť nastavenia vzhľadu', 'hint' => 'Svetlý, tmavý alebo podľa systému'],
     ],
 
     'run_command' => 'Spustiť :command',
@@ -47,7 +47,7 @@ return [
     'nav' => [
         'overview' => ['label' => 'Vývojársky prehľad', 'hint' => 'Systémové dlaždice + nedávne spustenia'],
         'artisan' => ['label' => 'Artisan runner', 'hint' => 'Spúšťanie príkazov zo zoznamu povolených'],
-        'audit' => ['label' => 'Záznam auditu', 'hint' => 'Každá akcia vo vývojárskom režime'],
+        'audit' => ['label' => 'Záznam auditu', 'hint' => 'Tvoje akcie vo vývojárskom režime'],
         // i18n-review: sk · nav.logs.label — Slovak has no noun for a "tailer"; the
         // locale's own phrase is «Živý výpis», a verb phrase, so the row keeps
         // «Výpis logov» and the live half moves down into the hint.

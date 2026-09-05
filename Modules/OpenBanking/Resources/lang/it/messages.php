@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Incolla il tuo ID applicazione',
         'application_id_label' => 'ID applicazione',
-        'step3_help' => 'Viene salvato in un file locale fuori dal database, con permessi restrittivi, e non lascia mai questo dispositivo.',
+        'step3_help' => 'Viene salvato in un file locale fuori dal database, leggibile solo da te. Identifica la tua applicazione presso Enable Banking, quindi viaggia con ogni richiesta — la tua chiave privata mai.',
 
         'step4_title' => 'Scegli la tua banca',
         'via_enable_banking' => 'tramite Enable Banking',

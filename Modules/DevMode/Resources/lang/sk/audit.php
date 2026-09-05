@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Záznam auditu',
-    'subtitle' => 'Každý príkaz, akcia frontu a SQL dotaz spustený cez vývojársku konzolu.',
+    'subtitle' => 'Príkazy, akcie frontu a SQL dotazy, ktoré si spustil cez vývojársku konzolu.',
     'clear_all' => 'Vymazať všetko',
-    'clear_all_confirm' => 'Vymazať všetky záznamy auditu? Túto akciu nemožno vrátiť späť.',
+    'clear_all_confirm' => 'Vymazať všetky záznamy auditu, ktoré si vytvoril? Túto akciu nemožno vrátiť späť.',
     'filter_tier' => 'Úroveň',
     'filter_all' => 'Všetko',
     'filter_command' => 'Príkaz',

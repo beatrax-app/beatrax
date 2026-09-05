@@ -25,6 +25,6 @@ return [
         'title' => 'Päivitä jaettu lista sovelluspäivitysten yhteydessä',
         'help' => 'Päivitä mukana toimitettava lista aina kun Beatrax päivittää itsensä.',
         'help_phone' => 'Päivitä mukana toimitettava lista aina kun App Storesta tai Google Playstä asennetaan uusi Beatraxin versio.',
-        'note' => 'Aktivoituu tulevassa sovelluspäivityksessä — katso nykyinen versio kohdasta Asetukset → Tietoja.',
+        'note' => 'Aktivoituu tulevassa sovelluspäivityksessä — käytössä oleva versio näkyy sivupalkin yläreunassa.',
     ],
 ];

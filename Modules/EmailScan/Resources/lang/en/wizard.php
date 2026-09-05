@@ -11,7 +11,7 @@ return [
     'cancel' => 'Cancel',
     'save_connect' => 'Save and connect',
 
-    'secret_help' => 'These are stored in a local config file outside the database with restrictive permissions and never leave this device.',
+    'secret_help' => 'Stored encrypted in the database on this device. Beatrax sends it only to Google or Microsoft, to exchange and refresh your access token — nowhere else.',
 
     'gmail' => [
         'step1_title' => 'Open Google Cloud Console',
@@ -55,6 +55,6 @@ return [
         'google_client_id' => 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.',
         'google_secret' => 'Enter a Google OAuth client secret starting with GOCSPX-.',
         'google_published' => "Confirm that you've pushed your OAuth consent screen to 'In production'.",
-        'write_failed' => 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.',
+        'write_failed' => 'Could not save your OAuth client — writing it to the database on this device failed. Try again.',
     ],
 ];

@@ -71,7 +71,14 @@ Asks `Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban`
 whether this IBAN is a known institution bridge — the PayPal
 Luxembourg and ICS-at-ABN-AMRO IBANs that `Chains` uses for account
 routing. A hit resolves to `type = 'bank'` with
-`metadata.bridge_account_kind` and `metadata.institution_iban`.
+`metadata.bridge_account_kind`, and nothing else.
+
+The IBAN itself is deliberately **not** copied into `metadata`.
+`counterparties.metadata` is on no encryption list, so a copy there was
+the row's own sealed `iban` written in the clear one column over, and
+nothing ever read it back — every consumer already gets that IBAN from
+the sealed column. The arm no longer writes it and a migration clears
+the rows that carry it, so do not reintroduce the key.
 
 It runs before merchant resolution because IBAN evidence is exact where
 description evidence is fuzzy. A PayPal settlement row's description

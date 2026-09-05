@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Skip for now',
     'mark_ignored' => 'Stop asking about this one',
-    'not_now_note' => 'Neither writes anything to the counterparty — you can still label it later from the counterparties page.',
+    'skip_note' => 'Skipping writes nothing — it moves on to the next unknown.',
+    'mark_ignored_note' => 'This marks the counterparty as ignored so it stays out of this queue. Its name, type and history are untouched, and you can still label it later from the counterparties page.',
     'previous' => 'Previous unknown',
 
     'kbd_yes' => 'yes',

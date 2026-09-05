@@ -81,10 +81,10 @@ return [
 
     'currency_display' => [
         'heading' => 'Összeg megjelenítése',
-        'label' => 'Alapértelmezett nézet a tranzakciólistán',
+        'label' => 'Összegek alapértelmezett nézete',
         'eur_only' => 'Elszámolt összeg',
         'original' => 'Eredeti összeg',
-        'help' => 'A tranzakciólistán oldalanként továbbra is válthatsz.',
+        'help' => 'A tranzakciólistára és az Irányítópult összesítéseire vonatkozik. Oldalanként továbbra is válthatsz, de csak a tranzakciólistán.',
     ],
 
     'base_currency' => [
@@ -96,9 +96,9 @@ return [
     'exchange_rates' => [
         'heading' => 'Árfolyamok',
         'fetch_online' => 'Aktuális árfolyamok letöltése online',
-        'online_on' => 'Az árfolyamok naponta az ECB-től érkeznek. Csak devizapár-lekérdezés — személyes adat nélkül.',
+        'online_on' => 'Az árfolyamok naponta az ECB-től érkeznek, vagy a Frankfurtertől, ha az ECB nem érhető el. Csak devizapár-lekérdezés — személyes adat nélkül.',
         'last_updated' => 'Utoljára frissítve: :date.',
-        'online_off' => 'A csomagolt árfolyamok vannak használatban. Semmilyen adat nem hagyja el ezt az eszközt.',
+        'online_off' => 'Továbbra is a már meglévő árfolyamok érvényesek, tartalékként a csomagolt pillanatkép szolgál. Semmilyen adat nem hagyja el ezt az eszközt.',
         'fetch_aria' => 'Aktuális árfolyamok letöltése online',
         'refreshing' => 'Frissítés…',
         'next_refresh' => 'Automatikus frissítés: naponta egyszer',

@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Omite deocamdată',
     'mark_ignored' => 'Nu mai întreba despre aceasta',
-    'not_now_note' => 'Niciuna dintre ele nu modifică contrapartea — o poți eticheta mai târziu din pagina Contrapărți.',
+    'skip_note' => 'Omiterea nu scrie nimic — trece doar la următoarea necunoscută.',
+    'mark_ignored_note' => 'Aceasta marchează contrapartea ca ignorată, așa că rămâne în afara acestei cozi. Numele, tipul și istoricul rămân neatinse și o poți eticheta mai târziu din pagina Contrapărți.',
     'previous' => 'Necunoscuta anterioară',
 
     'kbd_yes' => 'da',

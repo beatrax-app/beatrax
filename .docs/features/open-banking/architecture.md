@@ -130,10 +130,13 @@ session.
   `requestEnable()` is a structural no-op regardless of a forged
   `$acknowledged=true`. On success it persists an **epoch timestamp** (not a
   bare boolean) to the session and clears `$warningShown` (single-use).
-- The session acknowledgement carries a TTL (`ACK_TTL_SECONDS`, 2 hours —
-  long enough to cover a first-time Enable Banking application registration
-  plus SCA) so an abandoned tab cannot leave a standing, indefinitely-valid
-  authorization sitting in the session. A lapsed acknowledgement surfaces a
+- The session acknowledgement carries a TTL of two hours — long enough to
+  cover a first-time Enable Banking application registration plus SCA — so
+  an abandoned tab cannot leave a standing, indefinitely-valid
+  authorization sitting in the session. The value is the private
+  `OpenBankingSettingsPage::ackTtlSeconds()` rather than a constant another
+  class can reach, so the page that issues the acknowledgement is the only
+  thing that decides when it lapses. A lapsed acknowledgement surfaces a
   visible "re-confirm to finish enabling" CTA (`reconfirmEnable()`) rather
   than silently leaving a fully-consented connection disabled.
   `OpenBankingWizardModal::cancel()` clears the flag immediately on an
@@ -207,8 +210,9 @@ consent-failure detection.
 ## Sync job and freshness accounting
 
 `OpenBankingSyncRunner` owns the two-timestamp rule, and both entry points
-— `SyncOpenBankingAccountJob` (the 06:00 scheduler) and
-`OpenBankingSettingsPage::syncNow()` (the button) — go through it.
+— `SyncOpenBankingAccountJob` (dispatched by the `open-banking:sync-due`
+schedule entry, which is registered `->daily()` and so fires at midnight)
+and `OpenBankingSettingsPage::syncNow()` (the button) — go through it.
 `last_successful_sync_at` is written **only** in the success branch, never
 in a `finally` — a failed attempt must never advance the freshness signal a
 user reads as "how current is my data." Every attempt (success or failure)
@@ -270,16 +274,19 @@ attempt and zero timestamp write. That consent boundary is
 
 ## Onboarding wizard
 
-`OpenBankingWizardModal` walks the user through six steps: (1) generate a
-local RSA keypair — the private key is written straight to the secrets file
-and never assigned to a public Livewire property, so it cannot round-trip
-into a `wire:snapshot`; (2) an informational step to register the
-application in the Enable Banking portal using the public key + redirect
-URI; (3) paste back the pasted `application_id`; (4) choose the bank (ASN,
-SNS, or a free-text "other" institution id — never hardcoded); (5) hand off
-to the consent/SCA dance; (6) render the done/error state from the
-callback's flash values. A reconnect flow (triggered from the settings
-page's consent-expiry banner) can skip straight to step 4, reusing the
+`OpenBankingWizardModal` renders one branch per case of `WizardStep`:
+`Keypair` generates a local RSA keypair — the private key is written
+straight to the secrets file and never assigned to a public Livewire
+property, so it cannot round-trip into a `wire:snapshot`; `Register` is an
+informational step to register the application in the Enable Banking portal
+using the public key + redirect URI; `ApplicationId` takes the
+`application_id` back from the portal; `Bank` chooses the institution (ASN,
+SNS, or a free-text "other" institution id — never hardcoded); and
+`Consent` hands off to the consent/SCA dance. The done and error states are
+not a step of the wizard: `OpenBankingCallbackController` redirects to
+`settings.open-banking` with a flash value and the settings page renders
+it. A reconnect flow (triggered from the settings page's consent-expiry
+banner) can skip straight to `WizardStep::Bank`, reusing the
 already-registered application — `open()` only honors a requested start
 step when `hasApplication()` is true, so a reconnect can never accidentally
 regenerate a keypair or wipe an existing registration. The requested step

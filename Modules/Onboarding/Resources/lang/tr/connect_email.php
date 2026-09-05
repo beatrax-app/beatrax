@@ -16,8 +16,8 @@ return [
         'scope_sub' => 'Salt okunur erişim',
         'reads_label' => 'Beatrax okur',
         'reads_sub' => 'Yalnızca fişler',
-        'token_label' => 'Belirteç cihazda kalır',
-        'token_sub' => 'Şifrelenmiş dosya',
+        'token_label' => 'Belirteç şifreli saklanır',
+        'token_sub' => 'Yerel veritabanında',
     ],
 
     'authorize_gmail' => 'Gmail ile yetkilendir',

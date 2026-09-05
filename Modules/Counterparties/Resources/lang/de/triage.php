@@ -42,7 +42,8 @@ return [
 
     'skip' => 'Vorerst überspringen',
     'mark_ignored' => 'Nicht mehr danach fragen',
-    'not_now_note' => 'Keins von beiden verändert den Zahlungspartner — du kannst ihn später auf der Seite Zahlungspartner kennzeichnen.',
+    'skip_note' => 'Überspringen schreibt nichts — es geht nur zum nächsten Unbekannten weiter.',
+    'mark_ignored_note' => 'Damit wird der Zahlungspartner als ignoriert markiert und bleibt aus dieser Liste heraus. Name, Typ und Verlauf bleiben unberührt, und du kannst ihn später auf der Seite Zahlungspartner kennzeichnen.',
     'previous' => 'Vorheriger Unbekannter',
 
     'kbd_yes' => 'ja',

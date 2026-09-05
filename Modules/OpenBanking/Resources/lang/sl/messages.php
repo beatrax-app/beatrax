@@ -126,7 +126,7 @@ return [
 
         'step3_title' => 'Prilepi ID svoje aplikacije',
         'application_id_label' => 'ID aplikacije',
-        'step3_help' => 'To se shrani v lokalno datoteko zunaj zbirke podatkov z omejenimi dovoljenji in nikoli ne zapusti te naprave.',
+        'step3_help' => 'Shrani se v lokalno datoteko zunaj zbirke podatkov, ki jo lahko prebereš samo ti. Tvojo aplikacijo predstavi storitvi Enable Banking, zato potuje z vsako zahtevo — tvoj zasebni ključ nikoli.',
 
         'step4_title' => 'Izberi svojo banko',
         'via_enable_banking' => 'prek Enable Bankinga',

@@ -56,6 +56,7 @@ return [
 
     'reconnect' => 'Poveži ponovno',
     'disconnect' => 'Odspoji',
+    'disconnect_confirm' => 'Odspojiti :email? Ovo uklanja pohranjene vjerodajnice ovog pretinca, njegovu povijest skeniranja i pošiljatelje koje si dodao ili odbacio. Potvrde koje su već zavedene u Beatrax ostaju netaknute. Ponovno povezivanje kreće s novim skeniranjem.',
     'scan_now' => 'Skeniraj sada',
     'scan_in_progress_title' => 'Skeniranje je već u tijeku',
 

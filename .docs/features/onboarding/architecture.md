@@ -373,7 +373,7 @@ and the user can always connect later from Settings.
 
 `ConnectPaypalStep` collects a single PayPal Rapport Transactiegegevens
 CSV (an arbitrary user-chosen date range; additional CSVs go through
-the standalone `/imports/upload` flow later). Its account-before-preview
+the standalone `/imports/new` flow later). Its account-before-preview
 ordering is load-bearing: it calls `EnsurePaypalAccountAction` to
 idempotently create the synthetic `PAYPAL`-IBAN account **before**
 running `RunsImports::runFromUpload()`, because the import pipeline

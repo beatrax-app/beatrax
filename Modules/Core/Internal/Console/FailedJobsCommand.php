@@ -17,10 +17,10 @@ final class FailedJobsCommand extends Command
     protected $signature = 'beatrax:failed-jobs
         {action=prune : Action to run (currently only "prune" is wired)}
         {--older-than=30d : Duration cutoff for the prune action (e.g. 30d, 7d, 12h, 2w)}
-        {--dry-run : Print rows that WOULD be deleted without writing}';
+        {--dry-run : List the first 50 rows the prune would delete, report the full count, and write nothing}';
 
     /** @var string */
-    protected $description = 'Maintenance operations on the Laravel-managed failed_jobs table.';
+    protected $description = 'Prune the Laravel-managed failed_jobs table by age: deletes every row older than --older-than (30d by default), whether or not the job was ever retried.';
 
     public function __construct(
         private readonly DatabaseManager $db,

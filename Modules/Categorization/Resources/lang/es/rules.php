@@ -9,7 +9,7 @@ return [
     'device_local_note' => 'Las reglas permanecen en este dispositivo. No se comparten con tus otros dispositivos.',
 
     'reapply' => 'Volver a aplicar las reglas al historial',
-    'reapply_confirm' => '¿Volver a aplicar todas las reglas a todo tu historial? Cada categoría, contraparte, nota y etiqueta fiscal que haya puesto una regla se reescribe. Lo que has puesto a mano se mantiene, igual que todo lo que esté en un extracto conciliado. Nada devuelve los valores anteriores.',
+    'reapply_confirm' => '¿Volver a aplicar todas las reglas a todo tu historial? Cada categoría, contraparte, nota y etiqueta fiscal que haya puesto una regla se reescribe. Lo que has puesto a mano se mantiene, igual que todo lo que esté en un extracto conciliado o en una transacción que hayas desglosado. Nada devuelve los valores anteriores.',
     'reapplying' => 'Aplicando de nuevo…',
     'new_rule' => 'Nueva regla',
 

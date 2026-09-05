@@ -19,8 +19,8 @@ return [
     'upload_another' => 'Augšupielādēt citu konta izrakstu',
 
     'chain' => [
-        'heading' => 'Nosaka ķēdes…',
-        'pending' => 'Rindā. Ķēžu atrisinātājs sāks darbu drīzumā.',
+        'heading' => 'Ķēžu noteikšana',
+        'pending' => 'Ķēžu noteikšana nesākās, tāpēc finansējuma ķēdes netika sasaistītas.',
         'running' => 'Saista finansējuma ķēdes un sadala konta izraksta norēķinus.',
     ],
 

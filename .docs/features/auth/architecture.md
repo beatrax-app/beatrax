@@ -608,12 +608,25 @@ would only widen the locked-session surface for no benefit.
 
 ### Engaging the lock requires an enabled lock
 
-`lock.js` drops the privacy veil and starts a 30-second grace timer when
-the window is backgrounded or blurred; when that timer elapses it posts
-to `/lock/engage`, which withholds the session key and marks the session
-locked. `AppLockMiddleware` tests the session lock flag *before* it loads
-the user's lock config, so a session locked this way stays locked
-regardless of whether a lock was ever configured.
+`lock.js` drops the privacy veil when the window is backgrounded *or*
+blurred, and starts a grace timer on backgrounding alone; when that timer
+elapses it posts to `/lock/engage`, which withholds the session key and
+marks the session locked. A bare blur veils and nothing more — another
+window taking focus while ours stays on screen is no app-switcher
+snapshot, and counting it down locked a reader who clicked away for half
+a minute against a thirty-minute idle setting. `AppLockMiddleware` tests
+the session lock flag *before* it loads the user's lock config, so a
+session locked this way stays locked regardless of whether a lock was
+ever configured.
+
+The window itself is `IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS`, and
+it has one definition. `AppLockClientConfig::backgroundGraceMs()` carries
+it to the layout, which emits it as `window.beatraxGraceMs` beside
+`beatraxIdleMs`; the timer reads it from there, `LockIdleClock` enforces
+it server-side for the suspended-WebView case, and the app-lock settings
+copy discloses it through the same constant. Leaving the foreground is a
+second lock condition that the configured idle timeout does not govern,
+which is why the settings screen has to say so.
 
 For a user who has never enabled the app-lock that combination is a
 lockout: there is no PIN hash to verify against and no enrolled
@@ -629,7 +642,9 @@ never veiled and never locked**, enforced at two levels:
   authenticated layout emits only when the lock is enabled (via
   `AppLockClientConfig::idleTimeoutMs()`). When it is absent the store
   registers neither the idle watcher nor the `visibilitychange` / `blur`
-  veil-and-grace listeners, so `_serverLock()` is never reached.
+  veil listeners, so `_serverLock()` is never reached. `window.beatraxGraceMs`
+  is emitted from the same block, so the grace timer has no window to run
+  when the veil listeners were never registered either.
 - **Server.** `AppLockLiveness::isArmed()` asks
   `AppLockClientConfig::isEnabled()`, and both `EngageAppLock` and
   `RecordAppBackgrounded` return without touching the session when the lock

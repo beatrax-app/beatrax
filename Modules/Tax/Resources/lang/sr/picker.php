@@ -27,7 +27,7 @@ return [
 
     'batch_before' => 'Označiti još :count iz',
     'batch_after' => '?',
-    'batch_confirm' => 'Označiti sve preostale transakcije od :name kao poreski priznate? Svaka od njih dobija ovu kategoriju i ovu belešku. Oznaka se posle skida jedna po jedna transakcija.',
+    'batch_confirm' => 'Označiti još :count transakciju od :name za poresku godinu :year kao poreski priznatu? Dobija ovu kategoriju i ovu belešku. Transakcije na dovršenom usaglašavanju ostaju netaknute, a oznaka se posle skida jedna po jedna transakcija.|Označiti još :count transakcije od :name za poresku godinu :year kao poreski priznate? Svaka od njih dobija ovu kategoriju i ovu belešku. Transakcije na dovršenom usaglašavanju ostaju netaknute, a oznaka se posle skida jedna po jedna transakcija.|Označiti još :count transakcija od :name za poresku godinu :year kao poreski priznate? Svaka od njih dobija ovu kategoriju i ovu belešku. Transakcije na dovršenom usaglašavanju ostaju netaknute, a oznaka se posle skida jedna po jedna transakcija.',
     'batch_tag_all' => 'Označi sve',
     'batch_dismiss' => 'Odbaci',
 ];

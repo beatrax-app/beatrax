@@ -456,9 +456,13 @@ override reads filter explicitly at the call site instead (mirrors
 
 ## Mystery-merchants stats
 
-`MysteryMerchantsPage::render()` scans up to 2,000 of the user's most recent
-transactions, groups every description the `MerchantNameResolver` cannot
-identify, and renders the top 24 by occurrence count as mystery cards. The
+`MysteryMerchantsPage::render()` walks every transaction the reader owns,
+chunked through `lazyById(SCAN_CHUNK)` rather than capped, groups every
+description the `MerchantNameResolver` cannot identify, and renders the top
+`CARD_LIMIT` by occurrence count as mystery cards. The chunk is a memory
+bound, not a window: a window over the newest 2,000 rows told a ledger
+holding 600 unidentified rows that there was nothing mysterious yet, and
+truncated a card's own occurrence count. The
 stats strip's `contributorCount` KPI counts the reader's own rows via
 `CommunityCorpusQuery::contributionsCount()`, one of which `ContributionLog`
 writes per suggestion; it was a hardcoded zero that still read 0 immediately

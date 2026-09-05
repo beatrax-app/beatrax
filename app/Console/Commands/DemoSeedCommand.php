@@ -226,7 +226,7 @@ final class DemoSeedCommand extends Command
         // Nothing above fired TransactionImported, so the listener's index is
         // empty until this rebuild.
         $this->line('Rebuilding the full-text search index over the demo ledger…');
-        $this->call('search:reindex', ['--force' => true]);
+        $this->call('search:reindex');
 
         $this->newLine();
         $this->info('Demo dataset is ready. Log in as demo-1 (password: demo-only).');
