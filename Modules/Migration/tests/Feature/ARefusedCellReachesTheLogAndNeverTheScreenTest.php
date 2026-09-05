@@ -10,7 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Http\Livewire\NewMigration;
-use Psr\Log\AbstractLogger;
+use Modules\Migration\Tests\Support\RefusedCellRecordingLogger;
 use Psr\Log\LoggerInterface;
 use Tests\Helpers\UploadIsolation;
 
@@ -21,34 +21,6 @@ uses(RefreshDatabase::class);
 // local log entry naming the file, the column and the cell so there is
 // something to go and look at.
 const REFUSED_OUTFLOW_CELL = 'twelve euros fifty';
-
-final class RefusedCellRecordingLogger extends AbstractLogger
-{
-    /** @var list<array{message: string, context: array<mixed>}> */
-    public array $records = [];
-
-    /**
-     * @param  array<mixed>  $context
-     */
-    public function log($level, $message, array $context = []): void
-    {
-        $this->records[] = ['message' => (string) $message, 'context' => $context];
-    }
-
-    /**
-     * @return array<mixed>
-     */
-    public function parseFailureContext(): array
-    {
-        foreach ($this->records as $record) {
-            if (str_contains($record['message'], 'parse/stage failed')) {
-                return $record['context'];
-            }
-        }
-
-        throw new RuntimeException('nothing logged a parse/stage failure');
-    }
-}
 
 function refusedCellExportUpload(): UploadedFile
 {

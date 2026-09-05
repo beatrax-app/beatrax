@@ -29,7 +29,10 @@ final class MigrationServiceProvider extends ServiceProvider
         $this->app->singleton(ActualParser::class);
 
         $this->app->singleton(SourceMapWriter::class);
-        $this->app->singleton(StartMigrationRun::class);
+        // Both dispatch the cascade's events, so neither is shared: Event::fake()
+        // cannot reach a dispatcher a live singleton already holds, and the map of
+        // three already-shared parsers is not state worth a binding for.
+        $this->app->bind(StartMigrationRun::class);
         $this->app->bind(DiscardMigrationRun::class);
     }
 
