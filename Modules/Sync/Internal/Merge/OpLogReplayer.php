@@ -19,6 +19,7 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Services\PairUnlinker;
@@ -137,6 +138,7 @@ final readonly class OpLogReplayer
             ),
             new SuppliedCreationTime($db),
             new SplitOverfillGate($db),
+            new DependentRowCascade($db, $rules),
             $this->resolveFromContainer(LoggerInterface::class),
         );
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);

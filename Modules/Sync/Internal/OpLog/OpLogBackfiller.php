@@ -25,7 +25,7 @@ final readonly class OpLogBackfiller
     // the wire — not in the pairing snapshot and not incrementally. They keep
     // merge rules so a peer can still apply an op from an older build, but
     // nothing here produces one. The rules screen says so.
-    private const array DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
+    public const array DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
 
     // Never emitted as a field: the row's identity travels as the op's pk,
     // and re-stating it invites a create whose pk and user_id disagree.
