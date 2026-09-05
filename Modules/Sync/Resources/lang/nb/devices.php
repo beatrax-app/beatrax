@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Bekreft denne enheten',
     'introduced_dismiss' => 'Avvis',
     'introduced_dismiss_aria' => 'Avvis :name',
+    'withheld_heading' => 'Holdt tilbake av en annen enhet',
+    'withheld_explainer' => 'En annen av enhetene dine sender ikke disse endringene, fordi denne enheten ikke kan sjekke hvem som har signert dem. Ingenting går tapt — de blir liggende på enheten som har dem. De kommer hvis en av enhetene dine sender videre den identiteten og du bekrefter den.',
+    'withheld_count' => ':count endring signert av :name|:count endringer signert av :name',
+    'withheld_by' => 'Holdt tilbake av :name',
 ];

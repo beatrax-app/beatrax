@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Bu cihazı onayla',
     'introduced_dismiss' => 'Yoksay',
     'introduced_dismiss_aria' => ':name cihazını yoksay',
+    'withheld_heading' => 'Başka bir cihaz tarafından tutuluyor',
+    'withheld_explainer' => 'Cihazlarından biri bu değişiklikleri göndermiyor, çünkü bu cihaz onları kimin imzaladığını doğrulayamıyor. Hiçbir şey kaybolmuyor — onlara sahip olan cihazda kalırlar. Cihazlarından biri o kimliği ilettiğinde ve sen onu onayladığında ulaşacaklar.',
+    'withheld_count' => ':name tarafından imzalanmış :count değişiklik',
+    'withheld_by' => 'Tutan: :name',
 ];

@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Potvrdit toto zařízení',
     'introduced_dismiss' => 'Odmítnout',
     'introduced_dismiss_aria' => 'Odmítnout: :name',
+    'withheld_heading' => 'Zadrženo jiným zařízením',
+    'withheld_explainer' => 'Jiné tvé zařízení tyto změny neposílá, protože toto zařízení nemůže ověřit, kdo je podepsal. Nic není ztraceno — zůstávají na zařízení, které je má. Dorazí, jakmile některé tvé zařízení předá tuto identitu a ty ji potvrdíš.',
+    'withheld_count' => ':count změna podepsaná zařízením :name|:count změny podepsané zařízením :name|:count změn podepsaných zařízením :name',
+    'withheld_by' => 'Zadržuje zařízení :name',
 ];

@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Confirmar este dispositivo',
     'introduced_dismiss' => 'Descartar',
     'introduced_dismiss_aria' => 'Descartar :name',
+    'withheld_heading' => 'Retenido por otro dispositivo',
+    'withheld_explainer' => 'Otro de tus dispositivos no envía estos cambios, porque este dispositivo no puede comprobar quién los ha firmado. No se pierde nada — se quedan en el dispositivo que los tiene. Llegarán si alguno de tus dispositivos pasa esa identidad y tú la confirmas.',
+    'withheld_count' => ':count cambio firmado por :name|:count cambios firmados por :name',
+    'withheld_by' => 'Retenido por :name',
 ];

@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Transport\CatchUpDelta;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Modules\Sync\Internal\Transport\WithheldLedger;
 use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
@@ -214,8 +215,9 @@ it('stores a relayed identity unconfirmed, naming the voucher and the count it i
         ->and($row->name)->toBe('Old phone')
         ->and($row->ed25519_public_key_hex)->toBe($relayedKey)
         ->and($row->introduced_by_device_id)->toBe('the-mac')
-        ->and((int) $row->withheld_entry_count)->toBe(155)
         ->and($row->verification_confirmed_at)->toBeNull()
+        ->and(new WithheldLedger($db)->forUser($userId))
+        ->toBe([['peer_device_id' => 'the-mac', 'author_device_id' => 'old-phone', 'entry_count' => 155]])
         // Derived here from the key that arrived, never copied from the sender:
         // a fingerprint a reader is asked to trust because it was sent is not
         // one, and this is the assertion that keeps it that way.

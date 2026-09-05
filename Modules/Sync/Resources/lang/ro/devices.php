@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Confirmă acest dispozitiv',
     'introduced_dismiss' => 'Respinge',
     'introduced_dismiss_aria' => 'Respinge :name',
+    'withheld_heading' => 'Reținut de alt dispozitiv',
+    'withheld_explainer' => 'Un alt dispozitiv al tău nu trimite aceste modificări, pentru că acest dispozitiv nu poate verifica cine le-a semnat. Nimic nu se pierde — rămân pe dispozitivul care le are. Vor ajunge dacă unul dintre dispozitivele tale transmite acea identitate și o confirmi.',
+    'withheld_count' => ':count modificare semnată de :name|:count modificări semnate de :name|:count de modificări semnate de :name',
+    'withheld_by' => 'Reținut de :name',
 ];
