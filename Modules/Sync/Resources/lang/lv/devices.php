@@ -104,4 +104,8 @@ return [
     'introduced_confirm' => 'Apstiprināt šo ierīci',
     'introduced_dismiss' => 'Noraidīt',
     'introduced_dismiss_aria' => 'Noraidīt: :name',
+    'withheld_heading' => 'Cita ierīce tās aiztur',
+    'withheld_explainer' => 'Cita tava ierīce šīs izmaiņas nesūta, jo šī ierīce nevar pārbaudīt, kas tās parakstījis. Nekas nav zudis — tās paliek ierīcē, kurā ir. Tās nonāks šeit, kad kāda tava ierīce nodos tālāk to identitāti un tu to apstiprināsi.',
+    'withheld_count' => ':count izmaiņu, ko parakstījusi :name|:count izmaiņa, ko parakstījusi :name|:count izmaiņas, ko parakstījusi :name',
+    'withheld_by' => 'Aiztur :name',
 ];

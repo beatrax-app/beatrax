@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Bekräfta den här enheten',
     'introduced_dismiss' => 'Avfärda',
     'introduced_dismiss_aria' => 'Avfärda :name',
+    'withheld_heading' => 'Hålls tillbaka av en annan enhet',
+    'withheld_explainer' => 'En annan av dina enheter skickar inte de här ändringarna, eftersom den här enheten inte kan kontrollera vem som har signerat dem. Ingenting går förlorat — de blir kvar på enheten som har dem. De kommer fram när någon av dina enheter skickar vidare den identiteten och du bekräftar den.',
+    'withheld_count' => ':count ändring signerad av :name|:count ändringar signerade av :name',
+    'withheld_by' => 'Hålls tillbaka av :name',
 ];

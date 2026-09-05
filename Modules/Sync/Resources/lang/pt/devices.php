@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Confirmar este dispositivo',
     'introduced_dismiss' => 'Dispensar',
     'introduced_dismiss_aria' => 'Dispensar :name',
+    'withheld_heading' => 'Retido por outro dispositivo',
+    'withheld_explainer' => 'Outro dos teus dispositivos não envia estas alterações, porque este dispositivo não consegue verificar quem as assinou. Nada se perde — ficam no dispositivo que as tem. Chegarão se um dos teus dispositivos passar essa identidade e tu a confirmares.',
+    'withheld_count' => ':count alteração assinada por :name|:count alterações assinadas por :name',
+    'withheld_by' => 'Retido por :name',
 ];

@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Potvrdi ovaj uređaj',
     'introduced_dismiss' => 'Odbaci',
     'introduced_dismiss_aria' => 'Odbaci :name',
+    'withheld_heading' => 'Zadržava ih drugi uređaj',
+    'withheld_explainer' => 'Tvoj drugi uređaj ne šalje te promene jer ovaj uređaj ne može da proveri ko ih je potpisao. Ništa nije izgubljeno — ostaju na uređaju koji ih ima. Stići će ako neki tvoj uređaj prosledi taj identitet i ti ga potvrdiš.',
+    'withheld_count' => ':count promena koju je potpisao :name|:count promene koje je potpisao :name|:count promena koje je potpisao :name',
+    'withheld_by' => 'Zadržava ih :name',
 ];

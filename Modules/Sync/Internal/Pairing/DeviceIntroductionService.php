@@ -24,15 +24,15 @@ final readonly class DeviceIntroductionService
         private Clock $clock,
     ) {}
 
-    // Records what a peer offered, leaving every row unconfirmed. Re-running is
-    // how the withheld count stays current, so an existing row keeps its
-    // confirmation and its identity and takes only the new count and voucher.
+    // Records what a peer offered, leaving every row unconfirmed. Re-running it
+    // refreshes the voucher and the name, so an existing row keeps the identity
+    // a reader may already have confirmed. What the peer is holding back is
+    // WithheldLedger's, because it arrives for authors nobody offered a key for.
     /**
      * @param  list<array{device_id: string, name: string, ed25519_public_key_hex: string}>  $offered
-     * @param  array<array-key, int>  $withheld  author device id => entries the peer is holding back.
      * @return int How many introductions were stored or refreshed.
      */
-    public function record(int $userId, string $introducedBy, array $offered, array $withheld): int
+    public function record(int $userId, string $introducedBy, array $offered): int
     {
         if ($introducedBy === '') {
             return 0;
@@ -56,7 +56,7 @@ final readonly class DeviceIntroductionService
                 continue;
             }
 
-            if ($this->store($userId, $introducedBy, $introduction, $selfKeyHex, $withheld, $now)) {
+            if ($this->store($userId, $introducedBy, $introduction, $selfKeyHex, $now)) {
                 $stored++;
             }
         }
@@ -66,14 +66,12 @@ final readonly class DeviceIntroductionService
 
     /**
      * @param  array{device_id: string, name: string, ed25519_public_key_hex: string}  $introduction
-     * @param  array<array-key, int>  $withheld
      */
     private function store(
         int $userId,
         string $introducedBy,
         array $introduction,
         string $selfKeyHex,
-        array $withheld,
         string $now,
     ): bool {
         $deviceId = $introduction['device_id'];
@@ -96,7 +94,6 @@ final readonly class DeviceIntroductionService
         $refreshed = [
             'name' => $introduction['name'],
             'introduced_by_device_id' => $introducedBy,
-            'withheld_entry_count' => max(0, $withheld[$deviceId] ?? 0),
             'updated_at' => $now,
         ];
 
@@ -126,17 +123,28 @@ final readonly class DeviceIntroductionService
         return true;
     }
 
+    // Shadowed rows are left out on the same test record() refuses them on, so
+    // the list cannot offer an act on a device the device list already answers
+    // for: paired, it needs nothing; removed, saying "confirmed for signatures"
+    // would describe a grant signatureVerificationKeys() no longer makes.
     /**
      * @return array<int, \stdClass>
      */
     public function forUser(int $userId): array
     {
-        return $this->db->connection()
+        $paired = $this->registry->retainedDeviceKeys($userId);
+
+        $rows = $this->db->connection()
             ->table('device_introductions')
             ->where('user_id', $userId)
             ->orderBy('introduced_at')
             ->get()
             ->all();
+
+        return array_values(array_filter(
+            $rows,
+            static fn (\stdClass $row): bool => ! is_string($row->device_id) || ! isset($paired[$row->device_id]),
+        ));
     }
 
     // The reader's act, and the only thing that makes a relayed key verify

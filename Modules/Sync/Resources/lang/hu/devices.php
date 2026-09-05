@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Ennek az eszköznek a megerősítése',
     'introduced_dismiss' => 'Elvetés',
     'introduced_dismiss_aria' => ':name elvetése',
+    'withheld_heading' => 'Egy másik eszköz visszatartja',
+    'withheld_explainer' => 'Egy másik eszközöd nem küldi el ezeket a módosításokat, mert ez az eszköz nem tudja ellenőrizni, ki írta alá őket. Semmi nem vész el — azon az eszközön maradnak, amelyiken vannak. Megérkeznek, ha valamelyik eszközöd továbbadja azt az azonosságot, és te megerősíted.',
+    'withheld_count' => ':count módosítást írt alá: :name|:count módosítást írt alá: :name',
+    'withheld_by' => 'Visszatartja: :name',
 ];

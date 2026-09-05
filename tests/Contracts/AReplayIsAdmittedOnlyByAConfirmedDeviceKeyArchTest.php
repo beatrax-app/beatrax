@@ -139,6 +139,17 @@ it('widens the second admission anchor only by an introduction the reader confir
         .'devices this household paired with rather than add to them',
     );
 
+    expect(PatternScan::matches("/->whereNotIn\(\s*'device_id'/", $body))->toBeTrue(
+        'a device the registry holds a row for is pairing\'s to answer. Without this exclusion an '
+        .'introduction confirmed BEFORE that device paired outlives the removal the reader later '
+        .'performed, and a revoked device goes on verifying through the weaker door',
+    );
+
+    expect(PatternScan::matches("/->from\(\s*'device_registry'\s*\)/", $body))->toBeTrue(
+        'the exclusion has to be every registry row, not the confirmed ones: a revoked row is exactly '
+        .'the one an introduction must not be allowed to shadow',
+    );
+
     expect(PatternScan::matches('/retainedDeviceKeys|(?<!verification_)confirmed_at/', $body))->toBeFalse(
         'the revoked-device map and device_registry.confirmed_at are the paired half\'s business. '
         .'Reaching for either here would fold a revoked device back in through the weaker door',

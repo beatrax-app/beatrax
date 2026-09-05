@@ -49,6 +49,15 @@ final readonly class DeviceRegistryService
             ->table('device_introductions')
             ->where('user_id', $userId)
             ->whereNotNull('verification_confirmed_at')
+            // A device this registry has a row for is pairing's to answer, in
+            // either direction. record() refuses to shadow one; read it back
+            // here too, or a device introduced BEFORE it paired keeps a second
+            // grant that outlives the removal the reader performed.
+            ->whereNotIn('device_id', function (Builder $known) use ($userId): void {
+                $known->select('device_id')
+                    ->from('device_registry')
+                    ->where('user_id', $userId);
+            })
             ->pluck('ed25519_public_key_hex', 'device_id')
             ->all();
 

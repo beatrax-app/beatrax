@@ -101,4 +101,8 @@ return [
     'introduced_confirm' => 'Potrdi to napravo',
     'introduced_dismiss' => 'Zavrni',
     'introduced_dismiss_aria' => 'Zavrni :name',
+    'withheld_heading' => 'Zadržuje jih druga naprava',
+    'withheld_explainer' => 'Tvoja druga naprava teh sprememb ne pošilja, ker ta naprava ne more preveriti, kdo jih je podpisal. Nič ni izgubljeno — ostanejo na napravi, ki jih ima. Prispele bodo, ko katera od tvojih naprav posreduje to identiteto in jo potrdiš.',
+    'withheld_count' => ':count sprememba, ki jo je podpisala naprava :name|:count spremembi, ki ju je podpisala naprava :name|:count spremembe, ki jih je podpisala naprava :name|:count sprememb, ki jih je podpisala naprava :name',
+    'withheld_by' => 'Zadržuje jih :name',
 ];

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Pairing\DeviceIntroductionService;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
@@ -23,13 +25,23 @@ final readonly class IntroductionOffers
         private LoggerInterface $log,
         private DeviceRegistryService $registry,
         private DeviceIntroductionService $introductions,
+        private WithheldLedger $ledger,
+        private Clock $clock,
     ) {}
 
     public static function forDatabase(DatabaseManager $db, LoggerInterface $log): self
     {
         $registry = new DeviceRegistryService($db);
+        $clock = new SystemClock;
 
-        return new self($db, $log, $registry, new DeviceIntroductionService($db, $registry, new SystemClock));
+        return new self(
+            $db,
+            $log,
+            $registry,
+            new DeviceIntroductionService($db, $registry, $clock),
+            new WithheldLedger($db),
+            $clock,
+        );
     }
 
     // Exactly the map the op-log verifier admits on, so this device cannot
@@ -116,13 +128,19 @@ final readonly class IntroductionOffers
     {
         $withheld = WithheldHistory::fromWire($response);
 
+        // Before the offers and outside their guard: a count is the half of
+        // this report that always applies, and every path that dropped it —
+        // no identity offered, a key that failed validation, a device this
+        // install had already decided about — dropped it into a sender's log.
+        $this->ledger->record($userId, $peerDeviceId, $withheld->counts, Instant::zulu($this->clock->now()));
+
         if ($withheld->introductions === []) {
             return 0;
         }
 
         $this->reportRefusedForRemovedDevices($userId, $withheld);
 
-        return $this->introductions->record($userId, $peerDeviceId, $withheld->introductions, $withheld->counts);
+        return $this->introductions->record($userId, $peerDeviceId, $withheld->introductions);
     }
 
     // The one withholding no screen can offer to end. A peer still confirms an

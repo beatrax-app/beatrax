@@ -58,7 +58,6 @@ function introduce(DatabaseManager $db, int $userId, bool $confirmed): string
         'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($keypair)),
         'safety_number_words' => 'abandon ability able about above absent',
         'introduced_by_device_id' => 'the-mac',
-        'withheld_entry_count' => 155,
         'introduced_at' => '2026-09-05T10:00:00Z',
         'verification_confirmed_at' => $confirmed ? '2026-09-05T10:05:00Z' : null,
         'created_at' => '2026-09-05T10:00:00Z',
@@ -286,4 +285,41 @@ it('never appends an epoch key a device that is only introduced signed the wrap 
     $keyring = app(GdkKeyringService::class);
 
     expect($keyring->loadKeyring($userId, $session)->keyFor(4242))->toBeNull();
+});
+
+it('stops verifying for a device the reader paired with and then removed', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = introducedUser('removed');
+    $userId = (int) $user->id;
+
+    introduce($db, $userId, confirmed: true);
+
+    $pairedKeyHex = sodium_bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair()));
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => INTRODUCED_DEVICE_ID,
+        'name' => 'Old phone',
+        'ed25519_public_key_hex' => $pairedKeyHex,
+        'x25519_public_key_hex' => sodium_bin2hex(sodium_crypto_kx_publickey(sodium_crypto_kx_keypair())),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-09-05T11:00:00Z',
+        'confirmed_at' => '2026-09-05T11:00:00Z',
+        'created_at' => '2026-09-05T11:00:00Z',
+        'updated_at' => '2026-09-05T11:00:00Z',
+    ]);
+
+    /** @var DeviceRegistryService $registry */
+    $registry = app(DeviceRegistryService::class);
+
+    expect($registry->signatureVerificationKeys($userId))->toBe([INTRODUCED_DEVICE_ID => $pairedKeyHex]);
+
+    $db->connection()->table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', INTRODUCED_DEVICE_ID)
+        ->update(['confirmed_at' => null]);
+
+    expect($registry->signatureVerificationKeys($userId))->toBe([]);
 });
