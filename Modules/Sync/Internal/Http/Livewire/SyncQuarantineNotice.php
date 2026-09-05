@@ -30,7 +30,9 @@ final class SyncQuarantineNotice extends Component
         Clock $clock,
     ): View {
         return $views->make('sync::livewire.sync-quarantine-notice', [
-            'groups' => $this->groups($db, $currentUser->user()->id, $clock),
+            'groups' => $currentUser->isAuthenticated()
+                ? $this->groups($db, $currentUser->id(), $clock)
+                : [],
         ]);
     }
 

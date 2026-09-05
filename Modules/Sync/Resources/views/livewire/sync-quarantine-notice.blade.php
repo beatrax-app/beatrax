@@ -10,24 +10,30 @@
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
-@if ($groups !== [])
-    <div class="space-y-3" data-testid="sync-quarantine-notice">
-        @foreach ($groups as $group)
-            <x-core::alert
-                :tone="$group['outcome']->tone()"
-                role="status"
-                data-testid="quarantine-outcome"
-                data-outcome="{{ $group['outcome']->value }}"
-            >
-                <p class="font-semibold" style="font-feature-settings: 'tnum';">
-                    {{ Lang::choice($group['outcome']->summaryKey(), $group['tally']) }}
-                </p>
-                <p class="mt-1">{{ Lang::get($group['outcome']->bodyKey()) }}</p>
-                <p class="mt-1">{{ Lang::get($group['outcome']->actionKey()) }}</p>
-                @if ($group['newest'] !== null)
-                    <p class="mt-1 text-xs">{{ Lang::get('sync::quarantine.last_seen', ['when' => $group['newest']]) }}</p>
-                @endif
-            </x-core::alert>
-        @endforeach
-    </div>
-@endif
+{{-- Livewire requires a single root element on every render, and this
+     component renders nothing at all when there is nothing to report,
+     which is the ordinary case. Without the wrapper an install with a
+     clean quarantine answers 500 rather than a page. --}}
+<div>
+    @if ($groups !== [])
+        <div class="space-y-3" data-testid="sync-quarantine-notice">
+            @foreach ($groups as $group)
+                <x-core::alert
+                    :tone="$group['outcome']->tone()"
+                    role="status"
+                    data-testid="quarantine-outcome"
+                    data-outcome="{{ $group['outcome']->value }}"
+                >
+                    <p class="font-semibold" style="font-feature-settings: 'tnum';">
+                        {{ Lang::choice($group['outcome']->summaryKey(), $group['tally']) }}
+                    </p>
+                    <p class="mt-1">{{ Lang::get($group['outcome']->bodyKey()) }}</p>
+                    <p class="mt-1">{{ Lang::get($group['outcome']->actionKey()) }}</p>
+                    @if ($group['newest'] !== null)
+                        <p class="mt-1 text-xs">{{ Lang::get('sync::quarantine.last_seen', ['when' => $group['newest']]) }}</p>
+                    @endif
+                </x-core::alert>
+            @endforeach
+        </div>
+    @endif
+</div>
