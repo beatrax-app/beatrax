@@ -30,7 +30,7 @@ final class AmountStringParser
     // figure the file states; parse() answers null to both. Anything else null
     // is a value the reader wrote that could not be read, and a caller that
     // folds it into zero puts a wrong amount in the ledger saying nothing.
-    public function requireMinor(string $value, string $context, ?string $currencyCode = null): int
+    public function requireMinor(string $value, string $file, string $column, ?string $currencyCode = null): int
     {
         $positive = $this->parse($value, $currencyCode);
 
@@ -42,8 +42,6 @@ final class AmountStringParser
             return 0;
         }
 
-        throw new UnrecognizedMigrationFileException(
-            "could not parse {$context} value '{$value}'",
-        );
+        throw UnrecognizedMigrationFileException::cell($file, $column, $value, 'expected an amount');
     }
 }

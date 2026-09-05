@@ -279,7 +279,12 @@ final readonly class ActualParser implements ParsesMigrationSource
     {
         $parsed = SafeDate::fromFormatOrNull('!Ym', (string) $yyyymm);
         if (! $parsed instanceof CarbonImmutable) {
-            throw new UnrecognizedMigrationFileException("could not parse zero_budgets/reflect_budgets month value '{$yyyymm}' (expected YYYYMM)");
+            throw UnrecognizedMigrationFileException::cell(
+                'db.sqlite',
+                'zero_budgets/reflect_budgets.month',
+                (string) $yyyymm,
+                'expected YYYYMM',
+            );
         }
 
         return $parsed->startOfMonth();
@@ -289,7 +294,12 @@ final readonly class ActualParser implements ParsesMigrationSource
     {
         $parsed = SafeDate::fromFormatOrNull('!Ymd', (string) $yyyymmdd);
         if (! $parsed instanceof CarbonImmutable) {
-            throw new UnrecognizedMigrationFileException("could not parse transactions.date value '{$yyyymmdd}' (expected YYYYMMDD)");
+            throw UnrecognizedMigrationFileException::cell(
+                'db.sqlite',
+                'transactions.date',
+                (string) $yyyymmdd,
+                'expected YYYYMMDD',
+            );
         }
 
         return $parsed;

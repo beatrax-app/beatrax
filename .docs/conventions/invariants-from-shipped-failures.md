@@ -599,6 +599,20 @@ claim about a message, so it is made per exception class and checked against
 every `throw` — `InvalidAmountException` carries a raw MT940 `:61:` line and is
 deliberately not marked.
 
+`Modules\Core\Public\Support\NamesTheCellItRefused` is the other half, for a
+refusal whose message must stay dropped because it quotes the cell. The
+migration parsers compose their refusal around a file, a column and the value
+they could not read; the screen shows one fixed line for every unreadable export
+and the message reached the log stripped, so the whole diagnostic was discarded
+between the two. An exception implements the interface to hand the log a
+`RefusedCell` instead — the three fields separately, read through
+`SafeExceptionContext::refusedCell()` beside the strip rather than through it.
+The value is a figure out of the reader's own export, so `RefusedCell` caps it
+at `MAX_VALUE_BYTES`, replaces control characters, and records the cell's true
+length alongside: enough to see that a column is not the column it was taken
+for, bounded when the cell turns out to hold a memo a quoting fault shifted
+into it.
+
 A daemon's stdout is a log too: `relay:serve` and `sync:serve` run under a
 supervisor that captures it to the same kind of file, so a `$this->error()`
 carrying the message in a console command is the same disclosure.

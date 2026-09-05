@@ -6,6 +6,7 @@ namespace Modules\Migration\Internal\Parsers\Concerns;
 
 use League\Csv\Reader;
 use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
+use Modules\Migration\Internal\Parsers\Support\YnabCsvColumnMap;
 use Throwable;
 
 trait ReadsYnabCsvFiles
@@ -41,8 +42,8 @@ trait ReadsYnabCsvFiles
     {
         // The header is validated BEFORE any record is read, so a
         // missing/renamed column fails loud, never a partial import.
-        $reader = $this->openReader($path, 'Register.csv');
-        $this->columnMap->assertRegisterHeader($this->readerHeader($reader, 'Register.csv'), $format);
+        $reader = $this->openReader($path, YnabCsvColumnMap::REGISTER_FILE);
+        $this->columnMap->assertRegisterHeader($this->readerHeader($reader, YnabCsvColumnMap::REGISTER_FILE), $format);
 
         return $this->readerRows($reader);
     }
@@ -52,8 +53,8 @@ trait ReadsYnabCsvFiles
      */
     private function readBudgetRows(string $path): array
     {
-        $reader = $this->openReader($path, 'Budget.csv');
-        $this->columnMap->assertBudgetHeader($this->readerHeader($reader, 'Budget.csv'));
+        $reader = $this->openReader($path, YnabCsvColumnMap::BUDGET_FILE);
+        $this->columnMap->assertBudgetHeader($this->readerHeader($reader, YnabCsvColumnMap::BUDGET_FILE));
 
         return $this->readerRows($reader);
     }
