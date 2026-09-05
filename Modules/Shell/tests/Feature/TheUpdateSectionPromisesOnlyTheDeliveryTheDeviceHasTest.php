@@ -73,6 +73,30 @@ it('opens nothing when the releases endpoint is called on a phone anyway', funct
     expect($shell->openExternalCalls)->toBe([]);
 });
 
+// The section read `MobilePlatform::tryFrom()`, so a shell NativePHP names and
+// the enum does not model answered "desktop": the self-update copy, a live
+// switch, and a link to the page the installers are on. The three listeners it
+// cites have always asked the broader question.
+it('treats a shell the enum does not model as the store build it is', function (): void {
+    putenv('NATIVEPHP_PLATFORM=ipados');
+
+    $shell = new ShellFake;
+    $this->app->instance(ShellContract::class, $shell);
+
+    Livewire::test(UpdateCheckSettingsSection::class)
+        ->assertSet('onPhone', true)
+        ->assertDontSee('Beatrax updates itself automatically once installed')
+        ->assertDontSee('Check for updates automatically')
+        ->assertDontSee('Open releases page')
+        ->assertSee('App Store or Google Play')
+        ->call('openReleasesPage')
+        ->call('toggle')
+        ->assertSet('enabled', true);
+
+    expect($shell->openExternalCalls)->toBe([])
+        ->and($this->reader->fresh()->auto_update_check_enabled)->not->toBeFalse();
+});
+
 it('does not write an update preference the phone has no updater for', function (): void {
     putenv('NATIVEPHP_PLATFORM=ios');
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Mobile\Commands\PackageAndroidCommand;
+use Modules\Mobile\Internal\Boot\AndroidApiLevels;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Psr\Log\NullLogger;
 
@@ -20,6 +21,15 @@ function packageAndroidRoot(): string
     }
 
     return $root;
+}
+
+// The three levels the packager substitutes, written once: every case that
+// overrides the Gradle body to say something about the version code or the
+// bundle id still has to carry them, or it fails the API-level read-back for a
+// reason it is not about.
+function packageAndroidPinnedSdkLines(): string
+{
+    return "compileSdk = 36\nminSdk = 33\ntargetSdk = 36";
 }
 
 function packageAndroid(
@@ -74,7 +84,8 @@ function packageAndroid(
         'get' => [
             $base.'/.env' => "NATIVEPHP_APP_ID=com.beatrax.mobile\nAPP_ENV=production\nAPP_DEBUG=false\n",
             $base.'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
-                ."\n".'versionCode = 20000',
+                ."\n".'versionCode = 20000'
+                ."\n".packageAndroidPinnedSdkLines(),
         ],
         'isDirectory' => true,
         'size' => 4096,
@@ -102,6 +113,12 @@ function packageAndroid(
         'nativephp.app_id' => 'com.beatrax.mobile',
         'nativephp.version' => '2.0.0',
         'nativephp.version_code' => 20000,
+        // Set explicitly rather than left to the loaded config: the desktop
+        // Composer root has no android block to resolve, and this suite runs
+        // from both roots.
+        'nativephp.android.compile_sdk' => 36,
+        'nativephp.android.min_sdk' => 33,
+        'nativephp.android.target_sdk' => 36,
     ], $config));
 
     app()->instance(PackageAndroidCommand::class, new PackageAndroidCommand(
@@ -205,7 +222,8 @@ it('leaves an explicitly set version code alone', function (): void {
     expect(packageAndroid(
         files: ['get' => [
             packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
-                ."\n".'versionCode = 10300',
+                ."\n".'versionCode = 10300'
+                ."\n".packageAndroidPinnedSdkLines(),
         ]],
         config: ['nativephp.version_code' => 10300],
     ))->toBe(0)->and(config('nativephp.version_code'))->toBe(10300);
@@ -300,14 +318,16 @@ it('refuses an artifact of zero bytes', function (): void {
 it('refuses an APK carrying a different applicationId', function (): void {
     expect(packageAndroid(files: ['get' => [
         packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.runner.stormlunarbold"'
-            ."\n".'versionCode = 20000',
+            ."\n".'versionCode = 20000'
+            ."\n".packageAndroidPinnedSdkLines(),
     ]]))->toBe(1);
 });
 
 it('refuses an APK carrying a different version code', function (): void {
     expect(packageAndroid(files: ['get' => [
         packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
-            ."\n".'versionCode = 1',
+            ."\n".'versionCode = 1'
+            ."\n".packageAndroidPinnedSdkLines(),
     ]]))->toBe(1);
 });
 
@@ -330,7 +350,8 @@ it('accepts the version code as the string the environment actually hands back',
     expect(packageAndroid(
         files: ['get' => [
             packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
-                ."\n".'versionCode = 10300',
+                ."\n".'versionCode = 10300'
+                ."\n".packageAndroidPinnedSdkLines(),
         ]],
         config: ['nativephp.version_code' => '10300'],
     ))->toBe(0)->and(config('nativephp.version_code'))->toBe(10300);
@@ -340,3 +361,33 @@ it('still derives a code when the environment hands back the package default as 
     expect(packageAndroid(config: ['nativephp.version_code' => '1']))->toBe(0)
         ->and(config('nativephp.version_code'))->toBe(20000);
 });
+
+// nativephp/mobile resolves every level as env('NATIVEPHP_ANDROID_*', <default>),
+// so an unpinned level is the package's number filtered through a git-ignored
+// .env. A store refuses a submission below the level it requires, and nothing
+// in this product had chosen one.
+it('refuses a build whose Android API level nothing in this product pinned', function (string $key): void {
+    expect(packageAndroid(config: [$key => null]))->toBe(1);
+})->with([
+    'compileSdk' => 'nativephp.android.compile_sdk',
+    'minSdk' => 'nativephp.android.min_sdk',
+    'targetSdk' => 'nativephp.android.target_sdk',
+]);
+
+it('refuses a target below the level Google Play requires of an update', function (): void {
+    expect(packageAndroid(config: ['nativephp.android.target_sdk' => AndroidApiLevels::PLAY_TARGET_SDK - 1]))->toBe(1);
+});
+
+// The pin decides nothing on its own: PreparesBuild is what substitutes it into
+// Gradle, and a template placeholder left in place reads back as no value.
+it('refuses an artefact whose Gradle file disagrees with the pin', function (string $gradle): void {
+    expect(packageAndroid(files: ['get' => [
+        packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
+            ."\n".'versionCode = 20000'
+            ."\n".$gradle,
+    ]]))->toBe(1);
+})->with([
+    'a target the substitution moved' => "compileSdk = 36\nminSdk = 33\ntargetSdk = 34",
+    'a min the substitution moved' => "compileSdk = 36\nminSdk = 26\ntargetSdk = 36",
+    'the template placeholders left in place' => 'compileSdk = REPLACE_COMPILE_SDK',
+]);

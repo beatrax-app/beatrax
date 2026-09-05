@@ -2138,6 +2138,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Mobile/tests/Feature/AResumedTrustGateStillNamesBothDevicesTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/AStoreBuildCarriesNoFeedItCouldInstallFromTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
         'Modules/Mobile/tests/Feature/ImportWizardRecoveryDownloadTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Mobile/tests/Feature/LanSyncClientGdkEpochReceiveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkRotationService',
