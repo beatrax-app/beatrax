@@ -439,7 +439,7 @@ of a migration export, copied forward onto every reconcile run, matched by nothi
 rendered from the column nowhere — and its writer is a Livewire component, so the app-lock key
 *is* in scope. Nothing blocks sealing it. It is therefore **not** on this list, because this
 list means "AEAD does not apply"; it is named in
-`ARegisteredTableIsRegisteredWholeArchTest`'s open map instead, which is where a column that
+`ARegisteredTableIsRegisteredWholeTest`'s open map instead, which is where a column that
 could be sealed and has not been is recorded so the next pass does not have to find it again.
 
 ### What would have to move first
@@ -888,7 +888,7 @@ table; `baseline_value` argued on this page / absent from the registry, one sect
 reviewer checking a column checks the column in front of them, and the sibling holding the same
 string two lines down in the same migration is exactly what that check cannot see.
 
-`ARegisteredTableIsRegisteredWholeArchTest` closes it. Once a table has **any** column in
+`ARegisteredTableIsRegisteredWholeTest` closes it. Once a table has **any** column in
 `columns()`, `knowinglyPlaintext()` or `blindIndexColumns()`, the registry owns the whole
 table: every remaining column of it whose name is content-shaped — one carrying `name`, `note`,
 `description`, `subject`, `label`, `email`, `iban`, `pattern`, `sender`, `payee`, `memo`,

@@ -22,6 +22,7 @@ const REGISTERED_WHOLE_STRUCTURAL = [
     'migration_import_baseline.field_name' => 'Holds the NAME of the column the baseline was taken for — the string "description", not a description. It is also the merge key the resolver looks a baseline up by.',
     'transactions.normalization_version' => 'An integer version stamp for the normaliser that produced counterparty_normalized; it matches the token only through "normalization".',
     'transactions.value_date' => 'A date, not a value: the day the bank applied the entry. It matches on the "value" token alone.',
+    'categories.name_is_default' => 'A boolean, not a name: whether categories.name is still the shipped default and so may be re-localised. It carries no user text at all, and matches only because the flag is named after the column it describes.',
 ];
 
 // Content, assessed, and NOT yet sealed — kept out of knowinglyPlaintext()
