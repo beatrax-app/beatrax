@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Setup\DatabaseProbe;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Modules\Core\Public\Support\PatternScan;
-use PDOException;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\intro;
 use function Laravel\Prompts\note;
 use function Laravel\Prompts\outro;
-use function Laravel\Prompts\password;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
@@ -26,7 +23,7 @@ final class SetupCommand extends Command
 
     protected $description = 'Interactively configure this environment (.env + database) for a server deployment.';
 
-    public function handle(Repository $config, DatabaseProbe $probe): int
+    public function handle(Repository $config): int
     {
         intro('Beatrax server setup');
 
@@ -46,34 +43,18 @@ final class SetupCommand extends Command
             default: $this->laravel->environment() === 'local' ? 'local' : 'production',
         );
 
-        $driver = (string) select(
-            label: 'Database',
-            options: [
-                'sqlite' => 'SQLite (single file — simplest, default for desktop)',
-                'pgsql' => 'PostgreSQL (recommended for a server)',
-                'mysql' => 'MySQL',
-                'mariadb' => 'MariaDB',
-            ],
-            default: $this->configString($config, 'database.default', 'sqlite'),
-        );
-
+        // Written rather than asked for: SQLite is the only engine this
+        // schema runs on, in every deployment shape, and writing it normalises
+        // a .env somebody pointed at a server database by hand.
         $env = [
             'APP_ENV' => $appEnv,
             'APP_URL' => $appUrl,
             'APP_DEBUG' => $appEnv === 'production' ? 'false' : 'true',
-            'DB_CONNECTION' => $driver,
+            'DB_CONNECTION' => 'sqlite',
         ];
-
-        if ($driver !== 'sqlite') {
-            $env += $this->promptServerDatabase($config, $driver);
-        }
 
         $this->writeEnvValues($env);
         note('Wrote '.implode(', ', array_keys($env)).' to .env');
-
-        if ($driver !== 'sqlite') {
-            $this->verifyDatabase($driver, $env, $probe);
-        }
 
         if (confirm(label: 'Run database migrations and create your user now (beatrax:install)?', default: true)) {
             // A fresh process: .env was read once at boot, so an in-process
@@ -90,7 +71,7 @@ final class SetupCommand extends Command
             note('Skipped. Run `php artisan beatrax:install` when the database is ready.');
         }
 
-        $this->printNextSteps($driver);
+        $this->printNextSteps();
         outro('Setup complete.');
 
         return self::SUCCESS;
@@ -121,55 +102,6 @@ final class SetupCommand extends Command
 
         $this->callSilently('key:generate', ['--force' => true]);
         note('Generated an application key (APP_KEY)');
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function promptServerDatabase(Repository $config, string $driver): array
-    {
-        $base = 'database.connections.'.$driver.'.';
-        $defaultPort = $driver === 'pgsql' ? '5432' : '3306';
-
-        return [
-            'DB_HOST' => text('Database host', default: $this->configString($config, $base.'host', '127.0.0.1'), required: true),
-            'DB_PORT' => text('Database port', default: $this->configString($config, $base.'port', $defaultPort), required: true),
-            'DB_DATABASE' => text('Database name', default: $this->configString($config, $base.'database', 'beatrax'), required: true),
-            'DB_USERNAME' => text('Database username', default: $this->configString($config, $base.'username', 'beatrax'), required: true),
-            'DB_PASSWORD' => password('Database password (leave blank if none)'),
-        ];
-    }
-
-    // Best-effort reachability check. A fresh deploy may not have created
-    // the database yet, so a failure is a warning, not a hard stop.
-    /**
-     * @param  array<string, string>  $env
-     */
-    private function verifyDatabase(string $driver, array $env, DatabaseProbe $probe): void
-    {
-        $pdoDriver = $driver === 'pgsql' ? 'pgsql' : 'mysql';
-        $dsn = sprintf(
-            '%s:host=%s;port=%s;dbname=%s',
-            $pdoDriver,
-            $env['DB_HOST'] ?? '127.0.0.1',
-            $env['DB_PORT'] ?? '',
-            $env['DB_DATABASE'] ?? '',
-        );
-
-        try {
-            $version = $probe->serverVersion(
-                $dsn,
-                $env['DB_USERNAME'] ?? '',
-                $env['DB_PASSWORD'] ?? '',
-            );
-
-            $this->components->info($version === ''
-                ? 'Database connection OK.'
-                : sprintf('Database connection OK (%s %s).', $pdoDriver, $version));
-        } catch (PDOException $e) {
-            $this->components->warn('Could not connect yet: '.$e->getMessage());
-            note('That is fine if the database/user does not exist yet — create it, then re-run setup or `php artisan beatrax:install`.');
-        }
     }
 
     /**
@@ -229,17 +161,16 @@ final class SetupCommand extends Command
         return is_string($value) && $value !== '' ? $value : $default;
     }
 
-    private function printNextSteps(string $driver): void
+    private function printNextSteps(): void
     {
-        $lines = [
+        // The backup line used to appear only for a server database, which had
+        // it backwards: the SQLite file IS the whole ledger, and nothing prunes
+        // it, so it is the one thing on this list nobody can recreate.
+        note("Next steps:\n - ".implode("\n - ", [
+            'Back up the SQLite file regularly — full history is retained and never pruned.',
             'Serve the app behind a web server (nginx/Caddy → php-fpm) or run `php artisan serve` for a quick start.',
             'Run the queue worker:   php artisan queue:work --tries=3',
             'Run the scheduler:      php artisan schedule:work   (or a cron entry calling schedule:run every minute)',
-        ];
-        if ($driver !== 'sqlite') {
-            array_unshift($lines, 'Back up your database regularly — full history is retained and never pruned.');
-        }
-
-        note("Next steps:\n - ".implode("\n - ", $lines));
+        ]));
     }
 }

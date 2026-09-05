@@ -46,6 +46,20 @@ services:
         condition: service_completed_successfully
     ports:
       - "${HTTP_PORT:-8000}:80"
+    # Fetches a real route and reads the body, rather than testing that the
+    # port accepts a connection. This stack once 404'd every request while all
+    # four containers were up and `migrate` had succeeded, because FrankenPHP
+    # publishes no SERVER_ADDR and the address gate fell through to its
+    # no-bind-address branch. A TCP check would have reported that as healthy.
+    #
+    # From inside the container, so REMOTE_ADDR is loopback and the check
+    # passes on an install nobody has widened — which is the shipped default.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/health | grep -q '\"status\":\"ok\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   queue:
     <<: *app

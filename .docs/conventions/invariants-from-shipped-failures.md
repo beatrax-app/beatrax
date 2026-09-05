@@ -6483,6 +6483,104 @@ the field, so the banner drops a row that is indistinguishable from one above it
 — same kind, same severity, same stored sentence, same copy line, same minute.
 A duplicate that reaches a reader costs more than its own row: a critical
 sentence said twice is one nobody believes the third time.
+## A health page nobody here wrote that fetched from two CDNs
+
+`tests/Contracts/NothingShippedFetchesFromAThirdPartyHostArchTest.php`
+
+`bootstrap/app.php` passed `health: '/up'` to `withRouting()` — Laravel's
+one-line way of getting a liveness route. The route it registers renders the
+framework's own `health-up.blade.php`, and that page opens a preconnect to
+`fonts.bunny.net`, pulls a stylesheet from it, and loads Tailwind from
+`cdn.jsdelivr.net`. A product whose claim is a zero-by-default outbound surface
+shipped a page that talks to two strangers, and both learn the reader's IP
+address and the moment they looked.
+
+Nothing was misconfigured. The line is correct Laravel and had been in the tree
+since the application was generated. What it opted into was never read, because
+the thing it opted into is not in this repository.
+
+Three separate reasons nothing saw it:
+
+- **Every markup guard skips `vendor/`.** `BladeHrefResolvesArchTest` walks
+  `Modules/` and `resources/` and drops any path containing `/vendor/`, because
+  a hand-written href inside a package is not ours to fix. That is right for
+  that rule, and it means a first-party scan can never see a page this
+  application nonetheless serves.
+- **No rule looked for an external host at all.** The nearest neighbour,
+  `ThirdPartyContainmentArchTest`, contains third-party *namespaces* — PHP
+  imports — and has nothing to say about a hostname in an attribute.
+- **The CSP made it look handled.** `default-src 'self'` does refuse the
+  stylesheet and the script in a browser enforcing it. But a `preconnect` is a
+  resource hint rather than a fetch, so the fetch directives do not govern it
+  and the DNS lookup and TLS handshake are not prevented; and the header is
+  withheld entirely while the Vite dev server is hot. A backstop in the reader's
+  browser is not the same claim as not shipping the address.
+
+The second half of the same page is quieter. It prints `Response rendered in
+{{ round(…) }}ms`, so its body differs on every call — and a probe endpoint's
+whole job is to answer something a caller can compare against a known value.
+
+The resolution was to stop routing to it rather than to fix it. This application
+already answers `/health`: JSON, five keys, no timestamp, auth-free, and since
+the boundary widening it reports whether that boundary is open as a single word
+and never as an interface list. Two health endpoints is two answers to one
+question and only one of them was ours, so `health:` is gone from both bootstrap
+roots and `/health` is the one that remains.
+
+The rule that replaced it has four parts, because the failure had two halves and
+the blind spot was a third thing again. It reads *attributes off parsed
+elements* — the ones a browser fetches without being asked — rather than hunting
+`https://` through template text, which is why the wizards' links to the Google,
+Entra and Enable Banking consoles stay green and an `xmlns` is never mistaken
+for an address. It scans bundled CSS and JS on the same terms. It asserts that
+neither bootstrap root asks the framework for a health page, which is the only
+way to reach a template the first two parts cannot see. And it asserts the route
+table holds exactly one probe URI, answered by a controller in this repository.
+
+## A test that pinned the contradiction it should have caught
+
+`tests/Feature/ServerDeploymentConfigTest.php`
+
+ADR-0022 settled it in July: SQLite is the only supported database, in every
+deployment shape, and the PostgreSQL and MySQL options in the deployment guide
+were withdrawn because they described something that could not work — thirty-two
+migrations use `RAISE(ABORT)` enum-guard triggers and search is an FTS5 virtual
+table, so `migrate` against a server database fails on the first substantive
+table.
+
+The guide's callout was updated. Five other places were not:
+
+- `.env.example` carried a commented block headed "Server deployment (Postgres /
+  MySQL / MariaDB)" telling the reader to uncomment it.
+- The configuration reference two hundred lines further down the same guide
+  still listed `pgsql`, `mysql` and `mariadb` as values for `DB_CONNECTION`.
+- `config/database.php` still defined all three connections.
+- `deploy/server/Dockerfile` still installed `pdo_pgsql` and `pdo_mysql` into
+  the shipped image — two runtime extensions for a shape the schema refuses.
+- `beatrax:setup`, the interactive command `.env.example` points the operator
+  at, still offered **"PostgreSQL (recommended for a server)"**, wrote
+  `DB_CONNECTION=pgsql`, opened a connection, reported `Database connection OK
+  (pgsql 16.4)` — and then handed off to `beatrax:install`, which died on the
+  first table. The operator got a confident green from the step that could not
+  detect the problem and a syntax error from the step that could.
+
+And the reason none of it was noticed: a test asserted it. `it('defines the
+server database connections so DB_CONNECTION can select them')` walked all three
+drivers and passed, because they *were* defined. It tested that the option
+existed, never that choosing it worked, so the suite stayed green over a
+contradiction the ADR had already resolved.
+
+That test is now the guard, inverted. It asserts that the configured engines are
+`['sqlite']` and nothing else, that no `.env` an operator copies offers a key
+that only means something to a networked database — commented lines included,
+because a commented `# DB_HOST=` under "uncomment this" is an offer — that no
+string literal in the setup command names a withdrawn engine, and that the
+server image installs no PDO driver but `pdo_sqlite`.
+
+It reads values rather than text, which matters: the deployment guide and the
+compose header both name PostgreSQL in order to say it does not work, and a
+rule that grepped for the word would have to be switched off for the two files
+that explain the rule.
 
 ## Related
 
