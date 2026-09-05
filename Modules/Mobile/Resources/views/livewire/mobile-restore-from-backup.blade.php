@@ -25,7 +25,7 @@
                 <x-core::file-input
                     id="restore-file"
                     wire:model="backup"
-                    accept=".enc"
+                    accept=".enc,.zip"
                     x-on:livewire-upload-error="$wire.uploadFailed()"
                 />
                 <div wire:loading wire:target="backup" class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>

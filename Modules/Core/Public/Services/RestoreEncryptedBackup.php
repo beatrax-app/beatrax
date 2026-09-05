@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\ExportArchiveBackup;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -30,6 +31,7 @@ final readonly class RestoreEncryptedBackup
         private BackupKeyMaterial $keyMaterial,
         private LiveDatabaseTransplant $transplant,
         private OwnerOnlyPath $ownerOnly,
+        private ExportArchiveBackup $exportArchive,
     ) {}
 
     /**
@@ -50,11 +52,12 @@ final readonly class RestoreEncryptedBackup
         }
 
         $decryptedPath = $this->tempPath('decrypted');
+        $lifted = $this->liftedFromExportArchive($encryptedPath);
 
         try {
             // 1. Decrypt — a wrong passphrase / tampered file throws here, before
             //    anything touches the live database.
-            $this->encryptor->decrypt($encryptedPath, $decryptedPath, $passphrase);
+            $this->encryptor->decrypt($lifted ?? $encryptedPath, $decryptedPath, $passphrase);
 
             // 2. Prove it is a sound SQLite database before trusting it —
             //    integrity_check must return exactly ['ok'].
@@ -79,7 +82,40 @@ final readonly class RestoreEncryptedBackup
             return $snapshotPath;
         } finally {
             $this->files->delete($decryptedPath);
+            if ($lifted !== null) {
+                $this->files->delete($lifted);
+            }
         }
+    }
+
+    // The one-click export hands the reader a `.zip` holding the encrypted
+    // backup and their source documents. Refusing it here would have made that
+    // the only file the application produces and cannot take back, and on a
+    // phone the restore screen is the whole route home from a wipe.
+    private function liftedFromExportArchive(string $uploadedPath): ?string
+    {
+        if (! $this->exportArchive->isArchive($uploadedPath)) {
+            return null;
+        }
+
+        $lifted = $this->tempPath('archived').'.enc';
+        if (! $this->ownerOnly->file($lifted)) {
+            throw new BackupIoException('The staged backup could not be made owner-only: '.$lifted);
+        }
+
+        try {
+            $this->exportArchive->liftBackupInto($uploadedPath, $lifted);
+        } catch (Throwable $e) {
+            // Made owner-only before the lift, so the file exists by the time
+            // one throws. The refusals here are the ones a reader retries, and
+            // an empty 0600 file per attempt is what the staging area fills up
+            // with when the cleanup lives only on the path that succeeded.
+            $this->files->delete($lifted);
+
+            throw $e;
+        }
+
+        return $lifted;
     }
 
     private function snapshotCurrent(string $connection): string
