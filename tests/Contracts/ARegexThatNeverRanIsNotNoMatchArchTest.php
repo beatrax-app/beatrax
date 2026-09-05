@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Exceptions\PatternScanFailedException;
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\RegexReturnSites;
 
@@ -29,7 +30,7 @@ it('leaves no preg_match whose answer cannot tell a failed scan from an empty on
             continue;
         }
 
-        $source = (string) file_get_contents($path);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
 
         if (! str_contains($source, 'preg_match')) {
             continue;

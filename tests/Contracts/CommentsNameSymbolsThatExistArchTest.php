@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
 use Tests\Contracts\Support\FirstPartySymbols;
@@ -70,7 +71,7 @@ it('names no first-party symbol a comment claims but no class has', function ():
     foreach ($files as $path) {
         $label = str_replace(base_path().'/', '', $path);
 
-        foreach (commentSymbolsLines((string) file_get_contents($path)) as $number => $line) {
+        foreach (commentSymbolsLines(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $number => $line) {
             foreach (commentSymbolsMentions($line) as [$class, $member]) {
                 if (! isset($classes[$class]) || FirstPartySymbols::hasMember($classes[$class], $member)) {
                     continue;

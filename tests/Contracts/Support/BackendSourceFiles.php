@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use Modules\Core\Public\Support\BladePhpSource;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 
 // The set of files an architecture guard means when it says "the codebase":
 // every backend PHP file, minus the tests that assert about them and the
-// migrations, which describe schema rather than behaviour.
+// migrations, which describe schema rather than behaviour. A `.blade.php` file
+// ends in `.php`, so 265 templates are in that set and codeTokens reads their
+// islands rather than handing the tokeniser markup it cannot enter.
 final class BackendSourceFiles
 {
     /** @return list<string> */
@@ -93,8 +96,10 @@ final class BackendSourceFiles
      */
     public static function codeTokens(string $path): array
     {
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
+
         return array_values(array_filter(
-            token_get_all((string) file_get_contents($path)),
+            token_get_all($source),
             static fn (array|string $token): bool => ! is_array($token)
                 || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true),
         ));

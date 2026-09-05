@@ -38,6 +38,7 @@
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\PatternScan')
 @use('Modules\Sync\Internal\Crypto\EncryptionSetupStep')
 @use('Modules\Sync\Internal\OpLog\SyncBacklogState')
 <div class="space-y-6">
@@ -279,7 +280,7 @@
                                 {{-- Word safety-number: 6 words, two rows of 3, mono uppercase --}}
                                 @if ($device['safety_number_words'] !== '')
                                     @php
-                                        $words = preg_split('/\s+/', trim((string) $device['safety_number_words'])) ?: [];
+                                        $words = PatternScan::split('/\s+/', trim((string) $device['safety_number_words']));
                                         $rowOne = array_slice($words, 0, 3);
                                         $rowTwo = array_slice($words, 3, 3);
                                     @endphp

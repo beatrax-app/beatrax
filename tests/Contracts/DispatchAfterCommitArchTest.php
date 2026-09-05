@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
+
 /**
  * A background dispatch inside the transaction that caused it is a promise the
  * database has not made yet. Listeners run synchronously here, so a rollback
@@ -52,7 +54,7 @@ function dispatchesInsideATransaction(array $paths): array
 
     foreach ($paths as $path) {
         $tokens = array_values(array_filter(
-            token_get_all((string) file_get_contents($path)),
+            token_get_all(BladePhpSource::forPath($path, (string) file_get_contents($path))),
             static fn (array|string $token): bool => ! is_array($token)
                 || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT, T_WHITESPACE], true),
         ));
