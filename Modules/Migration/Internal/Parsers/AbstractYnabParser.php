@@ -325,7 +325,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         }
 
         throw UnrecognizedMigrationFileException::cell(
-            'Budget.csv',
+            YnabCsvColumnMap::BUDGET_FILE,
             'Month',
             $value,
             'expected one of '.implode(', ', self::BUDGET_MONTH_FORMATS),
@@ -371,8 +371,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
      */
     private function signedMinor(array $row, string $currency): int
     {
-        $outflow = $this->amounts->requireMinor($row['Outflow'] ?? '', 'Register.csv', 'Outflow', $currency);
-        $inflow = $this->amounts->requireMinor($row['Inflow'] ?? '', 'Register.csv', 'Inflow', $currency);
+        $outflow = $this->amounts->requireMinor($row['Outflow'] ?? '', YnabCsvColumnMap::REGISTER_FILE, 'Outflow', $currency);
+        $inflow = $this->amounts->requireMinor($row['Inflow'] ?? '', YnabCsvColumnMap::REGISTER_FILE, 'Inflow', $currency);
 
         return $inflow > 0 ? $inflow : -$outflow;
     }
@@ -493,7 +493,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     {
         $parsed = SafeDate::fromFormatOrNull('!m/d/Y', $value);
         if (! $parsed instanceof CarbonImmutable) {
-            throw UnrecognizedMigrationFileException::cell('Register.csv', 'Date', $value, 'expected m/d/Y');
+            throw UnrecognizedMigrationFileException::cell(YnabCsvColumnMap::REGISTER_FILE, 'Date', $value, 'expected m/d/Y');
         }
 
         return $parsed;
