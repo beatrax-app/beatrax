@@ -414,34 +414,71 @@ join on one, or a raw `update()` that writes plaintext straight into an encrypte
 None of these raise; they just quietly stop being right.
 
 `SensitiveColumnPredicateGuardTest` is a source scan standing in for the type system that
-would otherwise have caught it. It walks every production file under `Modules/` — skipping
-`tests/`, `Database/` and `Resources/` — and looks for each bare column name from
+would otherwise have caught it. It walks every production file under `Modules/` and `app/` —
+skipping `tests/`, `Database/` and `Resources/` — and looks for each bare column name from
 `SensitiveFieldRegistry::columns()` appearing in one of the shapes that only makes sense
-against plaintext: a `where`/`whereIn`, an `orderBy`/`groupBy`, a join `->on(...)`, a
-`whereRaw(... LIKE ...)`, a raw `json_decode(...)`, or a `'column' =>` key inside an
-`update()`/`insert()` array. A file that mentions any codec marker — `SensitiveColumnCodec`,
-`decryptValue`, `encryptValue`, `encryptAttrs` — is assumed to be routing through the codec
-and is skipped wholesale.
+against plaintext: a `where`/`whereIn`/`orWhere`/`whereLike`, an `orderBy`/`groupBy`, a join
+predicate, a `whereRaw`/`havingRaw`/`orderByRaw`, a `json_decode` of the column read off a
+row, or a `'column' =>` key inside a write.
 
-It is a substring scan, so it is coarse in both directions. It matches a *bare* column name,
-which means `accounts.iban` trips on the registry's `counterparties.iban` entry even though
-`accounts.iban` is plaintext and always has been. And the codec-marker check is per file, so
-one decrypting read in a file exempts every other query in it. An AST rule modelled on
-`app/PhpStan/Rules/BoundaryRule.php`, matching a `MethodCall` node with a sensitive string
-literal argument, would be precise where this is not; it has not been built.
+## How the predicate guard decides what it is looking at
+
+A bare column name is ambiguous — `accounts.iban` and `counterparties.iban` are spelled the
+same at a call site — so the scan reports an occurrence and then asks two questions about
+that one occurrence. Both are answered by reading the call, not the file it sits in.
+
+**Which table is this?** The chain leading up to the match is read back to the previous
+statement boundary for a `->table('…')`, a `->from('…')` or a `Model::query()`, and the model
+is asked its own `getTable()` rather than having its name pluralised by hand. A call that
+names a table whose column of this name the registry does not seal is cleared, and the
+clearance says so: *names `accounts.iban`, which the registry does not seal*. Promote that
+column to `columns()` and every one of those calls goes red in the same run — which is what
+the last test in the file asserts, naming all twenty of them.
+
+**Is this write coded?** A write is cleared when the value bound to that key routes through
+`encryptValue`, when the array holding it is an argument to `encryptAttrs('<table>', …)` for
+the table that seals it, or when the value comes from a method **in the same file** whose body
+seals it. One hop, and the callee's body is bounded at its own closing brace, so a codec call
+somewhere further down the file cannot clear a write that has none of its own.
+
+A write is found by its verb matched as a *word part* — `insert`, `update`, `upsert`,
+`create`, `fill`, `save` anywhere in the method name. `->insert(` alone could not see
+`insertChunked()`, `firstOrCreate()` or `findOrCreate()`. The argument is then read to its
+balanced closing bracket rather than for a fixed number of characters: the previous reading
+stopped at 600, so a long enough `insert()` hid its own last columns and reported nothing.
+
+### What replaced the whole-file exemption, and why
+
+Until this was rebuilt, a file mentioning any codec marker — `SensitiveColumnCodec`,
+`decryptValue`, `encryptValue`, `encryptAttrs` — anywhere in it was skipped wholesale, before
+being scanned at all. **71 production files held that exemption**, and the guard was blind
+precisely where the risk was: a file earned silence for every column it touched by encrypting
+one of them correctly. `CounterpartyResolverService` was one of the 71, and the IBAN it copied
+into a display name, a slug and a URL lived behind that exemption for as long as it existed.
+The marker check is gone. Nothing is skipped before scanning; clearance is decided per
+occurrence, and every clearance names its own reason.
 
 ### Adding an allowlist entry
 
-`sensitive-column-guard-allowlist.php` maps a repo-relative path to the reason that file is
-safe. Three reasons are legitimate:
+`sensitive-column-guard-allowlist.php` maps `{repo-relative path}::{column}::{kind}` to the
+reason **that one call** is safe — one file, one column, one shape of use. There is nothing
+a whole file can be granted.
 
-- a **different table** happens to share the bare column name, as with `accounts.iban`;
-- the predicate is a `whereNull`/`whereNotNull` presence check, which works on ciphertext
-  because it never compares the value;
-- the file already decrypts by a route the marker list does not recognise.
+Almost nothing needs an entry, because the two questions above are answered mechanically. What
+is left is a call whose table a reader can see and the scan cannot: `ManualEntryAnchors`
+passes `'accounts'` as its helper's first argument rather than to a `->table()` in the chain.
+That is a claim a person makes, so the reason has to name the `{table}.{column}` it rests on,
+and that pair has to be one `SensitiveFieldRegistry::knowinglyPlaintext()` records — a reason
+resting on a column the registry seals, or on one nobody has ruled on, fails.
+
+Two more tests keep the list from rotting. The scan is re-run with every exemption withheld,
+and an entry naming nothing the scan reported is **stale** and fails: the call it was granted
+for has been rewritten or deleted, and what is left is an exclusion covering whatever gets
+written there next. The same idea guards `.gitleaks.toml`, in
+`tests/Contracts/ATestFixtureIsNeverShapedLikeASecretArchTest.php`. And a reason saying the
+site is broken, unfixed or a TODO fails outright.
 
 Anything else is the bug the guard exists to find, and the fix is the query, not the list.
-Write the reason so the next reader can re-derive the judgement without opening the file.
 
 ## The guard that catches a column rendered as ciphertext
 
@@ -729,10 +766,10 @@ is where an engineer looks first, and a column argued only in prose read from th
 had looked at. `known_counterparty_ibans.real_iban` is the newest of them and the least obvious:
 it is a **counterparty's** IBAN in cleartext, `string(34)`, carrying `unique(user_id, real_iban)`,
 predicated on by every IBAN-matching resolver arm, and now read by the enable-time sweep to
-recover the IBAN half of a chain-link signature. Three tests in
+recover the IBAN half of a chain-link signature. Two tests in
 `SensitiveColumnPredicateGuardTest` hold the two lists honest against each other: they must be
-disjoint, every column an allowlist reason leans on must appear in `knowinglyPlaintext()`, and
-no allowlist reason may cite a column the registry has since started encrypting.
+disjoint, and every `{table}.{column}` an allowlist reason leans on must appear in
+`knowinglyPlaintext()` and must not have since entered `columns()`.
 
 ### The keyed blind index in `counterparty_normalized`
 
@@ -1152,19 +1189,20 @@ could not be read first.
 
 ### The allowlist entry that would quietly become a lie
 
-`sensitive-column-guard-allowlist.php` exempts six files on the stated grounds that their
-`where('iban', ...)` targets `accounts.iban`, "a plaintext column SensitiveFieldRegistry never
-lists". The guard skips allowlisted files *before* scanning. The moment `accounts.iban` is
-added to the registry, those six exemptions silently cover the six most dangerous predicates
-in the codebase, and the allowlist honesty check cannot detect it — it only greps reasons for
-`broken`/`TODO`/`FIXME`. Any change that lists `accounts.iban` must delete those six entries
-in the same commit.
+`sensitive-column-guard-allowlist.php` used to exempt eleven whole files on the stated grounds
+that their `where('iban', ...)` targets `accounts.iban`, "a plaintext column
+SensitiveFieldRegistry never lists". The guard skipped an allowlisted file *before* scanning
+it, so the moment `accounts.iban` was added to the registry those eleven exemptions would
+silently cover eleven of the most dangerous predicates in the codebase — and the honesty check
+could not detect it, because it only greps reasons for `broken`/`TODO`/`FIXME`.
 
-That is now enforced rather than merely written down. `SensitiveColumnPredicateGuardTest` pulls
-the `{table}.{column}` pairs back out of each allowlist *reason* and fails if any of them has
-entered `SensitiveFieldRegistry::columns()`, with an in-memory negative probe pinning that the
-check really does catch all six. Promoting `accounts.iban` without deleting the exemptions goes
-red on two tests, not zero.
+That is now structural rather than written down. Nothing is skipped before scanning, so the
+question is asked of the tree instead of of the prose written about it: the guard re-runs the
+whole scan with `accounts.iban` appended to the registry and asserts the exact list of calls
+that turn red. There are **twenty**, in fourteen files — six of them raw `create()` writes the
+old reading never looked at, because it matched `->insert(` and `->update(` and nothing else.
+The reason each exemption states is still checked against `knowinglyPlaintext()`, but it is no
+longer the only thing standing between a promoted column and a silent false green.
 
 ### What the status row must disclose
 

@@ -61,8 +61,10 @@ final readonly class RetypeByAliasResolver
             ->select(['id', 'account_id', 'amount_minor', 'counterparty_iban'])
             ->where('user_id', $user->id)
             ->whereIn('type', [TransactionType::Expense->value, TransactionType::Income->value])
+            // No `!= ''` beside it: sealed values are never the empty string,
+            // so that half of the filter admitted every row once the column
+            // was encrypted. matchCandidate() refuses a blank of either kind.
             ->whereNotNull('counterparty_iban')
-            ->where('counterparty_iban', '!=', '')
             ->chunkById(self::CANDIDATE_CHUNK_SIZE, function ($rows) use (
                 $aliasKindByIban,
                 $accountIdsByKind,
