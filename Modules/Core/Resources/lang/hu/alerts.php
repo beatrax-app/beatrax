@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Emlékeztess később',
         'mark_resolved' => 'Megjelölés megoldottként',
         'mark_resolved_aria' => 'Megjelölés megoldottként — #:id rendszerüzenet',
+        'assign_in_budgets' => 'Kiosztás a Költségvetésekben',
+        'dismiss' => 'Elvetés',
+        'dismiss_aria' => 'Elvetés — #:id rendszerüzenet',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'A nyugalmi állapotú titkosítás aktív ehhez a fiókhoz, de már egyetlen alkalmazászár-burok sem tartja az adatkulcsot, ezért minden titkosított jegyzet, leírás és partneradat üresként olvasható. Az egyetlen visszaút a párosítás olyan eszközzel, amely még őrzi a kulcsot.',
         'auth_lock_recovery_wrap_stale' => 'A fiók jelszava úgy változott meg, hogy az alkalmazászár helyreállítási burka nem lett újracsomagolva, ezért az a jelszó már nem nyitja az alkalmazászárat. A PIN-kód még igen. Kösse össze újra a fiókjelszót az alkalmazászár beállításaiban, amíg a PIN-kód ismert — különben egy elfelejtett PIN mögött nem marad semmi.',
         'reconnect_link' => 'Újracsatlakozás →',
+        'pots_category_link_retired' => 'A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.|A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.',
     ],
 ];

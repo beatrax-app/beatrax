@@ -3,6 +3,13 @@
 # A scope is shown as the component a change touched, so the published notes
 # can be filtered by it. Scopes that carry no letters are working references
 # rather than component names and are left out.
+#
+# Breaking changes sort first AND carry their prose: every other entry is one
+# subject line, and one line among hundreds is exactly what OPS-R12 refuses.
+# The prose is the commit's `BREAKING CHANGE:` footer, which git-cliff exposes
+# as `breaking_description` with the `Spec:` and `Signed-off-by:` trailers
+# already split off. It renders flush left, so it reads as a notice rather
+# than as a continuation of the bullet above it.
 
 [changelog]
 header = "# Changelog\n\n"
@@ -15,6 +22,9 @@ body = """
 {{ commit.message | split(pat="\n") | first | upper_first }}\
 {% if commit.breaking %} **(breaking)**{% endif %}\
 {% if commit.id %} ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo }}/commit/{{ commit.id }})){% endif %}
+{% if commit.breaking and commit.breaking_description %}
+{{ commit.breaking_description }}
+{% endif %}\
 {% endfor %}
 {% endfor %}
 """

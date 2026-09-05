@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Opomni me pozneje',
         'mark_resolved' => 'Označi kot rešeno',
         'mark_resolved_aria' => 'Označi kot rešeno — sistemsko opozorilo št. :id',
+        'assign_in_budgets' => 'Razporedi v Proračunih',
+        'dismiss' => 'Opusti',
+        'dismiss_aria' => 'Opusti — sistemsko opozorilo št. :id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Šifriranje v mirovanju je za ta račun aktivno, vendar noben ovoj zaklepanja aplikacije ne hrani več ključa podatkov, zato se vsaka šifrirana opomba, opis in podatek o nasprotni stranki prebere kot prazna. Edina pot nazaj je seznanitev z napravo, ki ključ še ima.',
         'auth_lock_recovery_wrap_stale' => 'Geslo računa se je spremenilo, ne da bi bil ovoj za obnovitev zaklepanja aplikacije ponovno ovit, zato to geslo ne odklene več aplikacije. PIN jo še vedno odklene. Znova povežite geslo računa v nastavitvah zaklepanja, dokler je PIN še znan — sicer za pozabljenim PIN-om ne ostane nič.',
         'reconnect_link' => 'Poveži znova →',
+        'pots_category_link_retired' => 'Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranega hranilnika je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.',
     ],
 ];

@@ -25,6 +25,52 @@ the version policy and channel semantics, see
    additions bump the minor, and a breaking change bumps the major. The spec owns the
    policy behind that; see
    [`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
+4. Give any breaking change its prominence, below.
+
+## A breaking change
+
+One subject line among hundreds is exactly what
+[OPS-R12](https://github.com/beatrax-app/spec/blob/main/70-operations/README.md)
+refuses, and nothing here can be edited to fix it afterwards: the release body is
+generated from the commit history and no hand-maintained file may be its source
+([OPS-R11](https://github.com/beatrax-app/spec/blob/main/70-operations/README.md)).
+The prominence is won in a commit, before the tag.
+
+Mark the commit breaking and put the whole note in a `BREAKING CHANGE:` footer:
+
+```text
+docs(pots)!: category-linked pots are retired on upgrade
+
+BREAKING CHANGE: Category-linked savings pots are retired, and money they
+held is now unallocated.
+
+The first time v2.0 opens, every pot that was linked to a budget category is
+archived and its balance released back to the unallocated pool of the account
+it sat on.
+
+Spec: D3-R16
+Signed-off-by: A Maintainer <maintainer@example.com>
+```
+
+Two things follow from `cliff.toml`. The `!` puts the entry in **Breaking changes**,
+which sorts above every other group, and it outranks the `docs`, `test`, `chore`,
+`ci`, `build` and `style` skips — so a note-only commit still appears whatever type
+it carries. The footer is then rendered in full beneath the entry, flush left, as its
+own paragraphs; `Spec:` and `Signed-off-by:` are separate trailers and do not appear.
+
+Write the footer for the person the change happens to rather than the person who made
+it: what changed, what it means for data they already hold, and what they now have to
+do by hand. Where the change moves the user's money, the app has to say so as well —
+a release body reaches a reader who goes looking for one, and the desktop updater
+renders no notes of its own. See
+[the category-link retirement](../features/pots/category-link-retirement.md) for the
+shape that took.
+
+Read it back before tagging, without pushing anything:
+
+```sh
+git-cliff --unreleased --strip header
+```
 
 ## Push the tag
 

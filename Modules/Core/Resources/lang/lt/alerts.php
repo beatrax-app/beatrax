@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Priminti vėliau',
         'mark_resolved' => 'Žymėti kaip išspręstą',
         'mark_resolved_aria' => 'Žymėti kaip išspręstą — sistemos įspėjimas #:id',
+        'assign_in_budgets' => 'Paskirstyti Biudžetuose',
+        'dismiss' => 'Slėpti',
+        'dismiss_aria' => 'Slėpti — sistemos įspėjimas #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Šiai paskyrai įjungtas ramybės būsenos šifravimas, tačiau nė vienas programos užrakto apvalkalas nebeturi duomenų rakto, todėl kiekviena užšifruota pastaba, aprašas ir sandorio šalies informacija rodoma tuščia. Vienintelis kelias atgal – susieti įrenginį, kuris vis dar turi raktą.',
         'auth_lock_recovery_wrap_stale' => 'Paskyros slaptažodis pasikeitė, o programos užrakto atkūrimo apvalkalas nebuvo supakuotas iš naujo, todėl tas slaptažodis nebeatrakina programos. PIN kodas vis dar atrakina. Iš naujo susiekite paskyros slaptažodį užrakto nustatymuose, kol PIN kodas dar žinomas — kitaip už pamiršto PIN kodo nieko nelieka.',
         'reconnect_link' => 'Prijungti iš naujo →',
+        'pots_category_link_retired' => 'Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotos taupyklės vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.',
     ],
 ];

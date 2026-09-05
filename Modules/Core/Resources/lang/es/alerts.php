@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Recordármelo más tarde',
         'mark_resolved' => 'Marcar como resuelta',
         'mark_resolved_aria' => 'Marcar como resuelta — alerta del sistema n.º :id',
+        'assign_in_budgets' => 'Asignar en Presupuestos',
+        'dismiss' => 'Descartar',
+        'dismiss_aria' => 'Descartar — alerta del sistema n.º :id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'El cifrado en reposo está activo para esta cuenta, pero ninguna envoltura del bloqueo de la aplicación conserva ya la clave de datos, por lo que cada nota, descripción y dato de contraparte cifrado se lee como vacío. Emparejar con un dispositivo que aún tenga la clave es la única vuelta atrás.',
         'auth_lock_recovery_wrap_stale' => 'La contraseña de la cuenta cambió sin que se reempaquetara la envoltura de recuperación del bloqueo de la aplicación, así que esa contraseña ya no abre el bloqueo. El PIN sí. Vuelve a vincular la contraseña de la cuenta desde los ajustes del bloqueo mientras aún conozcas el PIN; de lo contrario, un PIN olvidado no deja nada detrás.',
         'reconnect_link' => 'Volver a conectar →',
+        'pots_category_link_retired' => 'El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count hucha archivada vuelve a estar sin asignar y espera a que lo asignes.|El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count huchas archivadas vuelve a estar sin asignar y espera a que lo asignes.',
     ],
 ];

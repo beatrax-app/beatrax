@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Atgādināt vēlāk',
         'mark_resolved' => 'Atzīmēt kā atrisinātu',
         'mark_resolved_aria' => 'Atzīmēt kā atrisinātu — sistēmas brīdinājums #:id',
+        'assign_in_budgets' => 'Sadalīt Budžetos',
+        'dismiss' => 'Aizvērt',
+        'dismiss_aria' => 'Aizvērt — sistēmas brīdinājums #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,10 @@ return [
         'auth_lock_key_material_stranded' => 'Šim kontam ir aktīva miera stāvokļa šifrēšana, taču neviens lietotnes bloķēšanas apvalks vairs netur datu atslēgu, tāpēc katra šifrētā piezīme, apraksts un darījuma partnera informācija tiek nolasīta kā tukša. Vienīgais ceļš atpakaļ ir savienot pārī ierīci, kurai atslēga vēl ir.',
         'auth_lock_recovery_wrap_stale' => 'Konta parole tika mainīta, neietinot atkārtoti lietotnes bloķēšanas atkopšanas apvalku, tāpēc šī parole vairs neatver lietotnes bloķēšanu. PIN joprojām atver. Atkārtoti sasaistiet konta paroli bloķēšanas iestatījumos, kamēr PIN vēl ir zināms — citādi aiz aizmirsta PIN nepaliek nekas.',
         'reconnect_link' => 'Pievienot atkārtoti →',
+        // i18n-review: lv · pots_category_link_retired — Latvian selects the FIRST
+        // segment for zero, so that arm carries the plural. The alert is raised only
+        // once a pot has released money, so it never renders; confirm the case
+        // before this line is reused where zero can reach it.
+        'pots_category_link_retired' => 'Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētām krājkasēm atkal ir nepiešķirta un gaida, kad to sadalīsiet.|Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētas krājkases atkal ir nepiešķirta un gaida, kad to sadalīsiet.|Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētām krājkasēm atkal ir nepiešķirta un gaida, kad to sadalīsiet.',
     ],
 ];
