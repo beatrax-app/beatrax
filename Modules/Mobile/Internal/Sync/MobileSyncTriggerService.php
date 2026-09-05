@@ -102,7 +102,7 @@ final readonly class MobileSyncTriggerService
         // LAN leg used to skip this entirely, leaving anything queued in the
         // mailbox — epoch wraps included — unread for as long as the LAN
         // stayed reachable.
-        $relayReached = $this->relayLeg($identity);
+        $relayReached = $this->relayLeg($identity, $session);
 
         $lanReached = $lanHost !== null
             && $lanPort !== null
@@ -145,11 +145,11 @@ final readonly class MobileSyncTriggerService
         }
     }
 
-    // Off-LAN leg (relay is opt-in, zero-knowledge). A real, bounded
-    // RelayClient::drain() round-trip, never a fabricated success. This
-    // leg proves the relay is reachable/configured and drains this
-    // device's mailbox; it does not yet interpret or confirm drained rows.
-    private function relayLeg(DeviceIdentityDto $identity): bool
+    // Off-LAN leg (relay is opt-in, zero-knowledge). Reached means the relay
+    // answered AND every wrap it held for this device is off it, in the keyring
+    // or in this device's own inbox. It used to mean a bare round-trip that
+    // discarded what it downloaded, so the mailbox refilled the phone forever.
+    private function relayLeg(DeviceIdentityDto $identity, Session $session): bool
     {
         if (! $this->relayConfig->isConfigured()) {
             return false;
@@ -157,7 +157,7 @@ final readonly class MobileSyncTriggerService
 
         $token = $this->drainToken($identity->deviceId);
 
-        return $token !== null && $this->drainMailbox($identity->deviceId, $token);
+        return $token !== null && $this->drainMailbox($identity, $token, $session);
     }
 
     // A token minted for THIS device id and no other, matching what
@@ -177,12 +177,41 @@ final readonly class MobileSyncTriggerService
         }
     }
 
-    private function drainMailbox(string $deviceId, string $token): bool
+    private function drainMailbox(DeviceIdentityDto $identity, string $token, Session $session): bool
+    {
+        $rows = $this->drainRows($identity->deviceId, $token);
+
+        if ($rows === null) {
+            return false;
+        }
+
+        $owed = 0;
+        $settled = 0;
+
+        foreach ($rows as $row) {
+            $wrap = self::epochWrapOf($row);
+
+            // Another protocol's frame, left where PairingFrameCourier polls
+            // for it. Handing one to the wrap gateway gets it Refused and then
+            // deleted, which is a handshake step the peer is still waiting on.
+            if ($wrap === null) {
+                continue;
+            }
+
+            $owed++;
+            $settled += $this->settleWrap($identity, $token, $wrap, $session) ? 1 : 0;
+        }
+
+        return $settled === $owed;
+    }
+
+    /**
+     * @return list<array<string, mixed>>|null null when the round-trip failed
+     */
+    private function drainRows(string $deviceId, string $token): ?array
     {
         try {
-            $this->relayClient->drain($deviceId, $token);
-
-            return true;
+            return $this->relayClient->drain($deviceId, $token);
         } catch (Throwable $e) {
             // The class alone says "connection failed" and nothing about why;
             // the message carries the curl error that distinguishes a refused
@@ -192,7 +221,62 @@ final readonly class MobileSyncTriggerService
                 'message' => $e->getMessage(),
             ]);
 
+            return null;
+        }
+    }
+
+    // The gateway keeps a copy in this device's OWN inbox when this pass
+    // cannot open the wrap, so its true is the promise that the relay's copy
+    // may go — never "we looked at it". Confirming ahead of that answer is how
+    // the only copy of an epoch key gets deleted off the one device holding it.
+    /**
+     * @param  array{id: int, blob: string, senderDid: string}  $wrap
+     */
+    private function settleWrap(DeviceIdentityDto $identity, string $token, array $wrap, Session $session): bool
+    {
+        if (! $this->epochDelivery->receiveEpochWrap($wrap['blob'], $identity->userId, $wrap['senderDid'], $identity->deviceId, $session)) {
             return false;
         }
+
+        try {
+            $this->relayClient->confirm($wrap['id'], $token);
+
+            return true;
+        } catch (Throwable $e) {
+            $this->logger?->info('MobileSyncTriggerService: drained wrap accounted for but not confirmed off the relay.', [
+                'reason' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    // Null for every row this leg is not the reader of: an unusable id, a blob
+    // that is not base64, or another protocol's envelope type.
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array{id: int, blob: string, senderDid: string}|null
+     */
+    private static function epochWrapOf(array $row): ?array
+    {
+        $id = isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : null;
+        $blobB64 = isset($row['blob']) && is_string($row['blob']) ? $row['blob'] : '';
+        $blob = base64_decode($blobB64, true);
+
+        if ($id === null || $blob === false) {
+            return null;
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($blob, true);
+
+        if (! is_array($decoded) || ($decoded['type'] ?? null) !== GdkEpochDeliveryGateway::MSG_EPOCH_WRAP) {
+            return null;
+        }
+
+        $senderDid = $row['sender_did'] ?? null;
+
+        return ['id' => $id, 'blob' => $blob, 'senderDid' => is_string($senderDid) ? $senderDid : ''];
     }
 }

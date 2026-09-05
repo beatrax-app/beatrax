@@ -49,9 +49,13 @@ final readonly class ProjectionPipeline
         $asOf = $this->clock->now()->startOfDay();
 
         $run = $this->createPendingRun($user, $scenarioId, $horizonDays);
-        $this->stateMachine->start($run);
 
+        // start() inside the try, not above it: the row exists the moment
+        // createPendingRun returns, and a throw from the transition itself left
+        // it `pending` with fail() unreachable — a chart stuck on "updating"
+        // that no later reader can tell from one still being computed.
         try {
+            $this->stateMachine->start($run);
             $result = $this->computeResult($user, $scenarioId, $asOf, $horizonDays);
 
             $encoded = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

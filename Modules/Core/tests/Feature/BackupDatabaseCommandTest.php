@@ -127,6 +127,36 @@ it('prunes pre-seeded historical backups outside the 7-daily + 4-Sunday keep set
     expect(count($remaining))->toBe(7, 'Expected exactly 7 .sqlite files after pruning.');
 });
 
+// Retention used to sit behind the branch that kept a copy, so the promise in
+// the command's own description held on the scheduled --force run and on no
+// hand-run at all: a reader who ran db:backup by hand kept every backup forever.
+it('prunes retention on a run that keeps no copy because the database is unchanged', function (): void {
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    /** @var Filesystem $files */
+    $files = $this->app->make(Filesystem::class);
+
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    // Seeded after the first run so the digest sidecar the smart skip reads
+    // is the fresh copy's, which makes the second run take the skip branch.
+    $seedDates = ['2026-04-22-030000', '2026-04-23-030000', '2026-04-24-030000',
+        '2026-04-25-030000', '2026-04-27-030000', '2026-04-28-030000', '2026-04-29-030000'];
+
+    foreach ($seedDates as $stamp) {
+        $files->put($backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$stamp.'.sqlite', 'seeded');
+    }
+
+    expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))->toHaveCount(8);
+
+    $this->artisan('db:backup')
+        ->expectsOutputToContain('Skipped')
+        ->assertSuccessful();
+
+    $remaining = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
+    expect(count($remaining))->toBe(7, 'A run that keeps no copy must still prune what the policy no longer keeps.');
+});
+
 // VACUUM INTO interpolates its destination literally, so the command rejects
 // bytes that could break out of the quoted string. The storage root is where
 // such a byte would realistically arrive from.

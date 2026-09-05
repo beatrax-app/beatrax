@@ -305,3 +305,41 @@ it('leaves the nudge underived when that middleware is out of the stack', functi
     expect(app(DeferredNotificationPasses::class)->outstandingFor((int) $user->id))
         ->toContain(DeferredNotificationPass::BudgetNudges);
 });
+
+// The deferral is the normal outcome on an install with encryption at rest --
+// every OS-scheduled process is a keyless one -- so a pass that emitted for
+// nobody has to say so. Returning SUCCESS in silence reads at the console, and
+// to the phone's background runner, exactly like a pass with nothing to send.
+it('says at the console that the budget-nudge pass deferred rather than emitted', function (): void {
+    $user = dnpUser();
+    $this->enablesEncryptionForUser($user);
+    dnpOverspentGroceries($user);
+
+    dnpRunKeyless(static fn () => Artisan::call('budgets:emit-nudges'));
+
+    expect(Artisan::output())
+        ->toContain('Budget nudges: emitted for 0 users, deferred for 1 user')
+        ->toContain('holds no app-lock key');
+});
+
+it('says at the console that the daily-trigger pass deferred rather than emitted', function (): void {
+    $user = dnpUser();
+    $this->enablesEncryptionForUser($user);
+
+    dnpRunKeyless(static fn () => Artisan::call('notifications:daily-triggers'));
+
+    expect(Artisan::output())->toContain('Daily triggers: emitted for 0 users, deferred for 1 user');
+});
+
+// The other half of the same sentence: a pass that DID emit must not borrow the
+// deferral's wording, or the line stops distinguishing the two states it exists
+// to distinguish.
+it('names the users it emitted for when the process holds the key', function (): void {
+    $user = dnpUser();
+    dnpOverspentGroceries($user);
+
+    app(SuppressionEvaluator::class)->suppressDelivery(static fn () => Artisan::call('budgets:emit-nudges'));
+
+    expect(Artisan::output())->toContain('Budget nudges: emitted for 1 user.');
+    expect(app(DeferredNotificationPasses::class)->outstandingFor((int) $user->id))->toBe([]);
+});
