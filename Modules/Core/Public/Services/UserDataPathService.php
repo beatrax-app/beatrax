@@ -7,6 +7,7 @@ namespace Modules\Core\Public\Services;
 use InvalidArgumentException;
 use Modules\Core\Public\Enums\MobilePlatform;
 use Modules\Core\Public\Services\Concerns\ProvidesInstancePathAccessors;
+use Modules\Core\Public\Support\PersistedStore;
 
 /**
  * @link ../../../../.docs/features/core/durable-user-data-paths.md
@@ -55,10 +56,7 @@ final class UserDataPathService
         }
 
         if (self::isMobileRuntime()) {
-            return dirname(self::projectRoot())
-                .DIRECTORY_SEPARATOR.'persisted_data'
-                .DIRECTORY_SEPARATOR.'storage'
-                .DIRECTORY_SEPARATOR.'app';
+            return PersistedStore::pathBeside(self::projectRoot(), PersistedStore::DURABLE_APP);
         }
 
         return self::projectRoot().DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app';
@@ -69,10 +67,7 @@ final class UserDataPathService
         // base_path() is the wiped-and-reshipped BUNDLE, carrying a populated
         // dev database.sqlite; the persisted store is empty on a fresh install.
         if (self::isMobileRuntime()) {
-            return dirname(self::projectRoot())
-                .DIRECTORY_SEPARATOR.'persisted_data'
-                .DIRECTORY_SEPARATOR.'database'
-                .DIRECTORY_SEPARATOR.'database.sqlite';
+            return PersistedStore::pathBeside(self::projectRoot(), PersistedStore::DATABASE_FILE);
         }
 
         $native = getenv('NATIVEPHP_STORAGE_PATH');
@@ -110,9 +105,7 @@ final class UserDataPathService
             return true;
         }
 
-        return is_dir(
-            dirname(self::projectRoot()).DIRECTORY_SEPARATOR.'persisted_data',
-        );
+        return is_dir(PersistedStore::rootBeside(self::projectRoot()));
     }
 
     public static function storageBase(): string

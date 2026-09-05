@@ -59,14 +59,15 @@ final readonly class NativeBuildPatches
     ];
 
     // A cosmetic patch that fails degrades to the unpatched shell, which is
-    // visible on the device. These four are invisible: three until App Store
-    // Connect rejects the upload, and the fourth until a reader is asked for
-    // their face in a language they do not speak.
+    // visible on the device. These five are invisible: three until App Store
+    // Connect rejects the upload, one until a reader is asked for their face in
+    // a language they do not speak, and the backup one never — it reaches iCloud.
     private const array REQUIRED_SCRIPTS = [
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',
         'nativephp_ios_purpose_string_localisations.php',
+        'nativephp_exclude_data_from_backup.php',
     ];
 
     public function __construct(
