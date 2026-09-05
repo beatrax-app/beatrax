@@ -215,11 +215,16 @@ epoch key and an AEAD rejection are all the same null, and all quarantine.
 
 ### System ops bypass the signature gate
 
-`OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID` (`'system-cascade'`) and the FTS equivalent are
-device ids the replayer produces itself. They carry no Ed25519 key and no signature, because
-they are deterministically re-derived on every replay — incremental and rebuild alike — from
-entries that were themselves verified. They are trusted by construction, and they keep the
-cross-user check that the Ed25519 gate would otherwise have covered.
+`OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID` (`'system-cascade'`) is a device id the replayer
+produces itself. It carries no Ed25519 key and no signature, because the op is
+deterministically re-derived on every replay — incremental and rebuild alike — from entries
+that were themselves verified. It is trusted by construction, and it keeps the cross-user
+check that the Ed25519 gate would otherwise have covered.
+
+There was a second one, `'system-fts'`, and it was not an op at all: it named the *author* of
+a quarantine row written when the search index could not be refreshed. Nothing was refused
+there, so the row is gone and the id with it — see
+[an index that missed a row refused nothing](an-index-that-missed-a-row-refused-nothing.md).
 
 The transfer-pair cascade is the reason this exists. When one leg of a transfer is
 tombstoned, the surviving leg stops being a transfer and becomes plain income or expense.
@@ -293,9 +298,11 @@ The three apply passes run inside one `transaction()` scoped to `$userId`. Two t
 - **Full-text index refreshes**, because FTS5 shadow-table writes cannot run inside a
   transaction that also touches the base table.
 
-Search freshness can therefore never fail a replay. Each index call is individually guarded
-and routed to quarantine on failure — a stale index recovers on the next write, a
-half-applied replay does not.
+Search freshness can therefore never fail a replay. Each index call is individually guarded,
+and a failure is reported as a warning naming the row, the operation and `search:reindex` —
+a stale index recovers on the next write or on that rebuild, a half-applied replay does not.
+It is **not** quarantined: the op it belongs to was applied, and the quarantine records what
+the replayer refused.
 
 `OpLogRebuilder` runs the same production replayer, injected without a search writer so FTS
 writes are suppressed inside its transaction, and re-indexes afterwards. Skipping that second
