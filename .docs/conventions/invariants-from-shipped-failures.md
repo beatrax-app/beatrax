@@ -5912,8 +5912,11 @@ What the blindness was hiding, found by pointing the corrected walks at the tree
   `AOneDirectionalFigureIsNarrowedBeforeItIsSharedArchTest`. Both turned out to
   be relative-size bars rather than shares of a whole and are pinned with the
   reason, which is the point: the guards had never been given the chance to ask.
-- Fifteen `Class::member` mentions in comments inside `@php` islands, under
-  `CommentsNameSymbolsThatExistArchTest`. All fifteen resolve today.
+- Fifteen class-and-member mentions in comments inside `@php` islands, under
+  `CommentsNameSymbolsThatExistArchTest`. All fifteen resolve today. (Written
+  out rather than shown as an inline span: a span naming a class and a member
+  is a reference to the docs-symbol rule, which would then look for a class
+  whose whole purpose here is to stand for any of them.)
 
 ### One reading, not four workarounds
 
