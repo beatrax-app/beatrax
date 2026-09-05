@@ -44,7 +44,7 @@ function mobileBackgroundTaskManifestAtBootBoundary(string $root): array
             });
         });
         \$app->make(Illuminate\\Contracts\\Http\\Kernel::class)
-            ->handle(Illuminate\\Http\\Request::create('/up', 'GET'));
+            ->handle(Illuminate\\Http\\Request::create('/', 'GET'));
         echo json_encode(array_column(\$seen, 'command'));
         PHP);
 

@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SqliteDatabase;
 
-// Fallback host for every server connection whose DB_* / REDIS_* var is
-// unset; a self-hosted server overrides them explicitly.
+// Fallback host for a Redis connection whose REDIS_* var is unset. The
+// database has no host: SQLite is the only engine, in every shape.
 $loopbackHost = '127.0.0.1';
 
 return [
@@ -17,7 +17,7 @@ return [
     // foreground write. `sqlite_testing` omits it: WAL is moot in `:memory:`.
 
     // A local, not config(): this runs during config load.
-    'connections' => (static function () use ($loopbackHost): array {
+    'connections' => (static function (): array {
         $sqlite = [
             'driver' => SqliteDatabase::DRIVER,
             'url' => env('DB_URL'),
@@ -62,57 +62,18 @@ return [
                 'transaction_mode' => 'DEFERRED',
             ]),
 
-            /**
-             * @link ../.docs/deployment.md
-             */
-            'pgsql' => [
-                'driver' => 'pgsql',
-                'url' => env('DB_URL'),
-                'host' => env('DB_HOST', $loopbackHost),
-                'port' => env('DB_PORT', '5432'),
-                'database' => env('DB_DATABASE', 'beatrax'),
-                'username' => env('DB_USERNAME', 'beatrax'),
-                'password' => env('DB_PASSWORD', ''),
-                'charset' => env('DB_CHARSET', 'utf8'),
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'search_path' => env('DB_SEARCH_PATH', 'public'),
-                'sslmode' => env('DB_SSLMODE', 'prefer'),
-            ],
-
-            'mysql' => [
-                'driver' => 'mysql',
-                'url' => env('DB_URL'),
-                'host' => env('DB_HOST', $loopbackHost),
-                'port' => env('DB_PORT', '3306'),
-                'database' => env('DB_DATABASE', 'beatrax'),
-                'username' => env('DB_USERNAME', 'beatrax'),
-                'password' => env('DB_PASSWORD', ''),
-                'unix_socket' => env('DB_SOCKET', ''),
-                'charset' => env('DB_CHARSET', 'utf8mb4'),
-                'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'strict' => true,
-                'engine' => null,
-            ],
-
-            'mariadb' => [
-                'driver' => 'mariadb',
-                'url' => env('DB_URL'),
-                'host' => env('DB_HOST', $loopbackHost),
-                'port' => env('DB_PORT', '3306'),
-                'database' => env('DB_DATABASE', 'beatrax'),
-                'username' => env('DB_USERNAME', 'beatrax'),
-                'password' => env('DB_PASSWORD', ''),
-                'unix_socket' => env('DB_SOCKET', ''),
-                'charset' => env('DB_CHARSET', 'utf8mb4'),
-                'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'strict' => true,
-                'engine' => null,
-            ],
+            // Laravel merges its own config/database.php over this file key by
+            // key, so deleting these did not remove them: all four came
+            // straight back from the framework's defaults and DB_CONNECTION
+            // could still select one. Null is what removes a connection —
+            // DatabaseManager reads it as "not configured" and says so, rather
+            // than letting a migration run thirty-two tables into a trigger the
+            // engine cannot parse. SQLite is the only supported engine, in
+            // every deployment shape (ADR-0022).
+            'mysql' => null,
+            'mariadb' => null,
+            'pgsql' => null,
+            'sqlsrv' => null,
         ];
     })(),
 

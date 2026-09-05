@@ -1,0 +1,52 @@
+# Smoke test for the self-hosted server shape: build the shipped image, bring
+# the recipe up the way .docs/deployment.md tells an operator to, and ask the
+# running application for real routes.
+#
+# Called by release.yml ahead of `publish`, so no artifact is uploaded from a
+# tree whose documented deployment shape does not answer. Also runs on any pull
+# request that touches the recipe or the address gate in front of it, because a
+# check that only ever runs at release time is a check nobody has seen work.
+#
+# The reason it fetches routes rather than watching containers: this recipe
+# once answered 404 to every request while all four containers were up and
+# `migrate` had reported success. Process liveness said nothing.
+
+name: deploy-smoke
+
+on:
+    workflow_call:
+    pull_request:
+        paths:
+            - 'deploy/**'
+            - '.github/workflows/deploy-smoke.yml'
+            - 'Modules/Core/Internal/Http/Middleware/LoopbackOnly.php'
+            - 'Modules/Core/Internal/Http/Middleware/TrustedHostGuard.php'
+            - 'Modules/Core/Internal/Support/NetworkBoundary.php'
+            - 'Modules/Core/Public/Controllers/HealthController.php'
+            - 'Modules/Core/Routes/web.php'
+            - 'bootstrap/app.php'
+
+# Triggered by pull_request, so a push that supersedes a commit should not
+# leave a container build running for a SHA that is no longer the head of
+# anything. Never on the release path: `workflow_call` from a tag push reports
+# `push`, and a release smoke test is not something to cancel.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name != 'push' }}
+
+permissions:
+    contents: read
+
+jobs:
+    server:
+        name: self-host server
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Bring the recipe up and ask it for real routes
+              run: deploy/server/smoke.sh

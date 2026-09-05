@@ -30,6 +30,10 @@ writes `.env`, configures the database, and runs the install.
 - `poppler-utils` (`pdftotext`) is **optional**. It is preferred for PDF
   statement ingestion where it is installed; without it the app falls back
   to a pure-PHP reader, which is what every phone build uses.
+- The **`sqlite3` command-line binary** is *not* optional. A first `migrate`
+  against an empty database loads `database/schema/sqlite-schema.sql`, and
+  Laravel loads a file-backed dump by shelling out to `sqlite3` rather than
+  through PDO — so without it the very first migration cannot run.
 - Composer 2, and Node 22+ only if you build front-end assets yourself.
 - **SQLite.** It is the only supported database, in every deployment shape.
 
@@ -71,6 +75,10 @@ $COMPOSE up -d --build
 
 # 4. Create your account (migrations already ran in the `migrate` service)
 $COMPOSE exec app php artisan beatrax:install
+
+# 5. Confirm it is serving, not merely running
+$COMPOSE ps                                              # app should read (healthy)
+$COMPOSE exec app curl -fsS http://127.0.0.1/health
 ```
 
 Non-interactively — which is what a script or a remote shell gets — pass the
@@ -83,8 +91,22 @@ $COMPOSE exec app php artisan beatrax:install --no-interaction \
 
 > In Docker, set secrets in `deploy/server/.env` and use **`beatrax:install`**,
 > not `beatrax:setup`. All three app containers read that one env file, so
-> `APP_KEY`/DB credentials stay identical across web, queue, and scheduler.
+> `APP_KEY` stays identical across web, queue, and scheduler.
 > (`beatrax:setup` is for the single-process bare-metal path below.)
+
+Step 5 is not ceremony. The `app` service carries a `healthcheck:` that fetches
+`/health` **from inside the container** every 30 seconds, which is what makes
+`docker compose ps` able to tell "the process is up" from "the application
+answers". This recipe once returned 404 to every request while all four
+containers were up and `migrate` had reported success, and nothing that watched
+processes or ports could see it. The probe is run from inside because the
+boundary is closed until you widen it, and a request arriving over the bridge
+network is not a loopback one.
+
+`deploy/server/smoke.sh` runs all of the above from a clean slate and checks
+what comes back — the health contract, the same body twice, a real route that
+is not a 404. CI runs it on any pull request touching this recipe, and again
+before a release uploads anything.
 
 Open `http://localhost:8000` (or your `APP_URL`). The queue worker and
 scheduler already run as their own services.
@@ -283,9 +305,12 @@ rest](features/sync/sensitive-columns-at-rest.md#where-the-key-lives-on-a-phone-
 | `APP_URL` | Public URL the app is served at. Its host is also what a widened install accepts as a `Host` where the runtime publishes no bind address |
 | `BEATRAX_SERVED_INTERFACES` | Comma-separated literal IP addresses this install serves on beyond loopback. Empty (the default) refuses every non-loopback request with not-found |
 | `APP_ENV` / `APP_DEBUG` | `production` / `false` on a server |
-| `DB_CONNECTION` | `sqlite` (default), `pgsql`, `mysql`, or `mariadb` |
-| `DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` | Server DB connection |
+| `DB_CONNECTION` | `sqlite` — the only supported value, in every deployment shape |
+| `DB_DATABASE` | Path to the SQLite file. Defaults to the per-user data directory; the Docker recipe points it at the `app-data` volume |
 | `QUEUE_CONNECTION` | `database` (default; no Redis required) |
 
-The database connections are defined in `config/database.php`. SQLite remains
-the default so the desktop build is unaffected.
+The connection is defined in `config/database.php`, which names no engine other
+than SQLite. The `pgsql`, `mysql` and `mariadb` options this guide used to offer
+are gone: they described something that could not work, and
+[ADR-0022](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0022-sqlite-only-schema.md)
+withdrew them.
