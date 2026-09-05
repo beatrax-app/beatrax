@@ -24,7 +24,7 @@ final class AtwsTruncatingRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         foreach ([['2026-07-17', -1401, 'atws-1'], ['2026-07-18', -1502, 'atws-2']] as $index => [$date, $minor, $ref]) {
             yield new SourceTransactionDto(

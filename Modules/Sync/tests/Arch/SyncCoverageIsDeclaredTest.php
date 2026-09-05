@@ -70,7 +70,7 @@ function deviceSecretTables(): array
         'user_recovery_codes' => 'Shown once at setup. A replicated copy is a second copy of a single-use secret.',
         'user_app_lock_configs' => 'The lock on THIS screen: a phone in a pocket and a desktop at home do not want one setting.',
         'user_biometric_credentials' => 'A platform authenticator bound to this device\'s hardware.',
-        'open_banking_connections' => 'The bank session lives in a per-device chmod-600 file; the row without it is a connection nobody can fetch.',
+        'open_banking_connections' => 'The bank session lives in a chmod-600 file keyed to this device AND this reader; the row without it is a connection nobody can fetch.',
     ];
 }
 

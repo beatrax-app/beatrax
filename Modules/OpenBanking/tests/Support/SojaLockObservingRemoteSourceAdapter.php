@@ -31,7 +31,7 @@ final class SojaLockObservingRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         $probe = LockStore::forUniqueJobs()->lock(
             UniqueLock::getKey(new SyncOpenBankingAccountJob($this->connectionId)),

@@ -27,6 +27,9 @@ function ebFixtureHttpClient(
         /** @var list<string> */
         public array $recordedUids = [];
 
+        /** @var list<OpenBankingCredentials> */
+        public array $recordedCredentials = [];
+
         /**
          * @param  array<string, mixed>  $transactionsResponse
          * @param  array<string, mixed>  $accountDetailsResponse
@@ -36,16 +39,22 @@ function ebFixtureHttpClient(
             private readonly array $accountDetailsResponse,
         ) {}
 
-        public function accountDetails(string $uid): array
+        public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
         {
             $this->recordedUids[] = $uid;
+            $this->recordedCredentials[] = $credentials;
 
             return $this->accountDetailsResponse;
         }
 
-        public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-        {
+        public function transactions(
+            OpenBankingCredentials $credentials,
+            string $uid,
+            FetchWindow $window,
+            ?string $continuationKey = null,
+        ): array {
             $this->recordedUids[] = $uid;
+            $this->recordedCredentials[] = $credentials;
 
             return $this->transactionsResponse;
         }
@@ -218,13 +227,18 @@ it('resolves ownIban via accountDetails() and applies it to every yielded row', 
     }
 });
 
-it('is institution-parameterized: the same uid is threaded to accountDetails() and transactions(), never hardcoded', function (): void {
+// The client holds no credential of its own, so the ones the caller loaded for
+// this reader and this bank have to travel with every call the walk makes --
+// alongside the account uid, which is likewise never hardcoded here.
+it('threads the same account uid and the caller\'s credentials to accountDetails() and transactions()', function (): void {
     $client = ebFixtureHttpClient(EnableBankingFixtures::transactions(), $this->accountDetailsResponse);
     $adapter = new EnableBankingSourceAdapter($client);
+    $credentials = ebFixtureCredentials();
 
-    iterator_to_array($adapter->fetch('sns-acc-uid-999', $this->window, ebFixtureCredentials()));
+    iterator_to_array($adapter->fetch('sns-acc-uid-999', $this->window, $credentials));
 
     expect($client->recordedUids)->toBe(['sns-acc-uid-999', 'sns-acc-uid-999']);
+    expect($client->recordedCredentials)->toBe([$credentials, $credentials]);
 });
 
 it('produces fingerprint parity with the overlapping ASN CAMT.053 fixture rows', function (): void {
@@ -377,13 +391,17 @@ it('supports pagination via continuation_key without dropping later pages', func
             private readonly array $accountDetailsResponse,
         ) {}
 
-        public function accountDetails(string $uid): array
+        public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
         {
             return $this->accountDetailsResponse;
         }
 
-        public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-        {
+        public function transactions(
+            OpenBankingCredentials $credentials,
+            string $uid,
+            FetchWindow $window,
+            ?string $continuationKey = null,
+        ): array {
             $this->calls++;
 
             return $this->calls === 1 ? $this->firstPage : $this->secondPage;

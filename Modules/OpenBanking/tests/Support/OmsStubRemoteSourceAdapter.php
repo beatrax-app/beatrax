@@ -27,7 +27,7 @@ final class OmsStubRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         if ($this->throws !== null) {
             throw $this->throws;

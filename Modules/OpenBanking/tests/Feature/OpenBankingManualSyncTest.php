@@ -4,52 +4,34 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\UniqueLock;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\OmsStubRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 
 uses(RefreshDatabase::class);
 
-function omsSeedCredentials(string $institutionId = 'ASNBNL21'): void
+// Sync now belongs to one connection, so every case here drives the card that
+// bank is drawn by rather than the page the cards are listed on.
+
+function omsSeedCredentials(int $userId, string $institutionId = OpenBankingSecretsFixture::INSTITUTION_ID): void
 {
-    $path = storage_path('app/secrets/open-banking.json');
-    if (is_file($path)) {
-        @unlink($path);
-    }
-
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        $userId,
+        $institutionId,
         consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: $institutionId,
-    ));
+    );
 }
 
 /**
@@ -63,11 +45,12 @@ function omsSeedConnection(User $user, array $overrides = []): int
 
     return (int) $db->connection()->table('open_banking_connections')->insertGetId(array_merge([
         'user_id' => $user->id,
-        'institution_id' => 'ASNBNL21',
+        'institution_id' => OpenBankingSecretsFixture::INSTITUTION_ID,
         'account_uid' => 'acc-uid-fixture-1',
         'bank_display_name' => 'ASN Bank',
         'enabled' => true,
         'consent_expires_at' => CarbonImmutable::parse('2026-10-19 00:00:00')->toDateTimeString(),
+        'consent_revoked_at' => null,
         'last_successful_sync_at' => null,
         'last_attempt_at' => null,
         'last_attempt_status' => null,
@@ -76,29 +59,41 @@ function omsSeedConnection(User $user, array $overrides = []): int
     ], $overrides));
 }
 
+function omsCard(int $connectionId): Testable
+{
+    return Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $connectionId]);
+}
+
+function omsRow(int $connectionId): stdClass
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    /** @var stdClass $row */
+    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+
+    return $row;
+}
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
+
+    $seeded = $this->seedFixtureUserAndAccount();
+    /** @var User $user */
+    $user = $seeded['user'];
+    $this->omsUser = $user;
+    $this->actingAs($user);
+    OpenBankingSecretsFixture::forget($user->id);
 });
 
 afterEach(function (): void {
-    $path = storage_path('app/secrets/open-banking.json');
-    if (is_file($path)) {
-        @unlink($path);
-    }
-    if (is_file($path.'.tmp')) {
-        @unlink($path.'.tmp');
-    }
+    OpenBankingSecretsFixture::forget($this->omsUser->id);
     CarbonImmutable::setTestNow();
 });
 
 it('an eligible connection: syncNow surfaces "N new transactions found." with a working Review import link, and advances last_successful_sync_at', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
-
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user);
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser);
 
     $newRow = new SourceTransactionDto(
         bookedAt: CarbonImmutable::parse('2026-07-18'),
@@ -116,120 +111,111 @@ it('an eligible connection: syncNow surfaces "N new transactions found." with a 
     );
     app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([$newRow]));
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'success')
         ->assertSet('syncFlashMessage', '1 new transaction found.')
         ->assertSeeHtml('data-testid="ob-review-import-link"');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    $row = omsRow($connectionId);
 
     expect($row->last_successful_sync_at)->not->toBeNull();
     expect($row->last_attempt_status)->toBe('ok');
 });
 
 it('an eligible connection with zero new rows: "No new transactions." and last_successful_sync_at still advances', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
-
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user);
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser);
 
     app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([]));
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'zero')
         ->assertSet('syncFlashMessage', 'No new transactions.');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    expect(omsRow($connectionId)->last_successful_sync_at)->not->toBeNull();
+});
 
-    expect($row->last_successful_sync_at)->not->toBeNull();
+// One bank pressing Sync now must not fetch for the other: the card carries its
+// own connection id, and the runner is handed that id rather than "the"
+// connection the reader happens to hold.
+it('syncs only the bank whose card was pressed', function (): void {
+    omsSeedCredentials($this->omsUser->id);
+    OpenBankingSecretsFixture::seed(
+        $this->omsUser->id,
+        OpenBankingSecretsFixture::SECOND_INSTITUTION_ID,
+        consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
+        sessionId: 'fixture-session-second',
+    );
+
+    $first = omsSeedConnection($this->omsUser);
+    $second = omsSeedConnection($this->omsUser, [
+        'institution_id' => OpenBankingSecretsFixture::SECOND_INSTITUTION_ID,
+        'account_uid' => 'acc-uid-fixture-2',
+        'bank_display_name' => 'SNS (de Volksbank)',
+    ]);
+
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([]));
+
+    omsCard($second)->call('syncNow')->assertSet('syncFlashTone', 'zero');
+
+    expect(omsRow($second)->last_successful_sync_at)->not->toBeNull();
+    expect(omsRow($first)->last_successful_sync_at)->toBeNull();
+    expect(omsRow($first)->last_attempt_at)->toBeNull();
 });
 
 it('a disabled connection: syncNow is a no-op — no fetch, no timestamp write, no flash', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser, ['enabled' => false]);
 
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user, ['enabled' => false]);
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([]));
 
-    $stub = new OmsStubRemoteSourceAdapter([]);
-    app()->instance(RemoteSourceAdapter::class, $stub);
-
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->assertDontSeeHtml('data-testid="open-banking-sync-now"')
         ->call('syncNow')
         ->assertSet('syncFlashMessage', '')
         ->assertSet('syncFlashTone', '');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    $row = omsRow($connectionId);
 
     expect($row->last_attempt_at)->toBeNull();
     expect($row->last_successful_sync_at)->toBeNull();
 });
 
 it('an expired-consent connection: the button is disabled with "Reconnect first", and syncNow is a no-op', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
-
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user, [
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser, [
         'consent_expires_at' => CarbonImmutable::parse('2026-01-01 00:00:00')->toDateTimeString(),
     ]);
 
-    $stub = new OmsStubRemoteSourceAdapter([]);
-    app()->instance(RemoteSourceAdapter::class, $stub);
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([]));
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->assertSeeHtml('data-testid="ob-sync-now-disabled-caption"')
         ->assertSee('Reconnect first')
         ->call('syncNow')
         ->assertSet('syncFlashMessage', '')
         ->assertSet('syncFlashTone', '');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
-
-    expect($row->last_attempt_at)->toBeNull();
+    expect(omsRow($connectionId)->last_attempt_at)->toBeNull();
 });
 
 it('a generic fetch failure: rose flash, last_attempt_status=error, and last_successful_sync_at stays UNCHANGED', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
-
-    omsSeedCredentials();
+    omsSeedCredentials($this->omsUser->id);
     $priorSuccess = CarbonImmutable::parse('2026-07-18 06:00:00')->toDateTimeString();
-    $connectionId = omsSeedConnection($user, ['last_successful_sync_at' => $priorSuccess]);
+    $connectionId = omsSeedConnection($this->omsUser, ['last_successful_sync_at' => $priorSuccess]);
 
-    $stub = new OmsStubRemoteSourceAdapter(
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter(
         throws: EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 500, 'server error')
-    );
-    app()->instance(RemoteSourceAdapter::class, $stub);
+    ));
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'error')
         ->assertSet('syncFlashMessage', 'Enable Banking is temporarily unavailable. Try again shortly.');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    $row = omsRow($connectionId);
 
     expect($row->last_successful_sync_at)->toBe($priorSuccess);
     expect($row->last_attempt_status)->toBe('error');
@@ -238,34 +224,27 @@ it('a generic fetch failure: rose flash, last_attempt_status=error, and last_suc
 it('a consent failure (HTTP 401): rose flash with the specific reason, marks consent_failed, and dispatches OpenBankingConsentFailed', function (): void {
     Event::fake([OpenBankingConsentFailed::class]);
 
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser);
 
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user);
-
-    $stub = new OmsStubRemoteSourceAdapter(
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter(
         throws: EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 401, 'unauthorized')
-    );
-    app()->instance(RemoteSourceAdapter::class, $stub);
+    ));
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    omsCard($connectionId)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'error')
         ->assertSet('syncFlashMessage', 'Consent expired — reconnect.');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    $row = omsRow($connectionId);
 
     expect($row->last_successful_sync_at)->toBeNull();
     expect($row->last_attempt_status)->toBe('consent_failed');
 
+    $userId = $this->omsUser->id;
     Event::assertDispatched(
         OpenBankingConsentFailed::class,
-        fn (OpenBankingConsentFailed $event): bool => $event->connectionId === $connectionId && $event->userId === $user->id
+        fn (OpenBankingConsentFailed $event): bool => $event->connectionId === $connectionId && $event->userId === $userId
     );
 });
 
@@ -273,16 +252,10 @@ it('a consent failure (HTTP 401): rose flash with the specific reason, marks con
 // connection. Without a shared lock, whichever UPDATE lands second decides
 // last_successful_sync_at, and one of the two attempts is unaccounted for.
 it('declines a manual sync while the connection\'s scheduled sync already holds its lock', function (): void {
-    $seeded = $this->seedFixtureUserAndAccount();
-    /** @var User $user */
-    $user = $seeded['user'];
-    $this->actingAs($user);
+    omsSeedCredentials($this->omsUser->id);
+    $connectionId = omsSeedConnection($this->omsUser);
 
-    omsSeedCredentials();
-    $connectionId = omsSeedConnection($user);
-
-    $stub = new OmsStubRemoteSourceAdapter([]);
-    app()->instance(RemoteSourceAdapter::class, $stub);
+    app()->instance(RemoteSourceAdapter::class, new OmsStubRemoteSourceAdapter([]));
 
     $held = LockStore::forUniqueJobs()->lock(
         UniqueLock::getKey(new SyncOpenBankingAccountJob($connectionId)),
@@ -291,7 +264,7 @@ it('declines a manual sync while the connection\'s scheduled sync already holds 
     expect($held->get())->toBeTrue();
 
     try {
-        Livewire::test(OpenBankingSettingsPage::class)
+        omsCard($connectionId)
             ->call('syncNow')
             ->assertSet('syncFlashTone', 'busy')
             ->assertSet('syncFlashMessage', 'A sync is already running. Try again in a moment.');
@@ -299,9 +272,7 @@ it('declines a manual sync while the connection\'s scheduled sync already holds 
         $held->release();
     }
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+    $row = omsRow($connectionId);
 
     expect($row->last_attempt_at)->toBeNull()
         ->and($row->last_successful_sync_at)->toBeNull();

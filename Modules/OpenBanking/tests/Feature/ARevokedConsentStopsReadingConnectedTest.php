@@ -3,47 +3,29 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\ConsentStatus;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingSyncRunner;
 use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
 use Modules\OpenBanking\Tests\Support\ArcsRefusingRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 
 uses(RefreshDatabase::class);
 
-function arcsSeedCredentials(): void
+function arcsSeedCredentials(int $userId): void
 {
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        $userId,
         consentExpiresAt: CarbonImmutable::parse('2026-12-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    );
 }
 
 function arcsSeedConnection(User $user): int
@@ -70,16 +52,13 @@ function arcsSeedConnection(User $user): int
 }
 
 beforeEach(function (): void {
-    $this->secretsPath = storage_path('app/secrets/open-banking.json');
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
 
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
+    OpenBankingSecretsFixture::forget($this->fixtureUser->id);
     $this->connectionId = arcsSeedConnection($this->fixtureUser);
-    arcsSeedCredentials();
+    arcsSeedCredentials($this->fixtureUser->id);
 
     app()->instance(RemoteSourceAdapter::class, new ArcsRefusingRemoteSourceAdapter);
 
@@ -95,9 +74,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
+    OpenBankingSecretsFixture::forget($this->fixtureUser->id);
     CarbonImmutable::setTestNow();
 });
 
@@ -113,7 +90,7 @@ it('writes the revocation onto the connection when the scheduled sync discovers 
 it('stops reading Connected on the settings page once the bank has withdrawn the session', function (): void {
     app()->call([new SyncOpenBankingAccountJob($this->connectionId), 'handle']);
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->assertSet('consentStatus', ConsentStatus::Revoked->value)
         ->assertSee('Ended by your bank — reconnect')
         ->assertSee('Your bank ended the connection')
@@ -149,7 +126,7 @@ it('refuses to fetch and drops out of the daily scheduler while the revocation s
 
     expect($scheduled)->toBe([]);
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->call('syncNow')
         ->assertSet('syncFlashMessage', '');
 });
@@ -168,7 +145,7 @@ it('returns to Connected when the reader re-links and a sync succeeds', function
     app()->forgetInstance(OpenBankingFetchService::class);
     app()->forgetInstance(OpenBankingSyncRunner::class);
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->assertSet('consentStatus', ConsentStatus::Connected->value)
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'zero');

@@ -3,46 +3,28 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Ledger\Models\Transaction;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Internal\Dto\FetchWalk;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\FetchStop;
 use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\AtwsTruncatingRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 
 uses(RefreshDatabase::class);
 
-function atwsSeedCredentials(): void
+function atwsSeedCredentials(int $userId): void
 {
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        $userId,
         consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    );
 }
 
 function atwsSeedConnection(User $user): int
@@ -79,16 +61,13 @@ function atwsConnectionRow(int $connectionId): stdClass
 }
 
 beforeEach(function (): void {
-    $this->secretsPath = storage_path('app/secrets/open-banking.json');
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
 
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     $this->connectionId = atwsSeedConnection($this->fixtureUser);
-    atwsSeedCredentials();
+    atwsSeedCredentials((int) $this->fixtureUser->id);
 
     app()->instance(RemoteSourceAdapter::class, new AtwsTruncatingRemoteSourceAdapter(
         FetchWalk::stoppedAt(FetchStop::PageCap, 100, 25000),
@@ -96,9 +75,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     CarbonImmutable::setTestNow();
 });
 
@@ -124,7 +101,7 @@ it('keeps the rows it did fetch while leaving both the cursor and the freshness 
 });
 
 it('tells the reader the run stopped early instead of counting the rows it did get', function (): void {
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'error')
         ->assertSee('this run stopped early')
@@ -134,7 +111,7 @@ it('tells the reader the run stopped early instead of counting the rows it did g
 it('names the truncation on the transparency panel rather than calling it an error', function (): void {
     app()->call([new SyncOpenBankingAccountJob($this->connectionId), 'handle']);
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->assertSeeHtml('data-testid="ob-last-attempt"')
         ->assertSee('stopped early')
         ->assertDontSee('failed (error)');

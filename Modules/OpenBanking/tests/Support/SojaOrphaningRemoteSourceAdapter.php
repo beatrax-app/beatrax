@@ -25,7 +25,7 @@ final class SojaOrphaningRemoteSourceAdapter implements RemoteSourceAdapter
         return 'enable-banking';
     }
 
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
+    public function fetch(string $accountUid, FetchWindow $window, OpenBankingCredentials $credentials): Generator
     {
         $this->db->connection()->table('open_banking_connections')
             ->where('id', $this->connectionId)
