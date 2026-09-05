@@ -106,12 +106,14 @@ Or browse to the Actions tab on GitHub. Four things to confirm during the run:
   to twenty minutes wall-clock once they kick off; they run in parallel. The macOS and
   Windows jobs refuse to build at all when a signing credential is missing, and then
   interrogate the artifact they produced rather than trusting the build's exit code.
-- The publish job runs, signs each auto-update manifest with Ed25519, and uploads every
-  artifact plus the detached signatures. About two minutes.
-- The `verify published` job re-downloads the manifests from the release page and
-  re-verifies every signature against the publisher key committed in
-  `config/auto_update.php`. If it fails, the assets on the page are not what the
-  pipeline signed.
+- The publish job runs, writes a SHA-256 checksum file over every artifact, signs that
+  and each auto-update manifest with Ed25519, and uploads every artifact plus the
+  detached signatures. About two minutes.
+- The `verify published` job re-downloads the manifests and the checksum file from the
+  release page, re-verifies every signature against the publisher key committed in
+  `config/auto_update.php`, and asserts that every asset on the page appears in the
+  checksum file. If it fails, the assets on the page are not what the pipeline signed —
+  or one of them is something the pipeline never vouched for.
 
 If any platform job fails, the workflow stops and the publish job is skipped. Fix the
 underlying cause on `main`, then either delete and re-push the same tag (acceptable for
@@ -133,13 +135,14 @@ repo write, but no end user can see or download the release. To promote:
 
 1. Open the release in the GitHub UI under Releases.
 2. Verify the auto-generated release notes read correctly. Edit if needed.
-3. Confirm the asset list. There is no checksum file to look for — the hashes live
-   inside the manifests — so what to check is that each of `latest.yml`,
-   `latest-mac.yml` and `latest-linux.yml` is present, that each has a `.sig` sibling,
-   and that the installer each one names in its `path:` field is on the page too. The
-   Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the Android `.apk` are
-   the artifacts the four build jobs upload; `.msi` and `.deb` appear when
-   `electron-builder` produced them.
+3. Confirm the asset list. `beatrax-<version>-checksums.txt` covers every other asset
+   on the page and has its own `.sig`, so the fastest read is that file: the `verify
+   published` job already failed the run if anything published is missing from it. Then
+   check that each of `latest.yml`, `latest-mac.yml` and `latest-linux.yml` is present
+   with a `.sig` sibling, and that the installer each one names in its `path:` field is
+   on the page too. The Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the
+   Android `.apk` are the artifacts the four build jobs upload; `.msi` and `.deb` appear
+   when `electron-builder` produced them.
 4. Click Publish release.
 
 Once published, the stable channel sees the new version on its next auto-update poll.
