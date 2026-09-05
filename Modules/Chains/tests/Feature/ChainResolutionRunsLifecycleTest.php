@@ -17,6 +17,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 // The payload's serialised `command` must carry the userId in the
@@ -270,4 +271,81 @@ it('cross-user isolation: a failed-event for user A does not touch user B runnin
         ->latest('id')
         ->firstOrFail();
     expect($userBRow->status)->toBe('running');
+});
+
+// Measured, not reasoned about: dispatchSync on a ShouldQueue job DOES raise
+// JobFailed (Bus\Dispatcher routes it through SyncQueue, which fails the job
+// and rethrows). What stranded the row was the listener's reach -- it moved one
+// `running` row, while the claim it mirrors takes every `pending` one.
+it('fails every reservation the claim would have taken when the job throws', function (): void {
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Clock $clock */
+    $clock = $this->app->make(Clock::class);
+    $now = $clock->now()->toDateTimeString();
+
+    foreach ([1, 2] as $ignored) {
+        unset($ignored);
+        $db->connection()->table('chain_resolution_runs')->insert([
+            'user_id' => $this->user->id,
+            'status' => 'pending',
+            'linked_count' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    $this->app->bind(PairsTransferLegs::class, fn (): PairsTransferLegs => new class implements PairsTransferLegs
+    {
+        public function pairOne(Transaction $tx, User $user): ?int
+        {
+            return null;
+        }
+
+        public function pairOrphansForUser(User $user): int
+        {
+            throw new RuntimeException('Synthetic resolver failure');
+        }
+    });
+
+    expect(fn () => ResolveChainLinksJob::dispatchSync($this->user->id))
+        ->toThrow(RuntimeException::class);
+
+    $statuses = ChainResolutionRun::query()
+        ->where('user_id', $this->user->id)->orderBy('id')->pluck('status')->all();
+
+    expect($statuses)->toBe(['failed', 'failed']);
+});
+
+// The dashboard banner reads `status = failed`, so a row the job never reached
+// at all -- it threw above claimPendingRuns() -- is a reservation the reader is
+// never told about and no later pass restarts.
+it('fails a reservation the job threw before ever claiming', function (): void {
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Clock $clock */
+    $clock = $this->app->make(Clock::class);
+    $now = $clock->now()->toDateTimeString();
+
+    $db->connection()->table('chain_resolution_runs')->insert([
+        'user_id' => $this->user->id,
+        'status' => 'pending',
+        'linked_count' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // A collaborator handle() cannot be given is resolved by the container
+    // BEFORE the method body, so claimPendingRuns() never runs and the
+    // reservation is still `pending` when the failure arrives.
+    $this->app->bind(UpsertsCardStatements::class, function (): UpsertsCardStatements {
+        throw new RuntimeException('Synthetic wiring failure');
+    });
+
+    expect(fn () => ResolveChainLinksJob::dispatchSync($this->user->id))
+        ->toThrow(RuntimeException::class);
+
+    /** @var ChainResolutionRun $row */
+    $row = ChainResolutionRun::query()->where('user_id', $this->user->id)->latest('id')->firstOrFail();
+
+    expect($row->status)->toBe('failed');
+    expect((string) $row->last_error)->toContain('Synthetic wiring failure');
 });

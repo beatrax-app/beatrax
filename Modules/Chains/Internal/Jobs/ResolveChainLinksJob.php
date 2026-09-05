@@ -111,8 +111,8 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
 
     // ConfirmImport reserves the `pending` row the wizard polls; a second row
     // here left that one pending forever. Every pending row is claimed, not
-    // only the newest — a dispatch the unique lock refused leaves its
-    // reservation behind, and this pass covers the work it stood for.
+    // only the newest, so one pass covers every reservation standing for work
+    // this run is about to do. The failure listener releases the same set.
     /**
      * @return list<int>
      */
