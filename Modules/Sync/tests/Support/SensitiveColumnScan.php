@@ -31,7 +31,7 @@ final class SensitiveColumnScan
     // spellings. `->insert(` could not see `insertChunked()`, `firstOrCreate()`
     // or `findOrCreate()`, and the next helper to be named that way is not
     // knowable — so the verb is matched as a word part, in either case.
-    private const string WRITE_VERBS = '\\w*(?:[Ii]nsert|[Uu]pdate|[Uu]psert|[Cc]reate|[Ff]ill|[Ss]ave)\\w*';
+    private const string WRITE_VERBS = '\\w*(?i:insert|update|upsert|create|fill|save)\\w*';
 
     // A write whose column value is produced by a same-file helper is coded by
     // that helper, so the callee's body is read once. One hop, because a chain
