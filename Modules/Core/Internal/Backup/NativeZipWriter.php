@@ -23,6 +23,10 @@ use Modules\Core\Public\Exceptions\BackupIoException;
  */
 final class NativeZipWriter implements ArchiveWriter
 {
+    // Every write failure means the same thing to the reader — the archive on
+    // disk is not one — so the three sites that can hit it say it once.
+    private const string WRITE_FAILED = 'The export archive could not be written.';
+
     private const string LOCAL_SIGNATURE = "PK\x03\x04";
 
     private const string CENTRAL_SIGNATURE = "PK\x01\x02";
@@ -127,7 +131,7 @@ final class NativeZipWriter implements ArchiveWriter
         $this->offset = 0;
 
         if (! fclose($handle)) {
-            throw new BackupIoException('The export archive could not be written.');
+            throw new BackupIoException(self::WRITE_FAILED);
         }
     }
 
@@ -252,7 +256,7 @@ final class NativeZipWriter implements ArchiveWriter
         if (fseek($handle, $localHeaderOffset + self::LOCAL_HEADER_CRC_OFFSET) !== 0
             || fwrite($handle, $patch) !== strlen($patch)
             || fseek($handle, $this->offset) !== 0) {
-            throw new BackupIoException('The export archive could not be written.');
+            throw new BackupIoException(self::WRITE_FAILED);
         }
     }
 
@@ -301,7 +305,7 @@ final class NativeZipWriter implements ArchiveWriter
         $handle = $this->opened();
         $written = $bytes === '' ? 0 : @fwrite($handle, $bytes);
         if ($written !== strlen($bytes)) {
-            throw new BackupIoException('The export archive could not be written.');
+            throw new BackupIoException(self::WRITE_FAILED);
         }
 
         $this->offset += $written;
