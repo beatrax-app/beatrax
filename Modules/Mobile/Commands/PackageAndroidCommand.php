@@ -10,6 +10,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Boot\PinnedAppId;
+use Modules\Mobile\Internal\Boot\ShippedEnvironment;
 use Symfony\Component\Process\Process;
 
 final class PackageAndroidCommand extends Command
@@ -71,6 +72,7 @@ final class PackageAndroidCommand extends Command
     private function prepareAndPackage(string $buildType, string $appId): int
     {
         $failure = $this->appIdPinFailure($appId)
+            ?? $this->shippedEnvironmentFailure()
             ?? $this->versionCodeFailure()
             ?? $this->androidProjectFailure();
 
@@ -179,6 +181,32 @@ final class PackageAndroidCommand extends Command
             .'config(), and neither a commented nor a blank key satisfies it: it invents '
             .'com.<user>.<random words>, writes that back, and the build ships under it. Add the line '
             ."NATIVEPHP_APP_ID={$appId}.";
+    }
+
+    // The release workflow rewrites these two keys before it calls this command,
+    // and that is the whole of the guarantee: a build driven from anywhere else
+    // starts at the template's local/true and ships a debuggable bundle whose
+    // developer console opens to the account that installed it.
+    private function shippedEnvironmentFailure(): ?string
+    {
+        $envPath = $this->laravel->basePath('.env');
+        $contents = $this->files->isFile($envPath) ? $this->files->get($envPath) : '';
+        $wrong = ShippedEnvironment::wrongIn($contents);
+
+        if ($wrong === []) {
+            return null;
+        }
+
+        $carried = [];
+
+        foreach ($wrong as $key => $actual) {
+            $carried[] = $key.' is '.$actual.', not '.ShippedEnvironment::required()[$key];
+        }
+
+        return "{$envPath} does not resolve to a shipped environment: ".implode('; ', $carried)
+            .'. This .env is copied into the bundle, so the phone runs what it says: a build that '
+            .'resolves to a development environment reaches the developer console, and on a phone '
+            .'the first account is the only account.';
     }
 
     private function androidProjectFailure(): ?string

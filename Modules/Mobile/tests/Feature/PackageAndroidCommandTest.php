@@ -72,7 +72,7 @@ function packageAndroid(
             $base.'/nativephp/android/app/build/outputs/apk/release/app-release.apk' => true,
         ],
         'get' => [
-            $base.'/.env' => "NATIVEPHP_APP_ID=com.beatrax.mobile\n",
+            $base.'/.env' => "NATIVEPHP_APP_ID=com.beatrax.mobile\nAPP_ENV=production\nAPP_DEBUG=false\n",
             $base.'/nativephp/android/app/build.gradle.kts' => 'applicationId = "com.beatrax.mobile"'
                 ."\n".'versionCode = 20000',
         ],
@@ -165,6 +165,22 @@ it('refuses when the .env does not pin the bundle id', function (): void {
     // com.<user>.<random words> and ships the build under it.
     expect(packageAndroid(files: ['get' => [packageAndroidRoot().'/.env' => "# NATIVEPHP_APP_ID=\n"]]))->toBe(1);
 });
+
+// The .env this reads is the one copied into the bundle, and the release
+// workflow is the only thing that has ever rewritten these two keys. A build
+// driven from anywhere else starts at the template's local/true, and on a
+// mobile runtime APP_DEBUG is the single lever the developer console reads.
+it('refuses an env that resolves to a development build', function (string $env): void {
+    expect(packageAndroid(files: ['get' => [
+        packageAndroidRoot().'/.env' => "NATIVEPHP_APP_ID=com.beatrax.mobile\n".$env,
+    ]]))->toBe(1);
+})->with([
+    'the template as copied' => "APP_ENV=local\nAPP_DEBUG=true\n",
+    'production but debuggable' => "APP_ENV=production\nAPP_DEBUG=true\n",
+    'debug off but not production' => "APP_ENV=staging\nAPP_DEBUG=false\n",
+    'neither key written at all' => "APP_TIMEZONE=UTC\n",
+    'commented out rather than set' => "# APP_ENV=production\n# APP_DEBUG=false\n",
+]);
 
 it('derives the version code when only the package default is present', function (): void {
     expect(packageAndroid(config: ['nativephp.version_code' => 1]))->toBe(0)

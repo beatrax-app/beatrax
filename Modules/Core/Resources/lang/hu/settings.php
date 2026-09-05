@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'A frissítésekről',
         'body' => 'A Beatrax telepítés után automatikusan frissíti magát. A legelső verzió telepítése után a további verziók alkalmazáson belüli sávban érkeznek — nem kell visszatérned a GitHubra. Ha egy későbbi frissítés mégsem alkalmazható, a legfrissebb telepítőt bármikor letöltheted kézzel a kiadások oldaláról.',
-        'body_phone' => 'Itt a Beatrax nem frissíti magát. A mobilalkalmazás új verziói az App Store-on vagy a Google Play-en át érkeznek, ugyanúgy, mint a többi alkalmazásod. A kiadások oldala felsorolja, mi változott az egyesekben.',
+        'body_phone' => 'Itt a Beatrax nem frissíti magát. A mobilalkalmazás új verziói az App Store-on vagy a Google Play-en át érkeznek, ugyanúgy, mint a többi alkalmazásod.',
         'check_label' => 'Frissítések automatikus keresése',
         'check_on' => 'A Beatrax megkérdezi a kiadási csatornát, létezik-e újabb aláírt verzió. Semmi nem töltődik le, amíg te magad nem választod a telepítést.',
         'check_off' => 'Nem történik frissítéskeresés, és semmi nem hagyja el ezt az eszközt. Az új verziókat úgy találod meg, hogy magad nyitod meg a kiadások oldalát.',

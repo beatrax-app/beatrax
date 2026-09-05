@@ -35,10 +35,14 @@
                 {{ Lang::get('core::settings.about_updates.body') }}
             </p>
         @endif
-    @endif
 
-    <x-core::secondary-button
-        size="sm"
-        wire:click="openReleasesPage"
-    >{{ Lang::get('core::settings.about_updates.open_releases') }}</x-core::secondary-button>
+        {{-- Inside the desktop branch, not beneath both. The page it opens is
+             where the installers are, so on a phone it is an in-app route to
+             an out-of-store binary — and a sentence that names the store above
+             a control that bypasses it is the shape both stores refuse. --}}
+        <x-core::secondary-button
+            size="sm"
+            wire:click="openReleasesPage"
+        >{{ Lang::get('core::settings.about_updates.open_releases') }}</x-core::secondary-button>
+    @endif
 </div>

@@ -172,7 +172,7 @@ return [
     'about_updates' => [
         'heading' => 'Par atjauninājumiem',
         'body' => 'Pēc instalēšanas Beatrax atjaunina sevi automātiski. Kad ir uzstādīta pati pirmā versija, nākamās pienāk ar paziņojumu lietotnē — GitHub vairs nav jāapmeklē. Ja kāds atjauninājums neizdotos, jaunāko instalētāju vienmēr varat lejupielādēt manuāli laidienu lapā.',
-        'body_phone' => 'Šeit Beatrax sevi neatjaunina. Tālruņa lietotnes jaunās versijas pienāk caur App Store vai Google Play, tāpat kā pārējās jūsu lietotnes. Laidienu lapā ir uzskaitīts, kas katrā ir mainījies.',
+        'body_phone' => 'Šeit Beatrax sevi neatjaunina. Tālruņa lietotnes jaunās versijas pienāk caur App Store vai Google Play, tāpat kā pārējās jūsu lietotnes.',
         'check_label' => 'Automātiski meklēt atjauninājumus',
         'check_on' => 'Beatrax pajautā laidienu plūsmai, vai pastāv jaunāka parakstīta versija. Nekas netiek lejupielādēts, kamēr jūs pats neizvēlaties to instalēt.',
         'check_off' => 'Atjauninājumi netiek meklēti un nekas nepamet šo ierīci. Jaunās versijas atradīsiet, pats atverot laidienu lapu.',
