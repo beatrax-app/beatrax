@@ -7,10 +7,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
-use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
 use Native\Desktop\AutoUpdater;
@@ -202,5 +203,37 @@ it('smoke: an unreachable feed surfaces no update and installs nothing', functio
         ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
 
     expect(smokeUpdateAlertCount())->toBe(0);
+    @unlink($file);
+});
+
+it('smoke: a reader who switched the check off is announced nothing, installs nothing, and sends no request', function (): void {
+    // The whole chain, over a feed serving a genuinely signed manifest for a
+    // real newer release: with the switch off none of it happens, and the proof
+    // is that nothing left the machine to find out.
+    [$secret, $publicHex] = smokeKeypair();
+    $binaryBytes = 'genuine-installer-2.0.0';
+    smokePublishManifest('Windows', '2.0.0', $binaryBytes, $secret);
+
+    User::create([
+        'username' => 'smoke-updates-off',
+        'password' => 'a-long-password-12chars',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+        'auto_update_check_enabled' => false,
+    ]);
+
+    $file = (string) tempnam(sys_get_temp_dir(), 'smoke');
+    file_put_contents($file, $binaryBytes);
+
+    $updater = Mockery::mock(AutoUpdater::class);
+    $updater->shouldReceive('quitAndInstall')->never();
+
+    smokeAnnounce('Windows', $publicHex, '2.0.0');
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger))
+        ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
+
+    expect(smokeUpdateAlertCount())->toBe(0);
+    Http::assertNothingSent();
+
     @unlink($file);
 });

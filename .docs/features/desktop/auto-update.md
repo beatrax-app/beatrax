@@ -177,17 +177,19 @@ click, no download.
 — on `UpdateDownloaded`.
 
 The binary is now on disk but has not run. This listener re-fetches the
-manifest and fails closed on **every** unverifiable branch, in one
-condition:
+manifest and fails closed on **every** unverifiable branch, in two
+conditions rather than one, so neither log line names the other's cause:
 
-- the feed is unreachable or the manifest unparseable (`null`),
-- the Ed25519 signature does not verify against the pinned key,
-- the signed manifest's version is not the version that was downloaded,
-- the downloaded file's SHA-512 is not the digest that manifest names.
+- **No manifest at all** (`null`) — the feed is unreachable, the manifest
+  unparseable, or the reader switched the check off between consenting and
+  this event. None of those is a tampering signal, so it logs at `warning`.
+- **A manifest that does not check out** — the Ed25519 signature does not
+  verify against the pinned key, the signed version is not the version that
+  was downloaded, or the file's SHA-512 is not the digest that manifest
+  names. That is the tampering signal, and it logs at `critical`.
 
-Any of those logs at `critical` and returns, leaving the file on disk
-uninstalled. `AutoUpdater::quitAndInstall()` is reached only when all
-four pass.
+Either returns, leaving the file on disk uninstalled.
+`AutoUpdater::quitAndInstall()` is reached only when all four pass.
 
 ## Details that matter
 
