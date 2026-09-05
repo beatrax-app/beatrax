@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def bruger en ikke-understøttet (ikke-flad) skabelonform — målet blev ikke importeret.',
         'budget_currency_mismatch' => ':count budgetrække blev ikke importeret: dine budgetter føres i :envelope, og denne eksport budgetterer i :source.|:count budgetrækker blev ikke importeret: dine budgetter føres i :envelope, og denne eksport budgetterer i :source.',
         'amount_apply_collision' => 'Kildens nye beløb kunne ikke anvendes — det støder sammen med en anden transaktions fingeraftryk (samme konto, dato, valuta og modpart). Efterladt uændret.',
+        'amount_currency_mismatch' => 'Transaktionsbeløbene blev ikke afstemt: disse transaktioner føres i :local, og denne eksport angiver dem i :source. Efterladt uændret.',
         'schedule_unsupported' => 'Planlagte og tilbagevendende transaktioner har endnu ingen vej i Beatrax til at blive oprettet fra en ekstern kilde — de er kun bevaret som en note, ikke som en aktiv tilbagevendende serie.',
         'saved_report_unsupported' => 'Gemte rapporter og analyseopsætninger har ingen modsvarighed i Beatrax.',
         'assumed_currency' => "Antog :currency — der blev ikke fundet nogen 'preferences.currencyCode'-række i denne eksport.",

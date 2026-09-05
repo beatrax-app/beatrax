@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def gebruikt een niet-ondersteunde (niet-platte) sjabloonvorm — het doel is niet geïmporteerd.',
         'budget_currency_mismatch' => ':count budgetregel is niet geïmporteerd: jouw budgetten worden bijgehouden in :envelope en deze export voert zijn budget in :source.|:count budgetregels zijn niet geïmporteerd: jouw budgetten worden bijgehouden in :envelope en deze export voert zijn budget in :source.',
         'amount_apply_collision' => 'Het nieuwe bedrag uit de bron kon niet worden toegepast — het botst met de vingerafdruk van een andere transactie (zelfde rekening, datum, valuta en tegenpartij). Ongewijzigd gelaten.',
+        'amount_currency_mismatch' => 'Transactiebedragen zijn niet afgestemd: deze transacties worden bijgehouden in :local en deze export vermeldt ze in :source. Ongewijzigd gelaten.',
         'schedule_unsupported' => 'Geplande en terugkerende transacties kunnen in Beatrax nog niet vanuit een externe bron worden aangemaakt — alleen als notitie bewaard, niet als actieve reeks in Terugkerend.',
         'saved_report_unsupported' => 'Opgeslagen rapporten en analyse-instellingen hebben geen equivalent in Beatrax.',
         'assumed_currency' => "Aangenomen: :currency — er is in deze export geen rij 'preferences.currencyCode' gevonden.",

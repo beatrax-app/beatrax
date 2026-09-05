@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def desteklenmeyen (düz olmayan) bir şablon biçimi kullanıyor — hedef içe aktarılmadı.',
         'budget_currency_mismatch' => ':count bütçe satırı içe aktarılmadı: senin bütçelerin :envelope ile tutuluyor, bu dışa aktarım ise bütçeyi :source ile tutuyor.',
         'amount_apply_collision' => 'Kaynaktaki yeni tutar uygulanamadı — başka bir işlemin parmak iziyle çakışıyor (aynı hesap, tarih, para birimi ve karşı taraf). Değiştirilmeden bırakıldı.',
+        'amount_currency_mismatch' => 'İşlem tutarları mutabık kılınmadı: bu işlemler :local ile tutuluyor, bu dışa aktarım ise onları :source ile belirtiyor. Değiştirilmeden bırakıldı.',
         'schedule_unsupported' => 'Beatrax planlanmış ve düzenli işlemleri henüz dış kaynaktan oluşturamıyor — yalnızca not olarak saklandı, Düzenli işlemler altında etkin bir seri olarak değil.',
         'saved_report_unsupported' => 'Kaydedilmiş raporların ve analiz yapılandırmalarının Beatrax\'ta karşılığı yok.',
         'assumed_currency' => ":currency varsayıldı — bu dışa aktarımda 'preferences.currencyCode' satırı bulunamadı.",

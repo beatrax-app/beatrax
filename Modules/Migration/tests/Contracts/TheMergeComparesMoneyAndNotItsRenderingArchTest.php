@@ -54,7 +54,7 @@ it('asks a money value whether the cell changed, never the operands beside it', 
     $violatingSample = 'if ($sNewMinor === $baselineMinor) { continue; }';
     expect(PatternScan::matches(MERGE_MONEY_RAW_COMPARISON_PATTERN, $violatingSample))->toBeTrue();
 
-    $safeSample = 'if (self::moneyEquals($sNewMinor, $currency, $baselineMinor, $currency)) { continue; }';
+    $safeSample = 'if (self::moneyEquals($sNewMinor, $baselineMinor, $currency)) { continue; }';
     expect(PatternScan::matches(MERGE_MONEY_RAW_COMPARISON_PATTERN, $safeSample))->toBeFalse();
 });
 

@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def naudoja nepalaikomą (neplokščią) šablono formą — tikslas nebuvo importuotas.',
         'budget_currency_mismatch' => ':count biudžeto eilutė nebuvo importuota: tavo biudžetai vedami :envelope valiuta, o šiame eksporte biudžetas sudarytas :source valiuta.|:count biudžeto eilutės nebuvo importuotos: tavo biudžetai vedami :envelope valiuta, o šiame eksporte biudžetas sudarytas :source valiuta.|:count biudžeto eilučių nebuvo importuota: tavo biudžetai vedami :envelope valiuta, o šiame eksporte biudžetas sudarytas :source valiuta.',
         'amount_apply_collision' => 'Naujos šaltinio sumos pritaikyti nepavyko — ji susiduria su kitos operacijos atspaudu (ta pati sąskaita, data, valiuta ir kita šalis). Palikta nepakeista.',
+        'amount_currency_mismatch' => 'Operacijų sumos nebuvo suderintos: šios operacijos vedamos :local valiuta, o šis eksportas jas nurodo :source valiuta. Palikta nepakeista.',
         'schedule_unsupported' => 'Suplanuotoms ir pasikartojančioms operacijoms Beatrax dar neturi kūrimo iš išorinio šaltinio kelio — jos išsaugotos tik kaip pastaba, o ne kaip veikianti pasikartojanti serija.',
         'saved_report_unsupported' => 'Beatrax neturi atitikmens išsaugotoms ataskaitoms ir analizės konfigūracijoms.',
         'assumed_currency' => "Priimta :currency — šiame eksporte nerasta eilutė 'preferences.currencyCode'.",

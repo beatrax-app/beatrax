@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def använder en mallform som inte stöds (inte platt) — målet importerades inte.',
         'budget_currency_mismatch' => ':count budgetrad importerades inte: dina budgetar förs i :envelope och den här exporten för budget i :source.|:count budgetrader importerades inte: dina budgetar förs i :envelope och den här exporten för budget i :source.',
         'amount_apply_collision' => 'Det nya beloppet från källan kunde inte tillämpas — det krockar med fingeravtrycket för en annan transaktion (samma konto, datum, valuta och motpart). Lämnades oförändrat.',
+        'amount_currency_mismatch' => 'Transaktionsbeloppen stämdes inte av: dessa transaktioner förs i :local och den här exporten anger dem i :source. Lämnades oförändrade.',
         'schedule_unsupported' => 'Schemalagda och återkommande transaktioner går ännu inte att skapa i Beatrax från en extern källa — sparas bara som en anteckning, inte som en aktiv serie under Återkommande.',
         'saved_report_unsupported' => 'Sparade rapporter och analysinställningar har ingen motsvarighet i Beatrax.',
         'assumed_currency' => "Antog :currency — ingen rad 'preferences.currencyCode' hittades i den här exporten.",

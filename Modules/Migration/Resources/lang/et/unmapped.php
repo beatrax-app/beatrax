@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def kasutab toetamata (mitte-lameda) malli kuju — eesmärki ei imporditud.',
         'budget_currency_mismatch' => ':count eelarverida jäi importimata: sinu eelarveid peetakse valuutas :envelope, see eksport aga eelarvestab valuutas :source.|:count eelarverida jäi importimata: sinu eelarveid peetakse valuutas :envelope, see eksport aga eelarvestab valuutas :source.',
         'amount_apply_collision' => 'Allika uut summat ei saanud rakendada — see põrkub teise tehingu sõrmejäljega (sama konto, kuupäev, valuuta ja vastaspool). Jäetud muutmata.',
+        'amount_currency_mismatch' => 'Tehingusummasid ei võrreldud: neid tehinguid peetakse valuutas :local, see eksport aga esitab need valuutas :source. Jäid muutmata.',
         'schedule_unsupported' => 'Beatraxil pole ajastatud ja korduvate tehingute jaoks veel välisest allikast loomise teed — need on säilitatud ainult märkusena, mitte elava korduvate tehingute seeriana.',
         'saved_report_unsupported' => 'Beatraxil pole salvestatud aruannete ja analüüsiseadistuste vastet.',
         'assumed_currency' => "Eeldati :currency — sellest ekspordist ei leitud rida 'preferences.currencyCode'.",
