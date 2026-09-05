@@ -63,6 +63,47 @@ function workflowJobs(string $source): array
     return $jobs;
 }
 
+// The composite action is one bash script under a `run:` key. Lifted out by
+// indentation rather than parsed as YAML, which the suite has no reader for.
+function shippedEnvScript(string $action): string
+{
+    $lines = explode("\n", $action);
+    $body = [];
+    $indent = null;
+
+    foreach ($lines as $number => $line) {
+        if ($indent === null) {
+            if (PatternScan::matches('/^\s+run: \|\s*$/', $line)) {
+                $indent = strspn((string) ($lines[$number + 1] ?? ''), ' ');
+            }
+
+            continue;
+        }
+
+        if (trim($line) !== '' && strspn($line, ' ') < $indent) {
+            break;
+        }
+
+        $body[] = substr($line, $indent);
+    }
+
+    return implode("\n", $body);
+}
+
+function shippedEnvRun(string $script, string $directory, string $extra): int
+{
+    $path = $directory.'/run.sh';
+    file_put_contents($path, $script);
+
+    $command = 'cd '.escapeshellarg($directory)
+        .' && EXTRA='.escapeshellarg($extra)
+        .' bash '.escapeshellarg($path).' 2>&1';
+
+    exec($command, $output, $status);
+
+    return $status;
+}
+
 it('names every workflow that builds a bundle', function (): void {
     foreach (['.github/workflows', '../.github/workflows'] as $candidate) {
         $directory = base_path($candidate);
@@ -100,12 +141,17 @@ it('names every workflow that builds a bundle', function (): void {
     throw new RuntimeException('No .github/workflows directory from either composer root.');
 });
 
+const SHIPPED_ENV_ACTION = '.github/actions/stage-shipped-env';
+
+// The one spelling both workflows reach for. A job may still write the
+// override inline -- what it may not do is build a bundle having done neither.
 it('overrides the development environment in every job that builds a bundle', function (): void {
     $files = bundlingWorkflowFiles();
 
     expect($files)->not->toBeEmpty();
 
-    $offenders = [];
+    $unstaged = [];
+    $staged = 0;
 
     foreach ($files as $file) {
         foreach (workflowJobs((string) file_get_contents($file)) as $job => $body) {
@@ -113,28 +159,43 @@ it('overrides the development environment in every job that builds a bundle', fu
                 continue;
             }
 
+            if (str_contains($body, 'uses: ./'.SHIPPED_ENV_ACTION)) {
+                $staged++;
+
+                continue;
+            }
+
             $lines = explode("\n", $body);
+            $overridden = false;
 
             foreach ($lines as $number => $line) {
-                if (! str_contains($line, 'cp .env.example .env')) {
-                    continue;
+                if (str_contains($line, 'cp .env.example .env')
+                    && str_contains(implode("\n", array_slice($lines, $number, 8)), 'APP_ENV=production')) {
+                    $overridden = true;
                 }
-
-                if (str_contains(implode("\n", array_slice($lines, $number, 8)), 'APP_ENV=production')) {
-                    continue;
-                }
-
-                $offenders[] = basename($file).' job '.$job.', line '.($number + 1).' of it';
             }
+
+            if ($overridden) {
+                $staged++;
+
+                continue;
+            }
+
+            $unstaged[] = basename($file).' job '.$job;
         }
     }
 
-    expect($offenders)->toBe([], implode("\n", [
-        'These steps stage .env.example into a job that goes on to build a',
-        'bundle, and leave it there:',
-        ...$offenders,
+    // Named positively rather than counting offenders: a job that stages
+    // nothing at all is the case the old shape of this rule could not see,
+    // because it looked for a copy that a job doing nothing never makes.
+    expect($staged)->toBeGreaterThan(4);
+
+    expect($unstaged)->toBe([], implode("\n", [
+        'These jobs build an installable bundle without overriding the',
+        'development environment it ships with:',
+        ...$unstaged,
         '',
-        'That file carries APP_ENV=local and APP_DEBUG=true. DevConsoleBuildGate',
+        '.env.example carries APP_ENV=local and APP_DEBUG=true. DevConsoleBuildGate',
         'reads app.env first and answers local as a development build, so the',
         'artisan runner, the query panel and the log tail open with no key --',
         'and on a phone the first account is the only account. Laravel also',
@@ -142,9 +203,155 @@ it('overrides the development environment in every job that builds a bundle', fu
         'framework version and a full stack trace.',
         '',
         'A job that only runs the suite is not an offender: the suite wants the',
-        'development values. release.yml rewrites both keys at every one of its',
-        'four bundle-staging steps. Copy that block rather than writing a new one.',
+        'development values. Reach for the composite action rather than writing',
+        'the rewrite again: uses: ./'.SHIPPED_ENV_ACTION,
     ]));
+});
+
+// The rule above is satisfied by a step that names the action, so what the
+// action does is the whole of what it enforces. Run rather than read: a
+// substring check passes on the words appearing anywhere, including inside the
+// read-back that was meant to prove the write happened.
+it('keeps the override inside the action both workflows name, and proves it by running it', function (): void {
+    $action = base_path(SHIPPED_ENV_ACTION.'/action.yml');
+
+    if (! is_file($action)) {
+        $action = base_path('../'.SHIPPED_ENV_ACTION.'/action.yml');
+    }
+
+    expect(is_file($action))->toBeTrue(
+        'Both bundling workflows delegate the shipped .env to '.SHIPPED_ENV_ACTION.', so it has to exist.',
+    );
+
+    $script = shippedEnvScript((string) file_get_contents($action));
+
+    expect($script)->toContain('.env.example');
+
+    $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0o755, true);
+
+    try {
+        file_put_contents($directory.'/.env.example', implode("\n", [
+            'APP_NAME=Beatrax',
+            'APP_ENV=local',
+            'APP_DEBUG=true',
+            'DB_CONNECTION=sqlite',
+            '',
+        ]));
+
+        $status = shippedEnvRun($script, $directory, "AUTO_UPDATE_FEED_URL=https://example.test/feed.json\n");
+
+        expect($status)->toBe(0, 'The action exits non-zero on its own read-back, so this is what a bundling job would have got.');
+
+        $staged = (string) file_get_contents($directory.'/.env');
+
+        expect($staged)->toContain('APP_ENV=production')
+            ->and($staged)->toContain('APP_DEBUG=false')
+            ->and($staged)->not->toContain('APP_ENV=local')
+            ->and($staged)->not->toContain('APP_DEBUG=true')
+            // Not a rewrite of the whole template: everything else the file
+            // carries has to survive, or the bundle ships without its database.
+            ->and($staged)->toContain('DB_CONNECTION=sqlite')
+            ->and($staged)->toContain('APP_NAME=Beatrax')
+            // The extra lines are how the desktop legs hand the updater its
+            // feed, and they are written after the override, not instead of it.
+            ->and($staged)->toContain('AUTO_UPDATE_FEED_URL=https://example.test/feed.json');
+
+        // Read rather than run, and deliberately: the only way to reach this arm is
+        // to break the write above it, which the case would then already be failing
+        // on. What it is worth is that a renamed key in the template stops the
+        // build rather than shipping a bundle nobody looked at.
+        expect($script)->toContain('grep -qxF');
+    } finally {
+        foreach ((array) glob($directory.'/{,.}[!.,!..]*', GLOB_BRACE) as $file) {
+            @unlink((string) $file);
+        }
+        @rmdir($directory);
+    }
+});
+
+// "Nothing survived the filter" is grep's exit 1, and under `set -e` that ends
+// the job with no message — from a template that is merely small. The case
+// above cannot see it, because a run that aborts early is non-zero too.
+it('stages a template made only of the keys it replaces', function (): void {
+    $action = base_path(SHIPPED_ENV_ACTION.'/action.yml');
+
+    if (! is_file($action)) {
+        $action = base_path('../'.SHIPPED_ENV_ACTION.'/action.yml');
+    }
+
+    $script = shippedEnvScript((string) file_get_contents($action));
+    $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0o755, true);
+
+    try {
+        file_put_contents($directory.'/.env.example', "APP_ENV=local\nAPP_DEBUG=true\n");
+
+        expect(shippedEnvRun($script, $directory, ''))->toBe(0)
+            ->and((string) file_get_contents($directory.'/.env'))->toContain('APP_ENV=production');
+    } finally {
+        @unlink($directory.'/.env.example');
+        @unlink($directory.'/.env');
+        @unlink($directory.'/run.sh');
+        @rmdir($directory);
+    }
+});
+
+// An `extra` line whose value never arrived is the shape that survives every
+// later check: the key is present, the bundle boots, and the feed the updater
+// polls is the empty string. Refused where it is still nameable.
+it('refuses an extra line whose value never arrived', function (): void {
+    $action = base_path(SHIPPED_ENV_ACTION.'/action.yml');
+
+    if (! is_file($action)) {
+        $action = base_path('../'.SHIPPED_ENV_ACTION.'/action.yml');
+    }
+
+    $script = shippedEnvScript((string) file_get_contents($action));
+    $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0o755, true);
+
+    try {
+        // A template of nothing but the two keys being replaced: grep answers
+        // "no lines survived" there, which is not an error and must not read
+        // as one, or this case passes on a refusal it did not cause.
+        file_put_contents($directory.'/.env.example', "APP_ENV=local\nAPP_DEBUG=true\n");
+
+        expect(shippedEnvRun($script, $directory, "AUTO_UPDATE_FEED_URL=\n"))->not->toBe(
+            0,
+            'An unset workflow variable interpolates to exactly this, and a bundle carrying '
+            .'AUTO_UPDATE_FEED_URL= polls the empty string for its signed manifest.',
+        );
+    } finally {
+        @unlink($directory.'/.env.example');
+        @unlink($directory.'/.env');
+        @unlink($directory.'/run.sh');
+        @rmdir($directory);
+    }
+});
+
+// A template that no longer carries the keys the action rewrites is the silent
+// failure the read-back exists for, so the refusal is asserted as well.
+it('refuses a template it cannot stage, rather than shipping it', function (): void {
+    $action = base_path(SHIPPED_ENV_ACTION.'/action.yml');
+
+    if (! is_file($action)) {
+        $action = base_path('../'.SHIPPED_ENV_ACTION.'/action.yml');
+    }
+
+    $script = shippedEnvScript((string) file_get_contents($action));
+    $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
+    mkdir($directory, 0o755, true);
+
+    try {
+        expect(shippedEnvRun($script, $directory, ''))->not->toBe(
+            0,
+            'No .env.example at all is the clearest form of "there is nothing to ship from".',
+        );
+    } finally {
+        @unlink($directory.'/.env');
+        @rmdir($directory);
+    }
 });
 
 // verify-signature refuses a macOS artefact it cannot name: an unverifiable

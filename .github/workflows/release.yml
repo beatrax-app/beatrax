@@ -272,29 +272,25 @@ jobs:
               # the first request.
               run: npm run build
 
-            - name: Stage NativePHP electron scaffold + app .env
+            # The desktop updater's Ed25519 pre-check reads the feed at runtime
+            # and the boot hook reads the enabled flag, and the bundled `.env`
+            # is this file — so both have to be written in before native:build
+            # copies the app tree.
+            - name: Stage the shipped .env
+              uses: ./.github/actions/stage-shipped-env
+              with:
+                  extra: |
+                      AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
+
+            - name: Stage the NativePHP electron scaffold
               # `nativephp/electron/` is gitignored — the desktop build's
-              # prebuild hooks (patch-imports, inject-tray) need it on
-              # disk first, and the bundler copies the project `.env`
-              # into `vendor/nativephp/desktop/resources/build/app/.env`
-              # so the packaged runtime has a base config to load.
+              # prebuild hooks (patch-imports, inject-tray) need it on disk
+              # first, and the bundler copies the project `.env` staged above
+              # into the packaged runtime.
+              shell: bash
               run: |
                   set -euo pipefail
-                  cp .env.example .env
-                  # A shipped bundle must never answer an error with Laravel's
-                  # debug page: it prints file paths, the framework version and a
-                  # full stack trace. .env.example carries APP_DEBUG=true for
-                  # local work, so it is overridden here, portably.
-                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
-                  mv .env.release .env
-                  # The desktop updater's Ed25519 pre-check reads this feed at
-                  # runtime; the bundled .env is this file, so the origin has to
-                  # be written in before native:build copies the app tree.
-                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
-                  # The runtime half of the same variable electron-builder read
-                  # at build time: unwritten, the bundle would carry a feed the
-                  # boot hook was told nothing about.
-                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -441,25 +437,25 @@ jobs:
               shell: bash
               run: npm run build
 
-            - name: Stage NativePHP electron scaffold + app .env
+            # The desktop updater's Ed25519 pre-check reads the feed at runtime
+            # and the boot hook reads the enabled flag, and the bundled `.env`
+            # is this file — so both have to be written in before native:build
+            # copies the app tree.
+            - name: Stage the shipped .env
+              uses: ./.github/actions/stage-shipped-env
+              with:
+                  extra: |
+                      AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
+
+            - name: Stage the NativePHP electron scaffold
+              # `nativephp/electron/` is gitignored — the desktop build's
+              # prebuild hooks (patch-imports, inject-tray) need it on disk
+              # first, and the bundler copies the project `.env` staged above
+              # into the packaged runtime.
               shell: bash
               run: |
                   set -euo pipefail
-                  cp .env.example .env
-                  # A shipped bundle must never answer an error with Laravel's
-                  # debug page: it prints file paths, the framework version and a
-                  # full stack trace. .env.example carries APP_DEBUG=true for
-                  # local work, so it is overridden here, portably.
-                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
-                  mv .env.release .env
-                  # The desktop updater's Ed25519 pre-check reads this feed at
-                  # runtime; the bundled .env is this file, so the origin has to
-                  # be written in before native:build copies the app tree.
-                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
-                  # The runtime half of the same variable electron-builder read
-                  # at build time: unwritten, the bundle would carry a feed the
-                  # boot hook was told nothing about.
-                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -569,24 +565,25 @@ jobs:
               # `ViteManifestNotFoundException`.
               run: npm run build
 
-            - name: Stage NativePHP electron scaffold + app .env
+            # The desktop updater's Ed25519 pre-check reads the feed at runtime
+            # and the boot hook reads the enabled flag, and the bundled `.env`
+            # is this file — so both have to be written in before native:build
+            # copies the app tree.
+            - name: Stage the shipped .env
+              uses: ./.github/actions/stage-shipped-env
+              with:
+                  extra: |
+                      AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
+
+            - name: Stage the NativePHP electron scaffold
+              # `nativephp/electron/` is gitignored — the desktop build's
+              # prebuild hooks (patch-imports, inject-tray) need it on disk
+              # first, and the bundler copies the project `.env` staged above
+              # into the packaged runtime.
+              shell: bash
               run: |
                   set -euo pipefail
-                  cp .env.example .env
-                  # A shipped bundle must never answer an error with Laravel's
-                  # debug page: it prints file paths, the framework version and a
-                  # full stack trace. .env.example carries APP_DEBUG=true for
-                  # local work, so it is overridden here, portably.
-                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
-                  mv .env.release .env
-                  # The desktop updater's Ed25519 pre-check reads this feed at
-                  # runtime; the bundled .env is this file, so the origin has to
-                  # be written in before native:build copies the app tree.
-                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
-                  # The runtime half of the same variable electron-builder read
-                  # at build time: unwritten, the bundle would carry a feed the
-                  # boot hook was told nothing about.
-                  printf 'NATIVEPHP_UPDATER_ENABLED=%s\n' "$NATIVEPHP_UPDATER_ENABLED" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -705,17 +702,16 @@ jobs:
               # the Laravel tree is copied into the APK.
               run: npm run build
 
-            - name: Lay down the mobile environment
+            - name: Stage the shipped .env
+              uses: ./.github/actions/stage-shipped-env
+              with:
+                  working-directory: mobile-app
+
+            - name: Lay down the rest of the mobile environment
               working-directory: mobile-app
+              shell: bash
               run: |
                   set -euo pipefail
-                  cp .env.example .env
-                  # A shipped bundle must never answer an error with Laravel's
-                  # debug page: it prints file paths, the framework version and a
-                  # full stack trace. .env.example carries APP_DEBUG=true for
-                  # local work, so it is overridden here, portably.
-                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
-                  mv .env.release .env
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
