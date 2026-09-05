@@ -27,6 +27,15 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
         'password', 'secret', 'client_secret', 'private_key', 'kek', 'dek',
     ];
 
+    // Keys whose VALUE is private user content rather than a credential, kept
+    // apart from SECRET_KEYS so neither list has to lie about what it holds. An
+    // uploaded statement is named by the bank for the account it covers, so the
+    // filename routinely spells an IBAN, a card number or the holder's name.
+    /** @var list<string> */
+    private const array PRIVATE_CONTENT_KEYS = [
+        'filename', 'file_name', 'original_filename', 'source_filename',
+    ];
+
     // Value shapes, each anchored on a prefix that only a credential carries,
     // so an ordinary log line is never touched.
     /** @var array<string, string> */
@@ -77,7 +86,7 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
         foreach ($values as $key => $value) {
             if (is_array($value)) {
                 $out[$key] = $this->scrubArray($value);
-            } elseif ($this->isSecretKey($key)) {
+            } elseif ($this->isRedactedKey($key)) {
                 $out[$key] = self::REDACTED;
             } elseif (is_string($value)) {
                 $out[$key] = $this->scrub($value);
@@ -108,12 +117,15 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
         return RedactedText::orEmpty(self::JWT_PATTERN, '[JWT_REDACTED]', $text);
     }
 
-    private function isSecretKey(int|string $key): bool
+    private function isRedactedKey(int|string $key): bool
     {
         if (! is_string($key)) {
             return false;
         }
 
-        return in_array(strtolower(str_replace(['-', ' '], '_', $key)), self::SECRET_KEYS, true);
+        $normalised = strtolower(str_replace(['-', ' '], '_', $key));
+
+        return in_array($normalised, self::SECRET_KEYS, true)
+            || in_array($normalised, self::PRIVATE_CONTENT_KEYS, true);
     }
 }

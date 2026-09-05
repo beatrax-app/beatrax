@@ -371,12 +371,108 @@ Two columns hold decrypted values on purpose. Each is a reviewed decision, not a
 oversight:
 
 - **`migration_import_baseline.baseline_value`** snapshots a plaintext value so the
-  three-way merge resolver can compare against it.
+  three-way merge resolver can compare against it. A baseline that read back as different
+  bytes on every write would report every field as changed, which is the whole reason it
+  cannot be sealed. The prose here undersold what it holds: the snapshot is taken per field,
+  so it captures the narrative and the payee name, permanently, in a table that **syncs**
+  (`MergeRulesRegistry` registers it, with `baseline_value` mergeable). It was argued on this
+  page and **absent from `knowinglyPlaintext()`** — the mirror image of `categories.slug`,
+  which was argued in the registry and absent from the page. Both directions are now closed.
 - **`pending_enrichment_conflicts.stored_value` / `.incoming_value`** hold decrypted values
   of a held receipt-enrichment conflict until the user resolves the prompt, so the prompt
   never renders ciphertext.
 
 Deferred rather than decided: `counterparties.metadata` and `saved_reports.definition`.
+
+## The columns a queue worker cannot seal
+
+Seven columns on three mailbox tables — `inbox_messages.subject`, `.sender_name`,
+`.sender_email`; `file_imports.subject`, `.sender_name`, `.sender_email`; and
+`discovered_senders.sender_name` — hold content this page's own rule says should be
+encrypted. An e-mail subject line frequently *is* the merchant, the amount and the order id,
+and the receipt matchers copy exactly that pair of strings into the sealed
+`transactions.raw_payload`, so the same value lives in one column under AEAD and in another
+in the clear.
+
+Nothing about the schema stands in the way. There is no UNIQUE and no index over any of the
+seven — the uniques are on `provider_message_id`, and on `discovered_senders` it is
+`(user_id, inbox_id, sender_email)`. There is no SQL predicate over any of them either:
+`DetectIcsStatementReadyJob` selects the row and then domain-matches the sender and
+regex-matches the subject **in PHP**. By the matching-key test that keeps `accounts.iban` and
+`counterparties.slug` readable, all seven are sealable.
+
+**What blocks them is where their writer runs.** `IncrementalScanJob`, `BackfillInboxJob`,
+`DiscoveryScanJob`, `ProcessFetchedInboxMessagesJob` and `DetectIcsStatementReadyJob` all
+implement `ShouldQueue`, `QUEUE_CONNECTION` is `database`, and a queue worker builds its own
+session — so it never holds the app-lock key. That is the same wall
+[the phone's background sync hit](../mobile/background-sync-cannot-hold-the-key.md), and the
+conclusion there was that moving work to the queue "hits the same wall one layer further
+down".
+
+Seal them today and, for every user who has enabled encryption:
+
+- `encryptAttrs()` refuses the write and throws, so the mailbox scan fails instead of
+  storing a subject. Unlike a dropped budget nudge, there is no later pass to re-emit it —
+  the message has been marked fetched.
+- `decryptValue()` hands `DetectIcsStatementReadyJob` a blob, so the subject regex matches
+  nothing and ICS statement detection stops silently. That is the worst of the three
+  outcomes, because it looks exactly like a mailbox with no statements in it.
+
+So the entries are in `knowinglyPlaintext()` with that reason rather than in `columns()`, and
+the leak is disclosed rather than fixed. **This is the one group on the list whose reason is
+not a property of the data.** Every other exception is a column the database has to match on,
+and those arguments do not expire. This one is a statement about the current shape of the
+scan pipeline, and it stops being true the moment the pipeline changes.
+
+`file_imports.source_filename` is the fourth column on that table and reached the list by a
+different door. The name of an uploaded file is not obviously content until you notice that a
+bank names a statement for the account it covers — `ING_NL91ABNA0417164300_2026.eml` is an
+IBAN written out in full — which is the same realisation that put `filename` into the log
+redactor's `PRIVATE_CONTENT_KEYS`. The drop-folder arm of `ScanInboxDropFolderJob` stores
+whatever the user called the file, verbatim; the upload arm stores a sha256 basename and is
+harmless. Because the exposed writer is the queued one, it takes the same reason as its three
+siblings.
+
+Its counterpart does not. `migration_runs.original_filename` holds the browser-supplied name
+of a migration export, copied forward onto every reconcile run, matched by nothing and
+rendered from the column nowhere — and its writer is a Livewire component, so the app-lock key
+*is* in scope. Nothing blocks sealing it. It is therefore **not** on this list, because this
+list means "AEAD does not apply"; it is named in
+`ARegisteredTableIsRegisteredWholeArchTest`'s open map instead, which is where a column that
+could be sealed and has not been is recorded so the next pass does not have to find it again.
+
+### What would have to move first
+
+The seam already exists in outline and is named on the mobile page: run the burst from the
+`AppLockUnlocked` listener, the one moment a key exists without a user tap, the way
+`StartSyncListenerOnEnable::handleUnlocked()` starts the desktop listener. For the mailbox
+tables the shape is narrower than a full sync burst — the scan itself needs no key, only the
+three columns do — so a smaller answer may be enough:
+
+- Write the row without them and fill them in from the next unlocked request, the way
+  `PlaintextResidueSweep` already re-seals residue on `RecoverSealedLedger`. The scan keeps
+  working while locked; the subject simply arrives later.
+- Or keep the ICS detection input out of the table entirely: it is derived at scan time and
+  only re-read because the detector runs as a separate job.
+
+Both are behaviour changes and neither is attempted here. What this section buys is that the
+next reader finds a decision instead of a silence.
+
+### One shadow that is not a leak today, and the day it becomes one
+
+`statement_summaries.iban_owner` is a `string(34)` holding the statement's own account
+number. It is matched by nothing and indexed by nothing, and it is **not** on any list here —
+correctly, because it shadows `accounts.iban`, which is itself registered plaintext. A shadow
+of a readable column discloses nothing new.
+
+It is worth writing down anyway, because the argument is contingent on a column other than
+itself. `accounts.iban` is on the list with a `string(34)` objection and an
+eleven-predicate objection, and the blind-index treatment that fixed
+`transactions.counterparty_normalized` is exactly what would retire both. On the day
+`accounts.iban` moves to a keyed digest, `statement_summaries.iban_owner` becomes an
+undeclared plaintext copy of a sealed value — with nothing failing, because no test ties the
+two together. The IBAN half of a chain-link signature is read out of
+`known_counterparty_ibans.real_iban` for the same reason, and that column *is* listed.
 
 ## How the encryption is bound to its epoch
 
@@ -733,6 +829,81 @@ recover the IBAN half of a chain-link signature. Three tests in
 `SensitiveColumnPredicateGuardTest` hold the two lists honest against each other: they must be
 disjoint, every column an allowlist reason leans on must appear in `knowinglyPlaintext()`, and
 no allowlist reason may cite a column the registry has since started encrypting.
+
+### The matching keys that were never written down
+
+The five identity columns above were found by an at-rest audit of the `accounts` /
+`categories` / `counterparties` cluster. A second pass over the rest of the schema found five
+more columns with the same shape — a value the database has to match on, holding content a
+human wrote — and none of them was on any list:
+
+- **`merchant_aliases.pattern`** carries `unique(user_id, pattern)` and is the
+  `updateOrCreate` match key in `CreateMerchantAlias`, plus four further `where('pattern', …)`
+  sites in the YAML importer and the demo seeders. It is a **verbatim copy of the sealed
+  `transactions.description`** — the raw bank narrative, stored a second time in the clear so
+  the alias can be found again.
+- **`merchant_aliases.generalized_pattern`** is the one that looks sealable and is not.
+  Nothing predicates on it in SQL: `MerchantNameResolver` loads every alias for the user and
+  matches in PHP with `CorpusPatternMatcher::containsToken`, and its
+  `index(['user_id','generalized_pattern'])` is dead weight for equality. But it is the
+  generaliser run over `pattern`, which carries the UNIQUE above — so sealing it leaves the
+  string it was derived from readable one column over. That is the objection that keeps
+  `accounts.name` beside `accounts.slug`, and it applies here unchanged. (A live
+  `where('generalized_pattern', '!=', '')` does exist, in `CommunityCorpusQuery` — against
+  `community_merchant_mappings`, a different table with its own column. A grep on the column
+  name alone reads it as a hit here.)
+- **`discovered_senders.sender_email`** carries `unique(user_id, inbox_id, sender_email)` and
+  is the equality predicate `DiscoveryScanJob` walks before deciding a sender is already a
+  candidate. Under ciphertext every rescan discovers the same sender again.
+- **`known_senders.email_pattern`** carries `unique(user_id, email_pattern)`, is tested by
+  the ICS seeder before it inserts, and — the strongest of the four reasons — is an **input to
+  `DerivedRowId::for('known_senders', …)`. Two devices have to compute one primary key from
+  it**, and a random nonce makes that impossible, which is a sync defect rather than a slow
+  query.
+- **`known_senders.label`** is not matched by anything, and is unsealable for the
+  `categories.slug` reason instead: the rows the create migration seeds carry
+  `user_id IS NULL` while the codec keys on a user, so there is no key to seal them under. It
+  is also where `PromoteDiscoveredSender` copies `discovered_senders.sender_name` **verbatim**,
+  which makes it the readable end of that name however the other end is stored.
+
+`recurring_series.display_name_override` joins them from a sixth direction, and it is the
+sharpest illustration on this page of what the register is for. Its sibling
+`recurring_series.detected_name` was **already listed** — same table, same kind of string,
+registered years of commits earlier. `EntityNameSearch` searches the two **together**, and
+`LikeNeedle` whitelists both column names for the same raw `LIKE … ESCAPE` predicate. One of
+the pair was recorded and the other was not.
+
+Recording it turned up a second defect in the same place: `detected_name`'s reason said it was
+*"matched by nothing"*, and the `LIKE` arm makes that false. The decision it justified is still
+right — a substring search over random-nonce ciphertext returns nothing, which is a **better**
+reason than the one written down — but a reason nobody re-checks decays, and a wrong reason on
+a correct decision is how the next reader is talked out of the correct decision.
+
+### Why the check has to be per table, not per column
+
+Both misses in that pass have one shape, and it is not "nobody looked". It is **one column of
+a pair registered and the other not**: `detected_name` yes / `display_name_override` no, on one
+table; `baseline_value` argued on this page / absent from the registry, one section apart. A
+reviewer checking a column checks the column in front of them, and the sibling holding the same
+string two lines down in the same migration is exactly what that check cannot see.
+
+`ARegisteredTableIsRegisteredWholeArchTest` closes it. Once a table has **any** column in
+`columns()`, `knowinglyPlaintext()` or `blindIndexColumns()`, the registry owns the whole
+table: every remaining column of it whose name is content-shaped — one carrying `name`, `note`,
+`description`, `subject`, `label`, `email`, `iban`, `pattern`, `sender`, `payee`, `memo`,
+`title`, `body`, `address`, `filename` — must be classified in one of the three lists too, or
+named in the guard's own reviewed-and-structural set with a reason.
+
+It is deliberately not run over every table in the schema. That check is expressible and would
+be red on its first run against a hundred tables nobody has assessed, and a guard whose baseline
+is a hundred failures is a guard somebody turns off. Scoping it to tables already in the
+register makes the rule "a table you have started classifying, you finish", which is the exact
+defect observed and nothing wider.
+
+The name heuristic is the honest weak point: it catches a column called `payee_name` and misses
+one called `who_it_went_to`. It is a floor, not a proof, and it is a floor precisely where the
+evidence says the misses happen — a sibling in the same `CREATE TABLE`, sharing a naming
+convention with the column that was registered.
 
 ### The keyed blind index in `counterparty_normalized`
 
