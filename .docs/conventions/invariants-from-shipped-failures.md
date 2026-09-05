@@ -6483,6 +6483,52 @@ the field, so the banner drops a row that is indistinguishable from one above it
 — same kind, same severity, same stored sentence, same copy line, same minute.
 A duplicate that reaches a reader costs more than its own row: a critical
 sentence said twice is one nobody believes the third time.
+## A skip that no job could answer
+
+`tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php`
+
+A skipped test is printed in the same summary line as a passing one, in a colour
+nobody reads, and counted in the same total. So a test whose capability gate no
+job can answer reports, in every run the project has ever looked at, exactly
+like a test that holds — and it holds nothing. It is worse than deleting it,
+because deleting it lowers a number and this does not.
+
+The pipeline had already met the shape once and fixed it in one place. The
+docs-symbol rule reads both Composer roots' classmaps, and no job installed both,
+so it skipped in 100% of runs while its file reported green; the fix was to
+install the repo root inside the `mobile-app quality` job and fail its step if
+the word `skipped` appears at all. That is a correct guard for one rule and
+tells nobody about the next one.
+
+Measured across the whole tree, the gate reported 32 skips over 52 markers, and
+seven of the 32 ran nowhere. Four of the seven were the launchd plist tests,
+retired by `PHP_OS_FAMILY !== 'Darwin'` while every job runs on ubuntu — so the
+plist substitutions, the `--without-redis` branch and the `launchctl bootstrap`
+call had never been asserted anywhere, and neither had the refusal that every
+non-macOS host actually takes. One was a Redis ping with no Redis in the
+pipeline and none coming, Horizon being a dev-only dependency of the Dev Console.
+One looked for an mDNS publish binary the runner did not carry. The last is the
+sharpest: `HostPipeWatchTest` asked the **runner** whether its own stdin was a
+pipe, and a paratest worker is spawned with pipes on every descriptor — so under
+`--parallel`, which is how every job runs, the one assertion that the watch stays
+silent when there is no host never ran once.
+
+Each of the four needed a different answer, and the choice is the point. Give the
+job the capability (`avahi-utils` on the runner). Build the condition instead of
+inheriting it (a child handed `/dev/null` on stdin). Make the environment a seam
+the test drives (the host OS, beside the two overrides the launchd test already
+had). Or delete the test and say why, where the capability is out of scope by
+decision rather than by omission.
+
+The pin is `.github/test-skip-budget.json`: every file carrying a marker, its
+reason, and the job that runs the tests it retires. `runs_in` has deliberately no
+value meaning "nowhere", so a gate no job can answer cannot be written down — it
+has to be fixed. `.github/scripts/skip-budget.py` then holds the claim in the job
+it names, reading the JUnit report each test job writes: the file has to be
+collected there and skip nothing there, and a count that moved *down* is as much
+a stale pin as one that moved up. The arch test holds the other end, because a
+marker that fires on nobody's runner is invisible to a report and still has to be
+accounted for.
 
 ## A health page nobody here wrote that fetched from two CDNs
 
