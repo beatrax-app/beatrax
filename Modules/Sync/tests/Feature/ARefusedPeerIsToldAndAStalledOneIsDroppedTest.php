@@ -161,8 +161,14 @@ function refusedPeerFakeClient(array $inbound = []): WebsocketClient
     };
 }
 
-function refusedPeerRegistryRow(DatabaseManager $db, int $userId, string $deviceId, string $x25519PublicKeyHex, bool $isSelf): void
-{
+function refusedPeerRegistryRow(
+    DatabaseManager $db,
+    int $userId,
+    string $deviceId,
+    string $x25519PublicKeyHex,
+    bool $isSelf,
+    ?string $confirmedAt = '2026-08-27T10:05:00Z',
+): void {
     $db->connection()->table('device_registry')->insert([
         'user_id' => $userId,
         'device_id' => $deviceId,
@@ -172,7 +178,7 @@ function refusedPeerRegistryRow(DatabaseManager $db, int $userId, string $device
         'safety_number_words' => 'abandon ability able about above absent',
         'is_self' => $isSelf ? 1 : 0,
         'paired_at' => '2026-08-27T10:00:00Z',
-        'confirmed_at' => '2026-08-27T10:05:00Z',
+        'confirmed_at' => $confirmedAt,
         'last_seen_at' => null,
         'created_at' => '2026-08-27T10:00:00Z',
         'updated_at' => '2026-08-27T10:00:00Z',
@@ -230,6 +236,98 @@ function refusedPeerAuthenticatedSession(int $userId, string $localDeviceId, str
 
     return [$session, new NoiseSession($initSend, $initRecv, $peerStaticToInit)];
 }
+
+// Both halves of a completed Noise handshake WITHOUT asking the registry to
+// admit anybody, which is the state a refusal is decided in.
+/**
+ * @return array{0: NoiseSession, 1: NoiseSession} [the responder's, the initiator's]
+ */
+function refusedPeerNoisePair(string $localSecret, string $localPublic, string $peerSecret, string $peerPublic): array
+{
+    $initHs = NoiseHandshakeState::initIkInitiator($peerSecret, $peerPublic, $localPublic);
+    $respHs = NoiseHandshakeState::initIkResponder($localSecret, $localPublic);
+
+    $respHs->readMessage($initHs->writeMessage(''));
+    $initHs->readMessage($respHs->writeMessage(''));
+
+    [$respSend, $respRecv, $peerStaticToResp] = $respHs->split();
+    [$initSend, $initRecv, $peerStaticToInit] = $initHs->split();
+
+    return [
+        new NoiseSession($respSend, $respRecv, $peerStaticToResp),
+        new NoiseSession($initSend, $initRecv, $peerStaticToInit),
+    ];
+}
+
+// A phone that has confirmed while this desktop's own confirm is still in
+// flight fails the admission gate on the very same branch a removed device
+// does. Told it was revoked, the phone clears its confirmation of this desktop
+// for good, and a ceremony that was minutes from finishing cannot resume.
+it('says nothing about a removal to a device it never admitted', function (): void {
+    $user = refusedPeerUser();
+    $userId = (int) $user->id;
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+    $phoneKp = sodium_crypto_kx_keypair();
+    $phoneSecret = sodium_crypto_kx_secretkey($phoneKp);
+    $phonePublic = sodium_crypto_kx_publickey($phoneKp);
+
+    // Self only. The phone holds no row here at all, which is what a pairing
+    // this side has not finished looks like from the registry.
+    refusedPeerRegistryRow($db, $userId, 'desktop-self', sodium_bin2hex($desktopPublic), true);
+
+    [$responderNoise] = refusedPeerNoisePair($desktopSecret, $desktopPublic, $phoneSecret, $phonePublic);
+
+    $client = refusedPeerFakeClient();
+    $handler = refusedPeerHandler($userId, 'desktop-self', $desktopSecret, $desktopPublic);
+
+    $handler->tellPeerItIsRevoked($client, $responderNoise);
+
+    expect($client->sentBinary)->toBe(
+        [],
+        'a device this registry has never admitted was not removed, and the peer treats being told so as final',
+    );
+});
+
+it('still tells a device it did remove that the trust is gone', function (): void {
+    $user = refusedPeerUser();
+    $userId = (int) $user->id;
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+    $phoneKp = sodium_crypto_kx_keypair();
+    $phoneSecret = sodium_crypto_kx_secretkey($phoneKp);
+    $phonePublic = sodium_crypto_kx_publickey($phoneKp);
+
+    refusedPeerRegistryRow($db, $userId, 'desktop-self', sodium_bin2hex($desktopPublic), true);
+    refusedPeerRegistryRow($db, $userId, 'phone-peer', sodium_bin2hex($phonePublic), false, null);
+
+    [$responderNoise, $phoneNoise] = refusedPeerNoisePair($desktopSecret, $desktopPublic, $phoneSecret, $phonePublic);
+
+    $client = refusedPeerFakeClient();
+    $handler = refusedPeerHandler($userId, 'desktop-self', $desktopSecret, $desktopPublic);
+
+    $handler->tellPeerItIsRevoked($client, $responderNoise);
+
+    expect($client->sentBinary)->toHaveCount(
+        1,
+        'a removed device told nothing goes on describing itself as connected and synced',
+    );
+
+    /** @var array<string, mixed> $notice */
+    $notice = json_decode($phoneNoise->decrypt($client->sentBinary[0]), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($notice['type'] ?? null)->toBe(SyncWebSocketHandler::MSG_PEER_REVOKED);
+});
 
 it('drops its confirmation of a peer that tells it the trust is gone', function (): void {
     $user = refusedPeerUser();
