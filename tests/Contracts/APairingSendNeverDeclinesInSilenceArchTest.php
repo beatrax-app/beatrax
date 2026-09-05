@@ -36,7 +36,6 @@ const PAIRING_SEND_OTHER_RECEIVERS = [
 function pairingSendMethods(string $class): array
 {
     $reflection = new ReflectionClass($class);
-    $source = explode("\n", (string) file_get_contents((string) $reflection->getFileName()));
 
     $found = [];
 
@@ -44,6 +43,11 @@ function pairingSendMethods(string $class): array
         if ($method->getDeclaringClass()->getName() !== $class || ! str_starts_with($method->getName(), 'send')) {
             continue;
         }
+
+        // The method's own file, not the class's: a trait method reports the
+        // using class as its declaring class while its line numbers point into
+        // the trait, so slicing the class file would read someone else's body.
+        $source = explode("\n", (string) file_get_contents((string) $method->getFileName()));
 
         $body = implode("\n", array_slice(
             $source,
