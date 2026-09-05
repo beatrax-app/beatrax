@@ -257,14 +257,20 @@ row, and treat absence from the result map as "untagged." [The tag
 write contract](tag-write-contract.md) explains what dropping the
 whole-transaction filter breaks, and why the breakage is silent.
 
-Both also select the badge's label as
-`COALESCE(cat.short_name, cat.name)`. `short_name` is optional and only
-the corpus fills it in, so every category a reader adds — from the
-picker's quick-add or from Settings, neither of which asks for one —
-has none, and the badge fell all the way through to the generic
-`tax::badge.default_label`. The row then said "Tax" for a tag that had
-a category, on the one surface that shows the category at all: the
-cockpit, the PDF and the CSV all print `cat.name`.
+Both also select the badge's label, short name first and the category's
+own name behind it. `short_name` is optional and only the corpus fills
+it in, so every category a reader adds — from the picker's quick-add or
+from Settings, neither of which asks for one — has none, and the badge
+fell all the way through to the generic `tax::badge.default_label`. The
+row then said "Tax" for a tag that had a category, on the one surface
+that shows the category at all: the cockpit, the PDF and the CSV all
+print the category name.
+
+That fall-through used to be a SQL `COALESCE(cat.short_name, cat.name)`.
+It cannot be: both halves are resolved per reader now, so the choice
+between them has to be made after resolving rather than by the database.
+`TaxTagQuery` selects the columns and picks in PHP — see [deduction
+category wording](deduction-category-wording.md).
 
 `TaxCategoryStore` refuses a new category for two unrelated reasons, and both
 arrive as a `RuntimeException`: `DuplicateTaxCategoryNameException` when the

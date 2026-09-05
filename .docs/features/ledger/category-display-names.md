@@ -55,7 +55,12 @@ CategoryDisplayName::displayNamesBySlug(): array<string, string>
   `categorization::categories.<slug>` — and falls back to the stored
   English when that slug has no translation, so a category tree that
   grows a new slug renders English rather than a raw translation key
-  on a budget screen.
+  on a budget screen. The rule is no longer written here: it lives in
+  `Modules\Core\Public\Support\SeededDisplayName`, because two more
+  seeded tables obey it — `currencies` by code, and
+  `tax_deduction_categories` by corpus key ([deduction category
+  wording](../tax/deduction-category-wording.md)). This method is the
+  category-shaped way in.
 - **`columns()`** spreads the three columns a join has to select
   (`name`, `slug`, `name_is_default`) with a shared alias prefix, so a
   query selecting two categories in one row — a category and its
