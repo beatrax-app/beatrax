@@ -137,6 +137,32 @@ it('reports the leg reached when the mailbox is empty', function (): void {
     expect($deleted)->toBe([]);
 });
 
+it('reports the leg unreached when the relay refuses the drain itself', function (): void {
+    [$userId, $session] = darrSyncingPhone();
+    Http::fake(['relay.fixture.test/*' => Http::response('nope', 503)]);
+
+    expect(app(MobileSyncTriggerService::class)->attempt($userId, $session))
+        ->toBe(SyncAttemptOutcome::Unreachable);
+});
+
+// A blob that is not base64 belongs to nobody this leg can speak for. It is
+// left standing rather than confirmed away, because the poll that IS its reader
+// is the one entitled to decide it will never be decodable.
+it('leaves a blob it cannot decode for the poll that owns it', function (): void {
+    [$userId, $session] = darrSyncingPhone();
+    $deleted = [];
+    darrFakeRelay([[
+        'id' => 45,
+        'sender_did' => 'device-desktop',
+        'blob' => 'not-base64!!',
+        'created_at' => '2026-09-05T10:00:00Z',
+    ]], $deleted);
+
+    expect(app(MobileSyncTriggerService::class)->attempt($userId, $session))
+        ->toBe(SyncAttemptOutcome::Synced);
+    expect($deleted)->toBe([]);
+});
+
 // The one caller that runs keyless. MobilePullCommand builds a console session
 // with no app-lock key, so DeviceIdentityLoader answers Locked and attempt()
 // returns before the relay leg exists at all. That ordering is what makes
