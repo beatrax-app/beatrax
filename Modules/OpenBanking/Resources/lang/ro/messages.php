@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Activează open banking',
         'toggle_connected' => 'Conectat la :bank prin Enable Banking.',
         'toggle_off_help' => 'Dezactivat implicit. Necesită o confirmare unică și o configurare ghidată.',
+        'connect_another' => 'Conectează altă bancă',
         'credentials_unreadable' => 'Datele de autentificare open banking salvate pe acest dispozitiv nu pot fi citite, așa că Beatrax nu se poate conecta la banca ta.',
         'credentials_unreadable_next' => 'Parcurge din nou configurarea ghidată pentru a le înlocui. Tranzacțiile deja importate nu sunt afectate.',
         'reconfirm_body' => 'Confirmarea ta a expirat înainte să putem finaliza conectarea. Confirmă din nou pentru a termina activarea open banking.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking a returnat un URL de consimțământ nesigur.',
         'no_authorization_code' => 'Apelul de întoarcere Enable Banking nu a returnat un cod de autorizare.',
         'no_session_id' => 'Enable Banking nu a returnat un ID de sesiune.',
+        'bank_not_linked' => 'Banca aceasta nu este conectată pe acest dispozitiv. Conecteaz-o din nou ca sincronizarea să continue.',
         'oauth_state_mismatch' => 'Acest link de conectare a expirat sau a fost deja folosit. Începe din nou conectarea băncii.',
     ],
 ];

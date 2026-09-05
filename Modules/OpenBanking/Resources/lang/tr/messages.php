@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Open banking özelliğini etkinleştir',
         'toggle_connected' => 'Enable Banking üzerinden :bank bankasına bağlı.',
         'toggle_off_help' => 'Varsayılan olarak kapalıdır. Tek seferlik bir onay ve rehberli kurulum gerektirir.',
+        'connect_another' => 'Başka bir banka bağla',
         'credentials_unreadable' => 'Bu cihazda kayıtlı open banking kimlik bilgileri okunamıyor, bu yüzden Beatrax bankana ulaşamıyor.',
         'credentials_unreadable_next' => 'Bunları değiştirmek için rehberli kurulumu yeniden çalıştır. Önceden içe aktarılmış işlemler bundan etkilenmez.',
         'reconfirm_body' => 'Bağlantıyı tamamlayamadan onayının süresi doldu. Open banking kurulumunu bitirmek için yeniden onayla.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => "Enable Banking güvenli olmayan bir onay URL'si döndürdü.",
         'no_authorization_code' => 'Enable Banking geri çağrısı hiçbir yetkilendirme kodu döndürmedi.',
         'no_session_id' => 'Enable Banking bir oturum kimliği döndürmedi.',
+        'bank_not_linked' => 'Bu banka bu cihazda bağlı değil. Eşitlemenin sürmesi için yeniden bağla.',
         'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bankanızı bağlama işlemini yeniden başlatın.',
     ],
 ];

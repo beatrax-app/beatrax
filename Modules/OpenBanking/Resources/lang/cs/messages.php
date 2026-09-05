@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Zapnout open banking',
         'toggle_connected' => 'Připojeno přes Enable Banking. Banka: :bank.',
         'toggle_off_help' => 'Ve výchozím stavu vypnuto. Vyžaduje jednorázové potvrzení a nastavení krok za krokem.',
+        'connect_another' => 'Připojit další banku',
         'credentials_unreadable' => 'Přihlašovací údaje pro open banking uložené na tomto zařízení se nepodařilo přečíst, takže se Beatrax nemůže spojit s tvou bankou.',
         'credentials_unreadable_next' => 'Projdi znovu nastavení krok za krokem a nahraď je. Transakce, které už jsou naimportované, to neovlivní.',
         'reconfirm_body' => 'Tvé potvrzení vypršelo dřív, než se podařilo připojení dokončit. Potvrď to znovu a zapínání open bankingu dokonči.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking vrátilo nebezpečné URL souhlasu.',
         'no_authorization_code' => 'Zpětné volání Enable Banking nevrátilo autorizační kód.',
         'no_session_id' => 'Enable Banking nevrátilo identifikátor relace.',
+        'bank_not_linked' => 'Tato banka není na tomto zařízení připojená. Připoj ji znovu, aby se synchronizace obnovila.',
         'oauth_state_mismatch' => 'Tento odkaz pro připojení vypršel nebo již byl použit. Začněte připojení banky znovu.',
     ],
 ];

@@ -30,11 +30,12 @@ final readonly class OpenBankingConnectController
     public function __invoke(Request $request): RedirectResponse
     {
         $institutionIdRaw = $request->query('institution_id');
+        $institutionId = is_string($institutionIdRaw) ? trim($institutionIdRaw) : '';
 
         try {
             $consentUrl = ($this->startConsent)(
-                is_string($institutionIdRaw) ? trim($institutionIdRaw) : '',
-                fn (): string => $this->callbackUri(),
+                $institutionId,
+                fn (): string => $this->callbackUri($institutionId),
             );
         } catch (RuntimeException $e) {
             return $this->failRedirect($this->readerReason($e));
@@ -72,9 +73,9 @@ final readonly class OpenBankingConnectController
     // to be read back by the callback request. Handed over as a closure, so a
     // refused attempt mints none — one would overwrite the state another tab
     // is still waiting on at the bank.
-    private function callbackUri(): string
+    private function callbackUri(string $institutionId): string
     {
         return $this->loopback->forProvider('open-banking', scheme: 'https')
-            .'?state='.rawurlencode($this->oauthState->issueState($this->currentUser->id()));
+            .'?state='.rawurlencode($this->oauthState->issueState($this->currentUser->id(), $institutionId));
     }
 }

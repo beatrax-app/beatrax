@@ -14,7 +14,6 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Psr\Http\Message\RequestInterface;
 
 // The signer takes the key by value, so nothing about the type stops a caller
@@ -49,42 +48,36 @@ function privateKeyEgressSigner(): EnableBankingJwtSigner
     return new EnableBankingJwtSigner($clock);
 }
 
-function privateKeyEgressSecrets(string $privateKeyPem): OpenBankingSecretsRepository
+// The key now reaches the client as a call argument rather than being read
+// from a store it owns, so it is handed to every path here the same way a
+// fetch hands it in — which is exactly what the wire has to survive.
+function privateKeyEgressCredentials(string $privateKeyPem): OpenBankingCredentials
 {
-    return new class($privateKeyPem) extends OpenBankingSecretsRepository
-    {
-        public function __construct(private readonly string $privateKeyPem) {}
-
-        public function load(): ?OpenBankingCredentials
-        {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: $this->privateKeyPem,
-                sessionId: 'fixture-session-id',
-                consentExpiresAt: CarbonImmutable::now()->addDays(90),
-                bankScaHost: 'sca.asnbank.example',
-                institutionId: 'asn',
-            );
-        }
-    };
+    return new OpenBankingCredentials(
+        applicationId: 'fixture-application-id',
+        privateKeyPem: $privateKeyPem,
+        sessionId: 'fixture-session-id',
+        consentExpiresAt: CarbonImmutable::now()->addDays(90),
+        bankScaHost: 'sca.asnbank.example',
+        institutionId: 'asn',
+    );
 }
 
 /**
  * @param  array<int, array{0: mixed, 1: mixed}>  $history
  */
-function privateKeyEgressClient(string $privateKeyPem, MockHandler $mock, array &$history): EnableBankingHttpClient
+function privateKeyEgressClient(MockHandler $mock, array &$history): EnableBankingHttpClient
 {
     $stack = HandlerStack::create($mock);
     $stack->push(Middleware::history($history));
 
-    return new class(privateKeyEgressSecrets($privateKeyPem), privateKeyEgressSigner(), $stack) extends EnableBankingHttpClient
+    return new class(privateKeyEgressSigner(), $stack) extends EnableBankingHttpClient
     {
         public function __construct(
-            OpenBankingSecretsRepository $secrets,
             EnableBankingJwtSigner $jwtSigner,
             private readonly HandlerStack $stack,
         ) {
-            parent::__construct($secrets, $jwtSigner);
+            parent::__construct($jwtSigner);
         }
 
         protected function makeHttpClient(): GuzzleClient
@@ -95,26 +88,28 @@ function privateKeyEgressClient(string $privateKeyPem, MockHandler $mock, array 
 }
 
 /**
- * @return list<Closure(EnableBankingHttpClient): mixed>
+ * @return list<Closure(EnableBankingHttpClient, OpenBankingCredentials): mixed>
  */
 function privateKeyEgressCallPaths(): array
 {
     return [
-        static fn (EnableBankingHttpClient $client): array => $client->initiateAuth(
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->initiateAuth(
+            credentials: $credentials,
             institutionId: 'asn',
             country: 'NL',
             redirectUrl: 'http://127.0.0.1:9999/oauth/callback/open-banking',
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
             validUntil: CarbonImmutable::now()->addDays(90),
         ),
-        static fn (EnableBankingHttpClient $client): array => $client->createSession('fixture-code'),
-        static fn (EnableBankingHttpClient $client): array => $client->aspsps('NL'),
-        static fn (EnableBankingHttpClient $client): array => $client->accountDetails('fixture-uid'),
-        static fn (EnableBankingHttpClient $client): array => $client->transactions(
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->createSession($credentials, 'fixture-code'),
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->aspsps($credentials, 'NL'),
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->accountDetails($credentials, 'fixture-uid'),
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->transactions(
+            $credentials,
             'fixture-uid',
             new FetchWindow(dateFrom: CarbonImmutable::now()->subDays(30), dateTo: CarbonImmutable::now()),
         ),
-        static fn (EnableBankingHttpClient $client): array => $client->balances('fixture-uid'),
+        static fn (EnableBankingHttpClient $client, OpenBankingCredentials $credentials): array => $client->balances($credentials, 'fixture-uid'),
     ];
 }
 
@@ -166,10 +161,11 @@ it('hands the aggregator a token signed by the key and never the key itself', fu
 
     /** @var array<int, array{request: RequestInterface}> $history */
     $history = [];
-    $client = privateKeyEgressClient($privateKeyPem, $mock, $history);
+    $client = privateKeyEgressClient($mock, $history);
+    $credentials = privateKeyEgressCredentials($privateKeyPem);
 
     foreach ($callPaths as $invoke) {
-        $invoke($client);
+        $invoke($client, $credentials);
     }
 
     // Counted before anything is read: a walk that made no request would find

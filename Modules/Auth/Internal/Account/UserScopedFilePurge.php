@@ -18,6 +18,7 @@ final readonly class UserScopedFilePurge
     private const array OWNED = [
         'sync/identity/%d.enc',
         'sync/gdk/%d.enc',
+        'secrets/open-banking/%d.json',
         'inbox/%d',
         'inbox-drop/%d',
     ];

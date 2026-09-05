@@ -29,16 +29,4 @@ final class OpenBankingConnectionException extends RuntimeException
             .'capture accounts[].uid before a fetch can run.',
         );
     }
-
-    // The secrets file holds one live session, so a re-link to a different
-    // institution would pair one bank's credentials with another's uid.
-    public static function institutionMismatch(int $connectionId, string $connectionInstitution, string $sessionInstitution): self
-    {
-        return new self(
-            "Connection {$connectionId}'s institution ({$connectionInstitution}) does not match the "
-            ."currently active Enable Banking session's institution ({$sessionInstitution}). Only one "
-            .'Enable Banking connection can be live at a time — re-link '.$connectionInstitution
-            .' before syncing this connection.',
-        );
-    }
 }

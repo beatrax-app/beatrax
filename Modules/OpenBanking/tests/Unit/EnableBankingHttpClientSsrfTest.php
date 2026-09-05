@@ -8,7 +8,6 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 // No public method takes a caller-supplied URL, so the rejection cases override
 // the protected baseUri() hook. The refusal lands before a bearer token is
@@ -35,88 +34,69 @@ beforeEach(function (): void {
     $this->jwtSigner = new EnableBankingJwtSigner($this->clock);
 });
 
-function ebFixtureSecrets(string $privateKeyPem, ?string $bankScaHost = null): OpenBankingSecretsRepository
+// The credentials are a call argument now rather than something the client
+// reads for itself, so each case hands them in beside the URL under test.
+function ebSsrfCredentials(string $privateKeyPem, ?string $bankScaHost = null): OpenBankingCredentials
 {
-    return new class($privateKeyPem, $bankScaHost) extends OpenBankingSecretsRepository
+    return new OpenBankingCredentials(
+        applicationId: 'fixture-application-id',
+        privateKeyPem: $privateKeyPem,
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: $bankScaHost,
+        institutionId: 'asn',
+    );
+}
+
+function ebSsrfClientOn(EnableBankingJwtSigner $jwtSigner, string $baseUri): EnableBankingHttpClient
+{
+    return new class($jwtSigner, $baseUri) extends EnableBankingHttpClient
     {
         public function __construct(
-            private readonly string $privateKeyPem,
-            private readonly ?string $bankScaHost,
-        ) {}
+            EnableBankingJwtSigner $jwtSigner,
+            private readonly string $uri,
+        ) {
+            parent::__construct($jwtSigner);
+        }
 
-        public function load(): ?OpenBankingCredentials
+        protected function baseUri(): string
         {
-            return new OpenBankingCredentials(
-                applicationId: 'fixture-application-id',
-                privateKeyPem: $this->privateKeyPem,
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: $this->bankScaHost,
-                institutionId: 'asn',
-            );
+            return $this->uri;
         }
     };
 }
 
 it('rejects an attacker-controlled host before any bearer token is attached', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem);
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return 'https://attacker.example.com/';
-        }
-    };
+    $client = ebSsrfClientOn($this->jwtSigner, 'https://attacker.example.com/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps(ebSsrfCredentials($this->privateKeyPem), 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: attacker.example.com',
     );
 });
 
 it('rejects a look-alike host', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem);
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return 'https://api.enablebanking.com.evil.example/';
-        }
-    };
+    $client = ebSsrfClientOn($this->jwtSigner, 'https://api.enablebanking.com.evil.example/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps(ebSsrfCredentials($this->privateKeyPem), 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: api.enablebanking.com.evil.example',
     );
 });
 
 it('rejects a non-HTTPS scheme even on the real Enable Banking host', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem);
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return 'http://api.enablebanking.com/';
-        }
-    };
+    $client = ebSsrfClientOn($this->jwtSigner, 'http://api.enablebanking.com/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps(ebSsrfCredentials($this->privateKeyPem), 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-HTTPS scheme',
     );
 });
 
 it('rejects an unparseable URL', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem);
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return '://no-scheme-here/';
-        }
-    };
+    $client = ebSsrfClientOn($this->jwtSigner, '://no-scheme-here/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps(ebSsrfCredentials($this->privateKeyPem), 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'bearer token',
     );
@@ -126,32 +106,20 @@ it('rejects an unparseable URL', function (): void {
 // client never issues. Nothing here builds a URL on it, so allow-listing it
 // would authorise a bearer-token request no production path makes.
 it('rejects the resolved bank SCA host: this client only ever talks to the API host', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem, bankScaHost: 'sca.asnbank.example');
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return 'https://sca.asnbank.example/';
-        }
-    };
+    $credentials = ebSsrfCredentials($this->privateKeyPem, bankScaHost: 'sca.asnbank.example');
+    $client = ebSsrfClientOn($this->jwtSigner, 'https://sca.asnbank.example/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps($credentials, 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: sca.asnbank.example',
     );
 });
 
 it('rejects an attacker host even when a bank SCA host has separately been resolved', function (): void {
-    $secrets = ebFixtureSecrets($this->privateKeyPem, bankScaHost: 'sca.asnbank.example');
-    $client = new class($secrets, $this->jwtSigner) extends EnableBankingHttpClient
-    {
-        protected function baseUri(): string
-        {
-            return 'https://attacker.example.com/';
-        }
-    };
+    $credentials = ebSsrfCredentials($this->privateKeyPem, bankScaHost: 'sca.asnbank.example');
+    $client = ebSsrfClientOn($this->jwtSigner, 'https://attacker.example.com/');
 
-    expect(fn () => $client->aspsps('NL'))->toThrow(
+    expect(fn () => $client->aspsps($credentials, 'NL'))->toThrow(
         UnsafeOpenBankingRequestException::class,
         'non-allow-listed host: attacker.example.com',
     );

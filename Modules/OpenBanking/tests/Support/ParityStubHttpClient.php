@@ -6,6 +6,7 @@ namespace Modules\OpenBanking\Tests\Support;
 
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 
 final class ParityStubHttpClient extends EnableBankingHttpClient
 {
@@ -18,13 +19,17 @@ final class ParityStubHttpClient extends EnableBankingHttpClient
         private readonly array $accountDetailsResponse,
     ) {}
 
-    public function accountDetails(string $uid): array
+    public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
     {
         return $this->accountDetailsResponse;
     }
 
-    public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-    {
+    public function transactions(
+        OpenBankingCredentials $credentials,
+        string $uid,
+        FetchWindow $window,
+        ?string $continuationKey = null,
+    ): array {
         return $this->transactionsResponse;
     }
 }

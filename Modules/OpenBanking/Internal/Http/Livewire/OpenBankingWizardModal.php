@@ -9,9 +9,9 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\BankChoice;
 use Modules\OpenBanking\Internal\Enums\CuratedInstitution;
 use Modules\OpenBanking\Internal\Enums\WizardStep;
@@ -37,6 +37,7 @@ final class OpenBankingWizardModal extends Component
     #[On('open-banking-wizard:open')]
     public function open(
         OpenBankingSecretsRepository $secrets,
+        CurrentUser $currentUser,
         ?int $startStep = null,
         string $bankChoice = '',
         string $otherInstitutionId = '',
@@ -45,7 +46,7 @@ final class OpenBankingWizardModal extends Component
         // renders one branch per step, so an unknown one draws a dialog with no
         // controls and no way out of it.
         $requestedStep = WizardStep::requested($startStep);
-        $canSkipToRequestedStep = $requestedStep !== null && $secrets->hasApplication();
+        $canSkipToRequestedStep = $requestedStep !== null && $secrets->hasApplication($currentUser->id());
 
         $this->step = ($canSkipToRequestedStep ? $requestedStep : WizardStep::Keypair)->value;
         $this->publicKeyPem = '';
@@ -59,7 +60,7 @@ final class OpenBankingWizardModal extends Component
 
     // The private key is written to the secrets file immediately, with an empty
     // application_id placeholder that step 3 fills in.
-    public function generateKeypair(OpenBankingSecretsRepository $secrets): void
+    public function generateKeypair(OpenBankingSecretsRepository $secrets, CurrentUser $currentUser): void
     {
         $this->errorMessage = '';
 
@@ -73,14 +74,7 @@ final class OpenBankingWizardModal extends Component
         [$privateKeyPem, $publicKeyPem] = $keypair;
 
         try {
-            $secrets->save(new OpenBankingCredentials(
-                applicationId: '',
-                privateKeyPem: $privateKeyPem,
-                sessionId: null,
-                consentExpiresAt: null,
-                bankScaHost: null,
-                institutionId: null,
-            ));
+            $secrets->saveApplication($currentUser->id(), '', $privateKeyPem);
         } catch (SecretsWriteFailed) {
             $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.save_keypair_failed');
 
@@ -134,7 +128,7 @@ final class OpenBankingWizardModal extends Component
         $this->step = WizardStep::ApplicationId->value;
     }
 
-    public function saveApplicationId(OpenBankingSecretsRepository $secrets): void
+    public function saveApplicationId(OpenBankingSecretsRepository $secrets, CurrentUser $currentUser): void
     {
         $this->errorMessage = '';
 
@@ -145,7 +139,7 @@ final class OpenBankingWizardModal extends Component
             return;
         }
 
-        $existing = $secrets->load();
+        $existing = $secrets->load($currentUser->id());
         if ($existing === null) {
             $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.generate_first');
             $this->step = WizardStep::Keypair->value;
@@ -154,14 +148,7 @@ final class OpenBankingWizardModal extends Component
         }
 
         try {
-            $secrets->save(new OpenBankingCredentials(
-                applicationId: $applicationId,
-                privateKeyPem: $existing->privateKeyPem,
-                sessionId: $existing->sessionId,
-                consentExpiresAt: $existing->consentExpiresAt,
-                bankScaHost: $existing->bankScaHost,
-                institutionId: $existing->institutionId,
-            ));
+            $secrets->saveApplication($currentUser->id(), $applicationId, $existing->privateKeyPem);
         } catch (SecretsWriteFailed) {
             $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.save_application_id_failed');
 
@@ -205,10 +192,10 @@ final class OpenBankingWizardModal extends Component
         return $this->redirectRoute('oauth.open-banking.connect', ['institution_id' => $institutionId]);
     }
 
-    public function cancel(OpenBankingSecretsRepository $secrets, Session $session): void
+    public function cancel(OpenBankingSecretsRepository $secrets, CurrentUser $currentUser, Session $session): void
     {
-        if (! $secrets->hasApplication()) {
-            $secrets->clear();
+        if (! $secrets->hasApplication($currentUser->id())) {
+            $secrets->clear($currentUser->id());
         }
 
         $session->forget('open_banking_acknowledged');

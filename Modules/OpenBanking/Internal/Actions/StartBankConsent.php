@@ -53,7 +53,9 @@ final readonly class StartBankConsent
      */
     public function __invoke(string $institutionId, Closure $callbackUri): string
     {
-        if (! $this->secrets->hasApplication()) {
+        $userId = $this->currentUser->id();
+        $application = $this->secrets->load($userId);
+        if ($application === null || $application->applicationId === '') {
             throw OpenBankingConnectException::wizardIncomplete();
         }
 
@@ -61,18 +63,21 @@ final readonly class StartBankConsent
             throw OpenBankingConnectException::noBankChosen();
         }
 
-        $consentUrl = $this->initiateConsent($institutionId, $callbackUri());
+        $consentUrl = $this->initiateConsent($application, $institutionId, $callbackUri());
         $scaHost = $this->resolveScaHost($consentUrl);
 
-        $this->persistResolvedScaHost($scaHost, $institutionId);
+        // Merged into this institution's own record, so a consent begun at a
+        // second bank leaves the first one's live session where it was.
+        $this->secrets->rememberScaHost($userId, $institutionId, $scaHost);
         $this->guardConsentRedirect($consentUrl, $scaHost);
 
         return $consentUrl;
     }
 
-    private function initiateConsent(string $institutionId, string $callbackUri): string
+    private function initiateConsent(OpenBankingCredentials $application, string $institutionId, string $callbackUri): string
     {
         $response = $this->client->initiateAuth(
+            credentials: $application,
             institutionId: $institutionId,
             country: $this->aspspCountry(),
             redirectUrl: $callbackUri,
@@ -126,23 +131,6 @@ final readonly class StartBankConsent
             || ! is_string($consentHost) || strtolower($consentHost) !== $scaHost) {
             throw OpenBankingConnectException::unsafeConsentUrl();
         }
-    }
-
-    private function persistResolvedScaHost(string $scaHost, string $institutionId): void
-    {
-        $existing = $this->secrets->load();
-        if ($existing === null) {
-            return;
-        }
-
-        $this->secrets->save(new OpenBankingCredentials(
-            applicationId: $existing->applicationId,
-            privateKeyPem: $existing->privateKeyPem,
-            sessionId: $existing->sessionId,
-            consentExpiresAt: $existing->consentExpiresAt,
-            bankScaHost: $scaHost,
-            institutionId: $institutionId,
-        ));
     }
 
     // Fails CLOSED, like RelayConfig::isLanHost. Falling through to "contains

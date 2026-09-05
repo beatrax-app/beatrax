@@ -10,14 +10,14 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 
 uses(RefreshDatabase::class);
 
 // $consentStatus beside them was already locked. The four timestamps were not,
-// and the transparency panel reads three of them through CarbonImmutable.
+// and the transparency panel reads three of them through CarbonImmutable. They
+// belong to one bank's card now, which is the component the wire addresses.
 const CONNECTION_TIMESTAMP_PROPERTIES = [
     'consentExpiresAtIso',
     'lastSuccessfulSyncAtIso',
@@ -30,12 +30,12 @@ function connectionTimestampsSnapshot(string $pageHtml): string
     $matches = PatternScan::all('/wire:snapshot="([^"]*)"/', $pageHtml);
     foreach ($matches[1] as $encoded) {
         $snapshot = html_entity_decode($encoded, ENT_QUOTES);
-        if (str_contains($snapshot, '"name":"openbanking.open-banking-settings-page"')) {
+        if (str_contains($snapshot, '"name":"openbanking.open-banking-connection-card"')) {
             return $snapshot;
         }
     }
 
-    throw new RuntimeException('No wire:snapshot for the open banking settings page.');
+    throw new RuntimeException('No wire:snapshot for the open banking connection card.');
 }
 
 /**
@@ -53,11 +53,6 @@ function connectionTimestampsTamper(string $snapshot, array $updates): TestRespo
     ]);
 }
 
-function connectionTimestampsSecretsPath(): string
-{
-    return storage_path('app/secrets/open-banking.json');
-}
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'connection-timestamps',
@@ -66,20 +61,13 @@ beforeEach(function (): void {
     ]);
     $this->actingAs($this->user);
 
-    @unlink(connectionTimestampsSecretsPath());
-    app(OpenBankingSecretsRepository::class)->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: 'fixture-pem',
-        sessionId: 'fixture-session',
-        consentExpiresAt: CarbonImmutable::now()->addDays(180),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    OpenBankingSecretsFixture::forget((int) $this->user->id);
+    OpenBankingSecretsFixture::seed((int) $this->user->id);
 
     $now = CarbonImmutable::now()->toDateTimeString();
-    app(DatabaseManager::class)->connection()->table('open_banking_connections')->insert([
+    $this->connectionId = (int) app(DatabaseManager::class)->connection()->table('open_banking_connections')->insertGetId([
         'user_id' => $this->user->id,
-        'institution_id' => 'ASNBNL21',
+        'institution_id' => OpenBankingSecretsFixture::INSTITUTION_ID,
         'account_uid' => 'acc-uid-timestamps',
         'bank_display_name' => null,
         'enabled' => true,
@@ -95,8 +83,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    @unlink(connectionTimestampsSecretsPath());
-    @unlink(connectionTimestampsSecretsPath().'.tmp');
+    OpenBankingSecretsFixture::forget((int) $this->user->id);
 });
 
 it('refuses a timestamp no calendar answers to however the bundle was built', function (bool $debug): void {
@@ -111,7 +98,7 @@ it('refuses a timestamp no calendar answers to however the bundle was built', fu
 ]);
 
 it('throws rather than accepting a write to any of the four', function (string $property): void {
-    Livewire::test(OpenBankingSettingsPage::class)->set($property, 'zzz');
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])->set($property, 'zzz');
 })->with(CONNECTION_TIMESTAMP_PROPERTIES)->throws(CannotUpdateLockedPropertyException::class);
 
 // Belt and braces behind the lock. Read through the component rather than the
@@ -119,7 +106,7 @@ it('throws rather than accepting a write to any of the four', function (string $
 // the panel calls, and each one has to answer a string it cannot read with no
 // reading rather than with a stack trace.
 it('reads an unparseable timestamp as no timestamp rather than throwing', function (): void {
-    $component = Livewire::test(OpenBankingSettingsPage::class)->instance();
+    $component = Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])->instance();
 
     expect($component->lastSuccessfulSyncDisplay())->not->toBeNull();
 
@@ -135,5 +122,11 @@ it('reads an unparseable timestamp as no timestamp rather than throwing', functi
 // payload that chose it would reopen the wizard pointed at an institution the
 // reader never connected.
 it('throws rather than accepting a write to the institution the connection names', function (): void {
-    Livewire::test(OpenBankingSettingsPage::class)->set('institutionId', 'ZZZ_BANK');
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])->set('institutionId', 'ZZZ_BANK');
+})->throws(CannotUpdateLockedPropertyException::class);
+
+// The card is addressed by a bare integer from the wire, so the id it was
+// mounted with is the one thing a payload must not be able to re-point.
+it('throws rather than accepting a write to the connection id itself', function (): void {
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])->set('connectionId', $this->connectionId + 1);
 })->throws(CannotUpdateLockedPropertyException::class);

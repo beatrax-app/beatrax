@@ -118,17 +118,9 @@ final readonly class OpenBankingFetchService
             throw OpenBankingConnectionException::accountNotResolved($connectionId);
         }
 
-        $credentials = $this->secrets->loadOrThrow();
-
-        // The secrets file holds one live session, so a re-link since this row
-        // was created would pair one bank's credentials with another's uid.
-        if ($credentials->institutionId !== null && $credentials->institutionId !== $institutionId) {
-            throw OpenBankingConnectionException::institutionMismatch(
-                $connectionId,
-                $institutionId,
-                $credentials->institutionId,
-            );
-        }
+        // Addressed by reader AND bank, so a second connection's session can
+        // neither be reached from here nor overwrite this one.
+        $credentials = $this->secrets->loadOrThrow($user->id, $institutionId);
 
         $window = $this->resolveWindow($connection);
         $idempotencyKey = self::idempotencyKey($institutionId, $accountUid, $window);

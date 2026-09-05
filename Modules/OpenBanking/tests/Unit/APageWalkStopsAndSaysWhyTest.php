@@ -31,13 +31,17 @@ function pwsFixtureClient(int $rowsPerPage, bool $freshKeys, int $abortAfter = 5
             private readonly int $abortAfter,
         ) {}
 
-        public function accountDetails(string $uid): array
+        public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
         {
             return ['account_id' => ['iban' => 'NL01ASNB0000000001']];
         }
 
-        public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-        {
+        public function transactions(
+            OpenBankingCredentials $credentials,
+            string $uid,
+            FetchWindow $window,
+            ?string $continuationKey = null,
+        ): array {
             $this->calls++;
             if ($this->calls > $this->abortAfter) {
                 throw new RuntimeException('The walk never stopped: '.$this->calls.' round trips and counting.');
@@ -132,13 +136,17 @@ it('reports a walk that reached the end of the pages as complete', function (): 
 
         public function __construct() {}
 
-        public function accountDetails(string $uid): array
+        public function accountDetails(OpenBankingCredentials $credentials, string $uid): array
         {
             return ['account_id' => ['iban' => 'NL01ASNB0000000001']];
         }
 
-        public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
-        {
+        public function transactions(
+            OpenBankingCredentials $credentials,
+            string $uid,
+            FetchWindow $window,
+            ?string $continuationKey = null,
+        ): array {
             $this->calls++;
 
             return ['transactions' => []];

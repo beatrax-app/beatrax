@@ -20,6 +20,7 @@ use Modules\OpenBanking\Internal\Console\SyncDueOpenBankingConnectionsCommand;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Events\OpenBankingImportedNothing;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingNothingImportedAlert;
@@ -27,6 +28,7 @@ use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsFile;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
@@ -38,6 +40,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(OpenBankingSecretsFile::class);
         $this->app->singleton(OpenBankingSecretsRepository::class);
         $this->app->singleton(EnableBankingJwtSigner::class);
         $this->app->singleton(EnableBankingHttpClient::class);
@@ -65,6 +68,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
 
         $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
         $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);
+        $livewire->component('openbanking.open-banking-connection-card', OpenBankingConnectionCard::class);
         $livewire->component('openbanking.open-banking-status-row', OpenBankingStatusRow::class);
 
         // The HTTPS-loopback listener is local UAT tooling, guarded so it never

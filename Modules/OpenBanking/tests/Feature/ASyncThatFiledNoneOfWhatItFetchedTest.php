@@ -3,26 +3,22 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingConnectionCard;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\AfnStubRemoteSourceAdapter;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
@@ -36,26 +32,12 @@ const AFN_OWN_IBAN = 'NL57ASNB0123456789';
 
 const AFN_ALERT_KIND = 'open_banking_nothing_imported';
 
-function afnSeedCredentials(): void
+function afnSeedCredentials(int $userId): void
 {
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        $userId,
         consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    );
 }
 
 function afnSeedConnection(User $user): int
@@ -112,24 +94,19 @@ function afnWithholdTheKey(): void
 }
 
 beforeEach(function (): void {
-    $this->secretsPath = storage_path('app/secrets/open-banking.json');
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
 
     $this->seedFixtureUserAndAccount();
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     $this->connectionId = afnSeedConnection($this->fixtureUser);
-    afnSeedCredentials();
+    afnSeedCredentials((int) $this->fixtureUser->id);
 
     $this->adapter = new AfnStubRemoteSourceAdapter;
     app()->instance(RemoteSourceAdapter::class, $this->adapter);
 });
 
 afterEach(function (): void {
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
+    OpenBankingSecretsFixture::forget((int) $this->fixtureUser->id);
     CarbonImmutable::setTestNow();
 });
 
@@ -189,7 +166,7 @@ it('does not tell a reader who pressed Sync now that there was nothing new', fun
     $this->enablesEncryptionForUser($this->fixtureUser);
     afnWithholdTheKey();
 
-    Livewire::test(OpenBankingSettingsPage::class)
+    Livewire::test(OpenBankingConnectionCard::class, ['connectionId' => $this->connectionId])
         ->call('syncNow')
         ->assertSet('syncFlashTone', 'error')
         ->assertSet('syncFlashMessage', 'Your bank sent transactions, but none of them could be filed. Open the import review to see why.')

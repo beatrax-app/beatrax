@@ -44,11 +44,12 @@ final readonly class OpenBankingCallbackController
             // ORDINARY way for this URL to be reached — a link opened twice, a
             // back button, a redirect that sat in a tab overnight — and it left
             // the reader on a 500 page in the middle of connecting their bank.
-            if (! $this->oauthState->consumeState(is_string($stateParamRaw) ? $stateParamRaw : '', $userId)) {
+            $institutionId = $this->oauthState->consumeState(is_string($stateParamRaw) ? $stateParamRaw : '', $userId);
+            if ($institutionId === null) {
                 throw InvalidStateException::stateMismatch();
             }
 
-            $connectionId = ($this->completeConsent)($userId, is_string($codeRaw) ? $codeRaw : '');
+            $connectionId = ($this->completeConsent)($userId, $institutionId, is_string($codeRaw) ? $codeRaw : '');
         } catch (RuntimeException $e) {
             return $this->backToSettings('open_banking_failed', $this->readerReason($e));
         }

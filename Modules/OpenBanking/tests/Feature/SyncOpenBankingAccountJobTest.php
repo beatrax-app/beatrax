@@ -5,20 +5,16 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Support\LockStore;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
 use Modules\OpenBanking\Tests\Support\SojaLockObservingRemoteSourceAdapter;
 use Modules\OpenBanking\Tests\Support\SojaOrphaningRemoteSourceAdapter;
 use Modules\OpenBanking\Tests\Support\SojaStubRemoteSourceAdapter;
@@ -59,39 +55,27 @@ function sojaSeedConnection(User $user, array $overrides = []): int
     ], $overrides));
 }
 
-function sojaSeedCredentials(): void
+// Addressed by reader and bank both: the fetch loads the session under the
+// institution its own connection row names, so seeding for anyone else leaves
+// this job with nothing to fetch with.
+function sojaSeedCredentials(User $user): void
 {
-    $resource = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    if ($resource === false) {
-        throw new RuntimeException('Test fixture: failed to generate RSA keypair.');
-    }
-    openssl_pkey_export($resource, $privateKeyPem);
-
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
-    $repo->save(new OpenBankingCredentials(
-        applicationId: 'fixture-application-id',
-        privateKeyPem: $privateKeyPem,
-        sessionId: 'fixture-session-id',
+    OpenBankingSecretsFixture::seed(
+        (int) $user->id,
         consentExpiresAt: CarbonImmutable::parse('2026-10-19 00:00:00'),
-        bankScaHost: 'sca.asnbank.example',
-        institutionId: 'ASNBNL21',
-    ));
+    );
 }
 
 beforeEach(function (): void {
-    $this->secretsPath = storage_path('app/secrets/open-banking.json');
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
-    }
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 06:30:00'));
 });
 
+// One file per reader, so the cleanup names every reader the case created:
+// user ids restart at 1 under RefreshDatabase, and a file left behind would be
+// read as the next case's own stored session.
 afterEach(function (): void {
-    if (is_file($this->secretsPath)) {
-        @unlink($this->secretsPath);
+    foreach (User::query()->pluck('id') as $userId) {
+        OpenBankingSecretsFixture::forget((int) $userId);
     }
     CarbonImmutable::setTestNow();
 });
@@ -99,7 +83,7 @@ afterEach(function (): void {
 it('writes BOTH last_successful_sync_at and last_attempt_at on a successful fetch', function (): void {
     $user = sojaUser('sync-success');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter;
     app()->instance(RemoteSourceAdapter::class, $stub);
@@ -121,7 +105,7 @@ it('writes BOTH last_successful_sync_at and last_attempt_at on a successful fetc
 it('is a no-op — no fetch, no timestamp write — when the connection is disabled', function (): void {
     $user = sojaUser('sync-disabled');
     $connectionId = sojaSeedConnection($user, ['enabled' => false]);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter;
     app()->instance(RemoteSourceAdapter::class, $stub);
@@ -145,7 +129,7 @@ it('is a no-op — no fetch, no timestamp write — when consent has expired', f
     $connectionId = sojaSeedConnection($user, [
         'consent_expires_at' => CarbonImmutable::parse('2026-01-01 00:00:00')->toDateTimeString(),
     ]);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter;
     app()->instance(RemoteSourceAdapter::class, $stub);
@@ -165,7 +149,7 @@ it('updates ONLY last_attempt_* on a generic failure, leaves last_successful_syn
     $user = sojaUser('sync-failure');
     $priorSuccess = CarbonImmutable::parse('2026-07-18 06:00:00')->toDateTimeString();
     $connectionId = sojaSeedConnection($user, ['last_successful_sync_at' => $priorSuccess]);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter(
         EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 500, 'server error')
@@ -190,7 +174,7 @@ it('a consent failure (HTTP 401) marks consent_failed, dispatches OpenBankingCon
 
     $user = sojaUser('sync-consent-failure');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter(
         EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 401, 'unauthorized')
@@ -218,7 +202,7 @@ it('a consent failure (HTTP 403) also marks consent_failed and dispatches OpenBa
 
     $user = sojaUser('sync-forbidden');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter(
         EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 403, 'forbidden')
@@ -239,7 +223,7 @@ it('a consent failure (HTTP 403) also marks consent_failed and dispatches OpenBa
 it('is a no-op when the connection row was deleted between dispatch and pickup', function (): void {
     $user = sojaUser('sync-deleted');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -262,7 +246,7 @@ it('is a no-op when the connection row was deleted between dispatch and pickup',
 it('exits without touching the row when the connection has no user to sync for', function (): void {
     $user = sojaUser('soja-orphan');
     $connectionId = sojaSeedConnection($user, ['user_id' => null]);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $stub = new SojaStubRemoteSourceAdapter(null);
     app()->instance(RemoteSourceAdapter::class, $stub);
@@ -283,7 +267,7 @@ it('exits without touching the row when the connection has no user to sync for',
 it('writes no timestamp when the connection\'s owner is cleared while the fetch is in flight', function (): void {
     $user = sojaUser('sync-orphaned-mid-fetch');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -313,7 +297,7 @@ it('scopes queue uniqueness to the connection for ten minutes', function (): voi
 it('holds the connection\'s own uniqueness key for the duration of the fetch', function (): void {
     $user = sojaUser('sync-holds-lock');
     $connectionId = sojaSeedConnection($user);
-    sojaSeedCredentials();
+    sojaSeedCredentials($user);
 
     $observed = null;
     app()->instance(RemoteSourceAdapter::class, new SojaLockObservingRemoteSourceAdapter(

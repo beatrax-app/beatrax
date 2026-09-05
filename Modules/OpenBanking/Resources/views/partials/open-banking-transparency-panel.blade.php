@@ -55,16 +55,5 @@
                 </dd>
             @endif
         </dl>
-
-        <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <button
-                type="button"
-                wire:click="startDisconnect"
-                class="inline-flex min-h-[44px] items-center rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-600
-                       hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2
-                       dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
-                data-testid="ob-disconnect-button"
-            >{{ Lang::get('openbanking::messages.transparency.disconnect_button') }}</button>
-        </div>
     </x-core::card>
 @endif

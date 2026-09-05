@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Ota pankkiyhteys käyttöön',
         'toggle_connected' => 'Yhdistetty pankkiin :bank Enable Bankingin kautta.',
         'toggle_off_help' => 'Oletuksena pois päältä. Vaatii kertaluonteisen hyväksynnän ja ohjatun käyttöönoton.',
+        'connect_another' => 'Yhdistä toinen pankki',
         'credentials_unreadable' => 'Tälle laitteelle tallennettuja pankkiyhteyden tunnuksia ei voi lukea, joten Beatrax ei saa yhteyttä pankkiisi.',
         'credentials_unreadable_next' => 'Tee ohjattu käyttöönotto uudelleen, niin ne korvataan uusilla. Jo tuodut tapahtumat säilyvät ennallaan.',
         'reconfirm_body' => 'Hyväksyntäsi vanheni ennen kuin yhteys ehti valmistua. Vahvista uudelleen, niin pankkiyhteys saadaan käyttöön.',
@@ -165,6 +166,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking palautti turvattoman suostumusosoitteen.',
         'no_authorization_code' => 'Enable Bankingin paluukutsu ei sisältänyt valtuutuskoodia.',
         'no_session_id' => 'Enable Banking ei palauttanut istuntotunnusta.',
+        'bank_not_linked' => 'Tätä pankkia ei ole yhdistetty tällä laitteella. Yhdistä se uudelleen, niin synkronointi jatkuu.',
         'oauth_state_mismatch' => 'Tämä yhteyslinkki on vanhentunut tai jo käytetty. Aloita pankin yhdistäminen uudelleen.',
     ],
 ];

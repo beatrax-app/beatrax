@@ -11,6 +11,7 @@ return [
         'toggle_label' => 'Įjungti atvirąją bankininkystę',
         'toggle_connected' => 'Prisijungta prie :bank per Enable Banking.',
         'toggle_off_help' => 'Pagal numatymą išjungta. Reikia vienkartinio patvirtinimo ir žingsnis po žingsnio sąrankos.',
+        'connect_another' => 'Prijungti kitą banką',
         'credentials_unreadable' => 'Šiame įrenginyje išsaugotų atvirosios bankininkystės prisijungimo duomenų nepavyksta perskaityti, todėl Beatrax negali prisijungti prie tavo banko.',
         'credentials_unreadable_next' => 'Atlik žingsnis po žingsnio sąranką iš naujo, kad juos pakeistum. Jau importuotoms operacijoms tai neturi įtakos.',
         'reconfirm_body' => 'Tavo patvirtinimas nustojo galioti nespėjus užbaigti prisijungimo. Patvirtink iš naujo, kad užbaigtum atvirosios bankininkystės įjungimą.',
@@ -169,6 +170,7 @@ return [
         'unsafe_consent_url' => 'Enable Banking grąžino nesaugų sutikimo URL.',
         'no_authorization_code' => 'Enable Banking atgalinis kvietimas negrąžino autorizacijos kodo.',
         'no_session_id' => 'Enable Banking negrąžino seanso id.',
+        'bank_not_linked' => 'Šis bankas šiame įrenginyje neprijungtas. Prijunk jį iš naujo, kad sinchronizavimas atsinaujintų.',
         'oauth_state_mismatch' => 'Ši prisijungimo nuoroda nebegalioja arba jau panaudota. Pradėkite banko prijungimą iš naujo.',
     ],
 ];
