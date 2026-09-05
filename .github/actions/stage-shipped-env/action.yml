@@ -1,0 +1,95 @@
+# Writes the `.env` a shipped bundle carries, in the one place both
+# workflows read it from.
+#
+# `.env.example` is the local-development template: APP_ENV=local and
+# APP_DEBUG=true, which are correct there and wrong in anything a user
+# installs. DevConsoleBuildGate reads app.env first and answers `local` as a
+# development build before it reaches the per-platform branch, so a bundle
+# staged from the template hands the artisan runner, the query panel and the
+# log tail to the first account — and on a phone the first account is the only
+# account. Laravel also answers an error with the debug page, which prints
+# file paths, the framework version and a full stack trace.
+#
+# This existed twice, once per workflow, and drifted: release.yml rewrote both
+# keys at all four of its bundle-staging steps while release-build.yml — the
+# workflow whose entire purpose is producing an artefact to inspect before
+# publishing — copied the template and left it. The artefact offered for
+# inspection differed from the shipped one in exactly the way a reviewer is
+# looking for.
+#
+# The rewrite is filter-then-append rather than `sed -i`: it works the same on
+# a runner with BSD sed, and it is correct whether the template holds the key
+# once, twice or not at all. Laravel reads the last assignment, but a file
+# holding both values is a file the next reader has to reason about.
+name: 'Stage the shipped .env'
+description: 'Writes the .env a shipped bundle carries: the local template with the development environment overridden.'
+
+inputs:
+    working-directory:
+        description: >-
+            The composer root whose `.env.example` is staged. The mobile
+            bundle is built from `mobile-app/`, which carries its own.
+        required: false
+        default: '.'
+    extra:
+        description: >-
+            Additional `KEY=value` lines appended after the rewrite, one per
+            line. The desktop legs pass the updater feed and its enabled flag
+            here, because the bundled `.env` is where the runtime reads them.
+        required: false
+        default: ''
+
+runs:
+    using: composite
+    steps:
+        - name: Write the shipped .env
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          env:
+              EXTRA: ${{ inputs.extra }}
+          run: |
+              set -euo pipefail
+
+              if [ ! -f .env.example ]; then
+                  echo "::error::stage-shipped-env: no .env.example in $(pwd), so there is no template to ship from."
+                  exit 1
+              fi
+
+              cp .env.example .env
+              # `|| [ "$?" -eq 1 ]` because grep answers 1 for "nothing
+              # survived the filter", which is a template holding only the two
+              # keys being replaced -- not an error, but fatal under `set -e`,
+              # and fatal with no message at all. A real grep failure is 2 and
+              # still stops the build.
+              { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env || [ "$?" -eq 1 ]; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.staged
+              mv .env.staged .env
+
+              while IFS= read -r line; do
+                  if [ -z "$line" ]; then
+                      continue
+                  fi
+
+                  # `KEY=` is what an unset workflow variable interpolates to,
+                  # and it is the shape that survives every later check: the
+                  # key is present, the bundle boots, and the feed it polls is
+                  # the empty string. Refuse it where it is still nameable.
+                  if printf '%s' "$line" | grep -qE '^[A-Za-z_][A-Za-z0-9_]*=$'; then
+                      echo "::error::stage-shipped-env: ${line%=} arrived empty, so this bundle would ship carrying a key with no value."
+                      exit 1
+                  fi
+
+                  printf '%s\n' "$line" >> .env
+              done <<< "$EXTRA"
+
+              # A staging step that ran is not a staging step that worked,
+              # and a renamed key in the template fails silently. Read the file
+              # back rather than trusting the write above it.
+              for required in 'APP_ENV=production' 'APP_DEBUG=false'; do
+                  if ! grep -qxF "$required" .env; then
+                      echo "::error::stage-shipped-env: the staged .env does not carry ${required}, so this bundle would ship as a development build."
+                      exit 1
+                  fi
+              done
+
+              echo "Staged $(pwd)/.env:"
+              grep -E '^(APP_ENV|APP_DEBUG|AUTO_UPDATE_FEED_URL|NATIVEPHP_UPDATER_ENABLED)=' .env
