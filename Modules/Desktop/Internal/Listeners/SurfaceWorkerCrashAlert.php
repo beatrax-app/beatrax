@@ -13,6 +13,7 @@ use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\StoredCopy;
+use Modules\Desktop\Internal\Native\ShellState;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
@@ -21,9 +22,11 @@ use Native\Desktop\Facades\Notification;
 // NativePHP fires ProcessExited on every restart of the supervised queue:work
 // child, and a single exit is normal steady-state (auto-restart on a memory-limit
 // hit), so only a sustained crash-loop within the rolling window escalates.
-final class SurfaceWorkerCrashAlert
+final readonly class SurfaceWorkerCrashAlert
 {
     public const string WORKER_ALIAS = 'queue-default';
+
+    public const string EXIT_LOG_SLOT_PREFIX = 'desktop.shell-state.process-exits.';
 
     public const int CRASH_LOOP_THRESHOLD = 3;
 
@@ -37,15 +40,13 @@ final class SurfaceWorkerCrashAlert
 
     public const string OS_NOTIFICATION_TITLE = 'Background work stopped';
 
-    /** @var array<string, list<int>> */
-    private array $exitTimestampsByAlias = [];
-
     public function __construct(
-        private readonly Clock $clock,
-        private readonly DatabaseManager $db,
-        private readonly WindowFocusState $focus,
-        private readonly UrlGenerator $urls,
-        private readonly SystemAlertWriter $alerts,
+        private Clock $clock,
+        private DatabaseManager $db,
+        private WindowFocusState $focus,
+        private UrlGenerator $urls,
+        private SystemAlertWriter $alerts,
+        private ShellState $state,
     ) {}
 
     public function handle(ProcessExited $event): void
@@ -65,24 +66,44 @@ final class SurfaceWorkerCrashAlert
 
     public function recordExit(ProcessExited $event): void
     {
-        $now = $this->clock->now()->getTimestamp();
-        $cutoff = $now - self::CRASH_LOOP_WINDOW_SECONDS;
+        $stamps = $this->exitsInsideTheWindow($event->alias);
+        $stamps[] = $this->clock->now()->getTimestamp();
 
-        $alias = $event->alias;
-        $bucket = $this->exitTimestampsByAlias[$alias] ?? [];
-        $bucket = array_values(array_filter($bucket, static fn (int $t): bool => $t > $cutoff));
-        $bucket[] = $now;
-        $this->exitTimestampsByAlias[$alias] = $bucket;
+        // Only the newest THRESHOLD stamps can answer the question, so a worker
+        // exiting hundreds of times inside one window still writes a bounded row.
+        // The TTL is the window itself: a device that stops crashing leaves nothing.
+        $this->state->write(
+            self::exitSlot($event->alias),
+            array_slice($stamps, -self::CRASH_LOOP_THRESHOLD),
+            self::CRASH_LOOP_WINDOW_SECONDS,
+        );
     }
 
     public function isCrashLoop(string $alias): bool
     {
-        $now = $this->clock->now()->getTimestamp();
-        $cutoff = $now - self::CRASH_LOOP_WINDOW_SECONDS;
-        $bucket = $this->exitTimestampsByAlias[$alias] ?? [];
-        $bucket = array_filter($bucket, static fn (int $t): bool => $t > $cutoff);
+        return count($this->exitsInsideTheWindow($alias)) >= self::CRASH_LOOP_THRESHOLD;
+    }
 
-        return count($bucket) >= self::CRASH_LOOP_THRESHOLD;
+    // Pruned on the way out as well as on the way in, so a bucket read long
+    // after its last write cannot count a stamp the window has already left.
+    /**
+     * @return list<int>
+     */
+    private function exitsInsideTheWindow(string $alias): array
+    {
+        $cutoff = $this->clock->now()->getTimestamp() - self::CRASH_LOOP_WINDOW_SECONDS;
+
+        return array_values(array_filter(
+            $this->state->read(self::exitSlot($alias)) ?? [],
+            static fn (mixed $stamp): bool => is_int($stamp) && $stamp > $cutoff,
+        ));
+    }
+
+    // The alias reaches us from the shell and the cache key column is bounded,
+    // so the slot is one fixed length whatever a child process is called.
+    private static function exitSlot(string $alias): string
+    {
+        return self::EXIT_LOG_SLOT_PREFIX.hash('sha256', $alias);
     }
 
     private function escalate(): void

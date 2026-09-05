@@ -5,8 +5,9 @@ Practical recipes for exercising the `Desktop` module in isolation.
 ## Unit tests
 
 - **Location:** `Modules/Desktop/tests/Unit/`
-- **What they test:** the focus-state singleton flip
-  (`WindowFocusStateTest`); the OS-notification dispatcher's
+- **What they test:** the focus flag read back by an instance that
+  never saw it written (`WindowFocusStateTest`); the OS-notification
+  dispatcher's
   suppression-then-focus decision and its detail-free body
   (`DispatchOsNotificationTest`); the rolling crash counter
   (`SurfaceWorkerCrashAlertTest`); the menu's item shape
@@ -121,12 +122,11 @@ composer test
   `SuppressionEvaluator::shouldDeliver()` for the user and trigger:
   a per-trigger toggle off, or a quiet-hours window, returns a
   decision that never reaches the focus gate. If it says deliver,
-  confirm `WindowFocusState::isFocused()` returns the expected value —
-  the usual cause there is that `TrackWindowFocus` never registered,
-  because the bundle gate (`config('nativephp-internal.running')`) is
-  false and that subscription only exists inside the bundle. Inside one
-  it still answers the constructed default, for the reason "Known risks"
-  in [architecture.md](architecture.md) gives.
+  confirm `WindowFocusState::isFocused()` returns the expected value.
+  It is read from the `cache` table, so
+  `select value from cache where key like '%window-focused%'` says what
+  the shell last reported; an empty result reads as focused, which is
+  the launch default `ApplicationBooted` restores.
 - **A pending file intent lost across the login boundary** — the read
   half is session-scoped, and the write half is not: the shell has no
   session to write one in, so `FileOpenHandoff` leaves the intent on
@@ -223,10 +223,22 @@ and the assertion — see
   `TheCloseQuestionCouldBeDismissedWithoutAnsweringItTest`)
 - **The worker-crash watchdog only escalates on threshold-crossing.**
   `SurfaceWorkerCrashAlert` accumulates `ProcessExited` events in a
-  rolling window; a single transient crash does not raise an alert. The
-  suite drives the listener directly, so it accumulates there and not in
-  a bundle — see "Known risks" in [architecture.md](architecture.md).
-  (`SurfaceWorkerCrashAlertTest`, `WorkerCrashAlertTest`)
+  rolling window; a single transient crash does not raise an alert. Two
+  of the three suites drive the listener directly, which is the one
+  thing the shell never does; the third posts the real event three
+  times and throws the listener away between them, which is what a
+  bundle does, and it is the only one of the three that failed while
+  the counter lived on the object.
+  (`SurfaceWorkerCrashAlertTest`, `WorkerCrashAlertTest`,
+  `TheWatchdogCountedToOneAndTheWindowWasAlwaysFocusedTest`)
+- **A shell event's state outlives the request that wrote it.** The
+  same suite blurs the window through the real `_native/api/events`
+  POST, discards the resolved instances, and asserts the OS
+  notification is dispatched — the discriminating case, because a
+  focus flag held on the object made every desktop notification
+  suppress itself. `AShellEventKeepsNoStateTheNextEventCannotSeeArchTest`
+  holds the shape.
+  (`TheWatchdogCountedToOneAndTheWindowWasAlwaysFocusedTest`)
 - **`NotificationDeepLink` is the only path that drives in-app
   navigation from outside the bundle's window.** Subscribers
   (`NavigateOnNotificationDeepLink`) call

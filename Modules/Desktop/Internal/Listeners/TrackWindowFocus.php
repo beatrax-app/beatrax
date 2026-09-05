@@ -25,4 +25,12 @@ final readonly class TrackWindowFocus
     {
         $this->focus->markBlurred();
     }
+
+    // ApplicationBooted is the one event per launch, raised by the shell's
+    // booted POST before the window it opens can report focus. It clears a
+    // blurred flag the previous launch left behind on its way out.
+    public function handleBooted(): void
+    {
+        $this->focus->forgetAcrossLaunch();
+    }
 }

@@ -88,9 +88,10 @@ What the module explicitly does NOT do:
     composition.
   - `WindowCloseBehavior` — the minimize-to-tray vs quit-on-close
     decision service. Reads `users.close_behavior`.
-  - `WindowFocusState` — singleton holding the current
-    focused / blurred flag, flipped by the `WindowFocused` /
-    `WindowBlurred` event subscriptions.
+  - `WindowFocusState` — the current focused / blurred flag, written by
+    the `WindowFocused` / `WindowBlurred` listeners and read by requests
+    the shell never touches, so it is held on `ShellState` rather than on
+    the object. Absent reads as focused.
   - `OsThemeProbe` — concrete `OsThemeSignal` reading the OS
     setting.
   - `FileOpenIntake` — the security boundary for OS-supplied paths.
@@ -102,7 +103,9 @@ What the module explicitly does NOT do:
   - `FileOpenHandoff` — the write half, bound to
     `RemembersPendingFileIntent`. Holds no session.
   - `ShellHandoff` — the slot a shell event leaves a fact in for the
-    window to claim. See below.
+    window to claim once. See below.
+  - `ShellState` — the device-local store both of those sit on: the
+    `database` cache store, keyed by slot. See below.
 - **Internal/NativeAppServiceProvider** — the NativePHP-side
   provider. Opens the one window, registers the persistent
   macOS tray (composed directly in the Electron main process by
@@ -126,8 +129,9 @@ What the module explicitly does NOT do:
   - `NavigateOnNotificationDeepLink` — handles
     `NotificationDeepLink` via `Window::current()->url(...)`.
   - `SurfaceWorkerCrashAlert` — accumulates `ProcessExited` events
-    in a rolling window; raises a `SystemAlert` when the threshold
-    is crossed.
+    in a rolling window held on `ShellState`, because each exit
+    arrives in a request of its own; raises a `SystemAlert` when the
+    threshold is crossed.
 - **Internal/Http/Livewire/**
   - `SetupScreen` — first-run setup landing.
   - `WelcomeScreen` — first-launch welcome.
@@ -180,9 +184,11 @@ What the module explicitly does NOT do:
   layout's `app()->bound(OsThemeSignal::class)` check falls through
   to the client-side pre-paint script under local dev / CI.
 - `SurfaceWorkerCrashAlert::handle($event)` — handles the NativePHP
-  `ProcessExited` event. Accumulates crashes in a rolling window; on
-  threshold-crossing, raises a `system_alerts` row that
-  `SystemAlertsBanner` will render.
+  `ProcessExited` event. Accumulates crashes in a rolling window kept on
+  `ShellState`; on threshold-crossing, raises a `system_alerts` row that
+  `SystemAlertsBanner` will render. The window is pruned on both the write
+  and the read, and the row carries a TTL of the window itself, so exits a
+  year apart never add up and a device that stops crashing leaves nothing.
 - `FileOpenedFromOs` event — the cross-module surface for "the OS
   just handed us a file". Subscribed by `Import` (starts an import
   preview) and `Receipts` (starts a receipt match).
@@ -534,26 +540,55 @@ then does on the next request, because the session's own `last_activity` is from
 whenever the app died. Closing that last gap needs a lock demanded at boot
 rather than at close.
 
-## Known risks
+## State a shell event writes does not outlive its request
 
-**State a shell event writes does not outlive its request.** Every
-`_native/api/events` POST is its own PHP request, so a container singleton is
-constructed fresh for each one. Two pieces of desktop state are held that way
-and neither accumulates:
+The transport has a second consequence, of the same family as the session one
+and with a different mechanism. The bundle serves the application through
+`php -S` (`vendor/nativephp/desktop/.../server/php.ts` starts it), so every
+`_native/api/events` POST is its own PHP process: the container is rebuilt, and
+a property is born at the start of the event and dies at the end of it. What a
+provider binds the holder as makes no difference — a singleton is a singleton
+for one request.
 
-- `SurfaceWorkerCrashAlert` keeps `exitTimestampsByAlias` on the listener and
-  escalates only at three exits inside five minutes. Each `ProcessExited`
-  arrives in a request of its own, so the array starts empty every time, the
-  count never reaches three, and **the worker-crash alert never fires**.
-- `WindowFocusState` is written by the `WindowFocused`/`WindowBlurred` listeners
-  and read by `SurfaceWorkerCrashAlert` before it pushes an OS toast. Every
-  request reads the constructed default, `true`, so even a reached escalation
-  would decide the window is in front of the reader and stay quiet.
+Two pieces of desktop state were held that way, both bound as singletons and
+both documented as needing to survive:
 
-Same family as the session defects above — state a shell event writes, read from
-somewhere that shell event cannot reach — and the same shape of fix: put it
-where the next request can see it. Not done here because it changes a
-user-visible notification that only a real bundle can judge.
+- `SurfaceWorkerCrashAlert` kept `exitTimestampsByAlias` on the listener and
+  escalates at three exits inside five minutes. Each `ProcessExited` arrived in
+  a request of its own, so the array started empty every time and the count
+  never reached two. **The worker-crash alert had never fired.**
+- `WindowFocusState` was written by the `WindowFocused`/`WindowBlurred`
+  listeners and read by two callers in requests those events never touch. Every
+  read got the constructed default, `true`. The watchdog's read would have
+  stayed quiet on an escalation it never reached; the other read is
+  `DispatchOsNotification::shouldFire()`, which fires only when the window is
+  **not** focused — so **no operating-system notification was ever delivered on
+  the desktop**, whatever the suppression decision said.
+
+Both now sit on `ShellState`, the same device-local store `ShellHandoff` is
+built on. The difference between the two is the read: a hand-off is *claimed*
+and spent, while these are values that are read repeatedly and stay.
+
+- **The crash window.** A per-alias list of exit timestamps, pruned to the
+  window on both the write and the read, and truncated to the newest three
+  stamps — the only ones that can decide "three in five minutes" — so a
+  crash-looping worker cannot grow the row. The row itself is written with a TTL
+  of the window, which is a janitor rather than the rule: exits a year apart are
+  already dropped by the prune before the TTL is consulted.
+- **The focus flag.** Absent reads as focused, because a window opens in front
+  of the reader and treating a launch as blurred pops an OS toast on top of the
+  in-app banner it duplicates. `TrackWindowFocus::handleBooted` clears the slot
+  on `ApplicationBooted`, so a shell killed while blurred does not leave `false`
+  behind for the next launch. That listener is registered above the bundle gate,
+  on the same terms as the file-open and lock listeners: it records a fact and
+  touches no Electron API, so the round-trip is provable off-bundle. Its
+  readers stay below the gate.
+
+`tests/Contracts/AShellEventKeepsNoStateTheNextEventCannotSeeArchTest.php` holds
+it, on the same call-graph walk as the session guard — both use
+`Tests\Helpers\ShellEventGraph` — and fails on any non-readonly property, static
+or instance, declared by a class a shell event can reach. Restoring either
+original makes it name that class and the listener it was reached from.
 
 ## First-launch route gate
 

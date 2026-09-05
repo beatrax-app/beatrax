@@ -53,7 +53,7 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
 use Modules\Desktop\Internal\Native\ShellHandoff;
-use Modules\Desktop\Internal\Native\WindowFocusState;
+use Modules\Desktop\Internal\Native\ShellState;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
@@ -61,6 +61,7 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 use Native\Desktop\Client\Client as NativeApiClient;
+use Native\Desktop\Events\App\ApplicationBooted;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
@@ -77,12 +78,12 @@ final class DesktopServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(AppMenuBuilder::class);
-        $this->app->singleton(WindowFocusState::class);
 
-        // Singleton: the rolling crash-counter state lives on the listener and must
-        // survive across every ProcessExited event.
-        $this->app->singleton(SurfaceWorkerCrashAlert::class);
-
+        // One cache repository for every device-local fact a shell event leaves
+        // behind. Neither WindowFocusState nor SurfaceWorkerCrashAlert is bound
+        // here: both were singletons carrying state across events that a
+        // per-request container cannot carry, and both now hold none.
+        $this->app->singleton(ShellState::class);
         $this->app->singleton(ShellHandoff::class);
 
         $this->app->singleton(PendingFileIntent::class);
@@ -192,6 +193,14 @@ final class DesktopServiceProvider extends ServiceProvider
         $events->listen(WindowHidden::class, [DemandLockOnWindowHideOrClose::class, 'handle']);
         $events->listen(WindowClosed::class, [DemandLockOnWindowHideOrClose::class, 'handle']);
 
+        // Above the gate for the same reason, and it earns it the same way: this
+        // listener records a fact and touches no Electron API. Its readers — the
+        // notification dispatcher, the crash watchdog — stay below, so all that
+        // changes off-bundle is that the round-trip becomes provable there.
+        $events->listen(ApplicationBooted::class, [TrackWindowFocus::class, 'handleBooted']);
+        $events->listen(WindowFocused::class, [TrackWindowFocus::class, 'handleFocused']);
+        $events->listen(WindowBlurred::class, [TrackWindowFocus::class, 'handleBlurred']);
+
         // Signing in and out are the only two moments the developer submenu's
         // answer changes, and the boot-time build never sees either.
         $events->listen(Login::class, [RebuildAppMenuOnAuthChange::class, 'handle']);
@@ -223,9 +232,6 @@ final class DesktopServiceProvider extends ServiceProvider
         if ($config->get('nativephp-internal.running') !== true) {
             return;
         }
-
-        $events->listen(WindowFocused::class, [TrackWindowFocus::class, 'handleFocused']);
-        $events->listen(WindowBlurred::class, [TrackWindowFocus::class, 'handleBlurred']);
 
         $events->listen(NotificationDeliverable::class, [DispatchOsNotification::class, 'handleNotificationDeliverable']);
         $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
