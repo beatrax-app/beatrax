@@ -634,14 +634,19 @@ final class MobilePairingScan extends Component
         }
 
         try {
-            // Same rule as the accept re-emit above: a confirmation that never
-            // left is a stalled ceremony, and the only thing separating it from
-            // a delivered one on this screen is this line.
-            $this->flashMessage = $this->frameSendNotice(
+            // Same rule as the accept re-emit: a confirmation that never left
+            // is a stalled ceremony. Set only, never cleared — that re-emit
+            // owns clearing, and wiping its "no road home" line because a
+            // confirm happened to go out restores the silence it was added for.
+            $notice = $this->frameSendNotice(
                 $gateway->sendConfirm($userId, (int) $this->pairingTokenId, $initiatorDeviceId, $session),
                 $lock,
                 $userId,
             );
+
+            if ($notice !== '') {
+                $this->flashMessage = $notice;
+            }
         } catch (Throwable $e) {
             $logger->warning('MobilePairingScan: cross-device PAIR_CONFIRM relay delivery failed.', [
                 'pairing_token_id' => $this->pairingTokenId,
