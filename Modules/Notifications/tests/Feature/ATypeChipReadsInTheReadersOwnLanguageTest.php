@@ -95,7 +95,7 @@ function chipWordsIn(string $locale): array
 
     $words = [];
     foreach (NotificationTrigger::cases() as $trigger) {
-        $words[$trigger->value] = NotificationCopy::typeChip($trigger->value)['word'];
+        $words[$trigger->value] = NotificationCopy::typeChip($trigger)['word'];
     }
 
     return $words;
@@ -185,18 +185,18 @@ it('answers the reader in front of it rather than the one it answered first', fu
 it('degrades a trigger this build cannot name to the neutral chip, in the readers language', function (): void {
     app()->setLocale('nl');
 
-    $unknown = NotificationCopy::typeChip('a_kind_a_later_release_writes');
-    $sealed = NotificationCopy::typeChip('');
+    $unknown = NotificationCopy::typeChip(NotificationTrigger::tryFrom('a_kind_a_later_release_writes'));
+    $sealed = NotificationCopy::typeChip(NotificationTrigger::tryFrom(''));
 
     expect($unknown)->toBe($sealed)
         ->and($unknown['glyph'])->toBe('◌')
         ->and($unknown['word'])->toBe('Melding')
         ->and($unknown['word'])->not->toContain('::')
-        ->and(NotificationCopy::names('a_kind_a_later_release_writes'))->toBeFalse();
+        ->and(NotificationTrigger::tryFrom('a_kind_a_later_release_writes'))->toBeNull();
 });
 
 it('keeps the envelope chip ending in its presentation selector', function (): void {
-    $glyph = NotificationCopy::typeChip(NotificationTrigger::ReceiptsFound->value)['glyph'];
+    $glyph = NotificationCopy::typeChip(NotificationTrigger::ReceiptsFound)['glyph'];
 
     expect(bin2hex($glyph))->toBe('e29c89efb88f')
         ->and($glyph)->toBe("\u{2709}\u{FE0F}");

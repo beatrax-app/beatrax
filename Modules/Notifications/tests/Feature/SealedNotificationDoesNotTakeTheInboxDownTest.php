@@ -107,7 +107,7 @@ it('returns a row rather than throwing when the keyring no longer opens', functi
     expect($rows)->toHaveCount(1);
     expect($rows[0]->triggerType)->toBe('');
     expect($rows[0]->unreadable)->toBeTrue();
-    expect($rows[0]->glyph)->toBe(NotificationCopy::typeChip('')['glyph']);
+    expect($rows[0]->glyph)->toBe(NotificationCopy::typeChip(null)['glyph']);
 });
 
 it('returns a row rather than throwing when the app lock withholds the key', function (): void {
@@ -133,8 +133,8 @@ it('renders /notifications and says the row is sealed rather than gone', functio
 });
 
 it('names an unrecognised trigger type with the neutral chip instead of throwing', function (): void {
-    expect(NotificationCopy::typeChip('a_kind_a_later_release_writes'))
-        ->toBe(NotificationCopy::typeChip(''));
-    expect(NotificationCopy::names('a_kind_a_later_release_writes'))->toBeFalse();
-    expect(NotificationCopy::names(NotificationTrigger::BudgetNudge->value))->toBeTrue();
+    expect(NotificationCopy::typeChip(NotificationTrigger::tryFrom('a_kind_a_later_release_writes')))
+        ->toBe(NotificationCopy::typeChip(null));
+    expect(NotificationTrigger::tryFrom('a_kind_a_later_release_writes'))->toBeNull();
+    expect(NotificationTrigger::tryFrom(NotificationTrigger::BudgetNudge->value))->toBe(NotificationTrigger::BudgetNudge);
 });

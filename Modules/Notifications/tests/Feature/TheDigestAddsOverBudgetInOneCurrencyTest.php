@@ -11,6 +11,8 @@ use Modules\Budgets\Public\Dto\BudgetProgressRow;
 use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\DigestCadence;
+use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\TopCategories;
@@ -98,7 +100,13 @@ function digestFxEmit(User $user, array $budgets): void
         emailScanHealth: null,
         upcoming: [],
         budgets: $budgets,
-        shortfallAhead: false,
+        shortfallRisk: ShortfallRisk::None,
+        netWorth: new NetWorth(
+            totalMinor: 0,
+            currency: Currency::Usd->value,
+            accounts: [],
+            hasExcludedAccounts: false,
+        ),
     );
 
     /** @var SuppressionEvaluator $suppression */

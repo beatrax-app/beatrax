@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -46,6 +47,32 @@ final readonly class ForecastHighlightsQuery
             ->where('starts_at', '<=', $horizon)
             ->where('ends_at', '>=', $today)
             ->count();
+    }
+
+    // The count alone cannot say whether the horizon has been looked at. A user
+    // whose forecast has never completed has no windows for the same reason a
+    // user with a healthy balance has none, and the position summary has to
+    // tell those two apart before it reports either as safety.
+    public function shortfallRiskForUser(User $user): ShortfallRisk
+    {
+        // The window is asked about first: it is itself proof that a run
+        // reached this horizon, so a shortfall still answers Ahead in the
+        // moment between the windows landing and the run row closing.
+        return match (true) {
+            $this->activeShortfallCountForUser($user) > 0 => ShortfallRisk::Ahead,
+            $this->hasCompletedTileRun($user) => ShortfallRisk::None,
+            default => ShortfallRisk::NotYetComputed,
+        };
+    }
+
+    private function hasCompletedTileRun(User $user): bool
+    {
+        return $this->db->connection()->table('forecast_runs')
+            ->where('user_id', $user->id)
+            ->whereNull('scenario_id')
+            ->where('horizon_days', self::TILE_HORIZON)
+            ->where('status', JobRunStatus::Complete->value)
+            ->exists();
     }
 
     public function forUser(User $user): ForecastHighlightsDto

@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Não há nada que precise da tua atenção.',
         'flow' => 'Entradas :in, saídas :out, líquido :net.',
+        'net_worth' => 'Património líquido :amount.',
         'over_budget' => ':amount acima do orçamento até agora.',
         'payments_due' => ':count pagamento vence neste período.|:count pagamentos vencem neste período.',
         'shortfall' => 'Aproxima-se um défice de tesouraria.',
+        'forecast_not_run' => 'Ainda não foi executada nenhuma previsão de tesouraria.',
     ],
 ];

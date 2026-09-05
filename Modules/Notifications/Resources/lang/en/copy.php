@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Nothing needs your attention.',
         'flow' => 'In :in, out :out, net :net.',
+        'net_worth' => 'Net worth :amount.',
         'over_budget' => ':amount over budget so far.',
         'payments_due' => ':count payment due this period.|:count payments due this period.',
         'shortfall' => 'A cash-flow shortfall is ahead.',
+        'forecast_not_run' => 'No cash-flow forecast has run yet.',
     ],
 ];

@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Ništa ne traži tvoju pažnju.',
         'flow' => 'Priljev :in, odljev :out, neto :net.',
+        'net_worth' => 'Neto vrijednost :amount.',
         'over_budget' => 'Dosad :amount iznad proračuna.',
         'payments_due' => ':count plaćanje dospijeva u ovom razdoblju.|:count plaćanja dospijevaju u ovom razdoblju.|:count plaćanja dospijeva u ovom razdoblju.',
         'shortfall' => 'Slijedi manjak sredstava.',
+        'forecast_not_run' => 'Prognoza novčanog toka još nije pokrenuta.',
     ],
 ];

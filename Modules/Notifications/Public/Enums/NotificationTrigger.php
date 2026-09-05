@@ -50,4 +50,33 @@ enum NotificationTrigger: string
             self::SavingsPrompt => true,
         };
     }
+
+    // No default arm, so a twelfth case is a static-analysis failure here
+    // rather than a row rendered under the placeholder glyph with only a log
+    // line saying which kind it was. That leaves the placeholder reachable by
+    // exactly one thing: a string no case can represent.
+    /**
+     * @return array{glyph: string, key: string}
+     *
+     * @link ../../../../.docs/conventions/emoji-presentation-selector.md
+     */
+    public function chip(): array
+    {
+        return match ($this) {
+            // The Receipt chip's envelope ends in an invisible U+FE0F; without
+            // it the two phone engines disagree about whether it is a picture
+            // or a glyph.
+            self::ReceiptsFound => ['glyph' => '✉️', 'key' => 'receipt'],
+            self::ImportFinished => ['glyph' => '⊕', 'key' => 'import'],
+            self::ManualEntryRecorded => ['glyph' => '€', 'key' => 'cash'],
+            self::MigrationFinished => ['glyph' => '⇥', 'key' => 'migration'],
+            self::DriftChanged => ['glyph' => '⚠', 'key' => 'drift'],
+            self::ForecastShortfall => ['glyph' => '▽', 'key' => 'shortfall'],
+            self::PaymentReminder => ['glyph' => '◷', 'key' => 'reminder'],
+            self::PositionDigest => ['glyph' => '◆', 'key' => 'digest'],
+            self::BudgetNudge => ['glyph' => '⊙', 'key' => 'budget'],
+            self::SavingsPrompt => ['glyph' => '◎', 'key' => 'savings'],
+            self::IcsStatementReady => ['glyph' => '▤', 'key' => 'statement'],
+        };
+    }
 }

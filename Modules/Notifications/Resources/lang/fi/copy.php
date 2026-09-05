@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Mikään ei vaadi huomiotasi.',
         'flow' => 'Sisään :in, ulos :out, netto :net.',
+        'net_worth' => 'Nettovarallisuus :amount.',
         'over_budget' => ':amount yli budjetin toistaiseksi.',
         'payments_due' => ':count maksu erääntyy tällä jaksolla.|:count maksua erääntyy tällä jaksolla.',
         'shortfall' => 'Edessä on kassavaje.',
+        'forecast_not_run' => 'Kassavirtaennustetta ei ole vielä ajettu.',
     ],
 ];

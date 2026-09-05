@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Tavo dėmesio niekas nereikalauja.',
         'flow' => 'Gauta :in, išleista :out, grynasis :net.',
+        'net_worth' => 'Grynoji vertė :amount.',
         'over_budget' => 'Iki šiol biudžetas viršytas :amount.',
         'payments_due' => 'Šį laikotarpį mokėtinas :count mokėjimas.|Šį laikotarpį mokėtini :count mokėjimai.|Šį laikotarpį mokėtina :count mokėjimų.',
         'shortfall' => 'Artėja lėšų trūkumas.',
+        'forecast_not_run' => 'Pinigų srautų prognozė dar nebuvo atlikta.',
     ],
 ];

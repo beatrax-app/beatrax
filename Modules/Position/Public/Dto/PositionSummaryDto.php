@@ -6,6 +6,8 @@ namespace Modules\Position\Public\Dto;
 
 use Modules\Budgets\Public\Dto\BudgetProgressRow;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
+use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -24,6 +26,7 @@ final class PositionSummaryDto extends Data
         public readonly ?EmailScanHealthTile $emailScanHealth,
         public readonly array $upcoming,
         public readonly array $budgets,
-        public readonly bool $shortfallAhead,
+        public readonly ShortfallRisk $shortfallRisk,
+        public readonly NetWorth $netWorth,
     ) {}
 }

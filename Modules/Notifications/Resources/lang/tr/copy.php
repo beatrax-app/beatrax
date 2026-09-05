@@ -43,8 +43,10 @@ return [
     'digest' => [
         'nothing_notable' => 'Dikkatini gerektiren bir şey yok.',
         'flow' => 'Giren :in, çıkan :out, net :net.',
+        'net_worth' => 'Net değer :amount.',
         'over_budget' => 'Şu ana kadar bütçenin :amount üzerinde.',
         'payments_due' => 'Bu dönemde :count ödeme var.',
         'shortfall' => 'Yaklaşan bir nakit akışı açığı var.',
+        'forecast_not_run' => 'Henüz bir nakit akışı tahmini çalıştırılmadı.',
     ],
 ];

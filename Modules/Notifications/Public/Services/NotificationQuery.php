@@ -13,6 +13,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Public\Dto\NotificationDto;
+use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -156,7 +157,7 @@ final readonly class NotificationQuery
         foreach ($rows as $row) {
             if ($row->unreadable) {
                 $unreadable[] = $row->id;
-            } elseif (! NotificationCopy::names($row->triggerType)) {
+            } elseif (NotificationTrigger::tryFrom($row->triggerType) === null) {
                 $unknown[$row->id] = $row->triggerType;
             }
         }
@@ -226,7 +227,7 @@ final readonly class NotificationQuery
         $title = $copy?->title() ?? self::toString($decrypted['title']);
         $body = $copy?->body() ?? self::toString($decrypted['body']);
 
-        $chip = NotificationCopy::typeChip($triggerType);
+        $chip = NotificationCopy::typeChip(NotificationTrigger::tryFrom($triggerType));
 
         return new NotificationDto(
             id: self::toString($row->id ?? null),
