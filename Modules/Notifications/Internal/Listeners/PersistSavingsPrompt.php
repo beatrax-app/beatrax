@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Listeners;
 
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
@@ -25,6 +26,7 @@ final readonly class PersistSavingsPrompt
         private RecurringSeriesQuery $recurring,
         private LoggerInterface $log,
         private NotificationCopyRenderer $copyRenderer,
+        private UrlGenerator $urls,
     ) {}
 
     public function handle(SavingsPromptDue $event): void
@@ -42,6 +44,10 @@ final readonly class PersistSavingsPrompt
                 ]),
             );
 
+            // The deep link is the series screen, not the merchant's cancellation
+            // page: on the desktop this value becomes the address of the
+            // application's own window when the notification is clicked, so an
+            // outside URL here is a page taking that window over.
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
                 triggerType: NotificationTrigger::SavingsPrompt,
@@ -49,7 +55,7 @@ final readonly class PersistSavingsPrompt
                 occurrence: $event->insightKey,
                 copy: $copy,
                 params: $this->targetParams($event),
-                deepLinkRoute: $event->actionUrl,
+                deepLinkRoute: $this->urls->route('recurring.series.show', ['seriesId' => $event->seriesId]),
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {

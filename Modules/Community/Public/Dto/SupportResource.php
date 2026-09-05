@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Modules\Community\Public\Dto;
 
 use Modules\Community\Internal\Support\RecipientAddress;
+use Modules\Core\Public\Enums\ExternalUrlRefusal;
 use Spatie\LaravelData\Data;
 
 final class SupportResource extends Data
 {
+    /**
+     * @param  array<string, ExternalUrlRefusal>  $withheld  corpus field key => the refusal that stopped it becoming a link
+     */
     public function __construct(
         public readonly string $name,
         public readonly string $type,
@@ -23,8 +27,12 @@ final class SupportResource extends Data
         public readonly ?string $cancelEmailSubject = null,
         public readonly ?string $cancelEmailBody = null,
         public readonly ?string $notes = null,
+        public readonly array $withheld = [],
     ) {}
 
+    // A withheld link counts: the card exists to say what this merchant offers,
+    // and "we hold a cancellation route we will not send you to" is something
+    // the reader can act on, where a card that never renders is not.
     public function hasAny(): bool
     {
         return $this->cancelUrl !== null
@@ -34,7 +42,8 @@ final class SupportResource extends Data
             || $this->applyUrl !== null
             || $this->rightsUrl !== null
             || $this->phone !== null
-            || $this->cancelEmailTo !== null;
+            || $this->cancelEmailTo !== null
+            || $this->withheld !== [];
     }
 
     public function mailtoHref(): ?string

@@ -6,13 +6,13 @@ namespace Modules\Community\Internal\Corpus;
 
 use Modules\Community\Internal\Support\RecipientAddress;
 use Modules\Community\Public\Dto\MerchantContactDto;
+use Modules\Core\Public\Enums\ExternalUrlRefusal;
+use Modules\Core\Public\Support\ExternalUrl;
 use Modules\Core\Public\Support\PatternScan;
 use Psr\Log\LoggerInterface;
 
 final readonly class MerchantContactReader
 {
-    public const int URL_MAX = 512;
-
     private const int PHONE_MAX = 32;
 
     private const int PHONE_MIN_DIGITS = 3;
@@ -48,18 +48,18 @@ final readonly class MerchantContactReader
      */
     private function url(array $raw, string $key, string $pattern): ?string
     {
-        // HTTPS-only and short enough to land verbatim: these render as links
-        // a user clicks to cancel a real contract, so a downgradeable scheme
-        // or a silently truncated URL is a user-facing hazard.
+        // Judged by the same gate as every other externally-supplied URL: these
+        // render as links a user clicks to cancel a real contract, and this
+        // reader used to carry its own copy of the rules while the templates
+        // downstream of it carried a laxer one.
         $value = self::trimmed($raw, $key);
         if ($value === null) {
             return null;
         }
 
-        if (! str_starts_with($value, 'https://')
-            || mb_strlen($value) > self::URL_MAX
-            || filter_var($value, FILTER_VALIDATE_URL) === false) {
-            $this->reject($key, $pattern);
+        $refusal = ExternalUrl::refusalFor($value);
+        if ($refusal !== null) {
+            $this->reject($key, $pattern, $refusal);
 
             return null;
         }
@@ -116,11 +116,12 @@ final readonly class MerchantContactReader
         return $value;
     }
 
-    private function reject(string $field, string $pattern): void
+    private function reject(string $field, string $pattern, ?ExternalUrlRefusal $refusal = null): void
     {
         $this->logger->warning('MerchantContactReader: dropped an unusable corpus contact value.', [
             'pattern' => $pattern,
             'field' => $field,
+            'refusal' => $refusal?->value,
         ]);
     }
 

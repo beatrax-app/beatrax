@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Community\Internal\Corpus\MerchantContactReader;
+use Modules\Core\Public\Support\ExternalUrl;
 use Psr\Log\NullLogger;
 
 function merchantContactReader(): MerchantContactReader
@@ -49,14 +50,14 @@ it('drops a non-https URL', function (string $url): void {
 ]);
 
 it('drops a URL longer than the column can hold verbatim', function (): void {
-    $tooLong = 'https://example.com/'.str_repeat('a', MerchantContactReader::URL_MAX);
+    $tooLong = 'https://example.com/'.str_repeat('a', ExternalUrl::MAX_LENGTH);
 
     expect(merchantContactReader()->read(['support_url' => $tooLong], 'ALPHA'))->toBeNull();
 });
 
 it('keeps a URL exactly at the length ceiling', function (): void {
     $prefix = 'https://example.com/';
-    $atLimit = $prefix.str_repeat('a', MerchantContactReader::URL_MAX - strlen($prefix));
+    $atLimit = $prefix.str_repeat('a', ExternalUrl::MAX_LENGTH - strlen($prefix));
 
     expect(merchantContactReader()->read(['support_url' => $atLimit], 'ALPHA')?->supportUrl)->toBe($atLimit);
 });

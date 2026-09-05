@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Πώς να βρεις βοήθεια',
         'heading_merchant' => 'Υποστήριξη και ακύρωση',
         'cancel_by_email' => 'Ακύρωση μέσω email',
+        'withheld' => 'ο σύνδεσμος δεν προσφέρεται',
     ],
 ];

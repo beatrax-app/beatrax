@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Yardım alma',
         'heading_merchant' => 'Destek ve iptal',
         'cancel_by_email' => 'E-posta ile iptal et',
+        'withheld' => 'bağlantı sunulmuyor',
     ],
 ];

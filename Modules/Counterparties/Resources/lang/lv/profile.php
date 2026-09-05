@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Kā saņemt palīdzību',
         'heading_merchant' => 'Atbalsts un atteikšanās',
         'cancel_by_email' => 'Atteikties pa e-pastu',
+        'withheld' => 'saite netiek piedāvāta',
     ],
 ];

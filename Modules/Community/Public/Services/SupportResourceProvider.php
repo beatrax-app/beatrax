@@ -7,7 +7,10 @@ namespace Modules\Community\Public\Services;
 use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Internal\Support\RecipientAddress;
 use Modules\Community\Public\Dto\SupportResource;
+use Modules\Core\Public\Enums\ExternalUrlRefusal;
+use Modules\Core\Public\Support\ExternalUrl;
 use Modules\Core\Public\Support\PatternScan;
+use Psr\Log\LoggerInterface;
 
 final class SupportResourceProvider
 {
@@ -20,6 +23,7 @@ final class SupportResourceProvider
 
     public function __construct(
         private readonly CorpusYamlReader $reader,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -187,23 +191,32 @@ final class SupportResourceProvider
             return null;
         }
 
+        $withheld = [];
+        $cancel = $this->url($raw, 'cancel_url', $name, $withheld);
+        $support = $this->url($raw, 'support_url', $name, $withheld);
+        $cheaper = $this->url($raw, 'cheaper_url', $name, $withheld);
+        $help = $this->url($raw, 'help_url', $name, $withheld);
+        $apply = $this->url($raw, 'apply_url', $name, $withheld);
+        $rights = $this->url($raw, 'rights_url', $name, $withheld);
+
         $email = is_array($raw['cancel_email'] ?? null) ? $raw['cancel_email'] : [];
         $to = self::recipient($email);
 
         return new SupportResource(
             name: $name,
             type: $type,
-            cancelUrl: self::url($raw, 'cancel_url'),
-            supportUrl: self::url($raw, 'support_url'),
-            cheaperUrl: self::url($raw, 'cheaper_url'),
-            helpUrl: self::url($raw, 'help_url'),
-            applyUrl: self::url($raw, 'apply_url'),
-            rightsUrl: self::url($raw, 'rights_url'),
+            cancelUrl: $cancel,
+            supportUrl: $support,
+            cheaperUrl: $cheaper,
+            helpUrl: $help,
+            applyUrl: $apply,
+            rightsUrl: $rights,
             phone: self::str($raw, 'phone'),
             cancelEmailTo: $to,
             cancelEmailSubject: $to === null ? null : self::str($email, 'subject'),
             cancelEmailBody: $to === null ? null : self::str($email, 'body'),
             notes: self::str($raw, 'notes'),
+            withheld: $withheld,
         );
     }
 
@@ -233,17 +246,31 @@ final class SupportResourceProvider
 
     /**
      * @param  array<int|string, mixed>  $array
+     * @param  array<string, ExternalUrlRefusal>  $withheld  corpus field key => refusal, appended to
      */
-    private static function url(array $array, string $key): ?string
+    private function url(array $array, string $key, string $name, array &$withheld): ?string
     {
-        // Only an http(s) value passes, so a `javascript:` corpus value can
-        // never reach a consumer as a clickable href.
         $value = self::str($array, $key);
         if ($value === null) {
             return null;
         }
 
-        return str_starts_with($value, 'https://') || str_starts_with($value, 'http://') ? $value : null;
+        $refusal = ExternalUrl::refusalFor($value);
+        if ($refusal === null) {
+            return $value;
+        }
+
+        // Recorded, not dropped: a cancellation route that simply vanishes is
+        // indistinguishable from a merchant that never published one, and the
+        // reader is the person who would otherwise go looking for it.
+        $withheld[$key] = $refusal;
+        $this->logger->warning('SupportResourceProvider: withheld a corpus link.', [
+            'name' => $name,
+            'field' => $key,
+            'refusal' => $refusal->value,
+        ]);
+
+        return null;
     }
 
     /**
