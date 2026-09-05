@@ -236,7 +236,7 @@ final class SensitiveColumnScan
 
             foreach (PatternScan::allWithOffsets('/[\'"]'.$quoted.'[\'"]\s*=>/', $arguments)[0] as $key) {
                 $value = self::valueExpression($arguments, $key[1] + strlen($key[0]));
-                $cleared = self::codedBy($contents, $arguments, $value, $column, $sealedPairs);
+                $cleared = self::codedBy($contents, $arguments, $value, $key[1], $column, $sealedPairs);
 
                 $hits[] = self::hit(
                     $relative,
@@ -295,14 +295,14 @@ final class SensitiveColumnScan
     /**
      * @param  list<string>  $sealedPairs
      */
-    private static function codedBy(string $contents, string $arguments, string $value, string $column, array $sealedPairs): ?string
+    private static function codedBy(string $contents, string $arguments, string $value, int $keyOffset, string $column, array $sealedPairs): ?string
     {
         if (PatternScan::matches(self::CODEC_CALLS, $value)) {
             return 'the value routes through the codec';
         }
 
         foreach (self::sealedTablesFor($column, $sealedPairs) as $table) {
-            if (PatternScan::matches('/encryptAttrs\(\s*[\'"]'.preg_quote($table, '/').'[\'"]/', $arguments)) {
+            if (self::sealedByAttrsAt($arguments, $table, $keyOffset)) {
                 return 'the array is sealed by encryptAttrs('.$table.')';
             }
         }
@@ -313,6 +313,29 @@ final class SensitiveColumnScan
         }
 
         return null;
+    }
+
+    // The key has to sit INSIDE that encryptAttrs() call's own arguments. A
+    // write can splice a sealed array together with a raw one — `encryptAttrs(…)
+    // + ['description' => $plain]` — and reading the whole call for the marker
+    // would clear the raw half on the strength of the sealed half.
+    private static function sealedByAttrsAt(string $arguments, string $table, int $keyOffset): bool
+    {
+        $pattern = '/encryptAttrs\(\s*[\'"]'.preg_quote($table, '/').'[\'"]/';
+
+        foreach (PatternScan::allWithOffsets($pattern, $arguments)[0] as $call) {
+            $open = strpos($arguments, '(', $call[1]);
+            if ($open === false) {
+                continue;
+            }
+
+            $inner = self::balanced($arguments, $open);
+            if ($keyOffset > $open && $keyOffset < $open + strlen($inner)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -350,6 +373,29 @@ final class SensitiveColumnScan
         return $end === false ? substr($contents, $start) : substr($contents, $start, $end - $start);
     }
 
+    // A comment is not code, and an apostrophe in one is not a string. `the
+    // row's own sealed iban` in a `//` line opened a string literal that ran to
+    // the next quote hundreds of lines below, so the reader swallowed a later
+    // write whole and answered about the wrong call.
+    private static function skipTrivia(string $source, int $i): int
+    {
+        $two = substr($source, $i, 2);
+
+        if ($two === '//' || ($source[$i] === '#' && $two !== '#[')) {
+            $end = strpos($source, "\n", $i);
+
+            return $end === false ? strlen($source) : $end;
+        }
+
+        if ($two === '/*') {
+            $end = strpos($source, '*/', $i + 2);
+
+            return $end === false ? strlen($source) : $end + 1;
+        }
+
+        return $i;
+    }
+
     // The balanced argument text, not a fixed character budget. The previous
     // reading stopped at 600 characters, so a long enough insert() hid its own
     // last columns from the scan and reported nothing.
@@ -371,6 +417,13 @@ final class SensitiveColumnScan
                 if ($char === $quote) {
                     $quote = null;
                 }
+
+                continue;
+            }
+
+            $skipped = self::skipTrivia($contents, $i);
+            if ($skipped !== $i) {
+                $i = $skipped;
 
                 continue;
             }
@@ -414,6 +467,13 @@ final class SensitiveColumnScan
                 if ($char === $quote) {
                     $quote = null;
                 }
+
+                continue;
+            }
+
+            $skipped = self::skipTrivia($arguments, $i);
+            if ($skipped !== $i) {
+                $i = $skipped;
 
                 continue;
             }
