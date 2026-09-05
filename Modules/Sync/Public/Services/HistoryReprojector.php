@@ -224,7 +224,7 @@ final readonly class HistoryReprojector
     // only the self-healing half would leave the stuck one invisible.
     public function backlogState(int $userId, Session $session, ?string $since, ?string $lastFingerprint): SyncBacklogState
     {
-        if (! $this->anyRecoverableQuarantine($userId)) {
+        if (! $this->recoverableQuarantine($userId)->exists()) {
             return SyncBacklogState::None;
         }
 
@@ -424,11 +424,6 @@ final readonly class HistoryReprojector
         }
 
         return $query->exists();
-    }
-
-    private function anyRecoverableQuarantine(int $userId): bool
-    {
-        return $this->recoverableQuarantine($userId)->exists();
     }
 
     private function recoverableQuarantine(int $userId): Builder
