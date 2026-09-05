@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Onboarding\Internal\Services;
 
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
+
 final class WizardStepRegistry
 {
     /** @var list<string> */
@@ -62,5 +64,29 @@ final class WizardStepRegistry
     public function isSkippable(string $stepKey): bool
     {
         return in_array($stepKey, self::SKIPPABLE, true);
+    }
+
+    // "Prior" is this list's order, so the jump gate lives with the order rather
+    // than in the one component that used to hold it: the resume resolver asks
+    // the same question when it picks a step to reopen, and a second copy of the
+    // rule is a second answer waiting to disagree with this one.
+    /**
+     * @param  array<string, array{status: string, completed_at: ?string}>  $progress
+     */
+    public function isReachable(string $stepKey, array $progress): bool
+    {
+        $targetIndex = array_search($stepKey, self::STEPS, strict: true);
+        if ($targetIndex === false) {
+            return false;
+        }
+
+        for ($i = 0; $i < $targetIndex; $i++) {
+            $priorStatus = $progress[self::STEPS[$i]]['status'] ?? WizardStepStatus::Pending->value;
+            if ($priorStatus !== WizardStepStatus::Done->value && $priorStatus !== WizardStepStatus::Skipped->value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

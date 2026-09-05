@@ -33,6 +33,7 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountWriter;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Exceptions\EveryStagedRunWasRefusedException;
 use Modules\Onboarding\Internal\Services\StartingBalanceRule;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Psr\Log\LoggerInterface;
@@ -133,7 +134,15 @@ final class FirstImportStep extends Component
             $balanceConfirmations = $this->acceptedBalanceConfirmations($balanceRule);
 
             $db->connection()->transaction(function () use ($db, $confirmImport, $user, $now, $runIdsToCommit, $logger): void {
-                $this->confirmEachStagedRun($confirmImport, $user, $runIdsToCommit, $logger);
+                $confirmed = $this->confirmEachStagedRun($confirmImport, $user, $runIdsToCommit, $logger);
+
+                // Throwing is what rolls the progress row back with the import
+                // that never happened: returning here would leave the step
+                // marked done over zero committed transactions.
+                if ($confirmed === 0) {
+                    throw new EveryStagedRunWasRefusedException(count($runIdsToCommit));
+                }
+
                 $this->persistCommit($db, $user, $now);
             });
 
@@ -146,6 +155,14 @@ final class FirstImportStep extends Component
             $this->dispatchPostCommit($app, $logger, $user->id);
 
             $this->dispatch('wizard.step.completed');
+        } catch (EveryStagedRunWasRefusedException $everyRunRefused) {
+            $logger->error('FirstImportStep: every staged run was refused at commit, so nothing was imported.', [
+                'runs_offered' => $everyRunRefused->runsOffered,
+                'runs_refused' => $everyRunRefused->runsOffered,
+            ]);
+            $this->commitError = Lang::get('onboarding::first_import.errors.commit_failed');
+
+            return;
         } catch (Throwable $e) {
             $logger->error('FirstImportStep: commit-everything failed.', [
                 ...SafeExceptionContext::describe($e),
@@ -208,11 +225,13 @@ final class FirstImportStep extends Component
     /**
      * @param  list<int>  $runIdsToCommit
      */
-    private function confirmEachStagedRun(ConfirmsImports $confirmImport, User $user, array $runIdsToCommit, LoggerInterface $logger): void
+    private function confirmEachStagedRun(ConfirmsImports $confirmImport, User $user, array $runIdsToCommit, LoggerInterface $logger): int
     {
+        $confirmed = 0;
         foreach ($runIdsToCommit as $runId) {
             try {
                 ($confirmImport)($runId, $user, dispatchChain: false);
+                $confirmed++;
             } catch (ImportNotConfirmableException|PreviewExpiredException $refused) {
                 $logger->warning('FirstImportStep: a staged run was refused at commit and left for a re-upload.', [
                     'import_run_id' => $runId,
@@ -220,6 +239,8 @@ final class FirstImportStep extends Component
                 ]);
             }
         }
+
+        return $confirmed;
     }
 
     /**

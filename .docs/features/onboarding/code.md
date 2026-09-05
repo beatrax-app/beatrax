@@ -11,6 +11,8 @@ Modules/Onboarding/
 │   │   └── WizardStepStatus.php
 │   ├── Events/
 │   │   └── WizardCompleted.php
+│   ├── Exceptions/
+│   │   └── EveryStagedRunWasRefusedException.php
 │   ├── Services/
 │   │   ├── WizardStepRegistry.php
 │   │   ├── WizardProgressQuery.php
@@ -91,12 +93,21 @@ every class below as internal.
   as `skipped`, not `pending`, so shipping a new step does not
   re-open a closed wizard.
 - `Internal/Services/ResumeStepResolver::resolve(int $userId):
-  string` — the first `in_progress` step key, else the first
-  `pending` one, else `''`. The empty string is the "nothing left
-  to resume" answer; it is not the `done` step key.
+  string` — the first `in_progress` step key the jump gate
+  admits, else the earliest such `pending` one, else `''`. The
+  empty string is the "nothing left to resume" answer; it is not
+  the `done` step key.
+- `Internal/Services/WizardStepRegistry::isReachable(string
+  $stepKey, array $progress): bool` — the jump gate itself, in
+  its one home. True when the key is in `steps()` and every key
+  before it is `done` or `skipped`.
 - `Internal/Events/WizardCompleted` — `(int $userId)`, dispatched
   by `DoneStep::finish()` before it redirects to `/`. Nothing
   listens to it today; it exists as the seam.
+- `Internal/Exceptions/EveryStagedRunWasRefusedException` —
+  `(int $runsOffered)`, raised inside `commitEverything()`'s
+  transaction when the confirm took none of the runs it was
+  offered, so the rollback keeps the step off `done`.
 - `Internal/Listeners/InitializeWizardProgressOnInstall::handle(UserInstalled
   $event)` — runs the initializer for the just-installed user.
 - `Internal/Http/Livewire/SetupWizard` — parent SFC. Resolves
@@ -143,8 +154,8 @@ Migrations:
 
 - `2026_05_26_000001_create_wizard_progress_table.php` —
   initial create with `UNIQUE(user_id, step_key)` and an
-  `INDEX(user_id, status)` for `ResumeStepResolver`, which asks
-  for this user's `in_progress` step on every wizard request.
+  `INDEX(user_id, status)` for the per-user status map every
+  wizard request reads before it resolves a step.
   It also installs two SQLite triggers rejecting a `status`
   outside `pending` / `in_progress` / `done` / `skipped`, so the
   enum is enforced by the database and not only by PHP.

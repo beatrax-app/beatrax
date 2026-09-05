@@ -23,6 +23,13 @@ beforeEach(function (): void {
 });
 
 it('returns the step_key of the in_progress row when one exists', function (): void {
+    // Priors done, because an in_progress step the jump guard would refuse is
+    // the separate case below rather than this one.
+    DB::table('wizard_progress')
+        ->where('user_id', $this->user->id)
+        ->whereIn('step_key', ['welcome', 'connect-bank', 'connect-paypal'])
+        ->update(['status' => 'done']);
+
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'connect-card')
@@ -57,6 +64,42 @@ it('skips pending steps that appear before a later-pending step when earlier one
 
     // Registry order is welcome → connect-bank → connect-paypal → …
     expect($resolver->resolve($this->user->id))->toBe('connect-paypal');
+});
+
+// A step inserted into the registry ahead of the one that was in progress
+// leaves that step behind a gate it cannot open, and F2's own resume clause
+// answers it with the earliest step the jump guard would let the reader reach.
+it('falls back to the earliest reachable pending step when the in_progress step is unreachable', function (): void {
+    DB::table('wizard_progress')
+        ->where('user_id', $this->user->id)
+        ->where('step_key', 'welcome')
+        ->update(['status' => 'done']);
+
+    DB::table('wizard_progress')
+        ->where('user_id', $this->user->id)
+        ->where('step_key', 'connect-paypal')
+        ->update(['status' => 'in_progress']);
+
+    /** @var ResumeStepResolver $resolver */
+    $resolver = $this->app->make(ResumeStepResolver::class);
+
+    // connect-bank sits between the two and is still pending.
+    expect($resolver->resolve($this->user->id))->toBe('connect-bank');
+});
+
+// 'done' is a real step key rather than a sentinel, so a user whose last row
+// has never been completed still resumes onto it; the empty string is reserved
+// for the state where nothing is left at all.
+it('returns the terminal step key while its own row is still pending', function (): void {
+    DB::table('wizard_progress')
+        ->where('user_id', $this->user->id)
+        ->where('step_key', '!=', 'done')
+        ->update(['status' => 'done']);
+
+    /** @var ResumeStepResolver $resolver */
+    $resolver = $this->app->make(ResumeStepResolver::class);
+
+    expect($resolver->resolve($this->user->id))->toBe('done');
 });
 
 it('returns the empty-string sentinel when every step is done or skipped', function (): void {
