@@ -47,7 +47,11 @@ it('offers the account picker its currencies in the reader language', function (
 
     /** @var array<string, string> $options */
     $options = Livewire::actingAs($user)
-        ->test(AccountCurrencyEditor::class, ['accountId' => $account->id])
+        ->test(AccountCurrencyEditor::class, [
+            'accountId' => $account->id,
+            'accountName' => $account->name,
+            'currency' => $account->default_currency,
+        ])
         ->viewData('currencyOptions');
 
     expect($options['GBP'])->toBe('Britse pond')

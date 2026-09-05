@@ -79,10 +79,56 @@ function seededWordingFiles(): array
     return array_values($files);
 }
 
-/** @return list<string> the bundled corpus files, relative to the repo root */
+// Every bundled corpus tree, and whether its entries carry a `key` — the thing a
+// row stores and a screen re-resolves it by. Only a keyed tree is this rule's
+// subject; the rest reach a screen through a different seam, and two of them
+// reach it in the jurisdiction's language and are recorded here as open.
+const CORPUS_TREES = [
+    'tax' => [
+        'keyed' => true,
+        'reason' => 'corpus_key is stored on tax_deduction_categories and read back for display',
+    ],
+    'merchants' => [
+        'keyed' => false,
+        'reason' => 'pattern => a trading name — a proper noun that reads the same in every language, and the Counterparties seam already treats it as the entity\'s own words',
+    ],
+    'government' => [
+        'keyed' => false,
+        'reason' => 'pattern => the registered name of a public body — a proper noun, as above',
+    ],
+    'bank-fees' => [
+        'keyed' => false,
+        'reason' => 'OPEN, not fixed here: pattern => a fee word in the jurisdiction language ("Bankkosten", "Rente"), which is not a proper noun. It reaches a screen as a counterparty display name, so it belongs to the CounterpartyDefaultName provenance seam rather than this one',
+    ],
+    'support' => [
+        'keyed' => false,
+        'reason' => 'OPEN, not fixed here: `notes` is a paragraph of cancellation guidance written in the jurisdiction language, rendered on the subscription support panel',
+    ],
+];
+
+/** @return list<string> the bundled corpus files of every keyed tree */
 function seededWordingCorpora(): array
 {
-    $paths = glob(base_path('resources/corpus/*/*.yaml')) ?: [];
+    $paths = [];
+    foreach (CORPUS_TREES as $tree => $entry) {
+        if ($entry['keyed'] === true) {
+            $paths = array_merge($paths, glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: []);
+        }
+    }
+    sort($paths);
+
+    return array_values($paths);
+}
+
+/** @return list<string> every corpus file whose tree is declared unkeyed */
+function seededWordingUnkeyedCorpora(): array
+{
+    $paths = [];
+    foreach (CORPUS_TREES as $tree => $entry) {
+        if ($entry['keyed'] === false) {
+            $paths = array_merge($paths, glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: []);
+        }
+    }
     sort($paths);
 
     return array_values($paths);
@@ -181,6 +227,47 @@ it('resolves every seeded currency code in English and Dutch', function (): void
     ));
 
     expect($missing)->toBe([], 'seeded currency codes with no line to resolve to: '.implode(', ', $missing));
+});
+
+it('classifies every bundled corpus tree', function (): void {
+    $trees = array_values(array_filter(
+        scandir(base_path('resources/corpus')) ?: [],
+        static fn (string $entry): bool => $entry !== '.' && $entry !== '..'
+            && is_dir(base_path('resources/corpus/'.$entry)),
+    ));
+    sort($trees);
+
+    $declared = array_keys(CORPUS_TREES);
+    sort($declared);
+
+    expect($trees)->toBe($declared, implode("\n", [
+        'A corpus tree is bundled that this rule has never been told about. Say whether its',
+        'entries carry a `key` a row stores and a screen re-resolves. If they do, it owes',
+        'English and Dutch wording like the tax corpus; if they do not, say what carries them',
+        'into the reader\'s language instead.',
+    ]));
+});
+
+// The classification has to stay true: a tree declared unkeyed that grows a
+// `key` has quietly become this rule's subject without being checked.
+it('finds no key in a tree declared unkeyed', function (): void {
+    $keyed = [];
+    foreach (seededWordingUnkeyedCorpora() as $path) {
+        /** @var array<array-key, mixed> $parsed */
+        $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = is_array($parsed['entries'] ?? null) ? $parsed['entries'] : [];
+        foreach ($rows as $row) {
+            if (isset($row['key'])) {
+                $keyed[] = str_replace(base_path().'/', '', $path);
+
+                break;
+            }
+        }
+    }
+
+    expect($keyed)->toBe([], 'a tree declared unkeyed now carries a key: '.implode(', ', $keyed));
 });
 
 // The corpus carries its own wording rather than a lang group: 398 entries
