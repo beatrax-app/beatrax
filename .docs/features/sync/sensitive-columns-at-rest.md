@@ -846,10 +846,15 @@ human wrote — and none of them was on any list:
 - **`merchant_aliases.generalized_pattern`** is the one that looks sealable and is not.
   Nothing predicates on it in SQL: `MerchantNameResolver` loads every alias for the user and
   matches in PHP with `CorpusPatternMatcher::containsToken`, and its
-  `index(['user_id','generalized_pattern'])` is dead weight for equality. But it is the
-  generaliser run over `pattern`, which carries the UNIQUE above — so sealing it leaves the
-  string it was derived from readable one column over. That is the objection that keeps
-  `accounts.name` beside `accounts.slug`, and it applies here unchanged. (A live
+  `index(['user_id','generalized_pattern'])` is dead weight for equality. So it **can** be
+  sealed. It is on this list because sealing it would protect nothing, and the mechanism
+  settles it: `PatternGeneralizer::generalize()` splits on whitespace, **drops** the tokens
+  matching a card tail, a terminal id, a provenance prefix, an inline amount or a date, then
+  lowercases what survives. It adds nothing. Every token in `generalized_pattern` is therefore
+  a verbatim token of `pattern`, which carries the UNIQUE above and provably cannot be sealed
+  — so the ciphertext would sit one column over from its own plaintext superset. The tokens
+  it drops are the identifying numerics, which makes this the **less** revealing of the pair,
+  not the more. Same objection that keeps `accounts.name` beside `accounts.slug`. (A live
   `where('generalized_pattern', '!=', '')` does exist, in `CommunityCorpusQuery` — against
   `community_merchant_mappings`, a different table with its own column. A grep on the column
   name alone reads it as a hit here.)
