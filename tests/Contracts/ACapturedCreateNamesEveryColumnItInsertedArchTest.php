@@ -5,18 +5,16 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\PatternScan;
 
 // The comparison is whole-file, so a file inserting into one table and
-// announcing an edit to another reads as a create that lost its columns. These
-// rows travel whole instead of as a hand-written payload, each with the seam
-// that sends every column and a pattern re-run against it.
-// Pinned per column, so a fourth unannounced one in the same file still fails.
-const CREATES_CAPTURED_WHOLESALE = [
-    'Migration/Internal/Pipeline/PromoteStagingToDomain.php' => [
-        'columns' => ['raw_file_path', 'sha256', 'uploaded_at'],
-        'reason' => "the only create event this file dispatches names `transactions`; the `import_runs` row it inserts travels as a parent of those transactions, captured by ImportSyncCapture off the live foreign key and written out column by column. All three are in the registry's `_create_required` for the table, so they cannot be struck from it either",
-        'announcedBy' => 'Modules/Sync/Internal/OpLog/OpLogBackfiller.php',
-        'proves' => '/writeCreateRow\(\$table, \$pk, \$this->plaintext->fields\(/',
-    ],
-];
+// announcing an edit to another reads as a create that lost its columns. A row
+// that travels whole instead of as a hand-written payload is pinned here, per
+// column, with the seam that sends every column and a pattern re-run against it
+// — so a fourth unannounced column in the same file still fails.
+//
+// Empty, and that is the current state of the tree rather than a disabled rule:
+// the one entry it held was PromoteStagingToDomain's `import_runs` insert, and
+// that file now announces nothing at all, which puts it outside what this rule
+// compares. The rule still walks every file under Modules/.
+const CREATES_CAPTURED_WHOLESALE = [];
 
 // A create payload is written by hand beside the insert it describes, and the
 // two drift: envelope_moves shipped a `memo` the reader typed straight into

@@ -191,11 +191,48 @@ None of the three source formats carry a transaction time-of-day, so
 dedup tuple relies on `bookedAt`'s second-resolution to disambiguate two
 otherwise-identical same-day rows, feeding it the same midnight value for
 every row would collapse two genuinely distinct transactions into one.
-`PromoteStagingToDomain` seeds `bookedAt` with a deterministic sub-day offset
-derived from the staged row's own stable primary key, so two distinct staged
-rows always get distinct fingerprints — `postedAt`/`valueDate` stay the exact
+`SameFingerprintOrdinals` hands each staged row its position among the rows
+that would otherwise fingerprint identically — same account, date, payee,
+amount and currency — and `PromoteStagingToDomain` seeds `bookedAt` with that
+number of seconds past midnight. `postedAt`/`valueDate` stay the exact
 user-facing date; only the internal, never-displayed `bookedAt` carries the
 synthetic offset.
+
+## A row re-exported under a new identity
+
+The offset above used to be the staged row's own database id. That id is
+minted per run, so **the same transaction staged twice never fingerprinted the
+same twice** — which meant the fingerprint dedupe could not recognise a row
+this device already held.
+
+Reaching that costs one ordinary action. A YNAB4 register row's identity is
+`account | date | payee | category group | category`; its fingerprint is
+`account | dates | amount | counterparty`. Recategorise a transaction in the
+old app and re-export — a tidy-up before migrating — and the row arrives under
+an identity this device has never seen, carrying the fingerprint of a row it
+already holds. Under the old offset that fingerprint did not match, and the
+reader ended up with two €45 Albert Heijn rows on 15 January and a balance €45
+short.
+
+The ordinal is now computed from source values alone, in the order the export
+states them, and counted over **every** staged row including the ones the run
+skips as already mapped — a row's position among its own kind only holds if
+the rows ahead of it are counted whether or not this run promotes them. Two
+devices reading one export compute the same number.
+
+`persistPromotedRows` asks which fingerprints the ledger held **before** it
+records the batch. That is the only thing separating a row this run created
+from one the reader has had for a year: it decides whether the reconciled lock
+applies (see below), and it keeps the results screen from reporting a
+deduplicated row as imported.
+
+A row whose fingerprint resolves to one the reader has **reconciled** is not
+re-stamped with the source's cleared flag. `TransactionStatusWriter` refuses
+it, and the run records an unmapped item saying so — a statement the reader
+matched by hand is not something a file may quietly take back.
+
+`Modules/Migration` first ships in 2.0, so no installed version carries rows
+whose `bookedAt` was derived the old way.
 
 ## Format parsers
 

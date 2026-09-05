@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => "Cette transaction est entrée en collision avec une autre transaction déjà enregistrée (empreinte identique) et n'a pas été importée.",
+        'reconciled_status_kept' => "Le statut de rapprochement de la source n'a pas pu être appliqué — cette transaction est rapprochée dans Beatrax, et seule l'annulation du rapprochement le change. Laissé inchangé.",
         'split_legs_without_category' => ":count ligne de la ventilation sur :legs n'a pas de catégorie, et une ligne ne peut pas être enregistrée sans. La transaction a été importée pour son montant complet et attend dans la catégorie :uncategorized.|:count lignes de la ventilation sur :legs n'ont pas de catégorie, et une ligne ne peut pas être enregistrée sans. La transaction a été importée pour son montant complet et attend dans la catégorie :uncategorized.",
         'split_sum_mismatch' => 'Les lignes de la ventilation totalisent :legs alors que la transaction est à :total, et une ventilation doit correspondre exactement à sa transaction. La transaction a été importée pour son montant complet, sans ses lignes.',
         'split_unstorable' => 'Beatrax ne peut pas enregistrer cette ventilation telle quelle, la transaction a donc été importée seule, sans ses lignes.',

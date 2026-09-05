@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ця транзакція збіглася з іншою, уже записаною транзакцією (однаковий відбиток) і не була імпортована.',
+        'reconciled_status_kept' => 'Статус звірки з джерела не вдалося застосувати — ця транзакція звірена в Beatrax, і змінити це може лише скасування звірки. Залишено без змін.',
 
         // i18n-review: uk · reason.split_legs_without_category — "розподіл" is
         // this locale's word for a split (ledger::detail.split) and for a budget

@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Această tranzacție s-a suprapus cu o altă tranzacție deja înregistrată (amprentă identică) și nu a fost importată.',
+        'reconciled_status_kept' => 'Starea de reconciliere din sursă nu a putut fi aplicată — această tranzacție este reconciliată în Beatrax și doar anularea reconcilierii schimbă asta. Lăsată neschimbată.',
         'split_legs_without_category' => ':count poziție din :legs nu are categorie, iar o poziție nu poate fi salvată fără una. Tranzacția a fost importată cu suma întreagă și așteaptă în categoria :uncategorized.|:count poziții din :legs nu au categorie, iar o poziție nu poate fi salvată fără una. Tranzacția a fost importată cu suma întreagă și așteaptă în categoria :uncategorized.|:count de poziții din :legs nu au categorie, iar o poziție nu poate fi salvată fără una. Tranzacția a fost importată cu suma întreagă și așteaptă în categoria :uncategorized.',
         'split_sum_mismatch' => 'Pozițiile împărțirii însumează :legs, dar tranzacția este :total, iar o împărțire trebuie să corespundă exact tranzacției sale. Tranzacția a fost importată cu suma întreagă, fără pozițiile ei.',
         'split_unstorable' => 'Beatrax nu poate salva această împărțire așa cum este, așa că tranzacția a fost importată singură, fără pozițiile ei.',

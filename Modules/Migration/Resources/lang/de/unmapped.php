@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Diese Transaktion kollidierte mit einer bereits erfassten Transaktion (identischer Fingerabdruck) und wurde nicht importiert.',
+        'reconciled_status_kept' => 'Der Abgleichstatus der Quelle ließ sich nicht anwenden — diese Transaktion ist in Beatrax abgeglichen, und nur das Aufheben des Abgleichs ändert das. Unverändert gelassen.',
         'split_legs_without_category' => ':count Aufteilungsposition von :legs hat keine Kategorie, und ohne Kategorie lässt sich eine Position nicht speichern. Die Transaktion wurde mit ihrem vollen Betrag importiert und wartet in der Kategorie :uncategorized.|:count Aufteilungspositionen von :legs haben keine Kategorie, und ohne Kategorie lässt sich eine Position nicht speichern. Die Transaktion wurde mit ihrem vollen Betrag importiert und wartet in der Kategorie :uncategorized.',
         'split_sum_mismatch' => 'Die Positionen der Aufteilung ergeben zusammen :legs, die Transaktion beträgt aber :total, und eine Aufteilung muss ihrer Transaktion genau entsprechen. Die Transaktion wurde mit ihrem vollen Betrag importiert, ohne ihre Positionen.',
         'split_unstorable' => 'Beatrax kann diese Aufteilung so nicht speichern, deshalb wurde die Transaktion allein importiert, ohne ihre Positionen.',

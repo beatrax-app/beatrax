@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ova transakcija se poklopila sa drugom, već zabeleženom transakcijom (isti otisak) i nije uvezena.',
+        'reconciled_status_kept' => 'Status usaglašenosti iz izvora nije mogao da se primeni — ova transakcija je usaglašena u Beatraxu i to menja samo poništavanje usaglašavanja. Ostavljeno nepromenjeno.',
         'split_legs_without_category' => ':count stavka podele od :legs nema kategoriju, a stavka podele se bez nje ne može sačuvati. Transakcija je uvezena u punom iznosu i čeka u kategoriji „:uncategorized”.|:count stavke podele od :legs nemaju kategoriju, a stavka podele se bez nje ne može sačuvati. Transakcija je uvezena u punom iznosu i čeka u kategoriji „:uncategorized”.|:count stavki podele od :legs nema kategoriju, a stavka podele se bez nje ne može sačuvati. Transakcija je uvezena u punom iznosu i čeka u kategoriji „:uncategorized”.',
         'split_sum_mismatch' => 'Stavke podele daju zbir :legs, a transakcija je :total, dok podela mora tačno da odgovara svojoj transakciji. Transakcija je uvezena u punom iznosu, bez svojih stavki.',
         'split_unstorable' => 'Beatrax ne može da sačuva ovu podelu u ovakvom obliku, pa je transakcija uvezena sama, bez svojih stavki.',

@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Bu işlem, daha önce kaydedilmiş başka bir işlemle çakıştı (aynı parmak izi) ve içe aktarılmadı.',
+        'reconciled_status_kept' => "Kaynağın mutabakat durumu uygulanamadı — bu işlem Beatrax'ta mutabakatlı ve bunu yalnızca mutabakatı geri almak değiştirir. Değiştirilmeden bırakıldı.",
 
         // i18n-review: tr · reason.split_legs_without_category — Turkish selects
         // one arm, so this line covers every count. It leads with :legs because

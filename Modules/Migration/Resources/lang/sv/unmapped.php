@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Den här transaktionen krockade med en redan bokförd transaktion (identiskt fingeravtryck) och importerades inte.',
+        'reconciled_status_kept' => 'Källans avstämningsstatus kunde inte tillämpas — den här transaktionen är avstämd i Beatrax, och bara att häva avstämningen ändrar det. Lämnad oförändrad.',
         'split_legs_without_category' => ':count delpost av :legs saknar kategori, och en delpost går inte att spara utan. Transaktionen importerades med hela beloppet och ligger i kategorin :uncategorized.|:count delposter av :legs saknar kategori, och en delpost går inte att spara utan. Transaktionen importerades med hela beloppet och ligger i kategorin :uncategorized.',
         'split_sum_mismatch' => 'Delposterna summerar till :legs medan transaktionen är :total, och en uppdelning måste stämma exakt med sin transaktion. Transaktionen importerades med hela beloppet, utan sina delposter.',
         'split_unstorable' => 'Beatrax kan inte spara den här uppdelningen som den ser ut, så transaktionen importerades ensam, utan sina delposter.',

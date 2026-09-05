@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ši operacija susidūrė su kita jau įrašyta operacija (sutampa atspaudas) ir nebuvo importuota.',
+        'reconciled_status_kept' => 'Šaltinio suderinimo būsenos pritaikyti nepavyko — ši operacija Beatrax sistemoje yra suderinta, ir tai pakeičia tik suderinimo panaikinimas. Palikta nepakeista.',
 
         // i18n-review: lt · reason.split_legs_without_category — the waiting
         // bucket reads „kategorijoje Be kategorijos“, repeating this locale's

@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Αυτή η συναλλαγή συγκρούστηκε με άλλη ήδη καταχωρισμένη συναλλαγή (ίδιο αποτύπωμα) και δεν εισήχθη.',
+        'reconciled_status_kept' => 'Η κατάσταση εκκαθάρισης της πηγής δεν μπόρεσε να εφαρμοστεί — αυτή η συναλλαγή είναι συμφωνημένη στο Beatrax και μόνο η άρση της συμφωνίας το αλλάζει. Έμεινε αμετάβλητη.',
 
         // i18n-review: el · reason.split_legs_without_category — the waiting
         // bucket reads «στην κατηγορία Χωρίς κατηγορία», repeating this
