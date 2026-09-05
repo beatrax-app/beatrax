@@ -1506,26 +1506,74 @@ plugins (`COMPOSER_AUTH` / NativePHP licence), the same ones the
 Both platforms back up app data to the vendor's cloud by default, and both were
 doing it. `native:install` generates an Android manifest with
 `android:allowBackup="true"` pointing at Android Studio's sample rule files —
-whose every rule is commented out — and iOS puts the store under Application
-Support, which is in iCloud backup unless a file says otherwise.
+whose every rule is commented out — and on iOS every tree the app writes to is
+in iCloud backup unless a node says otherwise.
 
 What sits there is `persisted_data/`: the SQLite database with every
-transaction, the sync keyring, and the staged secrets. For a product whose
-stated position is local-first and end-to-end encrypted, a copy of all of it in
-a Google or Apple account is the one exposure no amount of transport encryption
-addresses — and it was silent, with nothing in the app or the build mentioning
-it.
+transaction, the sync keyring, the sync identity, and the staged secrets. For a
+product whose stated position is local-first and end-to-end encrypted, a copy of
+all of it in a Google or Apple account is the one exposure no amount of
+transport encryption addresses — and it was silent, with nothing in the app or
+the build mentioning it.
 
 `scripts/nativephp_exclude_data_from_backup.php` closes both. On Android it
 sets `allowBackup="false"` and fills in the rule files; the flag is what stops
 cloud backup, and the rules are written as well because Android 12+ reads
-`<device-transfer>` from `dataExtractionRules` independently of it. On iOS
-there is no manifest flag, so the exclusion is a per-URL resource value set as
-each directory is created in `getAppSupportDir`.
+`<device-transfer>` from `dataExtractionRules` independently of it.
 
-The two halves are guarded separately. They were not at first, and the Android
-marker short-circuited the script before the iOS half ever ran — a patch that
-reported success having done half its job.
+### The iOS half flagged a directory the app never writes to
+
+iOS has no manifest flag, so the exclusion is a per-URL resource value — and for
+its first life it was set inside `getAppSupportDir`, on the stated premise that
+the database lived under `Library/Application Support`.
+
+It does not. On iOS `base_path()` is `<container>/Documents/app`, so
+`UserDataPathService` resolves the store to `<container>/Documents/persisted_data`
+— a different tree, one directory above the flag, and `Documents` is iCloud-backed
+by default. The container pulled off an iPhone 12 mini on 2026-09-05 has both
+directories: `Library/Application Support/database/database.sqlite` at **4,096
+bytes with zero tables**, and `Documents/persisted_data/database/database.sqlite`
+at **5.9 MB across 105 tables** with a 4.4 MB WAL beside it. Seven more files sit
+in the unflagged tree — the two SQLite siblings, two relay secrets, `sync/relay.json`,
+the GDK keyring and the sync identity.
+
+The stub exists because the shell's `createDatabase()` creates it and
+`setupEnvironment()` points `DB_DATABASE` at it; `mobile-app/bootstrap/app.php`
+repoints the live connection in its `booted()` hook before anything reads. Zero
+tables is the evidence nothing ever migrated there.
+
+This is also why the 2026-09-04 hardware check did not catch it. It confirmed
+that *an* on-device database was excluded and recorded no path — and the file it
+could have read was the 4 KB stub.
+
+The fix is `prepareDurableStore()`, injected into `preparePhpEnvironment()` so it
+runs before the PHP runtime is embedded. It creates the store, walks it, and sets
+the flag on every node, then re-asserts on `didEnterBackgroundNotification`
+because iCloud takes its backup once the device is locked and idle.
+
+Two things are measured rather than assumed. `NSURLIsExcludedFromBackupKey`
+answers the **effective** value: a file created later inside an excluded
+directory reads back excluded while carrying no extended attribute of its own,
+so the ancestor covers the `-wal`, the `-shm` and the keyring minted mid-pairing.
+The walk is what covers the case inheritance cannot — a directory deleted and
+made again loses the flag with the inode.
+
+And the two paths can no longer drift. Both the writer and the exclusion read
+the layout from `Modules/Core/Public/Support/PersistedStore`, and
+`ExcludeDataFromBackupScriptTest` asserts that every path
+`UserDataPathService` resolves — database, keyring, sync identity, secrets,
+backups — falls inside a directory the patched shell excludes. Six of its ten
+cases fail against the old script.
+
+The two platform halves are guarded separately, and each patch within the iOS
+half has its own sentinel. They were not at first: the Android marker
+short-circuited the script before the iOS half ever ran, and a missing Android
+scaffold used to `exit(0)` for the whole script, so an iOS-only tree got no
+exclusion at all from a green log.
+
+The patch is on `NativeBuildPatches::REQUIRED_SCRIPTS`, so a failure stops the
+build. A warning in a build log is not a control here — nothing about a running
+app says whether its ledger is in iCloud.
 
 Restoring a device therefore starts a fresh install with no data, which is what
 [F4](../core/architecture.md) covers: the encrypted backup
