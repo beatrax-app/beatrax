@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\PersistedStore;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Symfony\Component\Process\Process;
@@ -101,14 +102,22 @@ function excludeBackupRun(string $root): Process
 /** @return array{root: string, directories: list<string>} */
 function excludeBackupTree(string $swift, string $documents): array
 {
-    $pattern = '/\.deletingLastPathComponent\(\)\s*\n\s*\.appendingPathComponent\("([^"]+)"\)/';
+    // PatternScan, not preg_*: a scan PCRE abandoned hands back an empty match
+    // array, so a bare read here would report "the shell excludes nothing" and
+    // "the shell excludes everything asked of it" with the same value.
+    $store = PatternScan::first(
+        '/\.deletingLastPathComponent\(\)\s*\n\s*\.appendingPathComponent\("([^"]+)"\)/',
+        $swift,
+    );
 
-    expect($swift)->toMatch($pattern);
-    preg_match($pattern, $swift, $store);
+    $list = PatternScan::first('/for relative in \[([^\]]+)\]/', $swift);
 
-    expect($swift)->toMatch('/for relative in \[([^\]]+)\]/');
-    preg_match('/for relative in \[([^\]]+)\]/', $swift, $list);
-    preg_match_all('/"([^"]+)"/', $list[1], $relatives);
+    expect($store)->not->toBe([])
+        ->and($list)->not->toBe([]);
+
+    $relatives = PatternScan::all('/"([^"]+)"/', $list[1]);
+
+    expect($relatives[1])->not->toBe([]);
 
     $root = $documents.'/'.$store[1];
 
