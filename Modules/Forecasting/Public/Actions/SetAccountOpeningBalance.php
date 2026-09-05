@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use Modules\Ledger\Public\Services\AccountWriter;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -28,6 +29,7 @@ final readonly class SetAccountOpeningBalance
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private AccountWriter $accounts,
         private BusDispatcher $bus,
     ) {}
 
@@ -51,16 +53,10 @@ final readonly class SetAccountOpeningBalance
             $this->validateOpeningBalance($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate, $allowDivergence);
         }
 
-        $this->db->connection()->transaction(function () use ($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate): void {
-            $this->db->connection()->table('accounts')
-                ->where('id', $accountId)
-                ->where('user_id', $user->id)
-                ->update([
-                    'opening_balance_minor' => $openingBalanceMinor,
-                    'opening_balance_as_of_date' => $openingBalanceMinor === null ? null : $openingBalanceAsOfDate,
-                    'updated_at' => $this->clock->now()->toDateTimeString(),
-                ]);
-        });
+        $this->accounts->write($user->id, $accountId, [
+            'opening_balance_minor' => $openingBalanceMinor,
+            'opening_balance_as_of_date' => $openingBalanceMinor === null ? null : $openingBalanceAsOfDate,
+        ]);
 
         foreach (ForecastHorizon::days() as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(

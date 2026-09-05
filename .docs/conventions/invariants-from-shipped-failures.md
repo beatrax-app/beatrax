@@ -6483,6 +6483,53 @@ the field, so the banner drops a row that is indistinguishable from one above it
 — same kind, same severity, same stored sentence, same copy line, same minute.
 A duplicate that reaches a reader costs more than its own row: a critical
 sentence said twice is one nobody believes the third time.
+## A column first written after its row had already travelled
+
+`tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php`
+
+Two rules already asked whether a table announces: one for a delete, one for the
+`users` settings row. Both are table-level, and a table is the wrong unit. A row
+goes on the wire as a whole-row create the first time anything captures it and
+after that only as the Sets its writers announce — so a column first written
+*after* that create reaches a peer never, on a table that announces perfectly
+well for everything else.
+
+`transactions.pair_transaction_id` is the instance that cost real data.
+`TransferPairer` wrote the link on both legs with a bare `->update()`, so it
+travelled only inside a create. A transfer spans two accounts, which is two
+statements and usually two import runs, so the ordinary shape is a new leg
+paired against an older one — and the peer then held the new leg naming its
+partner while the partner named nobody. A pair formed by the orphan sweep after
+the capture travelled not at all, and the whole-table backfill skips a row that
+already carries a create op.
+
+`accounts` was the same defect five times over: the row is captured as a parent
+of the first transaction that names it, and the currency, the forecast buffer,
+the opening balance and both statement anchors are every one of them written
+afterwards.
+
+The guard reads its denominator off `MergeRulesRegistry` — every column it
+declares mergeable, on every covered table — so a new column is in scope the day
+it is registered. Writers whose *caller* announces are pinned with the file that
+proves it, and the pin is compared in both directions.
+
+### The delete guard beside it was narrower than its own claim, twice
+
+Widening this one exposed two holes in the rule it was modelled on. It walked
+`base_path('Modules')` alone, so `app/` was structurally invisible; and it
+counted a bare mention of `DependentRowCascade` as an announcement. Both were
+needed to hide `DemoSeedCommand`, which named the cascade, **discarded the
+tombstones it returned**, and then raw-deleted `transactions` and `import_runs`.
+Widening the walk alone would still have passed it.
+
+The second hole is the more interesting one: the cascade does not announce for
+its caller, it hands the events back. A rule keyed on the class name reads
+"reached the seam" as "used it". The allowance now requires the caller to
+dispatch, and a fixture holds it — the call with no dispatch must not count.
+
+Both walks now also fail on a top-level directory that holds PHP and is neither
+read nor named, so no hand-written root list survives without a coverage
+assertion behind it.
 
 ## A skip that no job could answer
 

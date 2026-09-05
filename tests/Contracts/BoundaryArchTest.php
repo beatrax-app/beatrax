@@ -2310,6 +2310,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/APairingSendNeverDeclinesInSilenceArchTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingPeerLink',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
+        'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
@@ -2343,6 +2344,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobileImportBootstrap',
         'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
+        'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',

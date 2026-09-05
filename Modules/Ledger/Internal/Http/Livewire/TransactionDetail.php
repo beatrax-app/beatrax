@@ -158,14 +158,25 @@ final class TransactionDetail extends Component
             }
         });
 
-        // The partner's pair_transaction_id NULL-ing is deliberately absent
-        // from dirtyFields — the merge engine cascades it as an FK side-effect.
+        // Both halves of the break are announced. TransferPairCascade unpicks a
+        // pair only behind a TOMBSTONE, and nothing is deleted here — so a peer
+        // told only about the type kept two rows naming each other, one of them
+        // no longer a transfer at all.
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,
             userId: $user->id,
             mutationType: 'edit',
-            dirtyFields: ['type' => $newType],
+            dirtyFields: $breaksPair ? ['type' => $newType, 'pair_transaction_id' => null] : ['type' => $newType],
         ));
+
+        if ($breaksPair && $partnerId !== null) {
+            $events->dispatch(new TransactionMutated(
+                transactionId: $partnerId,
+                userId: $user->id,
+                mutationType: 'edit',
+                dirtyFields: ['pair_transaction_id' => null],
+            ));
+        }
 
         $message = $breaksPair
             ? Lang::get('ledger::detail.toast.reclassified_pair_removed', ['type' => $newType])
