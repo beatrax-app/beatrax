@@ -146,3 +146,40 @@ it('installs no PDO driver in the server image beyond SQLite', function (): void
 it('registers the interactive beatrax:setup command', function (): void {
     expect(Artisan::all())->toHaveKey('beatrax:setup');
 });
+
+// The assertions above read the command's source. This one runs it: the .env it
+// writes and the list it prints are what an operator ends up with, and neither
+// is derivable from a string literal appearing somewhere in the file.
+it('writes sqlite without asking, and names the backup step whatever engine the operator arrived with', function (): void {
+    $base = sys_get_temp_dir().'/beatrax-setup-'.bin2hex(random_bytes(6));
+    mkdir($base, 0o755, true);
+    file_put_contents($base.'/.env', implode("\n", [
+        'APP_ENV=local',
+        'APP_URL=http://localhost:8000',
+        'DB_CONNECTION=pgsql',
+        '',
+    ]));
+
+    $original = base_path();
+    app()->setBasePath($base);
+
+    try {
+        $this->artisan('beatrax:setup')
+            ->expectsQuestion('Application URL', 'https://finance.example.com')
+            ->expectsQuestion('Environment', 'production')
+            ->expectsConfirmation('Run database migrations and create your user now (beatrax:install)?', 'no')
+            ->expectsOutputToContain('Back up the SQLite file regularly')
+            ->assertSuccessful();
+    } finally {
+        app()->setBasePath($original);
+    }
+
+    $written = (string) file_get_contents($base.'/.env');
+    @unlink($base.'/.env');
+    @rmdir($base);
+
+    expect($written)->toContain('DB_CONNECTION=sqlite')
+        ->and($written)->not->toContain('pgsql')
+        ->and($written)->toContain('APP_ENV=production')
+        ->and($written)->toContain('APP_URL=https://finance.example.com');
+});
