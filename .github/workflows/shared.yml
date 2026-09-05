@@ -8,6 +8,14 @@ name: shared
 
 on: [pull_request]
 
+# One run per ref, not one per push. Without this a branch that is pushed four
+# times keeps four sets of these ten checks queued, and the runners spend their
+# time on commits nobody will merge. This workflow answers pull requests only,
+# so there is no push to exempt.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
