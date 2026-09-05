@@ -378,22 +378,25 @@ guards:
   quarantined (`cross_user`) before any DB write.
 - **`WHERE user_id = $userId` on every DB write:** even if the filter above
   were bypassed, no cross-user row would be touched.
-- **Ed25519 gate:** entries with no device key or a failing signature are
-  quarantined (`missing_device_key` / `forged_signature`). "No device key" is
-  asked of the confirmed map FIRST and then of
-  `DeviceRegistryService::retainedDeviceKeys()`, which also holds the key of a
-  device the user has REMOVED. Removal clears `confirmed_at`, which shuts the
-  Noise transport to that device, so retention admits nothing; it only keeps the
-  history that device already wrote verifiable. An entry that is byte-identical
-  to one `op_log_entries` already holds is accepted even when no key at all
-  remains — a rebuild deletes every row a CreateRow op created before replaying
-  them back, so refusing them there destroyed the data outright.
+- **Ed25519 gate:** entries with no device key, an unconfirmed author or a
+  failing signature are quarantined (`missing_device_key` /
+  `unconfirmed_device` / `forged_signature`). Admission is the confirmed map
+  and nothing else. `DeviceRegistryService::retainedDeviceKeys()` also holds
+  the key of a device the user has REMOVED, and that key answers only for an
+  entry `op_log_entries` already holds — byte-identical, signature included —
+  because that entry was admitted under a confirmed key once and a rebuild
+  deletes every row a CreateRow op created before replaying them back, so
+  refusing them there destroyed the data outright. An entry no key at all can
+  verify is accepted on the same evidence. Anything the retained key would
+  admit for the first time is an op from a device nothing confirms, which is
+  quarantined as `unconfirmed_device` — the key is present, so naming a
+  missing one would blame a cause the device list disproves.
 - **Table allow-list gate:** only tables registered in `MergeRulesRegistry`
   may be written via op-log replay, closing a full trust-store takeover via
   an arbitrary wire-supplied table name.
 
-Rejected ops (`cross_user`, `missing_device_key`, `forged_signature`,
-`unknown_table`, `strategy_error`, `incomplete_create_row`,
+Rejected ops (`cross_user`, `missing_device_key`, `unconfirmed_device`,
+`forged_signature`, `unknown_table`, `strategy_error`, `incomplete_create_row`,
 `missing_reference`, `gdk_decrypt_failed`) write a structured row to
 `op_log_quarantine` and replay continues — deterministic, exceptions never
 propagate. A CREATE_ROW is written with a plain `insert()`, never

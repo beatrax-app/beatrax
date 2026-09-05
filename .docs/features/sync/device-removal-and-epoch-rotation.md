@@ -77,14 +77,25 @@ device's log as `missing_device_key` and never recreate a single row. A goal mad
 phone, the phone removed, one rebuild later: goals count 0, quarantine full, transaction
 committed cleanly.
 
-Retention grants the removed device nothing. Revocation shut the Noise transport to it, so it
-cannot deliver anything to anybody; `deviceKeys()` still refuses it as an admission anchor, and
-`GdkEpochControlHandler` still refuses a wrap it signs. The wider map, from
-`retainedDeviceKeys()`, is consulted only when reading history back.
+Retention grants the removed device nothing, and "reading history back" is what the wider map
+from `retainedDeviceKeys()` is limited to *mechanically*, not merely by intent. `deviceKeys()`
+is the admission anchor, and `GdkEpochControlHandler` still refuses a wrap the removed device
+signs.
 
-For an install where an older build already deleted the row, `OpLogEntryVerifier` has a second
-door: an entry byte-identical to one `op_log_entries` already holds — same identity AND same
-signature — is accepted without a key, because only verified entries are ever persisted there.
+The limit is one question, asked before the retained key is ever consulted: is this exact entry
+— same identity AND same signature — already in `op_log_entries`? Only verified entries are
+ever persisted there, so a match is proof this device admitted it under a confirmed key once,
+and it stays admitted. That is also the whole of the second door for an install where an older
+build deleted the registry row: such an entry is accepted with no key at all.
+
+An entry the durable log does **not** hold is new work, and a device with no `confirmed_at` is
+unconfirmed however it got that way. It is quarantined as `unconfirmed_device` — a reason of
+its own, because the registry row and its key are sitting right there and blaming a missing key
+would name a cause the device list disproves. Nothing replays a quarantine recorded at this
+gate: the entry never reached `op_log_entries`, and `HistoryReprojector` replays out of that
+table. Where such an entry could reach this device at all — a still-confirmed third device
+forwarding the removed one's writes — losing it is the price of the revocation this device
+performed, but it is a loss, not a hold.
 
 ### The one residual
 

@@ -147,9 +147,7 @@ final readonly class OpLogEntryVerifier
             $this->isSystemDevice($entry->deviceId) => $entry->userId === $userId
                 ? null
                 : QuarantineReason::CrossUser,
-            $this->publicKeyFor($entry, $userId) === null => $this->unverifiableAuthor($entry, $userId),
-            ! $this->verifySignature($entry, $userId) => QuarantineReason::ForgedSignature,
-            default => null,
+            default => $this->authorReason($entry, $userId),
         };
 
         if ($reason !== null) {
@@ -178,36 +176,38 @@ final readonly class OpLogEntryVerifier
         return $deviceId === OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID;
     }
 
-    // The confirmed map first, then the key the registry retains for a device
-    // that has since been removed. Retention adds no admission: removal closes
-    // the Noise transport, so a revoked device can no longer deliver anything,
-    // and the ops it wrote while trusted are ordinary history.
-    private function publicKeyFor(OpLogEntry $entry, int $userId): ?string
+    // The confirmed map is the whole admission gate. A key the registry merely
+    // RETAINS belongs to a device nothing confirms any more, so it answers for
+    // history and admits nothing: only an entry op_log_entries already holds —
+    // byte-identical, signature included — was admitted under a confirmed key.
+    private function authorReason(OpLogEntry $entry, int $userId): ?QuarantineReason
     {
-        return $this->deviceKeys[$entry->deviceId]
-            ?? $this->priorAuthorship->retainedKeyFor($userId, $entry->deviceId);
-    }
+        $confirmedKey = $this->deviceKeys[$entry->deviceId] ?? null;
 
-    // An entry this device already accepted stays accepted even when nothing
-    // left can verify it — a device removed before the registry retained its
-    // key leaves exactly that state, and a rebuild that refused it would drop
-    // every row it created and never put one back.
-    private function unverifiableAuthor(OpLogEntry $entry, int $userId): ?QuarantineReason
-    {
-        return $this->priorAuthorship->alreadyAccepted($entry, $userId)
-            ? null
-            : QuarantineReason::MissingDeviceKey;
-    }
-
-    private function verifySignature(OpLogEntry $entry, int $userId): bool
-    {
-        $pubKeyHex = $this->publicKeyFor($entry, $userId);
-
-        if ($pubKeyHex === null) {
-            return false;
+        if ($confirmedKey !== null) {
+            return $this->signatureReason($entry, $confirmedKey);
         }
 
-        return $this->signer->verifyAny($entry->signatureCandidates(), $entry->signature, sodium_hex2bin($pubKeyHex));
+        $retainedKey = $this->priorAuthorship->retainedKeyFor($userId, $entry->deviceId);
+
+        if (! $this->priorAuthorship->alreadyAccepted($entry, $userId)) {
+            return $retainedKey === null
+                ? QuarantineReason::MissingDeviceKey
+                : QuarantineReason::UnconfirmedDevice;
+        }
+
+        // No key at all leaves the durable log as the only witness, and it
+        // already said yes to these exact bytes — the state an older removal
+        // that deleted the registry row left behind. Refusing there would drop
+        // every row that author created on rebuild and never put one back.
+        return $retainedKey === null ? null : $this->signatureReason($entry, $retainedKey);
+    }
+
+    private function signatureReason(OpLogEntry $entry, string $pubKeyHex): ?QuarantineReason
+    {
+        return $this->signer->verifyAny($entry->signatureCandidates(), $entry->signature, sodium_hex2bin($pubKeyHex))
+            ? null
+            : QuarantineReason::ForgedSignature;
     }
 
     // Persists a VERIFIED entry to the authoritative op_log_entries table
