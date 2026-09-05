@@ -257,6 +257,14 @@ triage page can show recent activity on it. The display name is the
 counterparty name, or the IBAN, or the app's own word `Unknown`, in that
 order.
 
+The IBAN stays the *display* name in the middle case, and deliberately:
+`display_name` is sealed, and it is the only thing the reader has to
+recognise the row by — a triage queue of rows all called "Unknown" is
+not a privacy improvement. What it must not become is the *slug*. The
+slug is plaintext and it is the URL, so the middle case is exactly the
+name [`routableBase()`](#slug-allocation-and-the-decrypt-before-compare-rule)
+refuses to derive a slug from.
+
 The one case that produces no row at all is a transaction with no name,
 no IBAN, *and* no description. The resolver returns null, the writer
 layer still persists the transaction without a `counterparty_id`, and
@@ -368,6 +376,37 @@ from a console command that Artisan constructs merely to list it.
 
 `CounterpartySlugResolver::resolveUnique()` owns the `(user_id, slug)`
 UNIQUE constraint in application code.
+
+### The one name a slug is never derived from
+
+`routableBase()` sits between `slugify()` and the walk, and it asks one
+question: does the slugified name spell an **account identifier** — the
+ISO 13616 shape, or the bare account number a file carries where no
+IBAN exists? If it does, the base is `OPAQUE_BASE` (`unnamed`) instead
+of the name.
+
+It is a property of the seam rather than of an arm, and that is the
+point. Three separate places in this repository asserted that the IBAN
+never reaches a URL — the `personal` arm's privacy note above, the
+`create_counterparties_table` migration's comment on the column, and
+the personal profile tab's own `The full IBAN never appears in the URL`
+— and all three were true of the arm the author was looking at and
+false of the row beside it. Arms 2 and 7 both fall back to the IBAN for
+a display name when the file names nobody, and the slug follows the
+display name, so `/counterparties/nl91abna0417164300` was a real route.
+`upsert()` is the single write path, `resolveUnique()` is its single
+slug source, and asking there is what makes the answer hold for an arm
+nobody has written yet — including a triage rename, where the name is
+whatever the reader typed.
+
+The suffix walk is unchanged, so the opacity costs no matching: two
+nameless rows become `unnamed` and `unnamed-2`, told apart by the
+holder's decrypted display name exactly as `bol` and `bol-2` are, and
+the same statement re-imported lands back on the row it made.
+`2026_09_05_000001_replace_counterparty_slugs_that_spell_an_account_number`
+renames the rows already written, reading the stored slug's shape
+because it is the only unsealed evidence on the row and it has to run
+before any device is unlocked.
 
 `slugify()` folds to ASCII, lower-cases, collapses every run of
 non-alphanumerics to a single `-`, trims stray dashes, and falls back

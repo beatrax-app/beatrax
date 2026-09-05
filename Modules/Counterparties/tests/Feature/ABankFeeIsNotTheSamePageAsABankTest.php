@@ -68,7 +68,6 @@ it('does not call an institutions spending a bank fee', function (): void {
     $user = bankFeeUser('bank-institution-panel');
     bankFeeCounterparty($user, 'paypal-europe', 'PayPal (Europe) S.a r.l.', [
         'bridge_account_kind' => 'paypal',
-        'institution_iban' => 'LU89751000135104200E',
     ]);
 
     $component = Livewire::actingAs($user)

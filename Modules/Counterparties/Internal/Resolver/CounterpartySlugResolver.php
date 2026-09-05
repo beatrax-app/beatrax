@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Internal\Resolver;
 
+use Iban\Validation\Validator as IbanValidator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use Modules\Core\Public\Services\SessionFactory;
@@ -21,7 +22,19 @@ final readonly class CounterpartySlugResolver
 
     private const string FALLBACK = 'counterparty';
 
+    // The base a name that spells an account number takes instead of itself.
+    // Two such rows are still separated by the ordinary suffix walk, which
+    // compares the holder's decrypted name, so matching is unchanged: the
+    // same file re-imported lands back on the same row.
+    public const string OPAQUE_BASE = 'unnamed';
+
     private const string SEPARATOR = '-';
+
+    // ISO 13616 shape — two letters, two check digits, then up to thirty more
+    // — beside the bare account number a file carries where no IBAN exists.
+    // Asked of the SLUG rather than the name, because the slug is the stored
+    // form and a migration has to ask the same question with no key held.
+    private const string ACCOUNT_IDENTIFIER = '/^(?:[a-z]{2}\d{2}[a-z0-9]{11,30}|\d{9,})$/';
 
     // Combining marks, and the zero-width characters //TRANSLIT passed over
     // without emitting its `?`. Every other unspellable character becomes a
@@ -48,6 +61,7 @@ final readonly class CounterpartySlugResolver
         // A factory, not the session: resolving a session builds the encrypter,
         // and Artisan constructs this class merely to list a console command.
         private SessionFactory $session,
+        private IbanValidator $ibanValidator,
     ) {}
 
     // $ownedBy is the row being renamed. An import has no row yet and asks by
@@ -56,9 +70,42 @@ final readonly class CounterpartySlugResolver
     public function resolveUnique(int $userId, string $displayName, ?int $ownedBy = null): string
     {
         return UniqueSlug::walk(
-            self::slugify($displayName),
+            $this->routableBase($displayName),
             fn (string $slug): bool => $this->slugIsFreeFor($userId, $slug, $displayName, $ownedBy),
         );
+    }
+
+    // The slug is a route segment and a plaintext column while `display_name`
+    // is sealed, so a name that spells an account number publishes the one
+    // value the profile keeps behind a Show-IBAN toggle. Every arm funnels
+    // through here, so no future one can reintroduce it by choosing a name.
+    private function routableBase(string $displayName): string
+    {
+        $base = self::slugify($displayName);
+
+        return self::spellsAnAccountIdentifier($base) || $this->spellsAPresentedIban($displayName)
+            ? self::OPAQUE_BASE
+            : $base;
+    }
+
+    // A file writing the IBAN into the name column writes it the way a human
+    // reads it, in groups of four, and those spaces survive as separators the
+    // shape test cannot see through. The checksum is what tells that name
+    // from a trading one merely opening with two letters and two digits.
+    private function spellsAPresentedIban(string $displayName): bool
+    {
+        $compact = strtoupper(PatternScan::replace('/[\s'.self::SEPARATOR.']+/u', '', $displayName));
+
+        return self::spellsAnAccountIdentifier(strtolower($compact))
+            && $this->ibanValidator->validate($compact);
+    }
+
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#the-identity-columns-that-are-still-plaintext-and-what-it-would-take-to-fix-them
+     */
+    public static function spellsAnAccountIdentifier(string $slug): bool
+    {
+        return PatternScan::matches(self::ACCOUNT_IDENTIFIER, $slug);
     }
 
     // Free means unused, or already held by this same counterparty. The

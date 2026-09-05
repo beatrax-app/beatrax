@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
+use Modules\Counterparties\Internal\Resolver\CounterpartySlugResolver;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -121,4 +122,139 @@ it('Test 2 — personal-type iban column IS populated even though slug stays pri
     expect($row)->not->toBeNull();
     expect($row->iban)->toBe('NL02ABNA0123456789');
     expect($row->slug)->not->toContain($row->iban);
+});
+
+// The three tests below are the branch Test 1 never reaches. `resolvePersonal`
+// is only entered when the file NAMED somebody, so a fixture that always
+// carries a name proved the privacy default for the one arm that could not
+// break it, while arms 2 and 7 fell back to the IBAN for a display name.
+it('Test 3 — an unresolved counterparty with no name takes an opaque slug rather than its IBAN', function (): void {
+    $tx = makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => null,
+        'counterpartyIban' => 'NL02ABNA0123456789',
+    ]);
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $this->user);
+
+    expect($dto)->not->toBeNull();
+    expect($dto->type)->toBe('unknown');
+    expect($dto->slug)->toBe(CounterpartySlugResolver::OPAQUE_BASE);
+
+    $row = DB::table('counterparties')->where('id', $dto->counterpartyId)->first();
+    expect($row)->not->toBeNull();
+    expect($row->slug)->toBe('unnamed');
+    expect($row->slug)->not->toContain('nl02');
+    expect($row->slug)->not->toContain('abna');
+    expect($row->slug)->not->toContain('0123456789');
+
+    // The IBAN stays the DISPLAY name, and has to: it is sealed there, and it
+    // is the only thing the reader has to tell one nameless row from another.
+    expect($row->display_name)->toBe('NL02ABNA0123456789');
+    expect($row->iban)->toBe('NL02ABNA0123456789');
+});
+
+it('Test 4 — two nameless counterparties stay two rows, told apart by the suffix and not by their IBANs', function (): void {
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+
+    $first = $resolver->resolve(makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => null,
+        'counterpartyIban' => 'NL02ABNA0123456789',
+    ]), $this->user);
+
+    $second = $resolver->resolve(makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => null,
+        'counterpartyIban' => 'BE68539007547034',
+    ]), $this->user);
+
+    expect($first?->slug)->toBe('unnamed');
+    expect($second?->slug)->toBe('unnamed-2');
+    expect($first?->counterpartyId)->not->toBe($second?->counterpartyId);
+    expect(DB::table('counterparties')->where('user_id', $this->user->id)->count())->toBe(2);
+
+    // Re-resolving the first one is the matching claim: an opaque slug that
+    // could not find the row it named would mint a third row on every import.
+    $again = $resolver->resolve(makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => null,
+        'counterpartyIban' => 'NL02ABNA0123456789',
+    ]), $this->user);
+
+    expect($again?->counterpartyId)->toBe($first?->counterpartyId);
+    expect($again?->slug)->toBe('unnamed');
+    expect(DB::table('counterparties')->where('user_id', $this->user->id)->count())->toBe(2);
+});
+
+it('Test 5 — a file that writes the IBAN into the name column, compact or presented, still gets an opaque slug', function (): void {
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+
+    $compact = $resolver->resolve(makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => 'NL02ABNA0123456789',
+        'counterpartyIban' => null,
+    ]), $this->user);
+
+    expect($compact?->slug)->toBe('unnamed');
+
+    $presented = $resolver->resolve(makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => 'BE68 5390 0754 7034',
+        'counterpartyIban' => null,
+    ]), $this->user);
+
+    expect($presented?->slug)->toBe('unnamed-2');
+    expect($presented?->slug)->not->toContain('be68');
+    expect($presented?->slug)->not->toContain('5390');
+});
+
+// Arm 2 falls back to the IBAN exactly as arm 7 does, when the alias row
+// carries no notes and the statement named nobody. It reached the same
+// `upsert()`, so it minted the same URL.
+it('Test 6 — the known-IBAN bridge takes an opaque slug when neither the alias nor the file names the institution', function (): void {
+    DB::table('known_counterparty_ibans')->insert([
+        'user_id' => $this->user->id,
+        'real_iban' => 'NL02ABNA0123456789',
+        'target_account_kind' => 'bank',
+        'notes' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $tx = makePrivacyTx($this->bank->id, $this->user->id, [
+        'counterpartyName' => null,
+        'counterpartyIban' => 'NL02ABNA0123456789',
+    ]);
+
+    /** @var CounterpartyResolverService $resolver */
+    $resolver = $this->app->make(CounterpartyResolverService::class);
+    $dto = $resolver->resolve($tx, $this->user);
+
+    expect($dto?->type)->toBe('bank');
+    expect($dto?->slug)->toBe('unnamed');
+
+    // The IBAN also used to be stamped into `metadata.institution_iban`, a
+    // column on no encryption list, beside the sealed `iban` it copied.
+    $row = DB::table('counterparties')->where('id', $dto?->counterpartyId)->first();
+    expect($row->metadata)->not->toContain('NL02ABNA0123456789');
+    expect($row->metadata)->not->toContain('institution_iban');
+});
+
+it('Test 7 — a reader who renames a counterparty to an IBAN does not move it onto an IBAN slug', function (): void {
+    $id = DB::table('counterparties')->insertGetId([
+        'user_id' => $this->user->id,
+        'type' => 'merchant',
+        'slug' => 'bol-com',
+        'display_name' => 'Bol.com',
+        'iban' => null,
+        'merchant_name' => 'Bol.com',
+        'metadata' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    /** @var CounterpartySlugResolver $slugs */
+    $slugs = $this->app->make(CounterpartySlugResolver::class);
+
+    expect($slugs->resolveUnique($this->user->id, 'NL02ABNA0123456789', $id))->toBe('unnamed');
+    expect($slugs->resolveUnique($this->user->id, 'Bol.com', $id))->toBe('bol-com');
 });
