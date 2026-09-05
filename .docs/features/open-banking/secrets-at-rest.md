@@ -239,9 +239,12 @@ could spend. Four things keep it here, and none of them is an accident:
   moved out of the database precisely so that it cannot carry them.
 
 Deleting an account takes its file with it:
-`secrets/open-banking/%d.json` is in `UserScopedFilePurge::OWNED`, not only in the
-device-wide sweep that runs for the last account on the device. SQLite reuses row
-ids, so a file left behind is a file a future account would inherit.
+`secrets/open-banking/%d.json` is in `UserScopedFilePurge::KEYED_TO_THE_ACCOUNT`,
+not only in the device-wide sweep that runs for the last account on the device.
+SQLite reuses row ids, so a file left behind is a file a future account would
+inherit. That tier is removed *inside* the deletion transaction and read back
+afterwards, so a refused unlink rolls the deletion back rather than reporting a
+deleted account over a live connector credential.
 
 ## See also
 
