@@ -10,6 +10,7 @@ use Modules\Core\Public\Scheduling\DailyLocalWindow;
 use Modules\DriftAlerts\Public\Services\SavingsPromptDispatch;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
+use Modules\Notifications\Internal\Support\NotificationPassOutcome;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Position\Public\Services\PositionDigestDispatch;
 use Modules\Recurring\Public\Services\PaymentReminderDispatch;
@@ -59,12 +60,17 @@ final class EmitDailyNotificationTriggersCommand extends Command
             return self::SUCCESS;
         }
 
-        User::query()->lazyById(100)->each(function (User $user): void {
+        $emitted = 0;
+        $deferred = 0;
+
+        User::query()->lazyById(100)->each(function (User $user) use (&$emitted, &$deferred): void {
             // All three triggers write nothing but notification content, so a
             // process that cannot seal has no partial work to do here. The
             // window claim above is left consumed on purpose: the pass this
             // records is replayed per user, not by re-running the command.
             if ($this->deferred->deferIfKeyless($user->id, DeferredNotificationPass::DailyTriggers)) {
+                $deferred++;
+
                 return;
             }
 
@@ -73,7 +79,10 @@ final class EmitDailyNotificationTriggersCommand extends Command
             $this->attempt('reminders', fn () => $this->reminders->forUser($user->id, $preferences->reminderLeadDays));
             $this->attempt('digest', fn () => $this->digest->forUser($user->id, $preferences->digestCadence));
             $this->attempt('savings-prompts', fn () => $this->savingsPrompts->forUser($user->id));
+            $emitted++;
         });
+
+        $this->info(NotificationPassOutcome::line('Daily triggers', $emitted, $deferred));
 
         return self::SUCCESS;
     }

@@ -129,12 +129,14 @@ final class ChainsServiceProvider extends ServiceProvider
                 500,
             );
 
+            // Every row the claim would have taken, not the newest running one.
+            // ConfirmImport reserves a `pending` row and claimPendingRuns()
+            // takes ALL of them, so a job that threw before or between those
+            // two left rows nothing else writes.
             $db->connection()
                 ->table('chain_resolution_runs')
                 ->where('user_id', $userId)
-                ->where('status', JobRunStatus::Running->value)
-                ->orderByDesc('id')
-                ->limit(1)
+                ->whereIn('status', JobRunStatus::unfinishedValues())
                 ->update([
                     'status' => JobRunStatus::Failed->value,
                     'completed_at' => $now,

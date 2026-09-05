@@ -30,4 +30,21 @@ enum JobRunStatus: string
             self::Failed => [],
         };
     }
+
+    // Read off the graph above rather than restated, so a repair pass cannot
+    // cover fewer states than a run can be left in. Naming `running` alone left
+    // a reserved-but-never-started row pending with nothing able to move it.
+    /** @return list<string> */
+    public static function unfinishedValues(): array
+    {
+        $values = [];
+
+        foreach (self::cases() as $case) {
+            if ($case->allowedNext() !== []) {
+                $values[] = $case->value;
+            }
+        }
+
+        return $values;
+    }
 }

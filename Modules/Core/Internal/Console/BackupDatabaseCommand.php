@@ -52,7 +52,7 @@ final class BackupDatabaseCommand extends Command
     protected $signature = 'db:backup {--force : Keep the copy even when it is identical to the last backup}';
 
     /** @var string */
-    protected $description = 'Produce a verified SQLite backup via VACUUM INTO. Without --force a run whose contents match the last backup writes nothing, and retention pruning — which deletes every backup the policy does not keep — happens only when a copy is kept.';
+    protected $description = 'Produce a verified SQLite backup via VACUUM INTO. Without --force a run whose contents match the last backup writes nothing; retention pruning — which deletes every backup the policy does not keep — runs either way.';
 
     public function __construct(
         private readonly Repository $config,
@@ -114,18 +114,24 @@ final class BackupDatabaseCommand extends Command
         // checkpoint and every unrelated session write.
         $digest = $this->readBackupDigest($partial);
 
-        if ($this->option('force') !== true && $this->sidecar->recordsDigest($backupsDir, $digest)) {
-            $this->files->delete($partial);
-            $this->info('Skipped — the database is unchanged since the last backup.');
+        $keepsCopy = $this->option('force') === true || ! $this->sidecar->recordsDigest($backupsDir, $digest);
 
-            return self::SUCCESS;
+        if ($keepsCopy) {
+            $this->promoteOrFail($partial, $destination);
+            $this->writeSidecarOrFail($destination, $digest, $startedAt);
+        } else {
+            $this->files->delete($partial);
         }
 
-        $this->promoteOrFail($partial, $destination);
-        $this->writeSidecarOrFail($destination, $digest, $startedAt);
-
+        // Retention is a policy over the folder, not a consequence of writing
+        // to it. Pruning only on the branch that kept a copy meant the promise
+        // held on the scheduled --force run and on no hand-run at all, so a
+        // reader who took backups by hand kept every one of them forever.
         $this->pruneRetention($backupsDir);
-        $this->info(sprintf('Backup written: %s', $destination));
+
+        $this->info($keepsCopy
+            ? sprintf('Backup written: %s', $destination)
+            : 'Skipped — the database is unchanged since the last backup. Retention pruned.');
 
         return self::SUCCESS;
     }
