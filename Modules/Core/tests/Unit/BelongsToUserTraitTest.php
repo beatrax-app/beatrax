@@ -2,20 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Modules\Core\Public\Concerns\BelongsToUser;
-
-final class BelongsToUserSampleModel extends Model
-{
-    use BelongsToUser;
-
-    /** @var string */
-    protected $table = 'belongs_to_user_sample_models';
-
-    /** @var list<string> */
-    protected $fillable = ['name'];
-}
+use Modules\Core\Tests\Support\BelongsToUserSampleModel;
 
 it('adds user_id to fillable on init', function (): void {
     $model = new BelongsToUserSampleModel(['name' => 'x']);

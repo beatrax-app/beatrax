@@ -9,18 +9,16 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\FetchWalk;
-use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Tests\Support\SncrStubRemoteSourceAdapter;
 
 uses(RefreshDatabase::class);
 
@@ -33,47 +31,6 @@ uses(RefreshDatabase::class);
 const SNCR_UNNAMED_IBAN = 'NL22RABO0987654321';
 
 const SNCR_BOOKED_ON = '2026-07-18';
-
-// A bank answers for the window it was asked about and nothing else, which is
-// what makes the advanced cursor lose the day: ask again from the day after,
-// and this transaction is not in the answer.
-final class SncrStubRemoteSourceAdapter implements RemoteSourceAdapter
-{
-    public int $fetches = 0;
-
-    public function format(): string
-    {
-        return 'enable-banking';
-    }
-
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
-    {
-        $this->fetches++;
-
-        $bookedOn = CarbonImmutable::parse(SNCR_BOOKED_ON);
-
-        if ($bookedOn->lessThan($window->dateFrom) || $bookedOn->greaterThan($window->dateTo)) {
-            return FetchWalk::exhausted(1, 0);
-        }
-
-        yield new SourceTransactionDto(
-            bookedAt: $bookedOn,
-            postedAt: $bookedOn,
-            valueDate: $bookedOn,
-            ownIban: SNCR_UNNAMED_IBAN,
-            counterpartyIban: 'NL91ABNA0417164300',
-            counterpartyName: 'Netflix',
-            currency: 'EUR',
-            amountMinor: -1299,
-            sourceRef: 'eb-sncr-1',
-            description: 'Netflix subscription',
-            rawPayload: [],
-            sourceRowIndex: 0,
-        );
-
-        return FetchWalk::exhausted(1, 1);
-    }
-}
 
 function sncrSeedConnection(User $user): int
 {

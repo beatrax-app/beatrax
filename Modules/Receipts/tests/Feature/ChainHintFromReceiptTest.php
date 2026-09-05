@@ -10,13 +10,12 @@ use Livewire\Livewire;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
 use Modules\Import\Public\Contracts\ConfirmsImports;
-use Modules\Ingestion\Public\Contracts\AccountResolver;
-use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Enums\ChainHintType;
 use Modules\Receipts\Public\Events\ChainHintDetected;
+use Modules\Receipts\Tests\Support\ChainHintFromReceiptTestAccountResolver;
 use Tests\Helpers\UploadIsolation;
 
 beforeEach(function (): void {
@@ -162,13 +161,3 @@ it('keeps chain_links at exactly one row across re-drops of the same .eml', func
     expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(1);
     expect(DB::table('chain_links')->where('user_id', $this->fixtureUser->id)->count())->toBe(1);
 });
-
-final class ChainHintFromReceiptTestAccountResolver implements AccountResolver
-{
-    public function resolve(string $iban): AccountResolution
-    {
-        // The spy test only iterates the row generator and never writes, so any
-        // non-null account id will do.
-        return AccountResolution::known(1);
-    }
-}

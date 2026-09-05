@@ -13,18 +13,16 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
-use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Internal\Dto\FetchWalk;
-use Modules\OpenBanking\Internal\Dto\FetchWindow;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Enums\SyncAttemptStatus;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Tests\Support\AfnStubRemoteSourceAdapter;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
@@ -37,42 +35,6 @@ uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 const AFN_OWN_IBAN = 'NL57ASNB0123456789';
 
 const AFN_ALERT_KIND = 'open_banking_nothing_imported';
-
-final class AfnStubRemoteSourceAdapter implements RemoteSourceAdapter
-{
-    public int $fetches = 0;
-
-    public function __construct(private readonly int $rowCount = 2) {}
-
-    public function format(): string
-    {
-        return 'enable-banking';
-    }
-
-    public function fetch(string $institutionId, FetchWindow $window, OpenBankingCredentials $credentials): Generator
-    {
-        $this->fetches++;
-
-        for ($i = 0; $i < $this->rowCount; $i++) {
-            yield new SourceTransactionDto(
-                bookedAt: CarbonImmutable::parse('2026-07-18'),
-                postedAt: CarbonImmutable::parse('2026-07-18'),
-                valueDate: CarbonImmutable::parse('2026-07-18'),
-                ownIban: AFN_OWN_IBAN,
-                counterpartyIban: 'NL91ABNA041716430'.$i,
-                counterpartyName: 'Fixture Merchant '.$i,
-                currency: 'EUR',
-                amountMinor: -1299 - $i,
-                sourceRef: 'afn-ref-'.$i,
-                description: 'Fixture EB row '.$i,
-                rawPayload: [],
-                sourceRowIndex: $i,
-            );
-        }
-
-        return FetchWalk::exhausted(1, $this->rowCount);
-    }
-}
 
 function afnSeedCredentials(): void
 {

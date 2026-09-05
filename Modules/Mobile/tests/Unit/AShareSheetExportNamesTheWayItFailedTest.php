@@ -5,37 +5,13 @@ declare(strict_types=1);
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
+use Modules\Mobile\Tests\Support\ShareSheetExportSpy;
 
 // The seam every download surface reaches the reader through on a shell whose
 // WebView drops one. It has exactly three answers and none of them is silence:
 // the sheet opened, this shell has no sheet, or the handover failed. A caller
 // that cannot tell those apart cannot tell the reader either, which is how
 // "↓ CSV exporteren" became a button that did nothing at all on the SM-S928B.
-
-final class ShareSheetExportSpy extends ShareSheetExport
-{
-    /** @var list<array{string, string, string}> */
-    public array $shared = [];
-
-    public function __construct(private readonly bool $registersShareFile = true, private readonly bool $shareSucceeds = true) {}
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    protected function canShareFiles(): bool
-    {
-        return $this->registersShareFile;
-    }
-
-    protected function share(string $shareTitle, string $shareMessage, string $path): bool
-    {
-        $this->shared[] = [$shareTitle, $shareMessage, $path];
-
-        return $this->shareSucceeds;
-    }
-}
 
 function shareSheetExportScratchDirectory(): string
 {

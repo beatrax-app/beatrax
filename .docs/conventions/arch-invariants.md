@@ -213,6 +213,55 @@ precisely the failure the whole section is about. Beyond it, every walk asserts 
 floor on what it scanned — files, echoes, payload keys — so a scan that ran over
 nothing fails on that assertion rather than on the offender list it never built.
 
+## A declaration no autoloader reaches
+
+Composer builds its classmap by psr-4 rule: a class is reachable because the
+file it sits in is named after it, under the directory its namespace maps to.
+A class declared at the top level of a `*Test.php` satisfies neither half — the
+file is named for the test — so Composer prints a warning and **skips** it. The
+class then exists only while the one file that declares it is loaded, which
+makes three things true at once. A second file naming it fatals. Two files
+declaring the same name in one shard fatal the whole parallel run rather than
+one test. And `composer install` prints a warning per site until nobody reads
+warnings at all.
+
+The tree had 45 of them, and the second hazard was already being managed by
+hand: seven stub adapters in one module carried the initials of their own test
+file as a prefix — `Acoa`, `Afn`, `Sncr`, `Soja`, `Ofs`, `Oms`, `Atws` — and
+4,284 free helper functions across 1,668 test files carry the same dodge. A
+naming convention nobody can enforce was standing in for a namespace.
+
+The shape a double takes instead is the one several modules already used:
+
+```text
+Modules/<Module>/tests/Support/<ClassName>.php
+namespace Modules\<Module>\Tests\Support;
+```
+
+imported with a compound `use`. A **non-compound** global `use` in a
+namespace-less test file aborts the whole parallel run, and a `namespace`
+declaration must never be added to a Pest file — Pest resolves it by path.
+`Support/` is safe to add because no `<testsuite>` collects a file that does not
+end in `Test.php`.
+
+`ATestDoubleTheAutoloaderCannotFindArchTest` reads both halves off one walk: no
+`*Test.php` declares a top-level type, and nothing under a declared psr-4
+directory declares a name that directory cannot resolve — which is Composer's
+own check, restated where the suite can fail on it. It reads with the tokeniser
+and not with a pattern, because around thirty arch tests in this tree plant a
+violation by writing a class into a heredoc and scanning the string, and to a
+regex that body is indistinguishable from a declaration. The lexer sees a
+heredoc as one string token and never as a `class` keyword.
+
+The exemptions are pinned with their reasons and re-checked against the walk, so
+a pin whose site has moved fails as loudly as a new violation. The four
+`app/PhpStan/Rules/Fixtures/` files are the durable ones: the custom
+`BoundaryRule` fires on a class whose namespace is a module `Internal`, so a
+fixture naming its own directory would not be a subject of the rule at all — and
+an autoloadable class in that `Internal\Examples` namespace would be real code
+inside a module's private namespace, which every boundary reader would then
+judge as shipped. Being unreachable is the point.
+
 ## Where a rule's rationale lives
 
 The failure message, not a comment. Each `expect(...)->toBe([], "…")` carries the

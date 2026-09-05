@@ -4,26 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Component;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\TransactionType;
-use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Tests\Support\TaxTaggingRefusalHost;
 
 uses(RefreshDatabase::class);
-
-// Three components mount this trait, all of them another module's Internal.
-// Hosting it here keeps the test about the trait's own guard rather than about
-// whichever consumer it was found on, and spares the boundary pin a crossing.
-final class TaxTaggingRefusalHost extends Component
-{
-    use HandlesTaxTagging;
-
-    public function render(): string
-    {
-        return '<div></div>';
-    }
-}
 
 function tagRefusedUser(string $username): User
 {
