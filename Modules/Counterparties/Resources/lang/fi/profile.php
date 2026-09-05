@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Avun saaminen',
         'heading_merchant' => 'Tuki ja irtisanominen',
         'cancel_by_email' => 'Irtisano sähköpostitse',
+        'withheld' => 'linkkiä ei tarjota',
     ],
 ];

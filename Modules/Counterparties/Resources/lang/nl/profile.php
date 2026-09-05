@@ -83,5 +83,6 @@ return [
         'heading_gov' => 'Hulp krijgen',
         'heading_merchant' => 'Ondersteuning & opzeggen',
         'cancel_by_email' => 'Per e-mail opzeggen',
+        'withheld' => 'link achtergehouden',
     ],
 ];

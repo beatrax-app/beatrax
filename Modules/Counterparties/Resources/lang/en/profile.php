@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Getting help',
         'heading_merchant' => 'Support & cancelling',
         'cancel_by_email' => 'Cancel by email',
+        'withheld' => 'link withheld',
     ],
 ];

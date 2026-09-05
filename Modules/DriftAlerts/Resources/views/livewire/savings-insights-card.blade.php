@@ -32,19 +32,20 @@
                              flex:none, so the dismiss keeps its own reach. --}}
                         <p class="min-w-0 flex-1 basis-64 text-sm text-slate-700 dark:text-slate-300">{{ $insight->message }}</p>
                         <div class="ml-auto flex min-w-0 items-center gap-1">
-                            @php
-                                $href = $insight->actionUrl;
-                                $safe = str_starts_with($href, 'https://') || str_starts_with($href, 'http://');
-                            @endphp
-                            @if ($safe)
-                                <x-core::secondary-button
-                                    :href="$href"
-                                    size="sm"
-                                    class="gap-1 text-center"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></x-core::secondary-button>
-                            @endif
+                            {{-- No scheme test here. The action URL is the
+                                 corpus cancel_url or cheaper_url, and the one
+                                 external-URL gate judged it before the DTO was
+                                 built; a refused one raises no insight at all.
+                                 A second test here was how `http://` got in:
+                                 this template accepted what the reader that
+                                 supplies the value already refused. --}}
+                            <x-core::secondary-button
+                                :href="$insight->actionUrl"
+                                size="sm"
+                                class="gap-1 text-center"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></x-core::secondary-button>
                             <x-core::emoji-action
                                 :label="Lang::get('drift-alerts::savings.dismiss_aria')"
                                 :caption="Lang::get('drift-alerts::savings.dismiss_caption')"

@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Kaip gauti pagalbos',
         'heading_merchant' => 'Palaikymas ir nutraukimas',
         'cancel_by_email' => 'Nutraukti el. paštu',
+        'withheld' => 'nuoroda neteikiama',
     ],
 ];

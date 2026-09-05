@@ -12,28 +12,29 @@
 @php
     $isGov = $resource->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Government->value;
 
-    $links = $isGov
+    $rows = $isGov
         ? [
-            ['label' => Lang::get('counterparties::profile.support.contact_help'), 'href' => $resource->helpUrl, 'primary' => true],
-            ['label' => Lang::get('counterparties::profile.support.sign_in_apply'), 'href' => $resource->applyUrl],
-            ['label' => Lang::get('counterparties::profile.support.your_rights'), 'href' => $resource->rightsUrl],
+            ['key' => 'help_url', 'label' => Lang::get('counterparties::profile.support.contact_help'), 'href' => $resource->helpUrl, 'primary' => true],
+            ['key' => 'apply_url', 'label' => Lang::get('counterparties::profile.support.sign_in_apply'), 'href' => $resource->applyUrl],
+            ['key' => 'rights_url', 'label' => Lang::get('counterparties::profile.support.your_rights'), 'href' => $resource->rightsUrl],
         ]
         : [
-            ['label' => Lang::get('counterparties::profile.support.cancel'), 'href' => $resource->cancelUrl, 'primary' => true],
-            ['label' => Lang::get('counterparties::profile.support.help_support'), 'href' => $resource->supportUrl],
-            ['label' => Lang::get('counterparties::profile.support.cheaper_plan'), 'href' => $resource->cheaperUrl],
+            ['key' => 'cancel_url', 'label' => Lang::get('counterparties::profile.support.cancel'), 'href' => $resource->cancelUrl, 'primary' => true],
+            ['key' => 'support_url', 'label' => Lang::get('counterparties::profile.support.help_support'), 'href' => $resource->supportUrl],
+            ['key' => 'cheaper_url', 'label' => Lang::get('counterparties::profile.support.cheaper_plan'), 'href' => $resource->cheaperUrl],
         ];
-    // Only emit http(s) link chips — never a javascript:/data: scheme, even
-    // from the bundled corpus. mailto: and tel: are built separately below.
-    $links = array_values(array_filter($links, static function ($l) {
-        $href = $l['href'] ?? null;
 
-        return is_string($href) && (str_starts_with($href, 'https://') || str_starts_with($href, 'http://'));
-    }));
+    // Every href here was judged at admission, so one that survived is an
+    // absolute https address on a public host. The refused ones are named in
+    // ->withheld and still get a chip: a route the corpus holds and this app
+    // will not follow is something a reader can act on, a vanished chip is not.
+    $links = array_values(array_filter($rows, static fn (array $row): bool => is_string($row['href'])));
+    $withheld = array_values(array_filter($rows, static fn (array $row): bool => isset($resource->withheld[$row['key']])));
 
     $mailto = $resource->mailtoHref();
     $phoneHref = $resource->phone !== null ? 'tel:'.preg_replace('/[^0-9+]/', '', $resource->phone) : null;
 
+    $chipWithheld = 'display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-md); border:1px dashed var(--color-border); font-size:var(--text-sm); font-weight:500; color:var(--color-text-muted); background:transparent;';
     $chip = 'display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-md); border:1px solid var(--color-border); font-size:var(--text-sm); font-weight:500; text-decoration:none; color:var(--color-text); background:var(--color-surface);';
     $chipPrimary = 'display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:var(--radius-md); border:1px solid var(--color-text); font-size:var(--text-sm); font-weight:600; text-decoration:none; color:var(--color-text-inverse); background:var(--color-text);';
 @endphp
@@ -53,6 +54,13 @@
                 {{ $link['label'] }}
                 <span aria-hidden="true" style="opacity:.6;">↗</span>
             </a>
+        @endforeach
+
+        @foreach ($withheld as $link)
+            <span class="support-chip" style="{{ $chipWithheld }}">
+                {{ $link['label'] }}
+                <span style="opacity:.75;">· {{ Lang::get('counterparties::profile.support.withheld') }}</span>
+            </span>
         @endforeach
 
         {{-- The envelope and the telephone below each end in an invisible

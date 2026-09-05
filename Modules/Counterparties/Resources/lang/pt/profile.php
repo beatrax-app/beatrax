@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Obter ajuda',
         'heading_merchant' => 'Apoio e cancelamento',
         'cancel_by_email' => 'Cancelar por e-mail',
+        'withheld' => 'ligação não oferecida',
     ],
 ];

@@ -48,3 +48,26 @@ it('brings the window back to the front, which is the whole point of the click',
 
     Http::assertSent(static fn ($request): bool => str_contains($request->url(), 'window/open'));
 });
+
+// The route reaches Window::url(), which replaces the address of this
+// application's own window rather than opening a tab. A savings prompt used to
+// stamp the community corpus's cancel_url here, so a contributed entry chose
+// what that window loaded; the listener's comment said the value was always
+// app-emitted.
+it('refuses a deep link that does not address this application', function (string $route): void {
+    app(NavigateOnNotificationDeepLink::class)->handle(new NotificationDeepLink($route));
+
+    Http::assertNotSent(static fn ($request): bool => str_contains($request->url(), 'window/url'));
+})->with([
+    'a merchant page, which is what the corpus supplies' => 'https://merchant.example/cancel',
+    'the same page in plaintext' => 'http://merchant.example/cancel',
+    'protocol-relative, which resolves to another host' => '//merchant.example/cancel',
+    'the backslash spelling of protocol-relative' => '/\\merchant.example/cancel',
+    'a host that merely begins with ours' => 'http://localhost.merchant.example/cancel',
+]);
+
+it('still brings the window back when it refuses the route, because that is what the click asked for', function (): void {
+    app(NavigateOnNotificationDeepLink::class)->handle(new NotificationDeepLink('https://merchant.example/cancel'));
+
+    Http::assertSent(static fn ($request): bool => str_contains($request->url(), 'window/open'));
+});

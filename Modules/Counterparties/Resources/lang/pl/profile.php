@@ -84,5 +84,6 @@ return [
         'heading_gov' => 'Uzyskiwanie pomocy',
         'heading_merchant' => 'Wsparcie i rezygnacja',
         'cancel_by_email' => 'Zrezygnuj e-mailem',
+        'withheld' => 'link nieudostępniony',
     ],
 ];
