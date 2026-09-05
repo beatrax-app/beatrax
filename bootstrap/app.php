@@ -15,6 +15,7 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
+use Modules\Core\Public\Bootstrap\EnsurePrivateLogFiles;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LivewireClientRefusal;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -125,6 +126,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->booting(function (Application $app): void {
+        // Before the database hook, so the error line that hook may write
+        // about a wide ledger does not itself land in a world-readable file.
+        $app->make(EnsurePrivateLogFiles::class)->run();
+
         // The empty file must exist before provider boot opens the connection,
         // and must NEVER be seeded or migrated here.
         $app->make(EnsurePrivateDatabaseFile::class)->run();

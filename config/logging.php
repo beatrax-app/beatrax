@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SecretFileMode;
 use Modules\DevMode\Internal\Logging\PushRedactProcessor;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -36,6 +37,7 @@ return [
             'driver' => 'single',
             'path' => UserDataPathService::logsFile(),
             'level' => env('LOG_LEVEL', 'debug'),
+            'permission' => SecretFileMode::FILE,
             'replace_placeholders' => true,
             'tap' => [PushRedactProcessor::class],
         ],
@@ -45,6 +47,7 @@ return [
             'path' => UserDataPathService::logsFile(),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'permission' => SecretFileMode::FILE,
             'replace_placeholders' => true,
             'tap' => [PushRedactProcessor::class],
         ],
@@ -104,6 +107,10 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        // No 'permission' here on purpose: LogManager::createEmergencyLogger()
+        // constructs its StreamHandler with only a path and a level, so the key
+        // would read as a decision and change nothing. EnsurePrivateLogFiles
+        // narrows the whole logs directory instead, which is what covers this.
         'emergency' => [
             'path' => UserDataPathService::logsFile(),
         ],
