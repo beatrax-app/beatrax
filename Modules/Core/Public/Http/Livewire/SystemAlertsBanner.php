@@ -32,7 +32,9 @@ final class SystemAlertsBanner extends Component
         $skippedVersions = $this->skippedVersionsFor($user->id);
 
         return $views->make('core::livewire.system-alerts-banner', [
-            'alerts' => $this->filterSkippedUpdates(self::installableHere($alerts), $skippedVersions),
+            'alerts' => self::collapseIndistinguishable(
+                $this->filterSkippedUpdates(self::installableHere($alerts), $skippedVersions),
+            ),
         ]);
     }
 
@@ -155,6 +157,52 @@ final class SystemAlertsBanner extends Component
         )->values();
 
         return $filtered;
+    }
+
+    // Rows written before the dedup key existed, and rows a peer's own probe
+    // raised, can still say the same thing twice. Keyed on everything the body
+    // paints — line, timestamp to the minute, and the kind that picks the
+    // buttons — so only a row nobody could tell from another is dropped.
+    /**
+     * @param  Collection<int, SystemAlert>  $alerts
+     * @return Collection<int, SystemAlert>
+     */
+    private static function collapseIndistinguishable(Collection $alerts): Collection
+    {
+        /** @var array<string, true> $seen */
+        $seen = [];
+
+        /** @var Collection<int, SystemAlert> $kept */
+        $kept = $alerts->filter(static function (SystemAlert $alert) use (&$seen): bool {
+            $fingerprint = self::asPainted($alert);
+
+            if (isset($seen[$fingerprint])) {
+                return false;
+            }
+
+            $seen[$fingerprint] = true;
+
+            return true;
+        })->values();
+
+        return $kept;
+    }
+
+    // The stored sentence AND the copy line beside it: the banner re-renders
+    // from metadata in the reader's language, so two rows carrying one English
+    // message can still reach the screen as two different sentences.
+    private static function asPainted(SystemAlert $alert): string
+    {
+        $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+        $copy = json_encode($metadata['copy'] ?? null);
+
+        return implode('|', [
+            $alert->kind,
+            $alert->severity,
+            $alert->message,
+            is_string($copy) ? $copy : '',
+            $alert->created_at->format('Y-m-d H:i'),
+        ]);
     }
 
     /**

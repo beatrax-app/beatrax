@@ -21,6 +21,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Navigation\Destination;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
@@ -479,6 +480,7 @@ final class DevModeServiceProvider extends ServiceProvider
         // observer can bust — a rotated secret has to apply immediately.
         $this->app->singleton(OAuthScrubSet::class, static fn (Application $app): OAuthScrubSet => new OAuthScrubSet(
             $app->make(SecretShield::class),
+            $app->make(SystemAlertWriter::class),
         ));
 
         $this->app->singleton(RedactionExcerptCap::class, static fn (Application $app): RedactionExcerptCap => new RedactionExcerptCap(

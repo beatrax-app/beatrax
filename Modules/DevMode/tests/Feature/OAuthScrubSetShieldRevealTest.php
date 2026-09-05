@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
@@ -63,7 +64,7 @@ it('reveals shielded client_secret and tokens_blob into the scrub set as plainte
     $row->tokens_blob = $shield->protect($tokensJson);
     $row->save();
 
-    $set = (new OAuthScrubSet($shield))->all();
+    $set = (new OAuthScrubSet($shield, app(SystemAlertWriter::class)))->all();
 
     expect($set)->toContain('GOCSPX-realsecret')
         ->and($set)->toContain('RT-topsecret')
@@ -91,7 +92,7 @@ it('treats an unshielded (legacy) row as plaintext via reveal-is-identity', func
     $row->tokens_blob = null;
     $row->save();
 
-    $set = (new OAuthScrubSet($shield))->all();
+    $set = (new OAuthScrubSet($shield, app(SystemAlertWriter::class)))->all();
 
     expect($set)->toContain('GOCSPX-legacy-plain');
 });
