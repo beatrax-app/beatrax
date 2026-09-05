@@ -263,7 +263,7 @@ it('holds a Set naming a partner that has not arrived, and writes it when it doe
     $accountId = selfRefAccount($db, $userId);
     $creates = selfRefUnpairedCreates($userId, $accountId, selfRefImportRun($db, $userId));
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $pendingDeletes = [];
 
     /** @var OpLogEntryApplier $applier */
@@ -302,7 +302,7 @@ it('writes a Set whose partner is already here', function (): void {
     selfRefUnlock($userId);
     $accountId = selfRefAccount($db, $userId);
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $pendingDeletes = [];
 
     /** @var OpLogEntryApplier $applier */
@@ -336,7 +336,7 @@ it('clears a link on a Set carrying null, which names no partner to wait for', f
     selfRefUnlock($userId);
     $accountId = selfRefAccount($db, $userId);
 
-    $touched = new SearchDocumentRows($db);
+    $touched = new ReplayedRows($db);
     $pendingDeletes = [];
 
     /** @var OpLogEntryApplier $applier */
