@@ -1307,17 +1307,31 @@ creation challenge and `EnrolBiometricCredential` refuses the enrolment itself, 
 bound `SecretShield` reports `protectsAtRest()`. The two answer with the same payload, because the
 controller maps every enrolment outcome through one place. That is a capability on the contract rather than a platform test, so it covers
 every route into enrolment however it is reached, and it fails closed on a shield that only *looks*
-like one — `SafeStorageSecretShield` answers it by round-tripping random bytes through the
-custodian rather than by returning `true`, because Electron's `safeStorage` is unavailable on a
-desktop with no keyring and the custodian silently returns the plaintext there. What a self-hosted
-reader sees is a localised sentence explaining why, not a button that does nothing.
+like one — `SafeStorageSecretShield` answers it by asking `KeyCustodian::custody()` and then
+round-tripping random bytes through the custodian, rather than by returning `true`. Both halves are
+needed. Off a bundle the custodian is the identity function and the round trip catches it; on a
+Linux desktop with no keyring `safeStorage` is *available* and does encrypt, so only the custody
+report catches it. What a self-hosted reader sees is a localised sentence explaining why, not a
+button that does nothing.
 
-`F3-R33` (operating-system key custody registered but not wired) and `E4-R23` (unwired OS key
-custody must be documented as outstanding rather than implied to work) are still open, and this
-paragraph is still that documentation — but the failure mode has inverted. The absent mobile
-custody now means a phone *cannot enrol*, rather than enrolling into cleartext. The symmetric fix
-remains a mobile `SecretShield` over `Native\Mobile\Facades\SecureStorage`, the seam
-`SecureStorageKeyCustodian` already uses for the session data key.
+`F3-R33` (operating-system key custody wired on desktop and mobile) is closed: `KeyCustodian` is
+bound to `DesktopKeyCustodian` inside the desktop bundle and to `SecureStorageKeyCustodian` on the
+phone, `LockStateManager` puts the handle rather than the key into the session on both, and
+`KeyCustodianIsWiredOnBothShellsArchTest` holds those two bindings in place so "registered but not
+wired" cannot come back by deletion. What was actually missing was not a binding but an honest
+answer on Linux, where `isEncryptionAvailable()` is true for a backend that protects nothing;
+`SafeStorageBackendProbe` and the `KeyCustody` report are that answer, and
+[the desktop page](../desktop/architecture.md#what-safestorage-is-worth-on-linux) is where it is
+written down.
+
+What remains open here is narrower than the requirement was. There is still no mobile
+`SecretShield`: `SecretShield` binds to `PassthroughSecretShield` on the phone, so the WebAuthn
+enrolment routes refuse there — which is the safe direction, and is why the absent mobile shield
+means a phone *cannot enrol* rather than enrolling into cleartext. The symmetric fix remains a
+mobile `SecretShield` over `Native\Mobile\Facades\SecureStorage`, the seam
+`SecureStorageKeyCustodian` already uses for the session data key. That is a different seam from
+key custody — it protects secrets that live in the ledger file rather than the unlocked key — and
+it is not what F3-R33 asked for.
 
 One residual has no gate at all, because it predates one: nothing re-shields a
 `biometric_wrap_secret` written before `SafeStorageSecretShield` existed, and

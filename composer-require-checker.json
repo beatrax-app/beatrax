@@ -25,6 +25,7 @@
         "injectFileAssociations",
         "injectFileOpenIngress",
         "injectPersistentTray",
+        "injectSafeStorageBackendRoute",
         "it",
         "Laravel\\Horizon\\Horizon",
         "Laravel\\Horizon\\HorizonServiceProvider",

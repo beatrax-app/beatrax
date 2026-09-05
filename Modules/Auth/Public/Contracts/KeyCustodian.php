@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Contracts;
 
+use Modules\Auth\Public\Enums\KeyCustody;
+
 interface KeyCustodian
 {
     // Implementations that cannot reach their backing store right now
@@ -19,4 +21,10 @@ interface KeyCustodian
     // A no-op for stateless handles; safe to call with a handle whose
     // backing entry is already gone.
     public function forget(string $handle): void;
+
+    // Where the key actually ends up, which is not what the binding intends
+    // but what the platform delivers. An implementation MUST answer for the
+    // machine it is running on rather than for the bundle it was built into,
+    // and MUST NOT report OperatingSystem for a store that does not protect.
+    public function custody(): KeyCustody;
 }

@@ -6,6 +6,7 @@ use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Enums\KeyCustody;
 
 // Models a native out-of-session store. The handle is "handle:" . base64(key)
 // so it is provably not the raw key, and forget() records what it released.
@@ -31,6 +32,11 @@ function spyCustodian(): KeyCustodian
         public function forget(string $handle): void
         {
             $this->forgotten[] = $handle;
+        }
+
+        public function custody(): KeyCustody
+        {
+            return KeyCustody::OperatingSystem;
         }
     };
 }

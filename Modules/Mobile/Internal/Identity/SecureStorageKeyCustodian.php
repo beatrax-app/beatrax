@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Enums\KeyCustody;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\SecureStorageException;
@@ -95,6 +96,15 @@ class SecureStorageKeyCustodian implements KeyCustodian
         }
 
         $this->nativeDelete($handle);
+    }
+
+    // A store that answers on a phone is a real one: the iOS entry is
+    // kSecAttrAccessibleWhenUnlockedThisDeviceOnly and the Android one an
+    // EncryptedSharedPreferences value under a Keystore master key. Neither
+    // platform has the keyring-less mode a Linux desktop has to be asked about.
+    public function custody(): KeyCustody
+    {
+        return $this->runtimeAvailable() ? KeyCustody::OperatingSystem : KeyCustody::Session;
     }
 
     // Safe to call unconditionally - never references the native facade

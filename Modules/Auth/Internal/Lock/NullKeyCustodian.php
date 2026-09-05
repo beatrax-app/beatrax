@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Lock;
 
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Enums\KeyCustody;
 
 // The default custodian on web and CI: the handle IS the raw key, so the
 // custody seam changes nothing until a desktop or mobile build rebinds it.
@@ -26,5 +27,10 @@ final class NullKeyCustodian implements KeyCustodian
         // copy of it anywhere this seam owns. A custodian that keeps one has
         // something to forget; erasing the caller's own copy is not this
         // custodian's job.
+    }
+
+    public function custody(): KeyCustody
+    {
+        return KeyCustody::Session;
     }
 }
