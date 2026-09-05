@@ -6582,6 +6582,31 @@ compose header both name PostgreSQL in order to say it does not work, and a
 rule that grepped for the word would have to be switched off for the two files
 that explain the rule.
 
+And then the guard went red on the fix, which is the part worth keeping. Deleting
+the three connections from `config/database.php` did not remove them. The running
+application still had `pgsql`, `mysql` and `mariadb` — plus `sqlsrv`, which this
+repository never defined at all.
+
+`LoadConfiguration` merges the framework's own `config/database.php` over ours
+key by key, and `connections` is one of the options it merges a second time at
+the inner level, so a connection deleted from our file is handed straight back by
+the framework default. `DB_CONNECTION=pgsql` still resolved to a working
+configuration, which then died thirty-two migrations later on a trigger
+PostgreSQL cannot parse — the same failure the ADR had already described, reached
+by a route the ADR's own remedy did not close.
+
+Null is what removes a connection. `DatabaseManager::configuration()` reads a
+null as "not configured" and says so before anything opens, which turns a
+mid-migration syntax error into one sentence at boot. All four engines the
+framework ships a default for are withdrawn that way, and the rule pins them by
+name so a framework upgrade adding a fifth goes red here rather than quietly
+reopening the option.
+
+The general shape: **a config file is not the configuration.** Anything that
+asserts on what an application is configured to do has to read the merged result
+the framework hands back, not the file this repository happens to own. Asserting
+on the file would have agreed with the deletion and been wrong.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
