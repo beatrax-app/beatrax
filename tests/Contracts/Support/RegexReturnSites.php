@@ -15,6 +15,46 @@ final class RegexReturnSites
 {
     public const array SCANNED_FUNCTIONS = ['preg_match', 'preg_match_all'];
 
+    /**
+     * Every directory under the application root that holds PHP. The list is
+     * written out rather than discovered so a new root is a reviewed line
+     * rather than a silent widening -- and `unscannedRootsHoldingPhp()` is
+     * what stops it from being a silent *narrowing* instead.
+     *
+     * @var list<string>
+     */
+    public const array SCANNED_ROOTS = [
+        '.claude',
+        'app',
+        'bootstrap',
+        'config',
+        'database',
+        'lang',
+        'Modules',
+        'public',
+        'resources',
+        'routes',
+        'scripts',
+        'tests',
+        'tools',
+    ];
+
+    /**
+     * Directories the walk steps over, each for a reason that is not "it has
+     * no PHP in it today". `mobile-app` is the second Composer root: the
+     * mobile-app job runs this same guard with `base_path()` pointing there,
+     * so scanning it from here would judge it twice and, through its symlinked
+     * `tests`, walk this root's own files a second time.
+     *
+     * @var list<string>
+     */
+    public const array ROOTS_COVERED_ELSEWHERE = [
+        'mobile-app',
+        'node_modules',
+        'storage',
+        'vendor',
+    ];
+
     // The one home for the checked reading. Its own calls are the checked
     // ones, so it is the single file the guard steps over.
     public const string SEAM = 'Modules/Core/Public/Support/PatternScan.php';
@@ -26,7 +66,7 @@ final class RegexReturnSites
     {
         $files = [];
 
-        foreach (['Modules', 'app', 'tests', 'database', 'scripts'] as $root) {
+        foreach (self::SCANNED_ROOTS as $root) {
             $dir = base_path($root);
             if (! is_dir($dir)) {
                 continue;
@@ -124,5 +164,55 @@ final class RegexReturnSites
         }
 
         return $operand['text'] === '1' || strtolower($operand['text']) === 'false';
+    }
+
+    /**
+     * Top-level directories that hold PHP and that `files()` never opens.
+     *
+     * A regex guard is only as wide as its walk, and this walk was five names
+     * long while the tree had grown thirteen. The rule it enforces is not
+     * "these roots are scanned" but "a directory holding PHP is either scanned
+     * or named as somebody else's to scan", which is the only form that
+     * survives a directory being added.
+     *
+     * @return list<string>
+     */
+    public static function unscannedRootsHoldingPhp(): array
+    {
+        $unscanned = [];
+
+        foreach ((array) scandir(base_path()) as $entry) {
+            if (! is_string($entry) || $entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            if (in_array($entry, self::SCANNED_ROOTS, true) || in_array($entry, self::ROOTS_COVERED_ELSEWHERE, true)) {
+                continue;
+            }
+
+            $dir = base_path($entry);
+
+            if (is_dir($dir) && ! is_link($dir) && self::holdsPhp($dir)) {
+                $unscanned[] = $entry;
+            }
+        }
+
+        sort($unscanned);
+
+        return $unscanned;
+    }
+
+    private static function holdsPhp(string $dir): bool
+    {
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        ) as $file) {
+            if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
