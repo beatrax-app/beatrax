@@ -333,10 +333,18 @@ it('a later disagreement about the same field replaces the record rather than be
     ]);
     $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
 
-    // A second real run, so the record's provenance has somewhere to move to:
-    // pending_enrichment_conflicts.import_run_id is a foreign key, and the
-    // reader is owed the run the surviving reading actually came from.
-    $laterRunId = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-LATER')->import_run_id;
+    // A second real run and no second transaction: pending_enrichment_conflicts
+    // .import_run_id is a foreign key, so the later reading needs a run to name,
+    // and seeding another row would collide with the natural key this fixture
+    // holds constant.
+    $laterRun = ImportRun::create([
+        'user_id' => $this->fixtureUser->id,
+        'source_format' => SourceFormat::Eml->value,
+        'raw_file_path' => '/tmp/conflict-later.eml',
+        'sha256' => hash('sha256', 'conflict-later'),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'confirmed',
+    ]);
 
     $applier = resolveApplier();
 
@@ -356,7 +364,7 @@ it('a later disagreement about the same field replaces the record rather than be
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-B',
-            importRunId: $laterRunId,
+            importRunId: $laterRun->id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Second reading'],
@@ -367,7 +375,7 @@ it('a later disagreement about the same field replaces the record rather than be
     $pending = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->get();
     expect($pending)->toHaveCount(1);
     expect(json_decode((string) $pending[0]->incoming_value, true))->toBe('Second reading');
-    expect((int) $pending[0]->import_run_id)->toBe((int) $laterRunId);
+    expect((int) $pending[0]->import_run_id)->toBe((int) $laterRun->id);
 });
 
 it('W6 no-instance-cache: two consecutive __invoke calls for different users honour each user\'s policy independently (singleton safety)', function (): void {
