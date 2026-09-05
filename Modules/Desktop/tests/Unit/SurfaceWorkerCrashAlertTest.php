@@ -5,11 +5,30 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
+use Modules\Desktop\Internal\Native\ShellState;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
+
+uses(RefreshDatabase::class);
+
+// A new listener for every call, because that is what the shell gets: each
+// ProcessExited arrives in a PHP process of its own. Anything these cases prove
+// about a counter is therefore proven about a counter that outlives its reader.
+function crashListener(Clock $clock): SurfaceWorkerCrashAlert
+{
+    return new SurfaceWorkerCrashAlert(
+        $clock,
+        app(DatabaseManager::class),
+        app(WindowFocusState::class),
+        app(UrlGenerator::class),
+        app(SystemAlertWriter::class),
+        app(ShellState::class),
+    );
+}
 
 it('exposes the windowed crash-loop threshold as public constants', function (): void {
     expect(SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD)->toBeGreaterThanOrEqual(2);
@@ -25,13 +44,7 @@ it('returns false on the first ProcessExited for the worker alias', function ():
         }
     };
 
-    $listener = new SurfaceWorkerCrashAlert(
-        $clock,
-        app(DatabaseManager::class),
-        app(WindowFocusState::class),
-        app(UrlGenerator::class),
-        app(SystemAlertWriter::class),
-    );
+    $listener = crashListener($clock);
 
     expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
 
@@ -52,13 +65,7 @@ it('returns true after threshold ProcessExited events within the rolling window'
         }
     };
 
-    $listener = new SurfaceWorkerCrashAlert(
-        $clock,
-        app(DatabaseManager::class),
-        app(WindowFocusState::class),
-        app(UrlGenerator::class),
-        app(SystemAlertWriter::class),
-    );
+    $listener = crashListener($clock);
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $now->addSeconds($i * 10);
@@ -80,13 +87,7 @@ it('does not flag a crash-loop when exits are spaced beyond the window', functio
         }
     };
 
-    $listener = new SurfaceWorkerCrashAlert(
-        $clock,
-        app(DatabaseManager::class),
-        app(WindowFocusState::class),
-        app(UrlGenerator::class),
-        app(SystemAlertWriter::class),
-    );
+    $listener = crashListener($clock);
 
     // Spacing the exits a full window apart leaves only the most recent one
     // inside the window, so the threshold is never reached.
@@ -108,13 +109,7 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
         }
     };
 
-    $listener = new SurfaceWorkerCrashAlert(
-        $clock,
-        app(DatabaseManager::class),
-        app(WindowFocusState::class),
-        app(UrlGenerator::class),
-        app(SystemAlertWriter::class),
-    );
+    $listener = crashListener($clock);
 
     // Enough events to trip the threshold, but under a foreign alias, which the
     // worker's counter must not count.
@@ -125,11 +120,23 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
     expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
 });
 
-it('is bound as a singleton so its crash-counter state persists across resolutions', function (): void {
-    $first = app(SurfaceWorkerCrashAlert::class);
-    $second = app(SurfaceWorkerCrashAlert::class);
+it('counts an exit recorded by a listener that has already been thrown away', function (): void {
+    $clock = new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-05-23T12:00:00Z');
+        }
+    };
 
-    expect($first)->toBe($second);
+    for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
+        crashListener($clock)->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    }
+
+    expect(crashListener($clock)->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeTrue(
+        'Three exits, three listeners, one crash-loop. Held on the object the '.
+        'count reset with every event and the threshold could not be reached.',
+    );
 });
 
 it('uses the verbatim UI-SPEC body for the worker-crashed alert', function (): void {

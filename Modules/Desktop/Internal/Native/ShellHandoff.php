@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
-use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
-
 /**
  * @link ../../../../.docs/features/desktop/architecture.md#a-native-event-never-holds-the-windows-session
  */
@@ -20,13 +17,8 @@ final readonly class ShellHandoff
 
     public const string FILE_INTENT = 'desktop.shell-handoff.file-intent';
 
-    // The database store, not the configured default: the app's SQLite file is
-    // owner-only, and the file store would write an OS-supplied document path
-    // into storage/framework at whatever the umask of the day allows.
-    private const string STORE = 'database';
-
     public function __construct(
-        private CacheFactory $cache,
+        private ShellState $state,
     ) {}
 
     // Forever, deliberately: a lock demanded by a window that closed has to be
@@ -36,7 +28,7 @@ final readonly class ShellHandoff
      */
     public function leave(string $slot, array $fact = []): void
     {
-        $this->store()->forever($slot, $fact);
+        $this->state->write($slot, $fact);
     }
 
     // Reading spends it. A fact claimed twice would lock a reader who had
@@ -46,13 +38,12 @@ final readonly class ShellHandoff
      */
     public function take(string $slot): ?array
     {
-        $fact = $this->store()->pull($slot);
+        $fact = $this->state->read($slot);
 
-        return is_array($fact) ? $fact : null;
-    }
+        if ($fact !== null) {
+            $this->state->forget($slot);
+        }
 
-    private function store(): CacheRepository
-    {
-        return $this->cache->store(self::STORE);
+        return $fact;
     }
 }
