@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Backup;
 use InflateContext;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Core\Public\Support\ZipLocalEntry;
 
 /**
  * @phpstan-type BackupEntry array{
@@ -24,20 +25,10 @@ final class ExportArchiveBackup
 
     public const string ENTRY_SUFFIX = '.sqlite.enc';
 
-    private const string LOCAL_SIGNATURE = "PK\x03\x04";
-
-    private const int LOCAL_FIXED_BYTES = 30;
-
     // Sizes live in a trailing descriptor rather than in the header when this
     // is set. Neither writer here does that — both patch the header once the
     // entry is on disk — so an archive that carries one is not one of ours.
     private const int FLAG_DATA_DESCRIPTOR = 0x0008;
-
-    private const int METHOD_STORE = 0;
-
-    private const int METHOD_DEFLATE = 8;
-
-    private const int READ_CHUNK_BYTES = 262144;
 
     // The reader hands back whatever the export gave them, and that is a `.zip`
     // where the backup download is a bare `.enc`. Four bytes tell the two apart
@@ -49,10 +40,10 @@ final class ExportArchiveBackup
             return false;
         }
 
-        $signature = fread($handle, strlen(self::LOCAL_SIGNATURE));
+        $signature = fread($handle, strlen(ZipLocalEntry::SIGNATURE));
         fclose($handle);
 
-        return $signature === self::LOCAL_SIGNATURE;
+        return $signature === ZipLocalEntry::SIGNATURE;
     }
 
     // Only the backup comes out. The source documents beside it in the archive
@@ -89,20 +80,20 @@ final class ExportArchiveBackup
      */
     private function firstEntry($handle): array
     {
-        $header = $this->readAt($handle, 0, self::LOCAL_FIXED_BYTES);
-        if (strlen($header) < self::LOCAL_FIXED_BYTES || ! str_starts_with($header, self::LOCAL_SIGNATURE)) {
+        $header = $this->readAt($handle, 0, ZipLocalEntry::FIXED_BYTES);
+        if (strlen($header) < ZipLocalEntry::FIXED_BYTES || ! str_starts_with($header, ZipLocalEntry::SIGNATURE)) {
             throw new BackupFormatException('The archive does not open with a zip entry.');
         }
 
         $nameLength = $this->readShort($header, 26);
-        $name = $this->readAt($handle, self::LOCAL_FIXED_BYTES, $nameLength);
+        $name = $this->readAt($handle, ZipLocalEntry::FIXED_BYTES, $nameLength);
         $this->guardIsOurBackup($header, $name);
 
         return [
             'method' => $this->readShort($header, 8),
             'compressedSize' => $this->readLong($header, 18),
             'uncompressedSize' => $this->readLong($header, 22),
-            'dataOffset' => self::LOCAL_FIXED_BYTES + $nameLength + $this->readShort($header, 28),
+            'dataOffset' => ZipLocalEntry::FIXED_BYTES + $nameLength + $this->readShort($header, 28),
         ];
     }
 
@@ -120,7 +111,7 @@ final class ExportArchiveBackup
         }
 
         $method = $this->readShort($header, 8);
-        if ($method !== self::METHOD_STORE && $method !== self::METHOD_DEFLATE) {
+        if ($method !== ZipLocalEntry::METHOD_STORE && $method !== ZipLocalEntry::METHOD_DEFLATE) {
             throw new BackupFormatException(sprintf('The archived backup uses compression method %d.', $method));
         }
     }
@@ -161,7 +152,7 @@ final class ExportArchiveBackup
      */
     private function inflaterFor(array $entry): ?InflateContext
     {
-        if ($entry['method'] !== self::METHOD_DEFLATE) {
+        if ($entry['method'] !== ZipLocalEntry::METHOD_DEFLATE) {
             return null;
         }
 
@@ -189,7 +180,7 @@ final class ExportArchiveBackup
         $written = 0;
 
         while ($remaining > 0) {
-            $chunk = $this->readAt($handle, $offset, min($remaining, self::READ_CHUNK_BYTES));
+            $chunk = $this->readAt($handle, $offset, min($remaining, ZipLocalEntry::READ_CHUNK_BYTES));
             if ($chunk === '') {
                 throw new BackupFormatException('The export archive stops before the end of the backup it holds.');
             }
