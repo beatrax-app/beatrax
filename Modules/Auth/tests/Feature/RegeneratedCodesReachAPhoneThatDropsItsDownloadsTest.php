@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
+use Modules\Auth\Tests\Support\ManageUserShareSheet;
 use Modules\Core\Models\User;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
@@ -16,35 +17,6 @@ uses(RefreshDatabase::class);
 // <a download> — the shape the Android shell drops without a file, an error or
 // a console entry. The one-time display and the import wizard already ask the
 // platform where their download can go; this screen never did.
-
-final class ManageUserShareSheet extends ShareSheetExport
-{
-    /** @var array<string, string> */
-    public array $handed = [];
-
-    public function __construct(private readonly bool $dropsDownloads = true) {}
-
-    public function replacesWebViewDownload(): bool
-    {
-        return $this->dropsDownloads;
-    }
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    public function export(
-        string $filename,
-        string $contents,
-        ?string $shareTitle = null,
-        ?string $shareMessage = null,
-    ): FileExportOutcome {
-        $this->handed[$filename] = $contents;
-
-        return FileExportOutcome::Shared;
-    }
-}
 
 function manageUserOwnerAndPartner(): User
 {

@@ -9,6 +9,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
+use Modules\Auth\Tests\Support\DurableColdStartVault;
 use Modules\Core\Models\User;
 
 // enable() already deletes the WebAuthn enrolments, because "a leftover
@@ -18,41 +19,6 @@ use Modules\Core\Models\User;
 // off left a safeStorage copy of the data key behind, and turning it back on
 // found that file still there -- so the lock screen never re-enrolled and Touch
 // ID unlock never came back, with nothing on screen to say why.
-
-// Stands in for the desktop vault: enrolment is durable material that outlives
-// the row, which is the whole reason the stale copy went unnoticed.
-final class DurableColdStartVault implements ColdStartVault
-{
-    /** @var array<int, string> */
-    public array $keys = [];
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    public function isEnrolled(int $userId): bool
-    {
-        return array_key_exists($userId, $this->keys);
-    }
-
-    public function enroll(int $userId, string $dataKey): bool
-    {
-        $this->keys[$userId] = $dataKey;
-
-        return true;
-    }
-
-    public function recover(int $userId, string $reason): ?string
-    {
-        return $this->keys[$userId] ?? null;
-    }
-
-    public function forget(int $userId): void
-    {
-        unset($this->keys[$userId]);
-    }
-}
 
 function vaultKeptUser(string $username): User
 {

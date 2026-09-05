@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Mobile\Internal\Identity\BiometricKeyVault;
-use Psr\Log\NullLogger;
+use Modules\Mobile\Tests\Support\PlatformStubVault;
 
 // Settings on the Samsung offered "Use fingerprint — Enroll this device to
 // unlock with biometrics", and Enroll answered "Your device declined to store
@@ -18,24 +16,6 @@ use Psr\Log\NullLogger;
 // that Keystore key needs an asynchronous BiometricPrompt, and that wiring is
 // deliberately still a skeleton. So enrolment cannot succeed on any Android
 // build, and the control was offered on all of them.
-
-final class PlatformStubVault extends BiometricKeyVault
-{
-    public function __construct(private readonly string $family, private readonly bool $runtime = true)
-    {
-        parent::__construct(app(BiometricKeyBlobCodec::class), new NullLogger);
-    }
-
-    protected function runtimeAvailable(): bool
-    {
-        return $this->runtime;
-    }
-
-    protected function platformFamily(): string
-    {
-        return $this->family;
-    }
-}
 
 it('does not offer the vault on Android, where nothing can be written to it', function (): void {
     expect((new PlatformStubVault('Linux'))->isAvailable())->toBeFalse();

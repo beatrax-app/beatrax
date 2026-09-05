@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +20,7 @@ use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Modules\EmailScan\Tests\Support\FailingTransactionDbManager;
 use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
@@ -141,59 +141,3 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
         ->count();
     expect($rowsAfterRetry)->toBe(3);
 });
-
-// Forces the .eml-then-DB rollback path without touching production code.
-final class FailingTransactionDbManager extends DatabaseManager
-{
-    public function __construct(
-        private readonly DatabaseManager $inner,
-        private readonly int $failOnCall,
-    ) {
-        // Every call proxies to $this->inner, so the parent constructor has
-        // nothing to set up.
-    }
-
-    /**
-     * @param  string|null  $name
-     */
-    public function connection($name = null): Connection
-    {
-        return new FailingTransactionConnection(
-            $this->inner->connection($name),
-            failOnCall: $this->failOnCall,
-        );
-    }
-}
-
-final class FailingTransactionConnection extends Connection
-{
-    private int $transactionCallCount = 0;
-
-    public function __construct(
-        private readonly Connection $inner,
-        private readonly int $failOnCall,
-    ) {
-        // The inner connection is already initialised and the parent's
-        // protected state is never read here.
-    }
-
-    public function transaction(Closure $callback, $attempts = 1)
-    {
-        $this->transactionCallCount++;
-        if ($this->transactionCallCount === $this->failOnCall) {
-            throw new RuntimeException('injected-tx-failure');
-        }
-
-        return $this->inner->transaction($callback, $attempts);
-    }
-
-    public function table($table, $as = null)
-    {
-        return $this->inner->table($table, $as);
-    }
-
-    public function statement($query, $bindings = [])
-    {
-        return $this->inner->statement($query, $bindings);
-    }
-}

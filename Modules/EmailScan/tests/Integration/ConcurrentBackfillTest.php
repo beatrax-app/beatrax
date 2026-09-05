@@ -21,6 +21,7 @@ use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use Modules\EmailScan\Tests\Support\RecordingDatabaseManager;
 use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
@@ -135,70 +136,3 @@ it('carries the configured busy_timeout on a connection nothing has touched', fu
 
     expect($timeout)->toBeGreaterThanOrEqual(30_000);
 });
-
-// capturedStatements collects one array per transaction() invocation, holding
-// the raw SQL issued via statement() inside that transaction body.
-final class RecordingDatabaseManager extends DatabaseManager
-{
-    /** @var list<list<string>> */
-    public array $capturedStatements = [];
-
-    public function __construct(
-        private readonly DatabaseManager $inner,
-        array &$statementsInTransactions = [],
-    ) {
-        $this->capturedStatements = &$statementsInTransactions;
-    }
-
-    public function connection($name = null): Connection
-    {
-        return new RecordingConnection(
-            $this->inner->connection($name),
-            capturedStatements: $this->capturedStatements,
-        );
-    }
-}
-
-final class RecordingConnection extends Connection
-{
-    /** @var list<string> */
-    private array $currentTransactionStatements = [];
-
-    private bool $inTransaction = false;
-
-    public function __construct(
-        private readonly Connection $inner,
-        /** @var list<list<string>> */
-        private array &$capturedStatements,
-    ) {}
-
-    public function transaction(Closure $callback, $attempts = 1)
-    {
-        $this->inTransaction = true;
-        $this->currentTransactionStatements = [];
-
-        try {
-            $result = $this->inner->transaction($callback, $attempts);
-        } finally {
-            $this->capturedStatements[] = $this->currentTransactionStatements;
-            $this->inTransaction = false;
-            $this->currentTransactionStatements = [];
-        }
-
-        return $result;
-    }
-
-    public function table($table, $as = null)
-    {
-        return $this->inner->table($table, $as);
-    }
-
-    public function statement($query, $bindings = [])
-    {
-        if ($this->inTransaction) {
-            $this->currentTransactionStatements[] = $query;
-        }
-
-        return $this->inner->statement($query, $bindings);
-    }
-}

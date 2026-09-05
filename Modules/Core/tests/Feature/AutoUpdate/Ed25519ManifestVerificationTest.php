@@ -8,19 +8,8 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Tests\Support\EuvRecordingLogger;
 use Psr\Log\NullLogger;
-
-// Captures warning messages so the two "cannot verify" reasons stay distinguishable.
-final class EuvRecordingLogger extends NullLogger
-{
-    /** @var list<string> */
-    public array $warnings = [];
-
-    public function warning(string|Stringable $message, array $context = []): void
-    {
-        $this->warnings[] = (string) $message;
-    }
-}
 
 function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChannel
 {

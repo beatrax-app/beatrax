@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
+use Modules\Reports\Tests\Support\ReportExportShareSheet;
 
 uses(RefreshDatabase::class);
 
@@ -16,35 +17,6 @@ uses(RefreshDatabase::class);
 // nothing in /sdcard/Download, nothing in the app container, an unchanged page
 // and an empty toast container. Both the builder's action and the /reports/export
 // route answered with a StreamedResponse the Android WebView has nowhere to put.
-
-final class ReportExportShareSheet extends ShareSheetExport
-{
-    /** @var array<string, string> */
-    public array $handed = [];
-
-    public function __construct(private readonly bool $dropsDownloads = true) {}
-
-    public function replacesWebViewDownload(): bool
-    {
-        return $this->dropsDownloads;
-    }
-
-    public function isAvailable(): bool
-    {
-        return true;
-    }
-
-    public function export(
-        string $filename,
-        string $contents,
-        ?string $shareTitle = null,
-        ?string $shareMessage = null,
-    ): FileExportOutcome {
-        $this->handed[$filename] = $contents;
-
-        return FileExportOutcome::Shared;
-    }
-}
 
 function reportExportReader(): User
 {

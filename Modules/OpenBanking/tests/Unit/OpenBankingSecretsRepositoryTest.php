@@ -10,30 +10,13 @@ use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Tests\Support\OpenBankingReversingShield;
 
 /** @link ../../../../.docs/features/open-banking/secrets-at-rest.md#two-encryption-layers-applied-inner-to-outer */
 
 // The bound SecretShield is the identity function, so "not plaintext-readable"
 // would be tautologically false against it. Every test injects the reversing
 // double instead, proving the bytes really go through protect()/reveal().
-
-final class OpenBankingReversingShield implements SecretShield
-{
-    public function protect(string $plaintext): string
-    {
-        return strrev($plaintext);
-    }
-
-    public function reveal(string $shielded): string
-    {
-        return strrev($shielded);
-    }
-
-    public function protectsAtRest(): bool
-    {
-        return true;
-    }
-}
 
 function openBankingSecretsFixturePath(): string
 {

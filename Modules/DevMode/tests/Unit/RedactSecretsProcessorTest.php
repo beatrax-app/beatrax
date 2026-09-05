@@ -3,41 +3,9 @@
 declare(strict_types=1);
 
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
-use Modules\DevMode\Internal\Services\OAuthScrubSet;
+use Modules\DevMode\Tests\Support\FixedOAuthScrubSetStub;
 use Monolog\Level;
 use Monolog\LogRecord;
-
-// A named class rather than an anonymous one: pest runs each `it()` body
-// inside a Closure, and an anonymous class declared there is redeclared on
-// repeat iterations. Overriding all three public methods sidesteps the
-// parent's private cache without touching the DB.
-class FixedOAuthScrubSetStub extends OAuthScrubSet
-{
-    /**
-     * @param  list<string>  $preloaded
-     */
-    public function __construct(private array $preloaded) {}
-
-    public function all(): array
-    {
-        return $this->preloaded;
-    }
-
-    public function compiledPattern(): ?string
-    {
-        if ($this->preloaded === []) {
-            return null;
-        }
-        $alt = implode('|', array_map(
-            static fn (string $s): string => preg_quote($s, '/'),
-            $this->preloaded,
-        ));
-
-        return '/('.$alt.')/';
-    }
-
-    public function bust(): void {}
-}
 
 function newProcessorRecord(string $message, array $context = [], array $extra = []): LogRecord
 {

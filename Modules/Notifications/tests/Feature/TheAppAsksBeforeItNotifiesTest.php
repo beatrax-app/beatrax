@@ -7,6 +7,7 @@ use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Delivery\NoSystemNotificationConsent;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
+use Modules\Notifications\Tests\Support\RecordingConsent;
 
 // Measured on the Samsung, Android 16, targetSdk 36: the manifest declares
 // POST_NOTIFICATIONS and the strip script deliberately keeps it, but nothing
@@ -18,16 +19,6 @@ use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 // nudge and shortfall warning the app posts was being dropped.
 //
 // The moment to ask is the moment the reader asks to be notified.
-
-final class RecordingConsent implements SystemNotificationConsent
-{
-    public int $requests = 0;
-
-    public function request(): void
-    {
-        $this->requests++;
-    }
-}
 
 beforeEach(function (): void {
     $this->user = User::query()->create([

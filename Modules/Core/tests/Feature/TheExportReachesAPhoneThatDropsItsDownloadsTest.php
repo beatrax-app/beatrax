@@ -18,6 +18,7 @@ use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Http\Livewire\ExportEverythingDownload;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Tests\Support\ExportEverythingShareSheet;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -26,43 +27,6 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 // BinaryFileResponse where the shell saves what its WebView downloads, and the
 // OS share sheet where it does not. A phone can be the only device a household
 // owns, so the road that works there is not the fallback.
-
-final class ExportEverythingShareSheet extends ShareSheetExport
-{
-    /** @var list<string> */
-    public array $handed = [];
-
-    public function __construct(
-        private readonly bool $dropsDownloads = true,
-        private readonly bool $available = true,
-        private readonly FileExportOutcome $outcome = FileExportOutcome::Shared,
-    ) {}
-
-    public function replacesWebViewDownload(): bool
-    {
-        return $this->dropsDownloads;
-    }
-
-    public function isAvailable(): bool
-    {
-        return $this->available;
-    }
-
-    public function exportFile(
-        string $sourcePath,
-        string $filename,
-        ?string $shareTitle = null,
-        ?string $shareMessage = null,
-    ): FileExportOutcome {
-        $this->handed[] = $filename;
-
-        if ($this->outcome === FileExportOutcome::Shared) {
-            @unlink($sourcePath);
-        }
-
-        return $this->outcome;
-    }
-}
 
 // Stands in for the VACUUM INTO the transactional harness refuses ("cannot
 // VACUUM from within a transaction"), so what this reaches is the component's
