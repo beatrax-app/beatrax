@@ -8,9 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Enums\BackupAlertKind;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Instant;
@@ -29,6 +29,7 @@ final readonly class BackupFreshnessProbe implements Probe
         private Clock $clock,
         private DatabaseManager $db,
         private UserDataPathService $paths,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function label(): string
@@ -160,16 +161,16 @@ final readonly class BackupFreshnessProbe implements Probe
                 ? CopyLine::of('core::alerts.messages.backup_none_found')
                 : CopyLine::of('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]);
 
-            SystemAlert::create([
-                'user_id' => null,
-                'kind' => BackupAlertKind::Overdue->value,
-                'severity' => SystemAlertSeverity::Warning->value,
-                'message' => $line->sentence(),
-                'metadata' => StoredCopy::inParams($line) + [
+            $this->alerts->raiseOnceSystemWide(
+                kind: BackupAlertKind::Overdue->value,
+                severity: SystemAlertSeverity::Warning->value,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line) + [
                     'hours_old' => $hoursOld,
                     'backups_path' => $this->paths->backups(),
                 ],
-            ]);
+                window: SystemAlertWriter::hourWindow($this->clock->now()),
+            );
         } catch (Throwable) {
             // Alert-write failure is non-fatal — the ProbeResult itself
             // is the load-bearing signal.

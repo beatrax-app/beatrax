@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
@@ -29,6 +30,7 @@ it('returns false on the first ProcessExited for the worker alias', function ():
         app(DatabaseManager::class),
         app(WindowFocusState::class),
         app(UrlGenerator::class),
+        app(SystemAlertWriter::class),
     );
 
     expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
@@ -55,6 +57,7 @@ it('returns true after threshold ProcessExited events within the rolling window'
         app(DatabaseManager::class),
         app(WindowFocusState::class),
         app(UrlGenerator::class),
+        app(SystemAlertWriter::class),
     );
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
@@ -82,6 +85,7 @@ it('does not flag a crash-loop when exits are spaced beyond the window', functio
         app(DatabaseManager::class),
         app(WindowFocusState::class),
         app(UrlGenerator::class),
+        app(SystemAlertWriter::class),
     );
 
     // Spacing the exits a full window apart leaves only the most recent one
@@ -109,6 +113,7 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
         app(DatabaseManager::class),
         app(WindowFocusState::class),
         app(UrlGenerator::class),
+        app(SystemAlertWriter::class),
     );
 
     // Enough events to trip the threshold, but under a foreign alias, which the

@@ -36,8 +36,10 @@ final class RealSqliteFixture
             message TEXT NOT NULL,
             metadata TEXT NULL,
             created_at TEXT NOT NULL,
-            acknowledged_at TEXT NULL
+            acknowledged_at TEXT NULL,
+            dedup_key TEXT NULL
         )',
+        'CREATE UNIQUE INDEX system_alerts_dedup_key_unique ON system_alerts (dedup_key)',
     ];
 
     /**

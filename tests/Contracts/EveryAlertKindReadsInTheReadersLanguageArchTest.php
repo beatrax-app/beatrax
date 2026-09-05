@@ -34,6 +34,23 @@ function alertKindsTheBannerMustRender(): array
     return $kinds;
 }
 
+// Every spelling a file that raises an alert can carry. Matched as a LIST and
+// not by a shared prefix: `raiseOnceForUser` does not contain `raiseForUser`,
+// so the one guard that looked for the substring skipped both app-lock kinds
+// for as long as they were the only alerts their file wrote.
+/** @return list<string> */
+function alertWriterSpellings(): array
+{
+    return [
+        'raiseForUser',
+        'raiseOnceForUser',
+        'raiseOnceSystemWide',
+        'SystemAlert::create',
+        'SystemAlert::query()->create',
+        'ALERT_KIND',
+    ];
+}
+
 // Most kinds are literals rather than enum cases, and a hand-written list of
 // them is a list that goes stale the first time a module raises a new one. The
 // writers are found instead, and their literals read off them.
@@ -57,8 +74,15 @@ function alertKindLiteralsWrittenInProduction(): array
 
         $source = (string) file_get_contents($path);
 
-        if (! str_contains($source, 'raiseForUser') && ! str_contains($source, 'SystemAlert::create')
-            && ! str_contains($source, 'ALERT_KIND')) {
+        $raisesAnAlert = false;
+        foreach (alertWriterSpellings() as $spelling) {
+            if (str_contains($source, $spelling)) {
+                $raisesAnAlert = true;
+                break;
+            }
+        }
+
+        if (! $raisesAnAlert) {
             continue;
         }
 

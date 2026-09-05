@@ -48,6 +48,23 @@ function neverLeavesTheDeviceThatWroteIt(): array
 }
 
 /**
+ * A non-pk UNIQUE index normally means the table has a natural key both devices
+ * compute the same way, so its pk can be derived instead of taken from the
+ * sequence. These do not, and a table is no safer for carrying one — so naming
+ * them here keeps that table under the guard rather than quietly outside it.
+ *
+ * @return array<string, string> index name => why it identifies nothing
+ */
+function uniqueIndexesThatAreNotACrossDeviceIdentity(): array
+{
+    return [
+        'system_alerts_dedup_key_unique' => 'A device-local claim on the one OPEN alert of a kind: '
+            .'NULL on every row that is meant to repeat, and SystemAlertWriter::storedRow() strips it '
+            .'before an owned alert travels, so the peer never sees the value at all.',
+    ];
+}
+
+/**
  * @return list<string>
  */
 function travellingTablesTakingIdsFromTheSequence(): array
@@ -65,9 +82,13 @@ function travellingTablesTakingIdsFromTheSequence(): array
             continue;
         }
 
+        $notAnIdentity = uniqueIndexesThatAreNotACrossDeviceIdentity();
+
         $unique = array_filter(
             $connection->select('pragma index_list('.$table.')'),
-            static fn (object $index): bool => (int) $index->unique === 1 && $index->origin !== 'pk',
+            static fn (object $index): bool => (int) $index->unique === 1
+                && $index->origin !== 'pk'
+                && ! isset($notAnIdentity[(string) $index->name]),
         );
 
         if ($unique === []) {

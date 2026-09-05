@@ -46,6 +46,10 @@ final readonly class AcknowledgeSystemAlert
             return $alert;
         }
 
+        // The row's `dedup_key` is released by a trigger on this column rather
+        // than here, because a peer's dismissal arrives as a raw UPDATE from
+        // the applier and reaches no PHP of ours. `refresh()` below reads the
+        // row back after it, so the returned model is not holding a stale key.
         $this->db->connection()->transaction(static function () use ($alert, $now): void {
             $alert->update(['acknowledged_at' => $now]);
         });
@@ -71,7 +75,11 @@ final readonly class AcknowledgeSystemAlert
             return;
         }
 
-        $this->db->connection()->table('system_alert_acknowledgements')->insert([
+        // insertOrIgnore, not insert: the read above and this write are two
+        // statements, and a double tap on a phone sends two requests that both
+        // pass it. The unique index then made the second one a 500 on a button
+        // whose whole job is to make a warning go away.
+        $this->db->connection()->table('system_alert_acknowledgements')->insertOrIgnore([
             'system_alert_id' => $alertId,
             'user_id' => $userId,
             'acknowledged_at' => $now->toDateTimeString(),

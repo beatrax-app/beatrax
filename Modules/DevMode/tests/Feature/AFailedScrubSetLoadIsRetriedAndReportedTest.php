@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\OAuthAlertKind;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
@@ -39,7 +40,7 @@ it('raises the redaction-is-offline alert on a load that fails after boot, even 
 
     /** @var SecretShield $shield */
     $shield = app(SecretShield::class);
-    $scrubSet = new OAuthScrubSet($shield);
+    $scrubSet = new OAuthScrubSet($shield, app(SystemAlertWriter::class));
 
     withOAuthSecretsTableHidden(function () use ($scrubSet): void {
         expect($scrubSet->all())->toBe([]);
@@ -72,7 +73,7 @@ it('scrubs again once the cause clears, rather than caching the empty set a fail
 
     /** @var SecretShield $shield */
     $shield = app(SecretShield::class);
-    $scrubSet = new OAuthScrubSet($shield);
+    $scrubSet = new OAuthScrubSet($shield, app(SystemAlertWriter::class));
 
     withOAuthSecretsTableHidden(function () use ($scrubSet): void {
         expect($scrubSet->all())->toBe([]);

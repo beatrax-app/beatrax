@@ -9,6 +9,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\OAuthAlertKind;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\StoredCopy;
 use Modules\EmailScan\Models\OAuthSecret;
@@ -46,6 +47,7 @@ class OAuthScrubSet
     // and the plaintext that actually reaches the logs would go unredacted.
     public function __construct(
         private readonly SecretShield $shield,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function bust(): void
@@ -231,16 +233,15 @@ class OAuthScrubSet
 
             $line = CopyLine::of('core::alerts.messages.oauth_scrub_set_failed');
 
-            SystemAlert::create([
-                'user_id' => null,
-                'kind' => OAuthAlertKind::ScrubSetFailed->value,
-                'severity' => SystemAlertSeverity::Critical->value,
-                'message' => $line->sentence(),
-                'metadata' => StoredCopy::inParams($line) + $about + [
+            $this->alerts->raiseOnceSystemWide(
+                kind: OAuthAlertKind::ScrubSetFailed->value,
+                severity: SystemAlertSeverity::Critical->value,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line) + $about + [
                     'exception' => $e->getMessage(),
                     'exception_class' => get_class($e),
                 ],
-            ]);
+            );
         } catch (Throwable) {
             // Swallowed: this runs inside a logger call, so a failing alert
             // write would crash every request that emits a log line.
@@ -248,8 +249,9 @@ class OAuthScrubSet
     }
 
     // The in-process flags above cannot hold across requests, and a keyless
-    // credential is a standing state: without this the alert is raised again
-    // by every request that writes a log line, burying its own first report.
+    // credential is a standing state: without this the alert is raised again by
+    // every request that writes a log line, burying its own first report. Two
+    // desktop processes booting together both read false, which the key refuses.
     private function alertAlreadyOpen(): bool
     {
         // Through the raw query builder, as every other existence probe here

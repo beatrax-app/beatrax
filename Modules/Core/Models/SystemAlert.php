@@ -12,6 +12,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property int $id
  * @property int|null $user_id
  * @property string $kind
+ * @property string|null $dedup_key
  * @property string $severity
  * @property string $message
  * @property array<string, mixed>|null $metadata
@@ -25,6 +26,7 @@ final class SystemAlert extends Model
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'dedup_key',
         'kind',
         'severity',
         'message',
