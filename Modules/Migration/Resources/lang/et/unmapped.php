@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'See tehing põrkus juba salvestatud tehinguga (identne sõrmejälg) ja jäi importimata.',
+        'reconciled_status_kept' => 'Allika kontrollistaatust ei saanud rakendada — see tehing on Beatraxis kooskõlastatud ja seda muudab ainult kooskõlastuse tühistamine. Jäeti muutmata.',
 
         // i18n-review: et · reason.split_legs_without_category — the count is
         // moved behind the elative phrase because Estonian counts that way, and

@@ -26,12 +26,12 @@ beforeEach(function (): void {
     $this->sourceDayDb = app(DatabaseManager::class);
 });
 
-function sourceDayPromoteYnab4(User $user): int
+function sourceDayPromoteYnab4(User $user, string $fixture = 'v1'): int
 {
     $run = app(StartMigrationRun::class)->__invoke(
         $user,
         'ynab4',
-        MigrationFixturePaths::ynab4Dir('v1'),
+        MigrationFixturePaths::ynab4Dir($fixture),
         'Beatrax Test Budget.zip',
     );
 
@@ -103,11 +103,16 @@ it('posts every promoted row on the exact day its export stated', function (): v
     );
 });
 
+// The `twins` register holds the case the offset was written for: two Albert
+// Heijn rows on 15 January, both 45,00, differing only by a memo the
+// fingerprint does not read. Every other fixture leaves the offset at zero, so
+// running this against one of those asserts that nothing spilled out of a day
+// nothing was ever moved within.
 it('keeps the ordering offset inside the day it orders', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->sourceDayDb;
 
-    sourceDayPromoteYnab4($this->sourceDayUser);
+    sourceDayPromoteYnab4($this->sourceDayUser, 'twins');
 
     $promoted = $db->connection()->table('transactions')
         ->where('user_id', $this->sourceDayUser->id)
@@ -133,6 +138,15 @@ it('keeps the ordering offset inside the day it orders', function (): void {
     // The offset has to be there, or this is asserting that nothing spilled out
     // of a day nothing was ever moved within.
     expect($offsetRows)->toBeGreaterThan(0);
+
+    // And it has to have done its job: both trips survive as two rows. An
+    // offset that separates nothing would let the second collapse onto the
+    // first as a duplicate fingerprint and be dropped.
+    expect($db->connection()->table('transactions')
+        ->where('user_id', $this->sourceDayUser->id)
+        ->whereDate('posted_at', '2026-01-15')
+        ->where('amount_minor', -4500)
+        ->count())->toBe(2);
 
     expect($spilled)->toBe(
         [],

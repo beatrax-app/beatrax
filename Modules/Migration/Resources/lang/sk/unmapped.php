@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Táto transakcia sa zhodovala s inou už zaznamenanou transakciou (rovnaký odtlačok) a nebola naimportovaná.',
+        'reconciled_status_kept' => 'Stav odsúhlasenia zo zdroja sa nepodarilo použiť — táto transakcia je v Beatraxe odsúhlasená a zmení to len zrušenie odsúhlasenia. Ponechané bez zmeny.',
         'split_legs_without_category' => ':count časť rozdelenia z :legs nemá kategóriu a časť rozdelenia sa bez nej nedá uložiť. Transakcia sa naimportovala v plnej sume a čaká v kategórii „:uncategorized“.|:count časti rozdelenia z :legs nemajú kategóriu a časť rozdelenia sa bez nej nedá uložiť. Transakcia sa naimportovala v plnej sume a čaká v kategórii „:uncategorized“.|:count častí rozdelenia z :legs nemá kategóriu a časť rozdelenia sa bez nej nedá uložiť. Transakcia sa naimportovala v plnej sume a čaká v kategórii „:uncategorized“.',
         'split_sum_mismatch' => 'Časti rozdelenia dávajú spolu :legs, ale transakcia je :total, pričom rozdelenie musí presne sedieť so svojou transakciou. Transakcia sa naimportovala v plnej sume, bez svojich častí.',
         'split_unstorable' => 'Beatrax nedokáže uložiť toto rozdelenie v tejto podobe, takže transakcia sa naimportovala samostatne, bez svojich častí.',

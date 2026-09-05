@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Ta transakcja pokryła się z inną, już zapisaną transakcją (identyczny odcisk) i nie została zaimportowana.',
+        'reconciled_status_kept' => 'Statusu uzgodnienia ze źródła nie udało się zastosować — ta transakcja jest uzgodniona w Beatrax i zmienia to tylko cofnięcie uzgodnienia. Pozostawiono bez zmian.',
         'split_legs_without_category' => ':count pozycja podziału z :legs nie ma kategorii, a pozycji podziału nie da się zapisać bez kategorii. Transakcja została zaimportowana w pełnej kwocie i czeka w kategorii „:uncategorized”.|:count pozycje podziału z :legs nie mają kategorii, a pozycji podziału nie da się zapisać bez kategorii. Transakcja została zaimportowana w pełnej kwocie i czeka w kategorii „:uncategorized”.|:count pozycji podziału z :legs nie ma kategorii, a pozycji podziału nie da się zapisać bez kategorii. Transakcja została zaimportowana w pełnej kwocie i czeka w kategorii „:uncategorized”.',
         'split_sum_mismatch' => 'Pozycje podziału sumują się do :legs, a transakcja wynosi :total, podczas gdy podział musi dokładnie odpowiadać swojej transakcji. Transakcja została zaimportowana w pełnej kwocie, bez pozycji.',
         'split_unstorable' => 'Beatrax nie może zapisać tego podziału w takiej postaci, więc transakcja została zaimportowana sama, bez pozycji.',

@@ -34,6 +34,7 @@ return [
 
     'reason' => [
         'fingerprint_collision' => 'Esta transacción chocó con otra transacción ya registrada (huella idéntica) y no se importó.',
+        'reconciled_status_kept' => 'El estado de conciliación de la fuente no se pudo aplicar — esta transacción está conciliada en Beatrax y solo anular la conciliación lo cambia. Se dejó sin cambios.',
         'split_legs_without_category' => ':count línea del desglose de :legs no tiene categoría, y una línea no se puede guardar sin ella. La transacción se importó por su importe completo y está esperando en la categoría :uncategorized.|:count líneas del desglose de :legs no tienen categoría, y una línea no se puede guardar sin ella. La transacción se importó por su importe completo y está esperando en la categoría :uncategorized.',
         'split_sum_mismatch' => 'Las líneas del desglose suman :legs pero la transacción es :total, y un desglose tiene que coincidir exactamente con su transacción. La transacción se importó por su importe completo, sin sus líneas.',
         'split_unstorable' => 'Beatrax no puede guardar este desglose tal como está, así que la transacción se importó sola, sin sus líneas.',

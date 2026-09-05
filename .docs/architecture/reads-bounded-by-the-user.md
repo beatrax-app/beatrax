@@ -304,7 +304,7 @@ the page it sits on rather than the scan underneath it.
    `whereIn`, while `ConfirmImport` beside it streams the rows themselves.
 6. `DetectAnomaliesJob` — one import run, which for the onboarding import is the
    whole ledger.
-7. `ReconciliationWriter` — the cleared-rows predicate has no lower bound, so a
+7. `TransactionStatusWriter` — the cleared-rows predicate has no lower bound, so a
    first Complete-reconcile plucks every cleared row an account ever held and
    dispatches one sync op per id.
 8. `ChainLinkQuery::hintsForReview()` — grows with import history, drained only
