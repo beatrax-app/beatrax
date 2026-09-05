@@ -217,8 +217,7 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
         expect(prcTokenRow($tokenHash)->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
-    $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
-    expect($desktopRelayToken)->not->toBeNull();
+    $desktopRelayToken = app(RelayConfig::class)->deviceDrainToken($desktopIdentity->deviceId);
 
     /** @var RelayClient $relayClient */
     $relayClient = app(RelayClient::class);
@@ -319,8 +318,7 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
         expect($db->connection()->table('pairing_tokens')->count())->toBe(0);
     });
 
-    $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
-    expect($desktopRelayToken)->not->toBeNull();
+    $desktopRelayToken = app(RelayConfig::class)->deviceDrainToken($desktopIdentity->deviceId);
     $pending = $relayClient->drain($desktopIdentity->deviceId, $desktopRelayToken);
     expect($pending)->toBe([]);
 });

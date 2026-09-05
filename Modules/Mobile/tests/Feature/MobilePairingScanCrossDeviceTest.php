@@ -73,7 +73,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
         $desktopIdentity->ed25519PublicKeyHex,
         $desktopIdentity->x25519PublicKeyHex,
         $issuedToken,
-        relay: new RelayBootstrap('https://relay.test', 'cross-device-harness-relay-secret'),
+        relay: new RelayBootstrap('https://relay.test'),
     );
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
@@ -133,7 +133,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
         $desktopIdentity->ed25519PublicKeyHex,
         $desktopIdentity->x25519PublicKeyHex,
         $issuedToken,
-        relay: new RelayBootstrap('https://relay.test', 'cross-device-harness-relay-secret'),
+        relay: new RelayBootstrap('https://relay.test'),
     );
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));

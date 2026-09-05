@@ -24,17 +24,17 @@ it('builds an SVG QR encoding a beatrax://pair URI with token, ed and kx params'
     expect($uri)->toContain('kx='.$kxHex);
 });
 
-// The QR optionally carries the relay endpoint and bearer token so a fresh phone
-// can bootstrap its own RelayConfig before the confirm handshake needs a
-// transport. Omitting both must leave the URI exactly as it was.
+// The QR optionally carries the relay endpoint and its certificate pin so a
+// fresh phone can bootstrap its own RelayConfig before the confirm handshake
+// needs a transport. Omitting both must leave the URI exactly as it was.
 
-it('omits the relay/rtok params entirely when no relay is configured — no behavior change', function (): void {
+it('omits the relay params entirely when no relay is configured — no behavior change', function (): void {
     $builder = new QrPayloadBuilder;
 
     $uri = $builder->buildUri('device-init', str_repeat('a', 64), str_repeat('b', 64), 'deadbeef');
 
     expect($uri)->not->toContain('relay=');
-    expect($uri)->not->toContain('rtok=');
+    expect($uri)->not->toContain('rpin=');
 });
 
 it('appends &relay=<endpoint> when a relay endpoint is supplied', function (): void {
@@ -49,32 +49,25 @@ it('appends &relay=<endpoint> when a relay endpoint is supplied', function (): v
     );
 
     expect($uri)->toContain('relay='.rawurlencode('https://relay.example.com'));
-    expect($uri)->not->toContain('rtok=');
+    expect($uri)->not->toContain('rpin=');
 });
 
-it('appends &rtok=<token> only when BOTH a relay endpoint AND an auth token are supplied', function (): void {
+it('carries no relay credential of any spelling', function (): void {
     $builder = new QrPayloadBuilder;
 
-    // Token alone (no endpoint) must never leak the bearer token onto the wire.
-    $uriTokenOnly = $builder->buildUri(
+    // A bearer here reaches every peer that ever scans this code, and one such
+    // copy drained an unclaimed mailbox. The scanner mints its own instead.
+    $uri = $builder->buildUri(
         'device-init',
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relay: new RelayBootstrap(authToken: 'shared-secret'),
+        relay: new RelayBootstrap('https://relay.example.com', 'sha256//pinned'),
     );
-    expect($uriTokenOnly)->not->toContain('rtok=');
-    expect($uriTokenOnly)->not->toContain('relay=');
 
-    $uriBoth = $builder->buildUri(
-        'device-init',
-        str_repeat('a', 64),
-        str_repeat('b', 64),
-        'deadbeef',
-        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
-    );
-    expect($uriBoth)->toContain('relay='.rawurlencode('https://relay.example.com'));
-    expect($uriBoth)->toContain('rtok='.rawurlencode('shared-secret'));
+    expect($uri)->toContain('relay='.rawurlencode('https://relay.example.com'))
+        ->and($uri)->toContain('rpin='.rawurlencode('sha256//pinned'))
+        ->and($uri)->not->toContain('rtok=');
 });
 
 it('renders relay params into the SVG-encoded URI too', function (): void {
@@ -85,7 +78,7 @@ it('renders relay params into the SVG-encoded URI too', function (): void {
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
+        relay: new RelayBootstrap('https://relay.example.com', 'sha256//pinned'),
     );
 
     expect($svg)->toContain('<svg');

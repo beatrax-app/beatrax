@@ -100,7 +100,7 @@ afterEach(function (): void {
     $secretsDir = UserDataPathService::secretsPath();
 
     foreach ([
-        $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json',
+        $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json',
         UserDataPathService::appPath('sync/relay.json'),
     ] as $path) {
         if (is_file($path)) {
@@ -136,14 +136,13 @@ it('returns nothing beyond the four public identity fields', function (): void {
     expect(array_keys($result['body']))->toBe(['device_id', 'ed25519', 'x25519', 'name']);
 });
 
-it('never hands out the relay endpoint, token or pin even when one is configured', function (): void {
+it('never hands out the relay endpoint or pin even when one is configured', function (): void {
     $user = pairingOfferUser('offer-no-relay');
     $issued = pairingOfferIssue($user);
 
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.invalid:51338');
-    $relayConfig->setAuthToken('relay-bearer-secret');
     $relayConfig->setPin('relay-pin-material');
 
     $result = pairingOfferDispatch(
@@ -157,10 +156,9 @@ it('never hands out the relay endpoint, token or pin even when one is configured
     // may therefore bootstrap a relay. This answer travels the very network
     // that attacker is on, so none of it may appear in the body.
     expect($result['raw'])->not->toContain('relay.invalid')
-        ->and($result['raw'])->not->toContain('relay-bearer-secret')
         ->and($result['raw'])->not->toContain('relay-pin-material');
 
-    foreach (['relay', 'rtok', 'rpin', 'endpoint', 'pin'] as $forbidden) {
+    foreach (['relay', 'rpin', 'endpoint', 'pin'] as $forbidden) {
         expect($result['body'])->not->toHaveKey($forbidden);
     }
 });

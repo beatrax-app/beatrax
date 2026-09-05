@@ -13,9 +13,15 @@ final class RelayConfig
 {
     private const string CONFIG_SUB = 'sync/relay.json';
 
-    private const string TOKEN_FILE = 'sync-relay-token.json';
+    private const string DRAIN_TOKENS_FILE = 'sync-relay-drain-tokens.json';
 
-    private const string DRAIN_SECRET_FILE = 'sync-relay-drain-secret.json';
+    // The two files the per-device scheme replaced: an install-scoped drain
+    // secret every local user of this install shared, and a relay-wide token
+    // the pairing QR handed to every peer that ever paired. Both are retired
+    // rather than left behind — see retireSupersededSecretFiles().
+    private const string SUPERSEDED_DRAIN_SECRET_FILE = 'sync-relay-drain-secret.json';
+
+    private const string SUPERSEDED_RELAY_TOKEN_FILE = 'sync-relay-token.json';
 
     // Never throws on a missing file — absent file/empty `endpoint` key
     // both mean "not configured".
@@ -224,18 +230,6 @@ final class RelayConfig
         }
     }
 
-    public function authToken(): ?string
-    {
-        $data = $this->readJsonObject(UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::TOKEN_FILE);
-        if ($data === null) {
-            return null;
-        }
-
-        $token = $data['token'] ?? null;
-
-        return is_string($token) && $token !== '' ? $token : null;
-    }
-
     // Shared read path for both config files: a missing file, an unreadable
     // or empty body, and non-object JSON all collapse to null so callers
     // treat "absent" and "malformed" identically as "not configured".
@@ -258,95 +252,105 @@ final class RelayConfig
         return is_array($data) ? $data : null;
     }
 
-    // Mirrors the DeviceIdentityService key-file write pattern: mkdir 0700
-    // -> write -> chmod 0600. Passing null clears the stored token.
+    // The drain credential for ONE device id on this install, minted on first
+    // use and never transmitted. Keyed on the device id because device ids are
+    // per-user: one secret for the whole install bound the relay to whichever
+    // local user drained first and answered 401 to the second one forever.
     /**
      * @throws SecretFileException on an I/O failure, including one that would
      *                             leave the token readable
      */
-    public function setAuthToken(?string $token): void
+    public function deviceDrainToken(string $deviceId): string
     {
-        $dir = UserDataPathService::secretsPath();
-        $path = $dir.DIRECTORY_SEPARATOR.self::TOKEN_FILE;
+        $tokens = $this->readDrainTokens();
 
-        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
-            throw SecretFileException::couldNotCreateSecretsDirectory($dir);
+        if (isset($tokens[$deviceId])) {
+            return $tokens[$deviceId];
         }
 
-        $data = ['token' => $token ?? ''];
-        $json = json_encode($data, JSON_THROW_ON_ERROR);
+        $tokens[$deviceId] = RelayDrainToken::mint($deviceId);
+        $this->writeDrainTokens($tokens);
 
-        // Suppressed so the `=== false` check decides; unsuppressed the
-        // E_WARNING becomes an ErrorException first and the guard never ran.
-        if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw SecretFileException::couldNotWriteRelayToken($path);
-        }
-
-        // A silently-swallowed chmod failure would leave the secret token
-        // file world-readable with no signal — verify and throw instead.
-        if (! @chmod($path, 0600)) {
-            throw SecretFileException::couldNotLockDown($path);
-        }
+        return $tokens[$deviceId];
     }
 
-    // This device's OWN per-instance drain secret, minted once and persisted
-    // like the token/pin. The draining client presents it and the relay
-    // verifies it via trust-on-first-use, so it is per-device — NOT the
-    // relay-wide authToken every paired peer receives through the QR.
     /**
-     * @throws SecretFileException on an I/O failure, including one that would
-     *                             leave the secret readable
+     * @return array<array-key, string>
      */
-    public function deviceDrainSecret(): string
+    private function readDrainTokens(): array
     {
-        $existing = $this->readDeviceDrainSecret();
-        if ($existing !== null) {
-            return $existing;
+        $path = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::DRAIN_TOKENS_FILE;
+
+        // is_file, not the file_exists the shared reader uses: a directory
+        // standing where this file belongs must reach the write below and be
+        // reported as the I/O failure it is, rather than dying in a read that
+        // never had anything to return.
+        $data = is_file($path) ? $this->readJsonObject($path) : null;
+        $stored = $data === null ? null : ($data['tokens'] ?? null);
+
+        if (! is_array($stored)) {
+            return [];
         }
 
-        $secret = bin2hex(random_bytes(32));
-        $this->writeDeviceDrainSecret($secret);
+        $tokens = [];
 
-        return $secret;
-    }
-
-    private function readDeviceDrainSecret(): ?string
-    {
-        $data = $this->readJsonObject(UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::DRAIN_SECRET_FILE);
-        if ($data === null) {
-            return null;
+        foreach ($stored as $deviceId => $token) {
+            if (is_string($token) && $token !== '') {
+                $tokens[$deviceId] = $token;
+            }
         }
 
-        $secret = $data['secret'] ?? null;
-
-        return is_string($secret) && $secret !== '' ? $secret : null;
+        return $tokens;
     }
 
-    // Same mkdir 0700 -> write -> chmod 0600 discipline as setAuthToken: the
-    // secret is a per-device bearer credential, so a chmod failure that would
-    // leave it world-readable throws rather than being swallowed.
+    // Same mkdir 0700 -> write -> chmod 0600 discipline as the identity
+    // key-file: these are bearer credentials, so a chmod failure that would
+    // leave them world-readable throws rather than being swallowed.
     /**
+     * @param  array<array-key, string>  $tokens
+     *
      * @throws SecretFileException on an I/O failure
      */
-    private function writeDeviceDrainSecret(string $secret): void
+    private function writeDrainTokens(array $tokens): void
     {
         $dir = UserDataPathService::secretsPath();
-        $path = $dir.DIRECTORY_SEPARATOR.self::DRAIN_SECRET_FILE;
+        $path = $dir.DIRECTORY_SEPARATOR.self::DRAIN_TOKENS_FILE;
 
         if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
             throw SecretFileException::couldNotCreateSecretsDirectory($dir);
         }
 
-        $json = json_encode(['secret' => $secret], JSON_THROW_ON_ERROR);
+        // FORCE_OBJECT because a device id that is all digits decodes to an
+        // integer key: json_encode would then emit a JSON array, which reads
+        // back renumbered from zero and hands that device a fresh token on
+        // every drain — a new TOFU claim the relay has already refused.
+        $json = json_encode(['tokens' => $tokens], JSON_THROW_ON_ERROR | JSON_FORCE_OBJECT);
 
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw SecretFileException::couldNotWriteDrainSecret($path);
+            throw SecretFileException::couldNotWriteDrainTokens($path);
         }
 
         if (! @chmod($path, 0600)) {
             throw SecretFileException::couldNotLockDown($path);
+        }
+
+        $this->retireSupersededSecretFiles();
+    }
+
+    // Best-effort, and only once the replacement is safely on disk. A secret
+    // nothing reads any more still reads like a live one to whoever finds it
+    // next, and the relay-wide one in particular is the credential every peer
+    // that ever scanned a pairing QR is still holding a copy of.
+    private function retireSupersededSecretFiles(): void
+    {
+        foreach ([self::SUPERSEDED_DRAIN_SECRET_FILE, self::SUPERSEDED_RELAY_TOKEN_FILE] as $file) {
+            $path = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.$file;
+
+            if (is_file($path)) {
+                @unlink($path);
+            }
         }
     }
 }

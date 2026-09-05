@@ -831,8 +831,10 @@ omitting ambiguous 0/O/1/I glyphs), chunked `XXXX-XXXX-XXXX-XXXX`.
 `QrPayloadBuilder` builds a `beatrax://pair` URI carrying the issuing
 device's public identity + a single-use token, rendered as an inline SVG QR
 (server-side SSR, no JS QR library). Optionally appends `&relay=<endpoint>`
-and `&rtok=<token>` so a fresh phone can auto-configure its own transport
-before the cross-device handshake needs one.
+and `&rpin=<spki pin>` so a fresh phone can auto-configure its own transport
+before the cross-device handshake needs one. No credential goes with them:
+the scanner mints its own per-device drain token, and the relay-wide bearer
+this used to carry reached every peer that ever paired.
 
 `PairingOfferService` answers the one question a typed word-code leaves
 open. The QR carries the initiator's device id and both public keys; the
@@ -841,8 +843,8 @@ has no local `pairing_tokens` row for `acceptToken()` to bind against. Given
 the token, this looks up the row by `sha256(token)` — the table stores the
 hash, never the token — requires it to be `pending`/`awaiting_confirm` and
 unexpired, and returns the initiator's `device_id`, `ed25519`, `x25519` and
-display `name`. Nothing else. In particular **no relay endpoint, token or
-pin**: the QR may bootstrap a relay because a camera is an out-of-band
+display `name`. Nothing else. In particular **no relay endpoint or pin**:
+the QR may bootstrap a relay because a camera is an out-of-band
 channel the network cannot touch, whereas this answer travels the very
 network an attacker would be sitting on. Every refusal — unknown token,
 expired token, another user's token, a ceremony already finished — is the
@@ -964,8 +966,9 @@ from an untrusted scanned QR. It never persists an insecure (`http://`)
 endpoint (`RelayClient` later refuses that scheme, which would durably brick
 all relay-backed sync), and only bootstraps a FRESH device — never clobbers
 an existing working relay, since a crafted/wrong QR must not redirect a
-device's relay. It only overwrites the auth token when the QR actually
-carries one, so a token-less relay endpoint cannot wipe an existing token.
+device's relay. It only overwrites the pin when the QR actually carries one,
+so a pin-less relay endpoint cannot wipe an existing pin. No credential
+travels with either: the scanner mints its own per-device drain token.
 
 `acceptToken()`'s QR path: the QR's `token` query parameter
 (`QrPayloadBuilder::buildUri()`) is the same raw hex `WordCodeEncoder::
@@ -1116,24 +1119,23 @@ learns only: sender_did, recipient_did, blob size, and delivery timestamp.
 
 **Drain authorization.** `GET /relay/drain` and `DELETE /relay/drain/{id}`
 require a bearer token in the Authorization header bound to the mailbox
-being accessed. The credential is the draining device's OWN per-instance
-drain secret — 32 random bytes minted on first use by
-`RelayConfig::deviceDrainSecret()` and persisted at
-`secretsPath()/sync-relay-drain-secret.json` — not a value derived from
-anything the relay or its peers hold.
+being accessed. The credential is a drain token minted for ONE device id by
+`RelayDrainToken::mint()`, handed out by `RelayConfig::deviceDrainToken()`
+and persisted at `secretsPath()/sync-relay-drain-tokens.json`. It is per
+device id, not per install: device ids are per user, so an install-scoped
+secret would bind the relay to whichever local user drained first.
 
-The relay side is `RelayDrainRegistry`, a trust-on-first-use store: the first
-token ever presented for a device id is recorded as `did → sha256(token)` and
-accepted, and every later drain or confirm for that id must present a token
-whose digest `hash_equals` the stored one. A token scoped to device A
-therefore cannot drain or confirm-delete device B's mailbox.
+The relay side is `RelayDrainRegistry`. It refuses any bearer that does not
+parse as `bdt1.<sha256(did)>.<random>` for the device id in the request, and
+only then applies trust-on-first-use: the first token seen for a device id is
+recorded as `did → sha256(token)`, and every later drain or confirm for that
+id must present a token whose digest `hash_equals` the stored one. A token
+scoped to device A cannot drain or confirm-delete device B's mailbox, and a
+relay-wide bearer — which names no device — drains nothing at all.
 
-An earlier scheme derived each device's token as
-`HMAC-SHA256(RelayConfig::authToken(), recipient_did)`. It is gone: the relay
-auth token travels in the pairing QR, so every peer that had ever paired could
-recompute any device's drain token. The residual weakness of the registry is
-narrower but real — an attacker who registers a victim's device id BEFORE the
-victim ever drains wins the slot. See
+Both halves are load-bearing. The digest binding alone let any bearer claim a
+device id nobody had drained yet, which is every new device's first drain and
+exactly where its GDK epoch wraps sit. See
 [the relay endpoint authorization page](relay-endpoint-authorization.md).
 
 ZK is preserved: the relay stores only a hash of a bearer token against a
@@ -1185,16 +1187,15 @@ SIGINT])`, which suspends the current fiber until one of those signals
 arrives. On shutdown: stop the HTTP server, return `self::SUCCESS`.
 
 **Client side (`RelayConfig`, `RelayMailbox`, `RelayClient`).** `RelayConfig`
-reads/writes the relay endpoint URL (non-secret, plain JSON at
-`sync/relay.json`, default absent — opt-in) and the auth token (secret, plain
-JSON at `secretsPath()/sync-relay-token.json`, chmod 600, never `.env`).
-`isInsecure()` flags non-https URLs so the UI can warn the user (the relay is
-ZK regardless of TLS, but an `http://` endpoint leaks ciphertext sizes and
-metadata to a network eavesdropper). `deviceDrainSecret()` mints this device's
-own drain credential on first call — 32 random bytes — and persists it to a
-third secret file, `secretsPath()/sync-relay-drain-secret.json`, under the same
-`mkdir 0700 → write → chmod 0600` discipline as the auth token. It derives
-nothing: the relay learns the secret by seeing it, once.
+reads/writes the relay endpoint URL and its SPKI pin (non-secret, plain JSON at
+`sync/relay.json`, default absent — opt-in). `isInsecure()` flags non-https URLs
+so the UI can warn the user (the relay is ZK regardless of TLS, but an `http://`
+endpoint leaks ciphertext sizes and metadata to a network eavesdropper).
+`deviceDrainToken($deviceId)` mints that device id's drain credential on first
+call and persists it to `secretsPath()/sync-relay-drain-tokens.json` under the
+`mkdir 0700 → write → chmod 0600` discipline every secret here uses. It derives
+nothing from anything shared: the relay learns the token by seeing it, once, and
+learns nothing about a second local user's token from it.
 
 `RelayMailbox` is the zero-knowledge ciphertext mailbox: stores and routes
 opaque Noise ciphertext blobs addressed by recipient `device_id`. Hard ZK

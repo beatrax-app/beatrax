@@ -101,7 +101,6 @@ it('has the certificate and the endpoint in place by the time it starts the rela
     // outside the desktop runtime; what this pins is the state it would read.
     expect($tls->exists())->toBeTrue()
         ->and($config->endpointUrl())->toStartWith('https://')
-        ->and($config->authToken())->not->toBeNull()
         ->and($config->pin())->toStartWith('sha256//');
 });
 

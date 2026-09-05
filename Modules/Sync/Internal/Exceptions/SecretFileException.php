@@ -37,14 +37,9 @@ final class SecretFileException extends RuntimeException
         return new self("Cannot create secrets directory: {$directory}");
     }
 
-    public static function couldNotWriteRelayToken(string $path): self
+    public static function couldNotWriteDrainTokens(string $path): self
     {
-        return new self("Cannot write relay token to: {$path}");
-    }
-
-    public static function couldNotWriteDrainSecret(string $path): self
-    {
-        return new self("Cannot write relay drain secret to: {$path}");
+        return new self("Cannot write relay drain tokens to: {$path}");
     }
 
     public static function couldNotWriteDrainRegistry(string $path): self

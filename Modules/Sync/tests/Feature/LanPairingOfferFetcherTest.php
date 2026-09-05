@@ -110,7 +110,7 @@ it('carries no relay bootstrap out of a LAN offer, whatever the peer sends', fun
 
     expect($offer)->toBeArray();
     expect($offer['relayEndpoint'])->toBeNull();
-    expect($offer['relayAuthToken'])->toBeNull();
+    expect($offer)->not->toHaveKey('relayAuthToken');
     expect($offer['relayPin'])->toBeNull();
 });
 

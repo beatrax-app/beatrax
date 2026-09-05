@@ -123,8 +123,8 @@ it('says which relay file could not be written', function (): void {
         ->toContain('/data/sync/relay.json')
         ->and(SecretFileException::couldNotCreateSecretsDirectory('/data/secrets')->getMessage())
         ->toContain('/data/secrets')
-        ->and(SecretFileException::couldNotWriteRelayToken('/data/secrets/relay.token')->getMessage())
-        ->toContain('/data/secrets/relay.token');
+        ->and(SecretFileException::couldNotWriteDrainTokens('/data/secrets/sync-relay-drain-tokens.json')->getMessage())
+        ->toContain('/data/secrets/sync-relay-drain-tokens.json');
 });
 
 // Named per operation rather than shared, because the guarded methods all

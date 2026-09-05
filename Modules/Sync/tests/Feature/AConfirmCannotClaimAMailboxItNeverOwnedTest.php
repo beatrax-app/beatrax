@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainToken;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
@@ -29,7 +30,6 @@ uses(RefreshDatabase::class);
 beforeEach(function (): void {
     $this->relayConfig = new RelayConfig;
     $this->relayConfig->setEndpointUrl('https://relay.test');
-    $this->relayConfig->setAuthToken('relay-shared-secret');
 
     $this->mailbox = new RelayMailbox(app(DatabaseManager::class), app(Clock::class));
 
@@ -53,8 +53,7 @@ afterEach(function (): void {
     $secrets = UserDataPathService::secretsPath();
 
     foreach ([
-        $secrets.DIRECTORY_SEPARATOR.'sync-relay-token.json',
-        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json',
+        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json',
         $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json',
         UserDataPathService::appPath('sync/relay.json'),
     ] as $path) {
@@ -70,21 +69,21 @@ it('refuses a confirm from a caller that never drained, and leaves the blob for 
     $row = app(DatabaseManager::class)->connection()->table('relay_mailbox')->first();
     expect($row)->not->toBeNull();
 
-    expect(fn () => $this->relayClient->confirm((int) $row->id, 'an-attacker-token-32-bytes-long!'))
+    expect(fn () => $this->relayClient->confirm((int) $row->id, RelayDrainToken::mint('device-attacker')))
         ->toThrow(RelayUnavailableException::class);
 
     expect(app(DatabaseManager::class)->connection()->table('relay_mailbox')->where('id', $row->id)->value('delivered_at'))
         ->toBeNull();
 
-    // The owner's real secret still works, so the slot was never claimed.
-    $drained = $this->relayClient->drain('device-recipient', $this->relayConfig->deviceDrainSecret());
+    // The owner's real token still works, so the slot was never claimed.
+    $drained = $this->relayClient->drain('device-recipient', $this->relayConfig->deviceDrainToken('device-recipient'));
     expect($drained)->toHaveCount(1);
 });
 
 it('lets the device that drained confirm its own blob', function (): void {
     $this->relayClient->deliver('device-sender', 'device-recipient', random_bytes(48));
 
-    $secret = $this->relayConfig->deviceDrainSecret();
+    $secret = $this->relayConfig->deviceDrainToken('device-recipient');
     $drained = $this->relayClient->drain('device-recipient', $secret);
     expect($drained)->toHaveCount(1);
 
@@ -95,9 +94,10 @@ it('lets the device that drained confirm its own blob', function (): void {
 
 it('refuses a drain-slot verification for a device id that never registered', function (): void {
     $registry = new RelayDrainRegistry;
+    $token = RelayDrainToken::mint('device-never-seen');
 
-    expect($registry->authorizes('device-never-seen', 'some-token'))->toBeFalse();
-    expect($registry->registerOrAuthorize('device-never-seen', 'some-token'))->toBeTrue();
-    expect($registry->authorizes('device-never-seen', 'some-token'))->toBeTrue();
-    expect($registry->authorizes('device-never-seen', 'a-different-token'))->toBeFalse();
+    expect($registry->authorizes('device-never-seen', $token))->toBeFalse();
+    expect($registry->registerOrAuthorize('device-never-seen', $token))->toBeTrue();
+    expect($registry->authorizes('device-never-seen', $token))->toBeTrue();
+    expect($registry->authorizes('device-never-seen', RelayDrainToken::mint('device-never-seen')))->toBeFalse();
 });

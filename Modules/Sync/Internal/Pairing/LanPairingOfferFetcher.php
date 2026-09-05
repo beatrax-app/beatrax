@@ -42,7 +42,7 @@ final readonly class LanPairingOfferFetcher
     // ever say one thing — and what it said was "check your network", to a
     // reader whose network was fine and whose code had simply expired.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     public function fetchForWordCode(string $wordCode): array|PairingOfferLookup
     {
@@ -62,7 +62,7 @@ final readonly class LanPairingOfferFetcher
     // all, or one that answered 429, changes the answer for all of them. That
     // is what the two flags carry past the loop.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     private function askEveryPeer(string $tokenHex): array|PairingOfferLookup
     {
@@ -97,7 +97,7 @@ final readonly class LanPairingOfferFetcher
     // Keeps WHICH ending happened: a peer that answered at all, even to refuse,
     // proves the network reached it.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
     private function attempt(DiscoveredPeer $peer, string $tokenHex): array|PairingOfferLookup
     {
@@ -154,7 +154,7 @@ final readonly class LanPairingOfferFetcher
 
     /**
      * @param  array<mixed>  $body
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null}|null
      */
     private function identityFrom(array $body, string $tokenHex): ?array
     {
@@ -189,7 +189,6 @@ final readonly class LanPairingOfferFetcher
             // camera is out of band; this reply travelled the very network
             // an attacker would be sitting on.
             'relayEndpoint' => null,
-            'relayAuthToken' => null,
             'relayPin' => null,
         ];
     }

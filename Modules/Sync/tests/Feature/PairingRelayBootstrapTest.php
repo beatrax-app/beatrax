@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 // A fresh phone has no relay configured, so the cross-device pre-confirm
 // handshake has no transport at all until configureRelayFromQr() runs. It
-// persists transport config only; no new trust decision is taken here.
+// persists transport config only; no credential and no new trust decision.
 
 function relayBootstrapUser(string $username): User
 {
@@ -27,30 +27,30 @@ function relayBootstrapUser(string $username): User
 afterEach(function (): void {
     // Never leave a relay config artifact in storage/app for a subsequent,
     // unrelated test to trip over.
-    $tokenPath = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'sync-relay-token.json';
-    $relayPath = UserDataPathService::appPath('sync/relay.json');
-
-    foreach ([$tokenPath, $relayPath] as $path) {
+    foreach ([
+        UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'sync-relay-drain-tokens.json',
+        UserDataPathService::appPath('sync/relay.json'),
+    ] as $path) {
         if (is_file($path)) {
             @unlink($path);
         }
     }
 });
 
-it('configures the relay endpoint + auth token from QR-carried values', function (): void {
+it('configures the relay endpoint and pin from QR-carried values', function (): void {
     $user = relayBootstrapUser('relay-bootstrap-configure');
     test()->actingAs($user);
 
     /** @var PairingGateway $gateway */
     $gateway = app(PairingGateway::class);
 
-    $gateway->configureRelayFromQr('https://relay.example.com', 'shared-secret');
+    $gateway->configureRelayFromQr('https://relay.example.com', 'sha256//pinned');
 
     /** @var RelayConfig $config */
     $config = app(RelayConfig::class);
 
     expect($config->endpointUrl())->toBe('https://relay.example.com');
-    expect($config->authToken())->toBe('shared-secret');
+    expect($config->pin())->toBe('sha256//pinned');
 });
 
 it('is a no-op when the QR carried no relay endpoint — never dead-ends a relay-less device', function (): void {
@@ -68,8 +68,8 @@ it('is a no-op when the QR carried no relay endpoint — never dead-ends a relay
     expect($config->isConfigured())->toBeFalse();
 });
 
-it('configures the endpoint without a token when the relay is deployed token-less', function (): void {
-    $user = relayBootstrapUser('relay-bootstrap-no-token');
+it('configures the endpoint without a pin when the QR carried none', function (): void {
+    $user = relayBootstrapUser('relay-bootstrap-no-pin');
     test()->actingAs($user);
 
     /** @var PairingGateway $gateway */
@@ -81,7 +81,7 @@ it('configures the endpoint without a token when the relay is deployed token-les
     $config = app(RelayConfig::class);
 
     expect($config->endpointUrl())->toBe('https://relay.example.com');
-    expect($config->authToken())->toBeNull();
+    expect($config->pin())->toBeNull();
 });
 
 it('rejects a non-https endpoint from scanned QR input — never durably breaks relay transport', function (): void {
@@ -91,7 +91,7 @@ it('rejects a non-https endpoint from scanned QR input — never durably breaks 
     /** @var PairingGateway $gateway */
     $gateway = app(PairingGateway::class);
 
-    $gateway->configureRelayFromQr('http://attacker.example.com', 'x');
+    $gateway->configureRelayFromQr('http://attacker.example.com', 'sha256//pinned');
 
     /** @var RelayConfig $config */
     $config = app(RelayConfig::class);
@@ -108,10 +108,10 @@ it('does not clobber an already-configured relay — fresh-device bootstrap only
     $config = app(RelayConfig::class);
 
     $config->setEndpointUrl('https://existing-relay.example.com');
-    $config->setAuthToken('existing-secret');
+    $config->setPin('sha256//existing');
 
-    $gateway->configureRelayFromQr('https://attacker-relay.example.com', 'attacker-secret');
+    $gateway->configureRelayFromQr('https://attacker-relay.example.com', 'sha256//attacker');
 
     expect($config->endpointUrl())->toBe('https://existing-relay.example.com');
-    expect($config->authToken())->toBe('existing-secret');
+    expect($config->pin())->toBe('sha256//existing');
 });
