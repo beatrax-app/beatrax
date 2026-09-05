@@ -6,29 +6,87 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "nl_zorgkosten"
     name: "Zorgkosten"
     short_name: "Zorgkosten"
     hint: "Ziektekosten boven drempel (eigen risico, hulpmiddelen, etc.)"
+    i18n:
+      en:
+        name: "Healthcare costs"
+        short_name: "Healthcare"
+        hint: "Medical costs above the threshold (insurance excess, medical aids, etc.)"
+      nl:
+        name: "Zorgkosten"
+        short_name: "Zorgkosten"
+        hint: "Ziektekosten boven drempel (eigen risico, hulpmiddelen, etc.)"
   - key: "nl_giften"
     name: "Giften"
     short_name: "Giften"
     hint: "Periodieke en eenmalige giften aan ANBI-instellingen"
+    i18n:
+      en:
+        name: "Donations"
+        short_name: "Donations"
+        hint: "Periodic and one-off donations to ANBI charities"
+      nl:
+        name: "Giften"
+        short_name: "Giften"
+        hint: "Periodieke en eenmalige giften aan ANBI-instellingen"
   - key: "nl_eigen_woning"
     name: "Eigen woning"
     short_name: "Eigen woning"
     hint: "Hypotheekrente, erfpacht, opstalrecht"
+    i18n:
+      en:
+        name: "Own home"
+        short_name: "Own home"
+        hint: "Mortgage interest, ground rent, right of superficies"
+      nl:
+        name: "Eigen woning"
+        short_name: "Eigen woning"
+        hint: "Hypotheekrente, erfpacht, opstalrecht"
   - key: "nl_partneralimentatie"
     name: "Partneralimentatie"
     short_name: "Alimentatie"
     hint: "Betaalde alimentatie aan ex-partner"
+    i18n:
+      en:
+        name: "Partner maintenance"
+        short_name: "Alimony"
+        hint: "Maintenance paid to a former partner"
+      nl:
+        name: "Partneralimentatie"
+        short_name: "Alimentatie"
+        hint: "Betaalde alimentatie aan ex-partner"
   - key: "nl_lijfrente"
     name: "Lijfrente / pensioen"
     short_name: "Lijfrente"
     hint: "Premies lijfrenteverzekering of lijfrenterekening"
+    i18n:
+      en:
+        name: "Annuity and pension"
+        short_name: "Annuity"
+        hint: "Premiums for an annuity insurance or an annuity account"
+      nl:
+        name: "Lijfrente / pensioen"
+        short_name: "Lijfrente"
+        hint: "Premies lijfrenteverzekering of lijfrenterekening"
   - key: "nl_ondernemerskosten"
     name: "Ondernemerskosten (ZZP)"
     short_name: "ZZP-kosten"
     hint: "Zakelijke kosten voor zelfstandigen"
+    i18n:
+      en:
+        name: "Business expenses (self-employed)"
+        short_name: "Business costs"
+        hint: "Business expenses for the self-employed"
+      nl:
+        name: "Ondernemerskosten (ZZP)"
+        short_name: "ZZP-kosten"
+        hint: "Zakelijke kosten voor zelfstandigen"

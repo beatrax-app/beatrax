@@ -40,7 +40,7 @@ return [
         'choose' => 'Pasirink šalį…',
         'switch_note' => 'Pakeitus pridedamos naujos kategorijos — esamos žymos niekada nekeičiamos.',
 
-        'wording_note' => 'Mokesčių kategorijų pavadinimai paimti iš :country naudojamos mokesčių deklaracijos, todėl jie lieka tos šalies žodžiais visomis programėlės kalbomis.',
+        'wording_note' => 'Mokesčių kategorijų pavadinimai rodomi jūsų kalba; :country mokesčių deklaracijoje vartojami jos pačios terminai.',
 
         'countries' => [
             'at' => 'Austrija',

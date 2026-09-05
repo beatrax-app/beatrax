@@ -193,7 +193,7 @@ final readonly class PotWriter
         if ($goalId !== null) {
             if ($pot->category_id !== null) {
                 throw new PotLinkedToCategoryException(
-                    'This pot is linked to a category; unlink that first.'
+                    'This pot still carries a retired category link; re-saving it on the Pots page clears it.'
                 );
             }
 
@@ -438,6 +438,11 @@ final readonly class PotWriter
             return;
         }
 
+        // Only what this restore actually rewrites. Announcing a column it left
+        // alone hands the peer a fresh timestamp for a value it may hold a
+        // newer one of, and the two links below are cleared conditionally.
+        $changed = ['status' => PotStatus::Active->value];
+
         // archive() keeps goal_id, so another pot may have claimed the goal
         // meanwhile; restoring must not leave two active pots on one goal.
         if ($pot->goal_id !== null) {
@@ -451,13 +456,23 @@ final readonly class PotWriter
 
             if ($goalTaken) {
                 $pot->goal_id = null;
+                $changed['goal_id'] = null;
             }
+        }
+
+        // The category link is retired: no write makes one, and the only way out
+        // is an edit and save on the Pots page. A pot restored still carrying a
+        // legacy link came back in a shape nothing else can produce — active,
+        // category-linked, and refused as a goal target on the strength of it.
+        if ($pot->category_id !== null) {
+            $pot->category_id = null;
+            $changed['category_id'] = null;
         }
 
         $pot->status = PotStatus::Active->value;
         $pot->save();
 
-        $this->dispatchAll([$this->capture($pot, 'edit', ['status' => $pot->status])]);
+        $this->dispatchAll([$this->capture($pot, 'edit', $changed)]);
     }
 
     // The pot's own denomination, never the repo-wide hundredth: a pot on a

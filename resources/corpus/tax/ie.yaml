@@ -15,61 +15,191 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "ie_health_expenses"
     name: "Health expenses"
     short_name: "Medical"
     hint: "Doctor, consultant, prescription and hospital costs"
+    i18n:
+      en:
+        name: "Health expenses"
+        short_name: "Medical"
+        hint: "Doctor, consultant, prescription and hospital costs"
+      nl:
+        name: "Zorgkosten"
+        short_name: "Zorgkosten"
+        hint: "Kosten voor huisarts, specialist, medicijnen en ziekenhuis"
   - key: "ie_nursing_home"
     name: "Nursing home expenses"
     short_name: "Nursing Home"
     hint: "Nursing home fees, relieved at your highest rate of tax"
+    i18n:
+      en:
+        name: "Nursing home expenses"
+        short_name: "Nursing home"
+        hint: "Nursing home fees, relieved at your highest rate of tax"
+      nl:
+        name: "Verpleeghuiskosten"
+        short_name: "Verpleeghuis"
+        hint: "Verpleeghuiskosten, aftrekbaar tegen uw hoogste belastingtarief"
   - key: "ie_dental_expenses"
     name: "Non-routine dental expenses"
     short_name: "Dental"
     hint: "Crowns, root canal, braces and implants; routine work excluded"
+    i18n:
+      en:
+        name: "Non-routine dental expenses"
+        short_name: "Dental"
+        hint: "Crowns, root canal, braces and implants; routine work excluded"
+      nl:
+        name: "Niet-routinematige tandartskosten"
+        short_name: "Tandarts"
+        hint: "Kronen, wortelkanaalbehandeling, beugels en implantaten; routinewerk uitgesloten"
   - key: "ie_rent_tax_credit"
     name: "Rent Tax Credit"
     short_name: "Rent"
     hint: "Rent paid on your home or on a student child's rented property"
+    i18n:
+      en:
+        name: "Rent Tax Credit"
+        short_name: "Rent"
+        hint: "Rent paid on your home or on a student child's rented property"
+      nl:
+        name: "Rent Tax Credit (huurkorting)"
+        short_name: "Huur"
+        hint: "Huur voor uw eigen woning of voor de huurwoning van een studerend kind"
   - key: "ie_mortgage_interest"
     name: "Mortgage Interest Tax Relief"
     short_name: "Mortgage"
     hint: "Relief on the increase in mortgage interest paid against 2022"
+    i18n:
+      en:
+        name: "Mortgage Interest Tax Relief"
+        short_name: "Mortgage"
+        hint: "Relief on the increase in mortgage interest paid against 2022"
+      nl:
+        name: "Mortgage Interest Tax Relief (hypotheekrente)"
+        short_name: "Hypotheekrente"
+        hint: "Aftrek voor de stijging van de betaalde hypotheekrente ten opzichte van 2022"
   - key: "ie_remote_working"
     name: "Remote Working Relief"
     short_name: "Remote Work"
     hint: "Share of electricity, heating and broadband for days worked at home"
+    i18n:
+      en:
+        name: "Remote Working Relief"
+        short_name: "Remote work"
+        hint: "Share of electricity, heating and broadband for days worked at home"
+      nl:
+        name: "Remote Working Relief (thuiswerkaftrek)"
+        short_name: "Thuiswerken"
+        hint: "Deel van elektriciteit, verwarming en internet voor dagen dat u thuis werkt"
   - key: "ie_flat_rate_expenses"
     name: "Flat Rate Expenses"
     short_name: "Flat Rate"
     hint: "Agreed annual expense allowance set by Revenue for your occupation"
+    i18n:
+      en:
+        name: "Flat Rate Expenses"
+        short_name: "Flat Rate"
+        hint: "Agreed annual expense allowance set by Revenue for your occupation"
+      nl:
+        name: "Flat Rate Expenses (vaste beroepskostenaftrek)"
+        short_name: "Vast bedrag"
+        hint: "Door Revenue vastgestelde jaarlijkse kostenaftrek voor uw beroep"
   - key: "ie_tuition_fees"
     name: "Tuition fees for third-level education"
     short_name: "Tuition"
     hint: "Approved third-level course fees and the student contribution"
+    i18n:
+      en:
+        name: "Tuition fees for third-level education"
+        short_name: "Tuition"
+        hint: "Approved third-level course fees and the student contribution"
+      nl:
+        name: "Collegegeld voor hoger onderwijs"
+        short_name: "Studiekosten"
+        hint: "Goedgekeurd collegegeld voor hoger onderwijs en de studentenbijdrage"
   - key: "ie_pension_contributions"
     name: "Pension contributions"
     short_name: "Pension"
     hint: "Occupational scheme, AVC, PRSA, RAC and PEPP contributions"
+    i18n:
+      en:
+        name: "Pension contributions"
+        short_name: "Pension"
+        hint: "Occupational scheme, AVC, PRSA, RAC and PEPP contributions"
+      nl:
+        name: "Pensioenpremies"
+        short_name: "Pensioen"
+        hint: "Premies voor een bedrijfsregeling, AVC, PRSA, RAC en PEPP"
   - key: "ie_medical_insurance"
     name: "Medical insurance premiums"
     short_name: "Health Ins"
     hint: "Medical insurance relief, including where your employer pays it"
+    i18n:
+      en:
+        name: "Medical insurance premiums"
+        short_name: "Health ins."
+        hint: "Medical insurance relief, including where your employer pays it"
+      nl:
+        name: "Zorgverzekeringspremies"
+        short_name: "Zorgverzekering"
+        hint: "Aftrek voor de zorgverzekering, ook als uw werkgever die betaalt"
   - key: "ie_permanent_health_benefit"
     name: "Permanent Health Benefit contributions"
     short_name: "Income Prot"
     hint: "Premiums on an approved income continuance plan"
+    i18n:
+      en:
+        name: "Permanent Health Benefit contributions"
+        short_name: "Income prot."
+        hint: "Premiums on an approved income continuance plan"
+      nl:
+        name: "Permanent Health Benefit-premies (inkomensbescherming)"
+        short_name: "Inkomensbescherming"
+        hint: "Premies voor een goedgekeurde inkomensbeschermingsregeling"
   - key: "ie_employing_a_carer"
     name: "Employing a carer"
     short_name: "Carer Costs"
     hint: "Cost of a carer for an incapacitated person, at your highest rate"
+    i18n:
+      en:
+        name: "Employing a carer"
+        short_name: "Carer costs"
+        hint: "Cost of a carer for an incapacitated person, at your highest rate"
+      nl:
+        name: "Inhuren van een zorgverlener"
+        short_name: "Zorgverlener"
+        hint: "Kosten van een zorgverlener voor een hulpbehoevende, tegen uw hoogste tarief"
   - key: "ie_help_to_buy"
     name: "Help to Buy"
     short_name: "Help to Buy"
     hint: "Refund of income tax and DIRT for first-time buyers of a new home"
+    i18n:
+      en:
+        name: "Help to Buy"
+        short_name: "Help to Buy"
+        hint: "Refund of income tax and DIRT for first-time buyers of a new home"
+      nl:
+        name: "Help to Buy (starterskorting)"
+        short_name: "Help to Buy"
+        hint: "Teruggaaf van inkomstenbelasting en DIRT voor starters die een nieuwbouwwoning kopen"
   - key: "ie_employment_expenses"
     name: "Employment and trading expenses"
     short_name: "Business"
     hint: "Costs incurred wholly and exclusively for your trade or profession"
+    i18n:
+      en:
+        name: "Employment and trading expenses"
+        short_name: "Business"
+        hint: "Costs incurred wholly and exclusively for your trade or profession"
+      nl:
+        name: "Beroeps- en ondernemerskosten"
+        short_name: "Beroepskosten"
+        hint: "Kosten die volledig en uitsluitend voor uw bedrijf of beroep zijn gemaakt"

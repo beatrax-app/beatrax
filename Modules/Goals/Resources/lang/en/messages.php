@@ -101,7 +101,7 @@ return [
         'date_before_start' => 'Choose a date on or after the goal\'s start date.',
         'generic' => 'That goal could not be saved. Check the fields and try again.',
         'amount' => 'Enter a valid amount greater than zero.',
-        'pot_linked_category' => 'This pot is linked to a category. Remove that link on the Pots page first.',
+        'pot_linked_category' => 'This pot still carries a retired category link. Open the pot on the Pots page and save it to clear the link.',
         'pot_already_linked' => 'That pot already funds another goal. Unlink it there first.',
         'pot_missing' => 'That pot is no longer available. Pick another one, or leave this goal unlinked.',
     ],

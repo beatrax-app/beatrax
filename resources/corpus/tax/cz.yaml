@@ -10,45 +10,139 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "cz_dary"
     name: "Bezúplatná plnění (dary)"
     short_name: "Dary"
     hint: "Dary obcím, krajům a na veřejně prospěšné účely, včetně bezpříspěvkového darování krve"
+    i18n:
+      en:
+        name: "Donations and gifts"
+        short_name: "Donations"
+        hint: "Gifts to municipalities, regions and public-benefit causes, including unpaid blood donation"
+      nl:
+        name: "Giften en schenkingen"
+        short_name: "Giften"
+        hint: "Giften aan gemeenten, provincies en algemeen nut beogende doelen, waaronder onbetaald bloed geven"
   - key: "cz_uroky_z_uveru_na_bydleni"
     name: "Úroky z úvěru na bytovou potřebu"
     short_name: "Úroky"
     hint: "Úroky z hypotečního úvěru nebo úvěru ze stavebního spoření na obstarání bydlení"
+    i18n:
+      en:
+        name: "Interest on a housing loan"
+        short_name: "Interest"
+        hint: "Interest on a mortgage or a building-savings loan used to obtain housing"
+      nl:
+        name: "Rente op een woninglening"
+        short_name: "Rente"
+        hint: "Hypotheekrente of rente op een bouwspaarlening voor het verkrijgen van een woning"
   - key: "cz_produkty_sporeni_na_stari"
     name: "Příspěvky na produkty spoření na stáří"
     short_name: "Spoření"
     hint: "Doplňkové penzijní spoření, penzijní připojištění, životní pojištění a DIP"
+    i18n:
+      en:
+        name: "Contributions to old-age savings products"
+        short_name: "Savings"
+        hint: "Supplementary pension savings, pension insurance, life insurance and DIP"
+      nl:
+        name: "Inleg in oudedagsvoorzieningen"
+        short_name: "Sparen"
+        hint: "Aanvullend pensioensparen, pensioenverzekering, levensverzekering en DIP"
   - key: "cz_pojisteni_dlouhodobe_pece"
     name: "Pojistné na pojištění dlouhodobé péče"
     short_name: "Dlouh. péče"
     hint: "Pojistné zaplacené na pojištění dlouhodobé péče"
+    i18n:
+      en:
+        name: "Long-term care insurance premiums"
+        short_name: "Long-term care"
+        hint: "Premiums paid for long-term care insurance"
+      nl:
+        name: "Premies langdurige zorgverzekering"
+        short_name: "Langdurige zorg"
+        hint: "Betaalde premies voor een langdurige zorgverzekering"
   - key: "cz_sleva_na_poplatnika"
     name: "Základní sleva na poplatníka"
     short_name: "Na poplatn."
     hint: "Základní sleva, kterou uplatňuje každý poplatník daně z příjmů fyzických osob"
+    i18n:
+      en:
+        name: "Basic taxpayer tax credit"
+        short_name: "Taxpayer"
+        hint: "The basic credit claimed by every personal income tax payer"
+      nl:
+        name: "Basiskorting voor de belastingplichtige"
+        short_name: "Belastingpl."
+        hint: "De basiskorting die elke belastingplichtige voor de inkomstenbelasting toepast"
   - key: "cz_sleva_na_manzela"
     name: "Sleva na manžela nebo manželku"
     short_name: "Na manžela"
     hint: "Sleva při péči o dítě do 3 let, pokud příjem manžela nepřesáhne stanovenou hranici"
+    i18n:
+      en:
+        name: "Tax credit for a spouse"
+        short_name: "Spouse"
+        hint: "Credit while caring for a child under 3, if the spouse income stays below the set limit"
+      nl:
+        name: "Heffingskorting voor de partner"
+        short_name: "Partner"
+        hint: "Korting bij de zorg voor een kind tot 3 jaar, als het inkomen van de partner onder de vastgestelde grens blijft"
   - key: "cz_zakladni_sleva_na_invaliditu"
     name: "Základní sleva na invaliditu"
     short_name: "Zákl. inval."
     hint: "Sleva pro poplatníka pobírajícího invalidní důchod pro invaliditu prvního nebo druhého stupně"
+    i18n:
+      en:
+        name: "Basic disability tax credit"
+        short_name: "Basic disability"
+        hint: "Credit for a taxpayer receiving a first or second degree disability pension"
+      nl:
+        name: "Basiskorting bij arbeidsongeschiktheid"
+        short_name: "Basis arbeidsong."
+        hint: "Korting voor een belastingplichtige met een arbeidsongeschiktheidspensioen van de eerste of tweede graad"
   - key: "cz_rozsirena_sleva_na_invaliditu"
     name: "Rozšířená sleva na invaliditu"
     short_name: "Rozš. inval."
     hint: "Sleva pro poplatníka pobírajícího invalidní důchod pro invaliditu třetího stupně"
+    i18n:
+      en:
+        name: "Extended disability tax credit"
+        short_name: "Extended disab."
+        hint: "Credit for a taxpayer receiving a third degree disability pension"
+      nl:
+        name: "Verhoogde korting bij arbeidsongeschiktheid"
+        short_name: "Verhoogd arb.ong."
+        hint: "Korting voor een belastingplichtige met een arbeidsongeschiktheidspensioen van de derde graad"
   - key: "cz_sleva_ztpp"
     name: "Sleva na držitele průkazu ZTP/P"
     short_name: "ZTP/P"
     hint: "Sleva pro poplatníka, kterému byl přiznán průkaz ZTP/P"
+    i18n:
+      en:
+        name: "Tax credit for ZTP/P card holders"
+        short_name: "ZTP/P"
+        hint: "Credit for a taxpayer who has been granted a ZTP/P card"
+      nl:
+        name: "Korting voor houders van een ZTP/P-kaart"
+        short_name: "ZTP/P"
+        hint: "Korting voor een belastingplichtige aan wie een ZTP/P-kaart is toegekend"
   - key: "cz_danove_zvyhodneni_na_dite"
     name: "Daňové zvýhodnění na vyživované dítě"
     short_name: "Na dítě"
     hint: "Zvýhodnění na vyživované dítě žijící ve společně hospodařící domácnosti"
+    i18n:
+      en:
+        name: "Tax benefit for a dependent child"
+        short_name: "Child"
+        hint: "Benefit for a dependent child living in the same household"
+      nl:
+        name: "Kindkorting voor een kind ten laste"
+        short_name: "Kind"
+        hint: "Voordeel voor een kind ten laste dat in hetzelfde huishouden woont"

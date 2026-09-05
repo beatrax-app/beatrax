@@ -101,7 +101,7 @@ return [
         'date_before_start' => 'Kies een datum op of na de startdatum van het doel.',
         'generic' => 'Dit doel kon niet worden opgeslagen. Controleer de velden en probeer het opnieuw.',
         'amount' => 'Voer een geldig bedrag groter dan nul in.',
-        'pot_linked_category' => 'Deze pot is aan een categorie gekoppeld. Verwijder die koppeling eerst op de Potten-pagina.',
+        'pot_linked_category' => 'Dit potje heeft nog een vervallen categoriekoppeling. Open het potje op de Potjes-pagina en sla het op om de koppeling te wissen.',
         'pot_already_linked' => 'Dit potje spaart al voor een ander doel. Verwijder die koppeling daar eerst.',
         'pot_missing' => 'Dat potje is niet meer beschikbaar. Kies een ander, of laat dit doel ongekoppeld.',
     ],

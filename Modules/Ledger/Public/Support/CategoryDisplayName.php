@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Support;
 
 use InvalidArgumentException;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SeededDisplayName;
 use stdClass;
 
 // `categories.name` does one job now: it holds the app's own English wording
@@ -71,7 +72,7 @@ final class CategoryDisplayName
         return self::resolve(
             $name,
             is_string($slug) ? $slug : '',
-            self::isTrue($values['name_is_default']),
+            SeededDisplayName::isTrue($values['name_is_default']),
         );
     }
 
@@ -83,7 +84,7 @@ final class CategoryDisplayName
      */
     public static function isDefaultRow(stdClass $row, string $alias = ''): bool
     {
-        return self::isTrue(self::aliasedValues($row, $alias)['name_is_default']);
+        return SeededDisplayName::isTrue(self::aliasedValues($row, $alias)['name_is_default']);
     }
 
     // A rename is the user's own words and stays verbatim in every language.
@@ -92,14 +93,7 @@ final class CategoryDisplayName
     // which is what the seeder wrote rather than a key on a budget screen.
     public static function resolve(string $storedName, string $slug, bool $nameIsDefault): string
     {
-        if (! $nameIsDefault || $slug === '') {
-            return $storedName;
-        }
-
-        $key = self::KEY_PREFIX.$slug;
-        $translated = Lang::get($key);
-
-        return $translated === $key ? $storedName : $translated;
+        return SeededDisplayName::fromLang(self::KEY_PREFIX, $slug, $storedName, $nameIsDefault) ?? $storedName;
     }
 
     // What a default row under each known slug SHOWS the reader, so a query can
@@ -153,13 +147,5 @@ final class CategoryDisplayName
             'slug' => $values[$prefix.'slug'],
             'name_is_default' => $values[$prefix.'name_is_default'],
         ];
-    }
-
-    // SQLite hands the flag back as 0 or 1, and as the string '1' on a fetch
-    // that stringifies. Those three plus a real bool are every shape the one
-    // shipped driver produces — 't', 'true' and 1.0 are not among them.
-    private static function isTrue(mixed $value): bool
-    {
-        return $value === true || $value === 1 || $value === '1';
     }
 }

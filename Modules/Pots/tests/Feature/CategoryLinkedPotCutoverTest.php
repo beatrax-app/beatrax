@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Modules\Budgets\Public\Services\EnvelopeActivationService;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
+use Modules\Pots\Internal\Enums\PotLinkType;
+use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
@@ -136,4 +139,53 @@ it('never archives pots via a single unscoped bulk UPDATE (per-user ownership ch
     // pots with an unscoped bulk UPDATE.
     $this->assertDatabaseHas('pots', ['id' => $malloryPot->id, 'status' => 'archived']);
     expect(DB::table('users')->where('id', $mallory->id)->value('envelope_activated_at'))->not->toBeNull();
+});
+
+// The archive step is two clicks from being undone, and the undo went through
+// PotWriter::restore(), which rewrote status without looking at the link. The
+// cutover has to survive the restore or it is a pause, not a cutover.
+it('is not undone by restoring an archived pot from the page', function (): void {
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'category_id' => $this->groceries->id,
+        'goal_id' => null,
+        'name' => 'Groceries pot',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($this->user);
+    app(EnvelopeActivationService::class)->activate();
+
+    Livewire::actingAs($this->user)->test(PotsPage::class)
+        ->call('restorePot', $pot->id);
+
+    expect($pot->fresh()->status)->toBe('active')
+        ->and($pot->fresh()->category_id)->toBeNull()
+        ->and(DB::table('pots')->where('status', 'active')->whereNotNull('category_id')->count())->toBe(0);
+});
+
+// A goal write refuses a category-linked pot and sends the reader to the Pots
+// page. The form there offers Goal and None and no category picker at all, so
+// the sentence is only true while opening the pot and saving it clears the link.
+it('lets the page clear a link a goal write sends the reader there to remove', function (): void {
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'category_id' => $this->groceries->id,
+        'goal_id' => null,
+        'name' => 'Groceries pot',
+        'status' => 'active',
+    ]);
+
+    Livewire::actingAs($this->user)->test(PotsPage::class)
+        ->call('openEdit', $pot->id)
+        ->assertSet('linkType', PotLinkType::None->value)
+        ->assertSet('name', 'Groceries pot')
+        ->call('updatePot')
+        ->assertDispatched('toast');
+
+    expect($pot->fresh()->category_id)->toBeNull()
+        ->and($pot->fresh()->name)->toBe('Groceries pot')
+        ->and($pot->fresh()->status)->toBe('active');
 });

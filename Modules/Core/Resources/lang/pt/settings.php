@@ -40,7 +40,7 @@ return [
         'choose' => 'Escolhe um país…',
         'switch_note' => 'Mudar de país acrescenta novas categorias — as etiquetas existentes nunca são alteradas.',
 
-        'wording_note' => 'Os nomes das categorias fiscais vêm da declaração de impostos usada em :country, por isso mantêm-se nas palavras desse país em qualquer idioma da app.',
+        'wording_note' => 'Os nomes das categorias fiscais aparecem no seu idioma; a declaração de :country usa os seus próprios termos.',
 
         'countries' => [
             'at' => 'Áustria',

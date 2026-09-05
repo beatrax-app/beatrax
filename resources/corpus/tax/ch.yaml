@@ -16,73 +16,230 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "ch_fahrkosten"
     name: "Auslagen für Fahrten zwischen Wohn- und Arbeitsstätte"
     short_name: "Fahrkosten"
     hint: "Notwendige Fahrkosten zum Arbeitsort, bei der direkten Bundessteuer bis zu einem Höchstbetrag"
+    i18n:
+      en:
+        name: "Costs of travel between home and work"
+        short_name: "Commuting"
+        hint: "Necessary travel costs to work, capped at a maximum for the direkte Bundessteuer"
+      nl:
+        name: "Kosten voor woon-werkverkeer"
+        short_name: "Woon-werkverkeer"
+        hint: "Noodzakelijke reiskosten naar het werk, bij de direkte Bundessteuer tot een maximumbedrag"
   - key: "ch_auswaertige_verpflegung"
     name: "Mehrkosten für auswärtige Verpflegung und bei Schichtarbeit"
     short_name: "Verpflegung"
     hint: "Pauschalen für Hauptmahlzeiten ausserhalb der Wohnstätte und bei Schichtarbeit"
+    i18n:
+      en:
+        name: "Extra costs of meals away from home and on shift work"
+        short_name: "Meals"
+        hint: "Flat rates for main meals taken away from home and for shift work"
+      nl:
+        name: "Meerkosten voor maaltijden buitenshuis en bij ploegendienst"
+        short_name: "Maaltijden"
+        hint: "Forfaits voor hoofdmaaltijden buiten de woning en bij ploegendienst"
   - key: "ch_uebrige_berufskosten"
     name: "Übrige Berufskosten"
     short_name: "Berufskosten"
     hint: "Pauschalabzug für Berufswerkzeuge, Fachliteratur, Arbeitszimmer und Berufskleider"
+    i18n:
+      en:
+        name: "Other work-related expenses"
+        short_name: "Work expenses"
+        hint: "Flat-rate deduction for tools, professional literature, home office and work clothing"
+      nl:
+        name: "Overige beroepskosten"
+        short_name: "Beroepskosten"
+        hint: "Forfaitaire aftrek voor gereedschap, vakliteratuur, werkruimte thuis en werkkleding"
   - key: "ch_aus_und_weiterbildung"
     name: "Aus- und Weiterbildungskosten"
     short_name: "Weiterbild."
     hint: "Berufsorientierte Aus-, Weiterbildungs- und Umschulungskosten nach dem ersten Abschluss"
+    i18n:
+      en:
+        name: "Education and training costs"
+        short_name: "Training"
+        hint: "Job-related education, training and retraining costs after the first qualification"
+      nl:
+        name: "Opleidings- en bijscholingskosten"
+        short_name: "Studiekosten"
+        hint: "Beroepsgerichte opleidings-, bijscholings- en omscholingskosten na de eerste diplomering"
   - key: "ch_saeule_3a"
     name: "Beiträge an die gebundene Selbstvorsorge (Säule 3a)"
     short_name: "Säule 3a"
     hint: "Im Jahr tatsächlich einbezahlte Beiträge an eine anerkannte Vorsorgeform"
+    i18n:
+      en:
+        name: "Säule 3a pension savings contributions"
+        short_name: "Säule 3a"
+        hint: "Contributions actually paid during the year into a recognised pension scheme"
+      nl:
+        name: "Säule 3a-pensioensparen"
+        short_name: "Säule 3a"
+        hint: "In het jaar daadwerkelijk gestorte premies in een erkende voorzieningsvorm"
   - key: "ch_berufliche_vorsorge"
     name: "Beiträge an Einrichtungen der beruflichen Vorsorge (2. Säule)"
     short_name: "2. Säule"
     hint: "Reglementarische Beiträge und freiwillige Einkäufe in die Pensionskasse"
+    i18n:
+      en:
+        name: "Occupational pension contributions (2. Säule)"
+        short_name: "2. Säule"
+        hint: "Regulatory contributions and voluntary buy-ins into the Pensionskasse"
+      nl:
+        name: "Pensioenpremies bedrijfspensioen (2. Säule)"
+        short_name: "2. Säule"
+        hint: "Reglementaire premies en vrijwillige inkoop in de Pensionskasse"
   - key: "ch_schuldzinsen"
     name: "Private Schuldzinsen"
     short_name: "Schuldzinsen"
     hint: "Zinsen auf privaten Schulden, begrenzt auf den Vermögensertrag zuzüglich eines Zuschlags"
+    i18n:
+      en:
+        name: "Interest on private debt"
+        short_name: "Debt interest"
+        hint: "Interest on private debts, capped at investment income plus a supplement"
+      nl:
+        name: "Rente op privéschulden"
+        short_name: "Rente leningen"
+        hint: "Rente op privéschulden, begrensd tot het vermogensrendement plus een opslag"
   - key: "ch_krankheits_und_unfallkosten"
     name: "Krankheits- und Unfallkosten"
     short_name: "Krankheitsk."
     hint: "Selbst getragene Arzt-, Zahnarzt- und Arzneikosten, soweit sie den Selbstbehalt übersteigen"
+    i18n:
+      en:
+        name: "Illness and accident costs"
+        short_name: "Healthcare"
+        hint: "Self-funded doctor, dentist and medicine costs above the excess"
+      nl:
+        name: "Ziekte- en ongevalskosten"
+        short_name: "Zorgkosten"
+        hint: "Zelf gedragen kosten voor arts, tandarts en medicijnen boven het eigen risico"
   - key: "ch_behinderungsbedingte_kosten"
     name: "Behinderungsbedingte Kosten"
     short_name: "Behind. Kost"
     hint: "Selbst getragene behinderungsbedingte Kosten, abziehbar ohne Selbstbehalt"
+    i18n:
+      en:
+        name: "Disability-related costs"
+        short_name: "Disability"
+        hint: "Self-funded disability-related costs, deductible without an excess"
+      nl:
+        name: "Kosten bij arbeidsongeschiktheid"
+        short_name: "Arbeidsongesch."
+        hint: "Zelf gedragen kosten bij arbeidsongeschiktheid, aftrekbaar zonder eigen risico"
   - key: "ch_freiwillige_leistungen"
     name: "Freiwillige Zuwendungen an gemeinnützige Organisationen"
     short_name: "Spenden"
     hint: "Zuwendungen an steuerbefreite juristische Personen mit Sitz in der Schweiz"
+    i18n:
+      en:
+        name: "Voluntary donations to charitable organisations"
+        short_name: "Donations"
+        hint: "Donations to tax-exempt legal entities based in Switzerland"
+      nl:
+        name: "Vrijwillige giften aan goede doelen"
+        short_name: "Giften"
+        hint: "Giften aan van belasting vrijgestelde rechtspersonen met zetel in Zwitserland"
   - key: "ch_politische_parteien"
     name: "Mitgliederbeiträge und Zuwendungen an politische Parteien"
     short_name: "Parteien"
     hint: "Beiträge an im Parteienregister eingetragene oder im Kantonsparlament vertretene Parteien"
+    i18n:
+      en:
+        name: "Membership fees and donations to political parties"
+        short_name: "Political parties"
+        hint: "Contributions to parties in the party register or represented in a cantonal parliament"
+      nl:
+        name: "Lidmaatschapsbijdragen en giften aan politieke partijen"
+        short_name: "Partijen"
+        hint: "Bijdragen aan partijen in het partijenregister of vertegenwoordigd in een kantonnaal parlement"
   - key: "ch_kinderdrittbetreuung"
     name: "Kosten für die Drittbetreuung der Kinder"
     short_name: "Kinderbetr."
     hint: "Nachgewiesene Betreuungskosten, wenn beide Elternteile erwerbstätig oder dauernd invalid sind"
+    i18n:
+      en:
+        name: "Third-party childcare costs"
+        short_name: "Childcare"
+        hint: "Proven childcare costs where both parents work or are permanently disabled"
+      nl:
+        name: "Kosten voor kinderopvang door derden"
+        short_name: "Kinderopvang"
+        hint: "Aangetoonde opvangkosten wanneer beide ouders werken of blijvend arbeidsongeschikt zijn"
   - key: "ch_unterhaltsbeitraege"
     name: "Unterhaltsbeiträge und Alimente"
     short_name: "Alimente"
     hint: "Beiträge an den geschiedenen oder getrennt lebenden Ehegatten und für minderjährige Kinder"
+    i18n:
+      en:
+        name: "Maintenance and alimony payments"
+        short_name: "Alimony"
+        hint: "Payments to a divorced or separated spouse and for minor children"
+      nl:
+        name: "Alimentatie en onderhoudsbijdragen"
+        short_name: "Alimentatie"
+        hint: "Bijdragen aan de gescheiden of duurzaam apart levende echtgenoot en voor minderjarige kinderen"
   - key: "ch_versicherungspraemien"
     name: "Versicherungsprämien und Zinsen von Sparkapitalien"
     short_name: "Versich.präm"
     hint: "Prämien für Kranken-, Lebens- und nicht obligatorische Unfallversicherung, bis zu einem Höchstbetrag"
+    i18n:
+      en:
+        name: "Insurance premiums and interest on savings capital"
+        short_name: "Insurance"
+        hint: "Premiums for health, life and non-compulsory accident insurance, up to a maximum"
+      nl:
+        name: "Verzekeringspremies en rente op spaartegoeden"
+        short_name: "Verzekeringen"
+        hint: "Premies voor zorg-, levens- en niet-verplichte ongevallenverzekering, tot een maximumbedrag"
   - key: "ch_liegenschaftsunterhalt"
     name: "Liegenschaftsunterhaltskosten"
     short_name: "Liegenschaft"
     hint: "Werterhaltender Unterhalt, Versicherungsprämien und Verwaltungskosten; wahlweise pauschal"
+    i18n:
+      en:
+        name: "Property maintenance costs"
+        short_name: "Property upkeep"
+        hint: "Value-preserving upkeep, insurance premiums and management costs; flat rate optional"
+      nl:
+        name: "Onderhoudskosten onroerend goed"
+        short_name: "Vastgoedonderh."
+        hint: "Waardebehoudend onderhoud, verzekeringspremies en beheerkosten; naar keuze forfaitair"
   - key: "ch_vermoegensverwaltungskosten"
     name: "Kosten der Vermögensverwaltung"
     short_name: "Vermögensv."
     hint: "Aufwendungen für die Verwaltung und Verwahrung von beweglichem Kapitalvermögen"
+    i18n:
+      en:
+        name: "Asset management costs"
+        short_name: "Asset mgmt"
+        hint: "Costs of managing and holding movable capital assets"
+      nl:
+        name: "Kosten van vermogensbeheer"
+        short_name: "Vermogensbeheer"
+        hint: "Uitgaven voor het beheer en de bewaring van roerend kapitaalvermogen"
   - key: "ch_zweiverdienerabzug"
     name: "Zweiverdienerabzug"
     short_name: "Zweiverdien."
     hint: "Abzug vom Erwerbseinkommen des zweitverdienenden Ehegatten"
+    i18n:
+      en:
+        name: "Second-earner deduction"
+        short_name: "Second earner"
+        hint: "Deduction from the earned income of the second-earning spouse"
+      nl:
+        name: "Tweeverdienersaftrek"
+        short_name: "Tweeverdieners"
+        hint: "Aftrek op het arbeidsinkomen van de tweede verdienende echtgenoot"

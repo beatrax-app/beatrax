@@ -8,49 +8,152 @@
 #   name        string  required — display name for the category management list
 #   short_name  string  optional — badge label (≤12 chars)
 #   hint        string  optional — one-line tooltip hint for the picker popover
+#   i18n        map     required — the same three fields per shipped locale, so a
+#                       reader outside this jurisdiction is not shown its language.
+#                       `en` is the source and fallback locale and is required for
+#                       every entry; a locale with no block here falls back to it.
 #
 entries:
   - key: "hu_30_ev_alatti_anyak_kedvezmenye"
     name: "30 év alatti anyák kedvezménye"
     short_name: "30 é. anyák"
     hint: "Családi kedvezményre jogosult, 30. életévét be nem töltött anya kedvezménye"
+    i18n:
+      en:
+        name: "Allowance for mothers under 30"
+        short_name: "Mothers under 30"
+        hint: "Allowance for a mother under 30 who is entitled to the family allowance"
+      nl:
+        name: "Voordeel voor moeders onder de 30"
+        short_name: "Moeders tot 30"
+        hint: "Voordeel voor een moeder die nog geen 30 is en recht heeft op de gezinsaftrek"
   - key: "hu_negy_gyermeket_nevelo_anyak_kedvezmenye"
     name: "Négy vagy több gyermeket nevelő anyák kedvezménye"
     short_name: "4+ gyermek"
     hint: "Legalább négy gyermeket nevelő vagy felnevelt anya adóalap-kedvezménye"
+    i18n:
+      en:
+        name: "Allowance for mothers of four or more children"
+        short_name: "4+ children"
+        hint: "Tax base allowance for a mother raising or having raised at least four children"
+      nl:
+        name: "Voordeel voor moeders met vier of meer kinderen"
+        short_name: "4+ kinderen"
+        hint: "Grondslagvermindering voor een moeder die ten minste vier kinderen opvoedt of heeft opgevoed"
   - key: "hu_harom_gyermeket_nevelo_anyak_kedvezmenye"
     name: "Három gyermeket nevelő anyák kedvezménye"
     short_name: "3 gyermek"
     hint: "Három gyermeket nevelő vagy felnevelt anya adóalap-kedvezménye"
+    i18n:
+      en:
+        name: "Allowance for mothers of three children"
+        short_name: "3 children"
+        hint: "Tax base allowance for a mother raising or having raised three children"
+      nl:
+        name: "Voordeel voor moeders met drie kinderen"
+        short_name: "3 kinderen"
+        hint: "Grondslagvermindering voor een moeder die drie kinderen opvoedt of heeft opgevoed"
   - key: "hu_ket_gyermeket_nevelo_anyak_kedvezmenye"
     name: "Két gyermeket nevelő anyák kedvezménye"
     short_name: "2 gyermek"
     hint: "Két gyermeket nevelő anya kedvezménye, korhatárhoz kötött ütemezéssel"
+    i18n:
+      en:
+        name: "Allowance for mothers of two children"
+        short_name: "2 children"
+        hint: "Allowance for a mother raising two children, phased in by age limit"
+      nl:
+        name: "Voordeel voor moeders met twee kinderen"
+        short_name: "2 kinderen"
+        hint: "Voordeel voor een moeder die twee kinderen opvoedt, gefaseerd naar leeftijdsgrens"
   - key: "hu_csed_gyed_kedvezmeny"
     name: "A csecsemőgondozási díj, a gyermekgondozási díj és az örökbefogadói díj kedvezménye"
     short_name: "Csed/gyed"
     hint: "A csed, a gyed és az örökbefogadói díj után érvényesíthető adóalap-kedvezmény"
+    i18n:
+      en:
+        name: "Allowance on maternity, childcare and adoption benefits"
+        short_name: "Csed/gyed"
+        hint: "Tax base allowance claimable on csed, gyed and the adoption benefit"
+      nl:
+        name: "Voordeel op de zwangerschaps-, kinderopvang- en adoptie-uitkering"
+        short_name: "Csed/gyed"
+        hint: "Grondslagvermindering die geldt voor csed, gyed en de adoptie-uitkering"
   - key: "hu_25_ev_alatti_fiatalok_kedvezmenye"
     name: "25 év alatti fiatalok kedvezménye"
     short_name: "25 év alatt"
     hint: "A 25. életévét be nem töltött fiatal munkából származó jövedelmének kedvezménye"
+    i18n:
+      en:
+        name: "Allowance for young people under 25"
+        short_name: "Under 25"
+        hint: "Allowance on the earned income of a young person who has not reached 25"
+      nl:
+        name: "Voordeel voor jongeren onder de 25"
+        short_name: "Onder 25"
+        hint: "Voordeel op het arbeidsinkomen van een jongere die nog geen 25 is"
   - key: "hu_szemelyi_kedvezmeny"
     name: "Személyi kedvezmény"
     short_name: "Személyi"
     hint: "Súlyosan fogyatékos, rokkantsági járadékban vagy fogyatékossági támogatásban részesülő magánszemély kedvezménye"
+    i18n:
+      en:
+        name: "Personal disability allowance"
+        short_name: "Disability"
+        hint: "Allowance for a severely disabled person or one receiving a disability annuity or benefit"
+      nl:
+        name: "Persoonlijke aftrek bij handicap"
+        short_name: "Persoonlijk"
+        hint: "Voordeel voor een ernstig gehandicapte of iemand met een invaliditeitsrente of gehandicaptentoelage"
   - key: "hu_elso_hazasok_kedvezmenye"
     name: "Első házasok kedvezménye"
     short_name: "Első házas"
     hint: "Kedvezmény, ha legalább az egyik házastárs első házasságát köti"
+    i18n:
+      en:
+        name: "Allowance for first-time married couples"
+        short_name: "First marriage"
+        hint: "Allowance where at least one spouse is entering their first marriage"
+      nl:
+        name: "Voordeel voor een eerste huwelijk"
+        short_name: "Eerste huwelijk"
+        hint: "Voordeel als ten minste een van beide echtgenoten voor het eerst trouwt"
   - key: "hu_csaladi_kedvezmeny"
     name: "Családi kedvezmény"
     short_name: "Családi"
     hint: "Az eltartottak száma szerinti adóalap-kedvezmény, közösen is érvényesíthető"
+    i18n:
+      en:
+        name: "Family allowance"
+        short_name: "Family"
+        hint: "Tax base allowance by number of dependants, claimable jointly as well"
+      nl:
+        name: "Gezinsaftrek"
+        short_name: "Gezin"
+        hint: "Grondslagvermindering naar het aantal personen ten laste, ook samen te benutten"
   - key: "hu_csaladi_jarulekkedvezmeny"
     name: "Családi járulékkedvezmény"
     short_name: "Járulékkedv."
     hint: "A fel nem használt családi kedvezmény érvényesítése a járulékok terhére"
+    i18n:
+      en:
+        name: "Family contribution allowance"
+        short_name: "Contrib. allow."
+        hint: "Claiming the unused family allowance against social contributions"
+      nl:
+        name: "Gezinskorting op de premies"
+        short_name: "Premiekorting"
+        hint: "De niet-benutte gezinsaftrek verrekenen met de sociale premies"
   - key: "hu_egy_szazalek"
     name: "Rendelkezés az szja 1+1 százalékáról"
     short_name: "1+1%"
     hint: "Az adó egy százaléka civil szervezetnek, további egy százaléka vallási közösségnek"
+    i18n:
+      en:
+        name: "Designating 1+1% of income tax"
+        short_name: "1+1%"
+        hint: "One per cent of the tax to a civil society organisation, a further one per cent to a religious community"
+      nl:
+        name: "Bestemming van 1+1% van de inkomstenbelasting"
+        short_name: "1+1%"
+        hint: "Een procent van de belasting naar een maatschappelijke organisatie, nog een procent naar een religieuze gemeenschap"
