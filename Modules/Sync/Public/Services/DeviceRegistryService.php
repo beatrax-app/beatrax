@@ -70,6 +70,28 @@ final readonly class DeviceRegistryService
             ->exists();
     }
 
+    // Whether a removal is something this registry can report about the device
+    // behind that handshake key: a row it holds with the confirmation taken
+    // off. Never an admission gate — nothing is let in on a `true`, and the
+    // `false` separates "I removed you" from "I have never met you".
+    /**
+     * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md
+     */
+    public function holdsRevokedDeviceWithKeyAgreementKey(int $userId, string $x25519PublicKeyHex): bool
+    {
+        if ($x25519PublicKeyHex === '') {
+            return false;
+        }
+
+        return $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->where('x25519_public_key_hex', $x25519PublicKeyHex)
+            ->whereNull('confirmed_at')
+            ->exists();
+    }
+
     // Drops this side's confirmation of a peer that has said it no longer
     // confirms us. Never the self row: a device answering for itself here
     // would revoke the only identity this install has.

@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Druge naprave ni mogoče doseči. Preveri, ali sta obe v istem omrežju in ali je sinhronizacija na namizju vklopljena.',
         'no_road_home' => 'Ta naprava ne more iskati po omrežju, koda, ki si jo skeniral, pa ne vsebuje naslova druge naprave. Prosi jo za novo kodo in skeniraj to.',
         'invalid_code' => 'Ta koda ni veljavna ali je potekla. Prosi drugo napravo, naj ustvari novo.',
+        'already_under_way' => 'Ta naprava je kodo že sprejela in čaka na potrditev druge naprave. Če ne pride, na njej ustvari novo kodo in uporabi tisto.',
+        'vouched_but_refused' => 'Druga naprava kodo še ima, a je ta naprava ni mogla sprejeti. Na njej ustvari novo kodo in uporabi tisto.',
         'code_incomplete' => 'Ta koda ni popolna. Primerjaj jo z drugo napravo in jo vnesi v celoti.',
         'code_not_accepted' => 'Nobena naprava v tem omrežju ni sprejela te kode. Preveri kodo in ali jo druga naprava še vedno prikazuje.',
         'no_peer_answered' => 'Nič v tem omrežju ni odgovorilo na to kodo. Preveri, ali na drugi napravi teče sinhronizacija, ali pa skeniraj njeno kodo s kamero — kameri ni treba iskati po omrežju.',

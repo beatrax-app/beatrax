@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Nevar sasniegt otru ierīci. Pārliecinieties, ka abas ir vienā tīklā un ka datorā ir ieslēgta sinhronizācija.',
         'no_road_home' => 'Šī ierīce nevar meklēt tīklā, un noskenētajā kodā nav otras ierīces adreses. Palūdz tai parādīt jaunu kodu un noskenē to.',
         'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
+        'already_under_way' => 'Šī ierīce šo kodu jau ir pieņēmusi un gaida otras ierīces apstiprinājumu. Ja tas nepienāk, palūdziet jaunu kodu un izmantojiet to.',
+        'vouched_but_refused' => 'Otrai ierīcei šis kods joprojām ir, bet šī ierīce to nevarēja pieņemt. Palūdziet tai jaunu kodu un izmantojiet to.',
         'code_incomplete' => 'Šis kods nav pilnīgs. Salīdziniet to ar otru ierīci un ievadiet to pilnībā.',
         'code_not_accepted' => 'Neviena šī tīkla ierīce nepieņēma šo kodu. Pārbaudi kodu un vai otra ierīce to joprojām rāda.',
         'no_peer_answered' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Pārbaudi, vai otrā ierīcē darbojas sinhronizācija, vai arī noskenē tās kodu ar kameru — kamerai tīklā nekas nav jāmeklē.',

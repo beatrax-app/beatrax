@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Kan het andere apparaat niet bereiken. Zorg dat beide op hetzelfde netwerk zitten en synchronisatie op de desktop aanstaat.',
         'no_road_home' => 'Dit apparaat kan het netwerk niet doorzoeken en de code die je hebt gescand bevat geen adres om het andere apparaat te bereiken. Vraag daar een nieuwe code en scan die.',
         'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
+        'already_under_way' => 'Dit apparaat heeft die code al aangenomen en wacht tot het andere apparaat bevestigt. Gebeurt dat niet, vraag dan een nieuwe code en gebruik die.',
+        'vouched_but_refused' => 'Het andere apparaat heeft die code nog, maar dit apparaat kon hem niet aannemen. Vraag daar een nieuwe code en gebruik die.',
         'code_incomplete' => 'Dat is geen volledige code. Vergelijk hem met het andere apparaat en typ hem helemaal over.',
         'code_not_accepted' => 'Geen enkel apparaat in dit netwerk accepteerde die code. Controleer de code en of het andere apparaat hem nog toont.',
         'no_peer_answered' => 'Niets in dit netwerk reageerde op die code. Controleer of synchronisatie op het andere apparaat draait, of scan zijn code met de camera — de camera hoeft niet in het netwerk te zoeken.',

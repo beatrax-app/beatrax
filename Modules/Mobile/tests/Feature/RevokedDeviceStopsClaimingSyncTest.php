@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
+use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
@@ -24,6 +25,23 @@ it('marks only a peer revocation as unretryable', function (): void {
         ->and($disconnect->isPeerRevocation())->toBeFalse();
 });
 
+function revokedClaimsPeerRow(DatabaseManager $db, int $userId, string $deviceId, string $name): void
+{
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => $name,
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'x25519_public_key_hex' => sodium_bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-08-01T10:00:00Z',
+        'confirmed_at' => '2026-08-01T10:05:00Z',
+        'created_at' => '2026-08-01T10:00:00Z',
+        'updated_at' => '2026-08-01T10:00:00Z',
+    ]);
+}
+
 it('stops treating the peer as confirmed once its confirmation is cleared', function (): void {
     $db = app(DatabaseManager::class);
 
@@ -35,35 +53,47 @@ it('stops treating the peer as confirmed once its confirmation is cleared', func
     ]);
     $userId = (int) $user->id;
 
-    $db->connection()->table('device_registry')->insert([
-        'user_id' => $userId,
-        'device_id' => 'desktop-peer',
-        'name' => "Wessel's Mac",
-        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
-        'x25519_public_key_hex' => sodium_bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
-        'safety_number_words' => 'abandon ability able about above absent',
-        'is_self' => 0,
-        'paired_at' => '2026-08-01T10:00:00Z',
-        'confirmed_at' => '2026-08-01T10:05:00Z',
-        'created_at' => '2026-08-01T10:00:00Z',
-        'updated_at' => '2026-08-01T10:00:00Z',
-    ]);
+    revokedClaimsPeerRow($db, $userId, 'desktop-peer', "Wessel's Mac");
 
     /** @var DeviceRegistryService $devices */
     $devices = app(DeviceRegistryService::class);
 
     expect($devices->otherDeviceNames($userId))->toHaveCount(1);
 
-    // What forgetRevokedPeer() does when PEER_REVOKED arrives.
-    $db->connection()->table('device_registry')
-        ->where('user_id', $userId)
-        ->where('is_self', 0)
-        ->update(['confirmed_at' => null]);
+    app(LanSyncClient::class)->forgetRevokedPeer($userId, 'desktop-peer');
 
     // Every surface that asks "do I have a peer?" must now say no — that is
     // what the sync screen renders its connected state from.
     expect($devices->otherDeviceNames($userId))->toBe([])
         ->and($devices->isStillConfirmed($userId, 'desktop-peer'))->toBeFalse();
+});
+
+// One notice arrives over one session and speaks for one device. Clearing every
+// non-self row instead took a second, silent desktop's confirmation with it —
+// and nothing short of pairing that desktop again ever puts one back.
+it('drops only the device that sent the notice', function (): void {
+    $db = app(DatabaseManager::class);
+
+    $user = User::query()->create([
+        'username' => 'revoked-claims-two-peers',
+        'password' => bcrypt('fixture'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+    $userId = (int) $user->id;
+
+    revokedClaimsPeerRow($db, $userId, 'desktop-that-revoked', 'The Mac that removed this phone');
+    revokedClaimsPeerRow($db, $userId, 'desktop-still-paired', 'The Mac that said nothing');
+
+    app(LanSyncClient::class)->forgetRevokedPeer($userId, 'desktop-that-revoked');
+
+    /** @var DeviceRegistryService $devices */
+    $devices = app(DeviceRegistryService::class);
+
+    expect($devices->isStillConfirmed($userId, 'desktop-that-revoked'))->toBeFalse()
+        ->and($devices->isStillConfirmed($userId, 'desktop-still-paired'))->toBeTrue(
+            'a device that said nothing has withdrawn nothing, and this drop has no way back',
+        );
 });
 
 it('sends the revocation notice before hanging up on an unconfirmed peer', function (): void {

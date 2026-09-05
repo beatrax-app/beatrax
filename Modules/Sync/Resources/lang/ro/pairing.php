@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Identitatea dispozitivului tău este blocată. Deblochează aplicația și încearcă din nou.',
     'invalid_code' => 'Acest cod este invalid sau a expirat. Cere celuilalt dispozitiv să genereze unul nou.',
+    'already_under_way' => 'Acest dispozitiv a acceptat deja codul și așteaptă confirmarea celuilalt dispozitiv. Dacă nu vine, cere un cod nou și folosește-l pe acela.',
+    'vouched_but_refused' => 'Celălalt dispozitiv are încă acel cod, dar acesta nu l-a putut accepta. Cere-i un cod nou și folosește-l pe acela.',
     'code_incomplete' => 'Acest cod nu este complet. Compară-l cu celălalt dispozitiv și introdu-l în întregime.',
     'code_not_accepted' => 'Niciun dispozitiv din această rețea nu a acceptat codul. Verifică codul și dacă celălalt dispozitiv încă îl afișează.',
     'no_peer_answered' => 'Nimic din această rețea nu a răspuns la acel cod. Verifică dacă sincronizarea rulează pe celălalt dispozitiv.',

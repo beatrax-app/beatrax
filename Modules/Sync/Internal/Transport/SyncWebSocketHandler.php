@@ -145,9 +145,9 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
                 'user_id' => $this->userId,
             ]);
 
-            // Say WHY before hanging up. Closing silently is indistinguishable
-            // from a flaky network, so a device removed here kept describing
-            // itself as connected and synced indefinitely.
+            // Say WHY before hanging up, where there is a why to say. Closing
+            // silently is indistinguishable from a flaky network, so a device
+            // removed here kept describing itself as connected and synced.
             $this->tellPeerItIsRevoked($client, $noiseSession);
 
             $client->close();
@@ -231,11 +231,29 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             && ! $this->registryService->isStillConfirmed($this->userId, $peerDeviceId);
     }
 
-    // Best-effort notice to an unconfirmed peer. Sent on the raw Noise
-    // session because SyncSession is deliberately unauthenticated here, and
-    // never allowed to throw — the connection is being closed either way.
-    private function tellPeerItIsRevoked(WebsocketClient $client, NoiseSession $noiseSession): void
+    // Best-effort notice to a peer this registry has REVOKED. Sent on the raw
+    // Noise session because SyncSession is deliberately unauthenticated here,
+    // and never allowed to throw — the connection is being closed either way.
+    /**
+     * @internal Public so the refusal is testable without a live amphp dial.
+     */
+    public function tellPeerItIsRevoked(WebsocketClient $client, NoiseSession $noiseSession): void
     {
+        // The gate refuses a device this household never admitted on exactly
+        // the same branch as one it removed, and the peer's reading of the
+        // notice is terminal. Told it while a confirm was still in flight, a
+        // phone dropped the desktop for good over a half-finished ceremony.
+        if (! $this->registryService->holdsRevokedDeviceWithKeyAgreementKey(
+            $this->userId,
+            sodium_bin2hex($noiseSession->peerStaticPublicKey()),
+        )) {
+            $this->logger->info('SyncWebSocketHandler: refused a device this registry never admitted — claiming no revocation.', [
+                'user_id' => $this->userId,
+            ]);
+
+            return;
+        }
+
         try {
             $client->sendBinary($noiseSession->encrypt(json_encode(
                 ['type' => self::MSG_PEER_REVOKED],

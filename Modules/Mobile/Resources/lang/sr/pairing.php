@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Nije moguće doći do drugog uređaja. Proveri da li su oba na istoj mreži i da li je sinhronizacija uključena na računaru.',
         'no_road_home' => 'Ovaj uređaj ne može da pretražuje mrežu, a kod koji si skenirao ne sadrži adresu drugog uređaja. Zatraži novi kod i skeniraj njega.',
         'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj napravi novi.',
+        'already_under_way' => 'Ovaj uređaj je taj kod već prihvatio i čeka potvrdu sa drugog uređaja. Ako ne stigne, zatraži novi kod i upotrebi njega.',
+        'vouched_but_refused' => 'Drugi uređaj još uvek ima taj kod, ali ga ovaj uređaj nije mogao prihvatiti. Zatraži od njega novi kod i upotrebi njega.',
         'code_incomplete' => 'Ovaj kod nije potpun. Uporedi ga sa drugim uređajem i unesi ga u celosti.',
         'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kôd. Proveri kôd i da li ga drugi uređaj još uvek prikazuje.',
         'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kôd. Proveri da li sinhronizacija radi na drugom uređaju ili skeniraj njegov kôd kamerom — kamera ne mora da pretražuje mrežu.',

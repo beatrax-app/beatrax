@@ -30,6 +30,7 @@ use Modules\Mobile\Internal\Http\PairingEntryUrl;
 use Modules\Mobile\Internal\Pairing\PairingEncryptionActivation;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingSide;
 use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -346,7 +347,18 @@ final class MobilePairingScan extends Component
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
 
         if ($result === null) {
-            $this->reportRejectedCode($gateway, $urls, $session, $lock, $userId);
+            // The typed arm reached the minting device for this code moments
+            // ago; the camera arm read it off a screen and asked nobody. Only
+            // the second may be told the code is unknown or expired.
+            $this->reportRejectedCode(
+                $gateway,
+                $urls,
+                $session,
+                $lock,
+                $userId,
+                $identity,
+                issuerServedItsOffer: $scannedPayload === null,
+            );
 
             return;
         }
@@ -434,7 +446,7 @@ final class MobilePairingScan extends Component
         if ($state === null || $state === PairingGateway::STATE_EXPIRED) {
             $this->resetPairingAttempt();
             $this->awaitingPeer = false;
-            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+            $this->flashMessage = Lang::get($this->acceptRefusalKey(PairingAcceptRefusal::NotLiveHere));
 
             return;
         }

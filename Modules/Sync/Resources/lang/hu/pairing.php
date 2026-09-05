@@ -38,6 +38,8 @@ return [
 
     'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
     'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
+    'already_under_way' => 'Ez az eszköz már elfogadta a kódot, és a másik eszköz megerősítésére vár. Ha nem érkezik meg, kérj új kódot, és azt használd.',
+    'vouched_but_refused' => 'A másik eszköznél még megvan ez a kód, de ez az eszköz nem tudta elfogadni. Kérj tőle új kódot, és azt használd.',
     'code_incomplete' => 'Ez a kód nem teljes. Vesd össze a másik eszközzel, és add meg az egészet.',
     'code_not_accepted' => 'A hálózaton egyetlen eszköz sem fogadta el ezt a kódot. Ellenőrizd a kódot, és hogy a másik eszköz még mutatja-e.',
     'no_peer_answered' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. Ellenőrizd, hogy fut-e a szinkronizálás a másik eszközön.',

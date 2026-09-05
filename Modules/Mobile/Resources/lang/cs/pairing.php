@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Druhé zařízení není dostupné. Zkontroluj, že jsou obě ve stejné síti a že je na počítači zapnutá synchronizace.',
         'no_road_home' => 'Toto zařízení neumí prohledávat síť a kód, který jsi naskenoval, neobsahuje žádnou adresu druhého zařízení. Požádej ho o nový kód a naskenuj ten.',
         'invalid_code' => 'Tento kód je neplatný nebo vypršel. Nech na druhém zařízení vygenerovat nový.',
+        'already_under_way' => 'Toto zařízení už kód přijalo a čeká na potvrzení z druhého zařízení. Pokud nepřijde, nech si vygenerovat nový kód a použij ten.',
+        'vouched_but_refused' => 'Druhé zařízení kód stále má, ale toto zařízení ho nedokázalo přijmout. Nech si na něm vygenerovat nový kód a použij ten.',
         'code_incomplete' => 'Tento kód není úplný. Porovnej ho s druhým zařízením a zadej ho celý.',
         'code_not_accepted' => 'Žádné zařízení v této síti tento kód nepřijalo. Zkontroluj kód a jestli ho druhé zařízení stále zobrazuje.',
         'no_peer_answered' => 'Na této síti na tento kód nic neodpovědělo. Zkontroluj, že na druhém zařízení běží synchronizace, nebo naskenuj jeho kód fotoaparátem — ten síť prohledávat nemusí.',

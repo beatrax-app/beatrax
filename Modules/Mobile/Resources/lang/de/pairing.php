@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Das andere Gerät ist nicht erreichbar. Stelle sicher, dass beide im selben Netzwerk sind und die Synchronisierung auf dem Desktop aktiviert ist.',
         'no_road_home' => 'Dieses Gerät kann das Netzwerk nicht durchsuchen, und der gescannte Code enthält keine Adresse für das andere Gerät. Lass dort einen neuen Code anzeigen und scanne diesen.',
         'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
+        'already_under_way' => 'Dieses Gerät hat den Code bereits übernommen und wartet auf die Bestätigung des anderen Geräts. Bleibt sie aus, lass einen neuen Code erzeugen und verwende den.',
+        'vouched_but_refused' => 'Das andere Gerät hat den Code noch, aber dieses Gerät konnte ihn nicht übernehmen. Lass dort einen neuen Code erzeugen und verwende den.',
         'code_incomplete' => 'Das ist kein vollständiger Code. Vergleiche ihn mit dem anderen Gerät und gib ihn ganz ein.',
         'code_not_accepted' => 'Kein Gerät in diesem Netzwerk hat den Code akzeptiert. Prüfe den Code und ob das andere Gerät ihn noch anzeigt.',
         'no_peer_answered' => 'Nichts in diesem Netzwerk hat auf den Code geantwortet. Prüfe, ob die Synchronisierung auf dem anderen Gerät läuft, oder scanne dessen Code mit der Kamera — die Kamera sucht nicht im Netzwerk.',

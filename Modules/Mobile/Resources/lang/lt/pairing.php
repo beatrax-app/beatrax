@@ -41,6 +41,8 @@ return [
         'relay_unreachable' => 'Nepavyksta pasiekti kito įrenginio. Įsitikink, kad abu yra tame pačiame tinkle ir kad kompiuteryje įjungtas sinchronizavimas.',
         'no_road_home' => 'Šis įrenginys negali ieškoti tinkle, o nuskaitytame kode nėra kito įrenginio adreso. Paprašyk jo parodyti naują kodą ir nuskaityk jį.',
         'invalid_code' => 'Šis kodas neteisingas arba nebegalioja. Paprašyk kitame įrenginyje sugeneruoti naują.',
+        'already_under_way' => 'Šis įrenginys tą kodą jau priėmė ir laukia, kol patvirtins kitas įrenginys. Jei taip neatsitiks, paprašyk naujo kodo ir naudok jį.',
+        'vouched_but_refused' => 'Kitas įrenginys tą kodą vis dar turi, bet šis įrenginys negalėjo jo priimti. Paprašyk jo naujo kodo ir naudok jį.',
         'code_incomplete' => 'Šis kodas nepilnas. Palygink jį su kitu įrenginiu ir įvesk visą.',
         'code_not_accepted' => 'Nė vienas šio tinklo įrenginys nepriėmė šio kodo. Patikrink kodą ir ar kitas įrenginys jį vis dar rodo.',
         'no_peer_answered' => 'Šiame tinkle į šį kodą niekas neatsakė. Patikrink, ar kitame įrenginyje veikia sinchronizavimas, arba nuskaityk jo kodą kamera — kamerai tinkle ieškoti nereikia.',
