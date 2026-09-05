@@ -799,9 +799,9 @@ the poll owns that transition and the settlement behind it, and a second owner i
 a second policy.
 
 Nothing new holds the deadline open. `HoldPairingCeremonyOpenOnUnlock` already
-fires on `AppLockUnlocked` — which `LockStateManager::admitDataKey()` dispatches
-on every unlock path, the mobile PIN included — so the window is extended by the
-unlock itself, before the carried tap is applied.
+fires on `AppLockUnlocked`, which `LockStateManager::unlock()` dispatches from
+the funnel all five unlock paths arrive at, the mobile PIN included — so the
+window is extended by the unlock itself, before the carried tap is applied.
 
 `APairingSendNeverDeclinesInSilenceArchTest` holds the shape: a send in these
 seams that reads this device's own identity may not return `void`, and no caller
