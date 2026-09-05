@@ -118,43 +118,6 @@ it('finds the shape it was written for and leaves the two checked forms alone', 
     'the name inside a comment' => ['// preg_match($p, $s, $m); is what this used to do', false],
 ]);
 
-// The rule above is exactly as wide as the walk under it, and the walk is a
-// hand-written list of directory names. A list like that does not go wrong
-// when it is written; it goes wrong when the tree grows a directory and nobody
-// remembers the list exists. So the walk is asked to account for the tree
-// rather than trusted to describe it: a top-level directory holding PHP is
-// either scanned or named as somebody else's to scan, and there is no third
-// answer that passes.
-it('opens every top-level directory that holds PHP, or names who does', function (): void {
-    expect(RegexReturnSites::unscannedRootsHoldingPhp())->toBe([], implode("\n", [
-        'These directories hold PHP that the unchecked-preg_match walk never opens, so a',
-        'call site in them is unguarded and reads as clean:',
-        '',
-        ...RegexReturnSites::unscannedRootsHoldingPhp(),
-        '',
-        'Add each to RegexReturnSites::SCANNED_ROOTS, or to ROOTS_COVERED_ELSEWHERE with',
-        'the reason another walk reaches it.',
-    ]));
-});
-
-// A walk that reached nothing would satisfy every assertion above it, and the
-// two lists are only meaningful if the names in them are real. Both are held
-// against the filesystem so that deleting a directory is as loud as adding one.
-it('names only directories that exist, and reaches the files it claims', function (): void {
-    $missing = array_values(array_filter(
-        RegexReturnSites::SCANNED_ROOTS,
-        static fn (string $root): bool => ! is_dir(base_path($root)),
-    ));
-
-    expect($missing)->toBe([], 'SCANNED_ROOTS names directories that are not there: '.implode(', ', $missing));
-
-    $files = RegexReturnSites::files();
-    expect(count($files))->toBeGreaterThan(8000);
-
-    $roots = [];
-    foreach ($files as $path) {
-        $roots[explode('/', str_replace(base_path().'/', '', $path))[0]] = true;
-    }
-
-    expect(array_keys($roots))->toContain('Modules', 'tests', '.claude');
-});
+// The walk's own account of the tree used to be asserted here. It moved to
+// AScannerAccountsForTheWholeTreeArchTest, which holds every scanner to the
+// same rule through RepoTree rather than this one to a list of its own.
