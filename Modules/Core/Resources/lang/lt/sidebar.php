@@ -42,6 +42,7 @@ return [
         'email' => 'El. paštas',
         'categorization' => 'Kategorijų priskyrimas',
         'data_devices' => 'Duomenys ir įrenginiai',
+        'data_locations' => 'Kur yra mano duomenys?',
         'settings' => 'Nustatymai',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Peržiūrėkite nesuskirstytas operacijas',
         'community' => 'Bendros žinios apie prekiautojus',
         'data_devices' => 'Sinchronizavimas, susiejimas ir atsarginės kopijos',
+        'data_locations' => 'Keliai, eksportas ir ištrynimas',
         'settings' => 'Programos nuostatos',
     ],
 

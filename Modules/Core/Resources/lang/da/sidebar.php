@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Kategorisering',
         'data_devices' => 'Data & enheder',
+        'data_locations' => 'Hvor er mine data?',
         'settings' => 'Indstillinger',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Gennemgå ukategoriserede transaktioner',
         'community' => 'Delt viden om forretninger',
         'data_devices' => 'Synkronisering, parring og sikkerhedskopier',
+        'data_locations' => 'Stier, eksport og sletning',
         'settings' => 'Appindstillinger',
     ],
 

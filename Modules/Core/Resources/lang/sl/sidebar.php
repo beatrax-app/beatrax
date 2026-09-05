@@ -42,6 +42,7 @@ return [
         'email' => 'E-pošta',
         'categorization' => 'Razvrščanje',
         'data_devices' => 'Podatki in naprave',
+        'data_locations' => 'Kje so moji podatki?',
         'settings' => 'Nastavitve',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Preglejte nerazvrščene transakcije',
         'community' => 'Skupno znanje o trgovcih',
         'data_devices' => 'Sinhronizacija, seznanjanje in varnostne kopije',
+        'data_locations' => 'Poti, izvoz in brisanje',
         'settings' => 'Nastavitve aplikacije',
     ],
 

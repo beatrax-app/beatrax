@@ -10,11 +10,15 @@ declare(strict_types=1);
 // The NativePHP mobile PHP build carries no ext-zip: its php_config.h has
 // `#undef HAVE_ZIP` on both iOS and Android. `new ZipArchive` there is not a
 // caught failure, it is a bare PHP Error, and the screen that caught it told
-// the reader their perfectly valid export was unreadable.
+// the reader their perfectly valid export was unreadable. Reading was the first
+// direction to need a seam; writing one needed a second, so each pair below is
+// a factory and the extension-backed half it picks.
 const PHONELESS_CLASS_SEAMS = [
     'ZipArchive' => [
         'Modules/Migration/Internal/Parsers/Support/ZipArchiveReader.php',
         'Modules/Migration/Internal/Parsers/Support/ArchiveReaderFactory.php',
+        'Modules/Core/Internal/Backup/ZipArchiveWriter.php',
+        'Modules/Core/Internal/Backup/ArchiveWriterFactory.php',
     ],
 ];
 

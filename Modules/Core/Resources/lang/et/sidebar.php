@@ -42,6 +42,7 @@ return [
         'email' => 'E-post',
         'categorization' => 'Kategoriseerimine',
         'data_devices' => 'Andmed ja seadmed',
+        'data_locations' => 'Kus mu andmed on?',
         'settings' => 'Seaded',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Vaata üle kategoriseerimata tehingud',
         'community' => 'Jagatud teadmised kaupmeeste kohta',
         'data_devices' => 'Sünkroonimine, sidumine ja varukoopiad',
+        'data_locations' => 'Asukohad, eksport ja kustutamine',
         'settings' => 'Rakenduse eelistused',
     ],
 

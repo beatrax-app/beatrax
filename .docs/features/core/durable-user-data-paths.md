@@ -189,6 +189,8 @@ in `view.compiled` depends on its timing any more.
 
 - [`Core` architecture](architecture.md) — where this class sits in the
   module's public surface, and the rest of the shared primitives.
+- [One export action](one-export-action.md) — `UserDataLocations`, the
+  inventory built on these accessors, and the archive that bundles it.
 - [Mobile architecture](../mobile/architecture.md) — the device side of the
   persisted store.
 - [SQLite file pre-creation](../../architecture/sqlite-file-precreation.md) —

@@ -42,6 +42,7 @@ return [
         'email' => 'E-pasts',
         'categorization' => 'Kategorizēšana',
         'data_devices' => 'Dati un ierīces',
+        'data_locations' => 'Kur ir mani dati?',
         'settings' => 'Iestatījumi',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Pārskatiet nekategorizētos darījumus',
         'community' => 'Kopīgas zināšanas par tirgotājiem',
         'data_devices' => 'Sinhronizācija, savienošana pārī un dublējumi',
+        'data_locations' => 'Ceļi, eksports un dzēšana',
         'settings' => 'Lietotnes preferences',
     ],
 

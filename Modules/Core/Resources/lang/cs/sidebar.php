@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Kategorizace',
         'data_devices' => 'Data a zařízení',
+        'data_locations' => 'Kde jsou moje data?',
         'settings' => 'Nastavení',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Zkontrolujte nezařazené transakce',
         'community' => 'Sdílené znalosti o obchodnících',
         'data_devices' => 'Synchronizace, párování a zálohy',
+        'data_locations' => 'Cesty, export a mazání',
         'settings' => 'Předvolby aplikace',
     ],
 

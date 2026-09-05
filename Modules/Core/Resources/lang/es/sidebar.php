@@ -42,6 +42,7 @@ return [
         'email' => 'Correo',
         'categorization' => 'Categorización',
         'data_devices' => 'Datos y dispositivos',
+        'data_locations' => '¿Dónde están mis datos?',
         'settings' => 'Ajustes',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Revisar transacciones sin categoría',
         'community' => 'Conocimiento compartido sobre comercios',
         'data_devices' => 'Sincronización, vinculación y copias de seguridad',
+        'data_locations' => 'Rutas, exportación y eliminación',
         'settings' => 'Preferencias de la aplicación',
     ],
 

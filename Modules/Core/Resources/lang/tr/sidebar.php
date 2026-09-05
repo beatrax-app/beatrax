@@ -42,6 +42,7 @@ return [
         'email' => 'E-posta',
         'categorization' => 'Kategorilendirme',
         'data_devices' => 'Veriler ve cihazlar',
+        'data_locations' => 'Verilerim nerede?',
         'settings' => 'Ayarlar',
     ],
 
@@ -74,6 +75,7 @@ return [
         'categorization' => 'Kategorisiz işlemleri gözden geçirin',
         'community' => 'Satıcılar hakkında paylaşılan bilgi',
         'data_devices' => 'Eşitleme, eşleştirme ve yedekler',
+        'data_locations' => 'Yollar, dışa aktarma ve silme',
         'settings' => 'Uygulama tercihleri',
     ],
 

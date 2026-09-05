@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Categorisatie',
         'data_devices' => 'Gegevens & apparaten',
+        'data_locations' => 'Waar staan mijn gegevens?',
         'settings' => 'Instellingen',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Ongecategoriseerde transacties beoordelen',
         'community' => 'Gedeelde kennis over winkeliers',
         'data_devices' => 'Synchronisatie, koppelen en back-ups',
+        'data_locations' => 'Paden, export en verwijderen',
         'settings' => 'Voorkeuren van de app',
     ],
 

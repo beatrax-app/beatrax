@@ -42,6 +42,7 @@ return [
         'email' => 'Email',
         'categorization' => 'Categorization',
         'data_devices' => 'Data & devices',
+        'data_locations' => 'Where is my data?',
         'settings' => 'Settings',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Review uncategorized transactions',
         'community' => 'Shared merchant knowledge',
         'data_devices' => 'Sync, pairing and backups',
+        'data_locations' => 'Paths, export and deletion',
         'settings' => 'App preferences',
     ],
 

@@ -42,6 +42,7 @@ return [
         'email' => 'E-mail',
         'categorization' => 'Kategorizálás',
         'data_devices' => 'Adatok és eszközök',
+        'data_locations' => 'Hol vannak az adataim?',
         'settings' => 'Beállítások',
     ],
 
@@ -70,6 +71,7 @@ return [
         'categorization' => 'Nézd át a besorolatlan tranzakciókat',
         'community' => 'Megosztott tudás a kereskedőkről',
         'data_devices' => 'Szinkronizálás, párosítás és biztonsági mentések',
+        'data_locations' => 'Elérési utak, exportálás és törlés',
         'settings' => 'Alkalmazásbeállítások',
     ],
 
