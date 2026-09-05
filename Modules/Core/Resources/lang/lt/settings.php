@@ -173,6 +173,9 @@ return [
         'heading' => 'Apie atnaujinimus',
         'body' => 'Įdiegta Beatrax atsinaujina automatiškai. Įdiegus pačią pirmąją versiją, būsimos versijos pasiekia tave per programėlės juostą — grįžti į GitHub nereikia. Jei kada nors atnaujinimo nepavyktų pritaikyti, naujausią diegimo failą visada gali ranka atsisiųsti iš laidų puslapio.',
         'body_phone' => 'Čia Beatrax pati neatsinaujina. Naujos telefono programėlės versijos pasiekia tave per „App Store“ arba „Google Play“, kaip ir kitos tavo programėlės. Laidų puslapyje surašyta, kas kiekvienoje pasikeitė.',
+        'check_label' => 'Automatiškai tikrinti atnaujinimus',
+        'check_on' => 'Beatrax paklausia laidų srauto, ar yra naujesnė pasirašyta versija. Nieko neatsisiunčiama, kol pats nepasirenki įdiegti.',
+        'check_off' => 'Atnaujinimai netikrinami ir niekas nepalieka šio įrenginio. Naujas versijas rasi pats atvėręs laidų puslapį.',
         'open_releases' => 'Atverti laidų puslapį →',
     ],
 

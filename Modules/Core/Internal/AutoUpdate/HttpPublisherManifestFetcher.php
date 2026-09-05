@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Yaml;
@@ -25,6 +26,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         private HttpClient $http,
         private Repository $config,
         private LoggerInterface $logger,
+        private UpdateCheckPreference $preference,
         // Defaults to the live platform; injected in tests so each platform's
         // manifest name can be asserted without mocking a constant.
         private string $platformFamily = PHP_OS_FAMILY,
@@ -48,11 +50,16 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         }
     }
 
-    // Two unrelated ways to have no manifest — an unconfigured feed and an OS
-    // that publishes none — and only the second is worth a line in the log: a
-    // feed left unset is how the desktop ships with updates off.
+    // Three unrelated ways to have no manifest — the reader switched the check
+    // off, the feed is unconfigured, the OS publishes none — and only the last
+    // is worth a line in the log. Both listeners reach the feed through here
+    // and nothing else does, so a refusal here is the whole outbound surface.
     private function manifestUrl(string $channel): ?string
     {
+        if (! $this->preference->enabled()) {
+            return null;
+        }
+
         $base = $this->config->get('auto_update.manifest_feed_url');
         if (! is_string($base) || $base === '') {
             return null;

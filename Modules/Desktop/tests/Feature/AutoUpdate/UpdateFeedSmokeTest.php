@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
+use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
@@ -63,6 +64,7 @@ function smokeFetcher(string $platformFamily): HttpPublisherManifestFetcher
         app(HttpClient::class),
         new Repository(['auto_update' => ['manifest_feed_url' => SMOKE_FEED_URL]]),
         new NullLogger,
+        app(UpdateCheckPreference::class),
         $platformFamily,
     );
 }

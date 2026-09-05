@@ -418,15 +418,10 @@
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2" id="about-updates">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.about_updates.heading') }}</h2>
-            {{-- The desktop updates itself; a phone is updated by its store.
-                 Both keep their own sentence rather than sharing a vaguer one. --}}
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get($onPhone ? 'core::settings.about_updates.body_phone' : 'core::settings.about_updates.body') }}
-            </p>
-            <x-core::secondary-button
-                size="sm"
-                wire:click="openReleasesPage"
-            >{{ Lang::get('core::settings.about_updates.open_releases') }}</x-core::secondary-button>
+            {{-- The desktop updates itself and can be told not to; a phone is
+                 updated by its store and has nothing to switch. Both keep their
+                 own sentence rather than sharing a vaguer one. --}}
+            @livewire('core.update-check-settings-section')
         </section>
 
         {{-- The codes are the only way back into a locked-out account, and

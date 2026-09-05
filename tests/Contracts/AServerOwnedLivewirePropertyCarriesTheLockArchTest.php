@@ -90,6 +90,7 @@ function serverOwnedPropertyExemptions(): array
         // writes what tapping the control twice would write, and gates nothing
         // but what this reader sees.
         'Modules\\Core\\Public\\Http\\Livewire\\AutoImportSettingsSection::$enabled' => 'the drop-folder preference, reachable from the switch beside it',
+        'Modules\\Core\\Public\\Http\\Livewire\\UpdateCheckSettingsSection::$enabled' => 'the update-check preference, reachable from the switch beside it',
         'Modules\\Mobile\\Internal\\Http\\Livewire\\SyncScreen::$pauseOnCellular' => 'the cellular-pause preference, reachable from the switch beside it',
         'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$confirmingPeriodMove' => 'a self-confirmation on the reader\'s own settings save, which the confirm button reaches anyway',
         'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$fxOnlineEnabled' => 'the online-FX preference, reachable from the switch beside it',
