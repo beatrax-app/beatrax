@@ -249,31 +249,38 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             return [];
         }
 
-        return match ($userChoice) {
-            null => $this->resolveUnsetPolicy($enrichment, $user),
-            ReceiptConflictChoice::PreferReceipt => self::extractIncomingValues($enrichment),
-            ReceiptConflictChoice::PreferFirstWrite => [],
-        };
+        $resolution = $this->resolutionFor($enrichment, $userChoice);
+
+        // Written down before it is settled, and under every resolution: the
+        // policy decides which of the two values stands, never whether the
+        // disagreement is recorded at all.
+        $this->recordConflicts($enrichment, $user, $resolution);
+
+        return $resolution === ReceiptConflictChoice::PreferReceipt
+            ? self::extractIncomingValues($enrichment)
+            : [];
     }
 
-    // Only a receipt source holds its conflicts for the user to resolve;
-    // every other source keeps the stored value and lets source_ref enrich
-    // on its own.
-    /**
-     * @return array<string, mixed>
-     */
-    private function resolveUnsetPolicy(PendingEnrichment $enrichment, User $user): array
+    // Null is the one outcome that reaches the reader, and what the toast asks
+    // is whether to prefer RECEIPTS — a question only the receipt-incoming
+    // direction poses. A statement enriching a receipt-written row settles on
+    // the stored value, which is prefer_first_write's outcome under any name.
+    private function resolutionFor(PendingEnrichment $enrichment, ?ReceiptConflictChoice $userChoice): ?ReceiptConflictChoice
     {
-        if ($this->ranker->isReceiptFormat($enrichment->sourceFormat)) {
-            $this->holdConflicts($enrichment, $user);
+        if ($userChoice !== null) {
+            return $userChoice;
         }
 
-        return [];
+        return $this->ranker->isReceiptFormat($enrichment->sourceFormat)
+            ? null
+            : ReceiptConflictChoice::PreferFirstWrite;
     }
 
-    // UNIQUE (user_id, transaction_id, field_name) is what makes the
-    // insertOrIgnore below idempotent across re-imports.
-    private function holdConflicts(PendingEnrichment $enrichment, User $user): void
+    // An upsert onto UNIQUE (user_id, transaction_id, field_name), not an
+    // insert-or-ignore: the constraint holds one row per field, so a later
+    // disagreement about that same field has to replace the one on record or
+    // it becomes the dropped one. One statement, so it cannot half-apply.
+    private function recordConflicts(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $resolution): void
     {
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
@@ -288,24 +295,32 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             $stored = $values['stored'] ?? null;
             $incoming = $values['incoming'] ?? null;
 
-            $connection->table('pending_enrichment_conflicts')->insertOrIgnore([
-                'user_id' => $user->id,
-                'transaction_id' => $enrichment->existingTransactionId,
-                'field_name' => $fieldName,
+            $record = [
                 'stored_value' => json_encode($stored, JSON_THROW_ON_ERROR),
                 'incoming_value' => json_encode($incoming, JSON_THROW_ON_ERROR),
                 'incoming_source_format' => $enrichment->sourceFormat,
                 'import_run_id' => $enrichment->importRunId,
-                'created_at' => $now,
+                'resolution' => $resolution?->value,
                 'updated_at' => $now,
-            ]);
+            ];
+
+            $connection->table('pending_enrichment_conflicts')->upsert(
+                [$record + [
+                    'user_id' => $user->id,
+                    'transaction_id' => $enrichment->existingTransactionId,
+                    'field_name' => $fieldName,
+                    'created_at' => $now,
+                ]],
+                ['user_id', 'transaction_id', 'field_name'],
+                array_keys($record),
+            );
 
             $this->events->dispatch(new ReceiptConflictDetected(
                 transactionId: $enrichment->existingTransactionId,
                 userId: $user->id,
                 field: $fieldName,
-                receiptValue: self::scalarToString($incoming),
-                csvValue: self::scalarToString($stored),
+                incomingValue: self::scalarToString($incoming),
+                storedValue: self::scalarToString($stored),
                 importRunId: $enrichment->importRunId,
             ));
         }

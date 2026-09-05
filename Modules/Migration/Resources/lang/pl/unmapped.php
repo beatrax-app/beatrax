@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def używa nieobsługiwanego (niepłaskiego) kształtu szablonu — cel nie został zaimportowany.',
         'budget_currency_mismatch' => ':count wiersz budżetu nie został zaimportowany: Twoje budżety są prowadzone w :envelope, a ten eksport prowadzi budżet w :source.|:count wiersze budżetu nie zostały zaimportowane: Twoje budżety są prowadzone w :envelope, a ten eksport prowadzi budżet w :source.|:count wierszy budżetu nie zostało zaimportowanych: Twoje budżety są prowadzone w :envelope, a ten eksport prowadzi budżet w :source.',
         'amount_apply_collision' => 'Nowej kwoty ze źródła nie udało się zastosować — koliduje z odciskiem innej transakcji (to samo konto, data, waluta i kontrahent). Pozostawiono bez zmian.',
+        'amount_currency_mismatch' => 'Kwoty transakcji nie zostały uzgodnione: te transakcje są prowadzone w :local, a ten eksport podaje je w :source. Pozostawiono bez zmian.',
         'schedule_unsupported' => 'Beatrax nie potrafi jeszcze tworzyć transakcji zaplanowanych ani cyklicznych ze źródła zewnętrznego — zachowane tylko jako notatka, nie jako aktywna seria w sekcji Cykliczne.',
         'saved_report_unsupported' => 'Zapisane raporty i konfiguracje analiz nie mają odpowiednika w Beatrax.',
         'assumed_currency' => "Przyjęto: :currency — w tym eksporcie nie znaleziono wiersza 'preferences.currencyCode'.",

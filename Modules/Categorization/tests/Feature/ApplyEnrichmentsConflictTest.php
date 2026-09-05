@@ -14,6 +14,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
+use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -136,12 +137,19 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
         fn (ReceiptConflictDetected $e): bool => $e->transactionId === $tx->id
             && $e->userId === $this->fixtureUser->id
             && $e->field === 'counterparty_name'
-            && $e->receiptValue === 'Albert Heijn'
-            && $e->csvValue === 'NLPAYPAL ALBERT HEIJN'
+            && $e->incomingValue === 'Albert Heijn'
+            && $e->storedValue === 'NLPAYPAL ALBERT HEIJN'
     );
+
+    $pendingRow = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->first();
+    expect($pendingRow->resolution)->toBeNull();
+
+    $latest = app(ReceiptConflictQuery::class)->latestForUser($this->fixtureUser);
+    expect($latest)->not->toBeNull();
+    expect($latest['conflictId'])->toBe((int) $pendingRow->id);
 });
 
-it('prefer_receipt policy: applies incoming values silently; no event; no pending row', function (): void {
+it('prefer_receipt policy: applies the incoming value AND records the disagreement, stamped with the policy that settled it', function (): void {
     DB::table('users')->where('id', $this->fixtureUser->id)->update([
         'receipt_conflict_resolution' => 'prefer_receipt',
     ]);
@@ -153,7 +161,7 @@ it('prefer_receipt policy: applies incoming values silently; no event; no pendin
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
@@ -167,11 +175,21 @@ it('prefer_receipt policy: applies incoming values silently; no event; no pendin
     expect($row->source_ref)->toBe('RECEIPT-77');
     expect($row->counterparty_name)->toBe('Albert Heijn');
 
-    Event::assertNotDispatched(ReceiptConflictDetected::class);
-    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+    $pending = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->get();
+    expect($pending)->toHaveCount(1);
+    expect($pending[0]->field_name)->toBe('counterparty_name');
+    expect($pending[0]->resolution)->toBe('prefer_receipt');
+    expect(json_decode((string) $pending[0]->stored_value, true))->toBe('NLPAYPAL ALBERT HEIJN');
+    expect(json_decode((string) $pending[0]->incoming_value, true))->toBe('Albert Heijn');
+
+    Event::assertDispatched(ReceiptConflictDetected::class);
+
+    // Recorded, not re-asked: the reader answered this question once and the
+    // stamped row is what keeps the toast from posing it again.
+    expect(app(ReceiptConflictQuery::class)->latestForUser($this->fixtureUser))->toBeNull();
 });
 
-it('prefer_first_write policy: keeps stored values; no event; no pending row; source_ref still updates', function (): void {
+it('prefer_first_write policy: keeps the stored value AND records the disagreement; source_ref still updates', function (): void {
     DB::table('users')->where('id', $this->fixtureUser->id)->update([
         'receipt_conflict_resolution' => 'prefer_first_write',
     ]);
@@ -183,7 +201,7 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
-            importRunId: 99,
+            importRunId: $tx->import_run_id,
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: [
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Albert Heijn'],
@@ -197,8 +215,13 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
     expect($row->source_ref)->toBe('RECEIPT-77');
     expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
 
-    Event::assertNotDispatched(ReceiptConflictDetected::class);
-    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+    $pending = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->get();
+    expect($pending)->toHaveCount(1);
+    expect($pending[0]->resolution)->toBe('prefer_first_write');
+    expect(json_decode((string) $pending[0]->incoming_value, true))->toBe('Albert Heijn');
+
+    Event::assertDispatched(ReceiptConflictDetected::class);
+    expect(app(ReceiptConflictQuery::class)->latestForUser($this->fixtureUser))->toBeNull();
 });
 
 it('cross-user: pending_enrichment_conflicts for another user is NEVER touched', function (): void {
@@ -260,10 +283,11 @@ it('cross-user: pending_enrichment_conflicts for another user is NEVER touched',
     expect($own)->not->toBeNull();
 });
 
-it('non-receipt sourceFormat with unset policy + conflict: keeps stored value silently (no event, no pending row)', function (): void {
-    // Non-receipt-format enrichment (e.g., mt940 vs asn-csv) — the
-    // receipt-vs-CSV first-conflict toast does not fire for these paths.
-    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'asn-csv', 'CSV-REF');
+it('unset policy + a statement enriching a receipt-written row: keeps the stored value, records the disagreement, raises no toast', function (): void {
+    // A CAMT.053 (rank 4) covering a row a receipt (rank 2) wrote is the
+    // default-configuration path FingerprintStage allows, and the direction
+    // the toast's "prefer receipts?" question cannot be asked in.
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, SourceFormat::Eml->value, 'RECEIPT-REF');
 
     Event::fake([ReceiptConflictDetected::class]);
 
@@ -271,9 +295,10 @@ it('non-receipt sourceFormat with unset policy + conflict: keeps stored value si
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'STRONGER-REF',
-            importRunId: 99,
-            sourceFormat: 'camt053',
+            importRunId: $tx->import_run_id,
+            sourceFormat: SourceFormat::Camt053->value,
             conflictingFields: [
+                'amount_minor' => ['stored' => -2500, 'incoming' => -9900],
                 'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Different name'],
             ],
         ),
@@ -284,9 +309,73 @@ it('non-receipt sourceFormat with unset policy + conflict: keeps stored value si
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('STRONGER-REF');
     expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
+    expect((int) $row->amount_minor)->toBe(-2500);
 
-    Event::assertNotDispatched(ReceiptConflictDetected::class);
-    expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
+    $pending = DB::table('pending_enrichment_conflicts')
+        ->where('transaction_id', $tx->id)
+        ->orderBy('field_name')
+        ->get();
+    expect($pending)->toHaveCount(2);
+    expect($pending[0]->field_name)->toBe('amount_minor');
+    expect((int) json_decode((string) $pending[0]->incoming_value, true))->toBe(-9900);
+    expect($pending[0]->resolution)->toBe('prefer_first_write');
+    expect($pending[1]->field_name)->toBe('counterparty_name');
+    expect($pending[1]->resolution)->toBe('prefer_first_write');
+    expect((string) $pending[1]->incoming_source_format)->toBe(SourceFormat::Camt053->value);
+
+    Event::assertDispatchedTimes(ReceiptConflictDetected::class, 2);
+    expect(app(ReceiptConflictQuery::class)->latestForUser($this->fixtureUser))->toBeNull();
+});
+
+it('a later disagreement about the same field replaces the record rather than being the one dropped', function (): void {
+    DB::table('users')->where('id', $this->fixtureUser->id)->update([
+        'receipt_conflict_resolution' => 'prefer_first_write',
+    ]);
+    $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'CSV-REF');
+
+    // A second real run and no second transaction: pending_enrichment_conflicts
+    // .import_run_id is a foreign key, so the later reading needs a run to name,
+    // and seeding another row would collide with the natural key this fixture
+    // holds constant.
+    $laterRun = ImportRun::create([
+        'user_id' => $this->fixtureUser->id,
+        'source_format' => SourceFormat::Eml->value,
+        'raw_file_path' => '/tmp/conflict-later.eml',
+        'sha256' => hash('sha256', 'conflict-later'),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'confirmed',
+    ]);
+
+    $applier = resolveApplier();
+
+    $applier([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-A',
+            importRunId: $tx->import_run_id,
+            sourceFormat: SourceFormat::Eml->value,
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'First reading'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    $applier([
+        new PendingEnrichment(
+            existingTransactionId: $tx->id,
+            newSourceRef: 'RECEIPT-B',
+            importRunId: $laterRun->id,
+            sourceFormat: SourceFormat::Eml->value,
+            conflictingFields: [
+                'counterparty_name' => ['stored' => 'NLPAYPAL ALBERT HEIJN', 'incoming' => 'Second reading'],
+            ],
+        ),
+    ], $this->fixtureUser);
+
+    $pending = DB::table('pending_enrichment_conflicts')->where('transaction_id', $tx->id)->get();
+    expect($pending)->toHaveCount(1);
+    expect(json_decode((string) $pending[0]->incoming_value, true))->toBe('Second reading');
+    expect((int) $pending[0]->import_run_id)->toBe((int) $laterRun->id);
 });
 
 it('W6 no-instance-cache: two consecutive __invoke calls for different users honour each user\'s policy independently (singleton safety)', function (): void {

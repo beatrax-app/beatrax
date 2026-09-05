@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def používá nepodporovaný (nikoli plochý) tvar šablony — cíl nebyl naimportován.',
         'budget_currency_mismatch' => ':count řádek rozpočtu nebyl naimportován: tvé rozpočty se vedou v :envelope a tento export rozpočtuje v :source.|:count řádky rozpočtu nebyly naimportovány: tvé rozpočty se vedou v :envelope a tento export rozpočtuje v :source.|:count řádků rozpočtu nebylo naimportováno: tvé rozpočty se vedou v :envelope a tento export rozpočtuje v :source.',
         'amount_apply_collision' => 'Novou částku ze zdroje nešlo použít — střetává se s otiskem jiné transakce (stejný účet, datum, měna a protistrana). Ponecháno beze změny.',
+        'amount_currency_mismatch' => 'Částky transakcí nebyly sladěny: tyto transakce se vedou v :local, ale tento export je uvádí v :source. Ponechány beze změny.',
         'schedule_unsupported' => 'Naplánované a opakované transakce zatím nemají v Beatraxu cestu pro vytvoření z externího zdroje — jsou zachovány jen jako poznámka, ne jako živá opakovaná řada.',
         'saved_report_unsupported' => 'Uložené sestavy a konfigurace analýz nemají v Beatraxu obdobu.',
         'assumed_currency' => "Předpokládáme :currency — v tomto exportu se nenašel řádek 'preferences.currencyCode'.",

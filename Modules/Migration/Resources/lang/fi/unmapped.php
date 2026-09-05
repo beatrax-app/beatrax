@@ -47,6 +47,7 @@ return [
         'goal_def_unsupported' => 'categories.goal_def käyttää tukematonta (ei-litteää) mallin muotoa — tavoitetta ei tuotu.',
         'budget_currency_mismatch' => ':count budjettirivi jäi tuomatta: budjettejasi pidetään valuutassa :envelope, ja tämä vienti budjetoi valuutassa :source.|:count budjettiriviä jäi tuomatta: budjettejasi pidetään valuutassa :envelope, ja tämä vienti budjetoi valuutassa :source.',
         'amount_apply_collision' => 'Lähteen uutta summaa ei voitu ottaa käyttöön — se törmää toisen tapahtuman sormenjälkeen (sama tili, päivä, valuutta ja vastapuoli). Jätettiin ennalleen.',
+        'amount_currency_mismatch' => 'Tapahtumien summia ei täsmäytetty: näitä tapahtumia pidetään valuutassa :local, ja tämä vienti ilmoittaa ne valuutassa :source. Jätettiin ennalleen.',
         'schedule_unsupported' => 'Beatraxilla ei ole vielä tapaa luoda ajastettuja ja toistuvia tapahtumia ulkoisesta lähteestä — ne on säilytetty vain muistiinpanona, ei elävänä toistuvana sarjana.',
         'saved_report_unsupported' => 'Beatraxilla ei ole vastinetta tallennetuille raporteille eikä analyysimäärityksille.',
         'assumed_currency' => "Oletettiin :currency — tästä viennistä ei löytynyt riviä 'preferences.currencyCode'.",

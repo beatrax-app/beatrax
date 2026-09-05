@@ -42,6 +42,7 @@ return [
         'goal_def_unsupported' => "categories.goal_def utilise une forme de modèle non prise en charge (non plate) — l'objectif n'a pas été importé.",
         'budget_currency_mismatch' => ":count ligne de budget n'a pas été importée : tes budgets sont tenus en :envelope, et cet export budgète en :source.|:count lignes de budget n'ont pas été importées : tes budgets sont tenus en :envelope, et cet export budgète en :source.",
         'amount_apply_collision' => "Le nouveau montant de la source n'a pas pu être appliqué — il entre en collision avec l'empreinte d'une autre transaction (même compte, même date, même devise et même tiers). Laissé inchangé.",
+        'amount_currency_mismatch' => "Les montants des transactions n'ont pas été rapprochés : ces transactions sont tenues en :local, et cet export les indique en :source. Laissés inchangés.",
         'schedule_unsupported' => "Les transactions planifiées et récurrentes n'ont pas encore de voie de création depuis une source externe dans Beatrax — elles ne sont conservées que sous forme de note, pas comme une série récurrente active.",
         'saved_report_unsupported' => "Les rapports enregistrés et les configurations d'analyse n'ont pas d'équivalent dans Beatrax.",
         'assumed_currency' => "Devise supposée : :currency — aucune ligne 'preferences.currencyCode' n'a été trouvée dans cet export.",

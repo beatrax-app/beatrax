@@ -10,6 +10,7 @@ use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\StoredCopy;
 use Modules\Migration\Internal\Dto\ConflictDto;
+use Modules\Migration\Internal\Dto\UnreconciledFieldDto;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Pipeline\ConflictValueCodec;
@@ -43,6 +44,13 @@ final readonly class CheckForUpdates
             $this->recordConflict($newRun->id, $user, $conflict);
         }
 
+        // Staged here and not at confirm: ConfirmMigration re-resolves against
+        // the same rows and would report the same refusal a second time, and
+        // this run cannot reach confirm without passing through here first.
+        foreach ($decision->unreconciled as $unreconciled) {
+            $this->recordUnreconciled($newRun->id, $user, $unreconciled);
+        }
+
         // Nothing here touches a domain table: this step reads what WOULD
         // happen, so a Discard leaves the ledger exactly as it found it.
         // ConfirmMigration re-resolves and is the only writer.
@@ -70,6 +78,21 @@ final readonly class CheckForUpdates
                 'local' => self::scalarToDisplay($conflict->localValue),
                 'source' => self::scalarToDisplay($conflict->sourceValue),
                 'baseline' => self::scalarToDisplay($conflict->baselineValue),
+            ])),
+        ]);
+    }
+
+    private function recordUnreconciled(int $runId, User $user, UnreconciledFieldDto $item): void
+    {
+        $this->db->connection()->table('migration_staging_unmapped_items')->insert([
+            'user_id' => $user->id,
+            'migration_run_id' => $runId,
+            'item_type' => UnmappedItemType::Extra->value,
+            'source_external_id' => $item->entityType.'|'.$item->fieldName.'|'.$item->sourceCurrency,
+            'display_label' => StoredCopy::of(CopyLine::of('migration::unmapped.label.amount_update')),
+            'reason' => StoredCopy::of(CopyLine::of('migration::unmapped.reason.amount_currency_mismatch', [
+                'local' => $item->localCurrency,
+                'source' => $item->sourceCurrency,
             ])),
         ]);
     }
