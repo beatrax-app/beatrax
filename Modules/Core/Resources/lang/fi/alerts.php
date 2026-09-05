@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Muistuta myöhemmin',
         'mark_resolved' => 'Merkitse ratkaistuksi',
         'mark_resolved_aria' => 'Merkitse ratkaistuksi — järjestelmähälytys #:id',
+        'assign_in_budgets' => 'Jaa Budjeteissa',
+        'dismiss' => 'Ohita',
+        'dismiss_aria' => 'Ohita — järjestelmähälytys #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Levossa oleva salaus on käytössä tällä tilillä, mutta mikään sovelluslukituksen kääre ei enää pidä datan avainta, joten jokainen salattu muistiinpano, kuvaus ja vastapuolitieto luetaan tyhjänä. Ainoa paluutie on laitepari, jolla avain vielä on.',
         'auth_lock_recovery_wrap_stale' => 'Tilin salasana vaihtui ilman, että sovelluslukituksen palautuskääre käärittiin uudelleen, joten kyseinen salasana ei enää avaa sovelluslukitusta. PIN-koodi avaa yhä. Liitä tilin salasana uudelleen sovelluslukituksen asetuksista, kun PIN-koodi on vielä tiedossa — muuten unohtuneen PIN-koodin taakse ei jää mitään.',
         'reconnect_link' => 'Yhdistä uudelleen →',
+        'pots_category_link_retired' => 'Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.|Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.',
     ],
 ];

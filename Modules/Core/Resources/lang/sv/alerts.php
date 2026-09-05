@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Påminn mig senare',
         'mark_resolved' => 'Markera som åtgärdad',
         'mark_resolved_aria' => 'Markera som åtgärdad — systemvarning #:id',
+        'assign_in_budgets' => 'Fördela i Budgetar',
+        'dismiss' => 'Stäng',
+        'dismiss_aria' => 'Stäng — systemvarning #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Kryptering i vila är aktiv för det här kontot, men ingen applås-inpackning håller längre datanyckeln, så varje krypterad anteckning, beskrivning och motpartsuppgift läses som tom. Parkoppling med en enhet som fortfarande har nyckeln är enda vägen tillbaka.',
         'auth_lock_recovery_wrap_stale' => 'Kontolösenordet ändrades utan att applåsets återställningsinpackning packades om, så det lösenordet öppnar inte längre applåset. PIN-koden gör det fortfarande. Länka kontolösenordet på nytt i applåsinställningarna medan PIN-koden fortfarande är känd — annars lämnar en glömd PIN-kod ingenting efter sig.',
         'reconnect_link' => 'Återanslut →',
+        'pots_category_link_retired' => 'Kuvertbudgetering har ersatt sparpotter som var kopplade till en kategori. :amount från :count arkiverad sparpott är ofördelat igen och väntar på att du fördelar beloppet.|Kuvertbudgetering har ersatt sparpotter som var kopplade till en kategori. :amount från :count arkiverade sparpotter är ofördelat igen och väntar på att du fördelar beloppet.',
     ],
 ];

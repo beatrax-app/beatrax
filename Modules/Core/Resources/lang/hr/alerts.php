@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Podsjeti me kasnije',
         'mark_resolved' => 'Označi kao riješeno',
         'mark_resolved_aria' => 'Označi kao riješeno — upozorenje sustava br. :id',
+        'assign_in_budgets' => 'Rasporedi u Proračunima',
+        'dismiss' => 'Odbaci',
+        'dismiss_aria' => 'Odbaci — upozorenje sustava br. :id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Šifriranje u mirovanju aktivno je za ovaj račun, ali nijedan omotač zaključavanja aplikacije više ne drži ključ podataka, pa se svaka šifrirana bilješka, opis i podatak o drugoj strani čitaju kao prazni. Uparivanje s uređajem koji još drži ključ jedini je put natrag.',
         'auth_lock_recovery_wrap_stale' => 'Lozinka računa promijenjena je bez ponovnog omatanja omotača za oporavak zaključavanja aplikacije, pa ta lozinka više ne otključava aplikaciju. PIN i dalje otključava. Ponovno povežite lozinku računa u postavkama zaključavanja dok je PIN još poznat — inače zaboravljeni PIN ne ostavlja ništa iza sebe.',
         'reconnect_link' => 'Poveži ponovno →',
+        'pots_category_link_retired' => 'Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhivirane kasice ponovno je neraspoređen i čeka da ga rasporediš.|Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhivirane kasice ponovno je neraspoređen i čeka da ga rasporediš.|Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhiviranih kasica ponovno je neraspoređen i čeka da ga rasporediš.',
     ],
 ];

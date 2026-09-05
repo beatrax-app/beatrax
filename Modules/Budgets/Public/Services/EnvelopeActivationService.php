@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Pots\Public\Actions\RecordCategoryPotRetirementAlert;
 use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Services\PotWriter;
 
@@ -18,6 +19,7 @@ final readonly class EnvelopeActivationService
         private PotWriter $potWriter,
         private Clock $clock,
         private WriteUserPreference $preferences,
+        private RecordCategoryPotRetirementAlert $retirementAlert,
     ) {}
 
     public function activate(): void
@@ -86,6 +88,12 @@ final readonly class EnvelopeActivationService
 
                 $this->potWriter->archive($user, $potIdInt);
             }
+
+            // After the walk, and reading the movements it just wrote rather
+            // than counting as it goes: a reader who paired a second device
+            // gets the same figures from the same rows on whichever of them
+            // ran the cutover.
+            ($this->retirementAlert)($userId);
         } catch (\Throwable $e) {
             $this->db->connection()
                 ->table('users')

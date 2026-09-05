@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Podseti me kasnije',
         'mark_resolved' => 'Označi kao rešeno',
         'mark_resolved_aria' => 'Označi kao rešeno — sistemsko upozorenje br. :id',
+        'assign_in_budgets' => 'Rasporedi u Budžetima',
+        'dismiss' => 'Odbaci',
+        'dismiss_aria' => 'Odbaci — sistemsko upozorenje br. :id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Šifrovanje u mirovanju aktivno je za ovaj nalog, ali nijedan omotač zaključavanja aplikacije više ne drži ključ podataka, pa se svaka šifrovana beleška, opis i podatak o drugoj strani čitaju kao prazni. Uparivanje sa uređajem koji još drži ključ jedini je put nazad.',
         'auth_lock_recovery_wrap_stale' => 'Lozinka naloga promenjena je bez ponovnog pakovanja omotača za oporavak zaključavanja aplikacije, pa ta lozinka više ne otključava aplikaciju. PIN i dalje otključava. Ponovo povežite lozinku naloga u podešavanjima zaključavanja dok je PIN još poznat — inače zaboravljeni PIN ne ostavlja ništa iza sebe.',
         'reconnect_link' => 'Poveži ponovo →',
+        'pots_category_link_retired' => 'Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhivirane kasice ponovo je neraspoređen i čeka da ga rasporediš.|Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhivirane kasice ponovo je neraspoređen i čeka da ga rasporediš.|Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhiviranih kasica ponovo je neraspoređen i čeka da ga rasporediš.',
     ],
 ];

@@ -15,6 +15,9 @@ return [
         'remind_later' => 'Minn meg på det senere',
         'mark_resolved' => 'Merk som løst',
         'mark_resolved_aria' => 'Merk som løst — systemvarsel #:id',
+        'assign_in_budgets' => 'Fordel i Budsjetter',
+        'dismiss' => 'Lukk',
+        'dismiss_aria' => 'Lukk — systemvarsel #:id',
     ],
 
     'messages' => [
@@ -44,5 +47,6 @@ return [
         'auth_lock_key_material_stranded' => 'Kryptering i hvile er aktiv for denne kontoen, men ingen applås-innpakning holder lenger datanøkkelen, så hvert kryptert notat, beskrivelse og motpartsdetalj leses som tomt. Paring med en enhet som fortsatt har nøkkelen, er eneste vei tilbake.',
         'auth_lock_recovery_wrap_stale' => 'Kontopassordet ble endret uten at applåsens gjenopprettingsinnpakning ble pakket om, så det passordet åpner ikke lenger applåsen. PIN-koden gjør det fortsatt. Koble kontopassordet på nytt fra applåsinnstillingene mens PIN-koden fortsatt er kjent — ellers etterlater en glemt PIN-kode ingenting.',
         'reconnect_link' => 'Koble til på nytt →',
+        'pots_category_link_retired' => 'Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkivert sparepott er ufordelt igjen og venter på at du fordeler beløpet.|Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkiverte sparepotter er ufordelt igjen og venter på at du fordeler beløpet.',
     ],
 ];
