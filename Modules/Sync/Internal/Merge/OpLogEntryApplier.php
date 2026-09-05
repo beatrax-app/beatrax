@@ -98,7 +98,7 @@ final readonly class OpLogEntryApplier
         array $tombstones,
         int $userId,
         string $now,
-        SearchDocumentRows $documents,
+        ReplayedRows $applied,
     ): void {
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
         $deferred = [];
@@ -112,7 +112,7 @@ final readonly class OpLogEntryApplier
                     $tombstones[$table][$pk] ?? null,
                     $userId,
                     $now,
-                    $documents,
+                    $applied,
                 );
 
                 if ($selfRefs !== []) {
@@ -137,7 +137,7 @@ final readonly class OpLogEntryApplier
         ?OpLogEntry $tomb,
         int $userId,
         string $now,
-        SearchDocumentRows $documents,
+        ReplayedRows $applied,
     ): array {
         $payload = $this->admissiblePayload($table, $pk, $fields, $tomb, $userId, $now);
 
@@ -161,7 +161,7 @@ final readonly class OpLogEntryApplier
             return [];
         }
 
-        $documents->rowWritten($table, $pk, $userId);
+        $applied->rowCreated($table, $pk, $userId);
 
         return $selfRefs;
     }
@@ -428,7 +428,7 @@ final readonly class OpLogEntryApplier
         int $userId,
         string $now,
         array &$pendingDeletes,
-        SearchDocumentRows $documents,
+        ReplayedRows $applied,
     ): void {
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
@@ -444,7 +444,7 @@ final readonly class OpLogEntryApplier
                     $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now);
                 }
 
-                $documents->rowWritten($table, $pk, $userId);
+                $applied->rowUpdated($table, $pk, $userId);
             }
         }
     }
@@ -552,13 +552,20 @@ final readonly class OpLogEntryApplier
         int $userId,
         string $now,
         array &$pairCascades,
-        SearchDocumentRows $documents,
+        ReplayedRows $applied,
     ): void {
         /** @var list<array{table: string, pk: int|string, tomb: OpLogEntry, documents: list<int>}> $refused */
         $refused = [];
 
         foreach ($pendingDeletes as $table => $pks) {
             foreach ($pks as $pk => $tomb) {
+                // deleteRow() answers true for a self-scoped table without
+                // removing anything, and every step below it is a no-op on
+                // one, so skipping keeps the announcement to rows that went.
+                if ($this->ownership->isSelfScoped($table)) {
+                    continue;
+                }
+
                 // Delete-wins applies to the LOGICAL row, so a peer deleting
                 // the id it minted deletes the twin this device minted.
                 $pk = $this->aliases->resolvePk($table, $tomb->deviceId, $pk, $userId);
@@ -568,10 +575,10 @@ final readonly class OpLogEntryApplier
                 // Asked while the row is still here: a tax tag names its
                 // transaction in a column, and the delete below is the last
                 // moment anything can read it.
-                $composed = $documents->documentsOf($table, $pk, $userId);
+                $composed = $applied->documentsOf($table, $pk, $userId);
 
                 if ($this->deleteRow($table, $pk, $userId)) {
-                    $documents->rowDeleted($table, $composed);
+                    $applied->rowDeleted($table, $pk, $composed);
 
                     continue;
                 }
@@ -584,7 +591,7 @@ final readonly class OpLogEntryApplier
             $this->clearDeviceLocalChildren($blocked['table'], $blocked['pk'], $userId);
 
             if ($this->deleteRow($blocked['table'], $blocked['pk'], $userId)) {
-                $documents->rowDeleted($blocked['table'], $blocked['documents']);
+                $applied->rowDeleted($blocked['table'], $blocked['pk'], $blocked['documents']);
 
                 continue;
             }

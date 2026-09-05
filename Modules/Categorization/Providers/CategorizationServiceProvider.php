@@ -31,6 +31,7 @@ use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Events\PeerRowsApplied;
 
 final class CategorizationServiceProvider extends ServiceProvider
 {
@@ -70,6 +71,12 @@ final class CategorizationServiceProvider extends ServiceProvider
         // be the only one: a writer that deletes a counterparty announces it,
         // and this is what that announcement reaches.
         $events->listen(EntityMutated::class, [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyPruned']);
+
+        // Neither arm above fires for a referent a PEER deleted: the merge
+        // writes through the query builder, and it raises no EntityMutated
+        // because the capture listener would send the peer's row back. Rules
+        // are device-local, so this is the only side that can deactivate them.
+        $events->listen(PeerRowsApplied::class, [DeactivateRulesOnReferentDelete::class, 'handlePeerRowsApplied']);
 
         $livewire->component('categorization.triage-inbox', TriageInbox::class);
         $livewire->component('categorization.inline-category-picker', InlineCategoryPicker::class);

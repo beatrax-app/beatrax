@@ -2359,6 +2359,12 @@ it('does not allow a cross-module Internal import outside the pinned production 
     // form: importing it would claim a dependency the file does not have.
     $pinnedInlineReferences = [
         'tests/Contracts/AMigrationIsNotTheOnlyPathToPerUserStateArchTest.php -> Modules\\FX\\Internal\\Services\\SeedBundledExchangeRates',
+        // Two of the events that guard classifies live in an Internal\Events
+        // namespace, and the classification is keyed by the name a provider
+        // wires a listener to. Naming them is the assertion; importing them
+        // would claim a dependency on OpenBanking this file does not have.
+        'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingConsentFailed',
+        'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingImportedNothing',
     ];
 
     $inlineReferences = [];

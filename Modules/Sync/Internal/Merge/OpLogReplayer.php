@@ -6,9 +6,11 @@ namespace Modules\Sync\Internal\Merge;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\RemoteClockAdvance;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
@@ -19,6 +21,7 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Events\PeerRowsApplied;
 use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -35,6 +38,11 @@ final readonly class OpLogReplayer
     // carry no Ed25519 key and no signature. The signature gate allow-lists
     // this device id via the verifier's system-device check.
     public const string SYSTEM_CASCADE_DEVICE_ID = 'system-cascade';
+
+    // Not a quarantine row: nothing was refused, and the rows are stored. What
+    // is stale is whatever the listener maintains from them, so the line names
+    // that rather than inventing an operation that failed.
+    private const string UNANNOUNCED = 'OpLogReplayer: a listener on PeerRowsApplied threw; the merged rows are stored, but the derived state kept from them may be stale until the next replay or scheduled sweep reaches the same tables.';
 
     private DatabaseManager $db;
 
@@ -286,7 +294,7 @@ final readonly class OpLogReplayer
         /** @var list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}> $pairCascades */
         $pairCascades = [];
 
-        $documents = new SearchDocumentRows($this->db);
+        $applied = new ReplayedRows($this->db);
 
         $this->db->connection()->transaction(
             function () use (
@@ -296,19 +304,19 @@ final readonly class OpLogReplayer
                 $userId,
                 $now,
                 &$pairCascades,
-                $documents,
+                $applied,
             ): void {
                 /** @var array<string, array<int|string, OpLogEntry>> $pendingDeletes */
                 $pendingDeletes = [];
 
-                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $documents);
+                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $applied);
                 $this->applier->applyFieldMerges(
                     $candidatesByField,
                     $tombstones,
                     $userId,
                     $now,
                     $pendingDeletes,
-                    $documents,
+                    $applied,
                 );
                 $this->applier->collectBareTombstones($candidatesByField, $tombstones, $creates, $pendingDeletes);
                 $this->applier->applyDeletions(
@@ -316,12 +324,54 @@ final readonly class OpLogReplayer
                     $userId,
                     $now,
                     $pairCascades,
-                    $documents,
+                    $applied,
                 );
             },
         );
 
-        $this->pairCascade->apply($pairCascades, $userId, $now, $documents);
-        $this->searchRefresher->refresh($documents, $userId);
+        $this->pairCascade->apply($pairCascades, $userId, $now, $applied->documents());
+        $this->searchRefresher->refresh($applied->documents(), $userId);
+
+        // Last, and after the refresh rather than before it: this is the only
+        // step that hands control to another module, and the index has no
+        // listener waiting on it. A stale index is also not a reason to
+        // withhold the announcement — the rows were applied either way.
+        $this->announce($applied->announcement($userId));
+    }
+
+    // Resolved per dispatch rather than held: one replayer outlives many
+    // replays on the daemon, and a test faking the dispatcher replaces the
+    // container's binding, never the instance a constructor already took.
+    private function announce(?PeerRowsApplied $announcement): void
+    {
+        if ($announcement === null) {
+            return;
+        }
+
+        try {
+            $this->resolveFromContainer(Dispatcher::class)?->dispatch($announcement);
+        } catch (\Throwable $e) {
+            $this->reportUnannounced($announcement, $e);
+        }
+    }
+
+    // The merge is committed before this runs, so a listener that throws has
+    // lost nothing that was stored — only the derived state kept from it.
+    // Letting that reach the caller would stop a catch-up mid-batch over work
+    // already durable, which is the trade the index refresh above also makes.
+    private function reportUnannounced(PeerRowsApplied $announcement, \Throwable $e): void
+    {
+        try {
+            $this->resolveFromContainer(LoggerInterface::class)?->warning(self::UNANNOUNCED, [
+                'userId' => $announcement->userId,
+                'createdTables' => array_keys($announcement->created),
+                'updatedTables' => array_keys($announcement->updated),
+                'deletedTables' => array_keys($announcement->deleted),
+                ...SafeExceptionContext::describe($e),
+            ]);
+        } catch (\Throwable) {
+            // The report is the second channel and a full disk is where it
+            // fails; taking a committed merge down with it is the larger loss.
+        }
     }
 }

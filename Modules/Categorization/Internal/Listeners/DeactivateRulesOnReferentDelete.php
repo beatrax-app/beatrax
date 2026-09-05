@@ -9,10 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Events\PeerRowsApplied;
 
 final readonly class DeactivateRulesOnReferentDelete
 {
     use CoercesScalars;
+
+    private const string CATEGORIES_TABLE = 'categories';
 
     private const string COUNTERPARTIES_TABLE = 'counterparties';
 
@@ -59,6 +62,21 @@ final readonly class DeactivateRulesOnReferentDelete
             payloadKey: 'counterparty_id',
             referentId: self::toInt($event->pk),
         );
+    }
+
+    // The peer's delete, which reaches neither arm above: the merge writes the
+    // row out with the query builder, so no model event fires, and it raises
+    // no EntityMutated because that is what the capture listener turns into an
+    // op — the row would be sent straight back to the device it came from.
+    public function handlePeerRowsApplied(PeerRowsApplied $event): void
+    {
+        foreach ($event->deletedFrom(self::COUNTERPARTIES_TABLE) as $pk) {
+            $this->deactivate($event->userId, ActionType::Counterparty->value, 'counterparty_id', self::toInt($pk));
+        }
+
+        foreach ($event->deletedFrom(self::CATEGORIES_TABLE) as $pk) {
+            $this->deactivate($event->userId, ActionType::Category->value, 'category_id', self::toInt($pk));
+        }
     }
 
     private function deactivate(?int $userId, string $actionType, string $payloadKey, int $referentId): void

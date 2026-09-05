@@ -4,37 +4,23 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Internal\Listeners;
 
-use Illuminate\Contracts\Bus\Dispatcher;
-use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
-use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use Modules\Forecasting\Internal\Support\ForecastReprojection;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 
 final readonly class ProjectForecastOnScenarioChange
 {
-    public function __construct(private Dispatcher $bus) {}
+    public function __construct(private ForecastReprojection $reprojection) {}
 
     public function handle(ScenarioCreated|ScenarioMutated|ScenarioDeleted $event): void
     {
-        foreach (ForecastHorizon::days() as $horizon) {
-            $this->bus->dispatch(new ProjectForecastJob(
-                userId: $event->userId,
-                scenarioId: null,
-                horizonDays: $horizon,
-            ));
-        }
+        $this->reprojection->baseline($event->userId);
 
         if ($event instanceof ScenarioDeleted) {
             return;
         }
 
-        foreach (ForecastHorizon::days() as $horizon) {
-            $this->bus->dispatch(new ProjectForecastJob(
-                userId: $event->userId,
-                scenarioId: $event->scenarioId,
-                horizonDays: $horizon,
-            ));
-        }
+        $this->reprojection->scenario($event->userId, $event->scenarioId);
     }
 }
