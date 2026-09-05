@@ -7,6 +7,8 @@ namespace Modules\Sync\Public\Services;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Internal\OpLog\BackfillProgress;
+use Modules\Sync\Internal\OpLog\DeferredOpCaptures;
 use Modules\Sync\Internal\Status\PeerSessionTally;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 
@@ -14,6 +16,8 @@ final readonly class SyncStatusService
 {
     public function __construct(
         private DatabaseManager $db,
+        private DeferredOpCaptures $deferred,
+        private BackfillProgress $backfill,
     ) {}
 
     /**
@@ -101,6 +105,14 @@ final readonly class SyncStatusService
     // been sent.
     private function hasUndeliveredLocalOps(int $userId): bool
     {
+        // Asked before the watermark, because neither of these has an op yet:
+        // a coordinate a keyless process left behind and a row the pre-sync
+        // walk has not reached are both owed to a peer and both invisible to
+        // op_log_entries, so a device owing them read as up to date.
+        if ($this->deferred->hasPending($userId) || $this->backfill->isOpen($userId)) {
+            return true;
+        }
+
         $lastSessionEnd = $this->latestInstant(
             $this->db->connection()
                 ->table('sync_sessions')
@@ -109,17 +121,17 @@ final readonly class SyncStatusService
                 ->all(),
         );
 
-        if (! $lastSessionEnd instanceof CarbonImmutable) {
-            return false;
-        }
-
         $selfDeviceId = $this->db->connection()
             ->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', true)
             ->value('device_id');
 
-        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+        // No session to measure from and no identity to measure are the same
+        // answer: nothing here can be shown to be owed. Asked together because
+        // the second is one indexed lookup, and the memory note below is about
+        // op_log_entries, which this does not touch.
+        if (! $lastSessionEnd instanceof CarbonImmutable || ! is_string($selfDeviceId) || $selfDeviceId === '') {
             return false;
         }
 

@@ -119,6 +119,12 @@
         </x-core::alert>
     @endif
 
+    {{-- Beside the backlog notice, never folded into it: that one reports a
+         wait, and these are the refusals no later pass takes again. A reader
+         told "waiting to be added" about a forged signature has been told the
+         one thing that is not true of it. --}}
+    @livewire('sync.sync-quarantine-notice', key('sync-quarantine-notice'))
+
     {{-- ===== Surface A: encryption status row =====
          Shown alongside the sync controls regardless of sync state:
          single-device sync-off users see the optional decline-able offer;

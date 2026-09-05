@@ -2319,6 +2319,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
         'tests/Contracts/EveryAlertKindReadsInTheReadersLanguageArchTest.php -> Modules\\Core\\Internal\\Enums\\BackupAlertKind',
+        // The closed set of quarantine reasons is the guard's denominator, and
+        // there is no Public spelling of it: a copy in tests/ would be a second
+        // list, which is exactly the drift the guard exists to catch.
+        'tests/Contracts/EveryQuarantineReasonReachesANonDeveloperReaderArchTest.php -> Modules\\Sync\\Internal\\OpLog\\QuarantineReason',
         // The exemption is keyed on the component class, so the allow-list has to
         // name it: a Livewire component stays Internal even where another module
         // mounts it by alias.
