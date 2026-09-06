@@ -78,8 +78,15 @@ final readonly class SyncStatusService
     public function overallStatus(int $userId): SyncOverallStatus
     {
         $rows = $this->peerStatuses($userId);
+
+        // A hold outranks unknown, and this arm used to answer before anything
+        // was asked. Dismissing a peer row drops the session and not the
+        // report, so "not enough information yet" got said over a count the
+        // device list was still printing two sections further down.
         if ($rows === []) {
-            return SyncOverallStatus::Unknown;
+            return $this->withheld->isHolding($userId)
+                ? SyncOverallStatus::Withheld
+                : SyncOverallStatus::Unknown;
         }
 
         $seen = PeerSessionTally::over($rows, $this->clock->now());

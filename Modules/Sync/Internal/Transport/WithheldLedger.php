@@ -51,6 +51,23 @@ final readonly class WithheldLedger
         }
     }
 
+    // The whole of one peer's report, dropped with the peer. Every other row
+    // here is replaced by the device that wrote it on its next exchange; one
+    // this install has removed never reports again, so its counts are the only
+    // ones nothing can revise and the only ones a removal has to take.
+    public function forgetPeer(int $userId, string $peerDeviceId): void
+    {
+        if ($peerDeviceId === '') {
+            return;
+        }
+
+        $this->db->connection()
+            ->table('sync_withheld_history')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->delete();
+    }
+
     /**
      * @return list<array{peer_device_id: string, author_device_id: string, entry_count: int}>
      */
