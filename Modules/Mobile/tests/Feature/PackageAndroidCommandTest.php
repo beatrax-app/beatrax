@@ -180,6 +180,9 @@ it('refuses an env that resolves to a development build', function (string $env)
     'debug off but not production' => "APP_ENV=staging\nAPP_DEBUG=false\n",
     'neither key written at all' => "APP_TIMEZONE=UTC\n",
     'commented out rather than set' => "# APP_ENV=production\n# APP_DEBUG=false\n",
+    // Not a development build by the two keys above, and still one that writes
+    // a personal ledger's rows to a phone's disk.
+    'production, not debuggable, and logging at debug' => "APP_ENV=production\nAPP_DEBUG=false\nLOG_LEVEL=debug\n",
 ]);
 
 it('derives the version code when only the package default is present', function (): void {

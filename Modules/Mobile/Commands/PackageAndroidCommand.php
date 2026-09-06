@@ -197,10 +197,16 @@ final class PackageAndroidCommand extends Command
             return null;
         }
 
+        $required = ShippedEnvironment::required();
         $carried = [];
 
         foreach ($wrong as $key => $actual) {
-            $carried[] = $key.' is '.$actual.', not '.ShippedEnvironment::required()[$key];
+            // A key is either one the bundle must carry a value for or one it
+            // may not carry a value for, and the sentence differs: "not X" says
+            // nothing about a key whose whole problem is the value it has.
+            $carried[] = isset($required[$key])
+                ? $key.' is '.$actual.', not '.$required[$key]
+                : $key.' is '.$actual.', which a shipped bundle may not carry';
         }
 
         return "{$envPath} does not resolve to a shipped environment: ".implode('; ', $carried)
