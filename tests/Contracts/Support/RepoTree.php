@@ -95,9 +95,9 @@ final class RepoTree
 
     /**
      * Code this repository did not write, sitting inside it. Each fragment
-     * carries the reason it is refused, and the guard beside this class holds
-     * every one of them to a directory that exists and to a walk that returns
-     * nothing from it, so a refusal that stopped excusing anything fails there.
+     * carries the reason it is refused, and the guard beside this class puts a
+     * path under every one of them to refuses() below, so a fragment the reader
+     * walks straight past fails there rather than excusing nothing quietly.
      *
      * @var array<string, string>
      */

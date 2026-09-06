@@ -166,7 +166,7 @@ it('gives every scope a floor its walk cannot quietly fall under', function (str
 // edge nobody wrote, under a root every scope covers and in a file the
 // accounting cannot see -- `unaccounted` is measured over `git ls-files`, so an
 // untracked file inside a covered root is invisible to it.
-it('refuses the code this repository did not write, and refuses nothing it no longer holds', function (): void {
+it('refuses the code this repository did not write, through the reader every walk here uses', function (): void {
     expect(RepoTree::NEVER_WALKED)->not->toBeEmpty(
         'RepoTree refuses nothing at all, so the loop below runs over nothing and this rule passes without '
         .'holding a single refusal to the tree.'

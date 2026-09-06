@@ -47,8 +47,10 @@ function userIdExemptTables(): array
 
         // The seven `migration_staging_*` tables were listed here too, excused
         // as per-run scratch space. Every one of them has carried a nullable
-        // user_id since it was created: `scopeColumns()` in the migration that
-        // creates them adds it. The rule below is the one that said so.
+        // user_id since the day it was created — six through `scopeColumns()`
+        // in the migration that creates them together, the goals table through
+        // its own — so the excuse covered nothing. The last rule below is what
+        // said so, and it is in this file because nothing said it before.
     ];
 }
 
