@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
+use Modules\Sync\Internal\Transport\WithheldLedger;
 
 final readonly class DeviceRegistryService
 {
@@ -210,6 +211,12 @@ final readonly class DeviceRegistryService
                     ->orWhere('initiator_device_id', $deviceId);
             })
             ->delete();
+
+        // What this peer said it was holding back, and only in that role. Rows
+        // naming it as the AUTHOR are a surviving peer's live report and stay:
+        // removing an author here does not stop another device holding its
+        // work, and that peer rewrites its own count on the next exchange.
+        new WithheldLedger($this->db)->forgetPeer($userId, $deviceId);
 
         // GdkRotationService clears this first, and purge() must not DEPEND on
         // that having happened: a purge is a removal, and a removal that leaves

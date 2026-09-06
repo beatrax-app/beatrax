@@ -86,6 +86,7 @@ holding less than the household has. Three surfaces stop that being silent.
 | The answering device's log | `IntroductionOffers` logs at **error**, with the peer, the authors and the totals. Error rather than warning for the reason `reportUnframable()` is one: a withholding nothing announces reads as an ordinary clean sync from every surface above it. |
 | The `CATCH_UP_RESPONSE` | `withheld` carries a per-author count, so the asking device learns the size of what it is not getting. |
 | The device list | `WithheldLedger` stores every count the answer carried, per (peer, author), and the screen reads it back — beside the introduction where there is one, and on its own where there is not. |
+| The status line | `SyncStatusService::overallStatus()` answers `Withheld` off the same `WithheldHistoryReport` the device list reads, so the two cannot disagree about whether a hold has ended. Including where no session row survives to read: that arm answered `Unknown` before anything was asked, over a count the list two sections below was still printing. |
 
 **The count is the half of the report that always applies.** It was originally
 written into `device_introductions.withheld_entry_count`, which meant it only
@@ -207,3 +208,17 @@ to. A purge leaves the `device_registry` row standing with its `confirmed_at`
 cleared, and a row there is what the exclusion above keys on: the introduction
 stops granting anything the moment the registry row exists, whichever of the
 two arrived first.
+
+`sync_withheld_history` is the other answer, and it does need the purge.
+Superseding a count is the sending peer's job and nobody else's, so the
+replacement rule above stops applying the instant that peer is removed: its
+last report becomes a number describing an exchange that can never happen
+again, and the aggregate status stays pinned to `Withheld` by a device the
+reader deliberately took off the list. `purge()` therefore drops the rows
+naming the removed device as the **peer**, alongside its sessions, its mailbox
+and its tokens.
+
+Rows naming it as the **author** stay. A surviving peer holding that author's
+work back is a live fact that peer rewrites on its own next exchange, and
+keying the cleanup on the author would delete a report the household can still
+act on along with the one it cannot.
