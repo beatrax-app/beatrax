@@ -6,6 +6,7 @@ return [
     'what_heading' => 'What to notify me about',
     'background_note' => 'Beatrax prepares these while it is open. A scheduled background run cannot — the app lock holds the only key — so anything due is picked up as you carry on using the app.',
     'background_note_phone' => 'Beatrax prepares these while it is open. In the background it cannot — the app lock holds the only key — so anything due arrives the next time you open the app.',
+    'system_grant_refused' => "Your device is not letting Beatrax show notifications, so nothing below can reach you. Turn them on for Beatrax in your device's settings.",
 
     'reminders' => [
         'label' => 'Payment reminders',

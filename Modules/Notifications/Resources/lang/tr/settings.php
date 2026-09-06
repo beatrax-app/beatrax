@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Hangi konularda bildirim alacaksın',
     'background_note' => 'Beatrax bunları uygulama açıkken hazırlar. Arka planda planlı bir çalışma bunu yapamaz — uygulama kilidi tek anahtarı tutuyor — bu yüzden bekleyenler sen uygulamayı kullanmayı sürdürürken tamamlanır.',
     'background_note_phone' => 'Beatrax bunları uygulama açıkken hazırlar. Arka planda hazırlayamaz — uygulama kilidi tek anahtarı tutuyor — bu yüzden bekleyenler uygulamayı bir sonraki açışında gelir.',
+    'system_grant_refused' => 'Cihazın, Beatrax uygulamasının bildirim göstermesine izin vermiyor, bu yüzden aşağıdakilerin hiçbiri sana ulaşamaz. Cihaz ayarlarından Beatrax için bildirimleri aç.',
 
     'reminders' => [
         'label' => 'Ödeme hatırlatmaları',

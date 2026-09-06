@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Miről értesítsünk',
     'background_note' => 'A Beatrax akkor készíti elő ezeket, amikor az alkalmazás nyitva van. Egy ütemezett háttérfutás nem tudja — az appzár őrzi az egyetlen kulcsot —, így a várakozókat az alkalmazás további használata közben pótolja.',
     'background_note_phone' => 'A Beatrax akkor készíti elő ezeket, amikor az alkalmazás nyitva van. A háttérben nem tudja — az appzár őrzi az egyetlen kulcsot —, így a várakozók akkor érkeznek meg, amikor legközelebb megnyitod az appot.',
+    'system_grant_refused' => 'Az eszközöd nem engedi, hogy a Beatrax értesítéseket jelenítsen meg, így az alábbiakból semmi nem jut el hozzád. Kapcsold be őket a Beatraxhoz az eszköz beállításaiban.',
 
     'reminders' => [
         'label' => 'Fizetési emlékeztetők',

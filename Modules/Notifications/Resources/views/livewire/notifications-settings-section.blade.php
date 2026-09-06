@@ -20,6 +20,7 @@
       - $saveError : string
       - $saved : bool
       - $otherDevices : list<array{name: string, summary: string}>
+      - $systemGrantRefused : bool
 
     Blade default `{{ }}` escaping for every interpolation.
 --}}
@@ -29,6 +30,16 @@
         {{-- ===== What to notify me about ===== --}}
         <div class="space-y-4">
             <x-core::section-heading :title="Lang::get('notifications::settings.what_heading')" :level="3" />
+
+            {{-- Above every toggle, because while this stands not one of them
+                 can do anything. The reader is the only one who can lift it,
+                 and only from the system's own settings: both platforms show
+                 their prompt once per install and answer silently after. --}}
+            @if ($systemGrantRefused)
+                <x-core::alert tone="warning" role="alert" data-testid="notifications-system-grant-refused">
+                    {{ Lang::get('notifications::settings.system_grant_refused') }}
+                </x-core::alert>
+            @endif
 
             @if ($preparedOnlyWhileOpen)
                 <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="notifications-background-note">{{ Lang::get($onPhone ? 'notifications::settings.background_note_phone' : 'notifications::settings.background_note') }}</p>

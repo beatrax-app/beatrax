@@ -16,12 +16,14 @@ use Modules\Notifications\Internal\Console\EmitBudgetNudgesCommand;
 use Modules\Notifications\Internal\Console\EmitDailyNotificationTriggersCommand;
 use Modules\Notifications\Internal\Console\PruneNotificationsCommand;
 use Modules\Notifications\Internal\Delivery\NoSystemNotificationConsent;
+use Modules\Notifications\Internal\Delivery\NoSystemNotificationGrantState;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
+use Modules\Notifications\Public\Contracts\SystemNotificationGrantState;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
@@ -72,6 +74,11 @@ final class NotificationsServiceProvider extends ServiceProvider
         // Rebound by Mobile on a real device, where the OS gates delivery
         // behind a runtime grant the app has to ask for.
         $this->app->singleton(SystemNotificationConsent::class, NoSystemNotificationConsent::class);
+
+        // Rebound beside it, and for the same platforms: the read half, so a
+        // settings screen and a delivery record can both say whether the OS
+        // is showing what this app posts.
+        $this->app->singleton(SystemNotificationGrantState::class, NoSystemNotificationGrantState::class);
         $this->app->singleton(NotificationStateMachine::class);
         $this->app->singleton(DeterministicKeyDeriver::class);
         $this->app->singleton(SuppressionEvaluator::class);

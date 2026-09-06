@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Worüber du benachrichtigt wirst',
     'background_note' => 'Beatrax bereitet diese vor, solange die App offen ist. Ein geplanter Lauf im Hintergrund kann das nicht — die App-Sperre hält den einzigen Schlüssel —, deshalb wird Fälliges nachgeholt, während du die App weiter benutzt.',
     'background_note_phone' => 'Beatrax bereitet diese vor, solange die App offen ist. Im Hintergrund geht das nicht — die App-Sperre hält den einzigen Schlüssel —, deshalb kommt Fälliges beim nächsten Öffnen der App an.',
+    'system_grant_refused' => 'Dein Gerät lässt Beatrax keine Mitteilungen anzeigen, deshalb erreicht dich nichts von dem hier. Schalte sie für Beatrax in den Geräteeinstellungen ein.',
 
     'reminders' => [
         'label' => 'Zahlungserinnerungen',

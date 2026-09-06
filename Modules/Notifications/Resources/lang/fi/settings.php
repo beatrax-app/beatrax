@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Mistä haluat ilmoituksen',
     'background_note' => 'Beatrax valmistelee ne, kun sovellus on auki. Ajoitettu taustasuoritus ei siihen pysty — sovelluslukko pitää ainoaa avainta — joten odottavat noudetaan, kun jatkat sovelluksen käyttöä.',
     'background_note_phone' => 'Beatrax valmistelee ne, kun sovellus on auki. Taustalla se ei voi — sovelluslukko pitää ainoaa avainta — joten odottavat saapuvat, kun avaat sovelluksen seuraavan kerran.',
+    'system_grant_refused' => 'Laitteesi ei anna Beatraxin näyttää ilmoituksia, joten mikään alla olevista ei tavoita sinua. Ota ne käyttöön Beatraxille laitteen asetuksissa.',
 
     'reminders' => [
         'label' => 'Maksumuistutukset',
