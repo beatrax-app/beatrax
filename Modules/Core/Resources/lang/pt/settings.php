@@ -33,6 +33,17 @@ return [
         'help' => 'Muda as palavras no ecrã e a forma como os valores são escritos. O modo Sistema segue o idioma do teu navegador ou sistema operativo, usando o inglês por predefinição.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Dados de exemplo',
+        'help' => 'Enche esta conta com um livro inventado — contas, transações, orçamentos, objetivos e avisos — para haver algo para ver. Junta-se ao que já existe e nada disto são dados de uma pessoa real.',
+        'warning' => 'Isto escreve no teu próprio livro e chega aos teus dispositivos emparelhados. Neste ecrã não há como anular.',
+        'confirm' => 'Adicionar a esta conta',
+        'cancel' => 'Cancelar',
+        'load' => 'Carregar dados de exemplo',
+        'working' => 'A construir o livro de exemplo. Demora um momento.',
+        'loaded' => 'Dados de exemplo adicionados (:count).',
+    ],
+
     'country' => [
         'heading' => 'País',
         'label' => 'O teu país',

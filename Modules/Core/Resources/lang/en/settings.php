@@ -33,6 +33,17 @@ return [
         'help' => 'Changes the words on screen, and how amounts are written. System follows your browser or operating system language, defaulting to English.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Sample data',
+        'help' => 'Fills this account with an invented ledger — accounts, transactions, budgets, goals and alerts — so there is something to look at. It adds to what is already here, and none of it is any real person\'s data.',
+        'warning' => 'This writes into your own ledger and reaches your paired devices. There is no undo for it on this screen.',
+        'confirm' => 'Add it to this account',
+        'cancel' => 'Cancel',
+        'load' => 'Load sample data',
+        'working' => 'Building the sample ledger. This takes a moment.',
+        'loaded' => 'Sample data added (:count).',
+    ],
+
     'country' => [
         'heading' => 'Country',
         'label' => 'Your country',

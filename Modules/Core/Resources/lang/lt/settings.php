@@ -33,6 +33,17 @@ return [
         'help' => 'Keičia ekrane matomus žodžius ir tai, kaip rašomos sumos. Sistemos parinktis seka tavo naršyklės arba operacinės sistemos kalbą; numatytoji — anglų.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Pavyzdiniai duomenys',
+        'help' => 'Užpildo šią paskyrą sugalvota knyga — sąskaitomis, operacijomis, biudžetais, tikslais ir įspėjimais — kad būtų į ką pažiūrėti. Pridedama prie to, kas jau yra, ir niekas iš to nėra tikro žmogaus duomenys.',
+        'warning' => 'Tai rašo į tavo paties knygą ir pasiekia susietus įrenginius. Šiame ekrane atšaukti negalima.',
+        'confirm' => 'Pridėti prie šios paskyros',
+        'cancel' => 'Atšaukti',
+        'load' => 'Įkelti pavyzdinius duomenis',
+        'working' => 'Kuriama pavyzdinė knyga. Tai užtruks akimirką.',
+        'loaded' => 'Pavyzdiniai duomenys pridėti (:count).',
+    ],
+
     'country' => [
         'heading' => 'Šalis',
         'label' => 'Tavo šalis',

@@ -33,6 +33,17 @@ return [
         'help' => 'Ekrandaki kelimeleri ve tutarların yazılış biçimini değiştirir. Sistem, tarayıcının veya işletim sisteminin dilini izler; varsayılan olarak İngilizce kullanılır.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Örnek veri',
+        'help' => 'Bu hesabı uydurma bir defterle doldurur — hesaplar, işlemler, bütçeler, hedefler ve uyarılar — bakacak bir şey olsun diye. Zaten olanın üstüne eklenir ve hiçbiri gerçek bir kişinin verisi değildir.',
+        'warning' => 'Bu, kendi defterine yazar ve eşleştirilmiş cihazlarına ulaşır. Bu ekranda geri alma yok.',
+        'confirm' => 'Bu hesaba ekle',
+        'cancel' => 'Vazgeç',
+        'load' => 'Örnek veri yükle',
+        'working' => 'Örnek defter oluşturuluyor. Bu biraz sürer.',
+        'loaded' => 'Örnek veri eklendi (:count).',
+    ],
+
     'country' => [
         'heading' => 'Ülke',
         'label' => 'Ülken',

@@ -32,6 +32,17 @@ return [
         'help' => 'Verandert de woorden op het scherm en hoe bedragen worden geschreven. Systeem volgt de taal van je browser of besturingssysteem, met Engels als standaard.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Voorbeeldgegevens',
+        'help' => 'Vult deze rekening met een verzonnen administratie — rekeningen, transacties, budgetten, doelen en meldingen — zodat er iets te zien is. Het komt bij wat er al staat, en niets ervan zijn gegevens van een echt persoon.',
+        'warning' => 'Dit schrijft in je eigen administratie en bereikt je gekoppelde apparaten. Op dit scherm is er geen ongedaan maken.',
+        'confirm' => 'Toevoegen aan deze rekening',
+        'cancel' => 'Annuleren',
+        'load' => 'Voorbeeldgegevens laden',
+        'working' => 'De voorbeeldadministratie wordt opgebouwd. Dit duurt even.',
+        'loaded' => 'Voorbeeldgegevens toegevoegd (:count).',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Jouw land',

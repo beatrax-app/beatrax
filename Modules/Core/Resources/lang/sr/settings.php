@@ -33,6 +33,17 @@ return [
         'help' => 'Menja reči na ekranu i način na koji se pišu iznosi. Sistemsko podešavanje prati jezik tvog pregledača ili operativnog sistema, a podrazumevano je engleski.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Probni podaci',
+        'help' => 'Puni ovaj račun izmišljenom knjigom — računi, transakcije, budžeti, ciljevi i upozorenja — da ima šta da se pogleda. Dodaje se onome što već postoji i ništa od toga nisu podaci stvarne osobe.',
+        'warning' => 'Ovo piše u tvoju sopstvenu knjigu i stiže na tvoje uparene uređaje. Sa ovog ekrana nema poništavanja.',
+        'confirm' => 'Dodaj na ovaj račun',
+        'cancel' => 'Otkaži',
+        'load' => 'Učitaj probne podatke',
+        'working' => 'Gradi se probna knjiga. Potrajaće trenutak.',
+        'loaded' => 'Probni podaci dodati (:count).',
+    ],
+
     'country' => [
         'heading' => 'Država',
         'label' => 'Tvoja država',

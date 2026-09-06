@@ -33,6 +33,17 @@ return [
         'help' => 'Spremeni besede na zaslonu in način zapisa zneskov. Sistemska nastavitev sledi jeziku tvojega brskalnika ali operacijskega sistema, privzeto pa je angleščina.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Vzorčni podatki',
+        'help' => 'Napolni ta račun z izmišljeno knjigo — računi, transakcije, proračuni, cilji in opozorila — da je kaj videti. Doda se k temu, kar že je, in nič od tega niso podatki resnične osebe.',
+        'warning' => 'To piše v tvojo lastno knjigo in doseže tvoje seznanjene naprave. S tega zaslona ni razveljavitve.',
+        'confirm' => 'Dodaj na ta račun',
+        'cancel' => 'Prekliči',
+        'load' => 'Naloži vzorčne podatke',
+        'working' => 'Gradi se vzorčna knjiga. To bo trajalo trenutek.',
+        'loaded' => 'Vzorčni podatki dodani (:count).',
+    ],
+
     'country' => [
         'heading' => 'Država',
         'label' => 'Tvoja država',

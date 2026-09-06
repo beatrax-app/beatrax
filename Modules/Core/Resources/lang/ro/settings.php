@@ -33,6 +33,17 @@ return [
         'help' => 'Schimbă cuvintele de pe ecran și modul în care sunt scrise sumele. Sistem urmează limba browserului sau a sistemului de operare, cu engleza ca variantă implicită.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Date de exemplu',
+        'help' => 'Umple acest cont cu un registru inventat — conturi, tranzacții, bugete, obiective și alerte — ca să ai ce privi. Se adaugă la ce există deja și nimic din el nu sunt datele unei persoane reale.',
+        'warning' => 'Asta scrie în propriul tău registru și ajunge pe dispozitivele împerecheate. De pe acest ecran nu se poate anula.',
+        'confirm' => 'Adaugă-l la acest cont',
+        'cancel' => 'Anulează',
+        'load' => 'Încarcă date de exemplu',
+        'working' => 'Se construiește registrul de exemplu. Durează un moment.',
+        'loaded' => 'Date de exemplu adăugate (:count).',
+    ],
+
     'country' => [
         'heading' => 'Țară',
         'label' => 'Țara ta',

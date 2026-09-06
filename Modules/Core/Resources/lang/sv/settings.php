@@ -33,6 +33,17 @@ return [
         'help' => 'Ändrar orden på skärmen och hur belopp skrivs. System följer språket i din webbläsare eller ditt operativsystem, med engelska som standard.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Exempeldata',
+        'help' => 'Fyller det här kontot med en påhittad bok — konton, transaktioner, budgetar, mål och varningar — så att det finns något att titta på. Det läggs till det som redan finns, och inget av det är en verklig persons uppgifter.',
+        'warning' => 'Det här skriver i din egen bok och når dina parkopplade enheter. Det finns ingen ångra på den här skärmen.',
+        'confirm' => 'Lägg till det på det här kontot',
+        'cancel' => 'Avbryt',
+        'load' => 'Läs in exempeldata',
+        'working' => 'Bygger exempelboken. Det tar ett ögonblick.',
+        'loaded' => 'Exempeldata tillagd (:count).',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Ditt land',

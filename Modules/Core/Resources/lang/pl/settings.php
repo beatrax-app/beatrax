@@ -33,6 +33,17 @@ return [
         'help' => 'Zmienia słowa widoczne na ekranie oraz sposób zapisu kwot. Ustawienie systemowe podąża za językiem przeglądarki lub systemu operacyjnego, a domyślnie używa angielskiego.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Dane przykładowe',
+        'help' => 'Wypełnia to konto wymyśloną księgą — konta, transakcje, budżety, cele i alerty — żeby było na co patrzeć. Dokłada się do tego, co już jest, i nic z tego nie jest danymi prawdziwej osoby.',
+        'warning' => 'To zapisuje w twojej własnej księdze i trafia na sparowane urządzenia. Na tym ekranie nie ma cofnięcia.',
+        'confirm' => 'Dodaj do tego konta',
+        'cancel' => 'Anuluj',
+        'load' => 'Wczytaj dane przykładowe',
+        'working' => 'Budowanie księgi przykładowej. To chwilę potrwa.',
+        'loaded' => 'Dane przykładowe dodane (:count).',
+    ],
+
     'country' => [
         'heading' => 'Kraj',
         'label' => 'Twój kraj',

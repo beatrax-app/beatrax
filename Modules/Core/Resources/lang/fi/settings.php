@@ -33,6 +33,17 @@ return [
         'help' => 'Vaihtaa näytöllä näkyvät sanat ja sen, miten summat kirjoitetaan. Järjestelmä seuraa selaimesi tai käyttöjärjestelmäsi kieltä ja käyttää oletuksena englantia.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Esimerkkidata',
+        'help' => 'Täyttää tämän tilin keksityllä kirjanpidolla — tilit, tapahtumat, budjetit, tavoitteet ja ilmoitukset — jotta katsottavaa on. Se lisätään olemassa olevaan, eikä mikään siitä ole oikean ihmisen tietoja.',
+        'warning' => 'Tämä kirjoittaa omaan kirjanpitoosi ja päätyy pariliitettyihin laitteisiisi. Tällä näytöllä ei ole kumoamista.',
+        'confirm' => 'Lisää se tälle tilille',
+        'cancel' => 'Peruuta',
+        'load' => 'Lataa esimerkkidata',
+        'working' => 'Esimerkkikirjanpitoa rakennetaan. Tämä kestää hetken.',
+        'loaded' => 'Esimerkkidata lisätty (:count).',
+    ],
+
     'country' => [
         'heading' => 'Maa',
         'label' => 'Maasi',

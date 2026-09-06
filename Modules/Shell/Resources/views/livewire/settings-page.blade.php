@@ -96,6 +96,16 @@
         </section>
     </div>
 
+    {{-- ===== Sample data ===== --}}
+    <div class="{{ $card }}">
+        <section>
+            {{-- Its own component, not another method on this class: the page is
+                 already at the method ceiling the analyser allows, and the
+                 control has a confirm step and a result of its own to hold. --}}
+            <livewire:shell.sample-data-card />
+        </section>
+    </div>
+
     {{-- ===== Country ===== --}}
     {{-- Beside the language, and deliberately without flags: a flag names a
          country, so putting one on the language picker is the confusion this

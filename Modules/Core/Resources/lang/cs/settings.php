@@ -33,6 +33,17 @@ return [
         'help' => 'Mění slova na obrazovce i způsob zápisu částek. Systémový se řídí jazykem prohlížeče nebo operačního systému, výchozí je angličtina.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Ukázková data',
+        'help' => 'Naplní tento účet vymyšlenou knihou — účty, transakcemi, rozpočty, cíli a upozorněními — aby bylo na co se dívat. Přidává k tomu, co už tu je, a nic z toho nejsou data skutečné osoby.',
+        'warning' => 'Zapisuje to do tvé vlastní knihy a dostane se to na spárovaná zařízení. Z této obrazovky to nelze vrátit.',
+        'confirm' => 'Přidat k tomuto účtu',
+        'cancel' => 'Zrušit',
+        'load' => 'Načíst ukázková data',
+        'working' => 'Sestavuje se ukázková kniha. Chvíli to potrvá.',
+        'loaded' => 'Ukázková data přidána (:count).',
+    ],
+
     'country' => [
         'heading' => 'Země',
         'label' => 'Tvoje země',

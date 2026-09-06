@@ -33,6 +33,17 @@ return [
         'help' => 'Maina ekrānā redzamos vārdus un to, kā tiek rakstītas summas. Sistēmas iestatījums seko pārlūka vai operētājsistēmas valodai, pēc noklusējuma izmantojot angļu valodu.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Paraugdati',
+        'help' => 'Aizpilda šo kontu ar izdomātu grāmatu — konti, darījumi, budžeti, mērķi un brīdinājumi —, lai būtu ko apskatīt. Tas pievienojas jau esošajam, un nekas no tā nav reālas personas dati.',
+        'warning' => 'Tas raksta tavā paša grāmatā un nonāk tavās sapārotajās ierīcēs. Šajā ekrānā atsaukšanas nav.',
+        'confirm' => 'Pievienot šim kontam',
+        'cancel' => 'Atcelt',
+        'load' => 'Ielādēt paraugdatus',
+        'working' => 'Tiek veidota parauga grāmata. Tas prasīs mirkli.',
+        'loaded' => 'Paraugdati pievienoti (:count).',
+    ],
+
     'country' => [
         'heading' => 'Valsts',
         'label' => 'Tava valsts',

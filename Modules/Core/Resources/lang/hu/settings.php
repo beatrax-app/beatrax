@@ -33,6 +33,17 @@ return [
         'help' => 'Megváltoztatja a képernyőn megjelenő szavakat és az összegek írásmódját. A Rendszer a böngésződ vagy az operációs rendszered nyelvét követi, alapértelmezésben az angolt.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Mintaadatok',
+        'help' => 'Feltölti ezt a fiókot egy kitalált könyvvel — számlák, tranzakciók, keretek, célok és jelzések —, hogy legyen mit nézni. A meglévőhöz adódik, és semmi sem valódi személy adata.',
+        'warning' => 'Ez a saját könyvedbe ír, és eljut a párosított eszközeidre. Erről a képernyőről nincs visszavonás.',
+        'confirm' => 'Hozzáadás ehhez a fiókhoz',
+        'cancel' => 'Mégse',
+        'load' => 'Mintaadatok betöltése',
+        'working' => 'Épül a mintakönyv. Ez eltart egy pillanatig.',
+        'loaded' => 'Mintaadatok hozzáadva (:count).',
+    ],
+
     'country' => [
         'heading' => 'Ország',
         'label' => 'Az országod',

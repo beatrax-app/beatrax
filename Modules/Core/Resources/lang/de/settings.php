@@ -33,6 +33,17 @@ return [
         'help' => 'Ändert die Wörter auf dem Bildschirm und die Schreibweise von Beträgen. System folgt der Sprache deines Browsers oder Betriebssystems, standardmäßig Englisch.',
     ],
 
+    'sample_data' => [
+        'heading' => 'Beispieldaten',
+        'help' => 'Füllt dieses Konto mit einem erfundenen Buch — Konten, Buchungen, Budgets, Ziele und Hinweise — damit es etwas zu sehen gibt. Es kommt zu dem hinzu, was schon da ist, und nichts davon sind Daten einer echten Person.',
+        'warning' => 'Das schreibt in dein eigenes Buch und erreicht deine gekoppelten Geräte. Auf diesem Bildschirm gibt es kein Zurück.',
+        'confirm' => 'Zu diesem Konto hinzufügen',
+        'cancel' => 'Abbrechen',
+        'load' => 'Beispieldaten laden',
+        'working' => 'Das Beispielbuch wird gebaut. Das dauert einen Moment.',
+        'loaded' => 'Beispieldaten hinzugefügt (:count).',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Dein Land',
