@@ -57,7 +57,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
     // the feed here and nowhere else, so this is the whole outbound surface.
     private function manifestUrl(UpdateChannel $channel): ?string
     {
-        $base = $this->config->get('auto_update.manifest_feed_url');
+        $base = $this->config->get($channel->feedConfigKey());
 
         if (! $this->preference->enabled() || ! is_string($base) || $base === '') {
             return null;

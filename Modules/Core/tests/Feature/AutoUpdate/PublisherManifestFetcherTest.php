@@ -16,9 +16,17 @@ use Psr\Log\NullLogger;
 // rather than arrive there as a weakened one. electron-updater writes sha512 in
 // base64; verifyBinary() compares hex.
 
-function makeManifestFetcher(?string $feedUrl, string $platformFamily = 'Windows'): HttpPublisherManifestFetcher
-{
-    $config = new Repository(['auto_update' => ['manifest_feed_url' => $feedUrl]]);
+function makeManifestFetcher(
+    ?string $feedUrl,
+    string $platformFamily = 'Windows',
+    ?string $previewFeedUrl = null,
+): HttpPublisherManifestFetcher {
+    // Both channels default to the one origin so a case about parsing says
+    // nothing about routing; the case that IS about routing passes them apart.
+    $config = new Repository(['auto_update' => [
+        'manifest_feed_url' => $feedUrl,
+        'preview_feed_url' => $previewFeedUrl ?? $feedUrl,
+    ]]);
 
     // Platform is injected so the manifest-name assertions do not depend on the
     // OS the suite runs on; the default keeps the base-case fakes on latest.yml.
@@ -178,4 +186,52 @@ it('names the manifest for every modelled family and channel exactly as the rele
         ->and($name('Darwin', UpdateChannel::Preview))->toBe('beta-mac.yml')
         ->and($name('Linux', UpdateChannel::Preview))->toBe('beta-linux.yml')
         ->and($name('FreeBSD', UpdateChannel::Stable))->toBeNull();
+});
+
+// `releases/latest/download` resolves the newest NON-prerelease release, so the
+// preview set cannot be reached there however it is named — the two channels
+// have to ask two origins, and a bundle whose preview feed is unset must go
+// quiet rather than fall back onto the stable one and offer a stable build to a
+// reader who asked for release candidates.
+it('asks each channel its own origin', function (): void {
+    Http::fake([
+        'https://stable.test/latest.yml' => Http::response(manifestYaml('1.0.0', base64_encode(str_repeat("\x01", 64))), 200),
+        'https://stable.test/latest.yml.sig' => Http::response(str_repeat('ab', 64), 200),
+        'https://preview.test/beta.yml' => Http::response(manifestYaml('2.0.0-rc.1', base64_encode(str_repeat("\x02", 64))), 200),
+        'https://preview.test/beta.yml.sig' => Http::response(str_repeat('cd', 64), 200),
+    ]);
+
+    $fetcher = makeManifestFetcher('https://stable.test', 'Windows', 'https://preview.test');
+
+    $stable = $fetcher->fetch(UpdateChannel::Stable);
+    $preview = $fetcher->fetch(UpdateChannel::Preview);
+
+    expect($stable)->not->toBeNull()
+        ->and($preview)->not->toBeNull()
+        ->and($stable['latest_version'])->toBe('1.0.0')
+        ->and($preview['latest_version'])->toBe('2.0.0-rc.1');
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://stable.test/latest.yml');
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://preview.test/beta.yml');
+});
+
+it('goes quiet on a channel whose origin is unset, without borrowing the other', function (): void {
+    Http::fake();
+
+    $config = new Repository(['auto_update' => [
+        'manifest_feed_url' => 'https://stable.test',
+        'preview_feed_url' => null,
+    ]]);
+
+    $fetcher = new HttpPublisherManifestFetcher(
+        app(HttpClient::class),
+        $config,
+        new NullLogger,
+        app(UpdateCheckPreference::class),
+        'Windows',
+    );
+
+    expect($fetcher->fetch(UpdateChannel::Preview))->toBeNull();
+
+    Http::assertNothingSent();
 });

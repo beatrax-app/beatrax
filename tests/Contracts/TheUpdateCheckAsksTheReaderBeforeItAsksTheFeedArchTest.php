@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
@@ -16,11 +17,35 @@ use Tests\Contracts\Support\BackendSourceFiles;
 
 const UPDATE_SWITCH_COLUMN = 'auto_update_check_enabled';
 
-// The two configuration keys the feature reaches the network through. The first
-// composes the manifest URL Beatrax fetches itself; the second is what the
-// Electron main process checks before electron-updater polls at all.
-const UPDATE_SWITCH_FEED_KEY = 'auto_update.manifest_feed_url';
+// The configuration keys the feature reaches the network through. The feed keys
+// compose the manifest URLs Beatrax fetches itself and are read off the channel
+// enum, so a channel added with an origin of its own is covered here without
+// anyone remembering this file; the boot key is what the Electron main process
+// checks before electron-updater polls at all.
 const UPDATE_SWITCH_BOOT_KEY = 'nativephp.updater.enabled';
+
+// The stable channel's key, named once so the control below can plant a file
+// that really does compose a URL. The rule itself reads every channel's.
+const UPDATE_SWITCH_FEED_KEY = 'auto_update.manifest_feed_url';
+
+// Naming a key is not reading one. `UpdateChannel::feedConfigKey()` answers
+// which origin a channel asks and reaches no network at all, so the subject is
+// a file that also performs the read.
+const UPDATE_SWITCH_CONFIG_READ = '/config\(|->get\(/';
+
+// Two ways to reach a feed origin: name the key, or ask the channel which key
+// to name. A rule that knew only the first went blind the moment the keys moved
+// onto the enum — the file that reads them stopped containing either literal.
+const UPDATE_SWITCH_FEED_ACCESSOR = 'feedConfigKey';
+
+/** @return list<string> */
+function updateSwitchFeedKeys(): array
+{
+    return array_map(
+        static fn (UpdateChannel $channel): string => $channel->feedConfigKey(),
+        UpdateChannel::cases(),
+    );
+}
 
 // The class every one of them has to name. A guard that accepted any mention
 // would pass on a comment, so the subject is always the comment-free source.
@@ -117,11 +142,38 @@ function updateSwitchBladeFiles(): array
 }
 
 it('lets nothing compose the update feed URL without asking the reader first', function (): void {
-    $composers = updateSwitchFilesNaming("'".UPDATE_SWITCH_FEED_KEY."'");
+    $keys = updateSwitchFeedKeys();
 
-    // The denominator. A rename that empties this scan would otherwise report a
-    // tree where every feed reader consults the switch, having read none.
-    expect($composers)->not->toBe([], 'nothing reads '.UPDATE_SWITCH_FEED_KEY.' — this guard just scanned an empty tree');
+    expect($keys)->not->toBe([], 'the channel enum declares no feed key, so this guard has no subject');
+
+    $naming = [UPDATE_SWITCH_FEED_ACCESSOR];
+    foreach ($keys as $key) {
+        $naming[] = "'".$key."'";
+    }
+
+    $composers = [];
+    foreach ($naming as $literal) {
+        foreach (updateSwitchFilesNaming($literal) as $relative) {
+            // Named AND read. A file that only answers which key to ask composes
+            // no URL and reaches nothing, which is what the channel enum does.
+            if (PatternScan::matches(UPDATE_SWITCH_CONFIG_READ, updateSwitchCode(base_path($relative)))) {
+                $composers[$relative] = true;
+            }
+        }
+    }
+
+    $composers = array_keys($composers);
+    sort($composers);
+
+    // The denominator, and the one reader it must always find. A rename that
+    // empties this scan would otherwise report a tree where every feed reader
+    // consults the switch, having read none — and naming the fetcher means the
+    // scan cannot go quietly blind while still finding something.
+    // `toContain` reads every argument as a needle, so the sentence goes through
+    // a boolean rather than becoming a second path to look for.
+    expect($composers)->not->toBe([], 'nothing reads '.implode(' or ', $keys).' — this guard just scanned an empty tree')
+        ->and(in_array('Modules/Core/Internal/AutoUpdate/HttpPublisherManifestFetcher.php', $composers, true))
+        ->toBeTrue('the one class that fetches a manifest is not among the composers, so this rule is reading something other than the feed path');
 
     $offenders = [];
     foreach ($composers as $relative) {

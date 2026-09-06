@@ -21,4 +21,12 @@ return [
     // that has one. The release workflow sets it from the GitHub context, so
     // moving the repository re-points the feed.
     'manifest_feed_url' => env('AUTO_UPDATE_FEED_URL'),
+
+    // The preview set cannot live behind the same origin. `releases/latest`
+    // resolves the newest NON-prerelease release, so a release candidate is
+    // unreachable through it and a reader on preview would be handed the
+    // newest stable build's manifest instead. A direct tag URL does serve a
+    // prerelease, so the pipeline keeps one rolling `preview` release and this
+    // addresses it by name. Unset behaves like the stable feed unset: null.
+    'preview_feed_url' => env('AUTO_UPDATE_PREVIEW_FEED_URL'),
 ];
