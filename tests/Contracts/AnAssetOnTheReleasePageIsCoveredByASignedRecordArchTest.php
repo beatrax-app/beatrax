@@ -58,12 +58,88 @@ function signedRecordSteps(string $source): array
 }
 
 /**
+ * The workflow's steps grouped by the job that runs them. Jobs are named at
+ * four spaces, steps at twelve, so one pass reads both. Without this a shape
+ * dropped from one page's download reads as covered because another page still
+ * asks for it, which is the whole property this file is about.
+ *
+ * @return array<string, array<string, string>>
+ */
+function signedRecordStepsByJob(string $source): array
+{
+    $jobs = [];
+    $job = null;
+    $step = null;
+
+    foreach (explode("\n", $source) as $line) {
+        $namedJob = PatternScan::first('/^ {4}([a-z][a-z0-9-]*):$/', $line);
+
+        if ($namedJob !== []) {
+            $job = trim($namedJob[1]);
+            $jobs[$job] = [];
+            $step = null;
+
+            continue;
+        }
+
+        $namedStep = PatternScan::first('/^ {12}- name: (.+)$/', $line);
+
+        if ($namedStep !== [] && $job !== null) {
+            $step = trim($namedStep[1]);
+            $jobs[$job][$step] = '';
+
+            continue;
+        }
+
+        if ($job !== null && $step !== null) {
+            $jobs[$job][$step] .= $line."\n";
+        }
+    }
+
+    return $jobs;
+}
+
+/**
  * @param  array<string, string>  $steps
  * @return list<string>
  */
 function signedRecordStepsContaining(array $steps, string $needle): array
 {
     return array_values(array_filter($steps, static fn (string $body): bool => str_contains($body, $needle)));
+}
+
+/**
+ * One sorted set, so a shape covered by two steps counts once.
+ *
+ * @param  list<string>  $shapes
+ * @return list<string>
+ */
+function signedRecordRequestedPatterns(string $body): array
+{
+    $patterns = array_map(
+        static fn (array $set): string => $set[1],
+        PatternScan::sets("/--pattern '([^']+)'/", $body),
+    );
+
+    // A `.sig` is checked by the key rather than by a hash, and every pass
+    // derives its own signature path from the file it covers, so it is not one
+    // of the shapes the sets below are compared on.
+    return array_values(array_filter(
+        $patterns,
+        static fn (string $pattern): bool => ! str_ends_with($pattern, '.sig'),
+    ));
+}
+
+/**
+ * @param  list<string>  $shapes
+ * @return list<string>
+ */
+function signedRecordUniqueShapes(array $shapes): array
+{
+    $unique = array_values(array_unique($shapes));
+    sort($unique);
+
+    return $unique;
 }
 
 /**
@@ -141,25 +217,52 @@ it('signs, re-downloads and re-verifies the same shapes', function (): void {
     $verifying = signedRecordStepsContaining($steps, 'sodium_crypto_sign_verify_detached');
     $downloading = signedRecordStepsContaining($steps, 'gh release download');
 
+    // One signing step, because one key signs the whole release and a second
+    // would sign part of it with nothing saying which part. Downloading and
+    // verifying are counted rather than pinned to one: the preview channel is
+    // served from a rolling release of its own, which is a second page a reader
+    // fetches from and so a second page that has to be re-read and re-verified.
+    // What must not drift is the SET of shapes, which is why they are unioned.
     expect($signing)->toHaveCount(1, 'One step signs the release; a second would sign part of it with nothing saying which part.')
-        ->and($verifying)->toHaveCount(1, 'One step verifies the published page against the signature.')
-        ->and($downloading)->toHaveCount(1, 'One step re-downloads from the page, which is the only evidence about the page there is.');
+        ->and($verifying)->not->toBe([], 'Nothing verifies a published page against the signature.')
+        ->and($downloading)->not->toBe([], 'Nothing re-downloads from a page, which is the only evidence about a page there is.');
 
-    $signed = signedRecordNamePredicates($signing[0] ?? '');
-    $verified = signedRecordNamePredicates($verifying[0] ?? '');
+    // Every page that is re-read has to be re-read whole: what a job downloads
+    // and what it then verifies are compared to each other, job by job, so a
+    // shape dropped from one page is not covered by another page still asking
+    // for it. The union is only used against what was signed.
+    $perPage = [];
+    foreach (signedRecordStepsByJob(signedRecordWorkflow()) as $job => $jobSteps) {
+        $jobDownloads = signedRecordStepsContaining($jobSteps, 'gh release download');
+        $jobVerifies = signedRecordStepsContaining($jobSteps, 'sodium_crypto_sign_verify_detached');
 
-    $requested = array_map(
-        static fn (array $set): string => $set[1],
-        PatternScan::sets("/--pattern '([^']+)'/", $downloading[0] ?? ''),
-    );
-    // A `.sig` is checked by the key rather than by a hash, here for the same
-    // reason it is dropped from the find predicates above: every pass derives
-    // its own signature path from the file it covers.
-    $requested = array_values(array_unique(array_filter(
-        $requested,
-        static fn (string $pattern): bool => ! str_ends_with($pattern, '.sig'),
-    )));
-    sort($requested);
+        if ($jobDownloads === [] || $jobVerifies === []) {
+            continue;
+        }
+
+        $asked = signedRecordUniqueShapes(signedRecordRequestedPatterns(implode("\n", $jobDownloads)));
+        $read = signedRecordUniqueShapes(signedRecordNamePredicates(implode("\n", $jobVerifies)));
+
+        if ($asked !== $read) {
+            $perPage[] = $job.' downloads ['.implode(', ', $asked).'] and verifies ['.implode(', ', $read).']';
+        }
+    }
+
+    expect($perPage)->toBe([], implode("\n  ", [
+        'A job re-reads a published page and then checks signatures over a different set of shapes.',
+        'A shape downloaded but not verified is a file the job holds and never reads; a shape verified',
+        'but not downloaded is checked against whatever an earlier step happened to leave on disk.',
+        'Offenders:',
+        ...$perPage,
+    ]));
+
+    // Deduplicated because these are unions over possibly several steps: two
+    // pages covering the same shape is the point, not a drift.
+    $signed = signedRecordUniqueShapes(signedRecordNamePredicates(implode("\n", $signing)));
+    $verified = signedRecordUniqueShapes(signedRecordNamePredicates(implode("\n", $verifying)));
+
+    $requested = signedRecordRequestedPatterns(implode("\n", $downloading));
+    $requested = signedRecordUniqueShapes($requested);
 
     $drift = implode("\n", [
         'What the publish job signs, what the verify job asks the release page',

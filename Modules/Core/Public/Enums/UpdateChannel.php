@@ -32,4 +32,16 @@ enum UpdateChannel: string
             self::Preview => 'beta',
         };
     }
+
+    // Which feed to ask, for the same reason the prefix is per-channel: the
+    // two sets do not live at one origin. `releases/latest` skips a
+    // prerelease by definition, so the preview set is addressed by its own
+    // rolling tag and a channel contributes the key that names it.
+    public function feedConfigKey(): string
+    {
+        return match ($this) {
+            self::Stable => 'auto_update.manifest_feed_url',
+            self::Preview => 'auto_update.preview_feed_url',
+        };
+    }
 }
