@@ -30,8 +30,12 @@ final class ReconciledRowExemptions
         ],
         'B5-R16' => [
             'reason' => 'the retyping healing pass, which repairs a type the chain resolvers read before they run and must reach every row they will walk',
+            // The proof names the pass rather than quoting its statement. It
+            // wrote raw SQL until the pass moved behind TransactionTypeWriter,
+            // and a proof spelt as SQL reads to the capture guards as a write
+            // this file performs — a pin planting evidence in the tree it pins.
             'writers' => [
-                'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php' => '/UPDATE transactions SET type = \?/',
+                'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php' => '/\$this->types->retype\(\$user->id,/',
             ],
         ],
         'B1-R15' => [
